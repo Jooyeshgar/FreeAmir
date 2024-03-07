@@ -1,66 +1,83 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+## Amir: Free Laravel Accounting Software (فارسی)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+**Introduction:**
 
-## About Laravel
+Amir is a free and open-source accounting software written in Laravel, designed specifically for Iranian businesses and individuals (فارسی پشتیبانی). It aims to provide a user-friendly and comprehensive solution for managing finances, with features tailored to the specific needs of Iranian users, including support for Iranian tax regulations (مالیات).
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+**Features:**
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+* **Intuitive interface:** Easy to use for businesses of all sizes and technical expertise.
+* **Multiple languages:** Currently supports Farsi (Persian) with potential for further language expansion.
+* **Accounting functionalities:**
+    * Manage income and expenses
+    * Track invoices and receipts
+    * Generate reports
+    * Support for Iranian tax regulations (مالیات)
+* **Open-source:** Free to use, modify, and contribute to.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+**Installation:**
 
-## Learning Laravel
+1. **Prerequisites:**
+    * PHP >= 8.0
+    * Composer
+    * MySQL database
+2. **Clone the repository:**
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+```bash
+git clone git@github.com:Jooyeshgar/FreeAmir.git
+```
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+3. **Install dependencies:**
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+composer install
+```
 
-## Laravel Sponsors
+4. **Copy `.env.example` to `.env` and configure database credentials.**
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+5. **Generate application key:**
 
-### Premium Partners
+```bash
+php artisan key:generate
+```
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+6. **Migrate the database:**
 
-## Contributing
+```bash
+php artisan migrate
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+7. **(Optional) Seed the database with sample data:**
 
-## Code of Conduct
+```bash
+php artisan db:seed
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+8. **Start the development server:**
 
-## Security Vulnerabilities
+```bash
+php artisan serve
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+**Usage:**
 
-## License
+1. Access the application in your web browser at http://localhost:8000 (or the port specified in your `.env` file).
+2. Login with the default credentials (username: `admin`, password: `password`).
+3. Explore the features and functionalities of the application.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+**Contributing:**
+
+We welcome contributions to the Amir project! Please refer to the CONTRIBUTING.md: CONTRIBUTING.md file for guidelines on how to submit bug reports, feature requests, and pull requests.
+
+**License:**
+
+This project is licensed under the MIT License. See the LICENSE: LICENSE file for details.
+
+**Support:**
+
+For any questions or issues, please feel free to create an issue on the GitHub repository.
+
+**Additional Notes:**
+
+* This is a basic README file and can be further enhanced with additional information, such as screenshots, detailed documentation links, and a troubleshooting section.
+* Remember to replace `your-username` with your actual GitHub username.
