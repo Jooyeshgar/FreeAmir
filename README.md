@@ -76,8 +76,3 @@ This project is licensed under the MIT License. See the LICENSE: LICENSE file fo
 **Support:**
 
 For any questions or issues, please feel free to create an issue on the GitHub repository.
-
-**Additional Notes:**
-
-* This is a basic README file and can be further enhanced with additional information, such as screenshots, detailed documentation links, and a troubleshooting section.
-* Remember to replace `your-username` with your actual GitHub username.
