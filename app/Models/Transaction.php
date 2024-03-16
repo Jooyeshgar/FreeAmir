@@ -3,35 +3,32 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Transaction extends Model
 {
     protected $fillable = [
-        'Code',
-        'Date',
-        'Bill',
-        'Cust',
-        'Addition',
-        'Subtraction',
-        'Tax',
-        'PayableAmnt',
-        'CashPayment',
-        'ShipDate',
-        'FOB',
-        'ShipVia',
-        'Permanent',
-        'Desc',
-        'Sell',
-        'LastEdit',
-        'Acivated',
+        'code',
+        'date',
+        'bill',
+        'customer_id',
+        'addition',
+        'subtraction',
+        'tax',
+        'payable_amount',
+        'cash_payment',
+        'ship_date',
+        'destination',
+        'ship_via',
+        'permanent',
+        'description',
+        'sell',
+        'activated',
     ];
 
-    // Define relationships with other models (e.g., Customer)
-
-    public function customer()
+    public function customer(): BelongsTo
     {
-        return $this->belongsTo(Customer::class, 'transCust');
+        return $this->belongsTo(Customer::class, 'customer');
     }
 
-    // Define any other methods as needed
 }

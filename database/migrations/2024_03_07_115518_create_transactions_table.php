@@ -14,32 +14,29 @@ class CreateTransactionsTable extends Migration
     public function up()
     {
         Schema::create('transactions', function (Blueprint $table) {
-            $table->id('Id');  // Use 'Id' as primary key
-            $table->integer('Code');
-            $table->date('Date');
-            $table->unsignedBigInteger('Bill')->nullable();
-            $table->unsignedBigInteger('Cust')->nullable();
-            $table->float('Addition');
-            $table->float('Subtraction');
-            $table->float('Tax');
-            $table->float('PayableAmnt');
-            $table->float('CashPayment');
-            $table->date('ShipDate')->nullable();
-            $table->string('FOB', 50)->nullable();
-            $table->string('ShipVia', 100)->nullable();
-            $table->boolean('Permanent')->nullable();
-            $table->string('Desc', 200)->nullable();
-            $table->boolean('Sell');
-            $table->date('LastEdit')->nullable();
-            $table->boolean('Acivated');
-
-            $table->primary(['Id']);
-            $table->foreign('Cust')->references('custId')->on('customers')->onDelete('set null');
-            $table->check('Permanent IN (0, 1)');
-            $table->check('Sell IN (0, 1)');
-            $table->check('Acivated IN (0, 1)');
+            $table->id();
+            $table->integer('code');
+            $table->date('date');
+            $table->unsignedBigInteger('bill')->nullable();
+            $table->unsignedBigInteger('customer_id')->nullable(); // Match model's foreign key
+            $table->float('addition');
+            $table->float('subtraction');
+            $table->float('tax');
+            $table->float('payable_amount');
+            $table->float('cash_payment');
+            $table->string('destination', 50)->nullable();
+            $table->date('ship_date')->nullable();
+            $table->string('ship_via', 100)->nullable();
+            $table->boolean('permanent')->nullable();
+            $table->string('description', 200)->nullable();
+            $table->boolean('sell');
+            $table->boolean('activated');
+            $table->timestamps();
+    
+            $table->foreign('customer_id')->references('Id')->on('customers')->onDelete('set null');
         });
     }
+    
 
     /**
      * Reverse the migrations.
