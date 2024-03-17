@@ -17,13 +17,11 @@ class CreateSubjectsTable extends Migration
             $table->id();
             $table->string('code', 20)->unique();
             $table->string('name', 60);
-            $table->unsignedBigInteger('parent_id');
-            $table->integer('type')->nullable();
-            $table->integer('lft')->default(0);
-            $table->integer('rgt')->default(0);
-
-            $table->primary('id');
-            $table->foreign('parent_id')->references('id')->on('subjects')->onDelete('cascade');
+            // $table->unsignedBigInteger('parent_id');
+            $table->enum('type', ['debtor', 'creditor', 'both'])->default('both');
+            $table->nestedSet();
+            
+            // $table->foreign('parent_id')->references('id')->on('subjects')->onDelete('cascade');
         });
     }
 

@@ -25,7 +25,7 @@ class CreatePaymentsTable extends Migration
             $table->unsignedBigInteger('transaction_id')->nullable();
             $table->unsignedBigInteger('bill_id')->nullable();
             $table->string('track_code')->nullable();
-            $table->integer('factor_id')->nullable();
+            $table->unsignedBigInteger('factor_id')->nullable();
             $table->text('payer_name')->nullable();
             $table->timestamps();
 

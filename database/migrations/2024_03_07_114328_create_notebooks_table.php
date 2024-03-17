@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateNotebookTable extends Migration
+return new class extends Migration
 {
     /**
      * Run the migrations.
@@ -13,7 +13,7 @@ class CreateNotebookTable extends Migration
      */
     public function up()
     {
-        Schema::create('notebook', function (Blueprint $table) {
+        Schema::create('notebooks', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('subject_id')->nullable();
             $table->unsignedBigInteger('bill_id')->nullable();
@@ -37,4 +37,4 @@ class CreateNotebookTable extends Migration
     {
         Schema::dropIfExists('notebook');
     }
-}
+};

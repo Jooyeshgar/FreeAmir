@@ -25,9 +25,9 @@ class CreateFactorItemsTable extends Migration
             $table->text('description')->nullable();
             $table->timestamps();
 
-            $table->foreign('factor_id')->references('id')->on('factor')->onDelete('set null'); // Assuming factors model is named FactorTable
+            $table->foreign('factor_id')->references('id')->on('factors')->onDelete('set null'); // Assuming factors model is named FactorTable
             $table->foreign('product_id')->references('id')->on('products')->onDelete('set null');
-            $table->foreign('transaction_id')->references('id')->on('transaction')->onDelete('set null'); // Assuming factors model is named FactorTable
+            $table->foreign('transaction_id')->references('id')->on('transactions')->onDelete('set null'); // Assuming factors model is named FactorTable
         });
     }
 

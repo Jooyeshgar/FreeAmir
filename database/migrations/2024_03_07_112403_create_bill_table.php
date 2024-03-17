@@ -9,7 +9,7 @@ class CreateBillTable extends Migration
     public function up()
     {
         // Create the bill table
-        Schema::create('bill', function (Blueprint $table) {
+        Schema::create('bills', function (Blueprint $table) {
             $table->id();
             $table->integer('number')->nullable();
             $table->date('date')->nullable();

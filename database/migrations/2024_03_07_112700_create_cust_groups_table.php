@@ -8,18 +8,16 @@ class CreateCustGroupsTable extends Migration
 {
     public function up()
     {
-        // Create the custGroups table
-        Schema::create('custGroups', function (Blueprint $table) {
+        Schema::create('customer_groups', function (Blueprint $table) {
             $table->id();
-            $table->string('Code', 20);
-            $table->string('Name', 50);
-            $table->text('Desc');
-            $table->primary('Id');
+            $table->string('code', 20)->unique();
+            $table->string('name', 50);
+            $table->text('description')->nullable();
         });
     }
 
     public function down()
     {
-        Schema::dropIfExists('custGroups');
+        Schema::dropIfExists('customer_groups');
     }
 }

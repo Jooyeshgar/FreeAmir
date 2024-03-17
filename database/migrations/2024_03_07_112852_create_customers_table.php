@@ -54,7 +54,7 @@ class CreateCustomersTable extends Migration
             $table->timestamps(); // Enable timestamps for created_at and updated_at
 
             $table->foreign('subject_id')->references('id')->on('subjects')->onDelete('set null'); // Allow null for subj_id
-            $table->foreign('group_id')->references('id')->on('groups')->onDelete('set null'); // Allow null for group_id
+            $table->foreign('group_id')->references('id')->on('customer_groups')->onDelete('set null'); // Allow null for group_id
             $table->foreign('introducer_id')->references('id')->on('customers')->onDelete('set null'); // Allow null for introducer_id
 
         });

@@ -20,7 +20,6 @@ class CreateProductGroupsTable extends Migration
             $table->unsignedBigInteger('buyId')->nullable();
             $table->unsignedBigInteger('sellId')->nullable();
 
-            $table->primary('id');
             $table->foreign('buyId')->references('id')->on('subjects')->onDelete('set null');
             $table->foreign('sellId')->references('id')->on('subjects')->onDelete('set null');
         });
