@@ -3,11 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Spatie\LaravelNestedSet\HasNestedSets;
+use Kalnoy\Nestedset\NodeTrait;
 
 class Subject extends Model
 {
-    use HasNestedSets;
+    use NodeTrait;
 
     protected $fillable = [
         'code',
@@ -16,5 +16,7 @@ class Subject extends Model
         'type',
     ];
 
-    // Define other methods as needed
+    protected $attributes = [
+        'parent_id' => 0,
+    ];
 }
