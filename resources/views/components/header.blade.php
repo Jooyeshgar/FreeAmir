@@ -5,9 +5,9 @@
         </label>
         <a href="#" class="text-xl font-bold">FreeAmir</a>
         <ul class="flex space-x-4">
-          <li><a href="#" class="hover:text-gray-500">Home</a></li>
-          <li><a href="#" class="hover:text-gray-500">About</a></li>
-          <li><a href="#" class="hover:text-gray-500">Contact</a></li>
+          <li><a href="/" class="hover:text-gray-500">Home</a></li>
+          <li><a href="{{ route('subjects.index') }}" class="hover:text-gray-500">Subjects</a></li>
+          <!-- <li><a href="#" class="hover:text-gray-500">Contact</a></li> -->
         </ul>
       </div>
     </header>

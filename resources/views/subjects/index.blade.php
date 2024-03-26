@@ -25,7 +25,7 @@
                             @foreach ($subjects as $subject)
                                 <tr>
                                     <td class="px-4 py-2">{{ $subject->code }}</td>
-                                    <td class="px-4 py-2">{{ $subject->name }}</td>
+                                    <td class="px-4 py-2"><a href="{{ route('subjects.index', ['parent_id' => $subject->id]) }}" class="text-primary"> {{ $subject->name }}</a></td>
                                     <td class="px-4 py-2">{{ $subject->parent ? $subject->parent->name : '-' }}</td>
                                     <td class="px-4 py-2">{{ $subject->type ? ucfirst($subject->type) : '-' }}</td>
                                     <td class="px-4 py-2">

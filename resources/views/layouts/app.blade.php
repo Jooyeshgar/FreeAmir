@@ -7,7 +7,7 @@
   @vite('resources/css/app.css') </head>
 <body>
   <header>
-    @include('components.Header')
+    @include('components.header')
   </header>
 
   <main>
@@ -15,7 +15,7 @@
   </main>
 
   <footer>
-    @include('components.Footer')
+    @include('components.footer')
   </footer>
 </body>
 </html>

@@ -7,10 +7,14 @@ use Illuminate\Http\Request;
 
 class SubjectController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $subjects = Subject::all();
-
+        if ($request->has('parent_id')) {
+            $subjects = Subject::find($request->get('parent_id'))->children()->get();
+        } else {
+            $subjects = Subject::firstLevel()->get();
+        }
+    
         return view('subjects.index', compact('subjects'));
     }
 
