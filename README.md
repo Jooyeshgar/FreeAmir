@@ -1,8 +1,10 @@
 ## Amir: Free Laravel Accounting Software (فارسی)
 
+**Important Notice:** Amir is currently under **development** and is not yet ready for production use. We are actively working on development and will announce the official release date soon. Stay tuned!
+
 **Introduction:**
 
-Amir is a free and open-source accounting software written in Laravel, designed specifically for Iranian businesses and individuals (فارسی پشتیبانی). It aims to provide a user-friendly and comprehensive solution for managing finances, with features tailored to the specific needs of Iranian users, including support for Iranian tax regulations (مالیات).
+**Amir** is a free and open-source accounting software written in Laravel, designed specifically for Iranian businesses and individuals. It aims to provide a user-friendly and comprehensive solution for managing finances, with features tailored to the specific needs of Iranian users, including support for Iranian tax regulations.
 
 **Features:**
 
@@ -12,7 +14,7 @@ Amir is a free and open-source accounting software written in Laravel, designed 
     * Manage income and expenses
     * Track invoices and receipts
     * Generate reports
-    * Support for Iranian tax regulations (مالیات)
+    * Support for Iranian tax regulations
 * **Open-source:** Free to use, modify, and contribute to.
 
 **Installation:**
@@ -24,7 +26,7 @@ Amir is a free and open-source accounting software written in Laravel, designed 
 2. **Clone the repository:**
 
 ```bash
-git clone git@github.com:Jooyeshgar/FreeAmir.git
+git clone https://github.com/Jooyeshgar/FreeAmir.git
 ```
 
 3. **Install dependencies:**
@@ -47,13 +49,19 @@ php artisan key:generate
 php artisan migrate
 ```
 
-7. **(Optional) Seed the database with sample data:**
+7. **Seed the database with sample data:**
 
 ```bash
 php artisan db:seed
 ```
 
-8. **Start the development server:**
+8. **Start the vite:**
+
+```bash
+npm run dev
+```
+
+9. **Start the development server:**
 
 ```bash
 php artisan serve
