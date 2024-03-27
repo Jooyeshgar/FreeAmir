@@ -13,17 +13,17 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('notebooks', function (Blueprint $table) {
+        Schema::create('articles', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('subject_id')->nullable();
-            $table->unsignedBigInteger('bill_id')->nullable();
+            $table->unsignedBigInteger('document_id')->nullable();
             $table->unsignedBigInteger('user_id')->nullable();
             $table->string('desc')->nullable();
             $table->integer('value');
             $table->timestamps();
 
             $table->foreign('subject_id')->references('id')->on('subjects')->onDelete('set null');
-            $table->foreign('bill_id')->references('id')->on('bills')->onDelete('set null');
+            $table->foreign('document_id')->references('id')->on('document')->onDelete('set null');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');
         });
     }
@@ -35,6 +35,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('notebook');
+        Schema::dropIfExists('articles');
     }
 };

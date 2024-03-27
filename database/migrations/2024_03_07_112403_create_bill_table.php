@@ -4,12 +4,12 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateBillTable extends Migration
+class CreateDocumentTable extends Migration
 {
     public function up()
     {
         // Create the bill table
-        Schema::create('bills', function (Blueprint $table) {
+        Schema::create('documents', function (Blueprint $table) {
             $table->id();
             $table->integer('number')->nullable();
             $table->date('date')->nullable();
@@ -20,6 +20,6 @@ class CreateBillTable extends Migration
 
     public function down()
     {
-        Schema::dropIfExists('bill');
+        Schema::dropIfExists('documents');
     }
 }

@@ -12,7 +12,7 @@ class Factor extends Model
     protected $fillable = [
         'code',
         'date',
-        'bill_id',
+        'document_id',
         'customer_id',
         'addition',
         'subtraction',
@@ -30,7 +30,7 @@ class Factor extends Model
 
     public function bill()
     {
-        return $this->belongsTo(Bill::class, 'bill_id');
+        return $this->belongsTo(Document::class, 'bill_id');
     }
 
     public function customer()

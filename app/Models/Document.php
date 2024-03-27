@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Bill extends Model
+class Document extends Model
 {
 
     public $timestamps = true;
@@ -15,7 +15,7 @@ class Bill extends Model
         'permanent',
     ];
 
-    public function notebook() {
-        return $this->hasMany(Notebook::class);
+    public function Transaction() {
+        return $this->hasMany(Transaction::class);
     }
 }
