@@ -3,15 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BankAccount extends Model
 {
-    protected $table = 'bankAccounts';
 
     public $timestamps = false;
 
     protected $fillable = [
-        'name', 
+        'name',
         'number',
         'type',
         'owner',
@@ -23,7 +23,7 @@ class BankAccount extends Model
         'desc'
     ];
 
-    public function bank()
+    public function bank(): BelongsTo
     {
         return $this->belongsTo(Bank::class);
     }
