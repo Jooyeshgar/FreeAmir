@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\SubjectController;
+use App\Http\Controllers;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -18,4 +18,5 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::resource('subjects', SubjectController::class);
+Route::resource('subjects', Controllers\SubjectController::class);
+Route::resource('transactions', Controllers\TransactionController::class);
