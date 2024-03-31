@@ -20,3 +20,4 @@ Route::get('/', function () {
 
 Route::resource('subjects', Controllers\SubjectController::class);
 Route::resource('transactions', Controllers\TransactionController::class);
+Route::resource('products', Controllers\ProductController::class);

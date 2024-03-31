@@ -8,6 +8,7 @@
           <li><a href="/" class="hover:text-gray-500">Home</a></li>
           <li><a href="{{ route('subjects.index') }}" class="hover:text-gray-500">Subjects</a></li>
           <li><a href="{{ route('transactions.index') }}" class="hover:text-gray-500">Transactions</a></li>
+          <li><a href="{{ route('products.index') }}" class="hover:text-gray-500">Products</a></li>
           <!-- <li><a href="#" class="hover:text-gray-500">Contact</a></li> -->
         </ul>
       </div>
