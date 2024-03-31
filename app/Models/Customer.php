@@ -9,7 +9,7 @@ class Customer extends Model
     protected $fillable = [
         'code',
         'name',
-        'subj_id',
+        'subject_id',
         'phone',
         'cell',
         'fax',
@@ -45,7 +45,7 @@ class Customer extends Model
 
     public function subject()
     {
-        return $this->belongsTo(Subject::class, 'subj_id');
+        return $this->belongsTo(Subject::class);
     }
 
     public function group()
