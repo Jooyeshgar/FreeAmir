@@ -22,3 +22,4 @@ Route::resource('subjects', Controllers\SubjectController::class);
 Route::resource('transactions', Controllers\TransactionController::class);
 Route::resource('products', Controllers\ProductController::class);
 Route::resource('customers', Controllers\CustomerController::class);
+Route::resource('customer-groups', Controllers\CustomerGroupController::class);
