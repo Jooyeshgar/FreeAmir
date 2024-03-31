@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateTransactions2Table extends Migration
+class CreateTransactionsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,7 +13,7 @@ class CreateTransactions2Table extends Migration
      */
     public function up()
     {
-        Schema::create('transactions2', function (Blueprint $table) {
+        Schema::create('transactions', function (Blueprint $table) {
             $table->id();
             $table->integer('code');
             $table->date('date');
@@ -32,11 +32,11 @@ class CreateTransactions2Table extends Migration
             $table->boolean('sell');
             $table->boolean('activated');
             $table->timestamps();
-    
+
             $table->foreign('customer_id')->references('Id')->on('customers')->onDelete('set null');
         });
     }
-    
+
 
     /**
      * Reverse the migrations.

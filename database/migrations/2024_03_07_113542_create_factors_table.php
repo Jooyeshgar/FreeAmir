@@ -32,14 +32,14 @@ class CreateFactorsTable extends Migration
             $table->decimal('vat', 10, 2)->default(0);
             $table->decimal('amount', 10, 2)->default(0);
             $table->timestamps();
-    
-            $table->foreign('bill_id')->references('id')->on('bills')->onDelete('set null'); // Assuming foreign key reference
+
+            $table->foreign('bill_id')->references('id')->on('documents')->onDelete('set null'); // Assuming foreign key reference
             $table->foreign('customer_id')->references('id')->on('customers')->onDelete('cascade');
-    
+
             // Remove redundant checks for boolean fields
         });
     }
-    
+
 
     /**
      * Reverse the migrations.
