@@ -19,7 +19,7 @@ class CreateChequesTable extends Migration
             $table->unsignedBigInteger('customer_id')->notNullable();
             $table->unsignedBigInteger('account_id')->notNullable();
             $table->unsignedBigInteger('transaction_id')->notNullable();
-            $table->unsignedBigInteger('notebook_id')->notNullable();
+            // $table->unsignedBigInteger('notebook_id')->notNullable();
             $table->unsignedBigInteger('history_id')->notNullable();
             $table->unsignedBigInteger('bill_id')->notNullable();
             $table->string('desc', 200)->nullable();
@@ -28,7 +28,7 @@ class CreateChequesTable extends Migration
             $table->foreign('customer_id')->references('id')->on('customers')->onDelete('cascade');
             $table->foreign('account_id')->references('id')->on('bank_accounts')->onDelete('cascade');
             $table->foreign('transaction_id')->references('id')->on('transactions')->onDelete('cascade');
-            $table->foreign('notebook_id')->references('id')->on('articles')->onDelete('cascade');
+            // $table->foreign('notebook_id')->references('id')->on('articles')->onDelete('cascade');
             // $table->foreign('history_id')->references('id')->on('notebooks')->onDelete('cascade');
             $table->foreign('bill_id')->references('id')->on('documents')->onDelete('cascade');
         });
