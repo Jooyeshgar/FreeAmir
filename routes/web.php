@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\SubjectController;
+use App\Http\Controllers;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -18,4 +18,10 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::resource('subjects', SubjectController::class);
+Route::resource('subjects', Controllers\SubjectController::class);
+Route::resource('transactions', Controllers\TransactionController::class);
+Route::resource('products', Controllers\ProductController::class);
+Route::resource('customers', Controllers\CustomerController::class);
+Route::resource('customer-groups', Controllers\CustomerGroupController::class);
+Route::resource('bank-accounts', Controllers\BankAccountController::class);
+Route::resource('banks', Controllers\BankController::class);

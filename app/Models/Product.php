@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
+    public $timestamps = false;
+
     protected $fillable = [
         'code',
         'name',
@@ -17,7 +19,7 @@ class Product extends Model
         'purchace_price',
         'selling_price',
         'discount_formula',
-        'description',
+        'description'
     ];
 
     // Define a relationship with the product group (if applicable)

@@ -10,7 +10,7 @@ class CreateBankAccountsTable extends Migration
     {
         Schema::create('bank_accounts', function (Blueprint $table) {
             $table->id();
-            $table->string('name', 100); 
+            $table->string('name', 100);
             $table->string('number', 40)->unique();
             $table->integer('type');
             $table->string('owner', 50);
@@ -21,9 +21,9 @@ class CreateBankAccountsTable extends Migration
             $table->string('bank_web_page')->nullable();
             $table->text('desc')->nullable();
 
-            $table->foreign('bank_id')->references('id')->on('bank_names')->onDelete('cascade');
+            $table->foreign('bank_id')->references('id')->on('banks')->onDelete('cascade');
 
-            $table->timestamps(false); 
+            $table->timestamps(false);
         });
     }
     public function down()

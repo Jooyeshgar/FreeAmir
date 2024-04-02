@@ -3,27 +3,44 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Transaction extends Model
 {
     public $timestamps = true;
 
     protected $fillable = [
-        'subject_id',
-        'document_id',
-        'user_id',
+        'code',
+        'date',
+        'bill',
+        'customer_id',
+        'addition',
+        'subtraction',
+        'tax',
+        'payable_amount',
+        'cash_payment',
+        'ship_date',
+        'destination',
+        'ship_via',
+        'permanent',
         'description',
-        'value',
+        'sell',
+        'activated',
     ];
 
-    public function subject()
-    {
-        return $this->belongsTo(Subject::class);
-    }
+//    public function subject(): BelongsTo
+//    {
+//        return $this->belongsTo(Subject::class);
+//    }
+//
+//    public function document(): BelongsTo
+//    {
+//        return $this->belongsTo(Document::class);
+//    }
 
-    public function document()
+    public function customer(): BelongsTo
     {
-        return $this->belongsTo(Document::class);
+        return $this->belongsTo(Customer::class);
     }
 
 }
