@@ -26,10 +26,10 @@
 
     <div class="col-span-2 md:col-span-1">
         <label id="location" class="input input-bordered flex items-center gap-2">
-            مکان
+            موقعیت در انبار
             <input type="text" id="location" name="location"
                    class="grow" value="{{ old('location', $product->location ?? '') }}"
-                   placeholder="مکان" required/>
+                   placeholder="موقعیت در انبار" required/>
         </label>
     </div>
 
@@ -107,7 +107,11 @@
                    placeholder="فرمول تخفیف"/>
         </label>
     </div>
+</div>
 
+<div class="py-3">
+    راهنمایی:از (مقدار) - (تا مقدار) : میزان  تخفیف  برای هر محصول مثال:
+    1-30:400, 30-100:360.7, 100-170:300
 </div>
 
 
