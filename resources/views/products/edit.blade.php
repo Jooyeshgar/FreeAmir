@@ -11,13 +11,12 @@
                 <div class="p-6 bg-white border-b border-gray-200">
                     <x-show-message-bags/>
                     <form action="{{ route('products.update', $product) }}" method="POST">
-                        @csrf
-                        @method('PUT')
-                        @include('products.form')
-                        <div class="mb-6">
-                            <button class="btn btn-pr"> {{ __('Edit') }} </button>
-                        </div>
-                    </form>
+                    @csrf
+                    @method('PUT')
+                    @include('products.form')
+                </div>
+                <div class="my-6">
+                    <button class="btn btn-pr"> {{ __('Edit') }} </button>
                 </div>
             </div>
         </div>

@@ -9,76 +9,64 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $products = Models\Product::with('group')->paginate(12);
-        $cols = [
-            'code', 'name', 'group', 'location', 'quantity',
-            'quantity_warning', 'oversell', 'purchace_price',
-            'selling_price', 'discount_formula', 'description'
-        ];
-        return view('products.index', compact('products', 'cols'));
+        $products = Models\Product::with('productGroup')->paginate(12);
+        return view('products.index', compact('products'));
     }
 
     public function create()
     {
         $groups = Models\ProductGroup::select('id', 'name')->get();
-        $fields = $this->fields($groups);
-        return view('products.create', compact('fields'));
+        return view('products.create', compact('groups'));
     }
 
     public function store(Request $request)
     {
         // TODO validate request
         $validatedData = $request->validate([
-            'code'=>'required|unique:products,code',
-            'name'=>'required|max:20',
-            'group'=>'required',
-            'location'=>'required',
-            'quantity'=>'required',
-            'quantity_warning'=>'required',
-            'oversell'=>'nullable',
-            'purchace_price'=>'required',
-            'selling_price'=>'required',
-            'discount_formula'=>'required',
-            'description'=>'required'
+            'code' => 'required|unique:products,code',
+            'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
+            'group' => 'required|exists:product_groups,id|integer',
+            'location' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
+            'quantity' => 'required|min:0|numeric',
+            'quantity_warning' => 'nullable|min:0|numeric',
+            'oversell' => 'nullable|in:on,off',
+            'purchace_price' => 'required|min:0|numeric',
+            'selling_price' => 'required|min:0|numeric',
+            'discount_formula' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
+            'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u'
         ]);
 
-        $validatedData['oversell'] = isset($validatedData['oversell']) ? 1 : 0;
+        $validatedData['oversell'] = $request->has('oversell') ? 1 : 0;
 
         Models\Product::create($validatedData);
 
         return redirect()->route('products.index')->with('success', 'Product created successfully.');
     }
 
-    public function show($id)
-    {
-        // Read - Display a single item
-    }
-
     public function edit(Models\Product $product)
     {
         $groups = Models\ProductGroup::select('id', 'name')->get();
-        $fields = $this->fields($groups);
-        return view('products.edit', compact('product', 'fields'));
+        return view('products.edit', compact('product', 'groups'));
     }
 
     public function update(Request $request, Models\Product $product)
     {
         // TODO validate request
         $validatedData = $request->validate([
-            'code'=>'required|exists:products,code',
-            'name'=>'required|max:20',
-            'group'=>'required',
-            'location'=>'required',
-            'quantity'=>'required',
-            'quantity_warning'=>'required',
-            'oversell'=>'nullable',
-            'purchace_price'=>'required',
-            'selling_price'=>'required',
-            'discount_formula'=>'required',
-            'description'=>'required'
+            'code' => 'required|exists:products,code',
+            'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
+            'group' => 'required|exists:product_groups,id|integer',
+            'location' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
+            'quantity' => 'required|min:0|numeric',
+            'quantity_warning' => 'nullable|min:0|numeric',
+            'oversell' => 'nullable|in:on,off',
+            'purchace_price' => 'required|min:0|numeric',
+            'selling_price' => 'required|min:0|numeric',
+            'discount_formula' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
+            'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u'
         ]);
 
-        $validatedData['oversell'] = isset($validatedData['oversell']) ? 1 : 0;
+        $validatedData['oversell'] = $request->has('oversell') ? 1 : 0;
 
         $product->update($validatedData);
 
@@ -92,20 +80,4 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with('success', 'Product deleted successfully.');
     }
 
-    public function fields($groups): array
-    {
-        return [
-            'code' => ['label' => 'کد', 'type' => 'text'],
-            'name' => ['label' => 'نام محصول', 'type' => 'text'],
-            'group' => ['label' => 'گروه محصول', 'type' => 'select', 'options' => $groups],
-            'location' => ['label' => 'مکان', 'type' => 'text'],
-            'quantity' => ['label' => 'تعداد', 'type' => 'number'],
-            'quantity_warning' => ['label' => 'هشدار مقدار', 'type' => 'number'],
-            'oversell' => ['label' => 'بیش فروش', 'type' => 'checkbox'],
-            'purchace_price' => ['label' => 'قیمت خرید', 'type' => 'number'],
-            'selling_price' => ['label' => 'قیمت فروش', 'type' => 'number'],
-            'discount_formula' => ['label' => 'فرمول تخفیف', 'type' => 'text'],
-            'description' => ['label' => 'توضیحات', 'type' => 'textarea'],
-        ];
-    }
 }

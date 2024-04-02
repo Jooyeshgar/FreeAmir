@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Product extends Model
 {
@@ -24,7 +25,7 @@ class Product extends Model
 
     // Define a relationship with the product group (if applicable)
 
-    public function group()
+    public function productGroup(): BelongsTo
     {
         return $this->belongsTo(ProductGroup::class, 'group');
     }
