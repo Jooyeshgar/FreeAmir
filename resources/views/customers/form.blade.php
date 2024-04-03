@@ -174,7 +174,7 @@
                 <span class="label-text">نشانی</span>
             </span>
                     <textarea id="address" name="address"
-                              class="textarea textarea-bordered h-24" placeholder="نشانی"></textarea>
+                              class="textarea textarea-bordered h-24" placeholder="نشانی">{{ old('address', $customer->address ?? '') }}</textarea>
                 </label>
 
             </div>
@@ -220,7 +220,7 @@
                 <span class="label-text">توضیح</span>
             </span>
                     <textarea id="desc" name="desc"
-                              class="textarea textarea-bordered h-24" placeholder="توضیح"></textarea>
+                              class="textarea textarea-bordered h-24" placeholder="توضیح">{{ old('desc', $customer->desc ?? '') }}</textarea>
                 </label>
             </div>
 

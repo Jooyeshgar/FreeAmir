@@ -31,7 +31,7 @@
                                 <td class="px-4 py-2">{{ $customer->name }}</td>
                                 <td class="px-4 py-2">{{ $customer->phone }}</td>
                                 <td class="px-4 py-2">{{ $customer->email }}</td>
-                                <td class="px-4 py-2">{{ $customer->group->name }}</td>
+                                <td class="px-4 py-2">{{ $customer->group ? $customer->group->name : '' }}</td>
                                 <td class="px-4 py-2">
                                     <a href="{{ route('customers.edit', $customer) }}"
                                        class="btn btn-sm btn-info">Edit</a>
