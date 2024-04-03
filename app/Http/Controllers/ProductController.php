@@ -27,16 +27,19 @@ class ProductController extends Controller
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
             'group' => 'required|exists:product_groups,id|integer',
             'location' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
-            'quantity' => 'required|min:0|numeric',
+            'quantity' => 'nullable|min:0|numeric',
             'quantity_warning' => 'nullable|min:0|numeric',
             'oversell' => 'nullable|in:on,off',
-            'purchace_price' => 'required|min:0|numeric',
-            'selling_price' => 'required|min:0|numeric',
+            'purchace_price' => 'nullable|min:0|numeric',
+            'selling_price' => 'nullable|min:0|numeric',
             'discount_formula' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
             'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u'
         ]);
 
         $validatedData['oversell'] = $request->has('oversell') ? 1 : 0;
+        $validatedData['purchace_price'] = empty($validatedData['purchace_price']) ? 0 : $validatedData['purchace_price'];
+        $validatedData['selling_price'] = empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price'];
+        $validatedData['quantity'] = empty($validatedData['quantity']) ? 0 : $validatedData['quantity'];
 
         Models\Product::create($validatedData);
 

@@ -29,7 +29,7 @@
             موقعیت در انبار
             <input type="text" id="location" name="location"
                    class="grow" value="{{ old('location', $product->location ?? '') }}"
-                   placeholder="موقعیت در انبار" required/>
+                   placeholder="موقعیت در انبار"/>
         </label>
     </div>
 
@@ -49,7 +49,7 @@
                 <span class="label-text">توضیحات</span>
             </span>
             <textarea id="description" name="description"
-                      class="textarea textarea-bordered h-24" placeholder="توضیحات"></textarea>
+                      class="textarea textarea-bordered h-24" placeholder="توضیحات">{{ old('description', $product->description ?? '') }}</textarea>
         </label>
 
     </div>
@@ -77,7 +77,7 @@
             موجودی اولیه
             <input type="text" id="quantity" name="quantity"
                    class="grow" value="{{ old('quantity', $product->quantity ?? '') }}"
-                   placeholder="موجودی اولیه" required/>
+                   placeholder="موجودی اولیه"/>
         </label>
     </div>
 
@@ -86,7 +86,7 @@
             قیمت فروش
             <input type="text" id="selling_price" name="selling_price"
                    class="grow" value="{{ old('name', $product->selling_price ?? '') }}"
-                   placeholder="قیمت فروش" required/>
+                   placeholder="قیمت فروش"/>
         </label>
     </div>
 
@@ -95,7 +95,7 @@
             قیمت خرید
             <input type="text" id="purchace_price" name="purchace_price"
                    class="grow" value="{{ old('purchace_price', $product->purchace_price ?? '') }}"
-                   placeholder="قیمت خرید" required/>
+                   placeholder="قیمت خرید"/>
         </label>
     </div>
 
