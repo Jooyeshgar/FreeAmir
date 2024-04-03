@@ -30,7 +30,7 @@
                                 <td class="px-4 py-2">{{ $bankAccount->number }}</td>
                                 <td class="px-4 py-2">{{ $bankAccount->owner }}</td>
                                 <td class="px-4 py-2">{{ $bankAccount->type }}</td>
-                                <td class="px-4 py-2">{{ $bankAccount->bank->name }}</td>
+                                <td class="px-4 py-2">{{ $bankAccount->bank ? $bankAccount->bank->name : '' }}</td>
                                 <td class="px-4 py-2">
                                     <a href="{{ route('bank-accounts.edit', $bankAccount) }}"
                                        class="btn btn-sm btn-info">Edit</a>
