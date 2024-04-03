@@ -13,7 +13,7 @@
                     <form action="{{ route('customers.store') }}" method="POST">
                         @csrf
                         @include('customers.form')
-                        <div class="mb-6">
+                        <div class="my-6">
                             <button type="submit" class="btn btn-pr"> {{ __('Create') }} </button>
                         </div>
                     </form>
