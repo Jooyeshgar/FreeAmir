@@ -32,7 +32,7 @@
                                 <td class="px-4 py-2">{{ $product->quantity }}</td>
                                 <td class="px-4 py-2">{{ $product->purchace_price }}</td>
                                 <td class="px-4 py-2">{{ $product->selling_price }}</td>
-                                <td class="px-4 py-2">{{ $product->productGroup->name }}</td>
+                                <td class="px-4 py-2">{{ $product->productGroup ? $product->productGroup->name : '' }}</td>
                                 <td class="px-4 py-2">
                                     <a href="{{ route('products.edit', $product) }}"
                                        class="btn btn-sm btn-info">Edit</a>
