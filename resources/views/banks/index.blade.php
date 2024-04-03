@@ -14,9 +14,7 @@
                     <table class="table w-full mt-4 overflow-auto">
                         <thead>
                         <tr>
-                            @foreach($cols as $col)
-                                <th class="px-4 py-2">{{$col}}</th>
-                            @endforeach
+                            <th class="px-4 py-2">نام</th>
                             <th class="px-4 py-2">Action</th>
                         </tr>
                         </thead>
@@ -24,9 +22,7 @@
 
                         @foreach ($banks as $bank)
                             <tr>
-                                @foreach($cols as $col)
-                                    <td class="px-4 py-2">{{ $bank[$col] }}</td>
-                                @endforeach
+                                <td class="px-4 py-2">{{ $bank->name }}</td>
                                 <td class="px-4 py-2">
                                     <a href="{{ route('banks.edit', $bank) }}"
                                        class="btn btn-sm btn-info">Edit</a>
