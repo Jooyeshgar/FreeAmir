@@ -1,37 +1,37 @@
-@foreach($fields as $key=>$field)
+<div class="grid grid-cols-2 gap-6">
 
-    <div class="mb-6">
-        <label for="{{$key}}"
-               class="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">{{$field['label']}}</label>
-
-        @switch($field['type'])
-
-            @case('select')
-                <select name="{{$key}}" id="{{$key}}">
-                    <option value="">choose a option</option>
-                    @foreach($field['options'] as $option)
-                        <option
-                            value="{{$option->id}}" {{ (isset($customerGroup) && $option->id === $customerGroup->group) ? 'selected' : ''}}>{{$option->name}}</option>
-                    @endforeach
-                </select>
-                @break
-
-            @case('textarea')
-                <textarea name="{{$key}}" id="{{$key}}" cols="30" rows="10" class="w-full border">
-                    {{ isset($customerGroup) ? $customerGroup[$key] : ''}}
-                </textarea>
-                @break
-
-            @case('checkbox')
-                <input {{ (isset($customerGroup) && $customerGroup[$key] == 1) ? 'checked' : ''}} type="checkbox"
-                       id="{{$key}}" name="{{$key}}"
-                       class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
-                @break
-
-            @default
-                <input value="{{ isset($customerGroup) ? $customerGroup[$key] : ''}}" type="{{$field['type']}}"
-                       id="{{$key}}" name="{{$key}}"
-                       class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
-        @endswitch
+    <div class="col-span-2 md:col-span-1">
+        <label id="code" class="input input-bordered flex items-center gap-2">
+            کد
+            <input type="text" id="code" name="code"
+                   class="grow" value="{{ old('code', $customerGroup->code ?? '') }}"
+                   placeholder="کد" required/>
+        </label>
     </div>
-@endforeach
+
+    <div class="col-span-2 md:col-span-1">
+        <label id="name" class="input input-bordered flex items-center gap-2">
+            نام
+            <input type="text" id="name" name="name"
+                   class="grow" value="{{ old('name', $customerGroup->name ?? '') }}"
+                   placeholder="نام" required/>
+        </label>
+    </div>
+
+    <div class="col-span-2">
+
+        <label id="description" class="form-control">
+            <span class="label">
+                <span class="label-text">توضیحات</span>
+            </span>
+            <textarea id="description" name="description"
+                      class="textarea textarea-bordered h-24" placeholder="توضیحات">{{ old('name', $customerGroup->description ?? '') }}</textarea>
+        </label>
+
+    </div>
+
+</div>
+
+
+
+
