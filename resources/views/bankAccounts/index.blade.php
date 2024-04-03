@@ -14,9 +14,11 @@
                     <table class="table w-full mt-4 overflow-auto">
                         <thead>
                         <tr>
-                            @foreach($cols as $col)
-                                <th class="px-4 py-2">{{$col}}</th>
-                            @endforeach
+                            <th class="px-4 py-2">نام حساب</th>
+                            <th class="px-4 py-2">شماره حساب</th>
+                            <th class="px-4 py-2">صاحب حساب</th>
+                            <th class="px-4 py-2">نوع</th>
+                            <th class="px-4 py-2">نام بانک</th>
                             <th class="px-4 py-2">Action</th>
                         </tr>
                         </thead>
@@ -24,9 +26,11 @@
 
                         @foreach ($bankAccounts as $bankAccount)
                             <tr>
-                                @foreach($cols as $col)
-                                    <td class="px-4 py-2">{{ $bankAccount[$col] }}</td>
-                                @endforeach
+                                <td class="px-4 py-2">{{ $bankAccount->name }}</td>
+                                <td class="px-4 py-2">{{ $bankAccount->number }}</td>
+                                <td class="px-4 py-2">{{ $bankAccount->owner }}</td>
+                                <td class="px-4 py-2">{{ $bankAccount->type }}</td>
+                                <td class="px-4 py-2">{{ $bankAccount->bank->name }}</td>
                                 <td class="px-4 py-2">
                                     <a href="{{ route('bank-accounts.edit', $bankAccount) }}"
                                        class="btn btn-sm btn-info">Edit</a>

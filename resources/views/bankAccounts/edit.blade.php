@@ -14,7 +14,7 @@
                         @csrf
                         @method('PUT')
                         @include('bankAccounts.form')
-                        <div class="mb-6">
+                        <div class="my-6">
                             <button class="btn btn-pr"> {{ __('Edit') }} </button>
                         </div>
                     </form>

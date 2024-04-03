@@ -10,36 +10,28 @@ class BankAccountController extends Controller
     public function index()
     {
         $bankAccounts = Models\BankAccount::with('bank')->paginate(12);
-        $cols = [
-            'name', 'number',
-            'type', 'owner',
-            'bank_id', 'bank_branch', 'bank_address',
-            'bank_phone', 'bank_web_page', 'desc'
-        ];
-        return view('bankAccounts.index', compact('bankAccounts', 'cols'));
+        return view('bankAccounts.index', compact('bankAccounts'));
     }
 
     public function create()
     {
         $banks = Models\Bank::select('id', 'name')->get();
-        $fieldset = $this->fieldset($banks);
-        return view('bankAccounts.create', compact('fieldset'));
+        return view('bankAccounts.create', compact('banks'));
     }
 
     public function store(Request $request)
     {
-        // TODO validate request
         $validatedData = $request->validate([
-            'name' => 'required|max:20',
-            'number' => 'required',
-            'type' => 'nullable',
-            'owner' => 'required',
-            'bank_id' => 'required',
-            'bank_branch' => 'required',
-            'bank_address' => 'required',
-            'bank_phone' => 'required',
-            'bank_web_page' => 'required',
-            'desc' => 'required'
+            'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
+            'number' => 'required|numeric',
+            'type' => 'required|integer|regex:/^[\w\d\s]*$/u',
+            'owner' => 'required|string|regex:/^[\w\d\s]*$/u',
+            'bank_id' => 'required|exists:banks,id|integer',
+            'bank_branch' => 'nullable|string|regex:/^[\w\d\s]*$/u',
+            'bank_address' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
+            'bank_phone' => 'nullable|numeric',
+            'bank_web_page' => 'nullable|string|regex:/^[\w\d\s]*$/u',
+            'desc' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u'
         ]);
 
         Models\BankAccount::create($validatedData);
@@ -47,32 +39,25 @@ class BankAccountController extends Controller
         return redirect()->route('bank-accounts.index')->with('success', 'Bank Account created successfully.');
     }
 
-    public function show($id)
-    {
-        // Read - Display a single item
-    }
-
     public function edit(Models\BankAccount $bankAccount)
     {
         $banks = Models\Bank::select('id', 'name')->get();
-        $fieldset = $this->fieldset($banks);
-        return view('bankAccounts.edit', compact('bankAccount', 'fieldset'));
+        return view('bankAccounts.edit', compact('bankAccount', 'banks'));
     }
 
     public function update(Request $request, Models\BankAccount $bankAccount)
     {
-        // TODO validate request
         $validatedData = $request->validate([
             'name' => 'required|max:20',
-            'number' => 'required',
-            'type' => 'nullable',
-            'owner' => 'required',
-            'bank_id' => 'required',
-            'bank_branch' => 'required',
-            'bank_address' => 'required',
-            'bank_phone' => 'required',
-            'bank_web_page' => 'required',
-            'desc' => 'required'
+            'number' => 'required|numeric',
+            'type' => 'required|integer|regex:/^[\w\d\s]*$/u',
+            'owner' => 'required|string|regex:/^[\w\d\s]*$/u',
+            'bank_id' => 'required|exists:banks,id|integer',
+            'bank_branch' => 'nullable|string|regex:/^[\w\d\s]*$/u',
+            'bank_address' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
+            'bank_phone' => 'nullable|numeric',
+            'bank_web_page' => 'nullable|string|regex:/^[\w\d\s]*$/u',
+            'desc' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u'
         ]);
 
         $bankAccount->update($validatedData);
@@ -85,25 +70,5 @@ class BankAccountController extends Controller
         $bankAccount->delete();
 
         return redirect()->route('bank-accounts.index')->with('success', 'Bank Account deleted successfully.');
-    }
-
-    public function fieldset($banks): array
-    {
-        return [
-            'حساب' => [
-                'name' => ['label' => 'نام', 'type' => 'text'],
-                'number' => ['label' => 'شماره', 'type' => 'number'],
-                'type' => ['label' => 'نوع', 'type' => 'text'],
-                'owner' => ['label' => 'صاحب', 'type' => 'text'],
-                'desc' => ['label' => 'توضیح', 'type' => 'textarea'],
-            ],
-            'بانک' => [
-                'bank_id' => ['label' => 'بانک', 'type' => 'select', 'options' => $banks],
-                'bank_branch' => ['label' => 'شعبه', 'type' => 'text'],
-                'bank_address' => ['label' => 'نشانی', 'type' => 'textarea'],
-                'bank_phone' => ['label' => 'تلفن', 'type' => 'number'],
-                'bank_web_page' => ['label' => 'صفحه وب', 'type' => 'text'],
-            ],
-        ];
     }
 }
