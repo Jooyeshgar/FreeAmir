@@ -10,25 +10,20 @@ class CustomerGroupController extends Controller
     public function index()
     {
         $customerGroups = Models\CustomerGroup::paginate(12);
-        $cols = [
-            'code', 'name', 'description',
-        ];
-        return view('customerGroups.index', compact('customerGroups', 'cols'));
+        return view('customerGroups.index', compact('customerGroups'));
     }
 
     public function create()
     {
-        $fields = $this->fields();
-        return view('customerGroups.create', compact('fields'));
+        return view('customerGroups.create');
     }
 
     public function store(Request $request)
     {
-        // TODO validate request
         $validatedData = $request->validate([
             'code' => 'required|unique:customer_groups,code',
-            'name' => 'required|max:20',
-            'description' => 'required',
+            'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
+            'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
         ]);
 
         Models\CustomerGroup::create($validatedData);
@@ -36,24 +31,18 @@ class CustomerGroupController extends Controller
         return redirect()->route('customer-groups.index')->with('success', 'Customer group created successfully.');
     }
 
-    public function show($id)
-    {
-        // Read - Display a single item
-    }
 
     public function edit(Models\CustomerGroup $customerGroup)
     {
-        $fields = $this->fields();
-        return view('customerGroups.edit', compact('customerGroup', 'fields'));
+        return view('customerGroups.edit', compact('customerGroup'));
     }
 
     public function update(Request $request, Models\CustomerGroup $customerGroup)
     {
-        // TODO validate request
         $validatedData = $request->validate([
             'code' => 'required|exists:customer_groups,code',
-            'name' => 'required|max:20',
-            'description' => 'required',
+            'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
+            'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
         ]);
 
         $customerGroup->update($validatedData);
@@ -68,12 +57,4 @@ class CustomerGroupController extends Controller
         return redirect()->route('customer-groups.index')->with('success', 'Customer group deleted successfully.');
     }
 
-    public function fields(): array
-    {
-        return [
-            'code' => ['label' => 'کد طرف حساب', 'type' => 'text'],
-            'name' => ['label' => 'نام', 'type' => 'text'],
-            'description' => ['label' => 'توضیحات', 'type' => 'textarea']
-        ];
-    }
 }

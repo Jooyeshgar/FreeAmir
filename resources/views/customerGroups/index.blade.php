@@ -14,9 +14,8 @@
                     <table class="table w-full mt-4 overflow-auto">
                         <thead>
                         <tr>
-                            @foreach($cols as $col)
-                                <th class="px-4 py-2">{{$col}}</th>
-                            @endforeach
+                            <th class="px-4 py-2">کد</th>
+                            <th class="px-4 py-2">نام</th>
                             <th class="px-4 py-2">Action</th>
                         </tr>
                         </thead>
@@ -24,9 +23,8 @@
 
                         @foreach ($customerGroups as $customerGroup)
                             <tr>
-                                @foreach($cols as $col)
-                                    <td class="px-4 py-2">{{ $customerGroup[$col] }}</td>
-                                @endforeach
+                                <td class="px-4 py-2">{{ $customerGroup->code }}</td>
+                                <td class="px-4 py-2">{{ $customerGroup->name }}</td>
                                 <td class="px-4 py-2">
                                     <a href="{{ route('customer-groups.edit', $customerGroup) }}"
                                        class="btn btn-sm btn-info">Edit</a>
