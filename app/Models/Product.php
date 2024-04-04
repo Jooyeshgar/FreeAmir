@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
+    use HasFactory;
     public $timestamps = false;
 
     protected $fillable = [
@@ -22,7 +25,6 @@ class Product extends Model
         'description'
     ];
 
-    // Define a relationship with the product group (if applicable)
 
     public function group()
     {

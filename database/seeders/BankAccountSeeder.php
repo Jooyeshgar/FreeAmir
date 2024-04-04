@@ -1,26 +1,32 @@
 <?php
 
 namespace Database\Seeders;
-
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
+use App\Models\Bank;
+use App\Models\BankAccount;
 use Carbon\Carbon;
+use Illuminate\Database\Seeder;
 
 class BankAccountSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     *
-     * @return void
-     */
     public function run()
     {
-        $subjectData = [
-            ['Id' => 1, 'name' => 'Account 1', 'number' => '123456789', 'type' => 1, 'owner' => 'John Doe', 'bank_id' => DB::table('banks')->where('Name', 'پارسیان')->first()->id, 'bank_branch' => 'Main Branch', 'bank_address' => '123 Main St', 'bank_phone' => '123-456-7890', 'bank_web_page' => 'www.example.com', 'desc' => 'Main checking account', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['Id' => 2, 'name' => 'Account 2', 'number' => '987654321', 'type' => 2, 'owner' => 'Jane Doe', 'bank_id' => DB::table('banks')->where('Name', 'دی')->first()->id, 'bank_branch' => 'Branch 2', 'bank_address' => '456 Secondary St', 'bank_phone' => '098-765-4321', 'bank_web_page' => 'www.example2.com', 'desc' => 'Secondary savings account', 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            // ...
-        ];
+        $banks = Bank::all();
 
-        DB::table('bank_accounts')->insert($subjectData);
+        foreach ($banks as $bank) {
+            BankAccount::create([
+                'name' => 'Account Name',
+                'number' => rand(1000000000, 9999999999),
+                'type' => 1,
+                'owner' => 'John Doe',
+                'bank_id' => $bank->id,
+                'bank_branch' => 'Main Branch',
+                'bank_address' => '123 Bank St',
+                'bank_phone' => '123-456-7890',
+                'bank_web_page' => 'www.bankwebsite.com',
+                'desc' => 'Main bank account',
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now()
+            ]);
+        }
     }
 }
