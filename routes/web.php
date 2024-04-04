@@ -26,3 +26,4 @@ Route::resource('customers', Controllers\CustomerController::class);
 Route::resource('customer-groups', Controllers\CustomerGroupController::class);
 Route::resource('bank-accounts', Controllers\BankAccountController::class);
 Route::resource('banks', Controllers\BankController::class);
+Route::resource('configs', Controllers\ConfigController::class);

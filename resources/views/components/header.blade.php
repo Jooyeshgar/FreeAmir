@@ -14,6 +14,7 @@
           <li><a href="{{ route('customer-groups.index') }}" class="hover:text-gray-500">Customer Groups</a></li>
           <li><a href="{{ route('bank-accounts.index') }}" class="hover:text-gray-500">Bank Accounts</a></li>
           <li><a href="{{ route('banks.index') }}" class="hover:text-gray-500">Banks</a></li>
+          <li><a href="{{ route('configs.index') }}" class="hover:text-gray-500">Configs</a></li>
           <!-- <li><a href="#" class="hover:text-gray-500">Contact</a></li> -->
         </ul>
       </div>
