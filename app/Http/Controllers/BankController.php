@@ -10,23 +10,18 @@ class BankController extends Controller
     public function index()
     {
         $banks = Models\Bank::paginate(12);
-        $cols = [
-            'name'
-        ];
-        return view('banks.index', compact('banks', 'cols'));
+        return view('banks.index', compact('banks'));
     }
 
     public function create()
     {
-        $fields = $this->fields();
-        return view('banks.create', compact('fields'));
+        return view('banks.create');
     }
 
     public function store(Request $request)
     {
-        // TODO validate request
         $validatedData = $request->validate([
-            'name'=>'required|max:20',
+            'name'=>'required|max:20|string|regex:/^[\w\d\s]*$/u',
         ]);
 
         Models\Bank::create($validatedData);
@@ -34,22 +29,15 @@ class BankController extends Controller
         return redirect()->route('banks.index')->with('success', 'Bank created successfully.');
     }
 
-    public function show($id)
-    {
-        // Read - Display a single item
-    }
-
     public function edit(Models\Bank $bank)
     {
-        $fields = $this->fields();
-        return view('banks.edit', compact('bank', 'fields'));
+        return view('banks.edit', compact('bank'));
     }
 
     public function update(Request $request, Models\Bank $bank)
     {
-        // TODO validate request
         $validatedData = $request->validate([
-            'name'=>'required|max:20',
+            'name'=>'required|max:20|string|regex:/^[\w\d\s]*$/u',
         ]);
 
         $bank->update($validatedData);
@@ -62,12 +50,5 @@ class BankController extends Controller
         $bank->delete();
 
         return redirect()->route('banks.index')->with('success', 'Bank deleted successfully.');
-    }
-
-    public function fields(): array
-    {
-        return [
-            'name' => ['label' => 'نام بانک', 'type' => 'text'],
-        ];
     }
 }
