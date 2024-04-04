@@ -32,7 +32,7 @@
             صاحب
             <input type="text" id="owner" name="owner"
                    class="grow" value="{{ old('owner', $bankAccount->owner ?? '') }}"
-                   placeholder="صاحب" required/>
+                   placeholder="صاحب" />
         </label>
     </div>
 

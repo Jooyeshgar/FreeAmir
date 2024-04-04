@@ -25,7 +25,7 @@ class BankAccountController extends Controller
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
             'number' => 'required|numeric',
             'type' => 'required|integer|regex:/^[\w\d\s]*$/u',
-            'owner' => 'required|string|regex:/^[\w\d\s]*$/u',
+            'owner' => 'nullable|string|regex:/^[\w\d\s]*$/u',
             'bank_id' => 'required|exists:banks,id|integer',
             'bank_branch' => 'nullable|string|regex:/^[\w\d\s]*$/u',
             'bank_address' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
