@@ -13,6 +13,8 @@ class ProductGroup extends Model
         'sellId',
     ];
 
+    public $timestamps = false;
+
     // Define relationships with other models (e.g., Subject)
 
     public function buySubject()

@@ -9,6 +9,7 @@
           <li><a href="{{ route('subjects.index') }}" class="hover:text-gray-500">Subjects</a></li>
           <li><a href="{{ route('transactions.index') }}" class="hover:text-gray-500">Transactions</a></li>
           <li><a href="{{ route('products.index') }}" class="hover:text-gray-500">Products</a></li>
+          <li><a href="{{ route('product-groups.index') }}" class="hover:text-gray-500">Product Groups</a></li>
           <li><a href="{{ route('customers.index') }}" class="hover:text-gray-500">Customers</a></li>
           <li><a href="{{ route('customer-groups.index') }}" class="hover:text-gray-500">Customer Groups</a></li>
           <li><a href="{{ route('bank-accounts.index') }}" class="hover:text-gray-500">Bank Accounts</a></li>
