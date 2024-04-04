@@ -5,21 +5,19 @@
         </h2>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 bg-white border-b border-gray-200">
-                    <x-show-message-bags/>
-                    <form action="{{ route('bank-accounts.update', $bankAccount) }}" method="POST">
-                        @csrf
-                        @method('PUT')
-                        @include('bankAccounts.form')
-                        <div class="my-6">
-                            <button class="btn btn-pr"> {{ __('Edit') }} </button>
-                        </div>
-                    </form>
+    <div class="card bg-base-100 shadow-xl">
+        <form action="{{ route('bank-accounts.update', $bankAccount) }}" method="POST">
+            @csrf
+            @method('PUT')
+            <div class="card-body">
+                <div class="card-title">{{ __('Edit bank account') }}</div>
+                <x-show-message-bags />
+
+                @include('bankAccounts.form')
+                <div class="card-actions">
+                    <button class="btn btn-pr"> {{ __('Edit') }} </button>
                 </div>
             </div>
-        </div>
+        </form>
     </div>
 </x-app-layout>

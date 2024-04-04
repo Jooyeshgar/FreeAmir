@@ -7,11 +7,11 @@
   </head>
   <body>
     <x-header/>
-
-    <main class="max-w-5xl mx-auto py-12">
-      {{ $slot }}
-    </main>
-
+    <div class="bg-neutral-200">
+      <main class="max-w-5xl mx-auto py-12">
+        {{ $slot }}
+      </main>
+    </div>
     <x-footer/>
   </body>
 </html>

@@ -5,10 +5,9 @@
         </h2>
     </x-slot>
     <x-show-message-bags/>
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 bg-white border-b border-gray-200 overflow-auto">
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <div class="card-actions">
                     <a href="{{ route('transactions.create') }}" class="btn btn-primary">Create transaction</a>
 
                     <table class="table w-full mt-4 overflow-auto">
@@ -53,5 +52,4 @@
                 </div>
             </div>
         </div>
-    </div>
 </x-app-layout>
