@@ -94,7 +94,7 @@
                     کد اقتصادی
                     <input type="number" id="ecnmcs_code" name="ecnmcs_code"
                            class="grow" value="{{ old('ecnmcs_code', $customer->ecnmcs_code ?? '') }}"
-                           placeholder="کد اقتصادی" required/>
+                           placeholder="کد اقتصادی" />
                 </label>
             </div>
 
@@ -112,7 +112,7 @@
                     کد ملی
                     <input type="number" id="personal_code" name="personal_code"
                            class="grow" value="{{ old('personal_code', $customer->personal_code ?? '') }}"
-                           placeholder="کد ملی" required/>
+                           placeholder="کد ملی" />
                 </label>
             </div>
         </fieldset>
@@ -124,7 +124,7 @@
                     تلفن
                     <input type="tel" id="phone" name="phone"
                            class="grow" value="{{ old('phone', $customer->phone ?? '') }}"
-                           placeholder="تلفن" required/>
+                           placeholder="تلفن" />
                 </label>
             </div>
             <div class="col-span-2 md:col-span-1">
@@ -132,7 +132,7 @@
                     فاکس
                     <input type="tel" id="fax" name="fax"
                            class="grow" value="{{ old('fax', $customer->fax ?? '') }}"
-                           placeholder="فاکس" required/>
+                           placeholder="فاکس" />
                 </label>
             </div>
             <div class="col-span-2 md:col-span-1">
