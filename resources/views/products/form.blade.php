@@ -13,6 +13,7 @@
                 @endforeach
             </select>
         </label>
+        <a class="link text-blue-500" href="{{ route('product-groups.create') }}">اضافه کردن کالا</a>
     </div>
 
     <div class="col-span-2 md:col-span-1">

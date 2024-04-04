@@ -39,6 +39,7 @@
                 @endforeach
                 </tbody>
             </table>
+            {!! $productGroups->links() !!}
         </div>
     </div>
 </x-app-layout>

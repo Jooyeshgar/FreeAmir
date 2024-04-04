@@ -78,6 +78,7 @@
                         @endforeach
                     </select>
                 </label>
+                <a class="link text-blue-500" href="{{ route('customer-groups.create') }}">اضافه کردن طرف حساب</a>
             </div>
 
             <div class="col-span-2 md:col-span-1">

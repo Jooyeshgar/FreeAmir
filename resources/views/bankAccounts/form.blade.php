@@ -63,6 +63,7 @@
                 @endforeach
             </select>
         </label>
+        <a class="link text-blue-500" href="{{ route('banks.create') }}">اضافه کردن بانک</a>
     </div>
     <div class="col-span-2 md:col-span-1">
         <label id="bank_branch" class="input input-bordered flex items-center gap-2">
