@@ -14,9 +14,12 @@
                     <table class="table w-full mt-4 overflow-auto">
                         <thead>
                         <tr>
-                            @foreach($cols as $col)
-                                <th class="px-4 py-2">{{$col}}</th>
-                            @endforeach
+                            <th class="px-4 py-2">کد</th>
+                            <th class="px-4 py-2">نام</th>
+                            <th class="px-4 py-2">مقدار</th>
+                            <th class="px-4 py-2">قیمت خرید</th>
+                            <th class="px-4 py-2">قیمت فروش</th>
+                            <th class="px-4 py-2">گروه کالا</th>
                             <th class="px-4 py-2">Action</th>
                         </tr>
                         </thead>
@@ -24,9 +27,12 @@
 
                         @foreach ($products as $product)
                             <tr>
-                                @foreach($cols as $col)
-                                    <td class="px-4 py-2">{{ $product[$col] }}</td>
-                                @endforeach
+                                <td class="px-4 py-2">{{ $product->code }}</td>
+                                <td class="px-4 py-2">{{ $product->name }}</td>
+                                <td class="px-4 py-2">{{ $product->quantity }}</td>
+                                <td class="px-4 py-2">{{ $product->purchace_price }}</td>
+                                <td class="px-4 py-2">{{ $product->selling_price }}</td>
+                                <td class="px-4 py-2">{{ $product->productGroup ? $product->productGroup->name : '' }}</td>
                                 <td class="px-4 py-2">
                                     <a href="{{ route('products.edit', $product) }}"
                                        class="btn btn-sm btn-info">Edit</a>
