@@ -22,7 +22,7 @@ class ProductGroupController extends Controller
     {
         // TODO validate request
         $validatedData = $request->validate([
-            'code' => 'required|unique:product_groups,code',
+            'code' => 'required|unique:product_groups,code|regex:/^\d{3}$/',
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u'
         ]);
 
@@ -40,7 +40,7 @@ class ProductGroupController extends Controller
     {
         // TODO validate request
         $validatedData = $request->validate([
-            'code' => 'required|exists:product_groups,code',
+            'code' => 'required|unique:product_groups,code,'.$productGroup->id.',|regex:/^\d{3}$/',
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u'
         ]);
 

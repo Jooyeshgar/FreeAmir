@@ -5,21 +5,18 @@
         </h2>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 bg-white border-b border-gray-200">
-                    <x-show-message-bags/>
-                    <form action="{{ route('product-groups.update', $productGroup) }}" method="POST">
-                        @csrf
-                        @method('PUT')
-                        @include('productGroups.form')
-                        <div class="my-6">
-                            <button class="btn btn-pr"> {{ __('Edit') }} </button>
-                        </div>
-                    </form>
+    <div class="card bg-base-100 shadow-xl">
+        <form action="{{ route('product-groups.update', $productGroup) }}" method="POST">
+            @method('PUT')
+            @csrf
+            <div class="card-body">
+                <h2 class="card-title">{{ __('Edit product group') }}</h2>
+                <x-show-message-bags/>
+                @include('productGroups.form')
+                <div class="card-actions justify-end">
+                    <button type="submit" class="btn btn-primary">{{ __('Edit') }}</button>
                 </div>
             </div>
-        </div>
+        </form>
     </div>
 </x-app-layout>
