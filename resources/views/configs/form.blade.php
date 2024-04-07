@@ -20,7 +20,7 @@
 
 
     </div>
-    <img class="block w-12 h-auto rounded-full" src="{{ asset("storage/{$configs['co_logo']}") }}" alt="{{ $configs['co_logo'] }}">
+    <img class="block w-12 h-auto rounded-full" src="{{ asset('storage/' . (old('co_logo') ?? ($configs['co_logo'] ?? ''))) }}" alt="{{ old('co_logo', $configs['co_logo'] ?? '') }}">
     <div class="col-span-2">
 
         <div class="col-span-2">
