@@ -1,5 +1,5 @@
 <div class="mb-4">
-    <input type="checkbox" id="toggleFields" class="mr-2">
+    <input type="checkbox" id="toggleFields" class="mr-2" checked>
     <label for="toggleFields" class="text-gray-700">Disable Fields</label>
 </div>
 <fieldset id="companyForm" class="grid grid-cols-2 gap-6 border p-5 my-3">
@@ -150,6 +150,10 @@
 </fieldset>
 
 <script>
+
+    toggleFormFields('companyForm', true);
+    toggleFormFields('subjectForm', true);
+
     document.getElementById('toggleFields').addEventListener('change', function() {
         toggleFormFields('companyForm', this.checked);
         toggleFormFields('subjectForm', this.checked);
