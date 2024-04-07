@@ -1,4 +1,8 @@
-<fieldset class="grid grid-cols-2 gap-6 border p-5 my-3">
+<div class="mb-4">
+    <input type="checkbox" id="toggleFields" class="mr-2">
+    <label for="toggleFields" class="text-gray-700">Disable Fields</label>
+</div>
+<fieldset id="companyForm" class="grid grid-cols-2 gap-6 border p-5 my-3">
     <legend>شرکت</legend>
     <div class="col-span-2 md:col-span-1">
         <label id="co_name" class="input input-bordered flex items-center gap-2">
@@ -64,7 +68,7 @@
     </div>
 </fieldset>
 
-<fieldset class="grid grid-cols-2 gap-6 border p-5 my-3">
+<fieldset id="subjectForm" class="grid grid-cols-2 gap-6 border p-5 my-3">
     <legend>سر فصل</legend>
 
     <div class="col-span-2 md:col-span-1">
@@ -145,3 +149,16 @@
     </div>
 </fieldset>
 
+<script>
+    document.getElementById('toggleFields').addEventListener('change', function() {
+        toggleFormFields('companyForm', this.checked);
+        toggleFormFields('subjectForm', this.checked);
+    });
+
+    function toggleFormFields(formId, disable) {
+        let formFields = document.getElementById(formId).elements;
+        for (let i = 0; i < formFields.length; i++) {
+            formFields[i].disabled = disable;
+        }
+    }
+</script>
