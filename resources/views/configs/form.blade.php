@@ -13,7 +13,10 @@
             لوگوی شرکت خود را انتخاب کنید
         </label>
             <input type="file" id="co_logo" name="co_logo" class="file-input w-full max-w-xs" accept="image/*"/>
+
+
     </div>
+    <img class="block w-12 h-auto rounded-full" src="{{ asset("storage/{$configs['co_logo']}") }}" alt="{{ $configs['co_logo'] }}">
     <div class="col-span-2">
 
         <div class="col-span-2">

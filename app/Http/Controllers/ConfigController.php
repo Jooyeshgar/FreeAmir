@@ -11,18 +11,13 @@ class ConfigController extends Controller
 {
     public function index()
     {
-        $configs = Models\Config::paginate(12);
-        return view('configs.index', compact('configs'));
-    }
-
-    public function create()
-    {
         $subjects = Models\Subject::all();
         $banks = Models\Bank::all();
         $configs = Models\Config::all();
         $configs = $configs->pluck('value', 'key')->toArray();
-        return view('configs.create', compact('banks', 'subjects', 'configs'));
+        return view('configs.index', compact('configs', 'banks', 'subjects', 'configs'));
     }
+
 
     public function store(Request $request)
     {
@@ -85,10 +80,4 @@ class ConfigController extends Controller
         return redirect()->route('configs.index')->with('success', 'Config created successfully.');
     }
 
-    public function destroy(Models\Config $config)
-    {
-        $config->delete();
-
-        return redirect()->route('configs.index')->with('success', 'Config deleted successfully.');
-    }
 }
