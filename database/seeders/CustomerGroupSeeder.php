@@ -2,17 +2,17 @@
 
 namespace Database\Seeders;
 
+use App\Models\CustomerGroup;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class CustomerGroupSeeder extends Seeder
 {
     public function run()
     {
         $customerGroups = [
-            ['id' => 1, 'code' => 'general', 'name' => 'عمومی', 'description' => 'گروه مشتریان عمومی'],
+            ['code' => 'general', 'name' => 'عمومی', 'description' => 'گروه مشتریان عمومی'],
         ];
 
-        DB::table('customer_groups')->insert($customerGroups);
+        CustomerGroup::insert($customerGroups);
     }
 }

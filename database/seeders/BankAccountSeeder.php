@@ -1,9 +1,9 @@
 <?php
 
 namespace Database\Seeders;
+
 use App\Models\Bank;
 use App\Models\BankAccount;
-use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 
 class BankAccountSeeder extends Seeder
@@ -24,8 +24,6 @@ class BankAccountSeeder extends Seeder
                 'bank_phone' => '123-456-7890',
                 'bank_web_page' => 'www.bankwebsite.com',
                 'desc' => 'Main bank account',
-                'created_at' => Carbon::now(),
-                'updated_at' => Carbon::now()
             ]);
         }
     }

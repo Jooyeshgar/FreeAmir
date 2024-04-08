@@ -3,21 +3,20 @@
 namespace Database\Factories;
 
 use App\Models\Customer;
+use App\Models\Bank;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\DB;
 
 class CustomerFactory extends Factory
 {
     protected $model = Customer::class;
 
-
     public function definition()
     {
-        $bankIds = DB::table('banks')->pluck('Id')->toArray();
+        $bankIds = Bank::pluck('id')->toArray();
         return [
             'code' => $this->faker->unique()->numerify('#####'),
             'name' => $this->faker->name,
-            'subject_id' => $this->faker->randomElement(DB::table('subjects')->pluck('id')->toArray()),
+            'subject_id' => $this->faker->randomElement(Customer::pluck('id')->toArray()),
             'phone' => substr($this->faker->phoneNumber, 0, 15),
             'cell' => substr($this->faker->phoneNumber, 0, 15),
             'fax' => substr($this->faker->phoneNumber, 0, 15),
@@ -44,7 +43,7 @@ class CustomerFactory extends Factory
             'type_seller' => $this->faker->boolean,
             'type_mate' => $this->faker->boolean,
             'type_agent' => $this->faker->boolean,
-            'introducer_id' => $this->faker->randomElement(DB::table('customers')->pluck('id')->toArray()),
+            'introducer_id' => $this->faker->randomElement(Customer::pluck('id')->toArray()),
             'commission' => $this->faker->randomFloat(2, 0, 100),
             'marked' => $this->faker->boolean,
             'reason' => $this->faker->text,
