@@ -8,8 +8,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class BankAccount extends Model
 {
 
-    public $timestamps = false;
-
     protected $fillable = [
         'name',
         'number',

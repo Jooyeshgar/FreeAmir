@@ -3,101 +3,101 @@
 namespace App\Http\Controllers;
 
 use App\Models;
+use App\Models\Document;
+use App\Models\Subject;
+use App\Models\Transaction;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+
 
 class TransactionController extends Controller
 {
     public function index()
     {
-        $transactions = Models\Transaction::with('customer')->paginate(12);
-        $cols = [
-            'code', 'date', 'bill', 'customer', 'addition', 'subtraction', 'tax',
-            'payable_amount', 'cash_payment', 'ship_date', 'destination',
-            'ship_via', 'permanent', 'description', 'sell', 'activated'
-        ];
+        $transactions = Transaction::all();
+        $cols = ['ID', 'Subject ID', 'Document ID', 'User ID', 'Description', 'Value'];
+
         return view('transactions.index', compact('transactions', 'cols'));
     }
 
+
     public function create()
     {
-        $customers = Models\Customer::select('id', 'name')->get();
-        $fields = $this->fields($customers);
-        return view('transactions.create', compact('fields'));
+        $users = User::all();
+        $subjects = Subject::all();
+        $transaction = new Transaction;
+
+        return view('transactions.create', compact('users', 'subjects','transaction'));
     }
+
 
     public function store(Request $request)
     {
-        // TODO validate request
-        $validatedData = $request->validate([
-            'code' => 'required',
-            'date' => 'required',
-            'bill' => 'required',
-            'customer_id' => 'required',
-            'addition' => 'required',
-            'subtraction' => 'required',
-            'tax' => 'required',
-            'payable_amount' => 'required',
-            'cash_payment' => 'required',
-            'destination' => 'required',
-            'ship_date' => 'required',
-            'ship_via' => 'required',
-            'permanent' => 'nullable',
-            'description' => 'required',
-            'sell' => 'nullable',
-            'activated' => 'nullable'
-        ]);
+        $document = Document::create();
 
-        $validatedData['permanent'] = isset($validatedData['permanent']) ? 1 : 0;
-        $validatedData['sell'] = isset($validatedData['sell']) ? 1 : 0;
-        $validatedData['activated'] = isset($validatedData['activated']) ? 1 : 0;
+        foreach ($request->input('transactions') as $transactionData) {
+            $validatedData = Validator::make($transactionData, [
+                'subject_id' => 'required|exists:subjects,id',
+                'user_id' => 'required|exists:users,id',
+                'value' => 'required|integer',
+                'desc' => 'required|string',
+            ])->validate();
 
-        Models\Transaction::create($validatedData);
+            Transaction::create($validatedData + ['document_id' => $document->id]);
+        }
 
-        return redirect()->route('transactions.index')->with('success', 'Transaction created successfully.');
+        return redirect()->route('transactions.index')->with('success', 'Transactions created successfully.');
     }
+
+
+
+
+
 
     public function show($id)
     {
         // Read - Display a single item
     }
 
-    public function edit(Models\Transaction $transaction)
+    public function edit($id)
     {
-        $customers = Models\Customer::select('id', 'name')->get();
-        $fields = $this->fields($customers);
-        return view('transactions.edit', compact('transaction', 'fields'));
+
+        $transaction = Models\Transaction::find($id);
+
+        if ($transaction) {
+            $users = User::all();
+            $subjects = Subject::all();
+
+            return view('transactions.edit', compact('users', 'subjects', 'transaction'));
+        } else {
+            return redirect()->route('transactions.index')->with('error', 'Transaction not found.');
+        }
     }
 
-    public function update(Request $request, Models\Transaction $transaction)
+
+
+    public function update(Request $request, $id)
     {
-        // TODO validate request
         $validatedData = $request->validate([
-            'code' => 'required',
-            'date' => 'required',
-            'bill' => 'required',
-            'customer_id' => 'required',
-            'addition' => 'required',
-            'subtraction' => 'required',
-            'tax' => 'required',
-            'payable_amount' => 'required',
-            'cash_payment' => 'required',
-            'destination' => 'required',
-            'ship_date' => 'required',
-            'ship_via' => 'required',
-            'permanent' => 'nullable',
-            'description' => 'required',
-            'sell' => 'nullable',
-            'activated' => 'nullable'
+            'transactions.0.subject_id' => 'exists:subjects,id',
+            'transactions.0.user_id' => 'exists:users,id',
+            'transactions.0.value' => 'integer',
+            'transactions.0.desc' => 'string',
         ]);
 
-        $validatedData['permanent'] = isset($validatedData['permanent']) ? 1 : 0;
-        $validatedData['sell'] = isset($validatedData['sell']) ? 1 : 0;
-        $validatedData['activated'] = isset($validatedData['activated']) ? 1 : 0;
+        $transaction = Transaction::findOrFail($id);
 
-        $transaction->update($validatedData);
+        $transactionData = $validatedData['transactions'][0];
+
+        $transaction->update($transactionData);
 
         return redirect()->route('transactions.index')->with('success', 'Transaction updated successfully.');
     }
+
+
+
+
 
     public function destroy(Models\Transaction $transaction)
     {
