@@ -2,45 +2,46 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Transaction extends Model
 {
-    public $timestamps = true;
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array
+     */
     protected $fillable = [
-        'code',
-        'date',
-        'bill',
-        'customer_id',
-        'addition',
-        'subtraction',
-        'tax',
-        'payable_amount',
-        'cash_payment',
-        'ship_date',
-        'destination',
-        'ship_via',
-        'permanent',
-        'description',
-        'sell',
-        'activated',
+        'subject_id',
+        'document_id',
+        'user_id',
+        'desc',
+        'value',
     ];
 
-//    public function subject(): BelongsTo
-//    {
-//        return $this->belongsTo(Subject::class);
-//    }
-//
-//    public function document(): BelongsTo
-//    {
-//        return $this->belongsTo(Document::class);
-//    }
-
-    public function customer(): BelongsTo
+    /**
+     * Get the subject associated with the transaction.
+     */
+    public function subject()
     {
-        return $this->belongsTo(Customer::class);
+        return $this->belongsTo(Subject::class);
     }
 
+    /**
+     * Get the document associated with the transaction.
+     */
+    public function document()
+    {
+        return $this->belongsTo(Document::class);
+    }
+
+    /**
+     * Get the user associated with the transaction.
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

@@ -16,29 +16,20 @@
                             @foreach($cols as $col)
                                 <th class="px-4 py-2">{{$col}}</th>
                             @endforeach
+                            <th class="px-4 py-2">Actions</th>
                         </tr>
                         </thead>
                         <tbody>
                         @foreach ($transactions as $transaction)
                             <tr>
-                                <td class="px-4 py-2">{{ $transaction->code }}</td>
-                                <td class="px-4 py-2">{{ $transaction->date }}</td>
-                                <td class="px-4 py-2">{{ $transaction->bill }}</td>
-                                <td class="px-4 py-2">{{ $transaction->customer->name }}</td>
-                                <td class="px-4 py-2">{{ $transaction->addition  }}</td>
-                                <td class="px-4 py-2">{{ $transaction->subtraction }}</td>
-                                <td class="px-4 py-2">{{ $transaction->tax  }}</td>
-                                <td class="px-4 py-2">{{ $transaction->payable_amount  }}</td>
-                                <td class="px-4 py-2">{{ $transaction->cash_payment  }}</td>
-                                <td class="px-4 py-2">{{ $transaction->destination  }}</td>
-                                <td class="px-4 py-2">{{ $transaction->ship_date  }}</td>
-                                <td class="px-4 py-2">{{ $transaction->ship_via  }}</td>
-                                <td class="px-4 py-2">{{ $transaction->permanent  }}</td>
-                                <td class="px-4 py-2">{{ $transaction->description  }}</td>
-                                <td class="px-4 py-2">{{ $transaction->sell  }}</td>
-                                <td class="px-4 py-2">{{ $transaction->activated  }}</td>
+                                <td class="px-4 py-2">{{ $transaction->id }}</td>
+                                <td class="px-4 py-2">{{ $transaction->subject->name }}</td>
+                                <td class="px-4 py-2">{{ $transaction->document_id }}</td>
+                                <td class="px-4 py-2">{{ $transaction->user->name }}</td>
+                                <td class="px-4 py-2">{{ $transaction->desc }}</td>
+                                <td class="px-4 py-2">{{ $transaction->value }}</td>
                                 <td class="px-4 py-2">
-                                    <a href="{{ route('transactions.edit', $transaction) }}" class="btn btn-sm btn-info">Edit</a>
+                                    <a href="{{ route('transactions.edit', $transaction->id) }}" class="btn btn-sm btn-info">Edit</a>
                                     <form action="{{ route('transactions.destroy', $transaction) }}" method="POST" class="inline-block">
                                         @csrf
                                         @method('DELETE')
