@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Customer;
 use App\Models\Bank;
+use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class CustomerFactory extends Factory
@@ -16,7 +17,7 @@ class CustomerFactory extends Factory
         return [
             'code' => $this->faker->unique()->numerify('#####'),
             'name' => $this->faker->name,
-            'subject_id' => $this->faker->randomElement(Customer::pluck('id')->toArray()),
+            'subject_id' => Subject::pluck('id')->toArray(),
             'phone' => substr($this->faker->phoneNumber, 0, 15),
             'cell' => substr($this->faker->phoneNumber, 0, 15),
             'fax' => substr($this->faker->phoneNumber, 0, 15),
