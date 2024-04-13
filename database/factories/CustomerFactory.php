@@ -17,7 +17,7 @@ class CustomerFactory extends Factory
         return [
             'code' => $this->faker->unique()->numerify('#####'),
             'name' => $this->faker->name,
-            'subject_id' => Subject::pluck('id')->toArray(),
+            'subject_id' => $this->faker->randomElement(Subject::pluck('id')->toArray()),
             'phone' => substr($this->faker->phoneNumber, 0, 15),
             'cell' => substr($this->faker->phoneNumber, 0, 15),
             'fax' => substr($this->faker->phoneNumber, 0, 15),
