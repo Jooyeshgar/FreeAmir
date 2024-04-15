@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Factor extends Model
+class Invoice extends Model
 {
 
     public $timestamps = true;
@@ -37,5 +37,4 @@ class Factor extends Model
     {
         return $this->belongsTo(Customer::class, 'customer_id');
     }
-
 }

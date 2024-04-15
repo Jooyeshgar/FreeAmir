@@ -17,7 +17,7 @@ class Payment extends Model
         'transaction_id',
         'bill_id',
         'track_code',
-        'factor_id',
+        'invoice_id',
         'payer_name',
     ];
 
@@ -35,9 +35,8 @@ class Payment extends Model
         return $this->belongsTo(Bill::class);
     }
 
-    public function factor()
+    public function invoice()
     {
-        return $this->belongsTo(Factor::class);
+        return $this->belongsTo(Invoice::class);
     }
-
 }

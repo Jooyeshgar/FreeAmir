@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateFactorItemsTable extends Migration
+class CreateInvoiceItemsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,9 +13,9 @@ class CreateFactorItemsTable extends Migration
      */
     public function up()
     {
-        Schema::create('factor_items', function (Blueprint $table) {
+        Schema::create('invoice_items', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('factor_id')->nullable();
+            $table->unsignedBigInteger('invoice_id')->nullable();
             $table->unsignedBigInteger('product_id')->nullable();
             $table->unsignedBigInteger('transaction_id')->nullable();
             $table->decimal('quantity', 10, 2);
@@ -25,9 +25,9 @@ class CreateFactorItemsTable extends Migration
             $table->text('description')->nullable();
             $table->timestamps();
 
-            $table->foreign('factor_id')->references('id')->on('factors')->onDelete('set null'); // Assuming factors model is named FactorTable
+            $table->foreign('invoice_id')->references('id')->on('invoices')->onDelete('set null'); // Assuming invoices model is named InvoiceTable
             $table->foreign('product_id')->references('id')->on('products')->onDelete('set null');
-            $table->foreign('transaction_id')->references('id')->on('transactions')->onDelete('set null'); // Assuming factors model is named FactorTable
+            $table->foreign('transaction_id')->references('id')->on('transactions')->onDelete('set null'); // Assuming invoices model is named InvoiceTable
         });
     }
 
@@ -38,6 +38,6 @@ class CreateFactorItemsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('factor_items');
+        Schema::dropIfExists('invoice_items');
     }
 }
