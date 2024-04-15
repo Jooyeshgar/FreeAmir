@@ -12,6 +12,4 @@ class Bank extends Model
     protected $fillable = [
         'name'
     ];
-
-    public $timestamps = false;
 }
