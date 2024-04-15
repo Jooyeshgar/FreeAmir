@@ -55,6 +55,11 @@ php artisan migrate
 php artisan db:seed
 ```
 
+optional demo data
+```bash
+php artisan db:seed --class DemoSeeder
+```
+
 8. **Start the vite:**
 
 ```bash
@@ -79,7 +84,7 @@ We welcome contributions to the Amir project! Please refer to the CONTRIBUTING.m
 
 **License:**
 
-This project is licensed under the MIT License. See the LICENSE: LICENSE file for details.
+This project is licensed under the GPL-3 License. See the LICENSE: LICENSE file for details.
 
 **Support:**
 
