@@ -14,16 +14,20 @@ class CustomerFactory extends Factory
     public function definition()
     {
         $bankIds = Bank::pluck('id')->toArray();
+        $name = $this->faker->name;
         return [
             'code' => $this->faker->unique()->numerify('#####'),
-            'name' => $this->faker->name,
-            'subject_id' => $this->faker->randomElement(Customer::pluck('id')->toArray()),
+            'name' => $name,
+            'subject_id' => Subject::factory([
+                'name' => $name,
+                'parent_id' => 0
+            ]),
             'phone' => substr($this->faker->phoneNumber, 0, 15),
             'cell' => substr($this->faker->phoneNumber, 0, 15),
             'fax' => substr($this->faker->phoneNumber, 0, 15),
             'address' => $this->faker->address,
             'postal_code' => $this->faker->postcode,
-            'email' => substr($this->faker->unique()->safeEmail, 0, 10),
+            'email' => $this->faker->unique()->safeEmail(),
             'ecnmcs_code' => $this->faker->numerify('######'),
             'personal_code' => $this->faker->numerify('######'),
             'web_page' => substr($this->faker->url, 0, 50),

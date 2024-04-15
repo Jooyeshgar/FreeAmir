@@ -17,7 +17,7 @@ class CreateInvoicesTable extends Migration
             $table->id();
             $table->string('code')->unique();
             $table->date('date');
-            $table->unsignedBigInteger('bill_id')->nullable();
+            $table->unsignedBigInteger('document_id')->nullable();
             $table->unsignedBigInteger('customer_id');
             $table->decimal('addition', 10, 2);
             $table->decimal('subtraction', 10, 2);
@@ -33,7 +33,7 @@ class CreateInvoicesTable extends Migration
             $table->decimal('amount', 10, 2)->default(0);
             $table->timestamps();
 
-            $table->foreign('bill_id')->references('id')->on('documents')->onDelete('set null'); // Assuming foreign key reference
+            $table->foreign('document_id')->references('id')->on('documents')->onDelete('set null'); // Assuming foreign key reference
             $table->foreign('customer_id')->references('id')->on('customers')->onDelete('cascade');
 
             // Remove redundant checks for boolean fields

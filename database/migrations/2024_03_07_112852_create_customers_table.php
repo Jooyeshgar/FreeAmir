@@ -24,7 +24,7 @@ class CreateCustomersTable extends Migration
             $table->string('fax', 15)->default('')->nullable();
             $table->string('address', 100)->default('')->nullable();
             $table->string('postal_code', 15)->default('')->nullable();
-            $table->string('email', 15)->unique()->default('')->nullable(); // Unique email address
+            $table->string('email', 64)->unique()->default('')->nullable(); // Unique email address
             $table->string('ecnmcs_code', 20)->default('')->nullable();
             $table->string('personal_code', 15)->default('')->nullable();
             $table->string('web_page', 50)->default('')->nullable();
