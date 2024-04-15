@@ -30,7 +30,7 @@ class Invoice extends Model
         'amount',
     ];
 
-    public function bill()
+    public function document()
     {
         return $this->belongsTo(Document::class, 'bill_id');
     }

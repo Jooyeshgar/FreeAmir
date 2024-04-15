@@ -15,8 +15,8 @@
                             d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="stat-title">Downloads</div>
-                <div class="stat-value">31K</div>
+                <div class="stat-title">{{ __('Total Invoice') }}</div>
+                <div class="stat-value"><a href="{{ route('invoices.index') }}">{{ $invoiceCount }}</a></div>
                 <div class="stat-desc">Jan 1st - Feb 1st</div>
             </div>
         </div>
@@ -31,7 +31,7 @@
                     </svg>
                 </div>
                 <div class="stat-title">{{ __('Total Users') }}</div>
-                <div class="stat-value">{{ $customerCount }}</div>
+                <div class="stat-value"><a href="{{ route('customers.index') }}">{{ $customerCount }}</a></div>
                 <div class="stat-desc">↗︎ 400 (22%)</div>
             </div>
         </div>
@@ -45,8 +45,8 @@
                         </path>
                     </svg>
                 </div>
-                <div class="stat-title">New Registers</div>
-                <div class="stat-value">1,200</div>
+                <div class="stat-title">{{ __('Total Documents') }}</div>
+                <div class="stat-value"><a href="{{ route('transactions.index') }}">{{ $documentCount }}</a></div>
                 <div class="stat-desc">↘︎ 90 (14%)</div>
             </div>
         </div>
@@ -60,8 +60,8 @@
                         </path>
                     </svg>
                 </div>
-                <div class="stat-title">New Registers</div>
-                <div class="stat-value">1,200</div>
+                <div class="stat-title">{{ __('Total Products') }}</div>
+                <div class="stat-value"><a href="{{ route('products.index') }}">{{ $productCount }}</a></div>
                 <div class="stat-desc">↘︎ 90 (14%)</div>
             </div>
         </div>
