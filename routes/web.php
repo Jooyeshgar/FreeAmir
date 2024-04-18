@@ -16,3 +16,7 @@ Route::resource('customers', Controllers\CustomerController::class);
 Route::resource('customer-groups', Controllers\CustomerGroupController::class);
 Route::resource('bank-accounts', Controllers\BankAccountController::class);
 Route::resource('banks', Controllers\BankController::class);
+Route::group(['prefix' => 'management'], function () {
+    Route::resource('permissions', Controllers\Management\PermissionController::class)->except(['show']);
+    Route::resource('roles', Controllers\Management\RoleController::class)->except(['show']);
+});
