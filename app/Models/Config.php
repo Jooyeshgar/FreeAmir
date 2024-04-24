@@ -6,7 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Config extends Model
 {
-    public $incrementing = false; 
+    public $incrementing = false;
+    protected $primaryKey = 'key';
 
     public $timestamps = false;
     protected $fillable = [
