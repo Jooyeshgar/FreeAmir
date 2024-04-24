@@ -72,8 +72,8 @@
             <li><a href="{{ route('users.index') }}">{{ __('Users') }}</a></li>
             <li><a href="{{ route('permissions.index') }}">{{ __('Permissions') }}</a></li>
             <li><a href="{{ route('roles.index') }}">{{ __('Roles') }}</a></li>
-            <li><a href="">تنظیمات</a></li>
-            <li><a href="">پشتیبانی</a></li>
+            <li><a href="{{ route('configs.index') }}">{{ __('Configs') }}</a></li>
+            <li><a href="https://github.com/Jooyeshgar/FreeAmir/issues">{{ __('Support') }}</a></li>
         </ul>
     </details>
 </li>

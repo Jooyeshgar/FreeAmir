@@ -10,13 +10,15 @@ class FormInput extends Component
     public $title;
     public $placeHolder;
     public $message;
+    public $type;
 
-    public function __construct($name, $title, $placeHolder, $message = null)
+    public function __construct($name, $title, $placeHolder, $message = null, $type = 'text')
     {
         $this->name = $name;
         $this->title = $title;
         $this->placeHolder = $placeHolder;
         $this->message = $message;
+        $this->type = $type;
     }
 
     public function render()
