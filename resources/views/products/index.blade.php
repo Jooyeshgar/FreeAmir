@@ -46,7 +46,32 @@
                 @endforeach
                 </tbody>
             </table>
-            {!! $products->links() !!}
+            @if ($products->hasPages())
+                <div class="join">
+                    {{-- Previous Page Link --}}
+                    @if ($products->onFirstPage())
+                        <input class="join-item btn btn-square hidden " type="radio" disabled>
+                    @else
+                        <a href="{{ $products->previousPageUrl() }}" class="join-item btn btn-square">&lsaquo;</a>
+                    @endif
+
+                    {{-- Pagination Elements --}}
+                    @foreach ($products->getUrlRange(1, $products->lastPage()) as $page => $url)
+                        @if ($page == $products->currentPage())
+                            <a href="{{ $url }}" class="join-item btn btn-square bg-blue-500 text-white">{{ $page }}</a>
+                        @else
+                            <a href="{{ $url }}" class="join-item btn btn-square">{{ $page }}</a>
+                        @endif
+                    @endforeach
+
+                    {{-- Next Page Link --}}
+                    @if ($products->hasMorePages())
+                        <a href="{{ $products->nextPageUrl() }}" class="join-item btn btn-square">&rsaquo;</a>
+                    @else
+                        <input class="join-item btn btn-square hidden" type="radio" disabled>
+                    @endif
+                </div>
+            @endif
         </div>
     </div>
 </x-app-layout>
