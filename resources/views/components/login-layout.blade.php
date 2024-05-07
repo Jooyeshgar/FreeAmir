@@ -10,7 +10,7 @@
 
 <body>
 
-        <main class=" mx-auto  h-full  ">
+        <main class=" mx-auto  min-h-screen p-0 flex flex-col  ">
             {{ $slot }}
         </main>
 

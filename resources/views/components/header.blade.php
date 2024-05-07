@@ -13,7 +13,7 @@
             <a class="btn btn-ghost text-xl">FreeAmir</a>
         </div>
         <div class="flex-none">
-            <ul class="menu menu-horizontal px-1">
+            <ul class="menu menu-horizontal px-1 z-30">
                 <x-menu />
             </ul>
         </div>

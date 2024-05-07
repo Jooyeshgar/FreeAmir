@@ -13,7 +13,6 @@
                     <label for="language-picker-select">Select your language</label>
 
                     <select name="language-picker-select" id="language-picker-select">
-                        <option lang="de" value="deutsch">Deutsch</option>
                         <option lang="en" value="english" selected>انتخاب زبان</option>
                         <option lang="fr" value="francais">Français</option>
                         <option lang="it" value="italiano">Italiano</option>
@@ -23,9 +22,10 @@
         </div>
 
     </header>
-    <div class=" border-opacity-75 rounded main ">
-        <div class="flex items-center justify-center  ">
-            <div class="w-96 p-7 mt-16	 h-373 bg-white rounded-lg">
+
+    <div class=" flex-1 border-8 border-gray-200 p-0 border-opacity-85  overflow-hidden   ">
+        <div class="flex items-center justify-center  rounded-3xl    ">
+            <div class="w-96 p-7 mt-16	 h-373 bg-white rounded-lg ">
                 <form method="POST" action="{{ route('login') }}">
                     @csrf
                     <h1 class="font-bold text-center">ورود به حساب</h1>
@@ -37,11 +37,11 @@
                                   type="password"/>
                     <div class="flex items-center justify-between mt-4 pl-2 ">
 
-                        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white  py-2 px-5 rounded">
+                        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white  py-2 px-8 rounded">
                             {{ __('ورود به حساب') }}
                         </button>
 
-                        <button type="submit" class="bg-gray-300 hover:bg-gray-400 text-black  py-2 px-5 rounded">
+                        <button type="submit" class="bg-gray-300 hover:bg-gray-400 text-black  py-2 px-8 rounded">
                             {{ __('بازیابی رمز عبور') }}
                         </button>
                     </div>

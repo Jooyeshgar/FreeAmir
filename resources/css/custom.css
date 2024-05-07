@@ -10,11 +10,18 @@ body{
 }
 .main{
 
-    border-color: rgba(255 , 255 , 255 , 0.75);
-    border-radius: 10px;
-    border-width: 10px;
+
 }
 
+.main::before {
+    content: "";
+    position: absolute;
+
+background: #718096;
+    border-radius: 50%;
+   border-color: #1a202c;
+
+}
 .language-picker__form {
     display: none;
 }
