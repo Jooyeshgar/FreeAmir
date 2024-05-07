@@ -1,4 +1,4 @@
-<li><a href="/">{{ __('Home') }}</a></li>
+<li><a href="/" class="hover:rounded-xl">{{ __('Home') }}</a></li>
 <li>
     <details>
         <summary>عملیات</summary>
@@ -60,6 +60,7 @@
         </ul>
     </details>
 </li>
+
 <li>
     <details>
         <summary>{{ __('Management') }}</summary>

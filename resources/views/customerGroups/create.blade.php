@@ -5,7 +5,7 @@
         </h2>
     </x-slot>
 
-    <div class="card bg-base-100 shadow-xl">
+    <div class="card bg-gray-100 shadow-xl">
         <form action="{{ route('customer-groups.store') }}" method="POST">
             @csrf
             <div class="card-body">
