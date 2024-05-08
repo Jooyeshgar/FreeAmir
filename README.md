@@ -75,7 +75,7 @@ php artisan serve
 **Usage:**
 
 1. Access the application in your web browser at http://localhost:8000 (or the port specified in your `.env` file).
-2. Login with the default credentials (username: `admin`, password: `password`).
+2. Login with the default credentials (email: `admin@example.com`, password: `password`).
 3. Explore the features and functionalities of the application.
 
 **Contributing:**

@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [Controllers\Auth\LoginController::class, 'login']);
+Route::get('/logout', [Controllers\Auth\LoginController::class, 'logout'])->name('logout');
 
 Route::group(['middleware' => 'auth'], function () {
     Route::get('/', [Controllers\HomeController::class, 'index'])->name('home');
