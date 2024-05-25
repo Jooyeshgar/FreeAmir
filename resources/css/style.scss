@@ -1,4 +1,4 @@
-@import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
+
 body{
     font-family: Vazirmatn, sans-serif;
     direction: rtl;
@@ -23,8 +23,11 @@ input[type="text"] ,input[type="tel"] ,input[type="number"] ,input[type="url"] ,
     @apply shadow-sm;
 }
 input[type="text"]:focus,
+select:focus,
+textarea:focus,
 input[type="tel"]:focus,
 input[type="number"]:focus,
+.prefix:focus,
 input[type="url"]:focus,
 input[type="email"]:focus {
     @apply rounded-md;
@@ -32,4 +35,9 @@ input[type="email"]:focus {
     outline: none;
     border-color: #007bff;
     box-shadow: 0 0 3px rgba(0, 123, 255, 0.5);
+}
+.prefix-input:focus{
+    border-color: transparent !important;
+    box-shadow: none !important;
+
 }

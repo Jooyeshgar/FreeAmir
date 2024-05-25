@@ -6,10 +6,10 @@
     </x-slot>
     <div class="card-title">{{ __('Add customer') }}</div>
     <form action="{{ route('customers.store') }}" method="POST" class="relative">
-        <div class="card bg-gray-100 shadow-xl rounded-xl">
+        <div class="card bg-gray-100 shadow-xl rounded-xl " style="height: 440px">
 
             @csrf
-            <div class="card-body">
+            <div class="card-body p-4  ">
 
                 <x-show-message-bags/>
 

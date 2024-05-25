@@ -1,4 +1,4 @@
-<div>
+<div class="mx-0.5">
     <label class="form-control w-full max-w-xs">
         <div class="label">
             <span class="label-text">{{ $title }}</span>

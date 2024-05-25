@@ -1,10 +1,10 @@
-<div class="grid grid-cols-2 bg-gray-100 ">
-    <div class="bg-gray-100 p-4">
+<div class="grid grid-cols-2 bg-gray-100  " >
+    <div class="bg-gray-100 p-2 min-h-full ">
         <div>
             <h1>مشخصات هویتی</h1>
             <div>
                 <label id="group_id" class="form-control w-full">
-                    <select id="group_id" name="group_id" class="select select-bordered" required>
+                    <select id="group_id" name="group_id" class="select select-bordered rounded-md"  required>
                         <option value="">گروه طرف حساب</option>
                         @foreach ($groups as $group)
                             <option
@@ -41,14 +41,32 @@
                                   place-holder="{{ __('  کد اقتصادی') }}" :message="$errors->first('ecnmcs_code')"
                                   :value="old('ecnmcs_code', $customer->ecnmcs_code ?? '')"/>
                 </div>
+                <div>
+                    <label class="form-control w-full max-w-xs">
+                        <div class="label">
+                            <span class="label-text">
+
+</span>
+                        </div>
+                    </label>
+                    <label class="input input-bordered flex items-center gap-2 prefix text-gray-300 " dir="ltr">
+                        ABR-
+                        <input class="grow input  w-full max-w-xs prefix-input" type="text" name="shenase" value="{{old('shenase', $customer->shenase ?? '')}}"  />
+                        @if ($errors->first('shenase'))
+                            <div class="label">
+                                <span class="label-text-alt text-red-700">{{ $errors->first('shenase') }}</span>
+                            </div>
+                        @endif
+                    </label>
+                </div>
             </div>
         </div>
 
     </div>
-    <div class="bg-gray-200 p-4 rounded-xl">
+    <div class="bg-gray-200 p-2 rounded-xl">
         <div role="tablist" class="tabs tabs-boxed	">
             <input type="radio" name="my_tabs_2" role="tab" class="tab" aria-label="اطلاعات تماس" checked/>
-            <div role="tabpanel" class="tab-content bg-gray-100  rounded-box p-4">
+            <div role="tabpanel" class="tab-content bg-gray-100  rounded-box p-2">
                 <div class="grid grid-cols-3 gap-1 ">
                     <div>
                         <x-form-input title="{{ __('تلفن') }}" name="tel"
@@ -105,7 +123,7 @@
                 </div>
             </div>
             <input type="radio" name="my_tabs_2" role="tab" class="tab  	" aria-label="اطلاعات اقتصادی"/>
-            <div role="tabpanel" class="tab-content bg-base-100  rounded-box p-6"><h1> حساب ۱</h1>
+            <div role="tabpanel" class="tab-content bg-gray-100  rounded-box p-2"><h1> حساب ۱</h1>
                 <div class="grid grid-cols-3 gap-1 ">
                     <div>
                         <x-form-input title="{{ __(' نام') }}" name="fax"
@@ -144,7 +162,7 @@
                 </div>
             </div>
             <input type="radio" name="my_tabs_2" role="tab" class="tab" aria-label="سایر اطلاعات"/>
-            <div role="tabpanel" class="tab-content bg-base-100  rounded-box p-6">
+            <div role="tabpanel" class="tab-content bg-gray-100  rounded-box p-2">
                 <div class="grid grid-cols-2 gap-1 ">
                     <div>
                         <x-form-input title="{{ __(' رابطه') }}" name="connector"
