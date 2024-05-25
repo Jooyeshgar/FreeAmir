@@ -2,7 +2,8 @@
     <div class="bg-gray-100 p-2 min-h-full ">
         <div>
             <h1>مشخصات هویتی</h1>
-            <div>
+            <div class="grid grid-cols-2 gap-1 ">
+                <div>
                 <label id="group_id" class="form-control w-full">
                     <select id="group_id" name="group_id" class="select select-bordered rounded-md"  required>
                         <option value="">گروه طرف حساب</option>
@@ -14,6 +15,15 @@
                         @endforeach
                     </select>
                 </label>
+                </div>
+                <div>
+                    <label id="group_id" class="form-control w-full">
+                        <select id="group_id" name="group_id" class="select select-bordered rounded-md mx-0.5"  required>
+                            <option value="">دسته بندی</option>
+
+                        </select>
+                    </label>
+                </div>
                 <a class="link text-blue-500" href="{{ route('customer-groups.create') }}">اضافه کردن طرف
                     حساب</a>
             </div>
@@ -44,12 +54,12 @@
                 <div>
                     <label class="form-control w-full max-w-xs">
                         <div class="label">
-                            <span class="label-text">
+                            <span class="label-text">شناسه
 
 </span>
                         </div>
                     </label>
-                    <label class="input input-bordered flex items-center gap-2 prefix text-gray-300 " dir="ltr">
+                    <label class="input input-bordered flex items-center gap-2 prefix text-gray-300 rounded-md"  dir="ltr">
                         ABR-
                         <input class="grow input  w-full max-w-xs prefix-input" type="text" name="shenase" value="{{old('shenase', $customer->shenase ?? '')}}"  />
                         @if ($errors->first('shenase'))
