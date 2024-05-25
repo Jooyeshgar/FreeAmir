@@ -1,10 +1,7 @@
 <div class="grid grid-cols-2 bg-gray-100 ">
     <div class="bg-gray-100 p-4">
-
-
         <div>
             <h1>مشخصات هویتی</h1>
-
             <div>
                 <label id="group_id" class="form-control w-full">
                     <select id="group_id" name="group_id" class="select select-bordered" required>
@@ -22,48 +19,29 @@
             </div>
             <div class="grid grid-cols-2 gap-1 ">
                 <div>
-                    <label id="name" class="label-text">
-                        نام
-                    </label>
-                    <input type="text" id="name" name="name"
-                           class="w-full p-2 border" value="{{ old('name', $customer->name ?? '') }}"
-                           placeholder="نام" required/>
-
+                    <x-form-input title="{{ __('نام') }}" name="name"
+                                  place-holder="{{ __('نام') }}" :message="$errors->first('name')"
+                                  :value="old('name', $customer->name ?? '')"/>
                 </div>
                 <div>
-                    <label id="code" class="label-text">
-                        کد طرف حساب
-                    </label>
-                        <input type="number" id="code" name="code"
-                               class="w-full p-2 border" value="{{ old('code', $customer->code ?? '') }}"
-                               placeholder="کد طرف حساب" required/>
-
+                    <x-form-input title="{{ __('   کد طرف حساب') }}" name="code"
+                                  place-holder="{{ __('   کد طرف حساب') }}" :message="$errors->first('code')"
+                                  :value="old('code', $customer->code ?? '')"/>
                 </div>
-
-
 
             </div>
             <div class="grid grid-cols-2 gap-1 ">
                 <div>
-                    <label id="personal_code" class="label-text">
-                        کد ملی
-                    </label>
-                    <input type="number" id="personal_code" name="personal_code"
-                           class="w-full p-2 border" value="{{ old('personal_code', $customer->personal_code ?? '') }}"
-                           placeholder="کد ملی"/>
-
+                    <x-form-input title="{{ __('     کد ملی') }}" name="code"
+                                  place-holder="{{ __('     کد ملی') }}" :message="$errors->first('personal_code')"
+                                  :value="old('personal_code', $customer->personal_code ?? '')"/>
                 </div>
                 <div>
-                    <label id="ecnmcs_code" class="label-text">
-                        کد اقتصادی
-                        <input type="number" id="ecnmcs_code" name="ecnmcs_code"
-                               class="w-full p-2 border" value="{{ old('ecnmcs_code', $customer->ecnmcs_code ?? '') }}"
-                               placeholder="کد اقتصادی"/>
-                    </label>
+                    <x-form-input title="{{ __(' کد اقتصادی') }}" name="ecnmcs_code"
+                                  place-holder="{{ __('  کد اقتصادی') }}" :message="$errors->first('ecnmcs_code')"
+                                  :value="old('ecnmcs_code', $customer->ecnmcs_code ?? '')"/>
                 </div>
             </div>
-
-
         </div>
 
     </div>
@@ -71,59 +49,39 @@
         <div role="tablist" class="tabs tabs-boxed	">
             <input type="radio" name="my_tabs_2" role="tab" class="tab" aria-label="اطلاعات تماس" checked/>
             <div role="tabpanel" class="tab-content bg-gray-100  rounded-box p-4">
-
                 <div class="grid grid-cols-3 gap-1 ">
                     <div>
-                        <label class="label-text" for="tel">تلفن</label>
-
-                        <input class="w-full p-2 border" type="tel" id="phone" name="phone"
-                               value="{{ old('phone', $customer->phone ?? '') }}"
-                               placeholder="تلفن"/>
+                        <x-form-input title="{{ __('تلفن') }}" name="tel"
+                                      place-holder="{{ __('تلفن') }}" :message="$errors->first('tel')"
+                                      :value="old('tel', $customer->tel ?? '')"/>
 
                     </div>
                     <div>
-                        <label class="label-text" for="tel">موبایل</label>
-
-                        <input type="tel" id="cell" name="cell" class="w-full p-2 border"
-                               value="{{ old('cell', $customer->cell ?? '') }}"
-                               placeholder="cell"/>
+                        <x-form-input title="{{ __('موبایل') }}" name="cell"
+                                      place-holder="{{ __('موبایل') }}" :message="$errors->first('cell')"
+                                      :value="old('cell', $customer->cell ?? '')"/>
+                    </div>
+                    <div>
+                        <x-form-input title="{{ __('فاکس') }}" name="fax"
+                                      place-holder="{{ __('فاکس') }}" :message="$errors->first('fax')"
+                                      :value="old('fax', $customer->fax ?? '')"/>
+                    </div>
+                    <div>
+                        <x-form-input title="{{ __('ایمیل') }}" name="email"
+                                      place-holder="{{ __('ایمیل') }}" :message="$errors->first('email')"
+                                      :value="old('email', $customer->email ?? '')"/>
 
                     </div>
                     <div>
-                        <label for="tel" class="label-text">فاکس</label>
-                        <input type="tel" id="fax" name="fax" class="w-full p-2 border"
-                               value="{{ old('fax', $customer->fax ?? '') }}"
-                               placeholder="فاکس"/>
-
-                    </div>
-
-
-                    <div>
-                        <label id="email" class="label-text">
-                            ایمیل
-                        </label>
-                        <input type="email" id="name" name="email"
-                               class="w-full p-2 border" value="{{ old('email', $customer->email ?? '') }}"
-                               placeholder="ایمیل"/>
+                        <x-form-input title="{{ __(' وب سایت') }}" name="web_page"
+                                      place-holder="{{ __(' وب سایت') }}" :message="$errors->first('web_page')"
+                                      :value="old('web_page', $customer->web_page ?? '')"/>
 
                     </div>
                     <div>
-                        <label id="email" class="label-text">
-                            وب سایت
-                        </label>
-                        <input type="text" id="web_page" name="web_page"
-                               class="w-full p-2 border" value="{{ old('web_page', $customer->web_page ?? '') }}"
-                               placeholder="وب سایت"/>
-
-                    </div>
-                    <div>
-                        <label id="postal_code" class="label-text">
-                            کد پستی
-                        </label>
-                        <input type="number" id="postal_code" name="postal_code"
-                               class="w-full p-2 border" value="{{ old('postal_code', $customer->postal_code ?? '') }}"
-                               placeholder="کد پستی"/>
-
+                        <x-form-input title="{{ __('   کد پستی') }}" name="postal_code"
+                                      :value="old('postal_code', $customer->postal_code ?? '')"
+                                      place-holder="{{ __('  کد پستی') }}" :message="$errors->first('postal_code')"/>
                     </div>
                     {{--
                     <div class="flex items-center">
@@ -136,114 +94,67 @@
                             رسانی از طریق ایمیل</label>
                     </div>
 --}}
-                    <div class="col-span-3">
-
-                        <label id="address" class="form-control">
+                    <div class="col-span-3"><label id="address" class="form-control">
             <span class="label">
                 <span class="label-text">نشانی</span>
             </span>
                             <textarea id="address" name="address"
                                       class="textarea textarea-bordered h-24"
                                       placeholder="نشانی">{{ old('address', $customer->address ?? '') }}</textarea>
-                        </label>
-
-                    </div>
-
-
+                        </label></div>
                 </div>
-
-
             </div>
             <input type="radio" name="my_tabs_2" role="tab" class="tab  	" aria-label="اطلاعات اقتصادی"/>
-            <div role="tabpanel" class="tab-content bg-base-100  rounded-box p-6">
-
-                <h1> حساب ۱</h1>
+            <div role="tabpanel" class="tab-content bg-base-100  rounded-box p-6"><h1> حساب ۱</h1>
                 <div class="grid grid-cols-3 gap-1 ">
                     <div>
-                        <label id="acc_name_1" class="label-text">
-                            نام
-                        </label>
-                        <input type="text" id="acc_name_1" name="acc_name_1"
-                               class="w-full p-2 border" value="{{ old('acc_name_1', $customer->acc_name_1 ?? '') }}"
-                               placeholder="نام"/>
+                        <x-form-input title="{{ __(' نام') }}" name="fax"
+                                      place-holder="{{ __(' نام') }}" :message="$errors->first('acc_name_1')"
+                                      :value="old('acc_name_1', $customer->acc_name_1 ?? '')"/>
 
                     </div>
                     <div>
-                        <label id="acc_no_1" class="label-text">
-                            شماره حساب
-                            <input type="number" id="acc_no_1" name="acc_no_1"
-                                   class="w-full p-2 border" value="{{ old('acc_no_1', $customer->acc_no_1 ?? '') }}"
-                                   placeholder="شماره حساب"/>
-                        </label>
+                        <x-form-input title="{{ __('  شماره حساب') }}" name="acc_no_1"
+                                      place-holder="{{ __('  شماره حساب') }}" :message="$errors->first('acc_no_1')"
+                                      :value="old('acc_name_1', $customer->acc_no_1 ?? '')"/>
                     </div>
                     <div>
-                        <label id="acc_bank_1" class="label-text">
-                            بانک
-                            <input type="text" id="acc_bank_1" name="acc_bank_1"
-                                   class="w-full p-2 border"
-                                   value="{{ old('acc_bank_1', $customer->acc_bank_1 ?? '') }}"
-                                   placeholder="بانک"/>
-                        </label>
+                        <x-form-input title="{{ __(' بانک') }}" name="acc_bank_1"
+                                      place-holder="{{ __('  بانک') }}" :message="$errors->first('acc_bank_1')"
+                                      :value="old('acc_bank_1', $customer->acc_bank_1 ?? '')"/>
                     </div>
-
-
                 </div>
                 <h1> حساب ۲</h1>
                 <div class="grid grid-cols-3 gap-1 ">
                     <div>
-                        <label id="acc_name_2" class="label-text">
-                            نام
-                            <input type="text" id="acc_name_2" name="acc_name_2"
-                                   class="w-full p-2 border"
-                                   value="{{ old('acc_name_2', $customer->acc_name_2 ?? '') }}"
-                                   placeholder="نام"/>
-                        </label>
+                        <x-form-input title="{{ __(' نام') }}" name="fax"
+                                      place-holder="{{ __(' نام') }}" :message="$errors->first('acc_name_2')"
+                                      :value="old('acc_name_2', $customer->acc_name_2 ?? '')"/>
                     </div>
                     <div>
-                        <label id="acc_no_2" class="label-text">
-                            شماره حساب
-                            <input type="number" id="acc_no_2" name="acc_no_2"
-                                   class="w-full p-2 border" value="{{ old('acc_no_2', $customer->acc_no_2 ?? '') }}"
-                                   placeholder="شماره حساب"/>
-                        </label>
+                        <x-form-input title="{{ __('  شماره حساب') }}" name="acc_no_2"
+                                      place-holder="{{ __('  شماره حساب') }}" :message="$errors->first('acc_no_1')"
+                                      :value="old('acc_name_2', $customer->acc_no_2 ?? '')"/>
                     </div>
                     <div>
-                        <label id="acc_bank_2" class="label-text">
-                            بانک
-                            <input type="text" id="acc_bank_2" name="acc_bank_2"
-                                   class="w-full p-2 border"
-                                   value="{{ old('acc_bank_2', $customer->acc_bank_2 ?? '') }}"
-                                   placeholder="بانک"/>
-                        </label>
+                        <x-form-input title="{{ __(' بانک') }}" name="acc_bank_1"
+                                      place-holder="{{ __('  بانک') }}" :message="$errors->first('acc_bank_2')"
+                                      :value="old('acc_bank_2', $customer->acc_bank_2?? '')"/>
                     </div>
-
                 </div>
             </div>
-
             <input type="radio" name="my_tabs_2" role="tab" class="tab" aria-label="سایر اطلاعات"/>
             <div role="tabpanel" class="tab-content bg-base-100  rounded-box p-6">
-
-
                 <div class="grid grid-cols-2 gap-1 ">
-
                     <div>
-                        <label id="connector" class="label-text">
-                            رابط
-                        </label>
-                        <input type="text" id="connector" name="connector"
-                               class="w-full p-2 border" value="{{ old('connector', $customer->connector ?? '') }}"
-                               placeholder="رابطه"/>
-
+                        <x-form-input title="{{ __(' رابطه') }}" name="connector"
+                                      place-holder="{{ __('  رابطه') }}" :message="$errors->first('connector')"
+                                      :value="old('connector', $customer->connector?? '')"/>
                     </div>
-
                     <div>
-                        <label id="responsible" class="label-text">
-
-                            responsible
-                        </label>
-                        <input type="text" id="responsible" name="responsible"
-                               class="w-full p-2 border" value="{{ old('responsible', $customer->responsible ?? '') }}"
-                               placeholder="responsible"/>
+                        <x-form-input title="{{ __(' responsible') }}" name="responsible"
+                                      place-holder="{{ __('  responsible') }}" :message="$errors->first('responsible')"
+                                      :value="old('responsible', $customer->responsible?? '')"/>
                     </div>
                     <div class="col-span-2">
                         <label id="desc" class="form-control">
@@ -256,10 +167,7 @@
                         </label>
                     </div>
                 </div>
-
-
             </div>
-
         </div>
     </div>
 </div>
