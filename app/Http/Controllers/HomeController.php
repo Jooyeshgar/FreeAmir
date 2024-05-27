@@ -3,10 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
-use App\Models\Invoice;
 use App\Models\Document;
+use App\Models\Invoice;
 use App\Models\Product;
-use Illuminate\Support\Facades\DB;
 
 class HomeController extends Controller
 {

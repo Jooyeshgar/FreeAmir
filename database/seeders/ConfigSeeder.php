@@ -32,7 +32,7 @@ class ConfigSeeder extends Seeder
             ['type' => 3, 'category' => 1, 'key' => 'income', 'value' => '83', 'desc' => 'Enter here'],
             ['type' => 3, 'category' => 1, 'key' => 'fund', 'value' => '??', 'desc' => 'Enter here'],
             ['type' => 3, 'category' => 1, 'key' => 'acc-receivable', 'value' => '??', 'desc' => 'Enter here'],
-            ['type' => 3, 'category' => 1, 'key' => 'commission', 'value' => '??', 'desc' => 'Enter here']
+            ['type' => 3, 'category' => 1, 'key' => 'commission', 'value' => '??', 'desc' => 'Enter here'],
         ];
 
         Config::insert($configs);

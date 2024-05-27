@@ -10,7 +10,6 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
-
 class TransactionController extends Controller
 {
     public function index()
@@ -21,16 +20,14 @@ class TransactionController extends Controller
         return view('transactions.index', compact('transactions', 'cols'));
     }
 
-
     public function create()
     {
         $users = User::all();
         $subjects = Subject::all();
         $transaction = new Transaction;
 
-        return view('transactions.create', compact('users', 'subjects','transaction'));
+        return view('transactions.create', compact('users', 'subjects', 'transaction'));
     }
-
 
     public function store(Request $request)
     {
@@ -49,11 +46,6 @@ class TransactionController extends Controller
 
         return redirect()->route('transactions.index')->with('success', 'Transactions created successfully.');
     }
-
-
-
-
-
 
     public function show($id)
     {
@@ -75,8 +67,6 @@ class TransactionController extends Controller
         }
     }
 
-
-
     public function update(Request $request, $id)
     {
         $validatedData = $request->validate([
@@ -94,10 +84,6 @@ class TransactionController extends Controller
 
         return redirect()->route('transactions.index')->with('success', 'Transaction updated successfully.');
     }
-
-
-
-
 
     public function destroy(Models\Transaction $transaction)
     {
@@ -124,7 +110,7 @@ class TransactionController extends Controller
             'permanent' => ['label' => 'permanent', 'type' => 'checkbox'],
             'description' => ['label' => 'description', 'type' => 'textarea'],
             'sell' => ['label' => 'sell', 'type' => 'checkbox'],
-            'activated' => ['label' => 'activated', 'type' => 'checkbox']
+            'activated' => ['label' => 'activated', 'type' => 'checkbox'],
         ];
     }
 }

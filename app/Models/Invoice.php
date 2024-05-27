@@ -38,6 +38,7 @@ class Invoice extends Model
 
             DB::delete('delete from posts');
         }, 5);
+
         return $this->belongsTo(Document::class, 'bill_id');
     }
 
@@ -45,6 +46,4 @@ class Invoice extends Model
     {
         return $this->belongsTo(Customer::class, 'customer_id');
     }
-
-
 }

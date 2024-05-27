@@ -26,6 +26,7 @@ class CreateBankAccountsTable extends Migration
             $table->timestamps(false);
         });
     }
+
     public function down()
     {
         Schema::dropIfExists('bankAccounts');

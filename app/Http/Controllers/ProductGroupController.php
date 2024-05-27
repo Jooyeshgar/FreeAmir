@@ -10,6 +10,7 @@ class ProductGroupController extends Controller
     public function index()
     {
         $productGroups = Models\ProductGroup::paginate(12);
+
         return view('productGroups.index', compact('productGroups'));
     }
 
@@ -23,7 +24,7 @@ class ProductGroupController extends Controller
         // TODO validate request
         $validatedData = $request->validate([
             'code' => 'required|unique:product_groups,code|regex:/^\d{3}$/',
-            'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u'
+            'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
         ]);
 
         Models\ProductGroup::create($validatedData);
@@ -41,7 +42,7 @@ class ProductGroupController extends Controller
         // TODO validate request
         $validatedData = $request->validate([
             'code' => 'required|unique:product_groups,code,'.$productGroup->id.',|regex:/^\d{3}$/',
-            'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u'
+            'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
         ]);
 
         $productGroup->update($validatedData);
@@ -55,5 +56,4 @@ class ProductGroupController extends Controller
 
         return redirect()->route('product-groups.index')->with('success', 'Product group deleted successfully.');
     }
-
 }

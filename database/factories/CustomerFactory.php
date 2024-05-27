@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\Customer;
 use App\Models\Bank;
+use App\Models\Customer;
 use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -15,12 +15,13 @@ class CustomerFactory extends Factory
     {
         $bankIds = Bank::pluck('id')->toArray();
         $name = $this->faker->name;
+
         return [
             'code' => $this->faker->unique()->numerify('#####'),
             'name' => $name,
             'subject_id' => Subject::factory([
                 'name' => $name,
-                'parent_id' => 0
+                'parent_id' => 0,
             ]),
             'phone' => substr($this->faker->phoneNumber, 0, 15),
             'cell' => substr($this->faker->phoneNumber, 0, 15),

@@ -10,6 +10,7 @@ class BankController extends Controller
     public function index()
     {
         $banks = Models\Bank::paginate(12);
+
         return view('banks.index', compact('banks'));
     }
 
@@ -21,7 +22,7 @@ class BankController extends Controller
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            'name'=>'required|max:20|string|regex:/^[\w\d\s]*$/u',
+            'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
         ]);
 
         Models\Bank::create($validatedData);
@@ -37,7 +38,7 @@ class BankController extends Controller
     public function update(Request $request, Models\Bank $bank)
     {
         $validatedData = $request->validate([
-            'name'=>'required|max:20|string|regex:/^[\w\d\s]*$/u',
+            'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
         ]);
 
         $bank->update($validatedData);

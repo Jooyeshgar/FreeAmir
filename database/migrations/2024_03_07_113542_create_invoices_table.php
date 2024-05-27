@@ -40,7 +40,6 @@ class CreateInvoicesTable extends Migration
         });
     }
 
-
     /**
      * Reverse the migrations.
      *

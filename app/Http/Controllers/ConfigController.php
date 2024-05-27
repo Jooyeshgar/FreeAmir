@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models;
 use Illuminate\Http\Request;
-use Illuminate\Session\Store;
 use Illuminate\Support\Facades\Storage;
 
 class ConfigController extends Controller
@@ -15,9 +14,9 @@ class ConfigController extends Controller
         $banks = Models\Bank::all();
         $configs = Models\Config::all();
         $configs = $configs->pluck('value', 'key')->toArray();
+
         return view('configs.index', compact('configs', 'banks', 'subjects', 'configs'));
     }
-
 
     public function store(Request $request)
     {
@@ -36,25 +35,24 @@ class ConfigController extends Controller
             'sell_discount' => 'nullable|numeric',
             'sell_vat' => 'nullable|numeric',
             'buy_vat' => 'nullable|numeric',
-            'sell_free' => 'nullable|numeric'
+            'sell_free' => 'nullable|numeric',
         ]);
-
 
         // Upload file (Storage or FTP)
         $file = $request->file('co_logo');
-        if( $file ){
+        if ($file) {
             $extension = $file->getClientOriginalExtension();
-            $uniqueName = uniqid() . '.' . $extension;
+            $uniqueName = uniqid().'.'.$extension;
             $co_logo = Models\Config::where('key', 'co_logo')->first();
 
-            if( $co_logo ){
+            if ($co_logo) {
                 $oldPath = 'public/'.$co_logo->value;
                 if (Storage::exists($oldPath)) {
                     Storage::delete($oldPath);
                 }
             }
 
-            $storagePath = 'public/company_logos/' . $uniqueName;
+            $storagePath = 'public/company_logos/'.$uniqueName;
             Storage::put($storagePath, file_get_contents($file));
             $validatedData['co_logo'] = "company_logos/{$uniqueName}";
         }
@@ -72,12 +70,11 @@ class ConfigController extends Controller
                     'key' => $key,
                     'value' => $value,
                     'type' => '',
-                    'category' => ''
+                    'category' => '',
                 ]);
             }
         }
 
         return redirect()->route('configs.index')->with('success', 'Config created successfully.');
     }
-
 }

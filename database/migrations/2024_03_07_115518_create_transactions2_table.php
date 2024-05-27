@@ -37,7 +37,6 @@ class CreateTransactions2Table extends Migration
         });
     }
 
-
     /**
      * Reverse the migrations.
      *

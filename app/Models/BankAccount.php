@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BankAccount extends Model
 {
-
     protected $fillable = [
         'name',
         'number',
@@ -18,7 +17,7 @@ class BankAccount extends Model
         'bank_address',
         'bank_phone',
         'bank_web_page',
-        'desc'
+        'desc',
     ];
 
     public function bank(): BelongsTo

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Customer extends Model
 {
     use HasFactory;
+
     protected $fillable = [
         'code',
         'name',
@@ -59,5 +60,4 @@ class Customer extends Model
     {
         return $this->belongsTo(Customer::class, 'introducer_id');
     }
-
 }

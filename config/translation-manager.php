@@ -18,7 +18,7 @@ return [
     /**
      * Enable deletion of translations
      *
-     * @type boolean
+     * @type bool
      */
     'delete_enabled' => true,
 

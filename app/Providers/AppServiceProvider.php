@@ -4,7 +4,6 @@ namespace App\Providers;
 
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\ServiceProvider;
-use PSpell\Config;
 
 class AppServiceProvider extends ServiceProvider
 {

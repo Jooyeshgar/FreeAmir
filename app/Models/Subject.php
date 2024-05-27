@@ -8,7 +8,7 @@ use Kalnoy\Nestedset\NodeTrait;
 
 class Subject extends Model
 {
-    use NodeTrait, HasFactory;
+    use HasFactory, NodeTrait;
 
     protected $fillable = [
         'code',

@@ -6,7 +6,6 @@ use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Invoice;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class InvoiceController extends Controller
 {
@@ -45,7 +44,6 @@ class InvoiceController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
@@ -75,7 +73,6 @@ class InvoiceController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param  \App\Models\Invoice  $invoice
      * @return \Illuminate\Http\Response
      */
     public function show(Invoice $invoice)
@@ -88,7 +85,6 @@ class InvoiceController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param  \App\Models\Invoice  $invoice
      * @return \Illuminate\Http\Response
      */
     public function edit(Invoice $invoice)
@@ -104,21 +100,18 @@ class InvoiceController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Invoice  $invoice
      * @return \Illuminate\Http\Response
      */
     public function update(Request $request, Invoice $invoice)
     {
         $request->validate([
-            'code' => 'required|unique:invoices,code,' . $invoice->id . '|max:255',
+            'code' => 'required|unique:invoices,code,'.$invoice->id.'|max:255',
             'date' => 'required|date',
             'document_id' => 'required|integer|exists:documents,id',
             'customer_id' => 'required|integer|exists:customers,id',
             'addition' => 'numeric|nullable',
             'subtraction' => 'numeric|nullable',
-            'tax' =>
-            'numeric|nullable',
+            'tax' => 'numeric|nullable',
             'cash_payment' => 'boolean',
             'ship_date' => 'nullable|date',
             'ship_via' => 'string|nullable|max:255',

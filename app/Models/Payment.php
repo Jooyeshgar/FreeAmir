@@ -30,6 +30,7 @@ class Payment extends Model
     {
         return $this->belongsTo(Transaction::class);
     }
+
     public function bill()
     {
         return $this->belongsTo(Bill::class);

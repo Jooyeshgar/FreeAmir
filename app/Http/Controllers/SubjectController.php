@@ -14,16 +14,16 @@ class SubjectController extends Controller
         } else {
             $subjects = Subject::firstLevel()->get();
         }
-    
+
         return view('subjects.index', compact('subjects'));
     }
 
     public function create()
     {
         $parentSubjects = Subject::where('parent_id', 0)->get();
+
         return view('subjects.create', compact('parentSubjects'));
     }
-    
 
     public function store(Request $request)
     {
@@ -42,13 +42,14 @@ class SubjectController extends Controller
     public function edit(Subject $subject)
     {
         $parentSubjects = Subject::where('parent_id', 0)->get();
+
         return view('subjects.edit', compact('subject', 'parentSubjects'));
     }
 
     public function update(Request $request, Subject $subject)
     {
         $validatedData = $request->validate([
-            'code' => 'required|max:20|unique:subjects,code,' . $subject->id,
+            'code' => 'required|max:20|unique:subjects,code,'.$subject->id,
             'name' => 'required|max:60',
             'parent_id' => 'nullable|exists:subjects,id',
             'type' => 'required|in:debtor,creditor,both',

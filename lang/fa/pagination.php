@@ -1,6 +1,6 @@
 <?php
 
-return array (
-  'next' => 'بعد "',
-  'previous' => '«قبلی',
-);
+return [
+    'next' => 'بعد "',
+    'previous' => '«قبلی',
+];

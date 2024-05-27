@@ -21,7 +21,7 @@ class CreateSubjectsTable extends Migration
             $table->enum('type', ['debtor', 'creditor', 'both'])->default('both');
             $table->nestedSet();
             $table->timestamps();
-            
+
             // $table->foreign('parent_id')->references('id')->on('subjects')->onDelete('cascade');
         });
     }

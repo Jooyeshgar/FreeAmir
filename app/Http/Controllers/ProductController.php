@@ -10,12 +10,14 @@ class ProductController extends Controller
     public function index()
     {
         $products = Models\Product::with('productGroup')->paginate(12);
+
         return view('products.index', compact('products'));
     }
 
     public function create()
     {
         $groups = Models\ProductGroup::select('id', 'name')->get();
+
         return view('products.create', compact('groups'));
     }
 
@@ -32,7 +34,7 @@ class ProductController extends Controller
             'purchace_price' => 'nullable|min:0|numeric',
             'selling_price' => 'nullable|min:0|numeric',
             'discount_formula' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
-            'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u'
+            'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
         ]);
 
         $validatedData['oversell'] = $request->has('oversell') ? 1 : 0;
@@ -48,6 +50,7 @@ class ProductController extends Controller
     public function edit(Models\Product $product)
     {
         $groups = Models\ProductGroup::select('id', 'name')->get();
+
         return view('products.edit', compact('product', 'groups'));
     }
 
@@ -64,7 +67,7 @@ class ProductController extends Controller
             'purchace_price' => 'nullable|min:0|numeric',
             'selling_price' => 'nullable|min:0|numeric',
             'discount_formula' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
-            'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u'
+            'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
         ]);
 
         $validatedData['oversell'] = $request->has('oversell') ? 1 : 0;
@@ -83,5 +86,4 @@ class ProductController extends Controller
 
         return redirect()->route('products.index')->with('success', 'Product deleted successfully.');
     }
-
 }

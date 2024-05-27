@@ -10,6 +10,7 @@ class CustomerGroupController extends Controller
     public function index()
     {
         $customerGroups = Models\CustomerGroup::paginate(12);
+
         return view('customerGroups.index', compact('customerGroups'));
     }
 
@@ -30,7 +31,6 @@ class CustomerGroupController extends Controller
 
         return redirect()->route('customer-groups.index')->with('success', 'Customer group created successfully.');
     }
-
 
     public function edit(Models\CustomerGroup $customerGroup)
     {
@@ -56,5 +56,4 @@ class CustomerGroupController extends Controller
 
         return redirect()->route('customer-groups.index')->with('success', 'Customer group deleted successfully.');
     }
-
 }

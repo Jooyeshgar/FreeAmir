@@ -11,7 +11,7 @@ use Spatie\Permission\Models\Role;
 class PermissionController extends Controller
 {
     public $rules = [
-        'name'        => 'required | string | min:1 | max:255',
+        'name' => 'required | string | min:1 | max:255',
         'description' => 'nullable | string | min:3 | max:255',
     ];
 
@@ -24,7 +24,6 @@ class PermissionController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @param  \Illuminate\Http\Request $request
      * @return \Illuminate\Http\Response
      */
     public function index(Request $request)
@@ -39,7 +38,7 @@ class PermissionController extends Controller
         $permissions = $query->paginate(20);
 
         return view('management.permission.index', [
-            'permissions' => $permissions
+            'permissions' => $permissions,
         ]);
     }
 
@@ -49,17 +48,17 @@ class PermissionController extends Controller
     public function create()
     {
         $roles = Role::all();
+
         return view('management.permission.create', [
-            'permission'  => null,
+            'permission' => null,
             'roles' => $roles,
-            'syncedRoles' => collect()
+            'syncedRoles' => collect(),
         ]);
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
@@ -82,25 +81,23 @@ class PermissionController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param  \Spatie\Permission\Models\Permission $permission
      * @return \Illuminate\Http\Response
      */
     public function edit(Permission $permission)
     {
         $roles = Role::all();
         $syncedRoles = $permission->roles()->pluck('id');
+
         return view('management.permission.create', [
-            'permission'  => $permission,
-            'roles'       => $roles,
-            'syncedRoles' => $syncedRoles
+            'permission' => $permission,
+            'roles' => $roles,
+            'syncedRoles' => $syncedRoles,
         ]);
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  Permission  $permission
      * @return \Illuminate\Http\Response
      */
     public function update(Request $request, Permission $permission)
@@ -118,6 +115,7 @@ class PermissionController extends Controller
             return redirect(route('permissions.index'))
                 ->with('success', 'Permission updated successfully');
         }
+
         return redirect(route('permissions.index'))
             ->with('error', 'An error occurred, Try again.');
     }
@@ -125,15 +123,15 @@ class PermissionController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param  \Spatie\Permission\Models\Permission $permission
      * @return \Illuminate\Http\Response
      */
     public function destroy(Permission $permission)
     {
         if ($permission->delete()) {
             return redirect(route('permissions.index'))
-                ->with('success', "Removed successfully.");
+                ->with('success', 'Removed successfully.');
         }
+
         return redirect(route('permissions.index'))
             ->with('error', 'An error occurred, Try again.');
     }

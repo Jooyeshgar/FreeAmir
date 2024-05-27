@@ -7,10 +7,15 @@ use Illuminate\View\Component;
 class FormInput extends Component
 {
     public $name;
+
     public $value;
+
     public $title;
+
     public $placeHolder;
+
     public $message;
+
     public $type;
 
     public function __construct($name, $title, $placeHolder, $message = null, $type = 'text', $value = '')

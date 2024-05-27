@@ -3,12 +3,11 @@
 use App\Http\Controllers;
 use Illuminate\Support\Facades\Route;
 
-
 Route::get('/login', [Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [Controllers\Auth\LoginController::class, 'login']);
 Route::get('/logout', [Controllers\Auth\LoginController::class, 'logout'])->name('logout');
 
-//Route::group(['middleware' => 'auth'], function () {
+Route::group(['middleware' => 'auth'], function () {
     Route::get('/', [Controllers\HomeController::class, 'index'])->name('home');
     Route::resource('subjects', Controllers\SubjectController::class);
     Route::resource('transactions', Controllers\TransactionController::class);
@@ -25,4 +24,4 @@ Route::get('/logout', [Controllers\Auth\LoginController::class, 'logout'])->name
         Route::resource('roles', Controllers\Management\RoleController::class)->except(['show']);
         Route::resource('configs', Controllers\ConfigController::class);
     });
-//});
+});

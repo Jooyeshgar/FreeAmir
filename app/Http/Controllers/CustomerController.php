@@ -10,12 +10,14 @@ class CustomerController extends Controller
     public function index()
     {
         $customers = Models\Customer::with('subject', 'group')->paginate(12);
+
         return view('customers.index', compact('customers'));
     }
 
     public function create()
     {
         $groups = Models\CustomerGroup::select('id', 'name')->get();
+
         return view('customers.create', compact('groups'));
     }
 
@@ -44,7 +46,7 @@ class CustomerController extends Controller
             'acc_bank_2' => 'nullable|string|max:50|regex:/^[\w\d\s]*$/u',
         ]);
 
-        $validatedData['rep_via_email'] =  $request->has('rep_via_email') ? 1 : 0;
+        $validatedData['rep_via_email'] = $request->has('rep_via_email') ? 1 : 0;
         $validatedData['connector'] = '';
         $validatedData['cell'] = '';
         $validatedData['balance'] = 0;
@@ -68,11 +70,11 @@ class CustomerController extends Controller
         return redirect()->route('customers.index')->with('success', 'Customer created successfully.');
     }
 
-
     public function edit(Models\Customer $customer)
     {
         $groups = Models\CustomerGroup::select('id', 'name')->get();
-        return view('customers.edit', compact('customer','groups'));
+
+        return view('customers.edit', compact('customer', 'groups'));
     }
 
     public function update(Request $request, Models\Customer $customer)
@@ -100,7 +102,7 @@ class CustomerController extends Controller
             'acc_bank_2' => 'nullable|string|max:50|regex:/^[\w\d\s]*$/u',
         ]);
 
-        $validatedData['rep_via_email'] =  $request->has('rep_via_email') ? 1 : 0;
+        $validatedData['rep_via_email'] = $request->has('rep_via_email') ? 1 : 0;
         $validatedData['connector'] = '';
         $validatedData['cell'] = '';
         $validatedData['balance'] = 0;
@@ -130,5 +132,4 @@ class CustomerController extends Controller
 
         return redirect()->route('customers.index')->with('success', 'Customer deleted successfully.');
     }
-
 }

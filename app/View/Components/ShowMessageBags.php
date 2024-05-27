@@ -9,7 +9,8 @@ class ShowMessageBags extends Component
 {
     public function __construct(
         public string $type = 'errors'
-    ){}
+    ) {
+    }
 
     public function render()
     {
@@ -25,7 +26,7 @@ class ShowMessageBags extends Component
                 if ($messages instanceof \Illuminate\Support\ViewErrorBag) {
                     $messages = collect($messages->getMessages())->flatten()->all();
                 }
-                
+
                 // Wrap single string in array
                 if (is_string($messages)) {
                     $messages = [$messages];
@@ -33,9 +34,9 @@ class ShowMessageBags extends Component
 
                 $msgs->push([
                     'type' => $class[$type],
-                    'message' => $messages
+                    'message' => $messages,
                 ]);
-            
+
                 Session::forget($type);
             }
         }

@@ -11,7 +11,7 @@ use Spatie\Permission\Models\Role;
 class RoleController extends Controller
 {
     public $rules = [
-        'name'        => 'required | string | min:3 | max:255',
+        'name' => 'required | string | min:3 | max:255',
         'description' => 'nullable | string | min:3 | max:255',
     ];
 
@@ -24,13 +24,12 @@ class RoleController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @param  \Illuminate\Http\Request $request
      * @return \Illuminate\Http\Response
      */
     public function index(Request $request)
     {
         $validated = Validator::make($request->all(), $this->searchRules, $this->messages)->validate();
-        $query     = Role::orderBy('id', 'desc');
+        $query = Role::orderBy('id', 'desc');
 
         if (isset($validated['search']) && $search = $validated['search']) {
             $query->where('name', 'like', "%{$search}%")
@@ -38,8 +37,9 @@ class RoleController extends Controller
         }
 
         $roles = $query->paginate(20);
+
         return view('management.roles.index', [
-            'roles' => $roles
+            'roles' => $roles,
         ]);
     }
 
@@ -49,10 +49,11 @@ class RoleController extends Controller
     public function create()
     {
         $permissions = Permission::all();
+
         return view('management.roles.create', [
-            'role'          => null,
+            'role' => null,
             'permissions' => $permissions,
-            'syncedPerms' => collect()
+            'syncedPerms' => collect(),
         ]);
     }
 
@@ -73,7 +74,7 @@ class RoleController extends Controller
         }
 
         return redirect(route('roles.index'))
-            ->with("success", "Created successfully.");
+            ->with('success', 'Created successfully.');
     }
 
     /**
@@ -83,10 +84,11 @@ class RoleController extends Controller
     {
         $permissions = Permission::all();
         $syncedPerms = $role->permissions()->pluck('id');
+
         return view('management.roles.create', [
-            'role'          => $role,
-            'permissions'   => $permissions,
-            'syncedPerms'   => $syncedPerms
+            'role' => $role,
+            'permissions' => $permissions,
+            'syncedPerms' => $syncedPerms,
         ]);
     }
 
@@ -106,10 +108,11 @@ class RoleController extends Controller
 
         if ($role->update($validated)) {
             return redirect()->route('roles.index')
-                ->with("success", "Updated successfully.");
+                ->with('success', 'Updated successfully.');
         }
+
         return redirect()->route('roles.index')
-            ->with("error", "An error occurred, Try again.");
+            ->with('error', 'An error occurred, Try again.');
     }
 
     /**
@@ -119,9 +122,10 @@ class RoleController extends Controller
     {
         if ($role->delete()) {
             return redirect(route('roles.index'))
-                ->with("success", "Removed successfully.");
+                ->with('success', 'Removed successfully.');
         }
+
         return redirect(route('roles.index'))
-            ->with("error", "An error occurred, Try again.");
+            ->with('error', 'An error occurred, Try again.');
     }
 }

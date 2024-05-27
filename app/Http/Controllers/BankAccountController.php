@@ -10,12 +10,14 @@ class BankAccountController extends Controller
     public function index()
     {
         $bankAccounts = Models\BankAccount::with('bank')->paginate(12);
+
         return view('bankAccounts.index', compact('bankAccounts'));
     }
 
     public function create()
     {
         $banks = Models\Bank::select('id', 'name')->get();
+
         return view('bankAccounts.create', compact('banks'));
     }
 
@@ -31,7 +33,7 @@ class BankAccountController extends Controller
             'bank_address' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
             'bank_phone' => 'nullable|numeric',
             'bank_web_page' => 'nullable|string|regex:/^[\w\d\s]*$/u',
-            'desc' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u'
+            'desc' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
         ]);
 
         Models\BankAccount::create($validatedData);
@@ -42,6 +44,7 @@ class BankAccountController extends Controller
     public function edit(Models\BankAccount $bankAccount)
     {
         $banks = Models\Bank::select('id', 'name')->get();
+
         return view('bankAccounts.edit', compact('bankAccount', 'banks'));
     }
 
@@ -57,7 +60,7 @@ class BankAccountController extends Controller
             'bank_address' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
             'bank_phone' => 'nullable|numeric',
             'bank_web_page' => 'nullable|string|regex:/^[\w\d\s]*$/u',
-            'desc' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u'
+            'desc' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
         ]);
 
         $bankAccount->update($validatedData);

@@ -34,7 +34,6 @@ class CreatePaymentsTable extends Migration
         });
     }
 
-
     /**
      * Reverse the migrations.
      *

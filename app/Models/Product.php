@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Product extends Model
 {
     use HasFactory;
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -23,9 +23,8 @@ class Product extends Model
         'purchace_price',
         'selling_price',
         'discount_formula',
-        'description'
+        'description',
     ];
-
 
     public function productGroup(): BelongsTo
     {
