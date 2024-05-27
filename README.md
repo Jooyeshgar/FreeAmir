@@ -1,35 +1,38 @@
-## Amir: Free Laravel Accounting Software (فارسی)
+## امیر: نرم افزار رایگان حسابداری لاراول
+**[English](README.en.md)**
 
-**Important Notice:** Amir is currently under **development** and is not yet ready for production use. We are actively working on development and will announce the official release date soon. Stay tuned!
 
-**Introduction:**
+**توجه مهم:** امیر در حال حاضر در مرحله **توسعه** است و هنوز برای استفاده در محیط عملیاتی آماده نیست. ما بطور فعالانه در حال توسعه آن هستیم و به زودی تاریخ انتشار رسمی را اعلام خواهیم کرد. با ما همراه باشید!
 
-**Amir** is a free and open-source accounting software written in Laravel, designed specifically for Iranian businesses and individuals. It aims to provide a user-friendly and comprehensive solution for managing finances, with features tailored to the specific needs of Iranian users, including support for Iranian tax regulations.
+**معرفی:**
 
-**Features:**
+**امیر** یک نرم افزار حسابداری رایگان و متن باز است که با لاراول نوشته شده و به طور خاص برای کسب و کارها و افراد ایرانی طراحی شده است. این نرم افزار با هدف ارائه یک راهکار جامع و کاربرپسند برای مدیریت امور مالی، با ویژگی هایی که مطابق با نیازهای خاص کاربران ایرانی است، از جمله پشتیبانی از قوانین مالیاتی ایران، ساخته شده است.
 
-* **Intuitive interface:** Easy to use for businesses of all sizes and technical expertise.
-* **Multiple languages:** Currently supports Farsi (Persian) with potential for further language expansion.
-* **Accounting functionalities:**
-    * Manage income and expenses
-    * Track invoices and receipts
-    * Generate reports
-    * Support for Iranian tax regulations
-* **Open-source:** Free to use, modify, and contribute to.
+**ویژگی ها:**
 
-**Installation:**
+* **آزاد (متن باز):** استفاده، اصلاح و مشارکت در آن رایگان است و به ازادی های کاربران احترام می گذارد.
+* **رابط کاربری کاربرپسند:** استفاده آسان برای کسب و کارها با هر اندازه و دانش فنی.
+* **چند زبانه:** در حال حاضر از زبان فارسی پشتیبانی می کند (با قابلیت اضافه شدن زبان های دیگر در آینده).
+* **کارکردهای حسابداری:**
+    * سامانه مودیان
+    * مدیریت درآمد و هزینه
+    * پیگیری فاکتورها و رسیدها
+    * تهیه گزارشات
+    * پشتیبانی از قوانین مالیاتی ایران
 
-1. **Prerequisites:**
+**نصب:**
+
+1. **پیش نیازها:**
     * PHP >= 8.0
     * Composer
     * MySQL database
-2. **Clone the repository:**
+2. **دریافت فایل ها:**
 
 ```bash
 git clone https://github.com/Jooyeshgar/FreeAmir.git
 ```
 
-3. **Install dependencies:**
+3. **نصب وابستگی ها:**
 
 ```bash
 composer install
@@ -37,7 +40,7 @@ composer install
 
 4. **Copy `.env.example` to `.env` and configure database credentials.**
 
-5. **Generate application key:**
+5. **ساخت application key:**
 
 ```bash
 php artisan key:generate
@@ -55,7 +58,7 @@ php artisan migrate
 php artisan db:seed
 ```
 
-optional demo data
+داده های نمایشی (اختیاری)
 ```bash
 php artisan db:seed --class DemoSeeder
 ```
@@ -72,20 +75,20 @@ npm run dev
 php artisan serve
 ```
 
-**Usage:**
+**استفاده:**
 
-1. Access the application in your web browser at http://localhost:8000 (or the port specified in your `.env` file).
-2. Login with the default credentials (email: `admin@example.com`, password: `password`).
-3. Explore the features and functionalities of the application.
+1. با مرورگر وب خود به برنامه در http://localhost:8000 (یا پورتی که در فایل .env شما مشخص شده است) دسترسی پیدا کنید.
+2. با اعتبار پیش فرض وارد شوید (ایمیل: admin@example.com، رمز عبور: password).
+3. ویژگی ها و کارکردهای برنامه را بررسی کنید.
 
-**Contributing:**
+**مشارکت:**
 
-We welcome contributions to the Amir project! Please refer to the CONTRIBUTING.md: CONTRIBUTING.md file for guidelines on how to submit bug reports, feature requests, and pull requests.
+ما از مشارکت در پروژه امیر استقبال می کنیم! لطفاً برای دستورالعمل های مربوط به ارسال گزارش باگ، درخواست ویژگی و درخواست های pull به فایل CONTRIBUTING.md مراجعه کنید: CONTRIBUTING.md
 
-**License:**
+**لایسنس:**
 
-This project is licensed under the GPL-3 License. See the LICENSE: LICENSE file for details.
+این پروژه تحت لایسنس GPL-3 منتشر شده است. برای جزئیات به فایل LICENSE: LICENSE مراجعه کنید.
 
-**Support:**
+**پشتیبانی:**
 
-For any questions or issues, please feel free to create an issue on the GitHub repository.
+برای هر گونه سوال یا مشکلی، لطفاً در مخزن گیت هاب یک issue ایجاد کنید.
