@@ -1,3 +1,14 @@
+@import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+.login-bg{
+	background-image: url("../images/bg.jpeg");
+}
+body{
+    font-family: Vazirmatn, sans-serif !important;
+    direction: rtl;
+}

@@ -5,7 +5,7 @@
         </h2>
     </x-slot>
     <x-show-message-bags/>
-    <div class="card bg-base-100 shadow-xl">
+    <div class="card bg-gray-100 shadow-xl">
         <div class="card-body">
             <div class="card-actions">
                 <a href="{{ route('customer-groups.create') }}" class="btn btn-primary">Create customer group</a>

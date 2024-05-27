@@ -31,7 +31,7 @@ class CreateCustomersTable extends Migration
             $table->string('responsible', 50)->default('')->nullable();
             $table->string('connector', 50)->default('')->nullable();
             $table->unsignedBigInteger('group_id')->nullable(); // Foreign key to groups table
-            $table->text('desc')->default('')->nullable();
+            $table->text('desc')->nullable();
             $table->decimal('balance', 10, 2)->default(0)->nullable();
             $table->decimal('credit', 10, 2)->default(0)->nullable();
             $table->boolean('rep_via_email')->default(false)->nullable(); // Boolean field for receiving updates via email

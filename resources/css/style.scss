@@ -1,0 +1,43 @@
+
+body{
+    font-family: Vazirmatn, sans-serif;
+    direction: rtl;
+    background-image: url("../images/inbg.jpeg");
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+
+}
+li a:hover , li summary:hover{
+@apply rounded-xl;
+}
+.tab{
+    width: 120px !important;
+    border-radius: 10px !important;
+    @apply my-3;
+    @apply px-1;
+    @apply block;
+}
+input[type="text"] ,input[type="tel"] ,input[type="number"] ,input[type="url"] ,input[type="email"]{
+    @apply rounded-md;
+    @apply shadow-sm;
+}
+input[type="text"]:focus,
+select:focus,
+textarea:focus,
+input[type="tel"]:focus,
+input[type="number"]:focus,
+.prefix:focus,
+input[type="url"]:focus,
+input[type="email"]:focus {
+    @apply rounded-md;
+    @apply shadow-sm;
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 3px rgba(0, 123, 255, 0.5);
+}
+.prefix-input:focus{
+    border-color: transparent !important;
+    box-shadow: none !important;
+
+}

@@ -36,8 +36,33 @@
                     @endforeach
                     </tbody>
                 </table>
-                {!! $banks->links() !!}
-            </div>
+
+                @if ($banks->hasPages())
+                    <div class="join">
+                        {{-- Previous Page Link --}}
+                        @if ($banks->onFirstPage())
+                            <input class="join-item btn btn-square" type="radio" disabled>
+                        @else
+                            <a href="{{ $banks->previousPageUrl() }}" class="join-item btn btn-square">&lsaquo;</a>
+                        @endif
+
+                        {{-- Pagination Elements --}}
+                        @foreach ($banks->links() as $link)
+                            @if (is_string($link))
+                                <input class="join-item btn btn-square" type="radio" disabled>
+                            @else
+                                <a href="{{ $link['url'] }}" class="join-item btn btn-square">{{ $link['label'] }}</a>
+                            @endif
+                        @endforeach
+
+                        {{-- Next Page Link --}}
+                        @if ($banks->hasMorePages())
+                            <a href="{{ $banks->nextPageUrl() }}" class="join-item btn btn-square">&rsaquo;</a>
+                        @else
+                            <input class="join-item btn btn-square" type="radio" disabled>
+                        @endif
+                    </div>
+                @endif
         </div>
     </div>
 </x-app-layout>
