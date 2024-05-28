@@ -28,19 +28,19 @@
             </div>
             <div class="grid grid-cols-2 gap-1 ">
                 <div>
-                    <x-form-input title="{{ __('Name') }}" name="name" place-holder="{{ __('Name') }}" :message="$errors->first('name')" :value="old('name', $customer->name ?? '')" />
+                    <x-form-input title="{{ __('Name') }}" name="name" place-holder="{{ __('Name') }}" :value="old('name', $customer->name ?? '')" />
                 </div>
                 <div>
-                    <x-form-input title="{{ __('Accountting code') }}" name="code" place-holder="{{ __('Accountting code') }}" :message="$errors->first('code')" :value="old('code', $customer->code ?? '')" />
+                    <x-form-input title="{{ __('Accountting code') }}" name="code" place-holder="{{ __('Accountting code') }}" :value="old('code', $customer->code ?? '')" />
                 </div>
 
             </div>
             <div class="grid grid-cols-2 gap-1 ">
                 <div>
-                    <x-form-input title="{{ __('National ID') }}" name="code" place-holder="{{ __('National ID') }}" :message="$errors->first('personal_code')" :value="old('personal_code', $customer->personal_code ?? '')" />
+                    <x-form-input title="{{ __('National ID') }}" name="code" place-holder="{{ __('National ID') }}" :value="old('personal_code', $customer->personal_code ?? '')" />
                 </div>
                 <div>
-                    <x-form-input title="{{ __('Economic code') }}" name="ecnmcs_code" place-holder="{{ __('Economic code') }}" :message="$errors->first('ecnmcs_code')" :value="old('ecnmcs_code', $customer->ecnmcs_code ?? '')" />
+                    <x-form-input title="{{ __('Economic code') }}" name="ecnmcs_code" place-holder="{{ __('Economic code') }}" :value="old('ecnmcs_code', $customer->ecnmcs_code ?? '')" />
                 </div>
                 <div>
                     <label class="form-control w-full max-w-xs">
@@ -70,24 +70,24 @@
             <div role="tabpanel" class="tab-content bg-gray-100  rounded-box p-2">
                 <div class="grid grid-cols-3 gap-1 ">
                     <div>
-                        <x-form-input title="{{ __('Phone') }}" name="tel" place-holder="{{ __('Phone') }}" :message="$errors->first('tel')" :value="old('tel', $customer->tel ?? '')" />
+                        <x-form-input title="{{ __('Phone') }}" name="tel" place-holder="{{ __('Phone') }}" :value="old('tel', $customer->tel ?? '')" />
 
                     </div>
                     <div>
-                        <x-form-input title="{{ __('Mobile') }}" name="cell" place-holder="{{ __('Mobile') }}" :message="$errors->first('cell')" :value="old('cell', $customer->cell ?? '')" />
+                        <x-form-input title="{{ __('Mobile') }}" name="cell" place-holder="{{ __('Mobile') }}" :value="old('cell', $customer->cell ?? '')" />
                     </div>
                     <div>
-                        <x-form-input title="{{ __('Fax') }}" name="fax" place-holder="{{ __('Fax') }}" :message="$errors->first('fax')" :value="old('fax', $customer->fax ?? '')" />
+                        <x-form-input title="{{ __('Fax') }}" name="fax" place-holder="{{ __('Fax') }}" :value="old('fax', $customer->fax ?? '')" />
                     </div>
                     <div>
-                        <x-form-input title="{{ __('Email') }}" name="email" place-holder="{{ __('Email') }}" :message="$errors->first('email')" :value="old('email', $customer->email ?? '')" />
+                        <x-form-input title="{{ __('Email') }}" name="email" place-holder="{{ __('Email') }}" :value="old('email', $customer->email ?? '')" />
 
                     </div>
                     <div>
-                        <x-form-input title="{{ __('Website') }}" name="web_page" place-holder="{{ __('Website') }}" :message="$errors->first('web_page')" :value="old('web_page', $customer->web_page ?? '')" />
+                        <x-form-input title="{{ __('Website') }}" name="web_page" place-holder="{{ __('Website') }}" :value="old('web_page', $customer->web_page ?? '')" />
                     </div>
                     <div>
-                        <x-form-input title="{{ __('Postal code') }}" name="postal_code" :value="old('postal_code', $customer->postal_code ?? '')" place-holder="{{ __('Postal code') }}" :message="$errors->first('postal_code')" />
+                        <x-form-input title="{{ __('Postal code') }}" name="postal_code" :value="old('postal_code', $customer->postal_code ?? '')" place-holder="{{ __('Postal code') }}" />
                     </div>
                     {{--
                     <div class="flex items-center">
@@ -113,27 +113,27 @@
                 <h1> حساب ۱</h1>
                 <div class="grid grid-cols-3 gap-1 ">
                     <div>
-                        <x-form-input title="{{ __('Name') }}" name="fax" place-holder="{{ __('Name') }}" :message="$errors->first('acc_name_1')" :value="old('acc_name_1', $customer->acc_name_1 ?? '')" />
+                        <x-form-input title="{{ __('Name') }}" name="fax" place-holder="{{ __('Name') }}" :value="old('acc_name_1', $customer->acc_name_1 ?? '')" />
 
                     </div>
                     <div>
-                        <x-form-input title="{{ __('Account number') }}" name="acc_no_1" place-holder="{{ __('Account number) }}" :message="$errors->first('acc_no_1')" :value="old('acc_name_1', $customer->acc_no_1 ?? '')" />
+                        <x-form-input title="{{ __('Account number') }}" name="acc_no_1" place-holder="{{ __('Account number') }}" :value="old('acc_name_1', $customer->acc_no_1 ?? '')" />
                     </div>
                     <div>
-                        <x-form-input title="{{ __('Bank') }}" name="acc_bank_1" place-holder="{{ __('Bank') }}" :message="$errors->first('acc_bank_1')" :value="old('acc_bank_1', $customer->acc_bank_1 ?? '')" />
+                        <x-form-input title="{{ __('Bank') }}" name="acc_bank_1" place-holder="{{ __('Bank') }}" :value="old('acc_bank_1', $customer->acc_bank_1 ?? '')" />
                     </div>
                 </div>
                 <h1> حساب ۲</h1>
                 <div class="grid grid-cols-3 gap-1 ">
                     <div>
-                        <x-form-input title="{{ __('Name') }}" name="fax" place-holder="{{ __('Name') }}" :message="$errors->first('acc_name_2')" :value="old('acc_name_2', $customer->acc_name_2 ?? '')" />
+                        <x-form-input title="{{ __('Name') }}" name="fax" place-holder="{{ __('Name') }}" :value="old('acc_name_2', $customer->acc_name_2 ?? '')" />
                     </div>
                     <div>
                         <x-form-input title="{{ __('Account number') }}" name="acc_no_2" place-holder="{{ __('Account number') }}" :message="$errors->first('acc_no_1')"
                             :value="old('acc_name_2', $customer->acc_no_2 ?? '')" />
                     </div>
                     <div>
-                        <x-form-input title="{{ __('Bank') }}" name="acc_bank_1" place-holder="{{ __('Bank') }}" :message="$errors->first('acc_bank_2')" :value="old('acc_bank_2', $customer->acc_bank_2 ?? '')" />
+                        <x-form-input title="{{ __('Bank') }}" name="acc_bank_1" place-holder="{{ __('Bank') }}" :value="old('acc_bank_2', $customer->acc_bank_2 ?? '')" />
                     </div>
                 </div>
             </div>
@@ -141,7 +141,7 @@
             <div role="tabpanel" class="tab-content bg-gray-100  rounded-box p-2">
                 <div class="grid grid-cols-2 gap-1 ">
                     <div>
-                        <x-form-input title="{{ __('connector') }}" name="connector" place-holder="{{ __('connector') }}" :message="$errors->first('connector')" :value="old('connector', $customer->connector ?? '')" />
+                        <x-form-input title="{{ __('connector') }}" name="connector" place-holder="{{ __('connector') }}" :value="old('connector', $customer->connector ?? '')" />
                     </div>
                     <div>
                         <x-form-input title="{{ __(' responsible') }}" name="responsible" place-holder="{{ __('  responsible') }}" :message="$errors->first('responsible')"

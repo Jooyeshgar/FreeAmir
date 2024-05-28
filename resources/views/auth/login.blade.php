@@ -20,9 +20,9 @@
                 <form method="POST" action="{{ route('login') }}">
                     @csrf
                     <h1 class="font-bold text-center">{{ __('Login') }}</h1>
-                    <x-form-input title="{{ __('Username or Email') }}" name="email" place-holder="{{ __('Enter your email') }}" :message="$errors->first('email')" />
+                    <x-form-input title="{{ __('Username or Email') }}" name="email" place-holder="{{ __('Enter your email') }}" />
 
-                    <x-form-input title="{{ __('Password') }}" name="password" place-holder="{{ __('Enter your password') }}" :message="$errors->first('password')" type="password" />
+                    <x-form-input title="{{ __('Password') }}" name="password" place-holder="{{ __('Enter your password') }}" type="password" />
                     <div class="flex items-center justify-between mt-4 pl-2 ">
 
                         <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white  py-2 px-8 rounded">
