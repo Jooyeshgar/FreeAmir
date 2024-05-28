@@ -38,9 +38,13 @@ git clone https://github.com/Jooyeshgar/FreeAmir.git
 composer install
 ```
 
-4. **فایل .env.example را به .env کپی کرده و اطلاعات مربوط به پایگاه داده را تنظیم کنید.**
+4. **فایل .env.example را به .env کپی کرده و اطلاعات مربوط به پایگاه داده را تنظیم کنید:**
 
-5. **ساخت 'کلید':**
+```bash
+cp .env.example .env
+```
+
+5. **ساخت کلید:**
 
 ```bash
 php artisan key:generate
