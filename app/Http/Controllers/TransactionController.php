@@ -26,7 +26,7 @@ class TransactionController extends Controller
     {
         $subjects = Subject::orderBy('code', 'asc')->get();
         $transaction = new Transaction;
-        $previousTransactionId = Transaction::orderBy('id', 'desc')->first()->id;
+        $previousTransactionId = Transaction::orderBy('id', 'desc')->first()->id ?? 0;
         return view('transactions.create', compact('previousTransactionId', 'subjects', 'transaction'));
     }
 
