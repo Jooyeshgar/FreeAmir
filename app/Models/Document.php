@@ -14,6 +14,7 @@ class Document extends Model
     protected $fillable = [
         'number',
         'date',
+        'title',
         'permanent',
     ];
 

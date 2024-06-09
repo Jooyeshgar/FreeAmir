@@ -8,6 +8,8 @@ use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class TransactionController extends Controller
@@ -22,27 +24,41 @@ class TransactionController extends Controller
 
     public function create()
     {
-        $users = User::all();
-        $subjects = Subject::all();
+        $subjects = Subject::orderBy('code', 'asc')->get();
         $transaction = new Transaction;
-
-        return view('transactions.create', compact('users', 'subjects', 'transaction'));
+        $previousTransactionId = Transaction::orderBy('id', 'desc')->first()->id;
+        return view('transactions.create', compact('previousTransactionId', 'subjects', 'transaction'));
     }
 
     public function store(Request $request)
     {
-        $document = Document::create();
+
+        Validator::make($request->all(), [
+            'title' => 'required|string|min:3|max:255',
+            'transactions.*.subject_id' => 'required|exists:subjects,id',
+            'transactions.*.debit' => 'nullable|required_without:transactions.*.credit|integer|min:0',
+            'transactions.*.credit' => 'nullable|required_without:transactions.*.debit|integer|min:0',
+            'transactions.*.desc' => 'required|string',
+        ])->validate();
+
+        DB::beginTransaction();
+
+        $document = Document::create([
+            'titile' => $request->title
+        ]);
 
         foreach ($request->input('transactions') as $transactionData) {
-            $validatedData = Validator::make($transactionData, [
-                'subject_id' => 'required|exists:subjects,id',
-                'user_id' => 'required|exists:users,id',
-                'value' => 'required|integer',
-                'desc' => 'required|string',
-            ])->validate();
-
-            Transaction::create($validatedData + ['document_id' => $document->id]);
+            $transactionData = (object) $transactionData;
+            Transaction::create([
+                'document_id' => $document->id,
+                'user_id' => Auth::id(),
+                'subject_id' => $transactionData->subject_id,
+                'debit' => $transactionData->debit ?? 0,
+                'credit' => $transactionData->credit ?? 0,
+                'desc' => $transactionData->desc ?? 0,
+            ]);
         }
+        DB::commit();
 
         return redirect()->route('transactions.index')->with('success', 'Transactions created successfully.');
     }

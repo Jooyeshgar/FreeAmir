@@ -16,7 +16,8 @@ class Transaction extends Model
         'document_id',
         'user_id',
         'desc',
-        'value',
+        'debit',
+        'credit',
     ];
 
     /**
