@@ -10,7 +10,7 @@ Route::get('/logout', [Controllers\Auth\LoginController::class, 'logout'])->name
 Route::group(['middleware' => 'auth'], function () {
     Route::get('/', [Controllers\HomeController::class, 'index'])->name('home');
     Route::resource('subjects', Controllers\SubjectController::class);
-    Route::resource('transactions', Controllers\TransactionController::class);
+    Route::resource('transactions', Controllers\DocumentController::class);
     Route::resource('invoices', Controllers\InvoiceController::class);
     Route::resource('products', Controllers\ProductController::class);
     Route::resource('product-groups', Controllers\ProductGroupController::class);

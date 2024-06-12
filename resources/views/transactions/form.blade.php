@@ -1,80 +1,140 @@
-<style>
-    label:nth-child(n + 6){
-        display: none !important;
-    }
-</style>
-<hr>
-<div id="transactions">
-    <div class="transaction flex flex-wrap items-center justify-center">
-        <div class="flex-1 min-w-42 p-3">
-            <label for="subject_id" class="block text-gray-700 text-sm font-bold mb-2">code</label>
-            <input type="text" name="transactions[0][code]" id="value"
-                   value="{{ $transaction->subject?$transaction->subject->code:'' }}"
-                   class="codeInput shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+<x-card class="rounded-2xl w-full" class_body="p-4">
+    <div class="flex gap-2">
+        <x-text-input name="title" title="{{__('document name')}}" value="{{$document->title??''}}" placeholder="{{__('document name')}}"
+                      label_text_class="text-gray-500" label_class="w-full" input_class="max-w-96"></x-text-input>
+        <x-text-input value="{{ $document->id??'' }}"
+                      name="document_id"
+                      label_text_class="text-gray-500"
+                      label_class="w-full hidden"></x-text-input>
+        <div class="flex-1"></div>
+        <x-text-input disabled="true" value="{{$previousDocumentNumber}}" name="" title="{{__('previous document number')}}"
+                      placeholder="{{__('previous document number')}}" label_text_class="text-gray-500 text-nowrap"></x-text-input>
+        <x-text-input value="{{$document->number??$previousDocumentNumber+1}}" name="number" title="{{__('previous document number')}}"
+                      placeholder="{{__('current document number')}}" label_text_class="text-gray-500 text-nowrap"></x-text-input>
+        <x-text-input data-jdp title="{{__('date')}}" name="date" placeholder="{{__('date')}}" value="{{$document->jalali_date}}"
+                      label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
+    </div>
+</x-card>
 
-        </div>
-        <div class="flex-1 min-w-42 p-3">
-            <label for="subject_id" class="block text-gray-700 text-sm font-bold mb-2">Subject</label>
-            <select name="transactions[0][subject_id]" id="subject_id"
-                    class="codeSelectBox shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                <option value="">Select a subject</option>
-                @foreach($subjects as $subject)
-                    <option {{$subject->parent_id?'':'disabled'}} value="{{ $subject->id }}"
-                            data-title="{{ $subject->name }}"
-                            data-type="{{ $subject->type }}"
-                        {{ $transaction->subject_id == $subject->id ? 'selected' : '' }}>
-                        {{ $subject->name }}  {{$subject->type=='both'?'':('- ('.$subject->type.')')}}
-                    </option>
-                @endforeach
+<x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-0">
 
-            </select>
+    <div class="flex overflow-x-auto overflow-y-hidden  gap-2 items-center px-4  ">
+        <div class="text-sm flex-1 max-w-8  text-center text-gray-500 pt-3 ">
+            *
         </div>
-        <div class="flex-1 min-w-42 p-3">
-            <label for="desc" class="block text-gray-700 text-sm font-bold mb-2">Description</label>
-            <input name="transactions[0][desc]" id="desc"
-                   class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                   value="{{ $transaction->desc }}">
+        <div class="text-sm flex-1 min-w-24 max-w-24 text-center text-gray-500 pt-3 ">
+            {{__('chapter code')}}
         </div>
-
-        <div class="flex-1 min-w-42 p-3">
-            <label for="debit" class="block text-gray-700 text-sm font-bold mb-2">Debit</label>
-            <input type="text" name="transactions[0][debit]" id="debit"
-                   value="{{ $transaction->debit }}"
-                   class="debitInput shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+        <div class="text-sm flex-1 min-w-80 max-w-80 text-center text-gray-500 pt-3 ">
+            {{__('chapter title')}}
         </div>
-        <div class="flex-1 min-w-42 p-3">
-            <label for="credit" class="block text-gray-700 text-sm font-bold mb-2">Credit</label>
-            <input type="text" name="transactions[0][credit]" id="credit"
-                   value="{{ $transaction->credit }}"
-                   class="creditInput shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+        <div class="text-sm flex-1 min-w-80 text-center text-gray-500 pt-3 ">
+            {{__('description')}}
         </div>
-        <div class="flex-1 min-w-42 p-3">
-            <label for="value" class="block text-gray-700 text-sm font-bold mb-2">action</label>
-
-            <button type="button" style="line-height: 0;padding: 20px 0px"
-                    class=" w-full btn-sm  bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded removeTransaction text-center">
-                Remove
-            </button>
+        <div class="text-sm flex-1 min-w-24 max-w-24 text-center text-gray-500 pt-3 ">
+            {{__('debit')}}
+        </div>
+        <div class="text-sm flex-1 min-w-24 max-w-24 text-center text-gray-500 pt-3 ">
+            {{__('credit')}}
         </div>
     </div>
-</div>
-<hr>
+    <div class="h-96 overflow-y-auto px-4">
+        <div id="transactions">
+            @foreach($transactions as $i=>$transaction)
+                <div onclick="activeRow(event)" class="transaction flex gap-2 overflow-auto items-center ">
 
-<div class="flex justify-content gap-4 align-center">
-    <button type="button" id="addTransaction"
-                                                       class=" flex-1 my-5 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Add Transaction
-    </button>
-    <button type="button" id="creditSum"
-            class="my-5 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">0
-    </button>
-    <button type="button" id="debitSum"
-            class="my-5 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">0
-    </button>
-</div>
+                    <x-text-input value="{{ $transaction->id??'' }}"
+                                  name="transactions[{{$i}}][transaction_id]"
+                                  label_text_class="text-gray-500"
+                                  label_class="w-full hidden"></x-text-input>
 
+                    <div class="flex-1 text-center  max-w-8 pb-3">
+                        <span class="transaction-count">1</span>
+
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                             stroke="currentColor"
+                             class="px-2 size-8 rounded-md  h-10 flex justify-center items-center text-center  bg-red-500 hover:bg-red-700 text-white font-bold rounded removeTransaction text-center">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                  d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
+                        </svg>
+
+                    </div>
+                    <div class="flex-1 min-w-24 max-w-24 pb-3">
+
+                        <x-text-input value="{{ $transaction->subject?$transaction->subject->code:'' }}" id="value"
+                                      name="transactions[{{$i}}][code]"
+                                      label_text_class="text-gray-500"
+                                      label_class="w-full" input_class="codeInput "></x-text-input>
+
+                    </div>
+                    <div class="flex-1 min-w-80 max-w-80 pb-3">
+                        <select name="transactions[{{$i}}][subject_id]" id="subject_id"
+                                class="codeSelectBox rounded-md max-h-10 min-h-10 select select-bordered border-slate-400 disabled:background-slate-700 w-full max-w-42 focus:outline-none ">
+                            <option value="">{{__('Select a subject')}}</option>
+                            @foreach($subjects as $subject)
+                                <option {{$subject->parent_id?'':'disabled'}} value="{{ $subject->id }}"
+                                        data-title="{{ $subject->name }}"
+                                        data-type="{{ $subject->type }}"
+                                    {{ $transaction->subject_id == $subject->id ? 'selected' : '' }}>
+                                    {{ $subject->name }}  {{$subject->type=='both'?'':('- ('.$subject->type.')')}}
+                                </option>
+                            @endforeach
+
+                        </select>
+                    </div>
+                    <div class="flex-1 min-w-80 pb-3">
+                        <x-text-input value="{{ $transaction->desc }}" placeholder="{{__('this document\'s row description')}}"
+                                      id="desc"
+                                      name="transactions[{{$i}}][desc]" label_text_class="text-gray-500"
+                                      label_class="w-full"
+                                      input_class=""></x-text-input>
+
+                    </div>
+
+                    <div class="flex-1 min-w-24 max-w-24 pb-3">
+                        <x-text-input value="{{ $transaction->value<0?-1*$transaction->value:'' }}"
+                                      placeholder="0" id="debit" name="transactions[{{$i}}][debit]"
+                                      label_text_class="text-gray-500"
+                                      label_class="w-full" input_class="debitInput"></x-text-input>
+                    </div>
+                    <div class="flex-1 min-w-24 max-w-24 pb-3">
+                        <x-text-input value="{{ $transaction->value>=0?$transaction->value:'' }}"
+                                      placeholder="0" id="credit" name="transactions[{{$i}}][credit]"
+                                      label_text_class="text-gray-500" label_class="w-full"
+                                      input_class="creditInput"></x-text-input>
+
+                    </div>
+                </div>
+            @endforeach
+        </div>
+
+        <div class="flex justify-content gap-4 align-center">
+            <div class="bg-gray-200 max-h-10 min-h-10 hover:bg-gray-300 border-none btn w-full rounded-md btn-active"
+                 id="addTransaction">
+                <span class="text-2xl">+</span>
+                {{__('Add Transaction')}}
+            </div>
+        </div>
+    </div>
+
+    <hr style="">
+    <div class="flex justify-end px-4 gap-2">
+        <span class="min-w-24 text-center text-gray-500" id="debitSum">1000</span>
+        <span class="min-w-24 text-center text-gray-500" id="creditSum">2000</span>
+    </div>
+</x-card>
+<div class="mt-2 flex gap-2 justify-end">
+    <a href="{{route('transactions.index')}}" type="submit" class="btn btn-default rounded-md"> {{__('cancel')}} </a>
+    <button type="submit" class="btn btn-default rounded-md"> {{__('save and create new document')}} </button>
+    <button type="submit"  class="btn text-white btn-primary rounded-md"> {{__('save and close form')}} </button>
+</div>
+<script type="module">
+    jalaliDatepicker.startWatch({
+    });
+</script>
 <script>
     var subjects = {!! json_encode($subjects) !!};
-    p2e = s => s.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+    var p2e = s => s.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
 
     function onCodeInputChange(e, selectBox) {
         let code = e.target.value
@@ -93,7 +153,14 @@
     function deleteAction() {
         if (document.getElementsByClassName('removeTransaction').length > 1) {
             this.parentNode.parentNode.remove();
+            updateTransactionCounter()
         }
+    }
+
+    function activeRow(e) {
+        console.log(e.currentTarget)
+        deactivateAllTransactionRow()
+        e.currentTarget.classList.remove('deactivated-transaction-row')
     }
 
     function debitInputChange(e, creditInput) {
@@ -122,8 +189,11 @@
         document.getElementById('creditSum').innerText = sumCredit
         document.getElementById('debitSum').innerText = sumDebit
     }
-    updateSumCalculation()
 
+    updateSumCalculation()
+    @isset($transaction->id)
+    deactivateAllTransactionRow()
+    @endisset
     var codeInputs = document.getElementById('transactions').getElementsByClassName('codeInput')
     var codeSelectBoxs = document.getElementById('transactions').getElementsByClassName('codeSelectBox')
     var removeButtons = document.getElementById('transactions').getElementsByClassName('removeTransaction')
@@ -143,12 +213,22 @@
         creditInput.addEventListener('keyup', (e) => creditInputChange(e, debitInput))
     }
 
+    function deactivateAllTransactionRow() {
+        let transactionsDiv = document.getElementById('transactions');
+        let transactionDivs = transactionsDiv.getElementsByClassName('transaction');
+        Array.from(transactionDivs).map(i => i.classList.add('deactivated-transaction-row'))
+    }
+
+    function updateTransactionCounter() {
+        Array.from(document.getElementsByClassName('transaction-count')).map((element, index) => element.innerText = index + 1)
+    }
 
     document.getElementById('addTransaction').addEventListener('click', function () {
         var transactionsDiv = document.getElementById('transactions');
         var transactionDivs = transactionsDiv.getElementsByClassName('transaction');
         var lastTransactionDiv = transactionDivs[transactionDivs.length - 1];
         var newTransactionDiv = lastTransactionDiv.cloneNode(true);
+        deactivateAllTransactionRow();
         // Update the index in the name attribute
         var selects = newTransactionDiv.getElementsByTagName('select');
         for (var i = 0; i < selects.length; i++) {
@@ -183,6 +263,7 @@
 
         // Append the new transaction div to the transactions div
         transactionsDiv.appendChild(newTransactionDiv);
+        updateTransactionCounter()
     });
 
 

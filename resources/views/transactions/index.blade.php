@@ -19,17 +19,15 @@
                         </tr>
                         </thead>
                         <tbody>
-                        @foreach ($transactions as $transaction)
+                        @foreach ($documents as $document)
                             <tr>
-                                <td class="px-4 py-2">{{ $transaction->id }}</td>
-                                <td class="px-4 py-2">{{ $transaction->subject->name }}</td>
-                                <td class="px-4 py-2">{{ $transaction->document_id }}</td>
-                                <td class="px-4 py-2">{{ $transaction->user->name }}</td>
-                                <td class="px-4 py-2">{{ $transaction->desc }}</td>
-                                <td class="px-4 py-2">{{ $transaction->value }}</td>
+                                <td class="px-4 py-2">{{ $document->id }}</td>
+                                <td class="px-4 py-2">{{ $document->number }}</td>
+                                <td class="px-4 py-2">{{ $document->title }}</td>
+                                <td class="px-4 py-2">{{ $document->created_at }}</td>
                                 <td class="px-4 py-2">
-                                    <a href="{{ route('transactions.edit', $transaction->id) }}" class="btn btn-sm btn-info">Edit</a>
-                                    <form action="{{ route('transactions.destroy', $transaction) }}" method="POST" class="inline-block">
+                                    <a href="{{ route('transactions.edit', $document->id) }}" class="btn btn-sm btn-info">Edit</a>
+                                    <form action="{{ route('transactions.destroy', $document) }}" method="POST" class="inline-block">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-sm btn-error">Delete</button>

@@ -2,49 +2,47 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreTransactionRequest;
+use App\Http\Requests\UpdateTransactionRequest;
 use App\Models;
 use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
-class TransactionController extends Controller
+class DocumentController extends Controller
 {
     public function index()
     {
-        $transactions = Transaction::all();
-        $cols = ['ID', 'Subject ID', 'Document ID', 'User ID', 'Description', 'Value'];
+        $documents = Document::orderBy('id', 'desc')->get();
+        $cols = ['ID', 'Number', 'Title', 'Date'];
 
-        return view('transactions.index', compact('transactions', 'cols'));
+        return view('transactions.index', compact('documents', 'cols'));
     }
 
     public function create()
     {
         $subjects = Subject::orderBy('code', 'asc')->get();
-        $transaction = new Transaction;
-        $previousTransactionId = Transaction::orderBy('id', 'desc')->first()->id ?? 0;
-        return view('transactions.create', compact('previousTransactionId', 'subjects', 'transaction'));
+        $transactions = [new Transaction];
+        $document = new Document();
+        $previousDocumentNumber = Document::orderBy('id', 'desc')->first()->number ?? 0;
+        return view('transactions.create', compact('document', 'previousDocumentNumber', 'subjects', 'transactions'));
     }
 
-    public function store(Request $request)
+    public function store(StoreTransactionRequest $request)
     {
-
-        Validator::make($request->all(), [
-            'title' => 'required|string|min:3|max:255',
-            'transactions.*.subject_id' => 'required|exists:subjects,id',
-            'transactions.*.debit' => 'nullable|required_without:transactions.*.credit|integer|min:0',
-            'transactions.*.credit' => 'nullable|required_without:transactions.*.debit|integer|min:0',
-            'transactions.*.desc' => 'required|string',
-        ])->validate();
 
         DB::beginTransaction();
 
         $document = Document::create([
-            'titile' => $request->title
+            'title' => $request->title,
+            'number' => $request->number,
+            'date' => jalali_to_gregorian_date($request->date)
         ]);
 
         foreach ($request->input('transactions') as $transactionData) {
@@ -53,11 +51,11 @@ class TransactionController extends Controller
                 'document_id' => $document->id,
                 'user_id' => Auth::id(),
                 'subject_id' => $transactionData->subject_id,
-                'debit' => $transactionData->debit ?? 0,
-                'credit' => $transactionData->credit ?? 0,
-                'desc' => $transactionData->desc ?? 0,
+                'value' => $transactionData->credit ?: -1 * $transactionData->debit,
+                'desc' => $transactionData->desc
             ]);
         }
+
         DB::commit();
 
         return redirect()->route('transactions.index')->with('success', 'Transactions created successfully.');
@@ -71,38 +69,59 @@ class TransactionController extends Controller
     public function edit($id)
     {
 
-        $transaction = Models\Transaction::find($id);
-
-        if ($transaction) {
-            $users = User::all();
+        $document = Models\Document::find($id);
+        if ($document) {
+            $transactions = $document->transaction;
             $subjects = Subject::all();
-
-            return view('transactions.edit', compact('users', 'subjects', 'transaction'));
+            $previousDocumentNumber = Document::orderBy('id', 'desc')->where('id', '<', $id)->first()->number ?? 0;
+            return view('transactions.edit', compact('previousDocumentNumber', 'document', 'subjects', 'transactions'));
         } else {
             return redirect()->route('transactions.index')->with('error', 'Transaction not found.');
         }
     }
 
-    public function update(Request $request, $id)
+    public function update(StoreTransactionRequest $request, $id)
     {
-        $validatedData = $request->validate([
-            'transactions.0.subject_id' => 'exists:subjects,id',
-            'transactions.0.user_id' => 'exists:users,id',
-            'transactions.0.value' => 'integer',
-            'transactions.0.desc' => 'string',
+
+
+        $document = Document::findOrFail($id);
+        $ids = [];
+        DB::beginTransaction();
+
+        $document->update([
+            'title' => $request->title,
+            'number' => $request->number,
+            'date' => jalali_to_gregorian_date($request->date)
         ]);
 
-        $transaction = Transaction::findOrFail($id);
+        foreach ($request->input('transactions') as $transactionData) {
+            $transactionData = (object)$transactionData;
+            $ids[] = $transactionData->transaction_id;
+            $transaction = Transaction::where('id', $transactionData->transaction_id)->first();
+            $payload = [
+                'document_id' => $document->id,
+                'user_id' => Auth::id(),
+                'subject_id' => $transactionData->subject_id,
+                'value' => $transactionData->credit ?: -1 * $transactionData->debit,
+                'desc' => $transactionData->desc
+            ];
+            if ($transaction) {
+                $transaction->update($payload);
+            } else {
+                Transaction::create($payload);
+            }
+        }
+        Transaction::where('document_id', $document->id)->whereNotIn('id', $ids)->delete();
 
-        $transactionData = $validatedData['transactions'][0];
 
-        $transaction->update($transactionData);
+        DB::commit();
 
         return redirect()->route('transactions.index')->with('success', 'Transaction updated successfully.');
     }
 
-    public function destroy(Models\Transaction $transaction)
+    public function destroy(Models\Document $transaction)
     {
+        $transaction->transaction()->delete();
         $transaction->delete();
 
         return redirect()->route('transactions.index')->with('success', 'Transaction deleted successfully.');

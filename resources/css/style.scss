@@ -41,3 +41,24 @@ input[type="email"]:focus {
     box-shadow: none !important;
 
 }
+.deactivated-transaction-row input, .deactivated-transaction-row select {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.transaction:not(.deactivated-transaction-row) .removeTransaction {
+    display: inline-block;
+}
+
+.transaction:not(.deactivated-transaction-row) .transaction-count {
+    display: none;
+}
+
+.transaction.deactivated-transaction-row .removeTransaction {
+    display: none;
+}
+
+.transaction.deactivated-transaction-row .transaction-count {
+    display: inline-block;
+}

@@ -1,23 +1,25 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Edit Transaction') }}
+            {{ __('Create Transaction') }}
         </h2>
     </x-slot>
+    <div class="font-bold text-gray-600 py-6 text-2xl">
+        <span>
+            ثبت سند حسابداری
+        </span>
+    </div>
+    <div class="">
 
-    <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('transactions.update', $transaction) }}" method="POST">
+        <form action="{{ route('transactions.update',$document) }}" method="POST">
+            <x-show-message-bags />
             @csrf
             @method('PUT')
-            <div class="card-body">
-                <div class="card-title">{{ __('Edit transaction') }}</div>
-                <x-show-message-bags />
 
-                @include('transactions.form')
-                <div class="mb-6">
-                    <button class="btn btn-pr"> {{ __('Edit') }} </button>
-                </div>
-            </div>
+            @include('transactions.form')
+
+
+
         </form>
     </div>
 </x-app-layout>

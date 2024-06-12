@@ -99,5 +99,20 @@
     "connector": "اتصال دهنده",
     "manager": "مدیر",
     "reporter": "خبرنگار",
-    "seller": "فروشنده"
+    "seller": "فروشنده",
+    "document name" : "نام سند",
+    "previous document number" :"شماره سند قبلی",
+    "current document number" :"شماره سند فعلی",
+    "date" :"تاریخ",
+    "chapter code" :"کد سرفصل",
+    "chapter title" :"عنوان سر فصل",
+    "description" :"توضیحات",
+    "debit" :"بدهکار",
+    "credit" :"بستانکار",
+    "Select a subject" :"یک عنوان انتخاب کنید",
+    "this document's row description" : "توضیحات این سطر از سند حسابداری",
+    "cancel" :"لغو",
+    "save and create new document" :"ذخیره و ایجاد سند جدید",
+    "save and close form" :"ذخیره و بستن فرم",
+    "Add Transaction" :"افزودن تراکنش"
 }
