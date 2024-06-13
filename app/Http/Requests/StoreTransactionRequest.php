@@ -22,8 +22,8 @@ class StoreTransactionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => 'required|string|min:3|max:255',
-            'number' => 'required|integer|unique:documents,number'.($this->request->get('document_id')?','.$this->request->get('document_id'):''),
+            'title' => 'nullable|string|min:3|max:255',
+            'number' => 'required|integer|unique:documents,number' . ($this->request->get('document_id') ? ',' . $this->request->get('document_id') : ''),
             'date' => 'required',
             'transactions.*.subject_id' => 'required|exists:subjects,id',
             'transactions.*.debit' => 'nullable|required_without:transactions.*.credit|integer|min:0',

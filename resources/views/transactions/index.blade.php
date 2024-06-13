@@ -23,14 +23,14 @@
                         <tr>
                             <td class="p-2">{{ $document->number }}</td>
                             <td class="p-2">{{ $document->title }}</td>
-                            <td class="p-2">{{ $document->transaction->sum('value') }}</td>
-                            <td class="p-2">{{ $document->JalaliDate }}</td>
+                            <td class="p-2">{{ formatNumber($document->transaction->sum('value')) }}</td>
+                            <td class="p-2">{{ formmatDate($document->date) }}</td>
                             <td class="p-2">
                                 <a href="{{ route('transactions.edit', $document->id) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                 <form action="{{ route('transactions.destroy', $document) }}" method="POST" class="inline-block">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                    <x-button type="submit" class="btn-sm btn-error">{{ __('Delete') }}</x-button>
                                 </form>
                             </td>
                         </tr>
