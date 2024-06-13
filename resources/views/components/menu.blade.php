@@ -30,9 +30,9 @@
                     <summary>حسابداری</summary>
                     <ul>
                         <li><a href="">سند</a></li>
-                        <li><a href="">روزنامه</a></li>
-                        <li><a href="">معین</a></li>
-                        <li><a href="">کل</a></li>
+                        <li><a href="{{route('reports.roozname')}}">روزنامه</a></li>
+                        <li><a href="{{route('reports.moein')}}">معین</a></li>
+                        <li><a href="{{route('reports.all')}}">کل</a></li>
                         <li><a href="">سود و زیان</a></li>
                     </ul>
                 </details>

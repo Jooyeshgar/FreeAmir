@@ -38,18 +38,17 @@ class DocumentController extends Controller
     {
 
         DB::beginTransaction();
-
         $document = Document::create([
             'title' => $request->title,
             'number' => $request->number,
-            'date' => jalali_to_gregorian_date($request->date)
+            'date' => jalali_to_gregorian_date($request->date),
+            'user_id' => Auth::id()
         ]);
 
         foreach ($request->input('transactions') as $transactionData) {
             $transactionData = (object) $transactionData;
             Transaction::create([
                 'document_id' => $document->id,
-                'user_id' => Auth::id(),
                 'subject_id' => $transactionData->subject_id,
                 'value' => $transactionData->credit ?: -1 * $transactionData->debit,
                 'desc' => $transactionData->desc
@@ -91,7 +90,8 @@ class DocumentController extends Controller
         $document->update([
             'title' => $request->title,
             'number' => $request->number,
-            'date' => jalali_to_gregorian_date($request->date)
+            'date' => jalali_to_gregorian_date($request->date,'/'),
+            'user_id' => Auth::id()
         ]);
 
         foreach ($request->input('transactions') as $transactionData) {
@@ -100,7 +100,6 @@ class DocumentController extends Controller
             $transaction = Transaction::where('id', $transactionData->transaction_id)->first();
             $payload = [
                 'document_id' => $document->id,
-                'user_id' => Auth::id(),
                 'subject_id' => $transactionData->subject_id,
                 'value' => $transactionData->credit ?: -1 * $transactionData->debit,
                 'desc' => $transactionData->desc
