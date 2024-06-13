@@ -640,9 +640,9 @@ function jalali_to_gregorian($jy,$jm,$jd,$mod=''){
     return($mod==='')?array($gy,$gm,$gd):$gy .$mod .$gm .$mod .$gd;
 }
 
-function jalali_to_gregorian_date($date,$str='-',$dateExploadStr='-'){
+function jalali_to_gregorian_date($date,$str='/',$dateExploadStr='/'){
     if($date instanceof \Carbon\Carbon){
-        $date = $date->toDateTimeString();
+        $date = $date->format('Y/m/d');
     }
     $checktime=explode(' ',$date);
     if (count($checktime)>1) {
@@ -655,9 +655,9 @@ function jalali_to_gregorian_date($date,$str='-',$dateExploadStr='-'){
     }
     return jalali_to_gregorian($dateStr[0],$dateStr[1],$dateStr[2],$str);
 }
-function gregorian_to_jalali_date($date,$str='-',$dateExploadStr='-'){
+function gregorian_to_jalali_date($date,$str='/',$dateExploadStr='/'){
     if($date instanceof \Carbon\Carbon){
-        $date = $date->toDateTimeString();
+        $date = $date->format('Y/m/d');
     }
     $checktime=explode(' ',$date);
     if (count($checktime)>1) {
@@ -670,9 +670,9 @@ function gregorian_to_jalali_date($date,$str='-',$dateExploadStr='-'){
     return gregorian_to_jalali($dateStr[0],$dateStr[1],$dateStr[2],$str);
 }
 
-function gregorian_to_jalali_datetime($date,$str='-',$dateExploadStr='-'){
+function gregorian_to_jalali_datetime($date,$str='/',$dateExploadStr='-'){
     if($date instanceof \Carbon\Carbon){
-        $date = $date->toDateTimeString();
+        $date = $date->format('Y/m/d');
     }
     $timeStr=explode(' ',$date);
     $dateStr=explode($dateExploadStr, $timeStr[0]);
@@ -691,7 +691,7 @@ function gregorian_to_jalali_datetime($date,$str='-',$dateExploadStr='-'){
 function justDate($date='')
 {
     if($date instanceof \Carbon\Carbon){
-        $date = $date->toDateTimeString();
+        $date = $date->format('Y/m/d');
     }
     $timeStr=explode(' ',$date);
     if(count($timeStr)==2){

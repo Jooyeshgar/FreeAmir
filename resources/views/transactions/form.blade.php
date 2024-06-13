@@ -229,6 +229,7 @@
         var lastTransactionDiv = transactionDivs[transactionDivs.length - 1];
         var newTransactionDiv = lastTransactionDiv.cloneNode(true);
         deactivateAllTransactionRow();
+        newTransactionDiv.classList.remove('deactivated-transaction-row');
         // Update the index in the name attribute
         var selects = newTransactionDiv.getElementsByTagName('select');
         for (var i = 0; i < selects.length; i++) {
