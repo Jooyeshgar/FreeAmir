@@ -20,9 +20,8 @@ class DocumentController extends Controller
     public function index()
     {
         $documents = Document::orderBy('id', 'desc')->get();
-        $cols = ['ID', 'Number', 'Title', 'Date'];
 
-        return view('transactions.index', compact('documents', 'cols'));
+        return view('transactions.index', compact('documents'));
     }
 
     public function create()

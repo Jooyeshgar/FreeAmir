@@ -21,7 +21,6 @@ class FormInput extends Component
         $this->name = $name;
         $this->title = $title;
         $this->placeHolder = $placeHolder;
-        $this->message = $message;
         $this->type = $type;
         $this->value = $value;
     }
