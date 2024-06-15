@@ -58,6 +58,13 @@ input[type="email"]:focus {
 .transaction.deactivated-transaction-row .removeTransaction {
     display: none;
 }
+.transaction.deactivated-transaction-row:hover .removeTransaction {
+    cursor: pointer;
+    display: inline-block;
+}
+.transaction.deactivated-transaction-row:hover .transaction-count {
+    display: none;
+}
 
 .transaction.deactivated-transaction-row .transaction-count {
     display: inline-block;

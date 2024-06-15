@@ -13,7 +13,9 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\MessageBag;
 
 class DocumentController extends Controller
 {
@@ -27,7 +29,19 @@ class DocumentController extends Controller
     public function create()
     {
         $subjects = Subject::orderBy('code', 'asc')->get();
-        $transactions = [new Transaction];
+        if(!old('transactions')){
+            $transactions = [new Transaction];
+        }else{
+            $transactions = [];
+            foreach (old('transactions') as $item){
+                $transaction = new Transaction();
+                $transaction->subject_id = $item['subject_id'];
+                $transaction->desc = $item['desc'];
+                $transaction->value = $item['debit']?-1*$item['debit']:$item['credit'];
+                $transactions[] = $transaction;
+            }
+        }
+
         $document = new Document();
         $previousDocumentNumber = Document::orderBy('id', 'desc')->first()->number ?? 0;
         return view('transactions.create', compact('document', 'previousDocumentNumber', 'subjects', 'transactions'));
@@ -69,7 +83,19 @@ class DocumentController extends Controller
 
         $document = Models\Document::find($id);
         if ($document) {
-            $transactions = $document->transaction;
+            if(!old('transactions')){
+                $transactions = $document->transaction;
+            }else{
+                $transactions = [];
+                foreach (old('transactions') as $item){
+                    $transaction = new Transaction();
+                    $transaction->subject_id = $item['subject_id'];
+                    $transaction->desc = $item['desc'];
+                    $transaction->value = $item['debit']?-1*$item['debit']:$item['credit'];
+                    $transactions[] = $transaction;
+                }
+            }
+
             $subjects = Subject::all();
             $previousDocumentNumber = Document::orderBy('id', 'desc')->where('id', '<', $id)->first()->number ?? 0;
             return view('transactions.edit', compact('previousDocumentNumber', 'document', 'subjects', 'transactions'));
