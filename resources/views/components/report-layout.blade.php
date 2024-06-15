@@ -124,6 +124,10 @@
         body {
             font-family: Vazirmatn, sans-serif !important;
         }
+        td{
+            white-space: nowrap;
+            overflow: hidden;
+        }
 
 
     </style>
