@@ -18,6 +18,7 @@ class Document extends Model
         'date',
         'title',
         'permanent',
+        'user_id',
     ];
 
     public function Transaction()
