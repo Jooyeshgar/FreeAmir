@@ -18,7 +18,7 @@
 
         main,
         header {
-            max-width: 30cm;
+            max-width: 20cm;
             margin: 0 auto;
         }
 
