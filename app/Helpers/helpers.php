@@ -28,7 +28,7 @@ function formatNumber($number)
 	return $formattedNumber;
 }
 
-function formmatDate(Carbon $date)
+function formatDate(Carbon $date)
 {
 	$locale = App::getLocale();
 	if ($locale === 'fa' || $locale === 'fa_IR') {

@@ -10,24 +10,23 @@ use Illuminate\Support\Facades\Validator;
 
 class ReportsController extends Controller
 {
-    public function all()
+    public function ledger()
     {
-        $subjects = Subject::where('parent_id', '=', 0)->get();
-        return view('reports.all', compact('subjects'));
+        $subjects = Subject::whereIsRoot()->get();
+        return view('reports.ledger', compact('subjects'));
     }
 
-    public function roozname()
+    public function journal()
     {
 
         $subjects = [];
-        return view('reports.roozname', compact('subjects'));
-
+        return view('reports.journal', compact('subjects'));
     }
 
-    public function moien()
+    public function subLedger()
     {
         $subjects = Subject::where('parent_id', '!=', 0)->get();
-        return view('reports.moein', compact('subjects'));
+        return view('reports.subLedger', compact('subjects'));
     }
 
     public function result(Request $request)
@@ -39,7 +38,7 @@ class ReportsController extends Controller
             'subject_id' => '',
         ]);
         $validator->sometimes('subject_id', 'required', function ($input) {
-            return $input->report_for != 'roozname';
+            return $input->report_for != 'journal';
         });
 
         $validator->sometimes(['start_document_number', 'end_document_number'], 'required', function ($input) {
@@ -57,10 +56,10 @@ class ReportsController extends Controller
 
         $transactions = new Transaction();
 
-        if ($request->subject_id && $request->report_for == 'moein') {
+        if ($request->subject_id && $request->report_for == 'subLedger') {
             $transactions = $transactions->where('subject_id', $request->subject_id);
         }
-        if ($request->subject_id && $request->report_for == 'all') {
+        if ($request->subject_id && $request->report_for == 'Ledger') {
             $transactions = $transactions->whereHas('subject', function ($query) use ($request) {
                 $query->whereHas('ancestors', function ($query) use ($request) {
                     $query->where('id', $request->subject_id)->whereIsRoot();
@@ -91,13 +90,16 @@ class ReportsController extends Controller
             });
         }
         $transactions = $transactions->with('document', 'subject')->get();
-        return view('reports.table', compact('transactions'));
 
+        if ($request->report_for == 'Journal') {
+            return view('reports.journalReport', compact('transactions'));
+        }
+        return view('reports.ledgerReport', compact('transactions'));
     }
 
     private function updateTree()
     {
-//        this function should remove. its just for fix tree one time.
+        //        this function should remove. its just for fix tree one time.
         $sub = Subject::all();
         foreach ($sub as $s) {
             $s->fixTree();

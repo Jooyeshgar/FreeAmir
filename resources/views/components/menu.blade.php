@@ -28,9 +28,9 @@
                     <summary>حسابداری</summary>
                     <ul>
                         <li><a href="">سند</a></li>
-                        <li><a href="{{route('reports.roozname')}}">روزنامه</a></li>
-                        <li><a href="{{route('reports.moein')}}">معین</a></li>
-                        <li><a href="{{route('reports.all')}}">کل</a></li>
+                        <li><a href="{{ route('reports.journal') }}">روزنامه</a></li>
+                        <li><a href="{{ route('reports.ledger') }}">کل</a></li>
+                        <li><a href="{{ route('reports.subLedger') }}">معین</a></li>
                         <li><a href="">سود و زیان</a></li>
                     </ul>
                 </details>
