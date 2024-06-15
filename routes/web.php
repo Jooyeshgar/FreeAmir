@@ -24,10 +24,10 @@ Route::group(['middleware' => 'auth'], function () {
         Route::resource('roles', Controllers\Management\RoleController::class)->except(['show']);
         Route::resource('configs', Controllers\ConfigController::class);
     });
-    Route::group(['prefix' => 'reports','as'=>'reports.'], function () {
-        Route::get('all', [Controllers\ReportsController::class,'all'])->name('all');
-        Route::get('roozname', [Controllers\ReportsController::class,'roozname'])->name('roozname');
-        Route::get('moein',[Controllers\ReportsController::class,'moien'] )->name('moein');
-        Route::get('result',[Controllers\ReportsController::class,'result'] )->name('result');
+    Route::group(['prefix' => 'reports', 'as' => 'reports.'], function () {
+        Route::get('ledger', [Controllers\ReportsController::class, 'ledger'])->name('ledger');
+        Route::get('journal', [Controllers\ReportsController::class, 'journal'])->name('journal');
+        Route::get('sub-ledger', [Controllers\ReportsController::class, 'subLedger'])->name('subLedger');
+        Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
     });
 });

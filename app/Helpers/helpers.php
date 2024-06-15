@@ -28,7 +28,7 @@ function formatNumber($number)
 	return $formattedNumber;
 }
 
-function formmatDate(Carbon $date)
+function formatDate(Carbon $date)
 {
 	$locale = App::getLocale();
 	if ($locale === 'fa' || $locale === 'fa_IR') {
@@ -36,6 +36,28 @@ function formmatDate(Carbon $date)
 	}
 
 	return $date->format('Y-m-d');
+}
+
+function formatCode(string $code)
+{
+	$isPersian = in_array(App::getLocale(), ['fa', 'fa_IR']);
+
+	$parts = explode('-', substr_replace($code, '-', 3, 0));
+
+	$parts = array_map(
+		function ($part) {
+			return ltrim($part, '0');
+		},
+		$parts
+	);
+
+	$code = implode('-', $parts);
+
+	if ($isPersian) {
+		$code = convertToFarsi($code);
+	}
+
+	return $code;
 }
 
 /**
@@ -46,8 +68,8 @@ function formmatDate(Carbon $date)
  */
 function convertToFarsi($number)
 {
-	$farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹', '/'];
-	$englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-'];
+	$farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+	$englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
 	return str_replace($englishDigits, $farsiDigits, $number);
 }
