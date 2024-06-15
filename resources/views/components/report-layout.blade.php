@@ -2,19 +2,96 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $title ?? 'Report' }}</title>
+
     <style>
+        @media print {
+            .print-hidden{
+                display: none;
+            }
+        }
         @page {
             size: A4;
             margin: 20mm;
         }
 
         @font-face {
-            font-family: "Vazir";
-            src: url(data/font/Vazir.woff);
+            font-family: Vazirmatn;
+            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Thin.woff2') format('woff2');
+            font-weight: 100;
+            font-style: normal;
+            font-display: swap;
         }
+
+        @font-face {
+            font-family: Vazirmatn;
+            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-ExtraLight.woff2') format('woff2');
+            font-weight: 200;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        @font-face {
+            font-family: Vazirmatn;
+            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Light.woff2') format('woff2');
+            font-weight: 300;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        @font-face {
+            font-family: Vazirmatn;
+            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Regular.woff2') format('woff2');
+            font-weight: 400;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        @font-face {
+            font-family: Vazirmatn;
+            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Medium.woff2') format('woff2');
+            font-weight: 500;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        @font-face {
+            font-family: Vazirmatn;
+            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-SemiBold.woff2') format('woff2');
+            font-weight: 600;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        @font-face {
+            font-family: Vazirmatn;
+            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Bold.woff2') format('woff2');
+            font-weight: 700;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        @font-face {
+            font-family: Vazirmatn;
+            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-ExtraBold.woff2') format('woff2');
+            font-weight: 800;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        @font-face {
+            font-family: Vazirmatn;
+            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Black.woff2') format('woff2');
+            font-weight: 900;
+            font-style: normal;
+            font-display: swap;
+        }
+
+
+        * {
+            font-family: Vazirmatn, sans-serif !important;
+        }
+
 
         main,
         header {
@@ -23,9 +100,9 @@
         }
 
         table {
-
             border-collapse: collapse;
             width: 100%;
+
         }
 
         th {
@@ -34,9 +111,6 @@
             font-size: 10px;
         }
 
-        thead {
-            display: table-header-group;
-        }
 
         .transactions td {
             border-left: 1px solid;
@@ -48,20 +122,16 @@
 
 
         body {
-            font-family: "Vazir"
+            font-family: Vazirmatn, sans-serif !important;
         }
 
-        @media print {
-            table {
-                page-break-after: auto;
-            }
-        }
+
     </style>
     @stack('styles')
 </head>
 
 <body dir="{{ app()->getLocale() == 'fa' ? 'rtl' : 'ltr' }}">
-    <header>
+    <header class="print-hidden">
         <h1>{{ $title ?? 'Report Header' }}</h1>
     </header>
 

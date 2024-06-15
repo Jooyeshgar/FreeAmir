@@ -12,7 +12,7 @@ class ReportsController extends Controller
 {
     public function ledger()
     {
-        $subjects = Subject::whereIsRoot()->get();
+        $subjects = Subject::orderBy('code','asc')->whereIsRoot()->get();
         return view('reports.ledger', compact('subjects'));
     }
 
@@ -25,7 +25,7 @@ class ReportsController extends Controller
 
     public function subLedger()
     {
-        $subjects = Subject::where('parent_id', '!=', 0)->get();
+        $subjects = Subject::orderBy('code','asc')->get();
         return view('reports.subLedger', compact('subjects'));
     }
 
@@ -90,11 +90,11 @@ class ReportsController extends Controller
             });
         }
         $transactions = $transactions->with('document', 'subject')->get();
-
+        $transactionsChunk = $transactions->chunk(env('REPORT_ROW_SIZE',26));
         if ($request->report_for == 'Journal') {
-            return view('reports.journalReport', compact('transactions'));
+            return view('reports.journalReport', compact('transactionsChunk'));
         }
-        return view('reports.ledgerReport', compact('transactions'));
+        return view('reports.ledgerReport', compact('transactionsChunk'));
     }
 
     private function updateTree()

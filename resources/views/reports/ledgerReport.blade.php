@@ -1,6 +1,7 @@
 <x-report-layout :title="'Report'">
-    <table class="transactions">
-        <thead>
+    @foreach($transactionsChunk as $transactions)
+        <table style="margin-top: 5px" class="transactions mt-1">
+
             <tr>
                 <th style="width: 1cm">{{ __('Document') }}</th>
                 <th style="width: 2cm">{{ __('Date') }}</th>
@@ -9,7 +10,7 @@
                 <th style="width: 3cm">{{ __('Credit') }}</th>
                 <th style="width: 3cm">{{ __('Balance') }}</th>
             </tr>
-        </thead>
+
         <tbody style="border-bottom: solid 1px">
             @php
                 $balance = 0;
@@ -31,4 +32,5 @@
             @endforeach
         </tbody>
     </table>
+    @endforeach
 </x-report-layout>

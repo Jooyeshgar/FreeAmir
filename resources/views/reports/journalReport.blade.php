@@ -1,7 +1,8 @@
 <!-- resources/views/report.blade.php -->
 <x-report-layout :title="__('Journal Report')">
-    <table class="transactions">
-        <thead>
+    @foreach($transactionsChunk as $transactions)
+        <table style="margin-top:5px" class="transactions">
+
             <tr>
                 <th style="width: 1cm">{{ __('Document') }}</th>
                 <th style="width: 2cm">{{ __('Date') }}</th>
@@ -10,7 +11,7 @@
                 <th style="width: 2cm">{{ __('Debit') }}</th>
                 <th style="width: 2cm">{{ __('Credit') }}</th>
             </tr>
-        </thead>
+
         <tbody style="border-bottom: solid 1px">
             @foreach ($transactions as $transaction)
                 <tr>
@@ -24,4 +25,5 @@
             @endforeach
         </tbody>
     </table>
+    @endforeach
 </x-report-layout>

@@ -1,23 +1,9 @@
-<x-show-message-bags />
+<x-show-message-bags/>
 <form action="{{ route('reports.result') }}" method="get">
 
     <x-card>
-        <div class="flex gap-4 {{ $type == 'Journal' ? 'hidden' : '' }}">
-            <x-text-input name="report_for" value="{{ $type }}" class="hidden" />
-            <x-text-input onkeyup_input="onCodeInputChange(event,document.getElementById('subject_id'))" id_input="code_input" label_class="flex-1"
-                placeholder="{{ __('Subject Code') }}" title="{{ __('Subject') }}"></x-text-input>
-            <label for="subject_id" class="flex-1">
-                {{ __('Select a subject') }}
-                <select onchange="onCodeSelectBoxChange(event,document.getElementById('code_input'))" name="subject_id" id="subject_id"
-                    class="codeSelectBox flex-1 rounded-md max-h-10 min-h-10 select select-bordered border-slate-400 disabled:background-slate-700 w-full max-w-42 focus:outline-none ">
-                    <option value="">{{ __('Select a subject') }}</option>
-                    @foreach ($subjects as $subject)
-                        <option value="{{ $subject->id }}">{{ $subject->name }}</option>
-                    @endforeach
-
-                </select>
-            </label>
-        </div>
+        @component('components.selectbox-subject',['type'=>$type,'subjects'=>$subjects])
+        @endcomponent
         <hr class="{{ $type == 'Journal' ? 'hidden' : '' }}">
         <div class="flex items-center">
             <div class="flex-1 gap-4">
@@ -85,26 +71,6 @@
     </div>
 </form>
 
-<script>
-    var subjects = {!! json_encode($subjects) !!};
-
-    var p2e = s => s.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
-
-    function onCodeInputChange(e, selectBox) {
-        let code = e.target.value
-        code = p2e(code)
-        e.target.value = code
-        let itemIndex = subjects.findIndex(i => (code === i.code))
-        if (itemIndex !== -1) selectBox.value = subjects[itemIndex].id;
-    }
-
-    function onCodeSelectBoxChange(e, codeInput) {
-        let id = e.target.value
-        let itemIndex = subjects.findIndex(i => parseInt(id) === parseInt(i.id))
-
-        if (itemIndex !== -1) codeInput.value = subjects[itemIndex].code;
-    }
-</script>
 <script type="module">
     jalaliDatepicker.startWatch({});
 </script>

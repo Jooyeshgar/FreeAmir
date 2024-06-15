@@ -8,7 +8,7 @@
 
 </head>
 
-<body class="min-h-full" dir="{{ app()->getLocale() == 'fa' ? 'rtl' : 'ltr' }}">
+<body class="min-h-screen" dir="{{ app()->getLocale() == 'fa' ? 'rtl' : 'ltr' }}">
     <x-header />
     <div class="  -z-0">
         <main class="max-w-6xl mx-auto py-0 lg:pb-14 px-2 lg:pd-x-0  ">
