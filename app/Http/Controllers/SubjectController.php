@@ -12,7 +12,7 @@ class SubjectController extends Controller
         if ($request->has('parent_id')) {
             $subjects = Subject::find($request->get('parent_id'))->children()->get();
         } else {
-            $subjects = Subject::firstLevel()->get();
+            $subjects = Subject::whereIsRoot()->get();
         }
 
         return view('subjects.index', compact('subjects'));
@@ -49,7 +49,7 @@ class SubjectController extends Controller
     public function update(Request $request, Subject $subject)
     {
         $validatedData = $request->validate([
-            'code' => 'required|max:20|unique:subjects,code,'.$subject->id,
+            'code' => 'required|max:20|unique:subjects,code,' . $subject->id,
             'name' => 'required|max:60',
             'parent_id' => 'nullable|exists:subjects,id',
             'type' => 'required|in:debtor,creditor,both',

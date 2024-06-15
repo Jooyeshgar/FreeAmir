@@ -38,7 +38,7 @@ class ReportsController extends Controller
             'subject_id' => '',
         ]);
         $validator->sometimes('subject_id', 'required', function ($input) {
-            return $input->report_for != 'journal';
+            return $input->report_for != 'Journal';
         });
 
         $validator->sometimes(['start_document_number', 'end_document_number'], 'required', function ($input) {

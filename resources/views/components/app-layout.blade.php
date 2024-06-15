@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ config('app.name') }}</title>
-    @vite(['resources/css/app.css' ,'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
 </head>
 
-<body class="h-full">
+<body class="h-full" dir="{{ app()->getLocale() == 'fa' ? 'rtl' : 'ltr' }}">
     <x-header />
     <div class="  -z-0">
         <main class="max-w-6xl mx-auto py-0 lg:pb-14 px-2 lg:pd-x-0  ">

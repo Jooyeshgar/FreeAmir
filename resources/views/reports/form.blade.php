@@ -2,7 +2,7 @@
 <form action="{{ route('reports.result') }}" method="get">
 
     <x-card>
-        <div class="flex gap-4 {{ $type == 'journal' ? 'hidden' : '' }}">
+        <div class="flex gap-4 {{ $type == 'Journal' ? 'hidden' : '' }}">
             <x-text-input name="report_for" value="{{ $type }}" class="hidden" />
             <x-text-input onkeyup_input="onCodeInputChange(event,document.getElementById('subject_id'))" id_input="code_input" label_class="flex-1"
                 placeholder="{{ __('Subject Code') }}" title="{{ __('Subject') }}"></x-text-input>
@@ -18,7 +18,7 @@
                 </select>
             </label>
         </div>
-        <hr class="{{ $type == 'journal' ? 'hidden' : '' }}">
+        <hr class="{{ $type == 'Journal' ? 'hidden' : '' }}">
         <div class="flex items-center">
             <div class="flex-1 gap-4">
                 <label class="label cursor-pointer justify-end gap-2" dir="ltr">
