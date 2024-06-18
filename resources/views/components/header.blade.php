@@ -4,20 +4,17 @@
             <img src="/images/logo.png" alt="Logo" width="50" class="">
         </div>
         <ul class="menu menu-horizontal px-1 z-30 bg-gray-200 rounded-xl">
-            <x-menu/>
+            <x-menu />
         </ul>
     </div>
 
     <div class="text-right">
         <ul class="menu menu-horizontal px-1 z-30 bg-gray-200 rounded-xl">
-             <li>
+            <li>
                 <details>
-                    <summary>شبنم عباسی </summary>
+                    <summary>{{ Auth::user()->name }}</summary>
                     <ul>
-                        <li><a href="">دریافت و پرداخت</li>
-                        <li><a href="">ثبت فاکترو فروش</a></li>
-                        <li><a href="">ثبت فاکتور خرید</a></li>
-                        <li><a href="">اضافه کردن طرف حساب</a></li>
+                        <li><a href="/logout">{{ __('Logout') }}</a></li>
                     </ul>
                 </details>
             </li>

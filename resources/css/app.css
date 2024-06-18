@@ -1,5 +1,6 @@
 @import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
-
+@import '@majidh1/jalalidatepicker/dist/jalalidatepicker.css';
+@import "style.scss";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -11,4 +12,12 @@
 body{
     font-family: Vazirmatn, sans-serif !important;
     direction: rtl;
+}
+
+
+
+
+
+jdp-container .jdp-btn-empty, jdp-container .jdp-btn-today, jdp-container .jdp-days .jdp-day.selected {
+    background: rgba(59, 189, 30, 0.99) !important;
 }

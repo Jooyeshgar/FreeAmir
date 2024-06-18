@@ -144,7 +144,7 @@
                         <x-form-input title="{{ __('connector') }}" name="connector" place-holder="{{ __('connector') }}" :value="old('connector', $customer->connector ?? '')" />
                     </div>
                     <div>
-                        <x-form-input title="{{ __(' responsible') }}" name="responsible" place-holder="{{ __('  responsible') }}" :message="$errors->first('responsible')"
+                        <x-form-input title="{{ __('responsible') }}" name="responsible" place-holder="{{ __('responsible') }}" :message="$errors->first('responsible')"
                             :value="old('responsible', $customer->responsible ?? '')" />
                     </div>
                     <div class="col-span-2">

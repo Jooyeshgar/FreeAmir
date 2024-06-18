@@ -6,7 +6,7 @@
             <li><a href="">دریافت و پرداخت</li>
             <li><a href="">ثبت فاکترو فروش</a></li>
             <li><a href="">ثبت فاکتور خرید</a></li>
-            <li><a href="">اضافه کردن طرف حساب</a></li>
+            <li><a href="{{ route('customers.create') }}">{{ __('Add Customer') }}</a></li>
         </ul>
     </details>
 </li>
@@ -14,10 +14,8 @@
     <details>
         <summary>حسابداری</summary>
         <ul>
-            <li><a href="{{ route('transactions.index') }}">{{ __('Transactions') }}</a></li>
-            <li><a href="">فروش ها</a></li>
-            <li><a href="">خرید ها</a></li>
-            <li><a href="">چک ها</a></li>
+            <li><a href="{{ route('transactions.create') }}">{{ __('Create Document') }}</a></li>
+            <li><a href="{{ route('transactions.index') }}">{{ __('Document List') }}</a></li>
         </ul>
     </details>
 </li>
@@ -30,9 +28,9 @@
                     <summary>حسابداری</summary>
                     <ul>
                         <li><a href="">سند</a></li>
-                        <li><a href="">روزنامه</a></li>
-                        <li><a href="">معین</a></li>
-                        <li><a href="">کل</a></li>
+                        <li><a href="{{ route('reports.journal') }}">روزنامه</a></li>
+                        <li><a href="{{ route('reports.ledger') }}">کل</a></li>
+                        <li><a href="{{ route('reports.subLedger') }}">معین</a></li>
                         <li><a href="">سود و زیان</a></li>
                     </ul>
                 </details>

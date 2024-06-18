@@ -6,18 +6,8 @@
     </x-slot>
     <div class="font-bold text-gray-600 py-6 text-2xl">
         <span>
-         {{__('Registration of accounting document')}}
+            {{ __('Journal Report') }}
         </span>
     </div>
-    <div class="">
-
-        <form action="{{ route('transactions.store') }}" method="POST">
-            <x-show-message-bags />
-            @csrf
-            @include('transactions.form')
-
-
-
-        </form>
-    </div>
+    @include('reports.form', ['type' => 'Journal'])
 </x-app-layout>
