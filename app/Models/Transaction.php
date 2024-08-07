@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Transaction extends Model
 {
+    use HasFactory;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -26,8 +29,7 @@ class Transaction extends Model
     {
         parent::boot();
 
-        static::updated(function($model)
-        {
+        static::updated(function ($model) {
             $model->subject->fixTree($model);
             return true;
         });

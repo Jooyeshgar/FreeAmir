@@ -20,8 +20,9 @@ class CreateInvoiceItemsTable extends Migration
             $table->unsignedBigInteger('transaction_id')->nullable();
             $table->decimal('quantity', 10, 2);
             $table->decimal('unit_price', 10, 2);
-            $table->string('unit_discount', 30);
+            $table->decimal('unit_discount', 10, 2);
             $table->decimal('vat', 10, 2);
+            $table->decimal('amount', 10, 2);
             $table->text('description')->nullable();
             $table->timestamps();
 
