@@ -45,6 +45,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'password' => bcrypt('password'), // Replace with a strong password
         ]);
 
-        $admin->assignRole('manager');
+        $admin->assignRole(__('manager'));
     }
 }

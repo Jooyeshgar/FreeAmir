@@ -20,4 +20,9 @@ class Subject extends Model
     protected $attributes = [
         'parent_id' => 0,
     ];
+
+    public function formattedCode()
+    {
+        return formatCode($this->code) . ' ' . $this->name;
+    }
 }

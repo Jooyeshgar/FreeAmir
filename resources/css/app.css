@@ -6,18 +6,24 @@
 @tailwind utilities;
 
 
-.login-bg{
-	background-image: url("../images/bg.jpeg");
+.login-bg {
+    background-image: url("../images/bg.jpeg");
 }
-body{
+
+body {
     font-family: Vazirmatn, sans-serif !important;
     direction: rtl;
 }
 
+.printable {
+    background-color: white;
+    background-image: none;
+    width: 210mm;
+    margin: 0 auto;
+}
 
-
-
-
-jdp-container .jdp-btn-empty, jdp-container .jdp-btn-today, jdp-container .jdp-days .jdp-day.selected {
+jdp-container .jdp-btn-empty,
+jdp-container .jdp-btn-today,
+jdp-container .jdp-days .jdp-day.selected {
     background: rgba(59, 189, 30, 0.99) !important;
 }

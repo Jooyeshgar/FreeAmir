@@ -12,52 +12,47 @@ use Illuminate\Support\Facades\App;
  */
 function formatNumber($number)
 {
-	$locale = App::getLocale();
-	$isPersian = $locale === 'fa' || $locale === 'fa_IR';
+    $locale = App::getLocale();
+    $isPersian = $locale === 'fa' || $locale === 'fa_IR';
 
-	$formattedNumber = number_format(abs($number));
+    $formattedNumber = number_format(abs($number));
 
-	if ($isPersian) {
-		$formattedNumber = convertToFarsi($formattedNumber);
-	}
+    if ($isPersian) {
+        $formattedNumber = convertToFarsi($formattedNumber);
+    }
 
-	if ($number < 0) {
-		$formattedNumber = "($formattedNumber)";
-	}
+    if ($number < 0) {
+        $formattedNumber = "($formattedNumber)";
+    }
 
-	return $formattedNumber;
+    return $formattedNumber;
 }
 
-function formatDate(Carbon $date)
+function formatDate(Carbon|null $date)
 {
-	$locale = App::getLocale();
-	if ($locale === 'fa' || $locale === 'fa_IR') {
-		return convertToFarsi(gregorian_to_jalali_date($date ?? now()));
-	}
+    if (is_null($date)) {
+        return '';
+    }
 
-	return $date->format('Y-m-d');
+    $locale = App::getLocale();
+    if ($locale === 'fa' || $locale === 'fa_IR') {
+        return convertToFarsi(gregorian_to_jalali_date($date ?? now()));
+    }
+
+    return $date->format('Y-m-d');
 }
 
 function formatCode(string $code)
 {
-	$isPersian = in_array(App::getLocale(), ['fa', 'fa_IR']);
+    $chunks = str_split($code, 3);
 
-	$parts = explode('-', substr_replace($code, '-', 3, 0));
+    $code = implode('/', $chunks);
 
-	$parts = array_map(
-		function ($part) {
-			return ltrim($part, '0');
-		},
-		$parts
-	);
+    if (in_array(App::getLocale(), ['fa', 'fa_IR'])) {
+        $code = convertToFarsi($code);
+    }
 
-	$code = implode('-', $parts);
-
-	if ($isPersian) {
-		$code = convertToFarsi($code);
-	}
-
-	return $code;
+    return $code;
 }
 
 /**
@@ -68,8 +63,8 @@ function formatCode(string $code)
  */
 function convertToFarsi($number)
 {
-	$farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-	$englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    $farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+    $englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
-	return str_replace($englishDigits, $farsiDigits, $number);
+    return str_replace($englishDigits, $farsiDigits, $number);
 }

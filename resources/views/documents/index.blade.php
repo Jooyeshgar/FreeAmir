@@ -8,7 +8,7 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="card-actions">
-                <x-button href="{{ route('transactions.create') }}" class="btn-primary">{{ __('Create Document') }}</x-button>
+                <x-button href="{{ route('documents.create') }}" class="btn-primary">{{ __('Create Document') }}</x-button>
             </div>
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
@@ -16,18 +16,19 @@
                     <th class="p-2">{{ __('Title') }}</th>
                     <th class="p-2 w-40">{{ __('Sum') }}</th>
                     <th class="p-2 w-40">{{ __('Date') }}</th>
-                    <th class="p-2 w-40">{{ __('Action') }}</th>
+                    <th class="p-2 w-60">{{ __('Action') }}</th>
                 </thead>
                 <tbody>
                     @foreach ($documents as $document)
                         <tr>
                             <td class="p-2">{{ $document->number }}</td>
                             <td class="p-2">{{ $document->title }}</td>
-                            <td class="p-2">{{ formatNumber($document->transaction->sum('value')) }}</td>
+                            <td class="p-2">{{ formatNumber($document->transactions->sum('value')) }}</td>
                             <td class="p-2">{{ formatDate($document->date) }}</td>
                             <td class="p-2">
-                                <a href="{{ route('transactions.edit', $document->id) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                <form action="{{ route('transactions.destroy', $document) }}" method="POST" class="inline-block">
+                                <a href="{{ route('documents.show', $document->id) }}" class="btn btn-sm btn-info">{{ __('View') }}</a>
+                                <a href="{{ route('documents.edit', $document->id) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                <form action="{{ route('documents.destroy', $document) }}" method="POST" class="inline-block">
                                     @csrf
                                     @method('DELETE')
                                     <x-button type="submit" class="btn-sm btn-error">{{ __('Delete') }}</x-button>
@@ -37,6 +38,7 @@
                     @endforeach
                 </tbody>
             </table>
+            {{ $documents->links() }}
         </div>
     </div>
     </div>

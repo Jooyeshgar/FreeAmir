@@ -11,7 +11,7 @@ class Document extends Model
 
     public $timestamps = true;
     protected $casts = [
-        'date'=>'date'
+        'date' => 'date'
     ];
     protected $fillable = [
         'number',
@@ -21,13 +21,23 @@ class Document extends Model
         'user_id',
     ];
 
-    public function Transaction()
+    public function transactions()
     {
         return $this->hasMany(Transaction::class);
     }
 
-    public function getJalaliDateAttribute()
+    public function creator()
     {
-        return gregorian_to_jalali_date($this->date??now());
+        return $this->belongsTo(User::class, 'creator_id');
+    }
+
+    public function approver()
+    {
+        return $this->belongsTo(User::class, 'approver_id');
+    }
+
+    public function getFormattedDateAttribute()
+    {
+        return formatDate($this->date ?? now());
     }
 }

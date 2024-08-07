@@ -15,6 +15,7 @@
         "spatie/laravel-permission": "^6.4"
     },
     "require-dev": {
+        "barryvdh/laravel-debugbar": "^3.13",
         "barryvdh/laravel-translation-manager": "^0.6.6",
         "fakerphp/faker": "^1.9.1",
         "laravel/envoy": "^2.9",
@@ -34,7 +35,8 @@
         },
         "files": [
             "app/Helpers/jdf.php",
-            "app/Helpers/helpers.php"
+            "app/Helpers/helpers.php",
+            "app/Helpers/NumberToWordHelper.php"
         ]
     },
     "autoload-dev": {

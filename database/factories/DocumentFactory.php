@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\DB;
 
@@ -21,7 +22,7 @@ class DocumentFactory extends Factory
         return [
             'number' => DB::table('documents')->max('number') + 1,
             'date' => $this->faker->date(),
-            'permanent' => $this->faker->boolean,
+            'creator_id' => User::all()->random()->id,
         ];
     }
 }

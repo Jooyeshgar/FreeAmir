@@ -14,8 +14,8 @@
     <details>
         <summary>حسابداری</summary>
         <ul>
-            <li><a href="{{ route('transactions.create') }}">{{ __('Create Document') }}</a></li>
-            <li><a href="{{ route('transactions.index') }}">{{ __('Document List') }}</a></li>
+            <li><a href="{{ route('documents.create') }}">{{ __('Create Document') }}</a></li>
+            <li><a href="{{ route('documents.index') }}">{{ __('Document List') }}</a></li>
         </ul>
     </details>
 </li>

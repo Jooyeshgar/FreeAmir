@@ -21,30 +21,29 @@ class DocumentController extends Controller
 {
     public function index()
     {
-        $documents = Document::orderBy('id', 'desc')->get();
-
-        return view('transactions.index', compact('documents'));
+        $documents = Document::orderBy('id', 'desc')->paginate(10);
+        return view('documents.index', compact('documents'));
     }
 
     public function create()
     {
         $subjects = Subject::orderBy('code', 'asc')->get();
-        if(!old('transactions')){
+        if (!old('transactions')) {
             $transactions = [new Transaction];
-        }else{
+        } else {
             $transactions = [];
-            foreach (old('transactions') as $item){
+            foreach (old('transactions') as $item) {
                 $transaction = new Transaction();
                 $transaction->subject_id = $item['subject_id'];
                 $transaction->desc = $item['desc'];
-                $transaction->value = $item['debit']?-1*$item['debit']:$item['credit'];
+                $transaction->value = $item['debit'] ? -1 * $item['debit'] : $item['credit'];
                 $transactions[] = $transaction;
             }
         }
 
         $document = new Document();
         $previousDocumentNumber = Document::orderBy('id', 'desc')->first()->number ?? 0;
-        return view('transactions.create', compact('document', 'previousDocumentNumber', 'subjects', 'transactions'));
+        return view('documents.create', compact('document', 'previousDocumentNumber', 'subjects', 'transactions'));
     }
 
     public function store(StoreTransactionRequest $request)
@@ -70,12 +69,12 @@ class DocumentController extends Controller
 
         DB::commit();
 
-        return redirect()->route('transactions.index')->with('success', 'Transactions created successfully.');
+        return redirect()->route('documents.index')->with('success', 'Transactions created successfully.');
     }
 
-    public function show($id)
+    public function show(Document $document)
     {
-        // Read - Display a single item
+        return view('documents.show', compact('document'));
     }
 
     public function edit($id)
@@ -83,24 +82,24 @@ class DocumentController extends Controller
 
         $document = Models\Document::find($id);
         if ($document) {
-            if(!old('transactions')){
+            if (!old('transactions')) {
                 $transactions = $document->transaction;
-            }else{
+            } else {
                 $transactions = [];
-                foreach (old('transactions') as $item){
+                foreach (old('transactions') as $item) {
                     $transaction = new Transaction();
                     $transaction->subject_id = $item['subject_id'];
                     $transaction->desc = $item['desc'];
-                    $transaction->value = $item['debit']?-1*$item['debit']:$item['credit'];
+                    $transaction->value = $item['debit'] ? -1 * $item['debit'] : $item['credit'];
                     $transactions[] = $transaction;
                 }
             }
 
             $subjects = Subject::all();
             $previousDocumentNumber = Document::orderBy('id', 'desc')->where('id', '<', $id)->first()->number ?? 0;
-            return view('transactions.edit', compact('previousDocumentNumber', 'document', 'subjects', 'transactions'));
+            return view('documents.edit', compact('previousDocumentNumber', 'document', 'subjects', 'transactions'));
         } else {
-            return redirect()->route('transactions.index')->with('error', 'Transaction not found.');
+            return redirect()->route('documents.index')->with('error', 'Transaction not found.');
         }
     }
 
@@ -115,7 +114,7 @@ class DocumentController extends Controller
         $document->update([
             'title' => $request->title,
             'number' => $request->number,
-            'date' => jalali_to_gregorian_date($request->date,'/'),
+            'date' => jalali_to_gregorian_date($request->date, '/'),
             'user_id' => Auth::id()
         ]);
 
@@ -140,7 +139,7 @@ class DocumentController extends Controller
 
         DB::commit();
 
-        return redirect()->route('transactions.index')->with('success', 'Transaction updated successfully.');
+        return redirect()->route('documents.index')->with('success', 'Transaction updated successfully.');
     }
 
     public function destroy(Models\Document $transaction)
@@ -148,7 +147,7 @@ class DocumentController extends Controller
         $transaction->transaction()->delete();
         $transaction->delete();
 
-        return redirect()->route('transactions.index')->with('success', 'Transaction deleted successfully.');
+        return redirect()->route('documents.index')->with('success', 'Transaction deleted successfully.');
     }
 
     public function fields($customers): array

@@ -13,8 +13,11 @@ class CreateDocumentTable extends Migration
             $table->id();
             $table->integer('number')->nullable();
             $table->date('date')->nullable();
-            $table->boolean('permanent')->default(0);
+            $table->date('approved_at')->nullable();
             $table->timestamps();
+
+            $table->foreignId('creator_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('approver_id')->nullable()->constrained('users')->nullOnDelete();
         });
     }
 
