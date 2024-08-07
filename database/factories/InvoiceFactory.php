@@ -30,7 +30,6 @@ class InvoiceFactory extends Factory
             'date' => $date,
             'document_id' => Document::factory()->create([
                 'date' => $date,
-
             ])->id,
             'customer_id' => Customer::factory(),
             'user_id' => User::all()->random()->id,

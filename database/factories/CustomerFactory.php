@@ -19,10 +19,6 @@ class CustomerFactory extends Factory
         return [
             'code' => $this->faker->unique()->numerify('#####'),
             'name' => $name,
-            'subject_id' => Subject::factory([
-                'name' => $name,
-                'parent_id' => 0,
-            ]),
             'phone' => substr($this->faker->phoneNumber, 0, 15),
             'cell' => substr($this->faker->phoneNumber, 0, 15),
             'fax' => substr($this->faker->phoneNumber, 0, 15),

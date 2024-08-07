@@ -109,7 +109,7 @@ return [
     |
     */
 
-    'faker_locale' => env('APP_LOCALE'),
+    'faker_locale' => 'fa_IR',
 
     /*
     |--------------------------------------------------------------------------
@@ -168,6 +168,7 @@ return [
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
+        App\Providers\ConfigurationServiceProvider::class,
     ])->toArray(),
 
     /*

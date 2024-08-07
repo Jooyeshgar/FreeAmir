@@ -5,7 +5,7 @@
     <div class="max-w-2xl mx-auto bg-white p-4 rounded-lg shadow">
         <div class="border border-gray-300 p-4 rounded mb-6 flex">
             <div class="flex-grow text-center mb-4">
-                <h1 class="text-xl font-bold">{{ config('app.name') }}</h1>
+                <h1 class="text-xl font-bold">{{ config('amir.company-name') }}</h1>
                 <p class="text-lg">سند حسابداری</p>
             </div>
             <div class="w-1/4 text-sm ">

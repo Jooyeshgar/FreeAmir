@@ -46,6 +46,21 @@ class Customer extends Model
         'disc_rate',
     ];
 
+    protected static function booted()
+    {
+        static::creating(function ($customer) {
+
+            // if (!$customer->subject_id) {
+            //     // Find or create a subject under the specified parent
+            //     $subject = Subject::firstOrCreate([
+            //         'parent_id' => $specificParentId, // Replace with the desired parent ID
+            //     ]);
+
+            //     $customer->subject_id = $subject->id;
+            // }
+        });
+    }
+
     public function subject()
     {
         return $this->belongsTo(Subject::class);

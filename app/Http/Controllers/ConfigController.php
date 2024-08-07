@@ -21,13 +21,13 @@ class ConfigController extends Controller
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            'co_name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
-            'co_logo' => 'nullable|image|mimes:jpeg,jpg,png,svg|max:10240',
-            'co_address' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
-            'co_economical_code' => 'nullable|integer',
-            'co_national_code' => 'nullable|integer',
-            'co_postal_code' => 'nullable|integer',
-            'co_phone_number' => 'nullable|numeric|regex:/^09\d{9}$/',
+            'company-name' => 'required|max:50|string|regex:/^[\w\d\s]*$/u',
+            'logo' => 'nullable|image|mimes:jpeg,jpg,png,svg|max:10240',
+            'address' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
+            'economical_code' => 'nullable|integer',
+            'national_code' => 'nullable|integer',
+            'postal_code' => 'nullable|integer',
+            'phone_number' => 'nullable|numeric|regex:/^09\d{9}$/',
             'cust_subject' => 'nullable|exists:subjects,id|integer',
             'bank' => 'nullable|exists:banks,id|integer',
             'cash' => 'nullable|numeric',
@@ -42,17 +42,17 @@ class ConfigController extends Controller
         $file = $request->file('co_logo');
         if ($file) {
             $extension = $file->getClientOriginalExtension();
-            $uniqueName = uniqid().'.'.$extension;
+            $uniqueName = uniqid() . '.' . $extension;
             $co_logo = Models\Config::where('key', 'co_logo')->first();
 
             if ($co_logo) {
-                $oldPath = 'public/'.$co_logo->value;
+                $oldPath = 'public/' . $co_logo->value;
                 if (Storage::exists($oldPath)) {
                     Storage::delete($oldPath);
                 }
             }
 
-            $storagePath = 'public/company_logos/'.$uniqueName;
+            $storagePath = 'public/company_logos/' . $uniqueName;
             Storage::put($storagePath, file_get_contents($file));
             $validatedData['co_logo'] = "company_logos/{$uniqueName}";
         }
