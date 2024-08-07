@@ -25,10 +25,10 @@ class StoreTransactionRequest extends FormRequest
             'title' => 'nullable|string|min:3|max:255',
             'number' => 'required|integer|unique:documents,number' . ($this->request->get('document_id') ? ',' . $this->request->get('document_id') : ''),
             'date' => 'required',
-            'transactions.*.subject_id' => 'required|exists:subjects,id',
-            'transactions.*.debit' => 'nullable|required_without:transactions.*.credit|integer|min:0',
-            'transactions.*.credit' => 'nullable|required_without:transactions.*.debit|integer|min:0',
-            'transactions.*.desc' => 'required|string',
+            'documents.*.subject_id' => 'required|exists:subjects,id',
+            'documents.*.debit' => 'nullable|required_without:transactions.*.credit|integer|min:0',
+            'documents.*.credit' => 'nullable|required_without:transactions.*.debit|integer|min:0',
+            'documents.*.desc' => 'required|string',
         ];
     }
 }

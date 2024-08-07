@@ -11,12 +11,12 @@
     </div>
     <div class="">
 
-        <form action="{{ route('transactions.update',$document) }}" method="POST">
+        <form action="{{ route('documents.update', $document) }}" method="POST">
             <x-show-message-bags />
             @csrf
             @method('PUT')
 
-            @include('transactions.form')
+            @include('documents.form')
 
 
 

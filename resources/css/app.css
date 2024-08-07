@@ -16,10 +16,11 @@ body {
 }
 
 .printable {
-    background-color: white;
+    background-color: lightgray;
     background-image: none;
-    width: 210mm;
-    margin: 0 auto;
+    /* width: 210mm; */
+    padding-top: 10px;
+    min-height: 100vh;
 }
 
 jdp-container .jdp-btn-empty,

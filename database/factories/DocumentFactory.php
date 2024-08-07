@@ -23,6 +23,7 @@ class DocumentFactory extends Factory
             'number' => DB::table('documents')->max('number') + 1,
             'date' => $this->faker->date(),
             'creator_id' => User::all()->random()->id,
+            'title' => $this->faker->persianSentence(),
         ];
     }
 }

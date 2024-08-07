@@ -1,29 +1,48 @@
 <!-- resources/views/report.blade.php -->
 <x-report-layout :title="__('Journal Report')">
-    @foreach($transactionsChunk as $transactions)
-        <table style="margin-top:5px" class="transactions">
+    @php
+        $pagecount = count($transactionsChunk);
+        $current = 1;
+    @endphp
+    @foreach ($transactionsChunk as $transactions)
+        <div class="w-full bg-white p-4 rounded-lg shadow my-2">
+            <div class="border border-gray-300 p-4 rounded mb-6 flex">
+                <div class="flex-grow text-center mb-4">
+                    <h1 class="text-xl font-bold">{{ config('app.name') }}</h1>
+                    <p class="text-lg">{{ __('Journal Report') }}</p>
+                </div>
+                <div class="w-1/4 text-sm ">
+                    <p>تاریخ گزارش: {{ formatDate(now()) }}</p>
+                    <p>صفحه: {{ formatNumber($current) }} از {{ formatNumber($pagecount) }}</p>
+                </div>
+            </div>
+            <table class="w-full mb-6 border-collapse border border-gray-300 rounded">
 
-            <tr>
-                <th style="width: 1cm">{{ __('Document') }}</th>
-                <th style="width: 2cm">{{ __('Date') }}</th>
-                <th style="width: 1cm">{{ __('Code') }}</th>
-                <th>{{ __('Subject') }}</th>
-                <th style="width: 2cm">{{ __('Debit') }}</th>
-                <th style="width: 2cm">{{ __('Credit') }}</th>
-            </tr>
-
-        <tbody style="border-bottom: solid 1px">
-            @foreach ($transactions as $transaction)
-                <tr>
-                    <td style="text-align: center">{{ $transaction->document->number }}</td>
-                    <td style="text-align: center">{{ formatDate($transaction->document->date) }}</td>
-                    <td style="text-align: center">{{ formatCode($transaction->subject->code) }}</td>
-                    <td>{{ $transaction->subject->name }}</td>
-                    <td>{{ formatNumber($transaction->value < 0 ? -1 * $transaction->value : 0) }}</td>
-                    <td>{{ formatNumber($transaction->value > 0 ? $transaction->value : 0) }}</td>
+                <tr class="bg-gray-200">
+                    <th class="border border-gray-300 p-2" style="width: 1cm">{{ __('Document') }}</th>
+                    <th class="border border-gray-300 p-2" style="width: 2cm">{{ __('Date') }}</th>
+                    <th class="border border-gray-300 p-2" style="width: 1cm">{{ __('Code') }}</th>
+                    <th class="border border-gray-300 p-2">{{ __('Subject') }}</th>
+                    <th class="border border-gray-300 p-2" style="width: 2cm">{{ __('Debit') }}</th>
+                    <th class="border border-gray-300 p-2" style="width: 2cm">{{ __('Credit') }}</th>
                 </tr>
-            @endforeach
-        </tbody>
-    </table>
+
+                <tbody style="border-bottom: solid 1px">
+                    @foreach ($transactions as $transaction)
+                        <tr>
+                            <td class="border p-2" style="text-align: center">{{ formatNumber($transaction->document->number) }}</td>
+                            <td class="border p-2" style="text-align: center">{{ formatDate($transaction->document->date) }}</td>
+                            <td class="border p-2" style="text-align: center">{{ formatCode($transaction->subject->code) }}</td>
+                            <td class="border p-2">{{ $transaction->subject->name }}</td>
+                            <td class="border p-2">{{ formatNumber($transaction->value < 0 ? -1 * $transaction->value : 0) }}</td>
+                            <td class="border p-2">{{ formatNumber($transaction->value > 0 ? $transaction->value : 0) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        @php
+            $current++;
+        @endphp
     @endforeach
 </x-report-layout>

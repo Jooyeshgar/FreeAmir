@@ -1,8 +1,8 @@
-<x-show-message-bags/>
+<x-show-message-bags />
 <form action="{{ route('reports.result') }}" method="get">
 
     <x-card>
-        @component('components.selectbox-subject',['type'=>$type,'subjects'=>$subjects])
+        @component('components.selectbox-subject', ['type' => $type, 'subjects' => $subjects])
         @endcomponent
         <hr class="{{ $type == 'Journal' ? 'hidden' : '' }}">
         <div class="flex items-center">
@@ -63,7 +63,7 @@
         </div>
     </x-card>
     <div class="mt-2 flex gap-2 justify-end">
-        <a href="{{ route('transactions.index') }}" type="submit" class="btn btn-default rounded-md">
+        <a href="{{ route('documents.index') }}" type="submit" class="btn btn-default rounded-md">
             {{ __('Convert to CSV') }}
         </a>
         <button type="submit" class="btn btn-default rounded-md"> {{ __('Print') }}</button>

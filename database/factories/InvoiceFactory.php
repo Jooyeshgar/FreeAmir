@@ -28,7 +28,10 @@ class InvoiceFactory extends Factory
         return [
             'code' => $this->faker->unique()->numerify('INV-####'),
             'date' => $date,
-            'document_id' => Document::factory()->create(['date' => $date])->id,
+            'document_id' => Document::factory()->create([
+                'date' => $date,
+
+            ])->id,
             'customer_id' => Customer::factory(),
             'user_id' => User::all()->random()->id,
             'addition' => $this->faker->randomFloat(2, 0, 1000),
@@ -38,7 +41,7 @@ class InvoiceFactory extends Factory
             'ship_date' => $this->faker->optional()->dateTime(),
             'ship_via' => $this->faker->company(),
             'permanent' => $this->faker->boolean,
-            'description' => $this->faker->sentence(5),
+            'description' => $this->faker->persianSentence(),
             'is_sell' => $this->faker->boolean,
             'active' => true,
             'vat' => $this->faker->randomNumber(5),
@@ -49,7 +52,7 @@ class InvoiceFactory extends Factory
     public function configure()
     {
         return $this->afterCreating(function ($invoice) {
-            $description = $this->faker->sentence(1);
+            $description = $this->faker->persianSentence();
 
             $invoiceItem = InvoiceItem::factory()->create([
                 'invoice_id' => $invoice->id,

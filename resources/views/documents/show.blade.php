@@ -1,7 +1,7 @@
 @php
     use App\Helpers\NumberToWordHelper;
 @endphp
-<x-print-layout>
+<x-report-layout>
     <div class="max-w-2xl mx-auto bg-white p-4 rounded-lg shadow">
         <div class="border border-gray-300 p-4 rounded mb-6 flex">
             <div class="flex-grow text-center mb-4">
@@ -32,10 +32,10 @@
                         $sum += $transaction->value > 0 ? $transaction->value : 0;
                     @endphp
                     <tr>
-                        <td class="border border-gray-300 p-2">{{ $transaction->subject->formattedCode() }}</td>
-                        <td class="border border-gray-300 p-2">{{ $transaction->desc }}</td>
-                        <td class="border border-gray-300 p-2">{{ $transaction->value >= 0 ? formatNumber($transaction->value) : '' }}</td>
-                        <td class="border border-gray-300 p-2">{{ $transaction->value < 0 ? formatNumber($transaction->value * -1) : '' }}</td>
+                        <td class="border p-2">{{ $transaction->subject->formattedCode() }}</td>
+                        <td class="border p-2">{{ $transaction->desc }}</td>
+                        <td class="border p-2">{{ $transaction->value >= 0 ? formatNumber($transaction->value) : '' }}</td>
+                        <td class="border p-2">{{ $transaction->value < 0 ? formatNumber($transaction->value * -1) : '' }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -53,4 +53,4 @@
             </div>
         </div>
     </div>
-</x-print-layout>
+</x-report-layout>

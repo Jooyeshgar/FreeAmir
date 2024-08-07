@@ -12,6 +12,7 @@ class CreateDocumentTable extends Migration
         Schema::create('documents', function (Blueprint $table) {
             $table->id();
             $table->integer('number')->nullable();
+            $table->string('title')->nullable();
             $table->date('date')->nullable();
             $table->date('approved_at')->nullable();
             $table->timestamps();
