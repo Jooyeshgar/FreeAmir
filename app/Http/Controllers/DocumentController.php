@@ -83,7 +83,7 @@ class DocumentController extends Controller
         $document = Models\Document::find($id);
         if ($document) {
             if (!old('transactions')) {
-                $transactions = $document->transaction;
+                $transactions = $document->transactions;
             } else {
                 $transactions = [];
                 foreach (old('transactions') as $item) {

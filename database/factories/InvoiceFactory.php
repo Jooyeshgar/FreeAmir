@@ -8,6 +8,7 @@ use App\Models\InvoiceItem;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\DocumentService;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -24,15 +25,22 @@ class InvoiceFactory extends Factory
     {
         $date = $this->faker->date();
         $amount = $this->faker->randomFloat(2, 1000, 10000);
+        $user = User::inRandomOrder()->first();
+
+        $document = DocumentService::createDocument(
+            $user,
+            [
+                'date' => $date
+            ],
+            []
+        );
 
         return [
             'code' => $this->faker->unique()->numerify('INV-####'),
             'date' => $date,
-            'document_id' => Document::factory()->create([
-                'date' => $date,
-            ])->id,
+            'document_id' => $document->id,
             'customer_id' => Customer::factory(),
-            'user_id' => User::all()->random()->id,
+            'user_id' => $user->id,
             'addition' => $this->faker->randomFloat(2, 0, 1000),
             'subtraction' => $this->faker->randomFloat(2, 0, 1000),
             'tax' => $this->faker->randomFloat(2, 0, 10),
@@ -59,12 +67,25 @@ class InvoiceFactory extends Factory
                 'amount' => $invoice->amount,
             ]);
 
-            Transaction::factory()->create([
-                'document_id' => $invoice->document_id,
-                'value' => $invoiceItem->amount,
-                'subject_id' => Subject::all()->random()->id,
-                'desc' => $description
-            ]);
+            DocumentService::createTransaction(
+                $invoice->document,
+                [
+                    'value' => $invoiceItem->amount,
+                    'subject_id' => Subject::inRandomOrder()->first()->id,
+                    'user_id' => $invoice->user_id,
+                    'desc' => $description
+                ]
+            );
+
+            DocumentService::createTransaction(
+                $invoice->document,
+                [
+                    'value' => -1 * $invoiceItem->amount,
+                    'subject_id' => Subject::inRandomOrder()->first()->id,
+                    'user_id' => $invoice->user_id,
+                    'desc' => $description
+                ],
+            );
         });
     }
 }

@@ -20,10 +20,14 @@ class ConfigurationServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        $configurations = Config::all();
+        try {
+            $configurations = Config::all();
 
-        foreach ($configurations as $config) {
-            config(['amir.' . $config->key => $config->value]);
+            foreach ($configurations as $config) {
+                config(['amir.' . $config->key => $config->value]);
+            }
+        } catch (\Exception $exception) {
+            //
         }
     }
 }

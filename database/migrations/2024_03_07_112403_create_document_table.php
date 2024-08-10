@@ -11,14 +11,15 @@ class CreateDocumentTable extends Migration
         // Create the bill table
         Schema::create('documents', function (Blueprint $table) {
             $table->id();
-            $table->integer('number')->nullable();
+            $table->decimal('number', 16, 2)->nullable();
             $table->string('title')->nullable();
             $table->date('date')->nullable();
             $table->date('approved_at')->nullable();
-            $table->timestamps();
 
             $table->foreignId('creator_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('approver_id')->nullable()->constrained('users')->nullOnDelete();
+
+            $table->timestamps();
         });
     }
 

@@ -33,13 +33,7 @@ class Invoice extends Model
 
     public function document()
     {
-        DB::transaction(function () {
-            DB::update('update users set votes = 1');
-
-            DB::delete('delete from posts');
-        }, 5);
-
-        return $this->belongsTo(Document::class, 'bill_id');
+        return $this->belongsTo(Document::class, 'document_id');
     }
 
     public function customer()
