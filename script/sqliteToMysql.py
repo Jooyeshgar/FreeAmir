@@ -112,14 +112,14 @@ def create_sql_dump(db_file, dump_file, drop_table=True, export_mode="both"):
             if export_mode in ("structure", "both"):
                 if drop_table:
                     f.write(f"\n\n-- Drop table if exists {table}\n")
-                    f.write(f"DROP TABLE IF EXISTS {table};")
+                    f.write(f"DROP TABLE IF EXISTS {table}_old;")
 
                 columns = ', '.join([
                     f"`{col[1]}` {sqlite_to_mysql_type(col[2], max_lengths.get(col[1]), nullability.get(col[1]), max_values.get(col[1]))}"
                     for col in columns_info
                 ])
                 table_create_query = f"\n\n-- Table structure for {table}\n"
-                table_create_query += f"CREATE TABLE {table} ({columns}) ENGINE={MYSQL_ENGINE} DEFAULT CHARSET={MYSQL_CHARSET} COLLATE={MYSQL_COLLATE};"
+                table_create_query += f"CREATE TABLE {table}_old ({columns}) ENGINE={MYSQL_ENGINE} DEFAULT CHARSET={MYSQL_CHARSET} COLLATE={MYSQL_COLLATE};"
                 f.write(table_create_query)
 
             if export_mode in ("data", "both"):
@@ -146,7 +146,7 @@ def create_sql_dump(db_file, dump_file, drop_table=True, export_mode="both"):
                     # Replace 'NULL' with NULL
                     columns = columns.replace("'NULL'", "NULL")
 
-                    f.write(f"\nINSERT INTO {table} VALUES ({columns});")
+                    f.write(f"\nINSERT INTO {table}_old VALUES ({columns});")
 
                     # Print progress for each row
                     print(

@@ -20,7 +20,7 @@ return new class extends Migration
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
 
             $table->string('desc')->nullable();
-            $table->decimal('value', 10, 2);
+            $table->decimal('value', 14, 2);
             $table->timestamps();
 
             $table->foreign('subject_id')->references('id')->on('subjects')->onDelete('set null');
