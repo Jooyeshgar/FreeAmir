@@ -15,26 +15,26 @@ class CreateInvoicesTable extends Migration
     {
         Schema::create('invoices', function (Blueprint $table) {
             $table->id();
-            $table->string('code')->unique();
+            $table->string('number')->unique();
             $table->date('date');
-            $table->unsignedBigInteger('user_id')->nullable();
+            $table->unsignedBigInteger('creator_id')->nullable();
+            $table->unsignedBigInteger('approver_id')->nullable();
             $table->unsignedBigInteger('document_id')->nullable();
             $table->unsignedBigInteger('customer_id');
-            $table->decimal('addition', 10, 2);
-            $table->decimal('subtraction', 10, 2);
-            $table->decimal('tax', 10, 2);
-            $table->decimal('cash_payment', 10, 2);
+            $table->decimal('addition', 16, 2);
+            $table->decimal('subtraction', 16, 2);
+            $table->decimal('vat', 16, 2);
+            $table->decimal('cash_payment', 16, 2);
             $table->date('ship_date')->nullable();
             $table->string('ship_via', 100)->nullable();
-            $table->boolean('permanent')->nullable();
             $table->text('description')->nullable();
             $table->boolean('is_sell');
             $table->boolean('active')->default(0);
-            $table->decimal('vat', 10, 2)->default(0);
-            $table->decimal('amount', 10, 2)->default(0);
+            $table->decimal('amount', 18, 2)->default(0);
             $table->timestamps();
 
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');
+            $table->foreign('creator_id')->references('id')->on('users')->onDelete('set null');
+            $table->foreign('approver_id')->references('id')->on('users')->onDelete('set null');
             $table->foreign('document_id')->references('id')->on('documents')->onDelete('set null'); // Assuming foreign key reference
             $table->foreign('customer_id')->references('id')->on('customers')->onDelete('cascade');
 
