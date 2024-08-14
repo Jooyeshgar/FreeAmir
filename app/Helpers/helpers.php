@@ -28,6 +28,15 @@ function formatNumber($number)
     return $formattedNumber;
 }
 
+function formatDocumentNumber(float $number)
+{
+    if (floor($number) == $number) {
+        return formatNumber((string) intval($number));
+    }
+
+    return formatNumber(number_format($number, 2, '/', ''));
+}
+
 function formatDate(Carbon|null $date)
 {
     if (is_null($date)) {

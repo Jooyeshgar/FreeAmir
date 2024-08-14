@@ -11,7 +11,8 @@ class Document extends Model
 
     public $timestamps = true;
     protected $casts = [
-        'date' => 'date'
+        'date' => 'date',
+        'approved_at' => 'date'
     ];
     protected $fillable = [
         'number',

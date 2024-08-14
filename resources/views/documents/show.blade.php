@@ -14,7 +14,7 @@
                 <p>صفحه: 1 از 1</p>
             </div>
         </div>
-        <table class="w-full mb-6 border-collapse border border-gray-300">
+        <table class="table-auto w-full mb-6 border-collapse border border-gray-300 max-w-full">
             <thead>
                 <tr class="bg-gray-200">
                     <th class="border border-gray-300 p-2">کد</th>
@@ -32,8 +32,8 @@
                         $sum += $transaction->value > 0 ? $transaction->value : 0;
                     @endphp
                     <tr>
-                        <td class="border p-2">{{ $transaction->subject->formattedCode() }}</td>
-                        <td class="border p-2">{{ $transaction->desc }}</td>
+                        <td class="border p-2 whitespace-normal">{{ $transaction->subject->formattedCode() }}</td>
+                        <td class="border p-2 whitespace-normal">{{ $transaction->desc }}</td>
                         <td class="border p-2">{{ $transaction->value >= 0 ? formatNumber($transaction->value) : '' }}</td>
                         <td class="border p-2">{{ $transaction->value < 0 ? formatNumber($transaction->value * -1) : '' }}</td>
                     </tr>

@@ -12,7 +12,7 @@
             </div>
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
-                    <th class="p-2 w-12">{{ __('Number') }}</th>
+                    <th class="p-2 w-12">{{ __('Doc Number') }}</th>
                     <th class="p-2">{{ __('Title') }}</th>
                     <th class="p-2 w-40">{{ __('Sum') }}</th>
                     <th class="p-2 w-40">{{ __('Date') }}</th>
@@ -21,9 +21,9 @@
                 <tbody>
                     @foreach ($documents as $document)
                         <tr>
-                            <td class="p-2">{{ $document->number }}</td>
-                            <td class="p-2">{{ $document->title }}</td>
-                            <td class="p-2">{{ formatNumber($document->transactions->sum('value')) }}</td>
+                            <td class="p-2"><a href="{{ route('documents.show', $document->id) }}">{{ formatDocumentNumber($document->number) }}</a></td>
+                            <td class="p-2">{{ $document->title ?? $document->transactions->first()->desc . ' ...' }}</td>
+                            <td class="p-2">{{ formatNumber($document->transactions->where('value', '>', 0)->sum('value')) }}</td>
                             <td class="p-2">{{ formatDate($document->date) }}</td>
                             <td class="p-2">
                                 <a href="{{ route('documents.show', $document->id) }}" class="btn btn-sm btn-info">{{ __('View') }}</a>
