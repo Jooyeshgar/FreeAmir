@@ -17,10 +17,10 @@ class CreateInvoicesTable extends Migration
             $table->id();
             $table->string('number')->unique();
             $table->date('date');
-            $table->unsignedBigInteger('creator_id')->nullable();
-            $table->unsignedBigInteger('approver_id')->nullable();
-            $table->unsignedBigInteger('document_id')->nullable();
-            $table->unsignedBigInteger('customer_id');
+            $table->foreignId('creator_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignId('approver_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignId('document_id')->nullable()->constrained('documents')->onDelete('set null');
+            $table->foreignId('customer_id')->constrained('customers')->onDelete('cascade');
             $table->decimal('addition', 16, 2);
             $table->decimal('subtraction', 16, 2);
             $table->decimal('vat', 16, 2);
@@ -32,13 +32,6 @@ class CreateInvoicesTable extends Migration
             $table->boolean('active')->default(0);
             $table->decimal('amount', 18, 2)->default(0);
             $table->timestamps();
-
-            $table->foreign('creator_id')->references('id')->on('users')->onDelete('set null');
-            $table->foreign('approver_id')->references('id')->on('users')->onDelete('set null');
-            $table->foreign('document_id')->references('id')->on('documents')->onDelete('set null'); // Assuming foreign key reference
-            $table->foreign('customer_id')->references('id')->on('customers')->onDelete('cascade');
-
-            // Remove redundant checks for boolean fields
         });
     }
 
