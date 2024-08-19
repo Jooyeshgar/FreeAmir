@@ -12,7 +12,8 @@
 
 body {
     font-family: Vazirmatn, sans-serif !important;
-    direction: rtl;
+    /* direction: rtl; */
+    padding: .6rem;
 }
 
 .printable {
@@ -27,4 +28,15 @@ jdp-container .jdp-btn-empty,
 jdp-container .jdp-btn-today,
 jdp-container .jdp-days .jdp-day.selected {
     background: rgba(59, 189, 30, 0.99) !important;
+}
+
+header {
+    position: relative;
+    z-index: 6;
+}
+
+main {
+    position: relative;
+    z-index: 2;
+    padding: 0 .4rem;
 }
