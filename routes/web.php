@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers;
+use App\Http\Controllers\WorkshopController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
@@ -29,5 +30,10 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('journal', [Controllers\ReportsController::class, 'journal'])->name('journal');
         Route::get('sub-ledger', [Controllers\ReportsController::class, 'subLedger'])->name('subLedger');
         Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
+    });
+    Route::group(['prefix' => 'payroll', 'as' => 'payroll.'], function () {
+        Route::group(['prefix' => 'workshop'], function () {
+            Route::resource('workshops', WorkshopController::class)->except(['show']);
+        });
     });
 });

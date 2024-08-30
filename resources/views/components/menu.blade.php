@@ -21,6 +21,15 @@
 </li>
 <li>
     <details>
+        <summary>{{__('payroll')}}</summary>
+        <ul>
+            <li><a href="{{ route('payroll.workshops.index') }}">{{ __('workshop') }}</a></li>
+           
+        </ul>
+    </details>
+</li>
+<li>
+    <details>
         <summary>گزارشات</summary>
         <ul>
             <li>
