@@ -21,10 +21,10 @@
 </li>
 <li>
     <details>
-        <summary>{{__('payroll')}}</summary>
+        <summary>{{ __('payroll') }}</summary>
         <ul>
-            <li><a href="{{ route('payroll.workshops.index') }}">{{ __('workshop') }}</a></li>
-           
+            <li><a href="{{ route('payroll.workhouses.index') }}">{{ __('workhouse') }}</a></li>
+
         </ul>
     </details>
 </li>

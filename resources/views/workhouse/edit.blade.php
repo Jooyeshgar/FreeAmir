@@ -1,11 +1,11 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Edit Workshop') }}
+            {{ __('Edit Workhouse') }}
         </h2>
     </x-slot>
-    <div class="card-title">{{ __('Edit Workshop') }}</div>
-    <form action="{{ route('payroll.workshops.update', $workshop) }}" method="POST" class="relative">
+    <div class="card-title">{{ __('Edit Workhouse') }}</div>
+    <form action="{{ route('payroll.workhouses.update', $workhouse) }}" method="POST" class="relative">
         @method('PUT')
         @csrf
         <div class="card bg-gray-100 shadow-xl rounded-xl ">
@@ -14,7 +14,7 @@
 
                 <x-show-message-bags />
 
-                @include('workshops.form')
+                @include('workhouses.form')
 
             </div>
 

@@ -1,19 +1,19 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Create Workshop') }}
+            {{ __('Create Workhouse') }}
         </h2>
     </x-slot>
-    <div class="card-title">{{ __('Add Workshop') }}</div>
-    <form action="{{ route('payroll.workshops.store') }}" method="POST" class="relative">
-        <div class="card bg-gray-100 shadow-xl rounded-xl " >
+    <div class="card-title">{{ __('Add Workhouse') }}</div>
+    <form action="{{ route('payroll.workhouses.store') }}" method="POST" class="relative">
+        <div class="card bg-gray-100 shadow-xl rounded-xl ">
 
             @csrf
             <div class="card-body p-4  ">
 
                 <x-show-message-bags />
 
-                @include('workshops.form')
+                @include('workhouses.form')
 
             </div>
 
