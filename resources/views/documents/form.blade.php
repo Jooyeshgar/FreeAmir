@@ -68,10 +68,11 @@
                             input_class="value codeInput "></x-text-input>
 
                     </div>
-                    <div class="selfSelectBoxContainer relative flex-1 min-w-80 max-w-80 pb-3">
+                    <div class="selfSelectBoxContainer relative flex-1 min-w-80 max-w-80 pb-3"
+                        onclick="openSelectBox(this)">
                         <x-text-input name="transactions[{{ $i }}][subject_id]" value="" readonly
                             id="subject_id" label_text_class="text-gray-500" label_class="w-full"
-                            input_class="subject_id codeSelectBox " onclick="openSelectBox(0)"></x-text-input>
+                            input_class="subject_id codeSelectBox "></x-text-input>
                         <div
                             class="selfSelectBox hidden absolute z-[3] top-[40px] w-full h-[300px] bg-white overflow-auto px-4 pb-4 rounded-[16px] shadow-[0px_43px_27px_0px_#00000012]">
                             <div class="sticky top-0 left-0 right-0 w-full bg-white py-2">
@@ -118,7 +119,8 @@
                                             <div class="ps-1 mt-4">
                                                 <div class="border-s-[1px] ps-4 border-[#ADB5BD]">
                                                     <a href="javascript:void(0)"
-                                                        class="selfSelectBoxItems flex justify-between" onclick="fillInput(this, 0)">
+                                                        class="selfSelectBoxItems flex justify-between"
+                                                        onclick="fillInput(this, '0')">
                                                         <span class="selfItemTitle">
                                                             {{ $subject->name }}
                                                         </span>
@@ -196,7 +198,8 @@
     jalaliDatepicker.startWatch({});
 </script>
 <script>
-    var t = 0;
+    let t = 0;
+    let o = 0;
     var subjects = {!! json_encode($subjects) !!};
     var p2e = s => s.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
 
@@ -215,9 +218,18 @@
     }
 
     function deleteAction() {
+        o = 0
         if (document.getElementsByClassName('removeTransaction').length > 1) {
+            t = t - 1;
             this.parentNode.parentNode.remove();
-            updateTransactionCounter()
+            updateTransactionCounter();
+            document.querySelectorAll(".transaction").forEach(element => {
+                element.querySelectorAll('.selfSelectBoxItems').forEach(element => {
+                    element.setAttribute('onclick', 'fillInput(this, "' + o + '")');
+                })
+                o = o + 1;
+                console.log(o);
+            })
         }
     }
 
@@ -316,9 +328,9 @@
         var removeButton = newTransactionDiv.getElementsByClassName('removeTransaction')[0];
         removeButton.addEventListener('click', deleteAction);
 
-        newTransactionDiv.querySelector('.subject_id').setAttribute('onclick', 'openSelectBox(' + t + ')')
-
-        newTransactionDiv.querySelector('.selfSelectBoxItems').setAttribute('onclick', 'fillInput(this, ' + t + ')')
+        newTransactionDiv.querySelectorAll('.selfSelectBoxItems').forEach(element => {
+            element.setAttribute('onclick', 'fillInput(this, "' + t + '")');
+        })
 
         // Add code onchange event listener
         var codeInput = newTransactionDiv.getElementsByClassName('codeInput')[0];
@@ -339,13 +351,16 @@
         updateTransactionCounter()
     });
 
-    function openSelectBox(index) {
-        document.querySelectorAll(".selfSelectBox")[index].style.display = "block";
+    function openSelectBox(thisOne) {
+        document.querySelectorAll(".selfSelectBox").forEach(function(box) {
+            box.style.display = "none";
+        });
+        thisOne.querySelector(".selfSelectBox").style.display = "block";
     }
 
-    function fillInput(t, index) {
-        let selfItemTitle = t.querySelector(".selfItemTitle").innerText;
-        let selfItemCode = t.querySelector(".selfItemCode").innerText;
+    function fillInput(thisOne, index) {
+        let selfItemTitle = thisOne.querySelector(".selfItemTitle").innerText;
+        let selfItemCode = thisOne.querySelector(".selfItemCode").innerText;
         document.querySelectorAll(".subject_id")[index].value = selfItemTitle;
         document.querySelectorAll(".value")[index].value = selfItemCode;
     }
