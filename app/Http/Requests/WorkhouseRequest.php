@@ -22,9 +22,9 @@ class WorkhouseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255',
-            'code' => 'required|string|max:255',
-            'address' => 'required|string|max:255',
+            'name' => 'required|unique:workhouses|string|max:255',
+            'code' => 'required|unique:workhouses|string|max:255',
+            'address' => 'nullable|string|max:255',
             'telephone' => 'nullable|string|regex:/^[0-9\s\-\+]+$/|min:10|max:15'
         ];
     }

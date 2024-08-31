@@ -11,8 +11,8 @@ class CreateWorkhousesTable extends Migration
             $table->id();
             $table->string('name');
             $table->string('code');
-            $table->string('address');
-            $table->string('telephone');
+            $table->string('address')->nullable();
+            $table->string('telephone')->nullable();
             $table->timestamps();
         });
     }
