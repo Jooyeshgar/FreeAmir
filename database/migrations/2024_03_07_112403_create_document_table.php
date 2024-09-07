@@ -18,6 +18,7 @@ class CreateDocumentTable extends Migration
 
             $table->foreignId('creator_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('approver_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('company_id')->nullable()->constrained()->nullOnDelete();
 
             $table->timestamps();
         });

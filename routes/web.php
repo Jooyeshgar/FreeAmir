@@ -32,13 +32,5 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
     });
 
-    Route::get('change-company', function () {
-        session([
-            'app.company' => request('company'),
-            'app.company_id' => request('company_id'),
-            'app.fiscal_year' => request('year')
-        ]);
-
-        return redirect()->route('home');
-    })->name('change-company');
+    Route::get('change-company/{company}', [Controllers\CompanyController::class, 'setActiveCompany'])->name('change-company');
 });

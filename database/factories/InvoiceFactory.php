@@ -36,18 +36,18 @@ class InvoiceFactory extends Factory
         );
 
         return [
-            'code' => $this->faker->unique()->numerify('INV-####'),
+            'number' => $this->faker->unique()->numerify('#####'),
             'date' => $date,
             'document_id' => $document->id,
             'customer_id' => Customer::factory(),
-            'user_id' => $user->id,
+            'creator_id' => $user->id,
+            'company_id' => 1,
+            'approver_id' => $this->faker->randomElement([null, $user->id]),
             'addition' => $this->faker->randomFloat(2, 0, 1000),
             'subtraction' => $this->faker->randomFloat(2, 0, 1000),
-            'tax' => $this->faker->randomFloat(2, 0, 10),
-            'cash_payment' => $this->faker->boolean,
+            'cash_payment' => $this->faker->randomFloat(2, 1000, $amount),
             'ship_date' => $this->faker->optional()->dateTime(),
             'ship_via' => $this->faker->company(),
-            'permanent' => $this->faker->boolean,
             'description' => $this->faker->persianSentence(),
             'is_sell' => $this->faker->boolean,
             'active' => true,
@@ -72,7 +72,7 @@ class InvoiceFactory extends Factory
                 [
                     'value' => $invoiceItem->amount,
                     'subject_id' => Subject::inRandomOrder()->first()->id,
-                    'user_id' => $invoice->user_id,
+                    'user_id' => $invoice->creator_id,
                     'desc' => $description
                 ]
             );
@@ -82,7 +82,7 @@ class InvoiceFactory extends Factory
                 [
                     'value' => -1 * $invoiceItem->amount,
                     'subject_id' => Subject::inRandomOrder()->first()->id,
-                    'user_id' => $invoice->user_id,
+                    'user_id' => $invoice->creator_id,
                     'desc' => $description
                 ],
             );

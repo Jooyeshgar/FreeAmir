@@ -46,6 +46,6 @@ class User extends Authenticatable
 
     public function companies()
     {
-        return $this->belongsToMany(Company::class)->withPivot('fiscal_year');
+        return $this->belongsToMany(Company::class);
     }
 }

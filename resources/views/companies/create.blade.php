@@ -25,14 +25,24 @@
                                 required />
                         </label>
                     </div>
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="input input-bordered flex items-center gap-2">
+                            {{ __('Fiscal year') }}
+                            <input type="text" name="fiscal_year" class="grow"
+                                value="{{ old('fiscal_year', $company?->fiscal_year) }}" required />
+                        </label>
+                    </div>
                     <div class="col-span-2 md:col-span-1 flex gap-x-4">
                         <label for="logo">
                             {{ __('Company logo') }}
                         </label>
                         <input type="file" id="logo" name="logo" class="file-input w-full max-w-xs" accept="image/*" />
                     </div>
+                    @if ($company)
+                        <img class="block w-12 h-auto rounded-full"
+                            src="{{ asset('storage/' . $company->logo) }}">
+                    @endif
                     <div class="col-span-2">
-
                         <div class="col-span-2">
                             <label id="co_address" class="form-control">
                                 <span class="label">
@@ -43,7 +53,6 @@
                                 </textarea>
                             </label>
                         </div>
-
                     </div>
                     <div class="col-span-2 md:col-span-1">
                         <label class="input input-bordered flex items-center gap-2">

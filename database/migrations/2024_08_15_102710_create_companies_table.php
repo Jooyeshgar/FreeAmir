@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('national_code', 12)->nullable();
             $table->string('postal_code')->nullable();
             $table->string('phone_number', 11)->nullable();
+            $table->unsignedInteger('fiscal_year');
         });
     }
 

@@ -14,12 +14,6 @@ class FiscalYearScope implements Scope
      */
     public function apply(Builder $builder, Model $model): void
     {
-        $builder->whereHas('company', function (Builder $query) {
-            $query->whereHas('users', function (Builder $query) {
-                $query->where('user_id', auth()->id())
-                ->where('company_id', session('app.company_id'))
-                ->where(DB::raw("YEAR(date)"), session('app.fiscal_year'));
-            });
-        });
+        $builder->where('company_id', session('active-company-id'));
     }
 }

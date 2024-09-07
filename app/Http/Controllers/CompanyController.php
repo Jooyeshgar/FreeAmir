@@ -13,13 +13,14 @@ use Illuminate\Support\Facades\Storage;
 class CompanyController extends Controller
 {
     public $rules = [
-        'name' => 'required|max:50|string|regex:/^[\w\d\s]*$/u',
-        'logo' => 'nullable|image|mimes:jpeg,jpg,png,svg|max:10240',
-        'address' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
+        'name'            => 'required|max:50|string|regex:/^[\w\d\s]*$/u',
+        'logo'            => 'nullable|image|mimes:jpeg,jpg,png,svg|max:10240',
+        'address'         => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
         'economical_code' => 'nullable|string|max:15',
-        'national_code' => 'nullable|string|max:12',
-        'postal_code' => 'nullable|integer',
-        'phone_number' => 'nullable|numeric|regex:/^09\d{9}$/'
+        'national_code'   => 'nullable|string|max:12',
+        'postal_code'     => 'nullable|integer',
+        'phone_number'    => 'nullable|numeric|regex:/^09\d{9}$/',
+        'fiscal_year'     => 'required|numeric'
     ];
 
     /**
@@ -57,7 +58,7 @@ class CompanyController extends Controller
         }
 
         $company = Company::create($validated);
-        auth()->user()->companies()->attach($company->id, ['fiscal_year' => date('Y')]);
+        $company->users()->attach($request->user()->id);
 
         return redirect(route('companies.index'))
             ->with('success', 'Company created successfully.');
@@ -127,5 +128,20 @@ class CompanyController extends Controller
         Storage::put($storagePath, file_get_contents($logo));
         $path = "company_logos/{$uniqueName}";
         return $path;
+    }
+
+    public function setActiveCompany(Company $company): RedirectResponse
+    {
+        if (! $company->users->contains(auth()->id())) {
+            abort(403);
+        }
+
+        session([
+            'active-company-id' => $company->id,
+            'active-company-name' => $company->name,
+            'active-company-fiscal-year' => $company->fiscal_year
+        ]);
+
+        return redirect()->route('home');
     }
 }

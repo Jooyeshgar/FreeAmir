@@ -15,6 +15,6 @@ class Company extends Model
 
     public function users()
     {
-        return $this->belongsToMany(User::class)->withPivot('fiscal_year');
+        return $this->belongsToMany(User::class);
     }
 }
