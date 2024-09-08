@@ -24,6 +24,12 @@
         <summary>{{ __('payroll') }}</summary>
         <ul>
             <li><a href="{{ route('payroll.workhouses.index') }}">{{ __('workhouse') }}</a></li>
+            <li><a href="{{ route('payroll.contracts.index') }}">{{ __('contract') }}</a></li>
+            <li><a href="{{ route('payroll.organizational_charts.index') }}">{{ __('organizational chart') }}</a></li>
+            <li><a href="{{ route('payroll.payroll_patterns.index') }}">{{ __('payroll patterns') }}</a></li>
+            <li><a href="{{ route('payroll.benefits_deductions.index') }}">{{ __('benefits deductions') }}</a></li>
+            <li><a href="{{ route('payroll.salary_slips.index') }}">{{ __('salary slip') }}</a></li>
+            <li><a href="{{ route('payroll.personnel.index') }}">{{ __('personnel') }}</a></li>
 
         </ul>
     </details>

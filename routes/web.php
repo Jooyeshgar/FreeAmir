@@ -1,6 +1,12 @@
 <?php
 
 use App\Http\Controllers;
+use App\Http\Controllers\BenefitsDeductionController;
+use App\Http\Controllers\ContractController;
+use App\Http\Controllers\OrganizationalChartController;
+use App\Http\Controllers\PayrollPatternController;
+use App\Http\Controllers\PersonnelController;
+use App\Http\Controllers\SalarySlipController;
 use App\Http\Controllers\WorkhouseController;
 use Illuminate\Support\Facades\Route;
 
@@ -31,9 +37,14 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('sub-ledger', [Controllers\ReportsController::class, 'subLedger'])->name('subLedger');
         Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
     });
+
     Route::group(['prefix' => 'payroll', 'as' => 'payroll.'], function () {
-        Route::group(['prefix' => 'workhouse'], function () {
-            Route::resource('workhouses', WorkhouseController::class)->except(['show']);
-        });
+        Route::resource('workhouses', WorkhouseController::class)->except(['show']);
+        Route::resource('contracts', ContractController::class)->except(['show']);
+        Route::resource('organizational_charts', OrganizationalChartController::class)->except(['show']);
+        Route::resource('payroll_patterns', PayrollPatternController::class)->except(['show']);
+        Route::resource('benefits_deductions', BenefitsDeductionController::class);
+        Route::resource('salary_slips', SalarySlipController::class);
+        Route::resource('personnel', PersonnelController::class);
     });
 });

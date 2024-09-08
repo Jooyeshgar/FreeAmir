@@ -210,5 +210,11 @@
     "Telephone": "تلفن",
     "Address": "آدرس",
     "Create Workhouse": "ساخت کارگاه",
-    "Update": "بروزرسانی"
+    "Update": "بروزرسانی",
+    "contract": "پیمان",
+    "Create Contract": "ایجاد پیمان",
+    "Row":"ردیف",
+    "Contract Name":"نام پیمان",
+    "Contract Row":"ردیف پیمان",
+    "organizational chart":"چارت سازمانی"
 }
