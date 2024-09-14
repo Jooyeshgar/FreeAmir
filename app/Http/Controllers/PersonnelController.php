@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StorePersonnelRequest;
+use App\Http\Requests\UpdatePersonnelRequest;
 use App\Models\Personnel;
 use App\Models\Bank;
 use App\Models\OrganizationalChart;
@@ -30,40 +32,10 @@ class PersonnelController extends Controller
         return view('personnel.create', compact('salarySlips', 'selectedSalarySlips', 'banks', 'organizationalCharts', 'workhouses'));
     }
 
-    public function store(Request $request)
+    public function store(StorePersonnelRequest $request)
     {
-        dd($request->input('salary_slips', []));
 
-        $validatedData = $request->validate([
-            'first_name' => 'required',
-            'last_name' => 'required',
-            'personnel_code' => 'required|unique:personnel',
-            'father_name' => 'required',
-            'nationality' => 'required|in:iranian,non_iranian',
-            'identity_number' => 'required',
-            'national_code' => 'required',
-            'passport_number' => 'required',
-            'marital_status' => 'required|in:single,married,divorced,widowed',
-            'gender' => 'required|in:female,male,other',
-            'contact_number' => 'required',
-            'address' => 'required',
-            'insurance_number' => 'required',
-            'insurance_type' => 'required|in:social_security,other',
-            'children_count' => 'nullable|integer',
-            'bank_id' => 'required|exists:banks,id',
-            'account_number' => 'required',
-            'card_number' => 'required',
-            'iban' => 'required',
-            'detailed_code' => 'required',
-            'contract_start_date' => 'nullable|date',
-            'employment_type' => 'required|in:full_time,part_time,contract',
-            'contract_type' => 'required|in:official,contract,other',
-            'birth_place' => 'nullable',
-            'organizational_chart_id' => 'required|exists:organizational_charts,id',
-            'military_status' => 'required|in:not_subject,completed,in_progress',
-            'workhouse_id' => 'required|exists:workhouses,id',
-        ]);
-
+        $validatedData = $request->validated();
         $personnel = Personnel::create($validatedData);
         $personnel->salarySlips()->sync($request->input('salary_slips', []));
 
@@ -87,38 +59,9 @@ class PersonnelController extends Controller
         return view('personnel.edit', compact('selectedSalarySlips', 'salarySlips', 'personnel', 'banks', 'organizationalCharts', 'workhouses'));
     }
 
-    public function update(Request $request, Personnel $personnel)
+    public function update(UpdatePersonnelRequest $request, Personnel $personnel)
     {
-        $validatedData = $request->validate([
-            'first_name' => 'required',
-            'last_name' => 'required',
-            'personnel_code' => 'required|unique:personnel,personnel_code,' . $personnel->id,
-            'father_name' => 'required',
-            'nationality' => 'required|in:iranian,non_iranian',
-            'identity_number' => 'required',
-            'national_code' => 'required',
-            'passport_number' => 'required',
-            'marital_status' => 'required|in:single,married,divorced,widowed',
-            'gender' => 'required|in:female,male,other',
-            'contact_number' => 'required',
-            'address' => 'required',
-            'insurance_number' => 'required',
-            'insurance_type' => 'required|in:social_security,other',
-            'children_count' => 'nullable|integer',
-            'bank_id' => 'required|exists:banks,id',
-            'account_number' => 'required',
-            'card_number' => 'required',
-            'iban' => 'required',
-            'detailed_code' => 'required',
-            'contract_start_date' => 'nullable|date',
-            'employment_type' => 'required|in:full_time,part_time,contract',
-            'contract_type' => 'required|in:official,contract,other',
-            'birth_place' => 'nullable',
-            'organizational_chart_id' => 'required|exists:organizational_charts,id',
-            'military_status' => 'required|in:not_subject,completed,in_progress',
-            'workhouse_id' => 'required|exists:workhouses,id',
-        ]);
-
+        $validatedData = $request->validated();
         $personnel->update($validatedData);
         $personnel->salarySlips()->sync($request->input('salary_slips', []));
 

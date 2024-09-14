@@ -1,11 +1,5 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Edit Organizational Chart') }}
-        </h2>
-    </x-slot>
-    <div class="card-title">{{ __('Edit Organizational Chart') }}</div>
-    <form action="{{ route('payroll.organizational_charts.update', $organizationalChart) }}" method="POST" class="relative">
+    <form action="{{ route('payroll.organizational_charts.update', $organizationalChart) }}" method="POST" class="relative mt-4">
         @method('PUT')
         @csrf
         <div class="card bg-gray-100 shadow-xl rounded-xl">

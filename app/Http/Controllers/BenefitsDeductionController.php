@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreBenefitsDeductionRequest;
+use App\Http\Requests\UpdateBenefitsDeductionRequest;
 use App\Models\BenefitsDeduction;
 use Illuminate\Http\Request;
 
@@ -18,22 +20,12 @@ class BenefitsDeductionController extends Controller
         return view('benefits_deductions.create');
     }
 
-    public function store(Request $request)
+    public function store(StoreBenefitsDeductionRequest $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'type' => 'required|in:benefit,deduction',
-            'calculation' => 'required|in:fixed,hourly,manual',
-            'amount' => 'required|numeric',
-        ]);
+        $validatedData = $request->validated();
 
         // Convert checkbox values to boolean
-        $data = $request->only([
-            'name',
-            'type',
-            'calculation',
-            'amount'
-        ]);
+        $data = $validatedData;
         $data['insurance_included'] = $request->has('insurance_included');
         $data['tax_included'] = $request->has('tax_included');
         $data['show_on_payslip'] = $request->has('show_on_payslip');
@@ -47,26 +39,17 @@ class BenefitsDeductionController extends Controller
         return view('benefits_deductions.edit', compact('benefitsDeduction'));
     }
 
-    public function update(Request $request, BenefitsDeduction $benefitsDeduction)
+    public function update(UpdateBenefitsDeductionRequest $request, BenefitsDeduction $benefitsDeduction)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'type' => 'required|in:benefit,deduction',
-            'calculation' => 'required|in:fixed,hourly,manual',
-            'amount' => 'required|numeric',
-        ]);
+        $validatedData = $request->validated();
 
         // Convert checkbox values to boolean
-        $data = $request->only([
-            'name',
-            'type',
-            'calculation',
-            'amount'
-        ]);
+        $data = $validatedData;
         $data['insurance_included'] = $request->has('insurance_included');
         $data['tax_included'] = $request->has('tax_included');
         $data['show_on_payslip'] = $request->has('show_on_payslip');
         $benefitsDeduction->update($data);
+
         return redirect()->route('payroll.benefits_deductions.index')->with('success', 'Benefit/Deduction updated successfully.');
     }
 

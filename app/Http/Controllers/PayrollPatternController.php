@@ -1,8 +1,10 @@
 <?php
+
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StorePayrollPatternRequest;
+use App\Http\Requests\UpdatePayrollPatternRequest;
 use App\Models\PayrollPattern;
-use Illuminate\Http\Request;
 
 class PayrollPatternController extends Controller
 {
@@ -17,15 +19,10 @@ class PayrollPatternController extends Controller
         return view('payroll_patterns.create');
     }
 
-    public function store(Request $request)
+    public function store(StorePayrollPatternRequest $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'daily_wage' => 'required|numeric',
-            // Validate other fields as needed
-        ]);
-
-        PayrollPattern::create($request->all());
+        $validatedData = $request->validated();
+        PayrollPattern::create($validatedData);
         return redirect()->route('payroll.payroll_patterns.index')->with('success', 'Payroll Calculation Pattern created successfully.');
     }
 
@@ -34,14 +31,10 @@ class PayrollPatternController extends Controller
         return view('payroll_patterns.edit', compact('payrollPattern'));
     }
 
-    public function update(Request $request, PayrollPattern $payrollPattern)
+    public function update(UpdatePayrollPatternRequest $request, PayrollPattern $payrollPattern)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'daily_wage' => 'required|numeric',
-        ]);
-
-        $payrollPattern->update($request->all());
+        $validatedData = $request->validated();
+        $payrollPattern->update($validatedData);
         return redirect()->route('payroll.payroll_patterns.index')->with('success', 'Payroll Calculation Pattern updated successfully.');
     }
 

@@ -19,6 +19,14 @@ class DatabaseSeeder extends Seeder
             CustomerGroupSeeder::class,
             ProductGroupSeeder::class,
             RolesAndPermissionsSeeder::class,
+
+            PayrollPatternSeeder::class,
+            BenefitsDeductionSeeder::class,
+            SalarySlipSeeder::class,
+            PersonnelSeeder::class,
+            WorkhouseSeeder::class,
+            OrganizationalChartSeeder::class,
+            ContractSeeder::class
         ]);
     }
 }

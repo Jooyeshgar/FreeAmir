@@ -27,7 +27,7 @@
                 <!-- Nationality -->
                 <div>
                     <x-form-select title="{{ __('Nationality') }}" name="nationality"
-                        :options="['iranian' => __('Iranian'), 'non_iranian' =>  __('Non Iranina')]"
+                        :options="['iranian' => __('Iranian'), 'non_iranian' =>  __('Non Iranian')]"
                         :selected="old('nationality', $personnel->nationality ?? '')" />
                   
                 </div>
@@ -49,13 +49,13 @@
                 <!-- Marital Status -->
                 <div>
                     <x-form-select title="{{ __('Marital Status') }}" name="marital_status"
-                        :options="['single' => 'مجرد', 'married' => 'متاهل', 'divorced' => 'طلاق', 'widowed' => 'همسر فوت شده']"
+                        :options="['single' => __('single'), 'married' => __('married'), 'divorced' => __('divorced'), 'widowed' => __('widowed')]"
                         :selected="old('marital_status', $personnel->marital_status ?? '')" />
                 </div>
                 <!-- Gender -->
                 <div>
                     <x-form-select title="{{ __('Gender') }}" name="gender"
-                        :options="['female' => 'زن', 'male' => 'مرد', 'other' => 'سایر']"
+                        :options="['female' => __('female'), 'male' => __('male'), 'other' => __('other')]"
                         :selected="old('gender', $personnel->gender ?? '')" />
                 </div>
             </div>
@@ -65,7 +65,7 @@
     <!-- Additional Information -->
     <div class="bg-gray-200 p-2 rounded-xl">
         <div role="tablist" class="tabs tabs-boxed">
-            <input type="radio" name="my_tabs_2" role="tab" class="tab" aria-label="سایر اطلاعات" checked />
+            <input type="radio" name="my_tabs_2" role="tab" class="tab" aria-label="{{__('Additional Information')}}" checked />
             <div role="tabpanel" class="tab-content bg-gray-100 rounded-box p-2">
                 <div class="grid grid-cols-3 gap-1">
                     <!-- Contact Number -->
@@ -119,7 +119,7 @@
             </div>
 
             <!-- Organizational Information -->
-            <input type="radio" name="my_tabs_2" role="tab" class="tab" aria-label="اطلاعات سازمانی" />
+            <input type="radio" name="my_tabs_2" role="tab" class="tab whitespace-nowrap" aria-label="{{__('Organizational Information')}}" />
             <div role="tabpanel" class="tab-content bg-gray-100 rounded-box p-2">
                 <div class="grid grid-cols-3 gap-1">
                     <!-- Detailed Code -->
@@ -136,7 +136,7 @@
                     <!-- Employment Type -->
                     <div>
                         <x-form-select title="{{ __('Employment Type') }}" name="employment_type"
-                        :options="['full_time' => __('full_time'), 'part_time' => __('part_time'), 'contract' => __('contract')]"
+                        :options="['full_time' => __('full time'), 'part_time' => __('part time'), 'contract' => __('contract')]"
 
                             :selected="old('employment_type',$personnel->employment_type??'')" />
                     </div>
