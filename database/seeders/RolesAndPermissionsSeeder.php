@@ -26,16 +26,16 @@ class RolesAndPermissionsSeeder extends Seeder
         Permission::create(['name' => 'accountant']);
 
         // create roles and assign created permissions
-        $role = Role::create(['name' => __('seller')]);
+        $role = Role::create(['name' => 'seller']);
         $role->givePermissionTo('seller');
 
-        $role = Role::create(['name' => __('reporter')]);
+        $role = Role::create(['name' => 'reporter']);
         $role->givePermissionTo('accounting reporter');
 
-        $role = Role::create(['name' => __('accountant')])
+        $role = Role::create(['name' => 'accountant'])
             ->givePermissionTo(['accountant', 'moadian manager']);
 
-        $role = Role::create(['name' => __('manager')]);
+        $role = Role::create(['name' => 'manager']);
         $role->givePermissionTo(Permission::all());
 
         // Create admin user
@@ -45,6 +45,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'password' => bcrypt('password'), // Replace with a strong password
         ]);
 
-        $admin->assignRole(__('manager'));
+        $admin->assignRole('manager');
     }
 }

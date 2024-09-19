@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Management;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
@@ -27,7 +28,8 @@ class UserController extends Controller
      */
     public function create()
     {
-        return view('users.create');
+        $roles = Role::get();
+        return view('users.create', compact('roles'));
     }
 
     /**
@@ -49,6 +51,7 @@ class UserController extends Controller
         $user->email = $request->input('email');
         $user->password = bcrypt($request->input('password'));
         $user->save();
+        $user->syncRoles($request->roles);
 
         return redirect()->route('users.index')->with('success', 'User created successfully!');
     }
@@ -70,7 +73,8 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
-        return view('users.edit', compact('user'));
+        $roles = Role::get();
+        return view('users.edit', compact('user', 'roles'));
     }
 
     /**
@@ -93,6 +97,8 @@ class UserController extends Controller
             $user->password = bcrypt($request->input('password'));
         }
         $user->save();
+        $user->syncRoles($request->roles);
+
 
         return redirect()->route('users.index')->with('success', 'User updated successfully!');
     }

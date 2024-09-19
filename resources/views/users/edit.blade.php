@@ -16,6 +16,13 @@
                     <x-form-input title="{{ __('Email') }}" name="email" place-holder="{{ __('Email') }}" :value="old('email', $user->email ?? '')" type="email" />
                     <x-form-input title="{{ __('Password') }}" name="password" place-holder="{{ __('Password') }}" type="password" />
                     <x-form-input title="{{ __('Confirm Password') }}" name="password_confirmation" place-holder="{{ __('Confirm Password') }}" type="password" />
+                    <select name="roles[]" multiple="true" id="">
+                        @foreach ($roles as $role)
+                            <option {{ in_array($role->id, $user->roles->pluck('id')->toArray()) ? 'selected' : '' }} value="{{ $role->name }}">
+                                {{ $role->name }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
                 <div class="flex justify-end mt-4">
                     <button type="submit"

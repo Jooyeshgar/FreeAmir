@@ -5,7 +5,7 @@
         </h2>
     </x-slot>
 
-    <div class="py-12">
+    <div class="py-12 relative">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white border-b border-gray-200">
@@ -21,7 +21,13 @@
                             <x-form-input title="{{ __('Password') }}" name="password"
                                 place-holder="{{ __('Enter your password') }}" :message="$errors->first('password')" />
                             <x-form-input title="{{ __('Confirm Password') }}" name="password_confirmation"
-                                place-holder="{{ __('Confirm your password') }}" :message="$errors->first('password_confirmation')" />
+                                place-holder="{{ __('Confirm your password') }}"
+                                :message="$errors->first('password_confirmation')" />
+                            <select name="roles[]" multiple="true" id="">
+                                @foreach ($roles as $role)
+                                    <option value="{{$role->name}}">{{$role->name}}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <div class="flex justify-end mt-4">
                             <button type="submit"

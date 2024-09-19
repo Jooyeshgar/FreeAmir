@@ -19,7 +19,7 @@ Route::group(['middleware' => 'auth'], function () {
     Route::resource('bank-accounts', Controllers\BankAccountController::class);
     Route::resource('banks', Controllers\BankController::class);
     Route::resource('invoices', Controllers\InvoiceController::class);
-    Route::group(['prefix' => 'management'], function () {
+    Route::group(['prefix' => 'management', 'middleware' => ['role:manager']], function () {
         Route::resource('users', Controllers\Management\UserController::class);
         Route::resource('permissions', Controllers\Management\PermissionController::class)->except(['show']);
         Route::resource('roles', Controllers\Management\RoleController::class)->except(['show']);
