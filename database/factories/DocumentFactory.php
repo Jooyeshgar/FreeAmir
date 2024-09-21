@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Company;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\DB;
@@ -18,12 +19,14 @@ class DocumentFactory extends Factory
      */
     public function definition(): array
     {
+        $companies = Company::pluck('id')->toArray();
 
         return [
             'number' => DB::table('documents')->max('number') + 1,
             'date' => $this->faker->date(),
             'creator_id' => User::all()->random()->id,
             'title' => $this->faker->persianSentence(),
+            'company_id' => $this->faker->randomElement($companies),
         ];
     }
 }
