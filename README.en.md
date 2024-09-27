@@ -20,7 +20,7 @@
 **Installation:**
 
 1. **Prerequisites:**
-    * PHP >= 8.0
+    * PHP >= 8.1
     * Composer
     * MySQL database
 2. **Clone the repository:**
@@ -60,13 +60,19 @@ optional demo data
 php artisan db:seed --class DemoSeeder
 ```
 
-8. **Start the vite:**
+8. **Install npm packages:**
+
+```bash
+npm install
+```
+
+9. **Start the vite:**
 
 ```bash
 npm run dev
 ```
 
-9. **Start the development server:**
+10. **Start the development server:**
 
 ```bash
 php artisan serve

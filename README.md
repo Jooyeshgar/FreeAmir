@@ -23,7 +23,7 @@
 ### نصب:
 
 1. **پیش نیازها:**
-    * PHP >= 8.0
+    * PHP >= 8.1
     * Composer
     * MySQL database
 2. **دریافت فایل ها:**
@@ -67,13 +67,19 @@ php artisan db:seed
 php artisan db:seed --class DemoSeeder
 ```
 
-8. **اجرای وایت**
+8. **نصب بسته‌های npm:**
+
+```bash
+npm install
+```
+
+9. **اجرای وایت**
 
 ```bash
 npm run dev
 ```
 
-9. **اجرای سرور:**
+10. **اجرای سرور:**
 
 ```bash
 php artisan serve
