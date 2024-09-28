@@ -8,7 +8,7 @@
 
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <span class="card-title">{{ $role ? _('Edit Role') : _('Add Role') }}</span>
+            <span class="card-title">{{ $role ? __('Edit Role') : __('Add Role') }}</span>
             <form action="{{ $role ? route('roles.update', $role->id) : route('roles.store') }}" method="POST">
                 @csrf
                 @isset($role)
@@ -16,14 +16,14 @@
                 @endisset
                 <div class="grid grid-cols-4 gap-5">
                     <div class="col-span-4 md:col-span-2">
-                        <input class="input input-bordered w-full" type="text" placeholder="{{ _('Name') }}"
+                        <input class="input input-bordered w-full" type="text" placeholder="{{ __('Name') }}"
                             id="name" name="name" value="{{ old('name', $role?->name) }}" />
                     </div>
                     <div class="col-span-4">
-                        <textarea class="textarea textarea-bordered textarea-lg w-full" plaseholder="{{ _('Description') }}" id="description"
+                        <textarea class="textarea textarea-bordered textarea-lg w-full" plaseholder="{{ __('Description') }}" id="description"
                             name="description">{{ old('description', $role?->description) }}</textarea>
                     </div>
-                    <h3 class="col-span-4">{{ _('Permissions') }}</h3>
+                    <h3 class="col-span-4">{{ __('Permissions') }}</h3>
                     @foreach ($permissions as $permission)
                         <div class="col-span-2 md:col-span-1">
                             <label class="label cursor-pointer">
@@ -34,7 +34,7 @@
                         </div>
                     @endforeach
                     <div class="col-span-4">
-                        <button class="btn btn-primary" type="submit">{{ $role ? _('Edit') : _('Add') }}</button>
+                        <button class="btn btn-primary" type="submit">{{ $role ? __('Edit') : __('Add') }}</button>
                     </div>
                 </div>
             </form>
