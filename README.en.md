@@ -23,6 +23,7 @@
     * PHP >= 8.1
     * Composer
     * MySQL database
+    * Node JS >= 18.0.0
 2. **Clone the repository:**
 
 ```bash
