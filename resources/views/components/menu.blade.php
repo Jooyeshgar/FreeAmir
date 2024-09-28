@@ -3,7 +3,7 @@
     <details>
         <summary>عملیات</summary>
         <ul>
-            <li><a href="">دریافت و پرداخت</li>
+            <li><a href="">دریافت و پرداخت</a></li>
             <li><a href="">ثبت فاکترو فروش</a></li>
             <li><a href="">ثبت فاکتور خرید</a></li>
             <li><a href="{{ route('customers.create') }}">{{ __('Add Customer') }}</a></li>
