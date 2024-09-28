@@ -6,7 +6,7 @@
         <div class="flex-1"></div>
         <x-text-input disabled="true" value="{{ $previousDocumentNumber }}" name="" title="{{ __('previous document number') }}"
             placeholder="{{ __('previous document number') }}" label_text_class="text-gray-500 text-nowrap"></x-text-input>
-        <x-text-input value="{{ old('number') ?? ($document->number ?? $previousDocumentNumber + 1) }}" name="number" title="{{ __('previous document number') }}"
+        <x-text-input value="{{ old('number') ?? ($document->number ?? $previousDocumentNumber + 1) }}" name="number" title="{{ __('current document number') }}"
             placeholder="{{ __('current document number') }}" label_text_class="text-gray-500 text-nowrap"></x-text-input>
         <x-text-input data-jdp title="{{ __('date') }}" name="date" placeholder="{{ __('date') }}" value="{{ old('date') ?? $document->jalali_date }}"
             label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
