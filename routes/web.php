@@ -15,6 +15,7 @@ Route::group(['middleware' => 'auth'], function () {
     Route::resource('product-groups', Controllers\ProductGroupController::class);
     Route::resource('customers', Controllers\CustomerController::class);
     Route::resource('customer-groups', Controllers\CustomerGroupController::class);
+    Route::resource('companies', Controllers\CompanyController::class);
     Route::resource('bank-accounts', Controllers\BankAccountController::class);
     Route::resource('banks', Controllers\BankController::class);
     Route::resource('invoices', Controllers\InvoiceController::class);
@@ -30,4 +31,6 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('sub-ledger', [Controllers\ReportsController::class, 'subLedger'])->name('subLedger');
         Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
     });
+
+    Route::get('change-company/{company}', [Controllers\CompanyController::class, 'setActiveCompany'])->name('change-company');
 });

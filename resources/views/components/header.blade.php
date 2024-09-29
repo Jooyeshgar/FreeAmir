@@ -12,6 +12,22 @@
         <ul class="menu menu-horizontal px-1 bg-gray-200 rounded-xl">
             <li>
                 <details>
+                    <summary>
+                        {{ session('active-company-id') ? session('active-company-name') . ' - ' . session('active-company-fiscal-year') : __('Please Select a Company') }}
+                    </summary>
+                    <ul>
+                        @foreach (auth()->user()->companies as $company)
+                            <li>
+                                <a href="{{ route('change-company', ['company' => $company->id]) }}">
+                                    {{ $company->name . ' - ' . $company->fiscal_year }}
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </details>
+            </li>
+            <li>
+                <details>
                     <summary>{{ Auth::user()->name }}</summary>
                     <ul>
                         <li><a href="/logout">{{ __('Logout') }}</a></li>

@@ -67,6 +67,7 @@
             <li><a href="{{ route('bank-accounts.index') }}">{{ __('Bank Accounts') }}</a></li>
             <li><a href="{{ route('customers.index') }}">{{ __('Customers') }} </a></li>
             <li><a href="{{ route('customer-groups.index') }}">{{ __('Customers Groups') }} </a></li>
+            <li><a href="{{ route('companies.index') }}">{{ __('Companies') }} </a></li>
             <li><a href="{{ route('banks.index') }}">{{ __('Banks') }}</a></li>
             <li><a href="{{ route('users.index') }}">{{ __('Users') }}</a></li>
             <li><a href="{{ route('permissions.index') }}">{{ __('Permissions') }}</a></li>
