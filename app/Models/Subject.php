@@ -23,6 +23,11 @@ class Subject extends Model
 
     public function formattedCode()
     {
+        return formatCode($this->code);
+    }
+
+    public function formattedName()
+    {
         return formatCode($this->code) . ' ' . $this->name;
     }
 }

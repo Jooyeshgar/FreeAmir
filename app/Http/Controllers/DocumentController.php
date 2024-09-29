@@ -27,7 +27,8 @@ class DocumentController extends Controller
 
     public function create()
     {
-        $subjects = Subject::orderBy('code', 'asc')->get();
+        $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->get();
+
         if (!old('transactions')) {
             $transactions = [new Transaction];
         } else {

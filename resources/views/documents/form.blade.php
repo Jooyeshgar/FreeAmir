@@ -38,7 +38,7 @@
     <div class="h-96 overflow-y-auto px-4">
         <div id="transactions">
             @foreach ($transactions as $i => $transaction)
-                <div onclick="activeRow(event)" class="transaction flex gap-2 overflow-auto items-center ">
+                <div class="transaction flex gap-2 items-center ">
 
                     <x-text-input value="{{ $transaction->id ?? '' }}" name="transactions[{{ $i }}][transaction_id]" label_text_class="text-gray-500"
                         label_class="w-full hidden"></x-text-input>
@@ -55,23 +55,12 @@
                     </div>
                     <div class="flex-1 min-w-24 max-w-24 pb-3">
 
-                        <x-text-input value="{{ $transaction->subject ? $transaction->subject->code : '' }}" id="value" name="transactions[{{ $i }}][code]"
-                            label_text_class="text-gray-500" label_class="w-full" input_class="codeInput "></x-text-input>
+                        <x-text-input value="{{ $transaction->subject ? $transaction->subject->code : '' }}" id="value"
+                            name="transactions[{{ $i }}][code]" label_text_class="text-gray-500" label_class="w-full"
+                            input_class="value codeInput "></x-text-input>
 
                     </div>
-                    <div class="flex-1 min-w-80 max-w-80 pb-3">
-                        <select name="transactions[{{ $i }}][subject_id]" id="subject_id"
-                            class="codeSelectBox rounded-md max-h-10 min-h-10 select select-bordered border-slate-400 disabled:background-slate-700 w-full max-w-42 focus:outline-none ">
-                            <option value="">{{ __('Select a subject') }}</option>
-                            @foreach ($subjects as $subject)
-                                <option {{ $subject->parent_id ? '' : 'disabled' }} value="{{ $subject->id }}" data-title="{{ $subject->name }}"
-                                    data-type="{{ $subject->type }}" {{ $transaction->subject_id == $subject->id ? 'selected' : '' }}>
-                                    {{ $subject->name }} {{ $subject->type == 'both' ? '' : '- (' . $subject->type . ')' }}
-                                </option>
-                            @endforeach
-
-                        </select>
-                    </div>
+                    <x-subject-select-box :subjects="$subjects" :name="'transactions[' . $i . '][subject_id]'" :value="$transaction->subject_id ?? ''"></x-subject-select-box>
                     <div class="flex-1 min-w-80 pb-3">
                         <x-text-input value="{{ $transaction->desc }}" placeholder="{{ __('this document\'s row description') }}" id="desc"
                             name="transactions[{{ $i }}][desc]" label_text_class="text-gray-500" label_class="w-full" input_class=""></x-text-input>
@@ -108,7 +97,8 @@
     </div>
 </x-card>
 <div class="mt-2 flex gap-2 justify-end">
-    <a href="{{ route('documents.index') }}" type="submit" class="btn btn-default rounded-md"> {{ __('cancel') }} </a>
+    <a href="{{ route('documents.index') }}" type="submit" class="btn btn-default rounded-md"> {{ __('cancel') }}
+    </a>
     <button type="submit" class="btn btn-default rounded-md"> {{ __('save and create new document') }} </button>
     <button type="submit" class="btn text-white btn-primary rounded-md"> {{ __('save and close form') }} </button>
 </div>
@@ -116,6 +106,8 @@
     jalaliDatepicker.startWatch({});
 </script>
 <script>
+    let t = 0;
+    let o = 0;
     var subjects = {!! json_encode($subjects) !!};
     var p2e = s => s.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
 
@@ -134,9 +126,18 @@
     }
 
     function deleteAction() {
+        o = 0
         if (document.getElementsByClassName('removeTransaction').length > 1) {
+            t = t - 1;
             this.parentNode.parentNode.remove();
-            updateTransactionCounter()
+            updateTransactionCounter();
+            document.querySelectorAll(".transaction").forEach(element => {
+                element.querySelectorAll('.selfSelectBoxItems').forEach(element => {
+                    element.setAttribute('onclick', 'fillInput(this, "' + o + '")');
+                })
+                o = o + 1;
+                console.log(o);
+            })
         }
     }
 
@@ -201,20 +202,22 @@
     function deactivateAllTransactionRow() {
         let transactionsDiv = document.getElementById('transactions');
         let transactionDivs = transactionsDiv.getElementsByClassName('transaction');
-        Array.from(transactionDivs).map(i => i.classList.add('deactivated-transaction-row'))
+        // Array.from(transactionDivs).map(i => i.classList.add('deactivated-transaction-row'))
     }
 
     function updateTransactionCounter() {
-        Array.from(document.getElementsByClassName('transaction-count')).map((element, index) => element.innerText = index + 1)
+        Array.from(document.getElementsByClassName('transaction-count')).map((element, index) => element.innerText =
+            index + 1)
     }
 
     document.getElementById('addTransaction').addEventListener('click', function() {
+        t = t + 1;
         var transactionsDiv = document.getElementById('transactions');
         var transactionDivs = transactionsDiv.getElementsByClassName('transaction');
         var lastTransactionDiv = transactionDivs[transactionDivs.length - 1];
         var newTransactionDiv = lastTransactionDiv.cloneNode(true);
         deactivateAllTransactionRow();
-        newTransactionDiv.classList.remove('deactivated-transaction-row');
+        // newTransactionDiv.classList.remove('deactivated-transaction-row');
         // Update the index in the name attribute
         var selects = newTransactionDiv.getElementsByTagName('select');
         for (var i = 0; i < selects.length; i++) {
@@ -233,6 +236,10 @@
         var removeButton = newTransactionDiv.getElementsByClassName('removeTransaction')[0];
         removeButton.addEventListener('click', deleteAction);
 
+        newTransactionDiv.querySelectorAll('.selfSelectBoxItems').forEach(element => {
+            element.setAttribute('onclick', 'fillInput(this, "' + t + '")');
+        })
+
         // Add code onchange event listener
         var codeInput = newTransactionDiv.getElementsByClassName('codeInput')[0];
         var codeSelectBox = newTransactionDiv.getElementsByClassName('codeSelectBox')[0];
@@ -250,5 +257,29 @@
         // Append the new transaction div to the transactions div
         transactionsDiv.appendChild(newTransactionDiv);
         updateTransactionCounter()
+    });
+
+    function openSelectBox(thisOne) {
+        document.querySelectorAll(".selfSelectBox").forEach(function(box) {
+            box.style.display = "none";
+        });
+        thisOne.querySelector(".selfSelectBox").style.display = "block";
+    }
+
+    function fillInput(thisOne, index) {
+        let selfItemTitle = thisOne.querySelector(".selfItemTitle").innerText;
+        let selfItemCode = thisOne.querySelector(".selfItemCode").innerText;
+        document.querySelectorAll(".subject_id")[index].value = selfItemTitle;
+        document.querySelectorAll(".value")[index].value = selfItemCode;
+    }
+
+    document.addEventListener("click", function(event) {
+        let isClickInside = event.target.closest(".selfSelectBoxContainer");
+
+        if (!isClickInside) {
+            document.querySelectorAll(".selfSelectBox").forEach(function(box) {
+                box.style.display = "none";
+            });
+        }
     });
 </script>

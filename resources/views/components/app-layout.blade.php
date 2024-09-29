@@ -9,11 +9,15 @@
 </head>
 
 <body class="min-h-screen" dir="{{ app()->getLocale() == 'fa' ? 'rtl' : 'ltr' }}">
-    <x-header />
-    <div class="  -z-0">
-        <main class="max-w-6xl mx-auto py-0 lg:pb-14 px-2 lg:pd-x-0  ">
-            {{ $slot }}
-        </main>
+
+    <span class="flex items-center fixed left-0 right-0 top-0 bottom-0">
+        <img src="/images/background.jpg" alt="" class="w-full h-full">
+    </span>
+    <div x-data="{ open: false }" class="min-[1430px]:w-[1430px] m-auto">
+        <x-header />
+
+        {{ $slot }}
+
     </div>
 
 </body>

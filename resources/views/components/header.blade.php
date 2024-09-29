@@ -1,15 +1,15 @@
-<div class="navbar flex justify-between">
+<header class="navbar flex justify-between">
     <div class="flex-none">
         <div class="flex items-center bg-gray-200 rounded-xl mx-4 p-1">
             <img src="/images/logo.png" alt="Logo" width="50" class="">
         </div>
-        <ul class="menu menu-horizontal px-1 z-30 bg-gray-200 rounded-xl">
+        <ul class="menu menu-horizontal px-1 bg-gray-200 rounded-xl">
             <x-menu />
         </ul>
     </div>
 
     <div class="text-right">
-        <ul class="menu menu-horizontal px-1 z-30 bg-gray-200 rounded-xl">
+        <ul class="menu menu-horizontal px-1 bg-gray-200 rounded-xl">
             <li>
                 <details>
                     <summary>
@@ -36,4 +36,4 @@
             </li>
         </ul>
     </div>
-</div>
+</header>
