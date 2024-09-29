@@ -7,10 +7,10 @@
     <x-show-message-bags />
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <span class="card-title">{{ _('Permissions') }}</span>
+            <span class="card-title">{{ __('Permissions') }}</span>
 
             <a href="{{ route('permissions.create') }}">
-                <botton class="btn btn-primary">{{ _('Add new Permission') }}</botton>
+                <button class="btn btn-primary">{{ __('Add new Permission') }}</button>
             </a>
             <form class="flex items-center right" method="GET" action="{{ route('permissions.index') }}">
                 <label class="input input-bordered flex items-center gap-2">
@@ -27,9 +27,9 @@
 
             <table class='table w-full mt-4 overflow-auto'>
                 <tr>
-                    <th class="center-align">{{ _('Name') }}</th>
-                    <th class="center-align">{{ _('guard') }}</th>
-                    <th class="center-align">{{ _('description') }}</th>
+                    <th class="center-align">{{ __('Name') }}</th>
+                    <th class="center-align">{{ __('guard') }}</th>
+                    <th class="center-align">{{ __('description') }}</th>
                     <th></th>
                 </tr>
                 @foreach ($permissions as $permission)
@@ -39,7 +39,7 @@
                         <td class="center-align">{{ $permission->description }}</td>
                         <td class="center-align">
                             <a class="btn btn-sm btn-info" href="{{ route('permissions.edit', $permission->id) }}">
-                                {{ _('Edit') }}
+                                {{ __('Edit') }}
                             </a>
                             <form action="{{ route('permissions.destroy', $permission->id) }}" method="post"
                                 style="display: inline-block">
@@ -47,7 +47,7 @@
                                 @method('DELETE')
                                 <button class="btn btn-sm btn-error" type="submit"
                                     onclick="return confirm('Are you sure?')">
-                                    {{ _('Delete') }}
+                                    {{ __('Delete') }}
                                 </button>
                             </form>
                         </td>

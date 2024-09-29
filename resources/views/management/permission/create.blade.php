@@ -8,7 +8,7 @@
 
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <span class="card-title">{{ $permission ? _('Edit Permission') : _('Add Permission') }}</span>
+            <span class="card-title">{{ $permission ? __('Edit Permission') : __('Add Permission') }}</span>
             <form action="{{ $permission ? route('permissions.update', $permission->id) : route('permissions.store') }}"
                 method="POST">
                 @csrf
@@ -25,11 +25,11 @@
                     </div>
                     <div></div>
                     <div class="col-span-4">
-                        <textarea name="description" id="description" placeholder="{{ _('Description') }}"
+                        <textarea name="description" id="description" placeholder="{{ __('Description') }}"
                             class="textarea textarea-bordered textarea-lg w-full">{{ old('description', $permission?->description) }}</textarea>
                     </div>
 
-                    <h3 class="col-span-4 text-lg font-semibold mb-2">{{ _('Roles') }}</h3>
+                    <h3 class="col-span-4 text-lg font-semibold mb-2">{{ __('Roles') }}</h3>
                     @foreach ($roles as $role)
                         <div class="col-span-2 md:col-span-1">
                             <label class="label cursor-pointer">
@@ -41,7 +41,7 @@
                     @endforeach
                     <div class="col-span-4">
                         <button type="submit"
-                            class="btn btn-primary">{{ $permission ? _('Edit') : _('Add') }}</button>
+                            class="btn btn-primary">{{ $permission ? __('Edit') : __('Add') }}</button>
                     </div>
                 </div>
 
