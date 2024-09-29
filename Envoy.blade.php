@@ -27,9 +27,12 @@
     $release = $releases.'/'.$date;
 @endsetup
 
-@servers(['web' => $server])
+@servers(['web' => $server, 'accRoot' => 'accRoot'])
 
 @task('init')
+    installing_apache
+    installing_php
+
     if [ ! -d {{ $path }}/storage ]; then
     cd {{ $path }}
     git clone {{ $repo }} --branch={{ $branch }} --depth=1 -q {{ $release }}
@@ -66,6 +69,52 @@
     deployment_reload
     health_check
 @endstory
+
+@task('installing_apache', ['on' => 'accRoot'])
+    if command -v apachectl > /dev/null 2>&1; then
+        echo "Apache is already installed."
+    else
+        echo "Apache is not installed. Installing now..."
+        apt update
+
+        apt install -y apache2
+
+        if command -v apachectl > /dev/null 2>&1; then
+            echo "Apache has been installed successfully."
+        else
+            echo "Failed to install Apache."
+        fi
+    fi
+@endtask
+
+@task('installing_php', ['on' => 'accRoot'])
+    if command -v php > /dev/null 2>&1; then
+        echo "PHP is already installed."
+        php -v  # Display the installed PHP version
+    else
+        echo "PHP is not installed. Installing now..."
+        apt update
+
+        apt install -y php composer php-xml php-curl
+
+        if command -v php > /dev/null 2>&1; then
+            echo "PHP has been installed successfully."
+            php -v  # Display the installed PHP version
+        else
+            echo "Failed to install PHP."
+        fi
+    fi
+@endtask
+
+@task('installing_docker')
+    if ! command -v docker &> /dev/null; then
+        echo "Docker is not installed. Installing Docker..."
+        apt update
+        apt install -y docker.io docker-compose-v2
+    else
+        echo "Docker is already installed."
+    fi
+@endtask
 
 @task('deployment_start')
     cd {{ $path }}

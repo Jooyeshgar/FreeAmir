@@ -1,6 +1,7 @@
 <?php
 
 namespace Database\Seeders;
+
 use App\Models\Company;
 use Illuminate\Database\Seeder;
 
@@ -8,6 +9,11 @@ class CompanySeeder extends Seeder
 {
     public function run(): void
     {
-        Company::factory()->count(5)->create();
+
+        $company = [
+            ['id' => 1, 'name' => 'نام شرکت', 'address' => '', 'postal_code' => '', 'phone_number' => '', 'fiscal_year' => '1403'],
+        ];
+
+        Company::insert($company);
     }
 }
