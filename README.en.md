@@ -18,6 +18,7 @@
 * **Open-source:** Free to use, modify, and contribute to.
 
 **Installation:**
+You can also use **[Sail](https://laravel.com/docs/sail)** for installation. For this, in step 3 after installing the dependencies, run the installation command once in sail as well, and for the next steps, use sail instead of php, and also add sail before npm. For more information, refer to the **[Sail](https://laravel.com/docs/sail)** guide.
 
 1. **Prerequisites:**
     * PHP >= 8.1
