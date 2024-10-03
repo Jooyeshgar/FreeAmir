@@ -30,20 +30,22 @@ class RolesAndPermissionsSeeder extends Seeder
         Permission::create(['name' => 'bank-accounts.*']);
         Permission::create(['name' => 'banks.*']);
         Permission::create(['name' => 'invoices.*']);
+        Permission::create(['name' => 'management.*']);
         Permission::create(['name' => 'management.users.*']);
         Permission::create(['name' => 'management.permissions.*']);
         Permission::create(['name' => 'management.roles.*']);
         Permission::create(['name' => 'management.configs.*']);
-        Permission::create(['name' => 'reports.ledger.*']);
-        Permission::create(['name' => 'reports.journal.*']);
-        Permission::create(['name' => 'reports.sub-ledger.*']);
-        Permission::create(['name' => 'reports.result.*']);
+        Permission::create(['name' => 'reports.*']);
+        Permission::create(['name' => 'reports.ledger']);
+        Permission::create(['name' => 'reports.journal']);
+        Permission::create(['name' => 'reports.sub-ledger']);
+        Permission::create(['name' => 'reports.result']);
 
         // create roles and assign created permissions
         $role = Role::create(['name' => 'Super-Admin']);
 
         $role = Role::create(['name' => 'Acountant']);
-        $role->givePermissionTo(Permission::where('name','NOT LIKE', 'management%')->get());
+        $role->givePermissionTo(Permission::where('name','NOT LIKE', '%management%')->get());
 
         // Create admin user
         $admin = User::create([
