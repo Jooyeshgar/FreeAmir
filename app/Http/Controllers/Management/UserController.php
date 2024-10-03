@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Management;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
@@ -36,7 +37,8 @@ class UserController extends Controller
      */
     public function create()
     {
-        return view('users.create');
+        $roles = Role::where('name', '!=', 'Super-Admin')->get();
+        return view('users.create', compact('roles'));
     }
 
     /**
@@ -59,6 +61,13 @@ class UserController extends Controller
         $user->password = bcrypt($request->input('password'));
         $user->save();
 
+        $role = [];
+        if ($request->has('role')) {
+            $role = array_values($request->role);
+        }
+
+        $user->syncRoles($role);
+
         return redirect()->route('users.index')->with('success', 'User created successfully!');
     }
 
@@ -79,7 +88,8 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
-        return view('users.edit', compact('user'));
+        $roles = Role::where('name', '!=', 'Super-Admin')->get();
+        return view('users.edit', compact('user', 'roles'));
     }
 
     /**
@@ -102,6 +112,13 @@ class UserController extends Controller
             $user->password = bcrypt($request->input('password'));
         }
         $user->save();
+
+        $role = [];
+        if ($request->has('role')) {
+            $role = array_values($request->role);
+        }
+
+        $user->syncRoles($role);
 
         return redirect()->route('users.index')->with('success', 'User updated successfully!');
     }

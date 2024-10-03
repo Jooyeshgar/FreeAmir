@@ -11,11 +11,19 @@
             <form method="post" action="{{ route('users.update', $user) }}">
                 @csrf
                 @method('PUT')
-                <div class="grid grid-cols-1 gap-6">
+                <div class="grid grid-cols-2 gap-6">
                     <x-form-input title="{{ __('Name') }}" name="name" place-holder="{{ __('Name') }}" :value="old('name', $user->name ?? '')" type="text" />
                     <x-form-input title="{{ __('Email') }}" name="email" place-holder="{{ __('Email') }}" :value="old('email', $user->email ?? '')" type="email" />
                     <x-form-input title="{{ __('Password') }}" name="password" place-holder="{{ __('Password') }}" type="password" />
                     <x-form-input title="{{ __('Confirm Password') }}" name="password_confirmation" place-holder="{{ __('Confirm Password') }}" type="password" />
+                </div>
+                <div class="grid gap-3 grid-cols-3">
+                    @can('management.roles.*')
+                        @foreach ($roles as $role)
+                            <x-checkbox :title="$role->name" name="role[]" :value="$role->name"
+                                checked="{{ $user->hasRole($role->name) ? true : false }}" />
+                        @endforeach
+                    @endcan
                 </div>
                 <div class="flex justify-end mt-4">
                     <button type="submit"
