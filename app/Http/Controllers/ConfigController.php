@@ -8,6 +8,11 @@ use Illuminate\Support\Facades\Storage;
 
 class ConfigController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:management.configs.*');
+    }
+
     public function index()
     {
         $subjects = Models\Subject::all();

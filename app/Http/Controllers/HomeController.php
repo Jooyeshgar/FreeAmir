@@ -9,6 +9,11 @@ use App\Models\Product;
 
 class HomeController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:home.*');
+    }
+
     public function index()
     {
         $customerCount = Customer::count();

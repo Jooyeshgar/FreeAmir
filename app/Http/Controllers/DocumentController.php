@@ -19,6 +19,14 @@ use Illuminate\Support\MessageBag;
 
 class DocumentController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:documents.*');
+        $this->middleware('permission:documents.edit')->only(['edit', 'update']);
+        $this->middleware('permission:documents.create')->only(['create', 'store']);
+        $this->middleware('permission:documents.destroy')->only(['destroy']);
+    }
+    
     public function index()
     {
         $documents = Document::orderBy('id', 'desc')->paginate(10);

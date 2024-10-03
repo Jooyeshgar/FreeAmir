@@ -19,24 +19,31 @@ class RolesAndPermissionsSeeder extends Seeder
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         // create permissions
-        Permission::create(['name' => 'setting manager']);
-        Permission::create(['name' => 'accounting reporter']);
-        Permission::create(['name' => 'seller']);
-        Permission::create(['name' => 'moadian manager']);
-        Permission::create(['name' => 'accountant']);
+        Permission::create(['name' => 'home.*']);
+        Permission::create(['name' => 'subjects.*']);
+        Permission::create(['name' => 'documents.*']);
+        Permission::create(['name' => 'products.*']);
+        Permission::create(['name' => 'product-groups.*']);
+        Permission::create(['name' => 'customers.*']);
+        Permission::create(['name' => 'customer-groups.*']);
+        Permission::create(['name' => 'companies.*']);
+        Permission::create(['name' => 'bank-accounts.*']);
+        Permission::create(['name' => 'banks.*']);
+        Permission::create(['name' => 'invoices.*']);
+        Permission::create(['name' => 'management.users.*']);
+        Permission::create(['name' => 'management.permissions.*']);
+        Permission::create(['name' => 'management.roles.*']);
+        Permission::create(['name' => 'management.configs.*']);
+        Permission::create(['name' => 'reports.ledger.*']);
+        Permission::create(['name' => 'reports.journal.*']);
+        Permission::create(['name' => 'reports.sub-ledger.*']);
+        Permission::create(['name' => 'reports.result.*']);
 
         // create roles and assign created permissions
-        $role = Role::create(['name' => __('seller')]);
-        $role->givePermissionTo('seller');
+        $role = Role::create(['name' => 'Super-Admin']);
 
-        $role = Role::create(['name' => __('reporter')]);
-        $role->givePermissionTo('accounting reporter');
-
-        $role = Role::create(['name' => __('accountant')])
-            ->givePermissionTo(['accountant', 'moadian manager']);
-
-        $role = Role::create(['name' => __('manager')]);
-        $role->givePermissionTo(Permission::all());
+        $role = Role::create(['name' => 'Acountant']);
+        $role->givePermissionTo(Permission::where('name','NOT LIKE', 'management%')->get());
 
         // Create admin user
         $admin = User::create([
@@ -45,6 +52,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'password' => bcrypt('password'), // Replace with a strong password
         ]);
 
-        $admin->assignRole(__('manager'));
+        $admin->assignRole('Super-Admin');
     }
 }

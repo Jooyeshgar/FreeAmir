@@ -7,6 +7,14 @@ use Illuminate\Http\Request;
 
 class BankAccountController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:bank-accounts.*');
+        $this->middleware('permission:bank-accounts.edit')->only(['edit', 'update']);
+        $this->middleware('permission:bank-accounts.create')->only(['create', 'store']);
+        $this->middleware('permission:bank-accounts.destroy')->only(['destroy']);
+    }
+
     public function index()
     {
         $bankAccounts = Models\BankAccount::with('bank')->paginate(12);

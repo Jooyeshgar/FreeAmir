@@ -7,6 +7,14 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:products.*');
+        $this->middleware('permission:products.edit')->only(['edit', 'update']);
+        $this->middleware('permission:products.create')->only(['create', 'store']);
+        $this->middleware('permission:products.destroy')->only(['destroy']);
+    }
+    
     public function index()
     {
         $products = Models\Product::with('productGroup')->paginate(12);
