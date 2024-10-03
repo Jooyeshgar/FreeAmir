@@ -29,14 +29,12 @@
                 <tr>
                     <th class="center-align">{{ __('Name') }}</th>
                     <th class="center-align">{{ __('guard') }}</th>
-                    <th class="center-align">{{ __('description') }}</th>
                     <th></th>
                 </tr>
                 @foreach ($permissions as $permission)
                     <tr>
                         <td class="center-align" style="direction: ltr">{{ $permission->name }}</td>
                         <td class="center-align">{{ $permission->guard_name }}</td>
-                        <td class="center-align">{{ $permission->description }}</td>
                         <td class="center-align">
                             <a class="btn btn-sm btn-info" href="{{ route('permissions.edit', $permission->id) }}">
                                 {{ __('Edit') }}

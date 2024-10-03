@@ -1,4 +1,4 @@
-@can('home.index')
+@can('home.*')
     <li><a href="/" class="hover:rounded-xl">{{ __('Home') }}</a></li>
 @endcan
 @can('customers.create')
@@ -14,7 +14,7 @@
         </details>
     </li>
 @endcan
-@can('documents.index')
+@can('documents.*')
     <li>
         <details>
             <summary>حسابداری</summary>

@@ -23,14 +23,12 @@
                 <tr>
                     <th class="center-align">{{ __('Name') }}</th>
                     <th class="center-align">{{ __('guard') }}</th>
-                    <th class="center-align">{{ __('description') }}</th>
                     <th class="center-align"></th>
                 </tr>
                 @foreach ($roles as $role)
                     <tr>
                         <td class="center-align" style="direction: ltr">{{ $role->name }}</td>
                         <td class="center-align">{{ $role->guard_name }}</td>
-                        <td class="center-align">{{ $role->description }}</td>
                         <td class="center-align">
                             <a class="btn btn-sm btn-info" href="{{ route('roles.edit', $role->id) }}">
                                 {{ __('Edit') }}</a>
