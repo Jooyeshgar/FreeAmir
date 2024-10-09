@@ -10,9 +10,18 @@ use Illuminate\Support\Facades\Validator;
 
 class ReportsController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:reports.*');
+        $this->middleware('permission:reports.ledger')->only(['ledger']);
+        $this->middleware('permission:reports.journal')->only(['journal']);
+        $this->middleware('permission:reports.sub-ledger')->only(['sub-ledger']);
+        $this->middleware('permission:reports.result')->only(['result']);
+    }
+
     public function ledger()
     {
-        $subjects = Subject::orderBy('code','asc')->whereIsRoot()->get();
+        $subjects = Subject::orderBy('code', 'asc')->whereIsRoot()->get();
         return view('reports.ledger', compact('subjects'));
     }
 
@@ -25,7 +34,7 @@ class ReportsController extends Controller
 
     public function subLedger()
     {
-        $subjects = Subject::orderBy('code','asc')->get();
+        $subjects = Subject::orderBy('code', 'asc')->get();
         return view('reports.subLedger', compact('subjects'));
     }
 
@@ -90,7 +99,7 @@ class ReportsController extends Controller
             });
         }
         $transactions = $transactions->with('document', 'subject')->get();
-        $transactionsChunk = $transactions->chunk(env('REPORT_ROW_SIZE',26));
+        $transactionsChunk = $transactions->chunk(env('REPORT_ROW_SIZE', 26));
         if ($request->report_for == 'Journal') {
             return view('reports.journalReport', compact('transactionsChunk'));
         }

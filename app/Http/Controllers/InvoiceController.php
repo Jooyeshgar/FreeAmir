@@ -9,6 +9,14 @@ use Illuminate\Http\Request;
 
 class InvoiceController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:invoices.*');
+        $this->middleware('permission:invoices.edit')->only(['edit', 'update']);
+        $this->middleware('permission:invoices.create')->only(['create', 'store']);
+        $this->middleware('permission:invoices.destroy')->only(['destroy']);
+    }
+
     /**
      * Display a listing of the resource.
      *

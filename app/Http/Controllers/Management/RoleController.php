@@ -21,6 +21,14 @@ class RoleController extends Controller
 
     public $messages = [];
 
+    public function __construct()
+    {
+        $this->middleware('permission:management.roles.*');
+        $this->middleware('permission:management.roles.edit')->only(['edit', 'update']);
+        $this->middleware('permission:management.roles.create')->only(['create', 'store']);
+        $this->middleware('permission:management.roles.destroy')->only(['destroy']);
+    }
+
     /**
      * Display a listing of the resource.
      *

@@ -7,6 +7,14 @@ use Illuminate\Http\Request;
 
 class SubjectController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:subjects.*');
+        $this->middleware('permission:subjects.edit')->only(['edit', 'update']);
+        $this->middleware('permission:subjects.create')->only(['create', 'store']);
+        $this->middleware('permission:subjects.destroy')->only(['destroy']);
+    }
+    
     public function index(Request $request)
     {
         if ($request->has('parent_id')) {
