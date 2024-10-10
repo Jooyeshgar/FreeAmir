@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Management;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
@@ -38,7 +39,8 @@ class UserController extends Controller
     public function create()
     {
         $roles = Role::where('name', '!=', 'Super-Admin')->get();
-        return view('users.create', compact('roles'));
+        $companies = Company::all();
+        return view('users.create', compact('roles', 'companies'));
     }
 
     /**
@@ -67,6 +69,7 @@ class UserController extends Controller
         }
 
         $user->syncRoles($role);
+        $user->companies()->sync($request->company);
 
         return redirect()->route('users.index')->with('success', 'User created successfully!');
     }
@@ -89,7 +92,8 @@ class UserController extends Controller
     public function edit(User $user)
     {
         $roles = Role::where('name', '!=', 'Super-Admin')->get();
-        return view('users.edit', compact('user', 'roles'));
+        $companies = Company::all();
+        return view('users.edit', compact('user', 'roles', 'companies'));
     }
 
     /**
@@ -119,6 +123,7 @@ class UserController extends Controller
         }
 
         $user->syncRoles($role);
+        $user->companies()->sync($request->company);
 
         return redirect()->route('users.index')->with('success', 'User updated successfully!');
     }
