@@ -1,4 +1,4 @@
-TRUNCATE TABLE `subjects`
+TRUNCATE TABLE `subjects`;
 
 INSERT INTO `subjects` (
   `id`, `code`, `name`, `type`, `_lft`, `_rgt`, `parent_id`, `created_at`, `updated_at`
@@ -44,12 +44,13 @@ FROM `customers_old`;
 
 DROP TABLE `customers_old`;
 
-INSERT INTO `documents` (`id`, `number`, `date`, `approved_at`, `creator_id`, `created_at`, `updated_at`)
+INSERT INTO `documents` (`id`, `number`, `date`, `approved_at`, `company_id`, `creator_id`, `created_at`, `updated_at`)
 SELECT 
   `id`, 
   `number`, 
   `date`, 
   `date`,  -- Use `date` for `approved_at`
+  1,       -- Use 1 for `company_id`
   1,       -- Use 1 for `creator_id`
   `creation_date` AS `created_at`,
   `lastedit_date` AS `updated_at`
