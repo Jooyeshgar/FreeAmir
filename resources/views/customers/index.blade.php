@@ -8,17 +8,17 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="card-actions">
-                <a href="{{ route('customers.create') }}" class="btn btn-primary">Create customer</a>
+                <a href="{{ route('customers.create') }}" class="btn btn-primary">{{ __('Create customer') }}</a>
             </div>
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <tr>
-                        <th class="px-4 py-2">کد</th>
-                        <th class="px-4 py-2">نام</th>
-                        <th class="px-4 py-2">شماره</th>
-                        <th class="px-4 py-2">ایمیل</th>
-                        <th class="px-4 py-2">گروه طرف حساب</th>
-                        <th class="px-4 py-2">Action</th>
+                        <th class="px-4 py-2">{{ __('Code') }}</th>
+                        <th class="px-4 py-2">{{ __('Name') }}</th>
+                        <th class="px-4 py-2">{{ __('Number') }}</th>
+                        <th class="px-4 py-2">{{ __('Email') }}</th>
+                        <th class="px-4 py-2">{{ __('Account Plan Group') }}</th>
+                        <th class="px-4 py-2">{{ __('Action') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -31,11 +31,13 @@
                             <td class="px-4 py-2">{{ $customer->email }}</td>
                             <td class="px-4 py-2">{{ $customer->group ? $customer->group->name : '' }}</td>
                             <td class="px-4 py-2">
-                                <a href="{{ route('customers.edit', $customer) }}" class="btn btn-sm btn-info">Edit</a>
-                                <form action="{{ route('customers.destroy', $customer) }}" method="POST" class="inline-block">
+                                <a href="{{ route('customers.edit', $customer) }}"
+                                    class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                <form action="{{ route('customers.destroy', $customer) }}" method="POST"
+                                    class="inline-block">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-error">Delete</button>
+                                    <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
                                 </form>
                             </td>
                         </tr>
