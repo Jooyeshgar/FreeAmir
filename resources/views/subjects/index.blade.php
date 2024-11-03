@@ -8,16 +8,16 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="card-actions">
-                <a href="{{ route('subjects.create') }}" class="btn btn-primary">Create Subject</a>
+                <a href="{{ route('subjects.create') }}" class="btn btn-primary">{{ __('Create Subject') }}</a>
             </div>
             <table class="table w-full mt-4">
                 <thead>
                     <tr>
-                        <th class="px-4 py-2">Code</th>
-                        <th class="px-4 py-2">Name</th>
-                        <th class="px-4 py-2">Parent</th>
-                        <th class="px-4 py-2">Type</th>
-                        <th class="px-4 py-2">Actions</th>
+                        <th class="px-4 py-2">{{ __('Code') }}</th>
+                        <th class="px-4 py-2">{{ __('Name') }}</th>
+                        <th class="px-4 py-2">{{ __('Parent') }}</th>
+                        <th class="px-4 py-2">{{ __('Type') }}</th>
+                        <th class="px-4 py-2">{{ __('Action') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -28,11 +28,11 @@
                         <td class="px-4 py-2">{{ $subject->parent ? $subject->parent->name : '-' }}</td>
                         <td class="px-4 py-2">{{ $subject->type ? ucfirst($subject->type) : '-' }}</td>
                         <td class="px-4 py-2">
-                            <a href="{{ route('subjects.edit', $subject) }}" class="btn btn-sm btn-info">Edit</a>
+                            <a href="{{ route('subjects.edit', $subject) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                             <form action="{{ route('subjects.destroy', $subject) }}" method="POST" class="inline-block">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-error">Delete</button>
+                                <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
                             </form>
                         </td>
                     </tr>
