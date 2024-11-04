@@ -1,137 +1,65 @@
-<div class="mb-4">
-    <input type="checkbox" id="toggleFields" class="mr-2" checked>
-    <label for="toggleFields" class="text-gray-700">Disable Fields</label>
+<div class="grid grid-cols-1 md:grid-cols-4">
+    <x-checkbox name="toggleFields" id="toggleFields" title="{{ __('Disable Fields') }}" :checked="true" />
 </div>
 <fieldset id="companyForm" class="grid grid-cols-2 gap-6 border p-5 my-3">
-    <legend>شرکت</legend>
+    <legend>{{ __('Company Info') }}</legend>
     <div class="col-span-2 md:col-span-1">
-        <label id="company-name" class="input input-bordered flex items-center gap-2">
-            نام شرکت شما
-            <input type="text" name="company-name" class="grow" value="{{ old('company-name', $configs['company-name'] ?? '') }}" placeholder="نام شرکت شما"
-                required />
-        </label>
+        <x-input name="company-name" id="company-name" title="{{ __('Company Name') }}" :value="old('company-name', $configs['company-name'] ?? '')" />
     </div>
     <div class="col-span-2 md:col-span-1 flex gap-x-4">
         <label for="co_logo">
-            لوگوی شرکت خود را انتخاب کنید
+            {{ __('Company Logo') }}
         </label>
         <input type="file" id="co_logo" name="co_logo" class="file-input w-full max-w-xs" accept="image/*" />
-
-
     </div>
-    <img class="block w-12 h-auto rounded-full" src="{{ asset('storage/' . (old('co_logo') ?? ($configs['co_logo'] ?? ''))) }}"
-        alt="{{ old('co_logo', $configs['co_logo'] ?? '') }}">
+    <img class="block w-12 h-auto rounded-full"
+        src="{{ asset('storage/' . (old('co_logo') ?? ($configs['co_logo'] ?? ''))) }}"
+        alt="{{ old('co_logo', $configs['co_logo'] ?? '') }}" />
     <div class="col-span-2">
-
-        <div class="col-span-2">
-            <label id="co_address" class="form-control">
-                <span class="label">
-                    <span class="label-text"> نشانی شرکت شما</span>
-                </span>
-                <textarea id="co_address" name="co_address" class="textarea textarea-bordered h-24" placeholder="نشانی شرکت شما">{{ old('co_address', $configs['co_address'] ?? '') }}</textarea>
-            </label>
-        </div>
-
+        <x-textarea name="co_address" id="co_address" title="{{ __('Company Address') }}" :value="old('co_address', $configs['co_address'] ?? '')" />
     </div>
     <div class="col-span-2 md:col-span-1">
-        <label id="co_economical_code" class="input input-bordered flex items-center gap-2">
-            کد اقتصادی شما
-            <input type="text" id="co_economical_code" name="co_economical_code" class="grow"
-                value="{{ old('co_economical_code', $configs['co_economical_code'] ?? '') }}" placeholder="کد اقتصادی شما" />
-        </label>
+        <x-input name="co_economical_code" id="co_economical_code" title="{{ __('Economical Code') }}" :value="old('co_economical_code', $configs['co_economical_code'] ?? '')" />
     </div>
     <div class="col-span-2 md:col-span-1">
-        <label id="co_national_code" class="input input-bordered flex items-center gap-2">
-            کد ملی شما
-            <input type="text" id="co_national_code" name="co_national_code" class="grow" value="{{ old('co_national_code', $configs['co_national_code'] ?? '') }}"
-                placeholder="کد ملی شما" />
-        </label>
+        <x-input name="co_national_code" id="co_national_code" title="{{ __('National Code') }}" :value="old('co_national_code', $configs['co_national_code'] ?? '')" />
     </div>
     <div class="col-span-2 md:col-span-1">
-        <label id="co_postal_code" class="input input-bordered flex items-center gap-2">
-            کد پستی شما
-            <input type="text" id="co_postal_code" name="co_postal_code" class="grow" value="{{ old('co_postal_code', $configs['co_postal_code'] ?? '') }}"
-                placeholder="کد پستی شما" />
-        </label>
+        <x-input name="co_postal_code" id="co_postal_code" title="{{ __('Postal Code') }}" :value="old('co_postal_code', $configs['co_postal_code'] ?? '')" />
     </div>
     <div class="col-span-2 md:col-span-1">
-        <label id="co_phone_number" class="input input-bordered flex items-center gap-2">
-            شماره تلفن شما
-            <input type="text" id="co_phone_number" name="co_phone_number" class="grow" value="{{ old('co_phone_number', $configs['co_phone_number'] ?? '') }}"
-                placeholder="شماره تلفن شما" />
-        </label>
+        <x-input name="co_phone_number" id="co_phone_number" title="{{ __('Company Phone') }}" :value="old('co_phone_number', $configs['co_phone_number'] ?? '')" />
     </div>
 </fieldset>
 
 <fieldset id="subjectForm" class="grid grid-cols-2 gap-6 border p-5 my-3">
-    <legend>سر فصل</legend>
+    <legend>{{ __('Subject Info') }}</legend>
 
     <div class="col-span-2 md:col-span-1">
-        <label id="cust_subject" class="form-control w-full">
-            <select id="cust_subject" name="cust_subject" class="select select-bordered">
-                <option value="">طرف حساب ها</option>
-                @foreach ($subjects as $subject)
-                    <option value="{{ $subject->id }}" {{ isset($configs['cust_subject']) && $configs['cust_subject'] == $subject->id ? 'selected' : '' }}>
-                        {{ $subject->name }}
-                    </option>
-                @endforeach
-            </select>
-        </label>
+        <x-select name="cust_subject" id="cust_subject" title="{{ __('Subject Type') }}" :options="$subjects->pluck('name', 'id')" :value="old('subject_type', $configs['subject_type'] ?? '')" />
     </div>
 
     <div class="col-span-2 md:col-span-1">
-        <label for="bank" class="form-control w-full">
-            <select id="bank" name="bank" class="select select-bordered">
-                <option value="">بانک ها</option>
-                @foreach ($banks as $bank)
-                    <option value="{{ $bank->id }}" {{ isset($configs['bank']) && $configs['bank'] == $bank->id ? 'selected' : '' }}>
-                        {{ $bank->name }}
-                    </option>
-                @endforeach
-            </select>
-        </label>
+        <x-select name="cust_subject" id="cust_subject" title="{{ __('Banks') }}" :options="$banks->pluck('name', 'id')" :value="old('bank', $configs['bank'] ?? '')" />
     </div>
     <div class="col-span-2 md:col-span-1">
-        <label for="cash" class="input input-bordered flex items-center gap-2">
-            نقدی
-            <input type="text" id="cash" name="cash" class="grow" value="{{ old('cash', $configs['cash'] ?? '') }}" placeholder="نقدی" />
-        </label>
+        <x-input name="cash" id="cash" title="{{ __('Cash') }}" :value="old('cash', $configs['cash'] ?? '')" />
     </div>
     <div class="col-span-2 md:col-span-1">
-        <label for="buy_discount" class="input input-bordered flex items-center gap-2">
-            تخفیفات خرید
-            <input type="text" id="buy_discount" name="buy_discount" class="grow" value="{{ old('buy_discount', $configs['buy_discount'] ?? '') }}"
-                placeholder="تخفیفات خرید" />
-        </label>
+        <x-input name="buy_discount" id="buy_discount" title="{{ __('Buy Discount') }}" :value="old('buy_discount', $configs['buy_discount'] ?? '')" />
     </div>
     <div class="col-span-2 md:col-span-1">
-        <label for="sell_discount" class="input input-bordered flex items-center gap-2">
-            تخفیفات فروش
-            <input type="text" id="sell_discount" name="sell_discount" class="grow" value="{{ old('sell_discount', $configs['sell_discount'] ?? '') }}"
-                placeholder="تخفیفات فروش" />
-        </label>
+        <x-input name="sell_discount" id="sell_discount" title="{{ __('Sell Discount') }}" :value="old('sell_discount', $configs['sell_discount'] ?? '')" />
     </div>
     <div class="col-span-2 md:col-span-1">
-        <label for="sell_vat" class="input input-bordered flex items-center gap-2">
-            مالیات فروش
-            <input type="text" id="sell_vat" name="sell_vat" class="grow" value="{{ old('sell_vat', $configs['sell_vat'] ?? '') }}"
-                placeholder="مالیات فروش" />
-        </label>
+        <x-input name="sell_vat" id="sell_vat" title="{{ __('Sell VAT') }}" :value="old('sell_vat', $configs['sell_vat'] ?? '')" />
     </div>
     <div class="col-span-2 md:col-span-1">
-        <label for="buy_vat" class="input input-bordered flex items-center gap-2">
-            مالیات خرید
-            <input type="text" id="buy_vat" name="buy_vat" class="grow" value="{{ old('buy_vat', $configs['buy_vat'] ?? '') }}"
-                placeholder="مالیات خرید" />
-        </label>
+        <x-input name="buy_vat" id="buy_vat" title="{{ __('Buy VAT') }}" :value="old('buy_vat', $configs['buy_vat'] ?? '')" />
     </div>
-
+    
     <div class="col-span-2 md:col-span-1">
-        <label for="sell_free" class="input input-bordered flex items-center gap-2">
-            عوارض فروش
-            <input type="text" id="sell_free" name="sell_free" class="grow" value="{{ old('sell_free', $configs['sell_free'] ?? '') }}"
-                placeholder="عوارض فروش" />
-        </label>
+        <x-input name="sell_free" id="sell_free" title="{{ __('Sales Tax') }}" :value="old('sell_free', $configs['sell_free'] ?? '')" />
     </div>
 </fieldset>
 
