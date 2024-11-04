@@ -10,7 +10,6 @@ class ConfigController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:management.configs.*');
     }
 
     public function index()

@@ -9,10 +9,6 @@ class ProductGroupController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:product-groups.*');
-        $this->middleware('permission:product-groups.edit')->only(['edit', 'update']);
-        $this->middleware('permission:product-groups.create')->only(['create', 'store']);
-        $this->middleware('permission:product-groups.destroy')->only(['destroy']);
     }
     
     public function index()

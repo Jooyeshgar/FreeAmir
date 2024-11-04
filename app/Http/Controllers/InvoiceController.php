@@ -11,10 +11,6 @@ class InvoiceController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:invoices.*');
-        $this->middleware('permission:invoices.edit')->only(['edit', 'update']);
-        $this->middleware('permission:invoices.create')->only(['create', 'store']);
-        $this->middleware('permission:invoices.destroy')->only(['destroy']);
     }
 
     /**

@@ -38,7 +38,7 @@
                                 <li><a href="{{ route('reports.ledger') }}">کل</a></li>
                             @endcan
                             @can('reports.sub-ledger')
-                                <li><a href="{{ route('reports.subLedger') }}">معین</a></li>
+                                <li><a href="{{ route('reports.sub-ledger') }}">معین</a></li>
                             @endcan
                             <li><a href="">سود و زیان</a></li>
                         </ul>

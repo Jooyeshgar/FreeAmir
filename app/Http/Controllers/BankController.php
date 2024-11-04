@@ -9,10 +9,6 @@ class BankController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:banks.*');
-        $this->middleware('permission:banks.edit')->only(['edit', 'update']);
-        $this->middleware('permission:banks.create')->only(['create', 'store']);
-        $this->middleware('permission:banks.destroy')->only(['destroy']);
     }
 
     public function index()

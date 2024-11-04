@@ -3,28 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreTransactionRequest;
-use App\Http\Requests\UpdateTransactionRequest;
 use App\Models;
 use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
-use App\Models\User;
-use Carbon\Carbon;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\MessageBag;
 
 class DocumentController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:documents.*');
-        $this->middleware('permission:documents.edit')->only(['edit', 'update']);
-        $this->middleware('permission:documents.create')->only(['create', 'store']);
-        $this->middleware('permission:documents.destroy')->only(['destroy']);
     }
     
     public function index()

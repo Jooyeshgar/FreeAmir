@@ -7,7 +7,7 @@ Route::get('/login', [Controllers\Auth\LoginController::class, 'showLoginForm'])
 Route::post('/login', [Controllers\Auth\LoginController::class, 'login']);
 Route::get('/logout', [Controllers\Auth\LoginController::class, 'logout'])->name('logout');
 
-Route::group(['middleware' => 'auth'], function () {
+Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('/', [Controllers\HomeController::class, 'index'])->name('home');
     Route::resource('subjects', Controllers\SubjectController::class);
     Route::resource('documents', Controllers\DocumentController::class);
@@ -28,7 +28,7 @@ Route::group(['middleware' => 'auth'], function () {
     Route::group(['prefix' => 'reports', 'as' => 'reports.'], function () {
         Route::get('ledger', [Controllers\ReportsController::class, 'ledger'])->name('ledger');
         Route::get('journal', [Controllers\ReportsController::class, 'journal'])->name('journal');
-        Route::get('sub-ledger', [Controllers\ReportsController::class, 'subLedger'])->name('subLedger');
+        Route::get('sub-ledger', [Controllers\ReportsController::class, 'subLedger'])->name('sub-ledger');
         Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
     });
 

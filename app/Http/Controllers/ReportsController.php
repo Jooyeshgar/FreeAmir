@@ -12,11 +12,6 @@ class ReportsController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:reports.*');
-        $this->middleware('permission:reports.ledger')->only(['ledger']);
-        $this->middleware('permission:reports.journal')->only(['journal']);
-        $this->middleware('permission:reports.sub-ledger')->only(['sub-ledger']);
-        $this->middleware('permission:reports.result')->only(['result']);
     }
 
     public function ledger()

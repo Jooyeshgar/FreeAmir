@@ -9,10 +9,6 @@ class CustomerGroupController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:customer-groups.*');
-        $this->middleware('permission:customer-groups.edit')->only(['edit', 'update']);
-        $this->middleware('permission:customer-groups.create')->only(['create', 'store']);
-        $this->middleware('permission:customer-groups.destroy')->only(['destroy']);
     }
     
     public function index()
