@@ -35,7 +35,7 @@
                             <form action="{{ route('roles.destroy', $role->id) }}" method="POST" class="inline-block">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" onclick="return confirm('Are you sure?')"
+                                <button type="submit" onclick="return confirm('{{ __('Are you sure?') }}')"
                                     class="btn btn-sm btn-error">{{ __('Delete') }}</button>
                             </form>
                         </td>
