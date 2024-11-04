@@ -8,6 +8,7 @@
     'hint' => false,
     'title2' => false,
     'hint2' => false,
+    'disabled' => false,
     'required' => false,
 ])
 <label {{ $attributes->merge(['class' => 'form-control w-full ' . $attributes->get('class')]) }}>
@@ -21,7 +22,7 @@
 
     <input title="{{ $title }}" type="{{ $type }}" name="{{ $name }}" id="{{ $name }}"
         value="{{ $value ?? '' }}" placeholder="{{ $placeholder ?? '' }}" class="input input-bordered w-full max-w-full"
-        {{ $required ? 'required' : '' }} />
+        {{ $required ? 'required' : '' }} {{ $disabled ? 'disabled' : '' }} />
 
     @if ($errors->first($name))
         <span class="label-text-alt text-rose-700">{{ $errors->first($name) }}</span>

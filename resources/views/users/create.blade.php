@@ -10,27 +10,36 @@
             <form method="post" action="{{ route('users.store') }}">
                 @csrf
                 <div class="grid grid-cols-2 gap-6">
-                    <x-form-input title="{{ __('Name') }}" name="name" place-holder="{{ __('Enter your name') }}"
-                        :message="$errors->first('name')" value="{{ old('name') }}" />
-                    <x-form-input title="{{ __('Email') }}" name="email" place-holder="{{ __('Enter your email') }}"
-                        :message="$errors->first('email')" value="{{ old('email') }}" />
-                    <x-form-input title="{{ __('Password') }}" name="password"
-                        place-holder="{{ __('Enter your password') }}" :message="$errors->first('password')" />
-                    <x-form-input title="{{ __('Confirm Password') }}" name="password_confirmation"
-                        place-holder="{{ __('Confirm your password') }}" :message="$errors->first('password_confirmation')" />
+                    <x-input title="{{ __('Name') }}" name="name" value="{{ old('name') }}" />
+                    <x-input title="{{ __('Email') }}" name="email" value="{{ old('email') }}" />
+                    <x-input title="{{ __('Password') }}" name="password" />
+                    <x-input title="{{ __('Confirm Password') }}" name="password_confirmation" />
                 </div>
-                <div class="grid gap-3 grid-cols-3">
-                    @can('management.roles.*')
+                @can('management.roles.*')
+                    <br />
+                    <hr>
+                    <br />
+                    <h3>{{ __('Roles') }}</h3>
+                    <div class="grid gap-3 grid-cols-5">
                         @foreach ($roles as $role)
-                            <x-checkbox :title="$role->name" name="role[]" :value="$role->name"/>
+                            <x-checkbox :title="$role->name" name="role[]" :value="$role->name" id="role-{{ $role->id }}" />
                         @endforeach
-                    @endcan
+                    </div>
+                @endcan
+                <br />
+                <hr>
+                <br />
+                <h3>{{ __('Companies') }}</h3>
+                <div class="grid gap-3 grid-cols-5">
+                    @foreach ($companies as $company)
+                        <x-checkbox :title="$company->name" name="company[]" :value="$company->id"
+                            id="company-{{ $role->id }}" />
+                    @endforeach
                 </div>
                 <div class="flex justify-end mt-4">
-                    <button type="submit"
-                        class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        Create User
-                    </button>
+                    <div class="mb-6">
+                        <button class="btn btn-pr"> {{ __('Create') }} </button>
+                    </div>
                 </div>
             </form>
         </div>
