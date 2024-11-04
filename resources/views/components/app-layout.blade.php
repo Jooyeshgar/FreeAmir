@@ -10,7 +10,7 @@
 
 <body class="min-h-screen" dir="{{ app()->getLocale() == 'fa' ? 'rtl' : 'ltr' }}">
 
-    <span class="flex items-center fixed left-0 right-0 top-0 bottom-0">
+    <span class="flex items-center fixed left-0 right-0 top-0 bottom-0 -z-10">
         <img src="/images/background.jpg" alt="" class="w-full h-full">
     </span>
     <div x-data="{ open: false }" class="min-[1430px]:w-[1430px] m-auto">

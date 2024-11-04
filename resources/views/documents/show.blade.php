@@ -43,8 +43,8 @@
                             <td class="border p-2 text-center">{{ formatNumber($i) }}</td>
                             <td class="border p-2 whitespace-normal">{{ $transaction->subject->formattedName() }}</td>
                             <td class="border p-2 whitespace-normal">{{ $transaction->desc }}</td>
-                            <td class="border p-2">{{ $transaction->value >= 0 ? formatNumber($transaction->value) : '' }}</td>
                             <td class="border p-2">{{ $transaction->value < 0 ? formatNumber($transaction->value * -1) : '' }}</td>
+                            <td class="border p-2">{{ $transaction->value >= 0 ? formatNumber($transaction->value) : '' }}</td>
                         </tr>
                     @endforeach
                 </tbody>
