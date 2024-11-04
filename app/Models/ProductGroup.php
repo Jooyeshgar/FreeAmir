@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Model;
 
 class ProductGroup extends Model
@@ -14,6 +15,11 @@ class ProductGroup extends Model
     ];
 
     public $timestamps = false;
+
+    public static function booted(): void
+    {
+        static::addGlobalScope(new FiscalYearScope());
+    }
 
     // Define relationships with other models (e.g., Subject)
 

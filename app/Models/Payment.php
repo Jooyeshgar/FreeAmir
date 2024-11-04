@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Model;
 
 class Payment extends Model
@@ -20,6 +21,11 @@ class Payment extends Model
         'invoice_id',
         'payer_name',
     ];
+
+    public static function booted(): void
+    {
+        static::addGlobalScope(new FiscalYearScope());
+    }
 
     public function payer()
     {

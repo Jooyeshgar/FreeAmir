@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Model;
 
 class Cheque extends Model
@@ -21,6 +22,11 @@ class Cheque extends Model
         'bill_id',
         'order',
     ];
+
+    public static function booted(): void
+    {
+        static::addGlobalScope(new FiscalYearScope());
+    }
 
     public function customer()
     {

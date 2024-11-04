@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Kalnoy\Nestedset\NodeTrait;
@@ -20,6 +21,11 @@ class Subject extends Model
     protected $attributes = [
         'parent_id' => 0,
     ];
+
+    public static function booted(): void
+    {
+        static::addGlobalScope(new FiscalYearScope());
+    }
 
     public function formattedCode()
     {
