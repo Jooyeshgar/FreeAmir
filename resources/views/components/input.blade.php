@@ -13,7 +13,7 @@
 <label {{ $attributes->merge(['class' => 'form-control w-full ' . $attributes->get('class')]) }}>
 
     <div class="label">
-        <span class="label-text">{{ $title }}{{ $required ? '*' : '' }}</span>
+        <span class="label-text">{{ $title }} {{ $required ? '*' : '' }}</span>
         @if ($title2)
             <span class="label-text-alt">{{ $title2 }}</span>
         @endif
