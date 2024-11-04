@@ -31,6 +31,14 @@ return new class extends Migration {
         Schema::table('subjects', function (Blueprint $table) {
             $table->foreignId('company_id')->constrained()->cascadeOnDelete()->after('parent_id');
         });
+
+        DB::table('banks')->update(['company_id' => 1]);
+        DB::table('bank_accounts')->update(['company_id' => 1]);
+        DB::table('cheques')->update(['company_id' => 1]);
+        DB::table('customer_groups')->update(['company_id' => 1]);
+        DB::table('payments')->update(['company_id' => 1]);
+        DB::table('product_groups')->update(['company_id' => 1]);
+        DB::table('subjects')->update(['company_id' => 1]);
     }
 
     /**
