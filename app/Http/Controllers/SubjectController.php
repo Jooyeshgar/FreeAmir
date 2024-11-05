@@ -24,7 +24,7 @@ class SubjectController extends Controller
 
     public function create()
     {
-        $parentSubjects = Subject::where('parent_id', 0)->get();
+        $parentSubjects = Subject::where('parent_id', null)->get();
 
         return view('subjects.create', compact('parentSubjects'));
     }
