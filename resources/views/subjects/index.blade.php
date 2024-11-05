@@ -22,20 +22,23 @@
                 </thead>
                 <tbody>
                     @foreach ($subjects as $subject)
-                    <tr>
-                        <td class="px-4 py-2">{{ $subject->code }}</td>
-                        <td class="px-4 py-2"><a href="{{ route('subjects.index', ['parent_id' => $subject->id]) }}" class="text-primary"> {{ $subject->name }}</a></td>
-                        <td class="px-4 py-2">{{ $subject->parent ? $subject->parent->name : '-' }}</td>
-                        <td class="px-4 py-2">{{ $subject->type ? ucfirst($subject->type) : '-' }}</td>
-                        <td class="px-4 py-2">
-                            <a href="{{ route('subjects.edit', $subject) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                            <form action="{{ route('subjects.destroy', $subject) }}" method="POST" class="inline-block">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                            </form>
-                        </td>
-                    </tr>
+                        <tr>
+                            <td class="px-4 py-2">{{ $subject->code }}</td>
+                            <td class="px-4 py-2"><a href="{{ route('subjects.index', ['parent_id' => $subject->id]) }}"
+                                    class="text-primary"> {{ $subject->name }}</a></td>
+                            <td class="px-4 py-2">{{ $subject->parent ? $subject->parent->name : __('Main') }}</td>
+                            <td class="px-4 py-2">{{ $subject->type ? __(ucfirst($subject->type)) : '-' }}</td>
+                            <td class="px-4 py-2">
+                                <a href="{{ route('subjects.edit', $subject) }}"
+                                    class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                <form action="{{ route('subjects.destroy', $subject) }}" method="POST"
+                                    class="inline-block">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                </form>
+                            </td>
+                        </tr>
                     @endforeach
                 </tbody>
             </table>

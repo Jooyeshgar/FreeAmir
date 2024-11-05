@@ -3,18 +3,18 @@
 @endcan
 @can('customers.create')
     <li class="dropdown dropdown-hover">
-        <div tabindex="0" role="button">عملیات</div>
+        <div tabindex="0" role="button">{{ __('Operation') }}</div>
         <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
-            <li><a href="">دریافت و پرداخت</a></li>
-            <li><a href="">ثبت فاکتور فروش</a></li>
-            <li><a href="">ثبت فاکتور خرید</a></li>
+            <li><a href="">{{ __('Receive and pay') }}</a></li>
+            <li><a href="">{{ __('Registration of sales invoice') }}</a></li>
+            <li><a href="">{{ __('Registration of purchase invoice') }}</a></li>
             <li><a href="{{ route('customers.create') }}">{{ __('Add Customer') }}</a></li>
         </ul>
     </li>
 @endcan
 @can('documents.*')
     <li class="dropdown dropdown-hover">
-        <div tabindex="1" role="button">حسابداری</div>
+        <div tabindex="1" role="button">{{ __('Accounting') }}</div>
         <ul tabindex="1" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
             <li><a href="{{ route('documents.create') }}">{{ __('Create Document') }}</a></li>
             <li><a href="{{ route('documents.index') }}">{{ __('Document List') }}</a></li>
@@ -23,24 +23,24 @@
 @endcan
 @canany(['reports.journal', 'reports.ledger', 'reports.sub-ledger', 'products.index', 'product-groups.index'])
     <li class="dropdown dropdown-hover">
-        <div tabindex="2" role="button">گزارشات</div>
+        <div tabindex="2" role="button">{{ __('Reports') }}</div>
         <ul tabindex="2" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
             @canany(['reports.journal', 'reports.ledger', 'reports.sub-ledger'])
                 <li>
                     <details>
-                        <summary>حسابداری</summary>
+                        <summary>{{ __('Accounting') }}</summary>
                         <ul>
-                            <li><a href="">سند</a></li>
+                            <li><a href="">{{ __('Document') }}</a></li>
                             @can('reports.journal')
-                                <li><a href="{{ route('reports.journal') }}">روزنامه</a></li>
+                                <li><a href="{{ route('reports.journal') }}">{{ __('Journal') }}</a></li>
                             @endcan
                             @can('reports.ledger')
-                                <li><a href="{{ route('reports.ledger') }}">کل</a></li>
+                                <li><a href="{{ route('reports.ledger') }}">{{ __('Ledger') }}</a></li>
                             @endcan
                             @can('reports.sub-ledger')
-                                <li><a href="{{ route('reports.sub-ledger') }}">معین</a></li>
+                                <li><a href="{{ route('reports.sub-ledger') }}">{{ __('Sub Ledger') }}</a></li>
                             @endcan
-                            <li><a href="">سود و زیان</a></li>
+                            <li><a href="">{{ __('Profit and loss') }}</a></li>
                         </ul>
                     </details>
                 </li>
@@ -48,7 +48,7 @@
             @canany(['products.index', 'product-groups.index'])
                 <li>
                     <details>
-                        <summary>انبار</summary>
+                        <summary>{{ __('Warehouse') }}</summary>
                         <ul>
                             @can('products.index')
                                 <li><a href="{{ route('products.index') }}">{{ __('Products') }}</a></li>
@@ -63,10 +63,10 @@
             @endcanany
             <li>
                 <details>
-                    <summary>طرف حسابها</summary>
+                    <summary>{{ __('Customers') }}</summary>
                     <ul>
-                        <li><a href="">بدهکاران</a></li>
-                        <li><a href="">بستانکاران</a></li>
+                        <li><a href="">{{ __('Debtors') }}</a></li>
+                        <li><a href="">{{ __('Creditors') }}</a></li>
                     </ul>
                 </details>
             </li>
