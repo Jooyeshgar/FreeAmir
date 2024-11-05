@@ -20,7 +20,8 @@ class Document extends Model
         'date',
         'title',
         'permanent',
-        'user_id',
+        'creator_id',
+        'company_id',
     ];
 
     public static function booted(): void

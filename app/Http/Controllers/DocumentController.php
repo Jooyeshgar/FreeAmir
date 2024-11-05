@@ -7,15 +7,14 @@ use App\Models;
 use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
+use App\Services\DocumentService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class DocumentController extends Controller
 {
-    public function __construct()
-    {
-    }
-    
+    public function __construct() {}
+
     public function index()
     {
         $documents = Document::orderBy('id', 'desc')->paginate(10);
@@ -34,7 +33,7 @@ class DocumentController extends Controller
                 $transaction = new Transaction();
                 $transaction->subject_id = $item['subject_id'];
                 $transaction->desc = $item['desc'];
-                $transaction->value = $item['debit'] ? -1 * $item['debit'] : $item['credit'];
+                $transaction->value = convertToFloat($item['credit'])  - convertToFloat($item['debit']);
                 $transactions[] = $transaction;
             }
         }
@@ -46,27 +45,26 @@ class DocumentController extends Controller
 
     public function store(StoreTransactionRequest $request)
     {
-
-        DB::beginTransaction();
-        $document = Document::create([
-            'title' => $request->title,
-            'number' => $request->number,
-            'date' => jalali_to_gregorian_date($request->date),
-            'user_id' => Auth::id()
-        ]);
-
+        $transactions = [];
         foreach ($request->input('transactions') as $transactionData) {
             $transactionData = (object) $transactionData;
-            Transaction::create([
-                'document_id' => $document->id,
+            $transactions[] = [
                 'subject_id' => $transactionData->subject_id,
-                'value' => $transactionData->credit ?: -1 * $transactionData->debit,
+                'value' => $transactionData->credit - $transactionData->debit,
                 'desc' => $transactionData->desc
-            ]);
+            ];
         }
 
-        DB::commit();
-
+        DocumentService::createDocument(
+            Auth::user(),
+            [
+                'title' => $request->title,
+                'number' => $request->number,
+                'date' => $request->date,
+                'user_id' => Auth::id()
+            ],
+            $transactions
+        );
         return redirect()->route('documents.index')->with('success', 'Transactions created successfully.');
     }
 
@@ -107,43 +105,22 @@ class DocumentController extends Controller
 
         $document = Document::findOrFail($id);
         $ids = [];
-        DB::beginTransaction();
 
-        $document->update([
+        DocumentService::updateDocument($document, [
             'title' => $request->title,
             'number' => $request->number,
-            'date' => jalali_to_gregorian_date($request->date, '/'),
+            'date' => $request->date,
             'user_id' => Auth::id()
         ]);
 
-        foreach ($request->input('transactions') as $transactionData) {
-            $transactionData = (object)$transactionData;
-            $ids[] = $transactionData->transaction_id;
-            $transaction = Transaction::where('id', $transactionData->transaction_id)->first();
-            $payload = [
-                'document_id' => $document->id,
-                'subject_id' => $transactionData->subject_id,
-                'value' => $transactionData->credit ?: -1 * $transactionData->debit,
-                'desc' => $transactionData->desc
-            ];
-            if ($transaction) {
-                $transaction->update($payload);
-            } else {
-                Transaction::create($payload);
-            }
-        }
-        Transaction::where('document_id', $document->id)->whereNotIn('id', $ids)->delete();
-
-
-        DB::commit();
+        DocumentService::updateDocumentTransactions($document->id, $request->input('transactions'));
 
         return redirect()->route('documents.index')->with('success', 'Transaction updated successfully.');
     }
 
-    public function destroy(Models\Document $transaction)
+    public function destroy(int $documentId)
     {
-        $transaction->transaction()->delete();
-        $transaction->delete();
+        DocumentService::deleteDocument($documentId);
 
         return redirect()->route('documents.index')->with('success', 'Transaction deleted successfully.');
     }

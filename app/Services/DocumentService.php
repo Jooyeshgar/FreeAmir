@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Exceptions\DocumentServiceExcepion;
 use App\Exceptions\DocumentServiceException;
 use App\Models\Document;
 use App\Models\Transaction;
@@ -22,11 +21,6 @@ class DocumentService
      */
     public static function createDocument(User $user, array $data, array $transactions)
     {
-        // try {
-        //     //code...
-        // } catch (DocumentServiceException $e) {
-        //     throw ValidationException::withMessages([$e->getMessage()]);
-        // }
 
         $validator = Validator::make($data, [
             'number' => 'nullable|integer',
@@ -43,18 +37,20 @@ class DocumentService
             $data['number'] = Document::max('number') + 1;
         }
 
+        $data['company_id'] = session('active-company-id');
+
         $document = null;
         DB::transaction(function () use ($data, $transactions, &$document) {
+
             $document = Document::create($data);
 
             foreach ($transactions as $transactionData) {
-                $this->createTransaction($document, $transactionData);
+                DocumentService::createTransaction($document, $transactionData);
             }
         });
 
         return $document;
     }
-
 
     /**
      * Update an existing document.
@@ -67,7 +63,7 @@ class DocumentService
     {
         $validator = Validator::make($data, [
             'number' => 'integer',
-            'title' => 'string',
+            'title' => 'nullable|string|min:3|max:255',
             'date' => 'date',
         ]);
 
@@ -112,13 +108,12 @@ class DocumentService
     {
         $validator = Validator::make($data, [
             'subject_id' => 'required|integer',
-            'user_id' => 'required|integer',
             'desc' => 'string',
             'value' => 'required|decimal:0,2',
         ]);
 
         if ($validator->fails()) {
-            dump($data);
+            // dd($data);
             throw new \Exception($validator->errors()->first());
         }
 
@@ -154,5 +149,37 @@ class DocumentService
         $transaction->save();
 
         return $transaction;
+    }
+
+    public static function updateDocumentTransactions(int $documentId, array $transactionsData): void
+    {
+        DB::beginTransaction();
+
+        $existingTransactionIds = [];
+        foreach ($transactionsData as $transactionData) {
+            $transaction = Transaction::firstOrCreate(
+                ['id' => $transactionData['transaction_id']],
+                [
+                    'document_id' => $documentId,
+                    'subject_id' => $transactionData['subject_id'],
+                    'desc' => $transactionData['desc'],
+                    'value' => floatval($transactionData['credit']) - floatval($transactionData['debit']),
+                ]
+            );
+            $existingTransactionIds[] = $transaction->id;
+        }
+        Transaction::where('document_id', $documentId)
+            ->whereNotIn('id', $existingTransactionIds)
+            ->delete();
+
+        DB::commit();
+    }
+
+    public static function deleteDocument(int $documentId): void
+    {
+        DB::beginTransaction();
+        Transaction::where('document_id', $documentId)->delete();
+        Document::where('id', $documentId)->delete();
+        DB::commit();
     }
 }

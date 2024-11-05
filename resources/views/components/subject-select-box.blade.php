@@ -1,6 +1,6 @@
 <div class="selfSelectBoxContainer relative flex-1 min-w-80 max-w-80 pb-3" onclick="openSelectBox(this)">
-    <x-text-input name="{{ $name }}" value="" readonly id="subject_id" label_text_class="text-gray-500" label_class="w-full"
-        input_class="subject_id codeSelectBox "></x-text-input>
+    <x-text-input value="" readonly id="subject_id" label_text_class="text-gray-500" label_class="w-full" input_class="subject_name codeSelectBox "></x-text-input>
+    <input type="hidden" name="{{ $name }}" class="subject_id" value="{{ $value }}">
     <div class="selfSelectBox hidden absolute z-[3] top-[40px] w-full h-[300px] bg-white overflow-auto px-4 pb-4 rounded-[16px] shadow-[0px_43px_27px_0px_#00000012]">
         <div class="sticky top-0 left-0 right-0 w-full bg-white py-2">
             <div class="relative">
@@ -51,6 +51,7 @@
                                             <span class="selfItemCode">
                                                 {{ $children->formattedCode() }}
                                             </span>
+                                            <span class="selfItemId hidden">{{ $children->id }}</span>
                                         </a>
                                     @endforeach
                                 </div>
@@ -61,15 +62,5 @@
             </div>
         </div>
     </div>
-    {{-- <select name="transactions[{{ $i }}][subject_id]" id="subject_id"
-        class="codeSelectBox hidden rounded-md max-h-10 min-h-10 select select-bordered border-slate-400 disabled:background-slate-700 w-full max-w-42 focus:outline-none ">
-        <option value="">{{ __('Select a subject') }}</option>
-        @foreach ($subjects as $subject)
-            <option {{ $subject->parent_id ? '' : 'disabled' }} value="{{ $subject->id }}" data-title="{{ $subject->name }}"
-                data-type="{{ $subject->type }}" {{ $transaction->subject_id == $subject->id ? 'selected' : '' }}>
-                {{ $subject->name }} {{ $subject->type == 'both' ? '' : '- (' . $subject->type . ')' }}
-            </option>
-        @endforeach
 
-    </select> --}}
 </div>

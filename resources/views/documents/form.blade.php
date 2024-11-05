@@ -4,11 +4,11 @@
             label_text_class="text-gray-500" label_class="w-full" input_class="max-w-96"></x-text-input>
         <x-text-input value="{{ $document->id ?? '' }}" name="document_id" label_text_class="text-gray-500" label_class="w-full hidden"></x-text-input>
         <div class="flex-1"></div>
-        <x-text-input disabled="true" value="{{ $previousDocumentNumber }}" name="" title="{{ __('previous document number') }}"
+        <x-text-input disabled="true" value="{{ formatDocumentNumber($previousDocumentNumber) }}" name="" title="{{ __('previous document number') }}"
             placeholder="{{ __('previous document number') }}" label_text_class="text-gray-500 text-nowrap"></x-text-input>
-        <x-text-input value="{{ old('number') ?? ($document->number ?? $previousDocumentNumber + 1) }}" name="number" title="{{ __('current document number') }}"
-            placeholder="{{ __('current document number') }}" label_text_class="text-gray-500 text-nowrap"></x-text-input>
-        <x-text-input data-jdp title="{{ __('date') }}" name="date" placeholder="{{ __('date') }}" value="{{ old('date') ?? $document->jalali_date }}"
+        <x-text-input value="{{ old('number') ?? formatDocumentNumber($document->number ?? $previousDocumentNumber + 1) }}" name="number"
+            title="{{ __('current document number') }}" placeholder="{{ __('current document number') }}" label_text_class="text-gray-500 text-nowrap"></x-text-input>
+        <x-text-input data-jdp title="{{ __('date') }}" name="date" placeholder="{{ __('date') }}" value="{{ old('date') ?? $document->FormattedDate }}"
             label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
     </div>
 </x-card>
@@ -55,7 +55,7 @@
                     </div>
                     <div class="flex-1 min-w-24 max-w-24 pb-3">
 
-                        <x-text-input value="{{ $transaction->subject ? $transaction->subject->code : '' }}" id="value"
+                        <x-text-input value="{{ $transaction->subject ? $transaction->subject->formattedCode() : '' }}" id="value"
                             name="transactions[{{ $i }}][code]" label_text_class="text-gray-500" label_class="w-full"
                             input_class="value codeInput "></x-text-input>
 
@@ -67,15 +67,13 @@
 
                     </div>
 
-                    <div class="flex-1 min-w-24 max-w-24 pb-3">
-                        <x-text-input value="{{ $transaction->value < 0 ? -1 * $transaction->value : '' }}" placeholder="0" id="debit"
-                            name="transactions[{{ $i }}][debit]" label_text_class="text-gray-500" label_class="w-full"
-                            input_class="debitInput"></x-text-input>
+                    <div class="flex-1 min-w-24 max-w-32 pb-3">
+                        <x-text-input value="{{ $transaction->debit }}" placeholder="0" id="debit" name="transactions[{{ $i }}][debit]"
+                            label_text_class="text-gray-500" label_class="w-full" input_class="debitInput"></x-text-input>
                     </div>
-                    <div class="flex-1 min-w-24 max-w-24 pb-3">
-                        <x-text-input value="{{ $transaction->value >= 0 ? $transaction->value : '' }}" placeholder="0" id="credit"
-                            name="transactions[{{ $i }}][credit]" label_text_class="text-gray-500" label_class="w-full"
-                            input_class="creditInput"></x-text-input>
+                    <div class="flex-1 min-w-24 max-w-32 pb-3">
+                        <x-text-input value="{{ $transaction->credit }}" placeholder="0" id="credit" name="transactions[{{ $i }}][credit]"
+                            label_text_class="text-gray-500" label_class="w-full" input_class="creditInput"></x-text-input>
 
                     </div>
                 </div>
@@ -269,7 +267,9 @@
     function fillInput(thisOne, index) {
         let selfItemTitle = thisOne.querySelector(".selfItemTitle").innerText;
         let selfItemCode = thisOne.querySelector(".selfItemCode").innerText;
-        document.querySelectorAll(".subject_id")[index].value = selfItemTitle;
+        let selfItemId = thisOne.querySelector(".selfItemId").innerText;
+        document.querySelectorAll(".subject_name")[index].value = selfItemTitle;
+        document.querySelectorAll(".subject_id")[index].value = selfItemId;
         document.querySelectorAll(".value")[index].value = selfItemCode;
     }
 

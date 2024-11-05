@@ -54,4 +54,14 @@ class Transaction extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function getDebitAttribute()
+    {
+        return $this->value < 0 ? formatNumber(-1 * $this->value) : '';
+    }
+
+    public function getCreditAttribute()
+    {
+        return $this->value > 0 ? formatNumber($this->value) : '';
+    }
 }
