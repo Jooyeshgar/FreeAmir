@@ -22,7 +22,7 @@
 
         @foreach ($options as $key => $value)
             <option value="{{ $key }}"
-                {{ old($name, $selected === $key || $selected === $value) ? 'selected' : '' }}>
+                {{ old($name, $selected == $key || $selected == $value) ? 'selected' : '' }}>
                 {{ $value }}
             </option>
         @endforeach

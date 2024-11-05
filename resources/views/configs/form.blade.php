@@ -19,7 +19,8 @@
         <x-textarea name="co_address" id="co_address" title="{{ __('Company Address') }}" :value="old('co_address', $configs['co_address'] ?? '')" />
     </div>
     <div class="col-span-2 md:col-span-1">
-        <x-input name="co_economical_code" id="co_economical_code" title="{{ __('Economical Code') }}" :value="old('co_economical_code', $configs['co_economical_code'] ?? '')" />
+        <x-input name="co_economical_code" id="co_economical_code" title="{{ __('Economical Code') }}"
+            :value="old('co_economical_code', $configs['co_economical_code'] ?? '')" />
     </div>
     <div class="col-span-2 md:col-span-1">
         <x-input name="co_national_code" id="co_national_code" title="{{ __('National Code') }}" :value="old('co_national_code', $configs['co_national_code'] ?? '')" />
@@ -36,10 +37,11 @@
     <legend>{{ __('Subject Info') }}</legend>
 
     <div class="col-span-2 md:col-span-1">
-        <x-select name="cust_subject" id="cust_subject" title="{{ __('Customers') }}" :options="$subjects->pluck('name', 'id')" :value="old('subject_type', $configs['subject_type'] ?? '')" />
+        <x-select name="cust_subject" id="cust_subject" title="{{ __('Customers') }}" :options="$subjects->pluck('name', 'id')"
+            :selected="old('cust_subject', $configs['cust_subject'] ?? '')" />
     </div>
     <div class="col-span-2 md:col-span-1">
-        <x-select name="bank" id="bank" title="{{ __('Banks') }}" :options="$banks->pluck('name', 'id')" :value="old('bank', $configs['bank'] ?? '')" />
+        <x-select name="bank" id="bank" title="{{ __('Banks') }}" :options="$banks->pluck('name', 'id')" :selected="old('bank', $configs['bank'] ?? '')" />
     </div>
     <div class="col-span-2 md:col-span-1">
         <x-input name="cash" id="cash" title="{{ __('Cash') }}" :value="old('cash', $configs['cash'] ?? '')" />
@@ -56,7 +58,7 @@
     <div class="col-span-2 md:col-span-1">
         <x-input name="buy_vat" id="buy_vat" title="{{ __('Buy VAT') }}" :value="old('buy_vat', $configs['buy_vat'] ?? '')" />
     </div>
-    
+
     <div class="col-span-2 md:col-span-1">
         <x-input name="sell_free" id="sell_free" title="{{ __('Sales Tax') }}" :value="old('sell_free', $configs['sell_free'] ?? '')" />
     </div>
