@@ -14,7 +14,7 @@
     </div>
 
     <div class="col-span-2 md:col-span-1">
-        <x-select title="{{ __('Parent') }}" name="parent_id" id="parent_id" :options="[
+        <x-select title="{{ __('Type') }}" name="type" id="type" :options="[
             'debtor' => __('Debtor'),
             'creditor' => __('Creditor'),
             'both' => __('Both'),
