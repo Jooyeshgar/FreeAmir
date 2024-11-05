@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models;
+use App\Models\Subject;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
@@ -10,7 +11,7 @@ class CustomerController extends Controller
     public function __construct()
     {
     }
-    
+
     public function index()
     {
         $customers = Models\Customer::with('subject', 'group')->paginate(12);
@@ -22,7 +23,13 @@ class CustomerController extends Controller
     {
         $groups = Models\CustomerGroup::select('id', 'name')->get();
 
-        return view('customers.create', compact('groups'));
+        $parentSubject = Subject::find(config('amir.cust_subject'));
+        $lastCode = Subject::where([
+            ['parent_id', $parentSubject->id],
+        ])->latest('code')->first()->code ?? "000";
+        $code = str_pad((int) $lastCode + 1, strlen($lastCode), "0", STR_PAD_LEFT);
+
+        return view('customers.create', compact('groups', 'parentSubject', 'code'));
     }
 
     public function store(Request $request)
@@ -78,7 +85,13 @@ class CustomerController extends Controller
     {
         $groups = Models\CustomerGroup::select('id', 'name')->get();
 
-        return view('customers.edit', compact('customer', 'groups'));
+        $parentSubject = Subject::find(config('amir.cust_subject'));
+        $lastCode = Subject::where([
+            ['parent_id', $parentSubject->id],
+        ])->latest('code')->first()->code ?? "000";
+        $code = str_pad((int) $lastCode + 1, strlen($lastCode), "0", STR_PAD_LEFT);
+
+        return view('customers.edit', compact('customer', 'groups', 'parentSubject', 'code'));
     }
 
     public function update(Request $request, Models\Customer $customer)

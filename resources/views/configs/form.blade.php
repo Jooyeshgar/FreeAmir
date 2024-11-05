@@ -36,11 +36,10 @@
     <legend>{{ __('Subject Info') }}</legend>
 
     <div class="col-span-2 md:col-span-1">
-        <x-select name="cust_subject" id="cust_subject" title="{{ __('Subject Type') }}" :options="$subjects->pluck('name', 'id')" :value="old('subject_type', $configs['subject_type'] ?? '')" />
+        <x-select name="cust_subject" id="cust_subject" title="{{ __('Customers') }}" :options="$subjects->pluck('name', 'id')" :value="old('subject_type', $configs['subject_type'] ?? '')" />
     </div>
-
     <div class="col-span-2 md:col-span-1">
-        <x-select name="cust_subject" id="cust_subject" title="{{ __('Banks') }}" :options="$banks->pluck('name', 'id')" :value="old('bank', $configs['bank'] ?? '')" />
+        <x-select name="bank" id="bank" title="{{ __('Banks') }}" :options="$banks->pluck('name', 'id')" :value="old('bank', $configs['bank'] ?? '')" />
     </div>
     <div class="col-span-2 md:col-span-1">
         <x-input name="cash" id="cash" title="{{ __('Cash') }}" :value="old('cash', $configs['cash'] ?? '')" />

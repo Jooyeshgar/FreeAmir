@@ -8,10 +8,12 @@
                         $hint =
                             '<a class="link text-blue-500" href="' .
                             route('customer-groups.create') .
-                            '">اضافه کردن طرف حساب</a>';
+                            '">' .
+                            __('Create plan group') .
+                            '</a>';
                     @endphp
-                    <x-select title="گروه طرف حساب" name="group_id" id="group_id" :options="$groups->pluck('name', 'id')" :selected="$customer->group_id ?? null"
-                        :hint="$hint" />
+                    <x-select title="{{ __('Account Plan Group') }}" name="group_id" id="group_id" :options="$groups->pluck('name', 'id')"
+                        :selected="$customer->group_id ?? null" :hint="$hint" />
                 </div>
                 <div>
                     <x-select title="{{ __('Category') }}" name="group_id" id="group_id" :selected="$customer->group_id ?? null" />
@@ -23,14 +25,14 @@
                         :value="old('name', $customer->name ?? '')" />
                 </div>
                 <div>
-                    <x-input title="{{ __('Accountting code') }}" name="code"
+                    <x-input title="{{ __('Accountting code') }}"{{--  name="code" --}}
                         placeholder="{{ __('Accountting code') }}" :value="old('code', $customer->code ?? '')" />
                 </div>
 
             </div>
             <div class="grid grid-cols-2 gap-1 ">
                 <div>
-                    <x-input title="{{ __('National ID') }}" name="code" placeholder="{{ __('National ID') }}"
+                    <x-input title="{{ __('National ID') }}" name="personal_code" placeholder="{{ __('National ID') }}"
                         :value="old('personal_code', $customer->personal_code ?? '')" />
                 </div>
                 <div>
@@ -40,19 +42,17 @@
                 <div>
                     <label class="form-control w-full max-w-xs">
                         <div class="label">
-                            <span class="label-text">شناسه
-
-                            </span>
+                            <span class="label-text">شناسه</span>
                         </div>
                     </label>
                     <label class="input input-bordered flex items-center gap-2 prefix text-gray-300 rounded-md"
                         dir="ltr">
-                        ABR-
-                        <input class="grow input  w-full max-w-xs prefix-input" type="text" name="shenase"
-                            value="{{ old('shenase', $customer->shenase ?? '') }}" />
-                        @if ($errors->first('shenase'))
+                        {{ $parentSubject->code }}-
+                        <input class="grow input  w-full max-w-xs prefix-input" type="text" name="code"
+                            value="{{ old('code', $customer->code ?? $code ) }}" />
+                        @if ($errors->first('code'))
                             <div class="label">
-                                <span class="label-text-alt text-red-700">{{ $errors->first('shenase') }}</span>
+                                <span class="label-text-alt text-red-700">{{ $errors->first('code') }}</span>
                             </div>
                         @endif
                     </label>

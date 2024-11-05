@@ -15,6 +15,7 @@ class Subject extends Model
         'code',
         'name',
         'parent_id',
+        'company_id',
         'type',
     ];
 
@@ -25,6 +26,11 @@ class Subject extends Model
     public static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope());
+    }
+
+    public function subjectable()
+    {
+        return $this->morphTo();
     }
 
     public function formattedCode()
