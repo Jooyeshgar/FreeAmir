@@ -25,8 +25,8 @@
                         :value="old('name', $customer->name ?? '')" />
                 </div>
                 <div>
-                    <x-input title="{{ __('Accountting code') }}"{{--  name="code" --}}
-                        placeholder="{{ __('Accountting code') }}" :value="old('code', $customer->code ?? '')" />
+                    {{-- <x-input title="{{ __('Accountting code') }}" name="code"
+                        placeholder="{{ __('Accountting code') }}" :value="old('code', $customer->code ?? '')" /> --}}
                 </div>
 
             </div>
