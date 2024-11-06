@@ -24,7 +24,7 @@ class Config extends Model
 
     public static function booted(): void
     {
-        // static::addGlobalScope(new FiscalYearScope);
+        static::addGlobalScope(new FiscalYearScope);
     }
 
 }
