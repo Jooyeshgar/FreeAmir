@@ -59,11 +59,19 @@ class Customer extends Model
             //     $customer->subject_id = $subject->id;
             // }
         });
+        static::created(function ($customer) {
+            $customer->subject()->create([
+                'name' => $customer->name,
+                'company_id' => session('active-company-id'),
+                'code' => request('code'),
+                'parent_id' => config('amir.cust_subject'),
+            ]);
+        });
     }
 
     public function subject()
     {
-        return $this->belongsTo(Subject::class);
+        return $this->morphOne(Subject::class, 'subjectable');
     }
 
     public function group()

@@ -44,7 +44,7 @@
                                 @csrf
                                 @method('DELETE')
                                 <button class="btn btn-sm btn-error" type="submit"
-                                    onclick="return confirm('Are you sure?')">
+                                    onclick="return confirm('{{ __('Are you sure?') }}')">
                                     {{ __('Delete') }}
                                 </button>
                             </form>

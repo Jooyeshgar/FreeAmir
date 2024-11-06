@@ -8,13 +8,23 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <h2 class="text-2xl font-bold">{{ $user->name }}</h2>
-            <p class="text-gray-600">{{ $user->email }}</p>
+            <div class="grid grid-cols-2 gap-6">
+                <div class="col-span-2 md:col-span-1">
+                    <x-input disabled title="{{ __('Email') }}" name="id" :value="$user->email" />
+                </div>
+
+                <div class="col-span-2 md:col-span-1">
+                    <x-input disabled name="name" id="name" title="{{ __('Name') }}" :value="$user->name"/>
+                </div>
+            </div>
             <div class="card-actions">
-                <a href="{{ route('users.edit', $user) }}" class="text-yellow-600 hover:text-yellow-900">Edit</a>
+                <a href="{{ route('users.edit', $user) }}"
+                    class="text-yellow-600 hover:text-yellow-900 btn btn-pr">{{ __('Edit') }}</a>
                 <form action="{{ route('users.destroy', $user) }}" method="post" class="inline">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" class="text-red-600 hover:text-red-900">Delete</button>
+                    <button type="submit"
+                        class="text-red-600 hover:text-red-900 btn btn-pr">{{ __('Delete') }}</button>
                 </form>
             </div>
         </div>

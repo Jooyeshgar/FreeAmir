@@ -19,68 +19,43 @@
                 <fieldset id="companyForm" class="grid grid-cols-2 gap-6 border p-5 my-3">
                     <legend>{{ __('company') }}</legend>
                     <div class="col-span-2 md:col-span-1">
-                        <label class="input input-bordered flex items-center gap-2">
-                            {{ __('Company name') }}
-                            <input type="text" name="name" class="grow" value="{{ old('name', $company?->name) }}"
-                                required />
-                        </label>
+                        <x-input name="name" id="name" title="{{ __('Company name') }}" :value="old('code', $company->name ?? '')"
+                            required />
                     </div>
                     <div class="col-span-2 md:col-span-1">
-                        <label class="input input-bordered flex items-center gap-2">
-                            {{ __('Fiscal year') }}
-                            <input type="text" name="fiscal_year" class="grow"
-                                value="{{ old('fiscal_year', $company?->fiscal_year) }}" required />
-                        </label>
+                        <x-input name="fiscal_year" id="fiscal_year" title="{{ __('Fiscal year') }}" :value="old('fiscal_year', $company->fiscal_year ?? '')"
+                            required />
                     </div>
                     <div class="col-span-2 md:col-span-1 flex gap-x-4">
                         <label for="logo">
                             {{ __('Company logo') }}
                         </label>
-                        <input type="file" id="logo" name="logo" class="file-input w-full max-w-xs" accept="image/*" />
+                        <input type="file" id="logo" name="logo" class="file-input w-full max-w-xs"
+                            accept="image/*" />
                     </div>
                     @if ($company)
-                        <img class="block w-12 h-auto rounded-full"
-                            src="{{ asset('storage/' . $company->logo) }}">
+                        <img class="block w-12 h-auto rounded-full" src="{{ asset('storage/' . $company->logo) }}">
                     @endif
                     <div class="col-span-2">
                         <div class="col-span-2">
-                            <label id="co_address" class="form-control">
-                                <span class="label">
-                                    <span class="label-text">{{ __('Address') }}</span>
-                                </span>
-                                <textarea id="address" name="address" class="textarea textarea-bordered h-24">
-                                    {{ old('address', $company?->address) }}
-                                </textarea>
-                            </label>
+                            <x-textarea name="address" id="address" title="{{ __('Address') }}" :value="old('address', $company->address ?? '')" />
                         </div>
                     </div>
                     <div class="col-span-2 md:col-span-1">
-                        <label class="input input-bordered flex items-center gap-2">
-                            {{ __('Economical Code') }}
-                            <input type="text" id="economical_code" name="economical_code" class="grow"
-                                value="{{ old('economical_code', $company?->economical_code) }}" />
-                        </label>
+                        <x-input name="economical_code" id="economical_code" title="{{ __('Economical Code') }}"
+                            :value="old('economical_code', $company->economical_code ?? '')" />
                     </div>
                     <div class="col-span-2 md:col-span-1">
-                        <label class="input input-bordered flex items-center gap-2">
-                            {{ __('National Code') }}
-                            <input type="text" id="national_code" name="national_code" class="grow"
-                                value="{{ old('national_code', $company?->national_code) }}" />
-                        </label>
+                        <x-input name="national_code" id="national_code" title="{{ __('National Code') }}"
+                            :value="old('national_code', $company->national_code ?? '')" />
                     </div>
                     <div class="col-span-2 md:col-span-1">
-                        <label class="input input-bordered flex items-center gap-2">
-                            {{ __('Postal Code') }}
-                            <input type="text" id="postal_code" name="postal_code" class="grow"
-                                value="{{ old('postal_code', $company?->postal_code) }}" />
-                        </label>
+                        <x-input name="postal_code" id="postal_code" title="{{ __('Postal Code') }}"
+                            :value="old('postal_code', $company->postal_code ?? '')" />
                     </div>
                     <div class="col-span-2 md:col-span-1">
-                        <label class="input input-bordered flex items-center gap-2">
-                            {{ __('Phone number') }}
-                            <input type="text" id="phone_number" name="phone_number" class="grow"
-                                value="{{ old('phone_number', $company?->phone_number) }}" />
-                        </label>
+                        <x-input name="phone_number" id="phone_number" title="{{ __('Phone number') }}"
+                            :value="old('phone_number', $company->phone_number ?? '')" />
                     </div>
                 </fieldset>
                 <div class="card-actions">

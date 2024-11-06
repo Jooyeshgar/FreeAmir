@@ -7,7 +7,6 @@
     <x-show-message-bags/>
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <div class="card-actions">
                 <form action="{{ route('configs.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <div class="card-body">
@@ -20,7 +19,6 @@
                         </div>
                     </div>
                 </form>
-            </div>
         </div>
     </div>
 </x-app-layout>

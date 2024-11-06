@@ -16,21 +16,18 @@
                 @endisset
                 <div class="grid grid-cols-4 gap-5">
                     <div class="col-span-4 md:col-span-2">
-                        <input class="input input-bordered w-full" type="text" placeholder="{{ __('Name') }}"
-                            id="name" name="name" value="{{ old('name', $role?->name) }}" />
+                        <x-input name="name" id="name" placeholder="{{ __('Role Wildcard') }}" title=""
+                            :value="old('name', $role?->name ?? '')" />
                     </div>
                     <div class="col-span-4">
-                        <textarea class="textarea textarea-bordered textarea-lg w-full" plaseholder="{{ __('Description') }}" id="description"
-                            name="description">{{ old('description', $role?->description) }}</textarea>
+                        <x-textarea title="{{ __('Description') }}" id="description" name="description"
+                            :value="old('description', $role?->description ?? '')" />
                     </div>
                     <h3 class="col-span-4">{{ __('Permissions') }}</h3>
                     @foreach ($permissions as $permission)
                         <div class="col-span-2 md:col-span-1">
-                            <label class="label cursor-pointer">
-                                <span class="label-text">{{ $permission->name }}</span>
-                                <input type="checkbox" name="permissions[]" value="{{ $permission->id }}"
-                                    {{ $syncedPerms->contains($permission->id) ? 'checked' : '' }} class="checkbox" />
-                            </label>
+                            <x-checkbox title="{{ $permission->name }}" name="permissions[]" id="permissions-{{ $permission->id }}"
+                                value="{{ $permission->id }}" :checked="$syncedPerms->contains($permission->id)" />
                         </div>
                     @endforeach
                     <div class="col-span-4">

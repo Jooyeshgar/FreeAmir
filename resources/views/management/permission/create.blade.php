@@ -18,25 +18,20 @@
 
                 <div class="grid grid-cols-4 gap-5">
                     <div class="col-span-4 md:col-span-2">
-                        <label class="input input-bordered flex items-center gap-2">
-                            <input type="text" id="name" name="name" placeholder="Name"
-                                class="w-4 h-4 opacity-70" value="{{ old('name', $permission?->name) }}" required>
-                        </label>
+                        <x-input name="name" id="name" placeholder="{{ __('Permission wildcard') }}" title=""
+                            :value="old('name', $permission->name ?? '')" />
                     </div>
                     <div></div>
                     <div class="col-span-4">
-                        <textarea name="description" id="description" placeholder="{{ __('Description') }}"
-                            class="textarea textarea-bordered textarea-lg w-full">{{ old('description', $permission?->description) }}</textarea>
+                        <x-textarea name="description" id="description" title="{{ __('Description') }}"
+                            placeholder="{{ __('Description') }}" :value="old('description', $permission->description ?? '')" />
                     </div>
 
                     <h3 class="col-span-4 text-lg font-semibold mb-2">{{ __('Roles') }}</h3>
                     @foreach ($roles as $role)
                         <div class="col-span-2 md:col-span-1">
-                            <label class="label cursor-pointer">
-                                <span class="label-text">{{ $role->name }}</span>
-                                <input type="checkbox" name="roles[]" value="{{ $role->id }}"
-                                    {{ $syncedRoles->contains($role->id) ? 'checked' : '' }} class="checkbox" />
-                            </label>
+                            <x-checkbox title="{{ $role->name }}" name="roles[]" id="roles-{{ $role->id }}"
+                                value="{{ $role->id }}" :checked="$syncedRoles->contains($role->id)" />
                         </div>
                     @endforeach
                     <div class="col-span-4">

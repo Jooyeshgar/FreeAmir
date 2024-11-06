@@ -10,7 +10,7 @@ class NumberToWordHelper
         $hyphen = '-';
         $conjunction = ' ' . __('and') . ' ';
         $separator = ', ';
-        $negative = __('negative ');
+        $negative = __('negative');
         $decimal = ' ' . __('point') . ' ';
         $dictionary = [
             0 => __('zero'),

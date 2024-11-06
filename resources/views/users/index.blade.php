@@ -13,9 +13,9 @@
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <tr>
-                        <th class="px-4 py-2">Name</th>
-                        <th class="px-4 py-2">Email</th>
-                        <th class="px-4 py-2">Actions</th>
+                        <th class="px-4 py-2">{{ __('Name') }}</th>
+                        <th class="px-4 py-2">{{ __('Email') }}</th>
+                        <th class="px-4 py-2">{{ __('Action') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -24,12 +24,15 @@
                             <td class="px-4 py-2">{{ $user->name }}</td>
                             <td class="px-4 py-2">{{ $user->email }}</td>
                             <td class="px-4 py-2">
-                                <a href="{{ route('users.show', $user) }}" class="btn text-blue-600 hover:text-blue-900">View</a>
-                                <a href="{{ route('users.edit', $user) }}" class="btn text-yellow-600 hover:text-yellow-900">Edit</a>
+                                <a href="{{ route('users.show', $user) }}"
+                                    class="btn text-blue-600 hover:text-blue-900">{{ __('View') }}</a>
+                                <a href="{{ route('users.edit', $user) }}"
+                                    class="btn text-yellow-600 hover:text-yellow-900">{{ __('Edit') }}</a>
                                 <form action="{{ route('users.destroy', $user) }}" method="post" class="inline">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn text-red-600 hover:text-red-900">Delete</button>
+                                    <button type="submit"
+                                        class="btn text-red-600 hover:text-red-900">{{ __('Delete') }}</button>
                                 </form>
                             </td>
                         </tr>

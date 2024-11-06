@@ -24,7 +24,7 @@ class SubjectController extends Controller
 
     public function create()
     {
-        $parentSubjects = Subject::where('parent_id', 0)->get();
+        $parentSubjects = Subject::where('parent_id', null)->get();
 
         return view('subjects.create', compact('parentSubjects'));
     }
@@ -45,7 +45,7 @@ class SubjectController extends Controller
 
     public function edit(Subject $subject)
     {
-        $parentSubjects = Subject::where('parent_id', 0)->get();
+        $parentSubjects = Subject::where('parent_id', null)->get();
 
         return view('subjects.edit', compact('subject', 'parentSubjects'));
     }

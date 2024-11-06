@@ -11,14 +11,10 @@
                 @csrf
                 @method('PUT')
                 <div class="grid grid-cols-2 gap-6">
-                    <x-form-input title="{{ __('Name') }}" name="name" place-holder="{{ __('Name') }}"
-                        :value="old('name', $user->name ?? '')" type="text" />
-                    <x-form-input title="{{ __('Email') }}" name="email" place-holder="{{ __('Email') }}"
-                        :value="old('email', $user->email ?? '')" type="email" />
-                    <x-form-input title="{{ __('Password') }}" name="password" place-holder="{{ __('Password') }}"
-                        type="password" />
-                    <x-form-input title="{{ __('Confirm Password') }}" name="password_confirmation"
-                        place-holder="{{ __('Confirm Password') }}" type="password" />
+                    <x-input title="{{ __('Name') }}" name="name" :value="old('name', $user->name ?? '')" type="text" />
+                    <x-input title="{{ __('Email') }}" name="email" :value="old('email', $user->email ?? '')" type="email" />
+                    <x-input title="{{ __('Password') }}" name="password" type="password" />
+                    <x-input title="{{ __('Confirm Password') }}" name="password_confirmation" type="password" />
                 </div>
 
                 @can('management.roles.*')
@@ -28,7 +24,7 @@
                     <h3>{{ __('Roles') }}</h3>
                     <div class="grid gap-3 grid-cols-5">
                         @foreach ($roles as $role)
-                            <x-checkbox :title="$role->name" name="role[]" :value="$role->name"
+                            <x-checkbox :title="$role->name" name="role[]" :value="$role->name" id="role-{{ $role->id }}"
                                 checked="{{ $user->hasRole($role->name) ? true : false }}" />
                         @endforeach
                     </div>
@@ -40,14 +36,12 @@
                 <div class="grid gap-3 grid-cols-5">
                     @foreach ($companies as $company)
                         <x-checkbox :title="$company->name" name="company[]" :value="$company->id"
+                            id="company-{{ $role->id }}"
                             checked="{{ $user->companies->contains($company) ? true : false }}" />
                     @endforeach
                 </div>
                 <div class="flex justify-end mt-4">
-                    <button type="submit"
-                        class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        Update User
-                    </button>
+                    <button type="submit" class="btn btn-pr"> {{ __('Edit') }} </button>
                 </div>
             </form>
         </div>
