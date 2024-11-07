@@ -10,7 +10,7 @@ class BankAccountSeeder extends Seeder
 {
     public function run()
     {
-        $banks = Bank::all();
+        $banks = Bank::withoutGlobalScopes()->where('company_id', 1)->get();
 
         foreach ($banks as $bank) {
             BankAccount::create([
@@ -24,6 +24,7 @@ class BankAccountSeeder extends Seeder
                 'bank_phone' => '123-456-7890',
                 'bank_web_page' => 'www.bankwebsite.com',
                 'desc' => 'Main bank account',
+                'company_id' => 1
             ]);
         }
     }

@@ -11,7 +11,7 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('subjects', function (Blueprint $table) {
-            $table->morphs('subjectable');
+            $table->nullableMorphs('subjectable');
         });
     }
 

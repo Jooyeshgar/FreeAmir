@@ -13,6 +13,7 @@ class CustomerFactory extends Factory
 
     public function definition()
     {
+        session(['active-company-id' => 1]);
         $bankIds = Bank::pluck('id')->toArray();
         $name = $this->faker->name;
 
