@@ -10,9 +10,7 @@ use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * Display a listing of the resource.
@@ -86,7 +84,7 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
-        $roles = Role::where('name', '!=', 'Super-Admin')->get();
+        $roles = Role::all();
         $companies = Company::all();
         return view('users.edit', compact('user', 'roles', 'companies'));
     }

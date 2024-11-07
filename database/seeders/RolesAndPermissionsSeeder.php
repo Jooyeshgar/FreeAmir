@@ -45,7 +45,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $role = Role::create(['name' => 'Super-Admin']);
 
         $role = Role::create(['name' => 'Acountant']);
-        $role->givePermissionTo(Permission::where('name','NOT LIKE', '%management%')->get());
+        $role->givePermissionTo(Permission::where('name', 'NOT LIKE', '%management%')->get());
 
         // Create admin user
         $admin = User::create([
@@ -53,6 +53,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'email' => 'admin@example.com',
             'password' => bcrypt('password'), // Replace with a strong password
         ]);
+
+        $admin->companies()->attach(1);
 
         $admin->assignRole('Super-Admin');
     }
