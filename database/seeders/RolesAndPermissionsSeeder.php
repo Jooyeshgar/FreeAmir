@@ -27,6 +27,7 @@ class RolesAndPermissionsSeeder extends Seeder
         Permission::create(['name' => 'customers.*']);
         Permission::create(['name' => 'customer-groups.*']);
         Permission::create(['name' => 'companies.*']);
+        Permission::create(['name' => 'change-company.*']);
         Permission::create(['name' => 'bank-accounts.*']);
         Permission::create(['name' => 'banks.*']);
         Permission::create(['name' => 'invoices.*']);
