@@ -70,4 +70,14 @@ class SubjectController extends Controller
 
         return redirect()->route('subjects.index')->with('success', 'Subject deleted successfully.');
     }
+
+    public function search(Request $request)
+    {
+        $query = $request->input('query');
+        $subjects = Subject::where('code', 'like', '%' . $query . '%')
+            ->orWhere('name', 'like', '%' . $query . '%')
+            ->get();
+
+        return response()->json($subjects);
+    }
 }

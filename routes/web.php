@@ -10,6 +10,7 @@ Route::get('/logout', [Controllers\Auth\LoginController::class, 'logout'])->name
 Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('/', [Controllers\HomeController::class, 'index'])->name('home');
     Route::resource('subjects', Controllers\SubjectController::class);
+    Route::post('subjects/search', [Controllers\SubjectController::class, 'search'])->name('subjects.search');
     Route::resource('documents', Controllers\DocumentController::class);
     Route::resource('products', Controllers\ProductController::class);
     Route::resource('product-groups', Controllers\ProductGroupController::class);
