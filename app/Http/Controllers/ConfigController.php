@@ -33,6 +33,7 @@ class ConfigController extends Controller
             'postal_code' => 'nullable|integer',
             'phone_number' => 'nullable|numeric|regex:/^09\d{9}$/',
             'cust_subject' => 'nullable|exists:subjects,id|integer',
+            'cash_book' => 'nullable|exists:subjects,id|integer',
             'bank' => 'nullable|exists:banks,id|integer',
             'cash' => 'nullable|numeric',
             'buy_discount' => 'nullable|numeric',
@@ -73,6 +74,7 @@ class ConfigController extends Controller
                 Models\Config::create([
                     'key' => $key,
                     'value' => $value,
+                    'company_id' => session('active-company-id'),
                     'type' => '',
                     'category' => '',
                 ]);
