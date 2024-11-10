@@ -10,7 +10,7 @@ class SubjectController extends Controller
     public function __construct()
     {
     }
-    
+
     public function index(Request $request)
     {
         if ($request->has('parent_id')) {
@@ -37,7 +37,7 @@ class SubjectController extends Controller
             'parent_id' => 'nullable|exists:subjects,id',
             'type' => 'required|in:debtor,creditor,both',
         ]);
-
+        $validatedData['company_id'] = session('active-company-id');
         Subject::create($validatedData);
 
         return redirect()->route('subjects.index')->with('success', 'Subject created successfully.');
@@ -63,6 +63,7 @@ class SubjectController extends Controller
 
         return redirect()->route('subjects.index')->with('success', 'Subject updated successfully.');
     }
+
 
     public function destroy(Subject $subject)
     {
