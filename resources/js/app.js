@@ -6,67 +6,15 @@ import { Chart, registerables } from 'chart.js';
 window.Alpine = Alpine;
 Alpine.start();
 
+window.Chart = Chart;
 Chart.register(...registerables);
+Chart.defaults.font.family = 'vazir'
 
-if(document.getElementById('lineChart')) {
-  document.addEventListener('DOMContentLoaded', () => {
-    Chart.defaults.font.family = 'vazir'
-    const ctx = document.getElementById('lineChart').getContext('2d');
-  
-    // ایجاد یک گرادینت برای پس‌زمینه
-    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-    gradient.addColorStop(0, 'rgba(0, 255, 200, 0.3)'); // رنگ شروع گرادینت
-    gradient.addColorStop(1, 'rgba(0, 255, 200, 0)');   // رنگ پایان گرادینت
-  
-    const myChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: ['ماه 1', 'ماه 2', 'ماه 3', 'ماه 4', 'ماه 5'],  // ماه‌ها
-        datasets: [{
-          label: 'رئال',
-          data: [15250000, 11890000, 33754000, 21507000, 31708000],  // مقادیر داده‌ها
-          fill: true,  // پر کردن زیر خط نمودار
-          backgroundColor: gradient,  // استفاده از گرادینت برای پس‌زمینه
-          borderColor: '#00cca3',  // رنگ خط
-          borderWidth: 3,  // ضخامت خط
-          pointBackgroundColor: '#ffffff',  // رنگ نقاط
-          pointBorderColor: '#00cca3',  // رنگ حاشیه نقاط
-          pointBorderWidth: 3,  // ضخامت حاشیه نقاط
-          pointRadius: 5,  // اندازه نقاط
-          pointHoverRadius: 7,  // اندازه نقاط هنگام هاور
-          lineTension: 0.4,  // مقدار برای نرم کردن گوشه‌های نمودار
-        }]
-      },
-      options: {
-        scales: {
-          x: {
-            display: false,  // حذف محور x و لیبل‌های آن
-          },
-          y: {
-            display: false,  // حذف محور y و لیبل‌های آن
-            beginAtZero: true,  // همچنان از صفر شروع می‌شود
-          }
-        },
-        plugins: {
-          legend: {
-            display: false  // مخفی کردن لیبل نمودار
-          },
-          tooltip: {
-            callbacks: {
-              label: function (context) {
-                let value = context.raw;
-                return value.toLocaleString();  // افزودن کاما به مقادیر Tooltip
-              }
-            }
-          }
-        }
-      }
-    });
-  });
-  
+
+if(document.getElementById('gaugeChart')) {  
   document.addEventListener('DOMContentLoaded', () => {
     const ctx = document.getElementById('gaugeChart').getContext('2d');
-    const myChart = new Chart(ctx, {
+    const gaugeChart = new Chart(ctx, {
       type: 'doughnut',
       data: {
         labels: ['درآمد از فروش', 'درآمد از تخفیف خرید', 'خالی'],  // برچسب‌ها
@@ -122,71 +70,6 @@ if(document.getElementById('lineChart')) {
     });
   });
   
-  document.addEventListener('DOMContentLoaded', () => {
-    const ctx = document.getElementById('midLineChart').getContext('2d');
   
-    const data = {
-      labels: ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد'],
-      datasets: [{
-        label: 'نمودار درصدی',
-        data: [-7.6, 2.5, -4.2, 4.7, -1.6],
-        borderColor: '#888',
-        borderWidth: 5,
-        fill: false,
-        tension: 0.4,  // نرم کردن خطوط نمودار
-        pointBackgroundColor: '#fff',
-        pointBorderColor: function(context) {
-          const value = context.raw;
-          return value >= 0 ? 'green' : 'red';
-        },
-        pointBorderWidth: 3,
-        pointRadius: 6
-      }]
-    };
   
-    const options = {
-      scales: {
-        x: {
-          grid: {
-            display: true,
-            color: '#e0e0e0',  // رنگ خطوط شبکه محور x
-          },
-        },
-        y: {
-          grid: {
-            display: true,
-            color: '#e0e0e0',  // رنگ خطوط شبکه محور y
-          },
-          beginAtZero: false,
-        }
-      },
-      plugins: {
-        legend: {
-          display: false,  // مخفی کردن لیبل نمودار
-        },
-        tooltip: {
-          enabled: false,  // غیرفعال کردن tooltip
-        },
-        datalabels: {
-          align: 'top',
-          anchor: 'end',
-          color: function(context) {
-            const value = context.dataset.data[context.dataIndex];
-            return value >= 0 ? 'green' : 'red';
-          },
-          font: {
-            weight: 'bold',
-            size: 14,
-          },
-          formatter: (value) => value + '%',  // افزودن علامت درصد به مقادیر
-        }
-      }
-    };
-  
-    const myChart = new Chart(ctx, {
-      type: 'line',
-      data: data,
-      options: options,
-    });
-  });
 }

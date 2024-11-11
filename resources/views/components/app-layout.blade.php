@@ -21,6 +21,7 @@
 
     </div>
 
+    @stack('footer')
 </body>
 
 </html>
