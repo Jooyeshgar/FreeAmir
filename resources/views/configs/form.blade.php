@@ -41,7 +41,7 @@
             :selected="old('cust_subject', $configs['cust_subject'] ?? '')" />
     </div>
     <div class="col-span-2 md:col-span-1">
-        <x-select name="bank" id="bank" title="{{ __('Banks') }}" :options="$banks->pluck('name', 'id')" :selected="old('bank', $configs['bank'] ?? '')" />
+        <x-select name="bank" id="bank" title="{{ __('Banks') }}" :options="$subjects->pluck('name', 'id')" :selected="old('bank', $configs['bank'] ?? '')" />
     </div>
     <div class="col-span-2 md:col-span-1">
         <x-select name="cash_book" id="cash_book" title="{{ __('Cash book') }}" :options="$subjects->pluck('name', 'id')" :selected="old('cash_book', $configs['cash_book'] ?? '')" />

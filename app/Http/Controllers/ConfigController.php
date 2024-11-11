@@ -15,11 +15,10 @@ class ConfigController extends Controller
     public function index()
     {
         $subjects = Models\Subject::all();
-        $banks = Models\Bank::all();
         $configs = Models\Config::all();
         $configs = $configs->pluck('value', 'key')->toArray();
 
-        return view('configs.index', compact('configs', 'banks', 'subjects', 'configs'));
+        return view('configs.index', compact('configs', 'subjects', 'configs'));
     }
 
     public function store(Request $request)
