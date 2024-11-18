@@ -78,7 +78,9 @@ class SubjectController extends Controller
         $subjects = Subject::where('code', 'like', '%' . $query . '%')
             ->orWhere('name', 'like', '%' . $query . '%')
             ->get();
-
+        $subs = Subject::whereIn('id', $subjects->pluck('id'))->get();
+        $subjects = $subjects->merge($subs);
+        
         return response()->json($subjects);
     }
 }
