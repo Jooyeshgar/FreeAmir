@@ -94,7 +94,7 @@
         <span class="min-w-24 text-center text-gray-500" id="creditSum">2000</span>
     </div>
 </x-card>
-<div class="mt-2 flex gap-2 justify-end">
+<div class="mt-4 flex gap-2 justify-end">
     <a href="{{ route('documents.index') }}" type="submit" class="btn btn-default rounded-md"> {{ __('cancel') }}
     </a>
     <button type="submit" class="btn btn-default rounded-md"> {{ __('save and create new document') }} </button>
