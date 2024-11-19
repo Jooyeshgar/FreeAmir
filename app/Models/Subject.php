@@ -28,6 +28,12 @@ class Subject extends Model
         static::addGlobalScope(new FiscalYearScope());
     }
 
+    public function subSubjects()
+    {
+        return $this->hasMany(Subject::class, 'parent_id');
+    }
+
+
     public function subjectable()
     {
         return $this->morphTo();
