@@ -75,9 +75,20 @@ class SubjectController extends Controller
     public function search(Request $request)
     {
         $query = $request->input('query');
-        $subjects = Subject::with('subSubjects')->where('code', 'like', '%' . $query . '%')
-            ->orWhere('name', 'like', '%' . $query . '%')
-            ->get();
+        $subjects = Subject::with(['subSubjects' => function ($subQuery) use ($query) {
+            $subQuery->where('name', 'like', '%' . $query . '%');
+        }])
+        ->where(function ($parentQuery) use ($query) {
+            $parentQuery->where('parent_id', null)
+                ->where(function ($innerQuery) use ($query) {
+                    $innerQuery->where('code', 'like', '%' . $query . '%')
+                        ->orWhere('name', 'like', '%' . $query . '%');
+                });
+        })
+        ->orWhereHas('subSubjects', function ($subQuery) use ($query) {
+            $subQuery->where('name', 'like', '%' . $query . '%');
+        })
+        ->get();
         
         return response()->json($subjects);
     }
