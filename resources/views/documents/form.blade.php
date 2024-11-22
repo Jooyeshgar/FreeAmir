@@ -61,7 +61,7 @@
 
                     </div>
                     <x-subject-select-box :subjects="$subjects" :name="'transactions[' . $i . '][subject_id]'" :value="$transaction->subject_id ?? ''"></x-subject-select-box>
-                    <div class="flex-1 min-w-80 pb-3">
+                    <div class="flex-1 w-[200px] pb-3">
                         <x-text-input value="{{ $transaction->desc }}" placeholder="{{ __('this document\'s row description') }}" id="desc"
                             name="transactions[{{ $i }}][desc]" label_text_class="text-gray-500" label_class="w-full" input_class=""></x-text-input>
 

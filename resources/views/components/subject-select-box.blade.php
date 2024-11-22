@@ -1,4 +1,4 @@
-<div class="selfSelectBoxContainer relative flex-1 min-w-80 max-w-80 pb-3" onclick="openSelectBox(this)">
+<div class="selfSelectBoxContainer relative flex-1 w-full pb-3" onclick="openSelectBox(this)">
     <x-text-input value="" readonly id="subject_id" label_text_class="text-gray-500" label_class="w-full"
         input_class="subject_name codeSelectBox "></x-text-input>
     <input type="hidden" name="{{ $name }}" class="subject_id" value="{{ $value }}">
@@ -32,6 +32,8 @@
                 </span>
             </div>
 
+            <div class="mt-4 text-xs hidden" id="searchResultDiv">
+            </div>
             <div class="mt-4 text-xs" id="resultDiv">
                 @foreach ($subjects as $subject)
                     <div class="w-full ps-2 mb-4">
@@ -46,9 +48,10 @@
                         </div>
                         @if ($subject->children->count() > 0)
                             <div class="ps-1 mt-4">
-                                <div class="border-s-[1px] ps-4 border-[#ADB5BD]">
+                                <div class="border-s-[1px] ps-7 border-[#ADB5BD]">
                                     @foreach ($subject->children as $children)
-                                        <a href="javascript:void(0)" class="selfSelectBoxItems flex justify-between"
+                                        <a href="javascript:void(0)"
+                                            class="selfSelectBoxItems flex justify-between mb-4"
                                             onclick="fillInput(this, '0')">
                                             <span class="selfItemTitle">
                                                 {{ $children->name }}
@@ -72,10 +75,9 @@
 
 <script>
     const csrf = document.querySelector('meta[name="csrf_token"]').getAttribute('content')
-    const requestData = {
-        query: "نقدی"
-    }
     const searchInput = document.getElementById('searchInput')
+    let resultDiv = document.getElementById("resultDiv")
+    let searchResultDiv = document.getElementById("searchResultDiv")
 
     function debounce(func, delay) {
         let timeout
@@ -94,7 +96,9 @@
                     "Content-Type": "application/json",
                     "X-CSRF-Token": csrf
                 },
-                body: JSON.stringify({ query })
+                body: JSON.stringify({
+                    query
+                })
             })
             .then(response => {
                 if (!response.ok) {
@@ -103,9 +107,72 @@
                 return response.json()
             })
             .then(data => {
-                data.forEach(element => {
-                    console.log(element)
-                });
+                resultDiv.style.display = "none"
+                searchResultDiv.style.display = "block"
+                if (data.length == 0) {
+                    searchResultDiv.innerHTML = '<span class="block text-center">چیزی پیدا نشد!</span>'
+                } else {
+                    data.forEach(element => {
+                        let targetName = element.name
+                        let targetCode = element.code
+                        let counter = 0
+                        if (element.sub_subjects.length == 0) {
+                            let createElement = `
+                        <div class="w-full ps-2 mb-4">
+                            <div class="flex justify-between">
+                                <span>
+                                    ${targetName}
+                                </span>
+
+                                <span>
+                                    ${targetCode}
+                                </span>
+                            </div>
+                        </div>
+                        `
+                            searchResultDiv.innerHTML = createElement
+                        } else {
+                            let subs = element.sub_subjects
+                            let createElement = `
+                        <div class="w-full ps-2 mb-4">
+                            <div class="flex justify-between">
+                                <span>
+                                    ${targetName}
+                                </span>
+
+                                <span>
+                                    ${targetCode}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="ps-1 mt-4">
+                            <div class="border-s-[1px] ps-7 border-[#ADB5BD]" id="sub-${counter}"></div>
+                        </div>
+                        `
+                            searchResultDiv.innerHTML = createElement
+
+                            subs.forEach(sub => {
+                                console.log(sub)
+                                let subContainer = document.getElementById(`sub-${counter}`)
+                                let createElement = `
+                                    <a href="javascript:void(0)"
+                                        class="selfSelectBoxItems flex justify-between mb-4"
+                                        onclick="fillInput(this, '0')">
+                                        <span class="selfItemTitle">
+                                            ${sub.name}
+                                        </span>
+                                        <span class="selfItemCode">
+                                            ${sub.code}
+                                        </span>
+                                        <span class="selfItemId hidden">{{ $children->id }}</span>
+                                    </a>
+                                    `
+                                subContainer.innerHTML += createElement
+                            })
+                            counter += 1
+                        }
+                    });
+                }
             })
             .catch(error => {
                 console.error("خطایی رخ داده: ", error)
@@ -114,9 +181,12 @@
 
     const debouncedSearch = debounce(function(event) {
         const query = event.target.value
-        if(query) {
+        if (query) {
             searchQuery(query)
+        } else {
+            resultDiv.style.display = "block"
+            searchResultDiv.style.display = "none"
         }
-    }, 300)
+    }, 1000)
     searchInput.addEventListener('input', debouncedSearch)
 </script>
