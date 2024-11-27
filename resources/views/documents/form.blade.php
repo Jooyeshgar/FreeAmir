@@ -118,302 +118,44 @@
     jalaliDatepicker.startWatch({});
 </script>
 <script>
-    var p2e = s => s.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
-    var codeInputs = document.getElementById('transactions').getElementsByClassName('codeInput')
-    var codeSelectBoxs = document.getElementById('transactions').getElementsByClassName('codeSelectBox')
-    var removeButtons = document.getElementById('transactions').getElementsByClassName('removeTransaction')
-    var debitInputs = document.getElementById('transactions').getElementsByClassName('debitInput')
-    var creditInputs = document.getElementById('transactions').getElementsByClassName('creditInput')
-    const csrf = document.querySelector('meta[name="csrf_token"]').getAttribute('content')
-    let searchInputs = document.querySelectorAll('.searchInput')
-    let resultDivs = document.querySelectorAll(".resultDiv")
-    let searchResultDivs = document.querySelectorAll(".searchResultDiv")
-
-    function onCodeInputChange(e, selectBox) {
-        let code = e.target.value
-        code = p2e(code)
-        e.target.value = code
-        let itemIndex = subjects.findIndex(i => (code === i.code && i.parent_id))
-        if (itemIndex !== -1) selectBox.value = subjects[itemIndex].id;
-    }
-
-    function onCodeSelectBoxChange(e, codeInput) {
-        let id = e.target.value
-        let itemIndex = subjects.findIndex(i => parseInt(id) === parseInt(i.id))
-        if (itemIndex !== -1) codeInput.value = subjects[itemIndex].code;
-    }
-
-    function deleteAction() {
-        if (document.getElementsByClassName('removeTransaction').length > 1) {
-            this.parentNode.parentNode.remove();
-            updateTransactionCounter()
-        }
-    }
-
-    function activeRow(e) {
-        console.log(e.currentTarget)
-        deactivateAllTransactionRow()
-        e.currentTarget.classList.remove('deactivated-transaction-row')
-    }
-
-    function debitInputChange(e, creditInput) {
-        let value = e.target.value
-        value = p2e(value)
-        e.target.value = parseInt(value) > 0 ? parseInt(value) : null
-        if (value <= 0) e.target.value = null;
-        else if (value > 0) creditInput.value = null
-        updateSumCalculation()
-    }
-
-    function creditInputChange(e, debitInput) {
-        let value = e.target.value
-        value = p2e(value)
-        e.target.value = parseInt(value) > 0 ? parseInt(value) : null
-        if (value <= 0) e.target.value = null;
-        else if (value > 0) debitInput.value = null
-        updateSumCalculation();
-    }
-
-    function updateSumCalculation() {
-        let debits = Array.from(document.getElementsByClassName('debitInput'))
-        let credits = Array.from(document.getElementsByClassName('creditInput'))
-        let sumDebit = 0;
-        let sumCredit = 0;
-        debits.map(i => i.value > 0 ? sumDebit += parseInt(i.value) : '')
-        credits.map(i => i.value > 0 ? sumCredit += parseInt(i.value) : '')
-        document.getElementById('creditSum').innerText = sumCredit
-        document.getElementById('debitSum').innerText = sumDebit
-    }
-
-    updateSumCalculation()
-
-    for (var i = 0; i < codeInputs.length; i++) {
-        let codeInput = codeInputs[i];
-        let codeSelectBox = codeSelectBoxs[i];
-        let removeButton = removeButtons[i];
-        let debitInput = debitInputs[i];
-        let creditInput = creditInputs[i];
-        codeInput.addEventListener('keyup', (e) => onCodeInputChange(e, codeSelectBox))
-        codeSelectBox.addEventListener('change', (e) => onCodeSelectBoxChange(e, codeInput))
-        removeButton.addEventListener('click', deleteAction)
-        debitInput.addEventListener('keyup', (e) => debitInputChange(e, creditInput))
-        creditInput.addEventListener('keyup', (e) => creditInputChange(e, debitInput))
-    }
-
-    function deactivateAllTransactionRow() {
-        let transactionsDiv = document.getElementById('transactions');
-        let transactionDivs = transactionsDiv.getElementsByClassName('transaction');
-        Array.from(transactionDivs).map(i => i.classList.add('deactivated-transaction-row'))
-    }
-
-    function updateTransactionCounter() {
-        Array.from(document.getElementsByClassName('transaction-count')).map((element, index) => element
-            .innerText = index + 1)
-    }
-
-    document.getElementById('addTransaction').addEventListener('click', function() {
-        var transactionsDiv = document.getElementById('transactions');
-        var transactionDivs = transactionsDiv.getElementsByClassName('transaction');
-        var lastTransactionDiv = transactionDivs[transactionDivs.length - 1];
-        var newTransactionDiv = lastTransactionDiv.cloneNode(true);
-        var transactionCount = newTransactionDiv.querySelector('.transaction-count').innerText
-        var selfSelectBoxItems = newTransactionDiv.querySelectorAll('.selfSelectBoxItems')
-        selfSelectBoxItems.forEach(selfSelectBoxItem => {
-            selfSelectBoxItem.setAttribute('onclick', `fillInput(this, '${transactionCount}')`)
-        })
-
-        deactivateAllTransactionRow();
-        newTransactionDiv.classList.remove('deactivated-transaction-row');
-        // Update the index in the name attribute
-        var selects = newTransactionDiv.getElementsByTagName('select');
-        for (var i = 0; i < selects.length; i++) {
-            selects[i].name = selects[i].name.replace(/\[\d+\]/, '[' + transactionDivs.length +
-                ']');
-            selects[i].value = ''
-        }
-
-        var inputs = newTransactionDiv.getElementsByTagName('input');
-        for (var i = 0; i < inputs.length; i++) {
-            inputs[i].name = inputs[i].name.replace(/\[\d+\]/, '[' + transactionDivs.length + ']');
-            inputs[i].value = ''
-        }
-
-
-        // Add the remove button event listener
-        var removeButton = newTransactionDiv.getElementsByClassName('removeTransaction')[0];
-        removeButton.addEventListener('click', deleteAction);
-
-        // Add code onchange event listener
-        var codeInput = newTransactionDiv.getElementsByClassName('codeInput')[0];
-        var codeSelectBox = newTransactionDiv.getElementsByClassName('codeSelectBox')[0];
-        codeInput.addEventListener('keyup', (e) => onCodeInputChange(e, codeSelectBox));
-        codeSelectBox.addEventListener('change', (e) => onCodeSelectBoxChange(e, codeInput));
-
-
-        // Add code onchange event listener
-        var debitInput = newTransactionDiv.getElementsByClassName('debitInput')[0];
-        var creditInput = newTransactionDiv.getElementsByClassName('creditInput')[0];
-        debitInput.addEventListener('keyup', (e) => debitInputChange(e, creditInput));
-        creditInput.addEventListener('keyup', (e) => creditInputChange(e, debitInput));
-
-
-        // Append the new transaction div to the transactions div
-        transactionsDiv.appendChild(newTransactionDiv);
-        updateTransactionCounter()
-        countInputs()
-    });
-
-    function openSelectBox(thisOne) {
-        document.querySelectorAll(".selfSelectBox").forEach(function(box) {
-            box.style.display = "none";
-        });
-        thisOne.querySelector(".selfSelectBox").style.display = "block";
-    }
-
-    function fillInput(thisOne, index) {
-        let selfItemTitle = thisOne.querySelector(".selfItemTitle").innerText;
-        let selfItemCode = thisOne.querySelector(".selfItemCode").innerText;
-        let selfItemId = thisOne.querySelector(".selfItemId").innerText;
-        document.querySelectorAll(".subject_name")[index].value = selfItemTitle;
-        document.querySelectorAll(".subject_id")[index].value = selfItemId;
-        document.querySelectorAll(".value")[index].value = selfItemCode;
-    }
-
-    document.addEventListener("click", function(event) {
-        let isClickInside = event.target.closest(".selfSelectBoxContainer");
-
-        if (!isClickInside) {
-            document.querySelectorAll(".selfSelectBox").forEach(function(box) {
-                box.style.display = "none";
-                resultDivs.forEach((resultDiv, i) => {
-                    searchInputs[i].value = ''
-                    resultDiv.style.display = "block"
-                    searchResultDivs[i].style.display = "none"
-                })
-            });
-        }
-    });
-
-    function countInputs() {
-        searchInputs = document.querySelectorAll('.searchInput')
-        resultDivs = document.querySelectorAll(".resultDiv")
-        searchResultDivs = document.querySelectorAll(".searchResultDiv")
-        voidInputSearch()
-    }
-
-    function voidInputSearch() {
-        searchInputs.forEach((searchInput, i) => {
-            searchInput.addEventListener('input', (event) => debouncedSearch(event, i))
-        })
-    }
-
-    function debounce(func, delay) {
-        let timeout
-        return function(...args) {
-            clearTimeout(timeout)
-            timeout = setTimeout(() => {
-                func.apply(this, args)
-            }, delay);
-        }
-    }
-
-    function searchQuery(query, i) {
-        fetch("/subjects/search", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-Token": csrf
-                },
-                body: JSON.stringify({
-                    query
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error("خطا در دریافت پاسخ")
-                }
-                return response.json()
-            })
-            .then(data => {
-                resultDivs[i].style.display = "none"
-                searchResultDivs[i].style.display = "block"
-                if (data.length == 0) {
-                    searchResultDivs[i].innerHTML = '<span class="block text-center">چیزی پیدا نشد!</span>'
-                } else {
-                    data.forEach(element => {
-                        let targetName = element.name
-                        let targetCode = element.code
-                        let counter = 0
-                        if (element.sub_subjects.length == 0) {
-                            let createElement = `
+var p2e=e=>e.replace(/[۰-۹]/g,e=>"۰۱۲۳۴۵۶۷۸۹".indexOf(e)),codeInputs=document.getElementById("transactions").getElementsByClassName("codeInput"),codeSelectBoxs=document.getElementById("transactions").getElementsByClassName("codeSelectBox"),removeButtons=document.getElementById("transactions").getElementsByClassName("removeTransaction"),debitInputs=document.getElementById("transactions").getElementsByClassName("debitInput"),creditInputs=document.getElementById("transactions").getElementsByClassName("creditInput");const csrf=document.querySelector('meta[name="csrf_token"]').getAttribute("content");let searchInputs=document.querySelectorAll(".searchInput"),resultDivs=document.querySelectorAll(".resultDiv"),searchResultDivs=document.querySelectorAll(".searchResultDiv");function onCodeInputChange(e,t){let n=e.target.value;n=p2e(n),e.target.value=n;let a=subjects.findIndex(e=>n===e.code&&e.parent_id);-1!==a&&(t.value=subjects[a].id)}function onCodeSelectBoxChange(e,t){let n=e.target.value,a=subjects.findIndex(e=>parseInt(n)===parseInt(e.id));-1!==a&&(t.value=subjects[a].code)}function deleteAction(){document.getElementsByClassName("removeTransaction").length>1&&(this.parentNode.parentNode.remove(),updateTransactionCounter())}function activeRow(e){console.log(e.currentTarget),deactivateAllTransactionRow(),e.currentTarget.classList.remove("deactivated-transaction-row")}function debitInputChange(e,t){let n=e.target.value;n=p2e(n),e.target.value=parseInt(n)>0?parseInt(n):null,n<=0?e.target.value=null:n>0&&(t.value=null),updateSumCalculation()}function creditInputChange(e,t){let n=e.target.value;n=p2e(n),e.target.value=parseInt(n)>0?parseInt(n):null,n<=0?e.target.value=null:n>0&&(t.value=null),updateSumCalculation()}function updateSumCalculation(){let e=Array.from(document.getElementsByClassName("debitInput")),t=Array.from(document.getElementsByClassName("creditInput")),n=0,a=0;e.map(e=>e.value>0?n+=parseInt(e.value):""),t.map(e=>e.value>0?a+=parseInt(e.value):""),document.getElementById("creditSum").innerText=a,document.getElementById("debitSum").innerText=n}updateSumCalculation();for(var i=0;i<codeInputs.length;i++){let e=codeInputs[i],t=codeSelectBoxs[i],n=removeButtons[i],a=debitInputs[i],s=creditInputs[i];e.addEventListener("keyup",e=>onCodeInputChange(e,t)),t.addEventListener("change",t=>onCodeSelectBoxChange(t,e)),n.addEventListener("click",deleteAction),a.addEventListener("keyup",e=>debitInputChange(e,s)),s.addEventListener("keyup",e=>creditInputChange(e,a))}function deactivateAllTransactionRow(){Array.from(document.getElementById("transactions").getElementsByClassName("transaction")).map(e=>e.classList.add("deactivated-transaction-row"))}function updateTransactionCounter(){Array.from(document.getElementsByClassName("transaction-count")).map((e,t)=>e.innerText=t+1)}function openSelectBox(e){document.querySelectorAll(".selfSelectBox").forEach(function(e){e.style.display="none"}),e.querySelector(".selfSelectBox").style.display="block"}function fillInput(e,t){let n=e.querySelector(".selfItemTitle").innerText,a=e.querySelector(".selfItemCode").innerText,s=e.querySelector(".selfItemId").innerText;document.querySelectorAll(".subject_name")[t].value=n,document.querySelectorAll(".subject_id")[t].value=s,document.querySelectorAll(".value")[t].value=a}function countInputs(){searchInputs=document.querySelectorAll(".searchInput"),resultDivs=document.querySelectorAll(".resultDiv"),searchResultDivs=document.querySelectorAll(".searchResultDiv"),voidInputSearch()}function voidInputSearch(){searchInputs.forEach((e,t)=>{e.addEventListener("input",e=>debouncedSearch(e,t))})}function debounce(e,t){let n;return function(...a){clearTimeout(n),n=setTimeout(()=>{e.apply(this,a)},t)}}function formatCode(e){let t=[];for(let n=0;n<e.length;n+=3)t.push(e.substring(n,n+3));return e=t.join("/"),["fa","fa_IR"].includes("fa")&&(e=convertToFarsi(e)),e}function convertToFarsi(e){let t={0:"۰",1:"۱",2:"۲",3:"۳",4:"۴",5:"۵",6:"۶",7:"۷",8:"۸",9:"۹"};return e.replace(/[0-9]/g,e=>t[e])}function searchQuery(e,t){fetch("/subjects/search",{method:"POST",headers:{"Content-Type":"application/json","X-CSRF-Token":csrf},body:JSON.stringify({query:e})}).then(e=>{if(!e.ok)throw Error("خطا در دریافت پاسخ");return e.json()}).then(e=>{resultDivs[t].style.display="none",searchResultDivs[t].style.display="block",0==e.length?searchResultDivs[t].innerHTML='<span class="block text-center">چیزی پیدا نشد!</span>':e.forEach(e=>{let n=e.name,a=e.code;if(0==e.sub_subjects.length){let s=`
                         <div class="w-full ps-2 mb-4">
                             <div class="flex justify-between">
                                 <span>
-                                    ${targetName}
+                                    ${n}
                                 </span>
 
                                 <span>
-                                    ${targetCode}
+                                    ${formatCode(a)}
                                 </span>
                             </div>
                         </div>
-                        `
-                            searchResultDivs[i].innerHTML = createElement
-                        } else {
-                            let subs = element.sub_subjects
-                            let createElement = `
+                        `;searchResultDivs[t].innerHTML=s}else{let l=e.sub_subjects,r=`
                         <div class="w-full ps-2 mb-4">
                             <div class="flex justify-between">
                                 <span>
-                                    ${targetName}
+                                    ${n}
                                 </span>
 
                                 <span>
-                                    ${targetCode}
+                                    ${formatCode(a)}
                                 </span>
                             </div>
                         </div>
                         <div class="ps-1 mt-4">
-                            <div class="border-s-[1px] ps-7 border-[#ADB5BD]" id="sub-${counter}"></div>
+                            <div class="border-s-[1px] ps-7 border-[#ADB5BD]" id="sub-${t}"></div>
                         </div>
-                        `
-                            searchResultDivs[i].innerHTML = createElement
-
-                            subs.forEach(sub => {
-                                let subContainer = document.getElementById(`sub-${counter}`)
-                                let createElement = `
+                        `;searchResultDivs[t].innerHTML=r,l.forEach(e=>{let n=document.getElementById(`sub-${t}`),a=`
                                     <a href="javascript:void(0)"
                                         class="selfSelectBoxItems flex justify-between mb-4"
-                                        onclick="fillInput(this, '${counter}')">
+                                        onclick="fillInput(this, '${t}')">
                                         <span class="selfItemTitle">
-                                            ${sub.name}
+                                            ${e.name}
                                         </span>
                                         <span class="selfItemCode">
-                                            ${sub.code}
+                                            ${formatCode(e.code)}
                                         </span>
-                                        <span class="selfItemId hidden">${sub.id}</span>
+                                        <span class="selfItemId hidden">${e.id}</span>
                                     </a>
-                                    `
-                                subContainer.innerHTML += createElement
-                            })
-                            counter += 1
-                        }
-                    });
-                }
-            })
-            .catch(error => {
-                console.error("خطایی رخ داده: ", error)
-            })
-    }
-
-    const debouncedSearch = debounce(function(event, i) {
-        const query = event.target.value
-        if (query) {
-            searchQuery(query, i)
-        } else {
-            resultDivs[i].style.display = "block"
-            searchResultDivs[i].style.display = "none"
-        }
-    }, 500)
-    voidInputSearch()
+                                    `;n.innerHTML+=a})}})}).catch(e=>{console.error("خطایی رخ داده: ",e)})}document.getElementById("addTransaction").addEventListener("click",function(){var e=document.getElementById("transactions"),t=e.getElementsByClassName("transaction"),n=t[t.length-1].cloneNode(!0),a=n.querySelector(".transaction-count").innerText;n.querySelectorAll(".selfSelectBoxItems").forEach(e=>{e.setAttribute("onclick",`fillInput(this, '${a}')`)}),deactivateAllTransactionRow(),n.classList.remove("deactivated-transaction-row");for(var s=n.getElementsByTagName("select"),l=0;l<s.length;l++)s[l].name=s[l].name.replace(/\[\d+\]/,"["+t.length+"]"),s[l].value="";for(var r=n.getElementsByTagName("input"),l=0;l<r.length;l++)r[l].name=r[l].name.replace(/\[\d+\]/,"["+t.length+"]"),r[l].value="";n.getElementsByClassName("removeTransaction")[0].addEventListener("click",deleteAction);var c=n.getElementsByClassName("codeInput")[0],o=n.getElementsByClassName("codeSelectBox")[0];c.addEventListener("keyup",e=>onCodeInputChange(e,o)),o.addEventListener("change",e=>onCodeSelectBoxChange(e,c));var u=n.getElementsByClassName("debitInput")[0],d=n.getElementsByClassName("creditInput")[0];u.addEventListener("keyup",e=>debitInputChange(e,d)),d.addEventListener("keyup",e=>creditInputChange(e,u)),e.appendChild(n),updateTransactionCounter(),countInputs()}),document.addEventListener("click",function(e){e.target.closest(".selfSelectBoxContainer")||document.querySelectorAll(".selfSelectBox").forEach(function(e){e.style.display="none",resultDivs.forEach((e,t)=>{searchInputs[t].value="",e.style.display="block",searchResultDivs[t].style.display="none"})})});const debouncedSearch=debounce(function(e,t){let n=e.target.value;n?searchQuery(n,t):(resultDivs[t].style.display="block",searchResultDivs[t].style.display="none")},500);voidInputSearch();
 </script>
