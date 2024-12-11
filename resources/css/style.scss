@@ -50,9 +50,9 @@ input[type="email"]:focus {
     display: inline-block;
 }
 
-.transaction:not(.deactivated-transaction-row) .transaction-count {
-    display: none;
-}
+// .transaction:not(.deactivated-transaction-row) .transaction-count {
+//     display: none;
+// }
 
 .transaction.deactivated-transaction-row .removeTransaction {
     display: none;

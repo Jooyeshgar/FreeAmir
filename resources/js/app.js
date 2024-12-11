@@ -8,16 +8,16 @@ Alpine.start();
 
 Chart.register(...registerables);
 
-if(document.getElementById('lineChart')) {
+if (document.getElementById('lineChart')) {
   document.addEventListener('DOMContentLoaded', () => {
     Chart.defaults.font.family = 'vazir'
     const ctx = document.getElementById('lineChart').getContext('2d');
-  
+
     // ایجاد یک گرادینت برای پس‌زمینه
     const gradient = ctx.createLinearGradient(0, 0, 0, 400);
     gradient.addColorStop(0, 'rgba(0, 255, 200, 0.3)'); // رنگ شروع گرادینت
     gradient.addColorStop(1, 'rgba(0, 255, 200, 0)');   // رنگ پایان گرادینت
-  
+
     const myChart = new Chart(ctx, {
       type: 'line',
       data: {
@@ -63,7 +63,7 @@ if(document.getElementById('lineChart')) {
       }
     });
   });
-  
+
   document.addEventListener('DOMContentLoaded', () => {
     const ctx = document.getElementById('gaugeChart').getContext('2d');
     const myChart = new Chart(ctx, {
@@ -121,10 +121,10 @@ if(document.getElementById('lineChart')) {
       }
     });
   });
-  
+
   document.addEventListener('DOMContentLoaded', () => {
     const ctx = document.getElementById('midLineChart').getContext('2d');
-  
+
     const data = {
       labels: ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد'],
       datasets: [{
@@ -135,7 +135,7 @@ if(document.getElementById('lineChart')) {
         fill: false,
         tension: 0.4,  // نرم کردن خطوط نمودار
         pointBackgroundColor: '#fff',
-        pointBorderColor: function(context) {
+        pointBorderColor: function (context) {
           const value = context.raw;
           return value >= 0 ? 'green' : 'red';
         },
@@ -143,7 +143,7 @@ if(document.getElementById('lineChart')) {
         pointRadius: 6
       }]
     };
-  
+
     const options = {
       scales: {
         x: {
@@ -170,7 +170,7 @@ if(document.getElementById('lineChart')) {
         datalabels: {
           align: 'top',
           anchor: 'end',
-          color: function(context) {
+          color: function (context) {
             const value = context.dataset.data[context.dataIndex];
             return value >= 0 ? 'green' : 'red';
           },
@@ -182,11 +182,157 @@ if(document.getElementById('lineChart')) {
         }
       }
     };
-  
+
     const myChart = new Chart(ctx, {
       type: 'line',
       data: data,
       options: options,
     });
   });
+}
+
+if (document.querySelector(".selfSelectBoxContainer")) {
+  const csrf = document.querySelector('meta[name="csrf_token"]').getAttribute("content");
+  let searchInputs = document.querySelectorAll(".searchInput"),
+    resultDivs = document.querySelectorAll(".resultDiv"),
+    searchResultDivs = document.querySelectorAll(".searchResultDiv");
+
+  function voidInputSearch() {
+    searchInputs.forEach((e, t) => {
+      e.addEventListener("input", e => debouncedSearch(e, t))
+    })
+  }
+
+  function debounce(e, t) {
+    let n;
+    return function (...a) {
+      clearTimeout(n), n = setTimeout(() => {
+        e.apply(this, a)
+      }, t)
+    }
+  }
+
+  function formatCode(e) {
+    let t = [];
+    for (let n = 0; n < e.length; n += 3) t.push(e.substring(n, n + 3));
+    return e = t.join("/"), ["fa", "fa_IR"].includes("fa") && (e = convertToFarsi(e)), e
+  }
+
+  function convertToFarsi(e) {
+    let t = {
+      0: "۰",
+      1: "۱",
+      2: "۲",
+      3: "۳",
+      4: "۴",
+      5: "۵",
+      6: "۶",
+      7: "۷",
+      8: "۸",
+      9: "۹"
+    };
+    return e.replace(/[0-9]/g, e => t[e])
+  }
+
+  function searchQuery(e, t) {
+    fetch("/subjects/search", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": csrf
+      },
+      body: JSON.stringify({
+        query: e
+      })
+    }).then(e => {
+      if (!e.ok) throw Error("خطا در دریافت پاسخ");
+      return e.json()
+    }).then(e => {
+      resultDivs[t].style.display = "none", searchResultDivs[t].style.display = "block", 0 == e.length ?
+        searchResultDivs[t].innerHTML = '<span class="block text-center">چیزی پیدا نشد!</span>' : e
+          .forEach(e => {
+            let n = e.name,
+              a = e.code;
+            if (0 == e.sub_subjects.length) {
+              let s = `
+                        <div class="w-full ps-2 mb-4">
+                            <div class="flex justify-between">
+                                <span>
+                                    ${n}
+                                </span>
+
+                                <span>
+                                    ${formatCode(a)}
+                                </span>
+                            </div>
+                        </div>
+                        `;
+              searchResultDivs[t].innerHTML = s
+            } else {
+              let l = e.sub_subjects,
+                r = `
+                        <div class="w-full ps-2 mb-4">
+                            <div class="flex justify-between">
+                                <span>
+                                    ${n}
+                                </span>
+
+                                <span>
+                                    ${formatCode(a)}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="ps-1 mt-4">
+                            <div class="border-s-[1px] ps-7 border-[#ADB5BD]" id="sub-${t}"></div>
+                        </div>
+                        `;
+              searchResultDivs[t].innerHTML = r, l.forEach(e => {
+                let n = document.getElementById(`sub-${t}`),
+                  a = `
+                                    <a href="javascript:void(0)"
+                                        class="selfSelectBoxItems flex justify-between mb-4"
+                                        onclick="fillInput(this, '${t}')">
+                                        <span class="selfItemTitle">
+                                            ${e.name}
+                                        </span>
+                                        <span class="selfItemCode">
+                                            ${formatCode(e.code)}
+                                        </span>
+                                        <span class="selfItemId hidden">${e.id}</span>
+                                    </a>
+                                    `;
+                n.innerHTML += a
+              })
+            }
+          })
+    }).catch(e => {
+      console.error("خطایی رخ داده: ", e)
+    })
+  }
+
+  document.getElementById("addTransaction").addEventListener("click", function () {
+    setTimeout(() => {
+      var e = document.getElementById("transactions"),
+        t = e.getElementsByClassName("transaction"),
+        n = t[t.length - 1],
+        a = n.querySelector(".transaction-count").innerText;
+      n.querySelectorAll(".selfSelectBoxItems").forEach(e => {
+        e.setAttribute("onclick", `fillInput(this, '${a - 1}')`)
+      })
+    }, 200);
+  }), document.addEventListener("click", function (e) {
+    e.target.closest(".selfSelectBoxContainer") || document.querySelectorAll(".selfSelectBox").forEach(
+      function (e) {
+        e.style.display = "none", resultDivs.forEach((e, t) => {
+          searchInputs[t].value = "", e.style.display = "block", searchResultDivs[t].style
+            .display = "none"
+        })
+      })
+  });
+  const debouncedSearch = debounce(function (e, t) {
+    let n = e.target.value;
+    n ? searchQuery(n, t) : (resultDivs[t].style.display = "block", searchResultDivs[t].style.display =
+      "none")
+  }, 500);
+  voidInputSearch();
 }
