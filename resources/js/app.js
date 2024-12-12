@@ -195,7 +195,33 @@ if (document.querySelector(".selfSelectBoxContainer")) {
   const csrf = document.querySelector('meta[name="csrf_token"]').getAttribute("content");
   let searchInputs = document.querySelectorAll(".searchInput"),
     resultDivs = document.querySelectorAll(".resultDiv"),
-    searchResultDivs = document.querySelectorAll(".searchResultDiv");
+    searchResultDivs = document.querySelectorAll(".searchResultDiv"),
+    debitInput = document.querySelectorAll(".debitInput"),
+    creditInput = document.querySelectorAll(".creditInput"),
+    debitSum = document.getElementById("debitSum"),
+    creditSum = document.getElementById("creditSum");
+
+  function updateDebitInput() {
+    debitInput = document.querySelectorAll(".debitInput"),
+    debitSum.innerText = 0,
+    debitInput.forEach(element => {
+      debitSum.innerText = parseInt(debitSum.innerText) + parseInt(element.value)
+    })
+  }
+
+  function updateCreditInput() {
+    creditInput = document.querySelectorAll(".creditInput"),
+    creditSum.innerText = 0,
+    creditInput.forEach(element => {
+      creditSum.innerText = parseInt(creditSum.innerText) + parseInt(element.value)
+    })
+  }
+
+  function countInputs() {
+    searchInputs = document.querySelectorAll(".searchInput"), resultDivs = document.querySelectorAll(".resultDiv"),
+      searchResultDivs = document.querySelectorAll(".searchResultDiv"),
+      voidInputSearch()
+  }
 
   function voidInputSearch() {
     searchInputs.forEach((e, t) => {
@@ -320,6 +346,9 @@ if (document.querySelector(".selfSelectBoxContainer")) {
         e.setAttribute("onclick", `fillInput(this, '${a - 1}')`)
       })
     }, 200);
+    countInputs(),
+    updateDebitInput(),
+    updateCreditInput()
   }), document.addEventListener("click", function (e) {
     e.target.closest(".selfSelectBoxContainer") || document.querySelectorAll(".selfSelectBox").forEach(
       function (e) {
