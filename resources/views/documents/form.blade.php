@@ -19,7 +19,7 @@
     </div>
 </x-card>
 
-<x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-0">
+<x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-0" x-data="{ debitSum: [0], creditSum: [0] }">
 
     <div class="flex overflow-x-auto overflow-y-hidden  gap-2 items-center px-4  ">
         <div class="text-sm flex-1 max-w-8  text-center text-gray-500 pt-3 ">
@@ -50,14 +50,17 @@
             this.transactions.push({ id: newId, name: '', amount: '' });
         },
         removeTransaction(index) {
-            this.transactions.splice(index, 1);
+            this.transactions.splice(index, 1),
+                debitSum.splice(index, 1),
+                creditSum.splice(index, 1),
+                reOrderInputs();
         }
     }">
-        <div id="transactions">
+        <div id="transactions" x-data="{ activeTab: 0 }">
             <template x-for="(transaction, index) in transactions" :key="transaction.id">
                 @foreach ($transactions as $i => $transaction)
-                    <div class="transaction flex gap-2 items-center px-4 " id="originalTransactions"
-                        x-data="{ hover: false }" @mouseenter="hover = true" @mouseleave="hover = false">
+                    <div :class="{ 'active': activeTab === index }" class="transaction flex gap-2 items-center px-4 "
+                        id="originalTransactions" @click="activeTab = index">
 
                         <x-text-input value="{{ $transaction->id ?? '' }}"
                             name="transactions[{{ $i }}][transaction_id]" label_text_class="text-gray-500"
@@ -66,8 +69,8 @@
                         <div class="relative flex-1 text-center max-w-8 pt-2 pb-5 transaction-count-container">
                             <span class="transaction-count block" x-text="index + 1"></span>
 
-                            <button @click="removeTransaction(index)" x-show="hover" type="button"
-                                class="absolute left-0 top-0">
+                            <button @click="removeTransaction(index);" type="button"
+                                class="absolute left-0 top-0 removeButton">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                     stroke-width="1.5" stroke="currentColor"
                                     class="px-2 size-8 rounded-md  h-10 flex justify-center items-center text-center bg-red-500 hover:bg-red-700 text-white font-bold removeTransaction">
@@ -83,7 +86,7 @@
                                 value="{{ $transaction->subject ? $transaction->subject->formattedCode() : '' }}"
                                 id="value" name="transactions[{{ $i }}][code]"
                                 label_text_class="text-gray-500" label_class="w-full"
-                                input_class="border-white hover:border-slate-400 value codeInput "></x-text-input>
+                                input_class="border-white value codeInput "></x-text-input>
 
                         </div>
                         <x-subject-select-box :subjects="$subjects" :name="'transactions[' . $i . '][subject_id]'"
@@ -92,40 +95,46 @@
                             <x-text-input value="{{ $transaction->desc }}"
                                 placeholder="{{ __('this document\'s row description') }}" id="desc"
                                 name="transactions[{{ $i }}][desc]" label_text_class="text-gray-500"
-                                label_class="w-full" input_class="border-white hover:border-slate-400 "></x-text-input>
+                                label_class="w-full" input_class="border-white "></x-text-input>
 
                         </div>
 
                         <div class="flex-1 min-w-24 max-w-32 pb-3">
-                            <x-text-input value="{{ $transaction->debit ? $transaction->debit : '0' }}" placeholder="0" id="debit"
-                                name="transactions[{{ $i }}][debit]" label_text_class="text-gray-500"
-                                label_class="w-full"
-                                input_class="border-white hover:border-slate-400 debitInput"></x-text-input>
+                            <x-text-input value="{{ $transaction->debit ? $transaction->debit : '0' }}" placeholder="0"
+                                id="debit" name="transactions[{{ $i }}][debit]"
+                                label_text_class="text-gray-500" label_class="w-full"
+                                input_class="border-white debitInput" x-model.number="debitSum[index]"></x-text-input>
                         </div>
                         <div class="flex-1 min-w-24 max-w-32 pb-3">
-                            <x-text-input value="{{ $transaction->credit ? $transaction->credit : '0' }}" placeholder="0" id="credit"
-                                name="transactions[{{ $i }}][credit]" label_text_class="text-gray-500"
-                                label_class="w-full"
-                                input_class="border-white hover:border-slate-400 creditInput"></x-text-input>
+                            <x-text-input value="{{ $transaction->credit ? $transaction->credit : '0' }}"
+                                placeholder="0" id="credit" name="transactions[{{ $i }}][credit]"
+                                label_text_class="text-gray-500" label_class="w-full"
+                                input_class="border-white creditInput"
+                                x-model.number="creditSum[index]"></x-text-input>
 
                         </div>
                     </div>
                 @endforeach
             </template>
-        </div>
 
-        <button class="flex justify-content gap-4 align-center w-full px-4" id="addTransaction" @click="addTransaction" type="button">
-            <div class="bg-gray-200 max-h-10 min-h-10 hover:bg-gray-300 border-none btn w-full rounded-md btn-active">
-                <span class="text-2xl">+</span>
-                {{ __('Add Transaction') }}
-            </div>
-        </button>
+            <button class="flex justify-content gap-4 align-center w-full px-4" id="addTransaction"
+                @click="addTransaction; activeTab = transactions.length; debitSum.push(0); creditSum.push(0)"
+                type="button">
+                <div
+                    class="bg-gray-200 max-h-10 min-h-10 hover:bg-gray-300 border-none btn w-full rounded-md btn-active">
+                    <span class="text-2xl">+</span>
+                    {{ __('Add Transaction') }}
+                </div>
+            </button>
+        </div>
     </div>
 
     <hr style="">
     <div class="flex justify-end px-4 gap-2">
-        <span class="min-w-24 text-center text-gray-500" id="debitSum">0</span>
-        <span class="min-w-24 text-center text-gray-500" id="creditSum">0</span>
+        <span class="min-w-24 text-center text-gray-500" id="debitSum"
+            x-text="debitSum.reduce((acc, val) => acc + (val || 0), 0)">0</span>
+        <span class="min-w-24 text-center text-gray-500" id="creditSum"
+            x-text="creditSum.reduce((acc, val) => acc + (val || 0), 0)">0</span>
     </div>
 </x-card>
 <div class="mt-4 flex gap-2 justify-end">
@@ -151,5 +160,16 @@
             s = e.querySelector(".selfItemId").innerText;
         document.querySelectorAll(".subject_name")[t].value = n, document.querySelectorAll(".subject_id")[t].value = s,
             document.querySelectorAll(".value")[t].value = a
+    }
+
+    function reOrderInputs() {
+        setTimeout(() => {
+            document.querySelectorAll(".transaction").forEach(elem => {
+                t = elem.querySelector(".transaction-count").innerText;
+                elem.querySelectorAll('.selfSelectBoxItems').forEach(e => {
+                    e.setAttribute('onclick', `fillInput(this, '${t - 1}')`);
+                })
+            })
+        }, 200);
     }
 </script>

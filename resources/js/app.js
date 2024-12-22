@@ -192,30 +192,28 @@ if (document.getElementById('lineChart')) {
 }
 
 if (document.querySelector(".selfSelectBoxContainer")) {
+  jalaliDatepicker.startWatch({});
   const csrf = document.querySelector('meta[name="csrf_token"]').getAttribute("content");
   let searchInputs = document.querySelectorAll(".searchInput"),
     resultDivs = document.querySelectorAll(".resultDiv"),
     searchResultDivs = document.querySelectorAll(".searchResultDiv"),
-    debitInput = document.querySelectorAll(".debitInput"),
-    creditInput = document.querySelectorAll(".creditInput"),
-    debitSum = document.getElementById("debitSum"),
-    creditSum = document.getElementById("creditSum");
+    spans = document.querySelectorAll(".codeList"),
+    codeInput = document.querySelector(".codeInput");
 
-  function updateDebitInput() {
-    debitInput = document.querySelectorAll(".debitInput"),
-    debitSum.innerText = 0,
-    debitInput.forEach(element => {
-      debitSum.innerText = parseInt(debitSum.innerText) + parseInt(element.value)
-    })
-  }
+  codeInput.addEventListener('input', () => {
+    let code = codeInput.value;
+    let showRes = document.querySelector(".codeSelectBox");
 
-  function updateCreditInput() {
-    creditInput = document.querySelectorAll(".creditInput"),
-    creditSum.innerText = 0,
-    creditInput.forEach(element => {
-      creditSum.innerText = parseInt(creditSum.innerText) + parseInt(element.value)
-    })
-  }
+    let matchedSpan = Array.from(spans).find(span => span.getAttribute('data-code') === code);
+
+    // نمایش نتیجه
+    if (matchedSpan) {
+      codeInput.value = formatCode(codeInput.value);
+      showRes.value = matchedSpan.getAttribute("data-name");
+    } else {
+      showRes.value = "";
+    }
+  })
 
   function countInputs() {
     searchInputs = document.querySelectorAll(".searchInput"), resultDivs = document.querySelectorAll(".resultDiv"),
@@ -345,10 +343,25 @@ if (document.querySelector(".selfSelectBoxContainer")) {
       n.querySelectorAll(".selfSelectBoxItems").forEach(e => {
         e.setAttribute("onclick", `fillInput(this, '${a - 1}')`)
       })
+
+      let codeInput = n.querySelector(".codeInput")
+
+      codeInput.addEventListener('input', () => {
+        let code = codeInput.value;
+        let showRes = n.querySelector(".codeSelectBox");
+
+        let matchedSpan = Array.from(spans).find(span => span.getAttribute('data-code') === code);
+
+        // نمایش نتیجه
+        if (matchedSpan) {
+          codeInput.value = formatCode(codeInput.value);
+          showRes.value = matchedSpan.getAttribute("data-name");
+        } else {
+          showRes.value = "";
+        }
+      })
     }, 200);
-    countInputs(),
-    updateDebitInput(),
-    updateCreditInput()
+    countInputs()
   }), document.addEventListener("click", function (e) {
     e.target.closest(".selfSelectBoxContainer") || document.querySelectorAll(".selfSelectBox").forEach(
       function (e) {

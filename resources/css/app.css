@@ -40,3 +40,24 @@ main {
     z-index: 2;
     padding: 0 .4rem;
 }
+
+#originalTransactions .removeButton {
+    display: none;
+}
+
+#originalTransactions:hover .removeButton {
+    display: block;
+}
+
+.transaction.active input {
+    border: 1px solid slategray;
+}
+
+.transaction input:focus {
+    border: 1px solid rgb(56, 121, 207);
+    box-shadow: 0px 0px 1px rgb(56, 121, 207);
+}
+
+.transaction.active .removeButton {
+    display: block !important;
+}
