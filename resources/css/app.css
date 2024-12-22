@@ -55,9 +55,13 @@ main {
 
 .transaction input:focus {
     border: 1px solid rgb(56, 121, 207);
-    box-shadow: 0px 0px 1px rgb(56, 121, 207);
+    box-shadow: 0px 0px 1px rgb(56, 121, 207) !important;
 }
 
 .transaction.active .removeButton {
     display: block !important;
+}
+
+#transactions input {
+    box-shadow: none;
 }
