@@ -273,10 +273,11 @@ if (document.querySelector(".selfSelectBoxContainer")) {
       return e.json()
     }).then(e => {
       resultDivs[t].style.display = "none", searchResultDivs[t].style.display = "block", 0 == e.length ?
-        searchResultDivs[t].innerHTML = '<span class="block text-center">چیزی پیدا نشد!</span>' : e
-          .forEach(e => {
+        searchResultDivs[t].innerHTML = '<span class="block text-center">چیزی پیدا نشد!</span>' : searchResultDivs[t].innerHTML = "", e
+          .forEach((e, i) => {
             let n = e.name,
-              a = e.code;
+              a = e.code,
+              o = e.id;
             if (0 == e.sub_subjects.length) {
               let s = `
                         <div class="w-full ps-2 mb-4">
@@ -291,7 +292,7 @@ if (document.querySelector(".selfSelectBoxContainer")) {
                             </div>
                         </div>
                         `;
-              searchResultDivs[t].innerHTML = s
+              searchResultDivs[t].innerHTML += s
             } else {
               let l = e.sub_subjects,
                 r = `
@@ -307,11 +308,11 @@ if (document.querySelector(".selfSelectBoxContainer")) {
                             </div>
                         </div>
                         <div class="ps-1 mt-4">
-                            <div class="border-s-[1px] ps-7 border-[#ADB5BD]" id="sub-${t}"></div>
+                            <div class="border-s-[1px] ps-7 border-[#ADB5BD]" id="sub-${t}-${i}"></div>
                         </div>
                         `;
-              searchResultDivs[t].innerHTML = r, l.forEach(e => {
-                let n = document.getElementById(`sub-${t}`),
+              searchResultDivs[t].innerHTML += r, l.forEach(e => {
+                let n = document.getElementById(`sub-${t}-${i}`),
                   a = `
                                     <a href="javascript:void(0)"
                                         class="selfSelectBoxItems flex justify-between mb-4"
@@ -319,7 +320,8 @@ if (document.querySelector(".selfSelectBoxContainer")) {
                                         <span class="selfItemTitle">
                                             ${e.name}
                                         </span>
-                                        <span class="selfItemCode">
+                                        <span class="codeList" data-name="${e.name}" data-code="${e.code}" hidden></span>
+                                        <span class="selfItemCode" data-en-code="${e.code}">
                                             ${formatCode(e.code)}
                                         </span>
                                         <span class="selfItemId hidden">${e.id}</span>
@@ -329,6 +331,15 @@ if (document.querySelector(".selfSelectBoxContainer")) {
               })
             }
           })
+      setTimeout(() => {
+        t = 0;
+        document.querySelectorAll(".transaction").forEach(elem => {
+          elem.querySelectorAll('.selfSelectBoxItems').forEach(e => {
+            e.setAttribute('onclick', `fillInput(this, '${t}')`);
+          })
+          t += 1
+        })
+      }, 200);
     }).catch(e => {
       console.error("خطایی رخ داده: ", e)
     })
@@ -352,7 +363,6 @@ if (document.querySelector(".selfSelectBoxContainer")) {
 
         let matchedSpan = Array.from(spans).find(span => span.getAttribute('data-code') === code);
 
-        // نمایش نتیجه
         if (matchedSpan) {
           codeInput.value = formatCode(codeInput.value);
           showRes.value = matchedSpan.getAttribute("data-name");

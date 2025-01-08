@@ -1,19 +1,20 @@
 <x-card class="rounded-2xl w-full" class_body="p-4">
     <div class="flex gap-2">
-        <x-text-input name="title" title="{{ __('document name') }}" value="{{ old('title') ?? $document->title }}"
+        <x-text-input input_name="title" title="{{ __('document name') }}" value="{{ old('title') ?? $document->title }}"
             placeholder="{{ __('document name') }}" label_text_class="text-gray-500" label_class="w-full"
             input_class="max-w-96"></x-text-input>
-        <x-text-input value="{{ $document->id ?? '' }}" name="document_id" label_text_class="text-gray-500"
+        <x-text-input value="{{ $document->id ?? '' }}" input_name="document_id" label_text_class="text-gray-500"
             label_class="w-full hidden"></x-text-input>
         <div class="flex-1"></div>
-        <x-text-input disabled="true" value="{{ formatDocumentNumber($previousDocumentNumber) }}" name=""
+        <x-text-input disabled="true" value="{{ formatDocumentNumber($previousDocumentNumber) }}" input_name=""
             title="{{ __('previous document number') }}" placeholder="{{ __('previous document number') }}"
             label_text_class="text-gray-500 text-nowrap"></x-text-input>
         <x-text-input
             value="{{ old('number') ?? formatDocumentNumber($document->number ?? $previousDocumentNumber + 1) }}"
-            name="number" title="{{ __('current document number') }}" placeholder="{{ __('current document number') }}"
+            input_name="number" title="{{ __('current document number') }}"
+            placeholder="{{ __('current document number') }}"
             label_text_class="text-gray-500 text-nowrap"></x-text-input>
-        <x-text-input data-jdp title="{{ __('date') }}" name="date" placeholder="{{ __('date') }}"
+        <x-text-input data-jdp title="{{ __('date') }}" input_name="date" placeholder="{{ __('date') }}"
             value="{{ old('date') ?? $document->FormattedDate }}" label_text_class="text-gray-500 text-nowrap"
             input_class="datePicker"></x-text-input>
     </div>
@@ -63,8 +64,8 @@
                         id="originalTransactions" @click="activeTab = index">
 
                         <x-text-input value="{{ $transaction->id ?? '' }}"
-                            name="transactions[{{ $i }}][transaction_id]" label_text_class="text-gray-500"
-                            label_class="w-full hidden"></x-text-input>
+                            x-bind:input_name="'transactions[' + index + '][transaction_id]'"
+                            label_text_class="text-gray-500" label_class="w-full hidden"></x-text-input>
 
                         <div class="relative flex-1 text-center max-w-8 pt-2 pb-5 transaction-count-container">
                             <span class="transaction-count block" x-text="index + 1"></span>
@@ -84,33 +85,34 @@
 
                             <x-text-input
                                 value="{{ $transaction->subject ? $transaction->subject->formattedCode() : '' }}"
-                                id="value" name="transactions[{{ $i }}][code]"
+                                id="value" x-bind:input_name="'transactions[' + index + '][code]'"
                                 label_text_class="text-gray-500" label_class="w-full"
                                 input_class="border-white value codeInput "></x-text-input>
 
                         </div>
-                        <x-subject-select-box :subjects="$subjects" :name="'transactions[' . $i . '][subject_id]'"
-                            :value="$transaction->subject_id ?? ''"></x-subject-select-box>
+                        <input type="text" class="subject_id" hidden
+                            x-bind:input_name="'transactions[' + index + '][subject_id]'" value="">
+                        <x-subject-select-box :subjects="$subjects"
+                            input_value="{{ $transaction->subject_id ?? '' }}"></x-subject-select-box>
                         <div class="flex-1 w-[200px] pb-3">
                             <x-text-input value="{{ $transaction->desc }}"
                                 placeholder="{{ __('this document\'s row description') }}" id="desc"
-                                name="transactions[{{ $i }}][desc]" label_text_class="text-gray-500"
+                                x-bind:input_name="'transactions[' + index + '][desc]'" label_text_class="text-gray-500"
                                 label_class="w-full" input_class="border-white "></x-text-input>
 
                         </div>
 
                         <div class="flex-1 min-w-24 max-w-32 pb-3">
                             <x-text-input value="{{ $transaction->debit ? $transaction->debit : '0' }}" placeholder="0"
-                                id="debit" name="transactions[{{ $i }}][debit]"
+                                id="debit" x-bind:input_name="'transactions[' + index + '][debit]'"
                                 label_text_class="text-gray-500" label_class="w-full"
                                 input_class="border-white debitInput" x-model.number="debitSum[index]"></x-text-input>
                         </div>
                         <div class="flex-1 min-w-24 max-w-32 pb-3">
                             <x-text-input value="{{ $transaction->credit ? $transaction->credit : '0' }}"
-                                placeholder="0" id="credit" name="transactions[{{ $i }}][credit]"
+                                placeholder="0" id="credit" x-bind:input_name="'transactions[' + index + '][credit]'"
                                 label_text_class="text-gray-500" label_class="w-full"
-                                input_class="border-white creditInput"
-                                x-model.number="creditSum[index]"></x-text-input>
+                                input_class="border-white creditInput" x-model.number="creditSum[index]"></x-text-input>
 
                         </div>
                     </div>
@@ -140,14 +142,23 @@
 <div class="mt-4 flex gap-2 justify-end">
     <a href="{{ route('documents.index') }}" type="submit" class="btn btn-default rounded-md"> {{ __('cancel') }}
     </a>
-    <button type="submit" class="btn btn-default rounded-md"> {{ __('save and create new document') }} </button>
-    <button type="submit" class="btn text-white btn-primary rounded-md"> {{ __('save and close form') }} </button>
+    <button id="submitFormPlus" type="button" class="btn btn-default rounded-md">
+        {{ __('save and create new document') }}
+    </button>
+    <button id="submitForm" type="submit" class="btn text-white btn-primary rounded-md">
+        {{ __('save and close form') }} </button>
 </div>
 
 <script type="module">
     jalaliDatepicker.startWatch({});
 </script>
 <script>
+    // document.querySelector("#submitForm").addEventListener("click", () => {
+    //     let form = document.querySelector("#documentForm");
+    //     let formData = new FormData(form);
+    //     console.log(formData.get('subject_id'));
+    // })
+
     function openSelectBox(e) {
         document.querySelectorAll(".selfSelectBox").forEach(function(e) {
             e.style.display = "none"
@@ -159,7 +170,7 @@
             a = e.querySelector(".selfItemCode").innerText,
             s = e.querySelector(".selfItemId").innerText;
         document.querySelectorAll(".subject_name")[t].value = n, document.querySelectorAll(".subject_id")[t].value = s,
-            document.querySelectorAll(".value")[t].value = a
+            document.querySelectorAll(".codeInput")[t].value = a
     }
 
     function reOrderInputs() {

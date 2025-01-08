@@ -11,7 +11,7 @@
     </div>
     <div class="">
 
-        <form action="{{ route('documents.store') }}" method="POST">
+        <form action="{{ route('documents.store') }}" method="POST" id="documentForm">
             <x-show-message-bags />
             @csrf
             @include('documents.form')

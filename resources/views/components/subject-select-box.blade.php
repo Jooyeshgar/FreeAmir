@@ -1,10 +1,9 @@
 <div class="selfSelectBoxContainer relative flex-1 w-full pb-3" onclick="openSelectBox(this)">
-    <x-text-input value="" readonly id="subject_id" label_text_class="text-gray-500" label_class="w-full" input_class="border-white subject_name codeSelectBox "></x-text-input>
-    <input type="hidden" name="{{ $name }}" class="subject_id" value="{{ $value }}">
+    <x-text-input readonly input_name="{{ $attributes->get('input_name') }}" input_value="{{ $attributes->get('input_value') }}" id="subject_id" label_text_class="text-gray-500" label_class="w-full" input_class="border-white subject_name codeSelectBox "></x-text-input>
     <div class="selfSelectBox hidden absolute z-[3] top-[40px] w-full h-[300px] bg-white overflow-auto px-4 pb-4 rounded-[16px] shadow-[0px_43px_27px_0px_#00000012]">
         <div class="sticky top-0 left-0 right-0 w-full bg-white py-2">
             <div class="relative">
-                <x-text-input name="" value="" label_text_class="text-gray-500" label_class="w-full" input_class="pe-8 text-sm searchInput"
+                <x-text-input input_name="" value="" label_text_class="text-gray-500" label_class="w-full" input_class="pe-8 text-sm searchInput"
                     placeholder="{{ __('Search... (heading code or name)') }}"></x-text-input>
 
                 <span class="absolute block left-2 top-1/2 translate-y-[-50%]">
