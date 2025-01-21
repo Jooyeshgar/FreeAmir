@@ -15,9 +15,6 @@ class ConfigSeeder extends Seeder
     public function run()
     {
         $configs = [
-            ['type' => 1, 'category' => 0, 'key' => 'company-name', 'value' => 'Enter Company Name', 'desc' => 'Enter Company name here', 'company_id' => 1],
-            ['type' => 0, 'category' => 0, 'key' => 'logo', 'value' => '', 'desc' => 'Select Company logo', 'company_id' => 1],
-            ['type' => 2, 'category' => 1, 'key' => 'cust_subject', 'value' => '4', 'desc' => 'Enter here', 'company_id' => 1],
             ['type' => 2, 'category' => 1, 'key' => 'cash_book', 'value' => '14', 'desc' => 'Enter here', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'bank', 'value' => '1', 'desc' => 'Enter here', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'cash', 'value' => '3', 'desc' => 'Enter here', 'company_id' => 1],

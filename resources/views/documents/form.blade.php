@@ -70,7 +70,7 @@
         <div class="text-sm flex-1 max-w-8  text-center text-gray-500 pt-3 ">
             *
         </div>
-        <div class="text-sm flex-1 min-w-24 max-w-24 text-center text-gray-500 pt-3 ">
+        <div class="text-sm flex-1 min-w-24 max-w-32 text-center text-gray-500 pt-3 ">
             {{ __('chapter code') }}
         </div>
         <div class="text-sm flex-1 min-w-80 max-w-80 text-center text-gray-500 pt-3 ">
@@ -160,8 +160,8 @@
                             </svg>
                         </button>
 
-                    </div>
-                    <div class="flex-1 min-w-24 max-w-24 pb-3">
+                        </div>
+                        <div class="flex-1 min-w-24 max-w-32 pb-3">
 
                         <input type="text" class="mainformCode" x-bind:value="transaction.code"
                             x-bind:name="'transactions[' + index + '][code]'" value="" hidden>
@@ -225,3 +225,33 @@
     <button id="submitForm" type="submit" class="btn text-white btn-primary rounded-md">
         {{ __('save and close form') }} </button>
 </div>
+
+<script type="module">
+    jalaliDatepicker.startWatch({});
+</script>
+<script>
+    // document.querySelector("#submitForm").addEventListener("click", () => {
+    //     let form = document.querySelector("#documentForm");
+    //     let formData = new FormData(form);
+    //     console.log(formData.get('subject_id'));
+    // })
+
+    function fillInput(e, t) {
+        let n = e.querySelector(".selfItemTitle").innerText,
+            a = e.querySelector(".selfItemCode").innerText,
+            s = e.querySelector(".selfItemId").innerText;
+        document.querySelectorAll(".subject_name")[t].value = n, document.querySelectorAll(".subject_id")[t].value = s,
+            document.querySelectorAll(".codeInput")[t].value = a
+    }
+
+    function reOrderInputs() {
+        setTimeout(() => {
+            document.querySelectorAll(".transaction").forEach(elem => {
+                t = elem.querySelector(".transaction-count").innerText;
+                elem.querySelectorAll('.selfSelectBoxItems').forEach(e => {
+                    e.setAttribute('onclick', `fillInput(this, '${t - 1}')`);
+                })
+            })
+        }, 200);
+    }
+</script>
