@@ -9,8 +9,13 @@ class CustomerGroup extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'code',
+        'subject_id',
         'name',
         'description',
     ];
+
+    public function subject()
+    {
+        return $this->belongsTo(Subject::class);
+    }
 }

@@ -5,7 +5,7 @@
         </h2>
     </x-slot>
 
-    <div class="card bg-base-100 shadow-xl">
+    <div class="card bg-gray-100 shadow-xl">
         <form action="{{ route('customer-groups.update', $customerGroup) }}" method="POST">
             @csrf
             @method('PUT')
@@ -15,7 +15,7 @@
 
                 @include('customerGroups.form')
                 <div class="card-actions">
-                    <button class="btn btn-pr"> {{ __('Edit') }} </button>
+                    <button class="btn btn-success"> {{ __('Edit') }} </button>
                 </div>
             </div>
         </form>

@@ -14,7 +14,7 @@
 
                 @include('customerGroups.form')
                 <div class="card-actions">
-                    <button type="submit" class="btn btn-pr"> {{ __('Create') }} </button>
+                    <button type="submit" class="btn btn-success"> {{ __('Create') }} </button>
                 </div>
             </div>
         </form>
