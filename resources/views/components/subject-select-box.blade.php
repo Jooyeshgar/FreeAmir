@@ -153,8 +153,7 @@
             fillInput(name, code, id) {
                 let activeTab = this.activeTab ?? 0
                 document.querySelectorAll(".subject_name")[activeTab].value = name;
-                document.querySelectorAll(".subject_id")[activeTab].value = id;
-                console.log(document.querySelectorAll(".subject_id")[activeTab],id)
+
                 if (document.querySelectorAll(".subject_id").length) {
                     document.querySelectorAll(".subject_id")[activeTab].value = id;
                     document.querySelectorAll(".codeInput")[activeTab].value = this.formatCode(code);
