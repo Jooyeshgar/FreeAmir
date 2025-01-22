@@ -26,6 +26,23 @@ class Subject extends Model
     public static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope());
+
+        static::creating(function ($subject) {
+
+            $subject->company_id = session('active-company-id');
+
+            // Generate code if not provided
+            if (empty($subject->code)) {
+                if (!empty($subject->parent_id)) {
+                    $parentSubject = Subject::find($subject->parent_id);
+
+                    $lastCode = $parentSubject->children()->orderBy('code', 'desc')->first()->code ?? '000';
+                } else {
+                    $lastCode = '000';
+                }
+                $subject->code = str_pad((int) $lastCode + 1, strlen($lastCode), "0", STR_PAD_LEFT);
+            }
+        });
     }
 
     public function subSubjects()

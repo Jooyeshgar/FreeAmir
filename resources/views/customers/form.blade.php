@@ -39,24 +39,6 @@
                     <x-input title="{{ __('Economic code') }}" name="ecnmcs_code"
                         placeholder="{{ __('Economic code') }}" :value="old('ecnmcs_code', $customer->ecnmcs_code ?? '')" />
                 </div>
-                <div>
-                    <label class="form-control w-full max-w-xs">
-                        <div class="label">
-                            <span class="label-text">شناسه</span>
-                        </div>
-                    </label>
-                    <label class="input input-bordered flex items-center gap-2 prefix text-gray-300 rounded-md"
-                        dir="ltr">
-                        {{ $parentSubject->code }}-
-                        <input class="grow input  w-full max-w-xs prefix-input" type="text" name="code"
-                            value="{{ old('code', $customer->code ?? $code ) }}" />
-                        @if ($errors->first('code'))
-                            <div class="label">
-                                <span class="label-text-alt text-red-700">{{ $errors->first('code') }}</span>
-                            </div>
-                        @endif
-                    </label>
-                </div>
             </div>
         </div>
 

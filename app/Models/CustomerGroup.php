@@ -12,7 +12,20 @@ class CustomerGroup extends Model
         'subject_id',
         'name',
         'description',
+        'company_id',
     ];
+
+    
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            
+            $model->company_id = session('active-company-id');
+
+        });
+    }
 
     public function subject()
     {

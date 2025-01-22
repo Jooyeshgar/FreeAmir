@@ -10,7 +10,6 @@ class Customer extends Model
     use HasFactory;
 
     protected $fillable = [
-        'code',
         'name',
         'subject_id',
         'phone',
@@ -46,26 +45,36 @@ class Customer extends Model
         'disc_rate',
     ];
 
+    protected $attributes = [
+        'connector' => '',
+        'cell' => '',
+        'balance' => 0,
+        'credit' => 0,
+        'type_buyer' => 0,
+        'type_seller' => 0,
+        'type_mate' => 0,
+        'type_agent' => 0,
+        'commission' => '',
+        'marked' => 0,
+        'reason' => '',
+        'disc_rate' => '',
+        'address' => '',
+        'web_page' => '',
+        'responsible' => '',
+        'desc' => '',
+        'postal_code' => '',
+    ];
+
     protected static function booted()
     {
-        static::creating(function ($customer) {
-
-            // if (!$customer->subject_id) {
-            //     // Find or create a subject under the specified parent
-            //     $subject = Subject::firstOrCreate([
-            //         'parent_id' => $specificParentId, // Replace with the desired parent ID
-            //     ]);
-
-            //     $customer->subject_id = $subject->id;
-            // }
-        });
         static::created(function ($customer) {
-            $customer->subject()->create([
+            $parentGroup = $customer->group;
+            $subject = $customer->subject()->create([
                 'name' => $customer->name,
-                'company_id' => session('active-company-id'),
-                'code' => request('code'),
-                'parent_id' => config('amir.cust_subject'),
+                'parent_id' => $parentGroup->subject_id,
             ]);
+
+            $customer->update(['subject_id' => $subject->id]);
         });
     }
 
