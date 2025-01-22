@@ -8,7 +8,8 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="card-actions">
-                <a href="{{ route('subjects.create') }}" class="btn btn-primary">{{ __('Create Subject') }}</a>
+                <a href="{{ route('subjects.create', ['parent_id' => request('parent_id', null)]) }}"
+                    class="btn btn-primary">{{ __('Create Subject') }}</a>
             </div>
             <table class="table w-full mt-4">
                 <thead>
