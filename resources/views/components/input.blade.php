@@ -16,13 +16,12 @@
     <div class="label">
         <span class="label-text">{{ $title }} {{ $required ? '*' : '' }}</span>
         @if ($title2)
-            <span class="label-text-alt">{{ $title2 }}</span>
+            <span class="label-text-alt">{!! $title2 !!}</span>
         @endif
     </div>
 
-    <input title="{{ $title }}" type="{{ $type }}" name="{{ $name }}" id="{{ $name }}"
-        value="{{ $value ?? '' }}" placeholder="{{ $placeholder ?? '' }}" class="input input-bordered w-full max-w-full"
-        {{ $required ? 'required' : '' }} {{ $disabled ? 'disabled' : '' }} />
+    <input title="{{ $title }}" type="{{ $type }}" name="{{ $name }}" id="{{ $name }}" value="{{ $value ?? '' }}"
+        placeholder="{{ $placeholder ?? '' }}" class="input input-bordered w-full max-w-full" {{ $required ? 'required' : '' }} {{ $disabled ? 'disabled' : '' }} />
 
     @if ($errors->first($name))
         <span class="label-text-alt text-rose-700">{{ $errors->first($name) }}</span>
