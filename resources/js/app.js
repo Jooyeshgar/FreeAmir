@@ -196,24 +196,129 @@ if (document.querySelector(".selfSelectBoxContainer")) {
   const csrf = document.querySelector('meta[name="csrf_token"]').getAttribute("content");
   let searchInputs = document.querySelectorAll(".searchInput"),
     resultDivs = document.querySelectorAll(".resultDiv"),
-    searchResultDivs = document.querySelectorAll(".searchResultDiv"),
-    spans = document.querySelectorAll(".codeList"),
-    codeInput = document.querySelector(".codeInput");
+    searchResultDivs = document.querySelectorAll(".searchResultDiv");
 
-  codeInput.addEventListener('input', () => {
-    let code = codeInput.value;
-    let showRes = document.querySelector(".codeSelectBox");
+  function codeInputFiller() {
+    const codeInputs = document.querySelectorAll(".codeInput");
+    const codeLists = document.querySelectorAll(".codeList");
+    const codeSelectBoxes = document.querySelectorAll(".codeSelectBox");
+    const subjectIds = document.querySelectorAll(".subject_id");
+    const mainformCodes = document.querySelectorAll(".mainformCode");
 
-    let matchedSpan = Array.from(spans).find(span => span.getAttribute('data-code') === code);
+    function normalizeCode(code) {
+      const persianNumbers = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+      const arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+      const englishNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
-    // نمایش نتیجه
-    if (matchedSpan) {
-      codeInput.value = formatCode(codeInput.value);
-      showRes.value = matchedSpan.getAttribute("data-name");
-    } else {
-      showRes.value = "";
+      let normalizedCode = code.split('').map(char => {
+        const persianIndex = persianNumbers.indexOf(char);
+        const arabicIndex = arabicNumbers.indexOf(char);
+        return persianIndex !== -1 ? englishNumbers[persianIndex] :
+          arabicIndex !== -1 ? englishNumbers[arabicIndex] : char;
+      }).join('');
+
+      normalizedCode = normalizedCode.replace(/\D/g, '');
+
+      return normalizedCode;
     }
-  })
+
+    codeInputs.forEach((element, index) => {
+      element.addEventListener('input', (e) => {
+        let code = e.target.value;
+
+        const normalizedCode = normalizeCode(code);
+
+        const matchedSpan = Array.from(codeLists).find(span => {
+          const spanCode = normalizeCode(span.getAttribute('data-code'));
+          return spanCode === normalizedCode;
+        });
+
+        if (matchedSpan) {
+          codeSelectBoxes[index].value = matchedSpan.getAttribute("data-name");
+          subjectIds[index].value = matchedSpan.getAttribute("data-id");
+          mainformCodes[index].value = normalizedCode;
+
+          setTimeout(() => {
+            e.target.value = window.formatCode(normalizedCode);
+          }, 200);
+        } else {
+          codeSelectBoxes[index].value = "";
+          subjectIds[index].value = "";
+          mainformCodes[index].value = "";
+        }
+      });
+    });
+  }
+
+  codeInputFiller()
+
+  window.openSelectBox = function (e) {
+    document.querySelectorAll(".selfSelectBox").forEach(function (e) {
+      e.style.display = "none"
+    }), e.querySelector(".selfSelectBox").style.display = "block"
+  }
+
+  window.formatCode = function (e) {
+    let t = [];
+    for (let n = 0; n < e.length; n += 3) t.push(e.substring(n, n + 3));
+    return e = t.join("/"), ["fa", "fa_IR"].includes("fa") && (e = window.convertToFarsi(e)), e
+  }
+
+  window.convertToFarsi = function (e) {
+    let t = {
+      0: "۰",
+      1: "۱",
+      2: "۲",
+      3: "۳",
+      4: "۴",
+      5: "۵",
+      6: "۶",
+      7: "۷",
+      8: "۸",
+      9: "۹"
+    };
+    return e.replace(/[0-9]/g, e => t[e])
+  }
+
+  window.fillInput = function (e, t) {
+    if (e.value != "0" && e.value) {
+      let n = e.value.split(","),
+        i = t
+      n.forEach(id => {
+        let a = document.querySelector(`[data-id="${id}"]`),
+          s = a.getAttribute("data-code"),
+          m = a.getAttribute("data-name"),
+          d = a.getAttribute("data-id")
+        document.querySelectorAll(".subject_name")[i].value = m, document.querySelectorAll(".subject_id")[i].value = d,
+          document.querySelectorAll(".codeInput")[i].value = window.formatCode(s), document.querySelectorAll(".mainformCode")[i].value =
+          s
+        i += 1
+      });
+    }
+    else if (!e.value) {
+      let n = e.querySelector(".selfItemTitle").innerText,
+        a = e.querySelector(".codeList").getAttribute("data-code"),
+        s = e.querySelector(".codeList").getAttribute("data-id");
+      document.querySelectorAll(".subject_name")[t].value = n, document.querySelectorAll(".subject_id")[t].value = s,
+        document.querySelectorAll(".codeInput")[t].value = window.formatCode(a), document.querySelectorAll(".mainformCode")[t].value =
+        a
+    }
+  }
+
+  window.fillInput(document.querySelector(".subjectIds"), 0)
+
+  window.reOrderInputs = function () {
+    setTimeout(() => {
+      document.querySelectorAll(".transaction").forEach(elem => {
+        let t = elem.querySelector(".transaction-count").innerText;
+        elem.querySelectorAll('.selfSelectBoxItems').forEach(e => {
+          e.setAttribute('onclick', `window.fillInput(this, '${t - 1}')`);
+        })
+      })
+    }, 200);
+  }
+
+  window.reOrderInputs();
 
   function countInputs() {
     searchInputs = document.querySelectorAll(".searchInput"), resultDivs = document.querySelectorAll(".resultDiv"),
@@ -234,28 +339,6 @@ if (document.querySelector(".selfSelectBoxContainer")) {
         e.apply(this, a)
       }, t)
     }
-  }
-
-  function formatCode(e) {
-    let t = [];
-    for (let n = 0; n < e.length; n += 3) t.push(e.substring(n, n + 3));
-    return e = t.join("/"), ["fa", "fa_IR"].includes("fa") && (e = convertToFarsi(e)), e
-  }
-
-  function convertToFarsi(e) {
-    let t = {
-      0: "۰",
-      1: "۱",
-      2: "۲",
-      3: "۳",
-      4: "۴",
-      5: "۵",
-      6: "۶",
-      7: "۷",
-      8: "۸",
-      9: "۹"
-    };
-    return e.replace(/[0-9]/g, e => t[e])
   }
 
   function searchQuery(e, t) {
@@ -287,7 +370,7 @@ if (document.querySelector(".selfSelectBoxContainer")) {
                                 </span>
 
                                 <span>
-                                    ${formatCode(a)}
+                                    ${window.formatCode(a)}
                                 </span>
                             </div>
                         </div>
@@ -303,7 +386,7 @@ if (document.querySelector(".selfSelectBoxContainer")) {
                                 </span>
 
                                 <span>
-                                    ${formatCode(a)}
+                                    ${window.formatCode(a)}
                                 </span>
                             </div>
                         </div>
@@ -316,15 +399,14 @@ if (document.querySelector(".selfSelectBoxContainer")) {
                   a = `
                                     <a href="javascript:void(0)"
                                         class="selfSelectBoxItems flex justify-between mb-4"
-                                        onclick="fillInput(this, '${t}')">
+                                        onclick="window.fillInput(this, '${t}')">
                                         <span class="selfItemTitle">
                                             ${e.name}
                                         </span>
-                                        <span class="codeList" data-name="${e.name}" data-code="${e.code}" hidden></span>
-                                        <span class="selfItemCode" data-en-code="${e.code}">
-                                            ${formatCode(e.code)}
+                                        <span class="codeList" data-name="${e.name}" data-code="${e.code}" data-id="${e.id}" hidden></span>
+                                        <span class="selfItemCode">
+                                            ${window.formatCode(e.code)}
                                         </span>
-                                        <span class="selfItemId hidden">${e.id}</span>
                                     </a>
                                     `;
                 n.innerHTML += a
@@ -335,7 +417,7 @@ if (document.querySelector(".selfSelectBoxContainer")) {
         t = 0;
         document.querySelectorAll(".transaction").forEach(elem => {
           elem.querySelectorAll('.selfSelectBoxItems').forEach(e => {
-            e.setAttribute('onclick', `fillInput(this, '${t}')`);
+            e.setAttribute('onclick', `window.fillInput(this, '${t}')`);
           })
           t += 1
         })
@@ -352,24 +434,10 @@ if (document.querySelector(".selfSelectBoxContainer")) {
         n = t[t.length - 1],
         a = n.querySelector(".transaction-count").innerText;
       n.querySelectorAll(".selfSelectBoxItems").forEach(e => {
-        e.setAttribute("onclick", `fillInput(this, '${a - 1}')`)
+        e.setAttribute("onclick", `window.fillInput(this, '${a - 1}')`)
       })
 
-      let codeInput = n.querySelector(".codeInput")
-
-      codeInput.addEventListener('input', () => {
-        let code = codeInput.value;
-        let showRes = n.querySelector(".codeSelectBox");
-
-        let matchedSpan = Array.from(spans).find(span => span.getAttribute('data-code') === code);
-
-        if (matchedSpan) {
-          codeInput.value = formatCode(codeInput.value);
-          showRes.value = matchedSpan.getAttribute("data-name");
-        } else {
-          showRes.value = "";
-        }
-      })
+      codeInputFiller()
     }, 200);
     countInputs()
   }), document.addEventListener("click", function (e) {

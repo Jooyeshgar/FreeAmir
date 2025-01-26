@@ -1,5 +1,5 @@
-<div class="selfSelectBoxContainer relative flex-1 w-full pb-3" onclick="openSelectBox(this)">
-    <x-text-input readonly input_name="{{ $attributes->get('input_name') }}" input_value="{{ $attributes->get('input_value') }}" id="subject_id" label_text_class="text-gray-500" label_class="w-full" input_class="border-white subject_name codeSelectBox "></x-text-input>
+<div class="selfSelectBoxContainer relative flex-1 w-full pb-3" onclick="window.openSelectBox(this)">
+    <x-text-input readonly x-bind:value="transaction.subject_name" x-bind:name="'transactions[' + index + '][subject_name]'" input_value="{{ $attributes->get('input_value') }}" id="subject_id" label_text_class="text-gray-500" label_class="w-full" input_class="border-white subject_name codeSelectBox "></x-text-input>
     <div class="selfSelectBox hidden absolute z-[3] top-[40px] w-full h-[300px] bg-white overflow-auto px-4 pb-4 rounded-[16px] shadow-[0px_43px_27px_0px_#00000012]">
         <div class="sticky top-0 left-0 right-0 w-full bg-white py-2">
             <div class="relative">
@@ -45,15 +45,14 @@
                             <div class="ps-1 mt-4">
                                 <div class="border-s-[1px] ps-7 border-[#ADB5BD]">
                                     @foreach ($subject->children as $children)
-                                        <a href="javascript:void(0)" class="selfSelectBoxItems flex justify-between mb-4" onclick="fillInput(this, '0')">
+                                        <a href="javascript:void(0)" class="selfSelectBoxItems flex justify-between mb-4" onclick="window.fillInput(this, 0)">
                                             <span class="selfItemTitle">
                                                 {{ $children->name }}
                                             </span>
-                                            <span class="codeList" data-name="{{ $children->name }}" data-code="{{ $children->code }}" hidden></span>
+                                            <span class="codeList" data-name="{{ $children->name }}" data-code="{{ $children->code }}" data-id="{{ $children->id }}" hidden></span>
                                             <span class="selfItemCode">
                                                 {{ $children->formattedCode() }}
                                             </span>
-                                            <span class="selfItemId hidden">{{ $children->id }}</span>
                                         </a>
                                     @endforeach
                                 </div>

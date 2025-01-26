@@ -32,7 +32,11 @@ class DocumentController extends Controller
             foreach (old('transactions') as $item) {
                 $transaction = new Transaction();
                 $transaction->subject_id = $item['subject_id'];
+                $transaction->subject_name = $item['subject_name'];
+                $transaction->code = $item['code'];
                 $transaction->desc = $item['desc'];
+                $transaction->credit = $item['credit'];
+                $transaction->debit = $item['debit'];
                 $transaction->value = convertToFloat($item['credit'])  - convertToFloat($item['debit']);
                 $transactions[] = $transaction;
             }
