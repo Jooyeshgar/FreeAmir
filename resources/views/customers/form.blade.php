@@ -18,7 +18,7 @@
                     <x-input title="{{ __('Name') }}" name="name" placeholder="{{ __('Name') }}" :value="old('name', $customer->name ?? '')" />
                 </div>
                 <div>
-                    <x-input title="{{ __('Accountting code') }}" title2="<a href='/'>{{ __('Edit') }}</a>" name="code" disabled
+                    <x-input title="{{ __('Accountting code') }}" title2="<a href='/'>{{ __('Edit') }}</a>" name="" disabled
                         placeholder="{{ __('Accountting code') }}" :value="isset($customer) ? $customer->subject->formattedCode() : ''" />
                 </div>
 
