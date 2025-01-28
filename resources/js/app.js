@@ -235,6 +235,17 @@ if (
         }
     });
 
+    window.reOrderInputs = function() {
+        setTimeout(() => {
+            document.querySelectorAll(".transaction").forEach(elem => {
+                t = elem.querySelector(".transaction-count").innerText;
+                elem.querySelectorAll('.selfSelectBoxItems').forEach(e => {
+                    e.setAttribute('onclick', `fillInput(this, '${t - 1}')`);
+                })
+            })
+        }, 200);
+    }
+
     function countInputs() {
         (searchInputs = document.querySelectorAll(".searchInput")),
             (resultDivs = document.querySelectorAll(".resultDiv")),
