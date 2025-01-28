@@ -113,10 +113,10 @@
                                         subDiv.innerHTML += `
                                             <a href="javascript:void(0)" 
                                                 class="selfSelectBoxItems flex justify-between mb-4" 
-                                                x-on:click="fillInput('${sub.name}', '${sub.code}', '${sub.id}')">
+                                                onclick="window.fillInput(this, 0)">
                                                 <span class="selfItemTitle">${sub.name}</span>
-                                                <span class="codeList" data-name="${sub.name}" data-code="${sub.code}" hidden></span>
-                                                <span class="selfItemCode" data-en-code="${sub.code}">
+                                                <span class="codeList" data-name="${sub.name}" data-code="${sub.code}" data-id="${sub.id}" hidden></span>
+                                                <span class="selfItemCode">
                                                     ${this.formatCode(sub.code)}
                                                 </span>
                                                 <span class="selfItemId hidden">${sub.id}</span>
@@ -124,41 +124,21 @@
                                     });
                                 }
                             });
-                        }
+                        };
+                        setTimeout(() => {
+                        t = 0;
+                        document.querySelectorAll(".transaction").forEach(elem => {
+                            elem.querySelectorAll('.selfSelectBoxItems').forEach(e => {
+                                e.setAttribute('onclick', `window.fillInput(this, '${t}')`);
+                            })
+                            t += 1
+                        })
+                    }, 200);
                     })
                     .catch((error) => {
                         console.error("خطایی رخ داده: ", error);
                     });
-            },
-            convertToFarsi(e) {
-                let t = {
-                    0: "۰",
-                    1: "۱",
-                    2: "۲",
-                    3: "۳",
-                    4: "۴",
-                    5: "۵",
-                    6: "۶",
-                    7: "۷",
-                    8: "۸",
-                    9: "۹"
-                };
-                return e.replace(/[0-9]/g, e => t[e])
-            },
-            formatCode(e) {
-                let t = [];
-                for (let n = 0; n < e.length; n += 3) t.push(e.substring(n, n + 3));
-                return e = t.join("/"), ["fa", "fa_IR"].includes("fa") && (e = this.convertToFarsi(e)), e
-            },
-            fillInput(name, code, id) {
-                let activeTab = this.activeTab ?? 0
-                document.querySelectorAll(".subject_name")[activeTab].value = name;
-
-                if (document.querySelectorAll(".subject_id").length) {
-                    document.querySelectorAll(".subject_id")[activeTab].value = id;
-                    document.querySelectorAll(".codeInput")[activeTab].value = this.formatCode(code);
-                }
-            },
+            }
         };
     }
 </script>

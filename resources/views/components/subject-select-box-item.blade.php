@@ -2,11 +2,11 @@
     <div class="w-full ps-2 mb-4">
         @if ($allSelectable)
             <a href="javascript:void(0)" class="selfSelectBoxItems flex justify-between mb-4"
-                x-on:click="fillInput('{{ $subject->name }}', '{{ $subject->code }}', '{{ $subject->id }}', '0')">
+                onclick="window.fillInput(this, 0)">
                 <span class="selfItemTitle">
                     {{ $subject->name }}
                 </span>
-                <span class="codeList" data-name="{{ $subject->name }}" data-code="{{ $subject->code }}" hidden></span>
+                <span class="codeList" data-name="{{ $subject->name }}" data-code="{{ $subject->code }}" data-id="{{ $subject->id }}" hidden></span>
                 <span class="selfItemCode">
                     {{ $subject->formattedCode() }}
                 </span>
@@ -38,11 +38,11 @@
     <div class="ps-1 mt-4">
         <div class="border-s-[1px] ps-7 border-[#ADB5BD]">
             <a href="javascript:void(0)" class="selfSelectBoxItems flex justify-between mb-4"
-                x-on:click="fillInput('{{ $subject->name }}', '{{ $subject->code }}', '{{ $subject->id }}', '0')">
+                onclick="window.fillInput(this, 0)">
                 <span class="selfItemTitle">
                     {{ $subject->name }}
                 </span>
-                <span class="codeList" data-name="{{ $subject->name }}" data-code="{{ $subject->code }}"
+                <span class="codeList" data-name="{{ $subject->name }}" data-code="{{ $subject->code }}" data-id="{{ $subject->id }}"
                     hidden></span>
                 <span class="selfItemCode">
                     {{ $subject->formattedCode() }}

@@ -38,11 +38,8 @@
 @endphp
 
 <x-card class="rounded-2xl w-full" class_body="p-4">
-    {{-- <p dir="ltr">
-        {{ $subjects }}
-    </p> --}}
     <x-text-input type="text"
-        input_value="{{ $subjectIds ? implode(',', $subjectIds) : 0 }}" input_class="subjectIds" hidden></x-text-input>
+    input_value="{{ $subjectIds ? implode(',', $subjectIds) : 0 }}" input_class="subjectIds" hidden></x-text-input>
     <div class="flex gap-2">
         <x-text-input input_name="title" title="{{ __('document name') }}"
             input_value="{{ old('title') ?? $document->title }}" placeholder="{{ __('document name') }}"
