@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models;
+use App\Models\Subject;
 use Illuminate\Http\Request;
 
 class CustomerGroupController extends Controller
@@ -10,7 +11,7 @@ class CustomerGroupController extends Controller
     public function __construct()
     {
     }
-    
+
     public function index()
     {
         $customerGroups = Models\CustomerGroup::paginate(12);
@@ -20,44 +21,46 @@ class CustomerGroupController extends Controller
 
     public function create()
     {
-        return view('customerGroups.create');
+        $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->get();
+        return view('customerGroups.create', compact('subjects'));
     }
 
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            'code' => 'required|unique:customer_groups,code',
+            'subject_id' => 'required|exists:subjects,id',
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
             'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
         ]);
 
         Models\CustomerGroup::create($validatedData);
 
-        return redirect()->route('customer-groups.index')->with('success', 'Customer group created successfully.');
+        return redirect()->route('customer-groups.index')->with('success', __('Customer group created successfully.'));
     }
 
     public function edit(Models\CustomerGroup $customerGroup)
     {
-        return view('customerGroups.edit', compact('customerGroup'));
+        $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->get();
+        return view('customerGroups.edit', compact('customerGroup', 'subjects'));
     }
 
     public function update(Request $request, Models\CustomerGroup $customerGroup)
     {
         $validatedData = $request->validate([
-            'code' => 'required|exists:customer_groups,code',
+            'subject_id' => 'required|exists:subjects,id',
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
             'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
         ]);
 
         $customerGroup->update($validatedData);
 
-        return redirect()->route('customer-groups.index')->with('success', 'Customer group updated successfully.');
+        return redirect()->route('customer-groups.index')->with('success', __('Customer group updated successfully.'));
     }
 
     public function destroy(Models\CustomerGroup $customerGroup)
     {
         $customerGroup->delete();
 
-        return redirect()->route('customer-groups.index')->with('success', 'Customer group deleted successfully.');
+        return redirect()->route('customer-groups.index')->with('success', __('Customer group deleted successfully.'));
     }
 }

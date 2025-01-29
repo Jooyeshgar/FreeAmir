@@ -24,23 +24,26 @@ class SubjectController extends Controller
 
     public function create()
     {
-        $parentSubjects = Subject::where('parent_id', null)->get();
+        if (request('parent_id')) {
+            $parentSubject = Subject::find(request('parent_id'))->first();
+        } else {
+            $parentSubject = null;
+        }
 
-        return view('subjects.create', compact('parentSubjects'));
+        return view('subjects.create', compact('parentSubject'));
     }
 
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            'code' => 'required|max:20|unique:subjects',
+            // 'code' => 'required|max:20|unique:subjects',
             'name' => 'required|max:60',
             'parent_id' => 'nullable|exists:subjects,id',
             'type' => 'required|in:debtor,creditor,both',
         ]);
-        $validatedData['company_id'] = session('active-company-id');
         Subject::create($validatedData);
 
-        return redirect()->route('subjects.index')->with('success', 'Subject created successfully.');
+        return redirect()->route('subjects.index')->with('success', __('Subject created successfully.'));
     }
 
     public function edit(Subject $subject)
@@ -61,7 +64,7 @@ class SubjectController extends Controller
 
         $subject->update($validatedData);
 
-        return redirect()->route('subjects.index')->with('success', 'Subject updated successfully.');
+        return redirect()->route('subjects.index')->with('success', __('Subject updated successfully.'));
     }
 
 
@@ -69,7 +72,7 @@ class SubjectController extends Controller
     {
         $subject->delete();
 
-        return redirect()->route('subjects.index')->with('success', 'Subject deleted successfully.');
+        return redirect()->route('subjects.index')->with('success', __('Subject deleted successfully.'));
     }
 
     public function search(Request $request)

@@ -10,7 +10,7 @@ class CustomerGroupSeeder extends Seeder
     public function run()
     {
         $customerGroups = [
-            ['code' => 'general', 'name' => 'عمومی', 'description' => 'گروه مشتریان عمومی', 'company_id' => 1],
+            ['subject_id' => 4, 'name' => 'عمومی', 'description' => 'گروه مشتریان عمومی', 'company_id' => 1],
         ];
 
         CustomerGroup::insert($customerGroups);

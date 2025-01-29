@@ -9,8 +9,26 @@ class CustomerGroup extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'code',
+        'subject_id',
         'name',
         'description',
+        'company_id',
     ];
+
+    
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            
+            $model->company_id = session('active-company-id');
+
+        });
+    }
+
+    public function subject()
+    {
+        return $this->belongsTo(Subject::class);
+    }
 }

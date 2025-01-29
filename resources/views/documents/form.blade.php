@@ -38,11 +38,8 @@
 @endphp
 
 <x-card class="rounded-2xl w-full" class_body="p-4">
-    {{-- <p dir="ltr">
-        {{ $subjects }}
-    </p> --}}
-    <x-text-input type="text"
-        input_value="{{ $subjectIds ? implode(',', $subjectIds) : 0 }}" input_class="subjectIds" hidden></x-text-input>
+    <x-text-input type="text" input_value="{{ $subjectIds ? implode(',', $subjectIds) : 0 }}" input_class="subjectIds"
+        hidden></x-text-input>
     <div class="flex gap-2">
         <x-text-input input_name="title" title="{{ __('document name') }}"
             input_value="{{ old('title') ?? $document->title }}" placeholder="{{ __('document name') }}"
@@ -70,7 +67,7 @@
         <div class="text-sm flex-1 max-w-8  text-center text-gray-500 pt-3 ">
             *
         </div>
-        <div class="text-sm flex-1 min-w-24 max-w-24 text-center text-gray-500 pt-3 ">
+        <div class="text-sm flex-1 min-w-24 max-w-32 text-center text-gray-500 pt-3 ">
             {{ __('chapter code') }}
         </div>
         <div class="text-sm flex-1 min-w-80 max-w-80 text-center text-gray-500 pt-3 ">
@@ -137,6 +134,11 @@
             }
     
             return e;
+        },
+        toEnglishNumber: function(num) {
+            const persianNumbers = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+            const englishNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+            return num.split('').map(char => persianNumbers.indexOf(char) !== -1 ? englishNumbers[persianNumbers.indexOf(char)] : char).join('');
         }
     }">
         <div id="transactions" x-data="{ activeTab: {{ $total }} }">
@@ -161,7 +163,7 @@
                         </button>
 
                     </div>
-                    <div class="flex-1 min-w-24 max-w-24 pb-3">
+                    <div class="flex-1 min-w-24 max-w-32 pb-3">
 
                         <input type="text" class="mainformCode" x-bind:value="transaction.code"
                             x-bind:name="'transactions[' + index + '][code]'" value="" hidden>
@@ -185,12 +187,14 @@
                         <x-text-input placeholder="0" id="debit" x-bind:value="transaction.debit"
                             x-bind:name="'transactions[' + index + '][debit]'" label_text_class="text-gray-500"
                             label_class="w-full" input_class="border-white debitInput"
+                            x-on:input="transaction.debit = toEnglishNumber($event.target.value)"
                             x-model.number="debitSum[index]"></x-text-input>
                     </div>
                     <div class="flex-1 min-w-24 max-w-32 pb-3">
                         <x-text-input x-bind:value="transaction.credit" placeholder="0" id="credit"
                             x-bind:name="'transactions[' + index + '][credit]'" label_text_class="text-gray-500"
                             label_class="w-full" input_class="border-white creditInput"
+                            x-on:input="transaction.credit = toEnglishNumber($event.target.value)"
                             x-model.number="creditSum[index]"></x-text-input>
                     </div>
                 </div>

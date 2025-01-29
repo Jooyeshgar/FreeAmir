@@ -9,450 +9,340 @@ Alpine.start();
 Chart.register(...registerables);
 
 if (document.getElementById('lineChart')) {
-  document.addEventListener('DOMContentLoaded', () => {
-    Chart.defaults.font.family = 'vazir'
-    const ctx = document.getElementById('lineChart').getContext('2d');
+    document.addEventListener('DOMContentLoaded', () => {
+        Chart.defaults.font.family = 'vazir'
+        const ctx = document.getElementById('lineChart').getContext('2d');
 
-    // ایجاد یک گرادینت برای پس‌زمینه
-    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-    gradient.addColorStop(0, 'rgba(0, 255, 200, 0.3)'); // رنگ شروع گرادینت
-    gradient.addColorStop(1, 'rgba(0, 255, 200, 0)');   // رنگ پایان گرادینت
+        // ایجاد یک گرادینت برای پس‌زمینه
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(0, 255, 200, 0.3)'); // رنگ شروع گرادینت
+        gradient.addColorStop(1, 'rgba(0, 255, 200, 0)');   // رنگ پایان گرادینت
 
-    const myChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: ['ماه 1', 'ماه 2', 'ماه 3', 'ماه 4', 'ماه 5'],  // ماه‌ها
-        datasets: [{
-          label: 'رئال',
-          data: [15250000, 11890000, 33754000, 21507000, 31708000],  // مقادیر داده‌ها
-          fill: true,  // پر کردن زیر خط نمودار
-          backgroundColor: gradient,  // استفاده از گرادینت برای پس‌زمینه
-          borderColor: '#00cca3',  // رنگ خط
-          borderWidth: 3,  // ضخامت خط
-          pointBackgroundColor: '#ffffff',  // رنگ نقاط
-          pointBorderColor: '#00cca3',  // رنگ حاشیه نقاط
-          pointBorderWidth: 3,  // ضخامت حاشیه نقاط
-          pointRadius: 5,  // اندازه نقاط
-          pointHoverRadius: 7,  // اندازه نقاط هنگام هاور
-          lineTension: 0.4,  // مقدار برای نرم کردن گوشه‌های نمودار
-        }]
-      },
-      options: {
-        scales: {
-          x: {
-            display: false,  // حذف محور x و لیبل‌های آن
-          },
-          y: {
-            display: false,  // حذف محور y و لیبل‌های آن
-            beginAtZero: true,  // همچنان از صفر شروع می‌شود
-          }
-        },
-        plugins: {
-          legend: {
-            display: false  // مخفی کردن لیبل نمودار
-          },
-          tooltip: {
-            callbacks: {
-              label: function (context) {
-                let value = context.raw;
-                return value.toLocaleString();  // افزودن کاما به مقادیر Tooltip
-              }
-            }
-          }
-        }
-      }
-    });
-  });
-
-  document.addEventListener('DOMContentLoaded', () => {
-    const ctx = document.getElementById('gaugeChart').getContext('2d');
-    const myChart = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: ['درآمد از فروش', 'درآمد از تخفیف خرید', 'خالی'],  // برچسب‌ها
-        datasets: [{
-          data: [30, 50, 20],  // مقادیر داده‌ها
-          backgroundColor: ['#FF6B6B', '#FFA726', '#FFFFFF'],  // رنگ‌ها
-          borderWidth: 0,  // حذف حاشیه‌ها
-        }]
-      },
-      options: {
-        responsive: true,  // واکنش‌گرا بودن نمودار
-        maintainAspectRatio: false,  // غیرفعال کردن حفظ نسبت ابعاد
-        aspectRatio: 2,  // نسبت ابعاد عرض به ارتفاع برای بوم
-        circumference: 180,  // تعیین زاویه نمودار (180 درجه)
-        rotation: -90,  // چرخش نمودار برای نمایش از پایین به بالا
-        cutout: '70%',  // تعیین اندازه حفره مرکزی
-        layout: {
-          padding: {
-            top: 0,  // حذف فضای خالی بالا
-            bottom: 0  // حذف فضای خالی پایین
-          }
-        },
-        plugins: {
-          legend: {
-            display: true,  // نمایش یا عدم نمایش لیبل‌های کنار نمودار
-            position: 'right',  // موقعیت لیبل‌ها
-            rtl: true,  // راست‌چین کردن لیبل‌ها
-            labels: {
-              usePointStyle: true,  // نمایش نقطه‌ها به جای مربع‌ها
-              pointStyle: 'circle',  // تعیین سبک نقاط به عنوان دایره
-              boxWidth: 8,  // تنظیم اندازه نقاط (کوچک‌تر کردن آنها)
-              boxHeight: 8,  // تنظیم ارتفاع نقاط
-              textAlign: 'left',  // تنظیم متن به راست
-              filter: function (legendItem, data) {
-                // فقط لیبل‌هایی که نام آنها "خالی" نیست را نمایش بده
-                return legendItem.text !== 'خالی';
-              }
-            }
-          },
-          datalabels: {
-            color: '#000',  // رنگ متن داخل نمودار
-            formatter: function (value, context) {
-              // نمایش مقادیر فقط برای بخش‌های غیر از "خالی"
-              return context.chart.data.labels[context.dataIndex] !== 'خالی' ? value : '';
+        const myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['ماه 1', 'ماه 2', 'ماه 3', 'ماه 4', 'ماه 5'],  // ماه‌ها
+                datasets: [{
+                    label: 'رئال',
+                    data: [15250000, 11890000, 33754000, 21507000, 31708000],  // مقادیر داده‌ها
+                    fill: true,  // پر کردن زیر خط نمودار
+                    backgroundColor: gradient,  // استفاده از گرادینت برای پس‌زمینه
+                    borderColor: '#00cca3',  // رنگ خط
+                    borderWidth: 3,  // ضخامت خط
+                    pointBackgroundColor: '#ffffff',  // رنگ نقاط
+                    pointBorderColor: '#00cca3',  // رنگ حاشیه نقاط
+                    pointBorderWidth: 3,  // ضخامت حاشیه نقاط
+                    pointRadius: 5,  // اندازه نقاط
+                    pointHoverRadius: 7,  // اندازه نقاط هنگام هاور
+                    lineTension: 0.4,  // مقدار برای نرم کردن گوشه‌های نمودار
+                }]
             },
-            anchor: 'end',  // موقعیت متن نسبت به نقطه
-            align: 'end',  // تنظیم متن به بالا
-            offset: 10,  // فاصله متن از نقطه
-            textAlign: 'right',  // راست‌چین کردن متن داخل نمودار
-          }
-        }
-      }
+            options: {
+                scales: {
+                    x: {
+                        display: false,  // حذف محور x و لیبل‌های آن
+                    },
+                    y: {
+                        display: false,  // حذف محور y و لیبل‌های آن
+                        beginAtZero: true,  // همچنان از صفر شروع می‌شود
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false  // مخفی کردن لیبل نمودار
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                let value = context.raw;
+                                return value.toLocaleString();  // افزودن کاما به مقادیر Tooltip
+                            }
+                        }
+                    }
+                }
+            }
+        });
     });
-  });
 
-  document.addEventListener('DOMContentLoaded', () => {
-    const ctx = document.getElementById('midLineChart').getContext('2d');
-
-    const data = {
-      labels: ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد'],
-      datasets: [{
-        label: 'نمودار درصدی',
-        data: [-7.6, 2.5, -4.2, 4.7, -1.6],
-        borderColor: '#888',
-        borderWidth: 5,
-        fill: false,
-        tension: 0.4,  // نرم کردن خطوط نمودار
-        pointBackgroundColor: '#fff',
-        pointBorderColor: function (context) {
-          const value = context.raw;
-          return value >= 0 ? 'green' : 'red';
-        },
-        pointBorderWidth: 3,
-        pointRadius: 6
-      }]
-    };
-
-    const options = {
-      scales: {
-        x: {
-          grid: {
-            display: true,
-            color: '#e0e0e0',  // رنگ خطوط شبکه محور x
-          },
-        },
-        y: {
-          grid: {
-            display: true,
-            color: '#e0e0e0',  // رنگ خطوط شبکه محور y
-          },
-          beginAtZero: false,
-        }
-      },
-      plugins: {
-        legend: {
-          display: false,  // مخفی کردن لیبل نمودار
-        },
-        tooltip: {
-          enabled: false,  // غیرفعال کردن tooltip
-        },
-        datalabels: {
-          align: 'top',
-          anchor: 'end',
-          color: function (context) {
-            const value = context.dataset.data[context.dataIndex];
-            return value >= 0 ? 'green' : 'red';
-          },
-          font: {
-            weight: 'bold',
-            size: 14,
-          },
-          formatter: (value) => value + '%',  // افزودن علامت درصد به مقادیر
-        }
-      }
-    };
-
-    const myChart = new Chart(ctx, {
-      type: 'line',
-      data: data,
-      options: options,
+    document.addEventListener('DOMContentLoaded', () => {
+        const ctx = document.getElementById('gaugeChart').getContext('2d');
+        const myChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['درآمد از فروش', 'درآمد از تخفیف خرید', 'خالی'],  // برچسب‌ها
+                datasets: [{
+                    data: [30, 50, 20],  // مقادیر داده‌ها
+                    backgroundColor: ['#FF6B6B', '#FFA726', '#FFFFFF'],  // رنگ‌ها
+                    borderWidth: 0,  // حذف حاشیه‌ها
+                }]
+            },
+            options: {
+                responsive: true,  // واکنش‌گرا بودن نمودار
+                maintainAspectRatio: false,  // غیرفعال کردن حفظ نسبت ابعاد
+                aspectRatio: 2,  // نسبت ابعاد عرض به ارتفاع برای بوم
+                circumference: 180,  // تعیین زاویه نمودار (180 درجه)
+                rotation: -90,  // چرخش نمودار برای نمایش از پایین به بالا
+                cutout: '70%',  // تعیین اندازه حفره مرکزی
+                layout: {
+                    padding: {
+                        top: 0,  // حذف فضای خالی بالا
+                        bottom: 0  // حذف فضای خالی پایین
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,  // نمایش یا عدم نمایش لیبل‌های کنار نمودار
+                        position: 'right',  // موقعیت لیبل‌ها
+                        rtl: true,  // راست‌چین کردن لیبل‌ها
+                        labels: {
+                            usePointStyle: true,  // نمایش نقطه‌ها به جای مربع‌ها
+                            pointStyle: 'circle',  // تعیین سبک نقاط به عنوان دایره
+                            boxWidth: 8,  // تنظیم اندازه نقاط (کوچک‌تر کردن آنها)
+                            boxHeight: 8,  // تنظیم ارتفاع نقاط
+                            textAlign: 'left',  // تنظیم متن به راست
+                            filter: function (legendItem, data) {
+                                // فقط لیبل‌هایی که نام آنها "خالی" نیست را نمایش بده
+                                return legendItem.text !== 'خالی';
+                            }
+                        }
+                    },
+                    datalabels: {
+                        color: '#000',  // رنگ متن داخل نمودار
+                        formatter: function (value, context) {
+                            // نمایش مقادیر فقط برای بخش‌های غیر از "خالی"
+                            return context.chart.data.labels[context.dataIndex] !== 'خالی' ? value : '';
+                        },
+                        anchor: 'end',  // موقعیت متن نسبت به نقطه
+                        align: 'end',  // تنظیم متن به بالا
+                        offset: 10,  // فاصله متن از نقطه
+                        textAlign: 'right',  // راست‌چین کردن متن داخل نمودار
+                    }
+                }
+            }
+        });
     });
-  });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const ctx = document.getElementById('midLineChart').getContext('2d');
+
+        const data = {
+            labels: ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد'],
+            datasets: [{
+                label: 'نمودار درصدی',
+                data: [-7.6, 2.5, -4.2, 4.7, -1.6],
+                borderColor: '#888',
+                borderWidth: 5,
+                fill: false,
+                tension: 0.4,  // نرم کردن خطوط نمودار
+                pointBackgroundColor: '#fff',
+                pointBorderColor: function (context) {
+                    const value = context.raw;
+                    return value >= 0 ? 'green' : 'red';
+                },
+                pointBorderWidth: 3,
+                pointRadius: 6
+            }]
+        };
+
+        const options = {
+            scales: {
+                x: {
+                    grid: {
+                        display: true,
+                        color: '#e0e0e0',  // رنگ خطوط شبکه محور x
+                    },
+                },
+                y: {
+                    grid: {
+                        display: true,
+                        color: '#e0e0e0',  // رنگ خطوط شبکه محور y
+                    },
+                    beginAtZero: false,
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false,  // مخفی کردن لیبل نمودار
+                },
+                tooltip: {
+                    enabled: false,  // غیرفعال کردن tooltip
+                },
+                datalabels: {
+                    align: 'top',
+                    anchor: 'end',
+                    color: function (context) {
+                        const value = context.dataset.data[context.dataIndex];
+                        return value >= 0 ? 'green' : 'red';
+                    },
+                    font: {
+                        weight: 'bold',
+                        size: 14,
+                    },
+                    formatter: (value) => value + '%',  // افزودن علامت درصد به مقادیر
+                }
+            }
+        };
+
+        const myChart = new Chart(ctx, {
+            type: 'line',
+            data: data,
+            options: options,
+        });
+    });
 }
 
 if (document.querySelector(".selfSelectBoxContainer")) {
-  jalaliDatepicker.startWatch({});
-  const csrf = document.querySelector('meta[name="csrf_token"]').getAttribute("content");
-  let searchInputs = document.querySelectorAll(".searchInput"),
-    resultDivs = document.querySelectorAll(".resultDiv"),
-    searchResultDivs = document.querySelectorAll(".searchResultDiv");
+    jalaliDatepicker.startWatch({});
+    const csrf = document.querySelector('meta[name="csrf_token"]').getAttribute("content");
+    let searchInputs = document.querySelectorAll(".searchInput"),
+        resultDivs = document.querySelectorAll(".resultDiv"),
+        searchResultDivs = document.querySelectorAll(".searchResultDiv");
 
-  function codeInputFiller() {
-    const codeInputs = document.querySelectorAll(".codeInput");
-    const codeLists = document.querySelectorAll(".codeList");
-    const codeSelectBoxes = document.querySelectorAll(".codeSelectBox");
-    const subjectIds = document.querySelectorAll(".subject_id");
-    const mainformCodes = document.querySelectorAll(".mainformCode");
+    function codeInputFiller() {
+        const codeInputs = document.querySelectorAll(".codeInput");
+        const codeLists = document.querySelectorAll(".codeList");
+        const codeSelectBoxes = document.querySelectorAll(".codeSelectBox");
+        const subjectIds = document.querySelectorAll(".subject_id");
+        const mainformCodes = document.querySelectorAll(".mainformCode");
 
-    function normalizeCode(code) {
-      const persianNumbers = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-      const arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-      const englishNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        function normalizeCode(code) {
+            const persianNumbers = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+            const arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+            const englishNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
-      let normalizedCode = code.split('').map(char => {
-        const persianIndex = persianNumbers.indexOf(char);
-        const arabicIndex = arabicNumbers.indexOf(char);
-        return persianIndex !== -1 ? englishNumbers[persianIndex] :
-          arabicIndex !== -1 ? englishNumbers[arabicIndex] : char;
-      }).join('');
+            let normalizedCode = code.split('').map(char => {
+                const persianIndex = persianNumbers.indexOf(char);
+                const arabicIndex = arabicNumbers.indexOf(char);
+                return persianIndex !== -1 ? englishNumbers[persianIndex] :
+                    arabicIndex !== -1 ? englishNumbers[arabicIndex] : char;
+            }).join('');
 
-      normalizedCode = normalizedCode.replace(/\D/g, '');
+            normalizedCode = normalizedCode.replace(/\D/g, '');
 
-      return normalizedCode;
-    }
-
-    codeInputs.forEach((element, index) => {
-      element.addEventListener('input', (e) => {
-        let code = e.target.value;
-
-        const normalizedCode = normalizeCode(code);
-
-        const matchedSpan = Array.from(codeLists).find(span => {
-          const spanCode = normalizeCode(span.getAttribute('data-code'));
-          return spanCode === normalizedCode;
-        });
-
-        if (matchedSpan) {
-          codeSelectBoxes[index].value = matchedSpan.getAttribute("data-name");
-          subjectIds[index].value = matchedSpan.getAttribute("data-id");
-          mainformCodes[index].value = normalizedCode;
-
-          setTimeout(() => {
-            e.target.value = window.formatCode(normalizedCode);
-          }, 200);
-        } else {
-          codeSelectBoxes[index].value = "";
-          subjectIds[index].value = "";
-          mainformCodes[index].value = "";
+            return normalizedCode;
         }
-      });
+
+        codeInputs.forEach((element, index) => {
+            element.addEventListener('input', (e) => {
+                let code = e.target.value;
+
+                const normalizedCode = normalizeCode(code);
+
+                const matchedSpan = Array.from(codeLists).find(span => {
+                    const spanCode = normalizeCode(span.getAttribute('data-code'));
+                    return spanCode === normalizedCode;
+                });
+
+                if (matchedSpan) {
+                    codeSelectBoxes[index].value = matchedSpan.getAttribute("data-name");
+                    subjectIds[index].value = matchedSpan.getAttribute("data-id");
+                    mainformCodes[index].value = normalizedCode;
+
+                    setTimeout(() => {
+                        e.target.value = window.formatCode(normalizedCode);
+                    }, 200);
+                } else {
+                    codeSelectBoxes[index].value = "";
+                    subjectIds[index].value = "";
+                    mainformCodes[index].value = "";
+                }
+            });
+        });
+    }
+
+    codeInputFiller()
+
+    window.openSelectBox = function (e) {
+        document.querySelectorAll(".selfSelectBox").forEach(function (e) {
+            e.style.display = "none"
+        }), e.querySelector(".selfSelectBox").style.display = "block"
+    }
+
+    window.formatCode = function (e) {
+        let t = [];
+        for (let n = 0; n < e.length; n += 3) t.push(e.substring(n, n + 3));
+        return e = t.join("/"), ["fa", "fa_IR"].includes("fa") && (e = window.convertToFarsi(e)), e
+    }
+
+    window.convertToFarsi = function (e) {
+        let t = {
+            0: "۰",
+            1: "۱",
+            2: "۲",
+            3: "۳",
+            4: "۴",
+            5: "۵",
+            6: "۶",
+            7: "۷",
+            8: "۸",
+            9: "۹"
+        };
+        return e.replace(/[0-9]/g, e => t[e])
+    }
+
+    window.fillInput = function (e, t) {
+        if (e.value != "0" && !/[a-zA-Z]/.test(e.value)) {
+            let n = e.value.split(","),
+                i = t
+            n.forEach(id => {
+                let a = document.querySelector(`[data-id="${id}"]`),
+                    s = a.getAttribute("data-code"),
+                    m = a.getAttribute("data-name"),
+                    d = a.getAttribute("data-id")
+                document.querySelectorAll(".subject_name")[i].value = m, document.querySelectorAll(".subject_id")[i].value = d,
+                    document.querySelectorAll(".codeInput")[i].value = window.formatCode(s), document.querySelectorAll(".mainformCode")[i].value =
+                    s
+                i += 1
+            });
+        }
+        else if (e.querySelector(".selfItemTitle")) {
+            let n = e.querySelector(".selfItemTitle").innerText,
+                a = e.querySelector(".codeList").getAttribute("data-code"),
+                s = e.querySelector(".codeList").getAttribute("data-id");
+            document.querySelectorAll(".subject_name")[t].value = n, document.querySelectorAll(".subject_id")[t].value = s,
+                document.querySelectorAll(".codeInput")[t].value = window.formatCode(a), document.querySelectorAll(".mainformCode")[t].value =
+                a
+        }
+    }
+
+    window.fillInput(document.querySelector(".subjectIds"), 0)
+
+    window.reOrderInputs = function () {
+        setTimeout(() => {
+            document.querySelectorAll(".transaction").forEach(elem => {
+                let t = elem.querySelector(".transaction-count").innerText;
+                elem.querySelectorAll('.selfSelectBoxItems').forEach(e => {
+                    e.setAttribute('onclick', `window.fillInput(this, '${t - 1}')`);
+                })
+            })
+        }, 200);
+    }
+
+    function countInputs() {
+        searchInputs = document.querySelectorAll(".searchInput"), resultDivs = document.querySelectorAll(".resultDiv"),
+            searchResultDivs = document.querySelectorAll(".searchResultDiv")
+    }
+
+    document.getElementById("addTransaction").addEventListener("click", function () {
+        setTimeout(() => {
+            var e = document.getElementById("transactions"),
+                t = e.getElementsByClassName("transaction"),
+                n = t[t.length - 1],
+                a = n.querySelector(".transaction-count").innerText;
+            n.querySelectorAll(".selfSelectBoxItems").forEach(e => {
+                e.setAttribute("onclick", `window.fillInput(this, '${a - 1}')`)
+            })
+
+            codeInputFiller()
+        }, 200);
+        countInputs()
+    }), document.addEventListener("click", function (e) {
+        e.target.closest(".selfSelectBoxContainer") || document.querySelectorAll(".selfSelectBox").forEach(
+            function (e) {
+                e.style.display = "none", resultDivs.forEach((e, t) => {
+                    searchInputs[t].value = "", e.style.display = "block", searchResultDivs[t].style
+                        .display = "none"
+                })
+            })
     });
-  }
-
-  codeInputFiller()
-
-  window.openSelectBox = function (e) {
-    document.querySelectorAll(".selfSelectBox").forEach(function (e) {
-      e.style.display = "none"
-    }), e.querySelector(".selfSelectBox").style.display = "block"
-  }
-
-  window.formatCode = function (e) {
-    let t = [];
-    for (let n = 0; n < e.length; n += 3) t.push(e.substring(n, n + 3));
-    return e = t.join("/"), ["fa", "fa_IR"].includes("fa") && (e = window.convertToFarsi(e)), e
-  }
-
-  window.convertToFarsi = function (e) {
-    let t = {
-      0: "۰",
-      1: "۱",
-      2: "۲",
-      3: "۳",
-      4: "۴",
-      5: "۵",
-      6: "۶",
-      7: "۷",
-      8: "۸",
-      9: "۹"
-    };
-    return e.replace(/[0-9]/g, e => t[e])
-  }
-
-  window.fillInput = function (e, t) {
-    if (e.value != "0" && e.value) {
-      let n = e.value.split(","),
-        i = t
-      n.forEach(id => {
-        let a = document.querySelector(`[data-id="${id}"]`),
-          s = a.getAttribute("data-code"),
-          m = a.getAttribute("data-name"),
-          d = a.getAttribute("data-id")
-        document.querySelectorAll(".subject_name")[i].value = m, document.querySelectorAll(".subject_id")[i].value = d,
-          document.querySelectorAll(".codeInput")[i].value = window.formatCode(s), document.querySelectorAll(".mainformCode")[i].value =
-          s
-        i += 1
-      });
-    }
-    else if (!e.value) {
-      let n = e.querySelector(".selfItemTitle").innerText,
-        a = e.querySelector(".codeList").getAttribute("data-code"),
-        s = e.querySelector(".codeList").getAttribute("data-id");
-      document.querySelectorAll(".subject_name")[t].value = n, document.querySelectorAll(".subject_id")[t].value = s,
-        document.querySelectorAll(".codeInput")[t].value = window.formatCode(a), document.querySelectorAll(".mainformCode")[t].value =
-        a
-    }
-  }
-
-  window.fillInput(document.querySelector(".subjectIds"), 0)
-
-  window.reOrderInputs = function () {
-    setTimeout(() => {
-      document.querySelectorAll(".transaction").forEach(elem => {
-        let t = elem.querySelector(".transaction-count").innerText;
-        elem.querySelectorAll('.selfSelectBoxItems').forEach(e => {
-          e.setAttribute('onclick', `window.fillInput(this, '${t - 1}')`);
-        })
-      })
-    }, 200);
-  }
-
-  window.reOrderInputs();
-
-  function countInputs() {
-    searchInputs = document.querySelectorAll(".searchInput"), resultDivs = document.querySelectorAll(".resultDiv"),
-      searchResultDivs = document.querySelectorAll(".searchResultDiv"),
-      voidInputSearch()
-  }
-
-  function voidInputSearch() {
-    searchInputs.forEach((e, t) => {
-      e.addEventListener("input", e => debouncedSearch(e, t))
-    })
-  }
-
-  function debounce(e, t) {
-    let n;
-    return function (...a) {
-      clearTimeout(n), n = setTimeout(() => {
-        e.apply(this, a)
-      }, t)
-    }
-  }
-
-  function searchQuery(e, t) {
-    fetch("/subjects/search", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-Token": csrf
-      },
-      body: JSON.stringify({
-        query: e
-      })
-    }).then(e => {
-      if (!e.ok) throw Error("خطا در دریافت پاسخ");
-      return e.json()
-    }).then(e => {
-      resultDivs[t].style.display = "none", searchResultDivs[t].style.display = "block", 0 == e.length ?
-        searchResultDivs[t].innerHTML = '<span class="block text-center">چیزی پیدا نشد!</span>' : searchResultDivs[t].innerHTML = "", e
-          .forEach((e, i) => {
-            let n = e.name,
-              a = e.code,
-              o = e.id;
-            if (0 == e.sub_subjects.length) {
-              let s = `
-                        <div class="w-full ps-2 mb-4">
-                            <div class="flex justify-between">
-                                <span>
-                                    ${n}
-                                </span>
-
-                                <span>
-                                    ${window.formatCode(a)}
-                                </span>
-                            </div>
-                        </div>
-                        `;
-              searchResultDivs[t].innerHTML += s
-            } else {
-              let l = e.sub_subjects,
-                r = `
-                        <div class="w-full ps-2 mb-4">
-                            <div class="flex justify-between">
-                                <span>
-                                    ${n}
-                                </span>
-
-                                <span>
-                                    ${window.formatCode(a)}
-                                </span>
-                            </div>
-                        </div>
-                        <div class="ps-1 mt-4">
-                            <div class="border-s-[1px] ps-7 border-[#ADB5BD]" id="sub-${t}-${i}"></div>
-                        </div>
-                        `;
-              searchResultDivs[t].innerHTML += r, l.forEach(e => {
-                let n = document.getElementById(`sub-${t}-${i}`),
-                  a = `
-                                    <a href="javascript:void(0)"
-                                        class="selfSelectBoxItems flex justify-between mb-4"
-                                        onclick="window.fillInput(this, '${t}')">
-                                        <span class="selfItemTitle">
-                                            ${e.name}
-                                        </span>
-                                        <span class="codeList" data-name="${e.name}" data-code="${e.code}" data-id="${e.id}" hidden></span>
-                                        <span class="selfItemCode">
-                                            ${window.formatCode(e.code)}
-                                        </span>
-                                    </a>
-                                    `;
-                n.innerHTML += a
-              })
-            }
-          })
-      setTimeout(() => {
-        t = 0;
-        document.querySelectorAll(".transaction").forEach(elem => {
-          elem.querySelectorAll('.selfSelectBoxItems').forEach(e => {
-            e.setAttribute('onclick', `window.fillInput(this, '${t}')`);
-          })
-          t += 1
-        })
-      }, 200);
-    }).catch(e => {
-      console.error("خطایی رخ داده: ", e)
-    })
-  }
-
-  document.getElementById("addTransaction").addEventListener("click", function () {
-    setTimeout(() => {
-      var e = document.getElementById("transactions"),
-        t = e.getElementsByClassName("transaction"),
-        n = t[t.length - 1],
-        a = n.querySelector(".transaction-count").innerText;
-      n.querySelectorAll(".selfSelectBoxItems").forEach(e => {
-        e.setAttribute("onclick", `window.fillInput(this, '${a - 1}')`)
-      })
-
-      codeInputFiller()
-    }, 200);
-    countInputs()
-  }), document.addEventListener("click", function (e) {
-    e.target.closest(".selfSelectBoxContainer") || document.querySelectorAll(".selfSelectBox").forEach(
-      function (e) {
-        e.style.display = "none", resultDivs.forEach((e, t) => {
-          searchInputs[t].value = "", e.style.display = "block", searchResultDivs[t].style
-            .display = "none"
-        })
-      })
-  });
-  const debouncedSearch = debounce(function (e, t) {
-    let n = e.target.value;
-    n ? searchQuery(n, t) : (resultDivs[t].style.display = "block", searchResultDivs[t].style.display =
-      "none")
-  }, 500);
-  voidInputSearch();
 }

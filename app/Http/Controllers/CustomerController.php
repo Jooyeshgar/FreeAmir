@@ -14,7 +14,7 @@ class CustomerController extends Controller
 
     public function index()
     {
-        $customers = Models\Customer::with('subject', 'group')->paginate(12);
+        $customers = Models\Customer::with('subject', 'group')->orderBy('id', 'desc')->paginate(12);
 
         return view('customers.index', compact('customers'));
     }
@@ -23,19 +23,12 @@ class CustomerController extends Controller
     {
         $groups = Models\CustomerGroup::select('id', 'name')->get();
 
-        $parentSubject = Subject::find(config('amir.cust_subject'));
-        $lastCode = Subject::where([
-            ['parent_id', $parentSubject->id],
-        ])->latest('code')->first()->code ?? "000";
-        $code = str_pad((int) $lastCode + 1, strlen($lastCode), "0", STR_PAD_LEFT);
-
-        return view('customers.create', compact('groups', 'parentSubject', 'code'));
+        return view('customers.create', compact('groups'));
     }
 
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            'code' => 'required|unique:customers,code',
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
             'phone' => 'nullable|numeric|regex:/^09\d{9}$/',
             'fax' => 'nullable|numeric',
@@ -58,46 +51,22 @@ class CustomerController extends Controller
         ]);
 
         $validatedData['rep_via_email'] = $request->has('rep_via_email') ? 1 : 0;
-        $validatedData['connector'] = '';
-        $validatedData['cell'] = '';
-        $validatedData['balance'] = 0;
-        $validatedData['credit'] = 0;
-        $validatedData['type_buyer'] = 0;
-        $validatedData['type_seller'] = 0;
-        $validatedData['type_mate'] = 0;
-        $validatedData['type_agent'] = 0;
-        $validatedData['commission'] = '';
-        $validatedData['marked'] = 0;
-        $validatedData['reason'] = '';
-        $validatedData['disc_rate'] = '';
-        $validatedData['address'] = empty($validatedData['address']) ? '' : $validatedData['address'];
-        $validatedData['web_page'] = empty($validatedData['web_page']) ? '' : $validatedData['web_page'];
-        $validatedData['responsible'] = empty($validatedData['responsible']) ? '' : $validatedData['responsible'];
-        $validatedData['desc'] = empty($validatedData['desc']) ? '' : $validatedData['desc'];
-        $validatedData['postal_code'] = empty($validatedData['postal_code']) ? '' : $validatedData['postal_code'];
 
         Models\Customer::create($validatedData);
 
-        return redirect()->route('customers.index')->with('success', 'Customer created successfully.');
+        return redirect()->route('customers.index')->with('success', __('Customer created successfully.'));
     }
 
     public function edit(Models\Customer $customer)
     {
         $groups = Models\CustomerGroup::select('id', 'name')->get();
 
-        $parentSubject = Subject::find(config('amir.cust_subject'));
-        $lastCode = Subject::where([
-            ['parent_id', $parentSubject->id],
-        ])->latest('code')->first()->code ?? "000";
-        $code = str_pad((int) $lastCode + 1, strlen($lastCode), "0", STR_PAD_LEFT);
-
-        return view('customers.edit', compact('customer', 'groups', 'parentSubject', 'code'));
+        return view('customers.edit', compact('customer', 'groups'));
     }
 
     public function update(Request $request, Models\Customer $customer)
     {
         $validatedData = $request->validate([
-            'code' => 'required|exists:customers,code',
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
             'phone' => 'nullable|numeric|regex:/^09\d{9}$/',
             'fax' => 'nullable|numeric',
@@ -120,33 +89,16 @@ class CustomerController extends Controller
         ]);
 
         $validatedData['rep_via_email'] = $request->has('rep_via_email') ? 1 : 0;
-        $validatedData['connector'] = '';
-        $validatedData['cell'] = '';
-        $validatedData['balance'] = 0;
-        $validatedData['credit'] = 0;
-        $validatedData['type_buyer'] = 0;
-        $validatedData['type_seller'] = 0;
-        $validatedData['type_mate'] = 0;
-        $validatedData['type_agent'] = 0;
-        $validatedData['commission'] = '';
-        $validatedData['marked'] = 0;
-        $validatedData['reason'] = '';
-        $validatedData['disc_rate'] = '';
-        $validatedData['address'] = empty($validatedData['address']) ? '' : $validatedData['address'];
-        $validatedData['web_page'] = empty($validatedData['web_page']) ? '' : $validatedData['web_page'];
-        $validatedData['responsible'] = empty($validatedData['responsible']) ? '' : $validatedData['responsible'];
-        $validatedData['desc'] = empty($validatedData['desc']) ? '' : $validatedData['desc'];
-        $validatedData['postal_code'] = empty($validatedData['postal_code']) ? '' : $validatedData['postal_code'];
 
         $customer->update($validatedData);
 
-        return redirect()->route('customers.index')->with('success', 'Customer updated successfully.');
+        return redirect()->route('customers.index')->with('success', __("'Customer updated successfully.'"));
     }
 
     public function destroy(Models\Customer $customer)
     {
         $customer->delete();
 
-        return redirect()->route('customers.index')->with('success', 'Customer deleted successfully.');
+        return redirect()->route('customers.index')->with('success', __('Customer deleted successfully.'));
     }
 }

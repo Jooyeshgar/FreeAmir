@@ -25,14 +25,6 @@ class ConfigController extends Controller
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            'company-name' => 'required|max:50|string|regex:/^[\w\d\s]*$/u',
-            'logo' => 'nullable|image|mimes:jpeg,jpg,png,svg|max:10240',
-            'address' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
-            'economical_code' => 'nullable|integer',
-            'national_code' => 'nullable|integer',
-            'postal_code' => 'nullable|integer',
-            'phone_number' => 'nullable|numeric|regex:/^09\d{9}$/',
-            'cust_subject' => 'nullable|exists:subjects,id|integer',
             'cash_book' => 'nullable|exists:subjects,id|integer',
             'bank' => 'nullable|exists:banks,id|integer',
             'cash' => 'nullable|numeric',
@@ -81,6 +73,6 @@ class ConfigController extends Controller
             }
         }
 
-        return redirect()->route('configs.index')->with('success', 'Config created successfully.');
+        return redirect()->route('configs.index')->with('success', __('Config created successfully.'));
     }
 }
