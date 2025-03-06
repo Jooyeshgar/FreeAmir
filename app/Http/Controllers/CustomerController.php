@@ -8,9 +8,7 @@ use Illuminate\Http\Request;
 
 class CustomerController extends Controller
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     public function index()
     {
@@ -97,8 +95,11 @@ class CustomerController extends Controller
 
     public function destroy(Models\Customer $customer)
     {
-        $customer->delete();
-
-        return redirect()->route('customers.index')->with('success', __('Customer deleted successfully.'));
+        try {
+            $customer->delete();
+            return redirect()->route('customers.index')->with('success', __('Customer deleted successfully.'));
+        } catch (\Exception $e) {
+            return redirect()->route('customers.index')->with('error', $e->getMessage());
+        }
     }
 }
