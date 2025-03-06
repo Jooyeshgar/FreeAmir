@@ -53,6 +53,12 @@ class Subject extends Model
                 }
             }
         });
+
+        static::deleting(function ($subject) {
+            if ($subject->subjectable()->exists()) {
+                throw new \Exception(__('Cannot delete subject with relationships'));
+            }
+        });
     }
 
     public function subSubjects()
