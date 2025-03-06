@@ -76,6 +76,13 @@ class Customer extends Model
 
             $customer->update(['subject_id' => $subject->id]);
         });
+        
+        static::deleting(function ($customer) {
+            // Delete the related subject when the customer is deleted
+            if ($customer->subject) {
+                $customer->subject->delete();
+            }
+        });
     }
 
     public function subject()

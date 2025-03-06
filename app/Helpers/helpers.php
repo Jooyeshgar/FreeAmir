@@ -2,6 +2,7 @@
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Str;
 
 /**
  * Format a number with separators, parentheses for negatives,
@@ -113,4 +114,27 @@ function convertToGregorian($date)
     }
 
     return $date;
+}
+
+
+if (!function_exists('model_route')) {
+    /**
+     * Convert a model class or instance to a route name.
+     *
+     * @param string|object $model The model class name or instance
+     * @param string $action The action for the route (default: 'index')
+     * @param bool $plural Whether to pluralize the route name (default: true)
+     * @return string The route name
+     */
+    function model_route($model, string $action = 'index', bool $plural = true): string
+    {
+        $routeName = is_object($model) ? class_basename($model) : $model;
+        $routeName = Str::snake($routeName);
+
+        if ($plural) {
+            $routeName = Str::plural($routeName);
+        }
+
+        return $routeName . '.' . $action;
+    }
 }

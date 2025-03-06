@@ -7,16 +7,14 @@ use Illuminate\Http\Request;
 
 class SubjectController extends Controller
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     public function index(Request $request)
     {
         if ($request->has('parent_id')) {
-            $subjects = Subject::find($request->get('parent_id'))->children()->get();
+            $subjects = Subject::find($request->get('parent_id'))->children()->with('subjectable')->get();
         } else {
-            $subjects = Subject::whereIsRoot()->get();
+            $subjects = Subject::whereIsRoot()->with('subjectable')->get();
         }
 
         return view('subjects.index', compact('subjects'));
@@ -70,9 +68,12 @@ class SubjectController extends Controller
 
     public function destroy(Subject $subject)
     {
-        $subject->delete();
-
-        return redirect()->route('subjects.index')->with('success', __('Subject deleted successfully.'));
+        try {
+            $subject->delete();
+            return redirect()->route('subjects.index')->with('success', __('Subject deleted successfully.'));
+        } catch (\Exception $e) {
+            return redirect()->route('subjects.index')->with('error', $e->getMessage());
+        }
     }
 
     public function search(Request $request)
