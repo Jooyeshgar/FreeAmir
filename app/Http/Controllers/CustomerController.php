@@ -102,4 +102,9 @@ class CustomerController extends Controller
             return redirect()->route('customers.index')->with('error', $e->getMessage());
         }
     }
+
+    public function show(Models\Customer $customer)
+    {
+        return view('customers.show', compact('customer'));
+    }
 }

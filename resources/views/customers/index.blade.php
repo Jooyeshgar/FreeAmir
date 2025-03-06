@@ -26,7 +26,7 @@
                     @foreach ($customers as $customer)
                         <tr>
                             <td class="px-4 py-2">{{ $customer->subject?->formattedCode() }}</td>
-                            <td class="px-4 py-2">{{ $customer->name }}</td>
+                            <td class="px-4 py-2"><a href="{{ route('customers.show', $customer) }}">{{ $customer->name }}</a></td>
                             <td class="px-4 py-2">{{ $customer->phone }}</td>
                             <td class="px-4 py-2">{{ $customer->email }}</td>
                             <td class="px-4 py-2">{{ $customer->group ? $customer->group->name : '' }}</td>

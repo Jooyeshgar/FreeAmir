@@ -10,13 +10,7 @@ body{
 li a:hover , li summary:hover{
 @apply rounded-xl;
 }
-.tab{
-    width: 120px !important;
-    border-radius: 10px !important;
-    @apply my-3;
-    @apply px-1;
-    @apply block;
-}
+
 input[type="text"] ,input[type="tel"] ,input[type="number"] ,input[type="url"] ,input[type="email"]{
     @apply rounded-md;
     @apply shadow-sm;
