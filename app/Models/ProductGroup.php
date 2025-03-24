@@ -14,8 +14,6 @@ class ProductGroup extends Model
         'sellId',
     ];
 
-    public $timestamps = false;
-
     public static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope());

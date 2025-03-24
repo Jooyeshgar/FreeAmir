@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Company;
+use App\Services\FiscalYearService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,10 +24,8 @@ class CompanyController extends Controller
         'fiscal_year'     => 'required|numeric'
     ];
 
-    public function __construct()
-    {
-    }
-    
+    public function __construct() {}
+
     /**
      * Display a listing of the resource.
      */
@@ -44,8 +43,15 @@ class CompanyController extends Controller
      */
     public function create(): View
     {
+        // Get previous fiscal years for the current company
+        $previousYears = Company::all();
+
+        $availableSection = FiscalYearService::getAvailableSections();
+
         return view('companies.create', [
-            'company' => null
+            'company' => null,
+            'previousYears' => $previousYears,
+            'availableSection' => $availableSection
         ]);
     }
 
@@ -54,14 +60,27 @@ class CompanyController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate($this->rules);
+        $fiscalYearRules = [
+            'source_year_id' => 'required|exists:companies,id',
+            'tables_to_copy' => 'array',
+            'tables_to_copy.*' => 'string|in:' . implode(',', array_keys(FiscalYearService::getAvailableSections()))
+        ];
+
+        $validated = $request->validate(array_merge($this->rules, $fiscalYearRules));
 
         if ($logo = $request->file('logo')) {
             $logo = $this->storeLogo($logo);
             $validated['logo'] = $logo;
         }
+        $data = $validated;
+        unset($data['source_year_id']);
+        unset($data['tables_to_copy']);
 
-        $company = Company::create($validated);
+        $company = FiscalYearService::createWithCopiedData(
+            $data,
+            $validated['source_year_id'],
+            $validated['tables_to_copy'] ?? []
+        );
         $company->users()->attach($request->user()->id);
 
         return redirect(route('companies.index'))
@@ -73,7 +92,7 @@ class CompanyController extends Controller
      */
     public function edit(Company $company): View
     {
-        return view('companies.create', [
+        return view('companies.edit', [
             'company' => $company
         ]);
     }

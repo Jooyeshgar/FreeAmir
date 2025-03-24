@@ -19,7 +19,7 @@ class DefaultCompany
     {
         if (session('active-company-id')) {
             $company = Company::find(session('active-company-id'));
-            if (! $company->users->contains(auth()->id())) {
+            if (!$company or ! $company->users->contains(auth()->id())) {
                 session()->forget('active-company-id');
                 session()->forget('active-company-name');
                 session()->forget('active-company-fiscal-year');

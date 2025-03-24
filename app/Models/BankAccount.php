@@ -24,6 +24,12 @@ class BankAccount extends Model
     public static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope());
+
+        static::creating(function ($bankAccount) {
+            if (!isset($bankAccount->company_id)) {
+                $bankAccount->company_id = session('active-company-id');
+            }
+        });
     }
 
     public function bank(): BelongsTo

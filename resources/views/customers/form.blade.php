@@ -9,17 +9,15 @@
                     @endphp
                     <x-select title="{{ __('Account Plan Group') }}" name="group_id" id="group_id" :options="$groups->pluck('name', 'id')" :selected="$customer->group_id ?? null" :hint="$hint" />
                 </div>
-                <div>
-                    {{-- <x-select title="{{ __('Category') }}" name="group_id" id="group_id" :selected="$customer->group_id ?? null" /> --}}
-                </div>
             </div>
             <div class="grid grid-cols-2 gap-1 ">
                 <div>
                     <x-input title="{{ __('Name') }}" name="name" placeholder="{{ __('Name') }}" :value="old('name', $customer->name ?? '')" />
                 </div>
                 <div>
-                    <x-input title="{{ __('Accountting code') }}" title2="<a href='{{ route('subjects.edit', $customer->subject) }}'>{{ __('Edit') }}</a>"
-                        name="" disabled placeholder="{{ __('Accountting code') }}" :value="isset($customer) ? $customer->subject->formattedCode() : ''" />
+                    <x-input title="{{ __('Accounting code') }}"
+                        title2="{{ isset($customer) && $customer->subject ? '<a href=' . route('subjects.edit', $customer->subject) . '>' . __('Edit') . '</a>' : '' }}"
+                        name="" disabled placeholder="{{ __('Accounting code') }}" :value="isset($customer) && $customer->subject ? $customer->subject->formattedCode() : ''" />
                 </div>
 
             </div>
