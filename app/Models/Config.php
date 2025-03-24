@@ -9,8 +9,6 @@ class Config extends Model
 {
     public $incrementing = false;
 
-    protected $primaryKey = 'key';
-
     public $timestamps = false;
 
     protected $fillable = [
@@ -26,5 +24,4 @@ class Config extends Model
     {
         static::addGlobalScope(new FiscalYearScope);
     }
-
 }

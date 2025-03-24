@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -24,12 +25,16 @@ class Product extends Model
         'selling_price',
         'discount_formula',
         'description',
+        'company_id',
     ];
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new FiscalYearScope());
+    }
 
     public function productGroup(): BelongsTo
     {
         return $this->belongsTo(ProductGroup::class, 'group');
     }
-
-    // Define any other methods as needed
 }

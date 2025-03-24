@@ -11,9 +11,9 @@ class CreateBankAccountsTable extends Migration
         Schema::create('bank_accounts', function (Blueprint $table) {
             $table->id();
             $table->string('name', 100);
-            $table->string('number', 40)->unique();
+            $table->string('number', 40);
             $table->integer('type');
-            $table->string('owner', 50);
+            $table->string('owner', 50)->nullable();
             $table->unsignedBigInteger('bank_id');
             $table->string('bank_branch')->nullable();
             $table->string('bank_address')->nullable();
@@ -22,7 +22,9 @@ class CreateBankAccountsTable extends Migration
             $table->text('desc')->nullable();
 
             $table->foreign('bank_id')->references('id')->on('banks')->onDelete('cascade');
+            $table->foreignId('company_id')->constrained()->cascadeOnDelete()->after('bank_id');
 
+            $table->unique(['number', 'company_id']);
             $table->timestamps(false);
         });
     }

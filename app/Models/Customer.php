@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -43,6 +44,7 @@ class Customer extends Model
         'marked',
         'reason',
         'disc_rate',
+        'company_id',
     ];
 
     protected $attributes = [
@@ -67,16 +69,26 @@ class Customer extends Model
 
     protected static function booted()
     {
+        static::addGlobalScope(new FiscalYearScope());
+
+        static::creating(function ($customer) {
+            // Set company_id before creating the customer
+            if (!isset($customer->company_id)) {
+                $customer->company_id = session('active-company-id');
+            }
+        });
+
         static::created(function ($customer) {
             $parentGroup = $customer->group;
             $subject = $customer->subject()->create([
                 'name' => $customer->name,
-                'parent_id' => $parentGroup->subject_id,
+                'parent_id' => $parentGroup->subject_id ?? 0,
+                'company_id' => session('active-company-id'),
             ]);
 
             $customer->update(['subject_id' => $subject->id]);
         });
-        
+
         static::deleting(function ($customer) {
             // Delete the related subject when the customer is deleted
             if ($customer->subject) {

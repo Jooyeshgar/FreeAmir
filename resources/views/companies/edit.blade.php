@@ -8,52 +8,10 @@
 
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <span class="card-title">{{ __('Add Company') }}</span>
-            <form action="{{ route('companies.store') }}" method="POST" enctype="multipart/form-data">
+            <span class="card-title">{{ __('Edit Company') }}</span>
+            <form action="{{ route('companies.update', $company->id) }}" method="POST" enctype="multipart/form-data">
                 @csrf
-                <fieldset id="previousYears" class="grid grid-cols-2 gap-6 border p-5 my-3">
-                    <legend>{{ __('Previous Years') }}</legend>
-                    <div class="form-control">
-                        <label for="source_year_id" class="label">
-                            <span class="label-text">{{ __('Copy Data From') }}</span>
-                        </label>
-                        <select class="select select-bordered w-full" id="source_year_id" name="source_year_id" required>
-                            <option value="">{{ __('Select Source Fiscal Year') }}</option>
-                            @foreach ($previousYears as $year)
-                                <option value="{{ $year->id }}">{{ $year->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text">{{ __('Select Tables to Copy') }}</span>
-                        </label>
-                        <div class="overflow-x-auto">
-                            <table class="table w-full">
-                                <thead>
-                                    <tr>
-                                        <th>{{ __('Select') }}</th>
-                                        <th>{{ __('Table Name') }}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($availableSection as $key => $name)
-                                        <tr>
-                                            <td>
-                                                <input type="checkbox" name="tables_to_copy[]" value="{{ $key }}" id="table_{{ $key }}"
-                                                    class="checkbox" checked>
-                                            </td>
-                                            <td>
-                                                <label for="table_{{ $key }}" class="label-text">{{ $name }}</label>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </fieldset>
+                @method('PATCH')
 
                 <fieldset id="companyForm" class="grid grid-cols-2 gap-6 border p-5 my-3">
                     <legend>{{ __('company') }}</legend>
@@ -69,7 +27,7 @@
                         </label>
                         <input type="file" id="logo" name="logo" class="file-input w-full max-w-xs" accept="image/*" />
                     </div>
-
+                    <img class="block w-12 h-auto rounded-full" src="{{ asset('storage/' . $company->logo) }}">
                     <div class="col-span-2">
                         <div class="col-span-2">
                             <x-textarea name="address" id="address" title="{{ __('Address') }}" :value="old('address', $company->address ?? '')" />
