@@ -103,19 +103,18 @@ class DocumentController extends Controller
         }
     }
 
+    /**
+     * Update the specified document and its transactions.
+     *
+     * @param StoreTransactionRequest $request
+     * @param int $id
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function update(StoreTransactionRequest $request, $id)
     {
-
-
         $document = Document::findOrFail($id);
-        $ids = [];
 
-        DocumentService::updateDocument($document, [
-            'title' => $request->title,
-            'number' => $request->number,
-            'date' => $request->date,
-            'user_id' => Auth::id()
-        ]);
+        DocumentService::updateDocument($document, $request->toArray());
 
         DocumentService::updateDocumentTransactions($document->id, $request->input('transactions'));
 

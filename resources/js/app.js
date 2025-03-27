@@ -280,40 +280,10 @@ if (document.querySelector(".selfSelectBoxContainer")) {
         return e.replace(/[0-9]/g, e => t[e])
     }
 
-    window.fillInput = function (e, t) {
-        if (e.value != "0" && !/[a-zA-Z]/.test(e.value)) {
-            let n = e.value.split(","),
-                i = t
-            n.forEach(id => {
-                let a = document.querySelector(`[data-id="${id}"]`),
-                    s = a.getAttribute("data-code"),
-                    m = a.getAttribute("data-name"),
-                    d = a.getAttribute("data-id")
-                document.querySelectorAll(".subject_name")[i].value = m, document.querySelectorAll(".subject_id")[i].value = d,
-                    document.querySelectorAll(".codeInput")[i].value = window.formatCode(s), document.querySelectorAll(".mainformCode")[i].value =
-                    s
-                i += 1
-            });
-        }
-        else if (e.querySelector(".selfItemTitle")) {
-            let n = e.querySelector(".selfItemTitle").innerText,
-                a = e.querySelector(".codeList").getAttribute("data-code"),
-                s = e.querySelector(".codeList").getAttribute("data-id");
-            document.querySelectorAll(".subject_name")[t].value = n, document.querySelectorAll(".subject_id")[t].value = s,
-                document.querySelectorAll(".codeInput")[t].value = window.formatCode(a), document.querySelectorAll(".mainformCode")[t].value =
-                a
-        }
-    }
-
-    window.fillInput(document.querySelector(".subjectIds"), 0)
-
     window.reOrderInputs = function () {
         setTimeout(() => {
             document.querySelectorAll(".transaction").forEach(elem => {
                 let t = elem.querySelector(".transaction-count").innerText;
-                elem.querySelectorAll('.selfSelectBoxItems').forEach(e => {
-                    e.setAttribute('onclick', `window.fillInput(this, '${t - 1}')`);
-                })
             })
         }, 200);
     }
@@ -329,9 +299,6 @@ if (document.querySelector(".selfSelectBoxContainer")) {
                 t = e.getElementsByClassName("transaction"),
                 n = t[t.length - 1],
                 a = n.querySelector(".transaction-count").innerText;
-            n.querySelectorAll(".selfSelectBoxItems").forEach(e => {
-                e.setAttribute("onclick", `window.fillInput(this, '${a - 1}')`)
-            })
 
             codeInputFiller()
         }, 200);

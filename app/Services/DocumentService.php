@@ -157,7 +157,7 @@ class DocumentService
 
         $existingTransactionIds = [];
         foreach ($transactionsData as $transactionData) {
-            $transaction = Transaction::firstOrCreate(
+            $transaction = Transaction::updateOrCreate(
                 ['id' => $transactionData['transaction_id']],
                 [
                     'document_id' => $documentId,
