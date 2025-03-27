@@ -25,26 +25,12 @@ class DocumentController extends Controller
     {
         $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->get();
 
-        if (!old('transactions')) {
-            $transactions = [new Transaction];
-        } else {
-            $transactions = [];
-            foreach (old('transactions') as $item) {
-                $transaction = new Transaction();
-                $transaction->subject_id = $item['subject_id'];
-                $transaction->subject_name = $item['subject_name'];
-                $transaction->code = $item['code'];
-                $transaction->desc = $item['desc'];
-                $transaction->credit = $item['credit'];
-                $transaction->debit = $item['debit'];
-                $transaction->value = convertToFloat($item['credit'])  - convertToFloat($item['debit']);
-                $transactions[] = $transaction;
-            }
-        }
+        $transactions = old('transactions') ?? $this->preparedTransactions(collect([new Transaction]));
 
+        $total = count($transactions);
         $document = new Document();
         $previousDocumentNumber = Document::orderBy('id', 'desc')->first()->number ?? 0;
-        return view('documents.create', compact('document', 'previousDocumentNumber', 'subjects', 'transactions'));
+        return view('documents.create', compact('document', 'previousDocumentNumber', 'subjects', 'transactions', 'total'));
     }
 
     public function store(StoreTransactionRequest $request)
@@ -79,25 +65,14 @@ class DocumentController extends Controller
 
     public function edit($id)
     {
-
         $document = Models\Document::find($id);
         if ($document) {
-            if (!old('transactions')) {
-                $transactions = $document->transactions;
-            } else {
-                $transactions = [];
-                foreach (old('transactions') as $item) {
-                    $transaction = new Transaction();
-                    $transaction->subject_id = $item['subject_id'];
-                    $transaction->desc = $item['desc'];
-                    $transaction->value = $item['debit'] ? -1 * $item['debit'] : $item['credit'];
-                    $transactions[] = $transaction;
-                }
-            }
+            $transactions = old('transactions') ?? $this->preparedTransactions($document->transactions);
 
+            $total = -1;
             $subjects = Subject::all();
             $previousDocumentNumber = Document::orderBy('id', 'desc')->where('id', '<', $id)->first()->number ?? 0;
-            return view('documents.edit', compact('previousDocumentNumber', 'document', 'subjects', 'transactions'));
+            return view('documents.edit', compact('previousDocumentNumber', 'document', 'subjects', 'transactions', 'total'));
         } else {
             return redirect()->route('documents.index')->with('error', 'Transaction not found.');
         }
@@ -148,5 +123,21 @@ class DocumentController extends Controller
             'sell' => ['label' => 'sell', 'type' => 'checkbox'],
             'activated' => ['label' => 'activated', 'type' => 'checkbox'],
         ];
+    }
+
+    private function preparedTransactions($transactions)
+    {
+        return $transactions->map(function ($transaction, $i) {
+            return [
+                'id' => $i + 1,
+                'transaction_id' => $transaction->transaction_id,
+                'subject_id' => $transaction->subject_id,
+                'subject' => $transaction->subject?->name,
+                'code' => $transaction->subject?->code,
+                'desc' => $transaction->desc,
+                'credit' => $transaction->credit,
+                'debit' => $transaction->debit,
+            ];
+        });
     }
 }

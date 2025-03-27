@@ -46,94 +46,96 @@
     </div>
 
 </div>
-<script>
-    function searchComponent() {
-        return {
-            query: '',
-            index: 0,
-            csrf: '{{ csrf_token() }}',
-            searchResultDivs: [],
-            resultDivs: [],
-            search(query, index) {
-                fetch("/subjects/search", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-CSRF-Token": this.csrf,
-                        },
-                        body: JSON.stringify({
-                            query
-                        }),
-                    })
-                    .then((response) => {
-                        if (!response.ok) throw new Error("خطا در دریافت پاسخ");
-                        return response.json();
-                    })
-                    .then((data) => {
-                        const resultDiv = this.$refs.results;
-                        const baseResultsDiv = this.$refs.baseResults;
-                        if (data.length === 0) {
-                            baseResultsDiv.classList.remove('hidden');
-                            resultDiv.innerHTML = '';
-                        } else {
-                            baseResultsDiv.classList.add('hidden');
-                            resultDiv.innerHTML = '';
-                            data.forEach((item, i) => {
-                                const {
-                                    name,
-                                    code,
-                                    sub_subjects: subSubjects
-                                } = item;
+@pushOnce('scripts')
+    <script>
+        function searchComponent() {
+            return {
+                query: '',
+                index: 0,
+                csrf: '{{ csrf_token() }}',
+                searchResultDivs: [],
+                resultDivs: [],
+                search(query, index) {
+                    fetch("/subjects/search", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRF-Token": this.csrf,
+                            },
+                            body: JSON.stringify({
+                                query
+                            }),
+                        })
+                        .then((response) => {
+                            if (!response.ok) throw new Error("خطا در دریافت پاسخ");
+                            return response.json();
+                        })
+                        .then((data) => {
+                            const resultDiv = this.$refs.results;
+                            const baseResultsDiv = this.$refs.baseResults;
+                            if (data.length === 0) {
+                                baseResultsDiv.classList.remove('hidden');
+                                resultDiv.innerHTML = '';
+                            } else {
+                                baseResultsDiv.classList.add('hidden');
+                                resultDiv.innerHTML = '';
+                                data.forEach((item, i) => {
+                                    const {
+                                        name,
+                                        code,
+                                        sub_subjects: subSubjects
+                                    } = item;
 
-                                if (subSubjects.length === 0) {
-                                    resultDiv.innerHTML += `
+                                    if (subSubjects.length === 0) {
+                                        resultDiv.innerHTML += `
                                         <div class="w-full ps-2 mb-4">
                                             <div class="flex justify-between">
                                                 <span>${name}</span>
-                                                <span>${this.formatCode(code)}</span>
+                                                <span>${formatCode(code)}</span>
                                             </div>
                                         </div>`;
-                                } else {
-                                    const subDivId = `sub-${index}-${i}`;
-                                    resultDiv.innerHTML += `
+                                    } else {
+                                        const subDivId = `sub-${index}-${i}`;
+                                        resultDiv.innerHTML += `
                                         <div class="w-full ps-2 mb-4">
                                             <div class="flex justify-between">
                                                 <span>${name}</span>
-                                                <span>${this.formatCode(code)}</span>
+                                                <span>${formatCode(code)}</span>
                                             </div>
                                         </div>
                                         <div class="ps-1 mt-4">
                                             <div class="border-s-[1px] ps-7 border-[#ADB5BD]" id="${subDivId}"></div>
                                         </div>`;
 
-                                    const subDiv = document.getElementById(subDivId);
-                                    subSubjects.forEach((sub) => {
-                                        subDiv.innerHTML += `
+                                        const subDiv = document.getElementById(subDivId);
+                                        subSubjects.forEach((sub) => {
+                                            subDiv.innerHTML += `
                                             <a href="javascript:void(0)" 
                                                 class="selfSelectBoxItems flex justify-between mb-4" 
-                                                @click="isSelectBoxOpen= false; transaction.code= '{{ $subject->code }}'; transaction.subject= '{{ $subject->name }}'; transaction.subject_id= '{{ $subject->id }}';">
+                                                @click="isSelectBoxOpen= false; transaction.code= '${sub.code}'; transaction.subject= '${sub.name}'; transaction.subject_id= '${sub.id}';">
                                                 <span class="selfItemTitle">${sub.name}</span>
                                                 <span class="codeList" data-name="${sub.name}" data-code="${sub.code}" data-id="${sub.id}" hidden></span>
                                                 <span class="selfItemCode">
-                                                    ${this.formatCode(sub.code)}
+                                                    ${formatCode(sub.code)}
                                                 </span>
                                                 <span class="selfItemId hidden">${sub.id}</span>
                                             </a>`;
-                                    });
-                                }
-                            });
-                        };
-                        setTimeout(() => {
-                            t = 0;
-                            document.querySelectorAll(".transaction").forEach(elem => {
-                                t += 1
-                            })
-                        }, 200);
-                    })
-                    .catch((error) => {
-                        console.error("خطایی رخ داده: ", error);
-                    });
-            }
-        };
-    }
-</script>
+                                        });
+                                    }
+                                });
+                            };
+                            setTimeout(() => {
+                                t = 0;
+                                document.querySelectorAll(".transaction").forEach(elem => {
+                                    t += 1
+                                })
+                            }, 200);
+                        })
+                        .catch((error) => {
+                            console.error("خطایی رخ داده: ", error);
+                        });
+                }
+            };
+        }
+    </script>
+@endPushOnce
