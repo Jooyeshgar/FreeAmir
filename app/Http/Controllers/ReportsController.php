@@ -66,8 +66,12 @@ class ReportsController extends Controller
             $transactions = $transactions->where('subject_id', $request->subject_id);
         }
         if ($request->subject_id && $request->report_for == 'Ledger') {
-            $transactions = $transactions->whereHas('subject.ancestors', function ($query) use ($request) {
-                $query->where('id', $request->subject_id)->whereIsRoot();
+            $subject = Subject::findOrFail($request->subject_id);
+
+            $transactions = $transactions->whereHas('subject', function ($query) use ($subject) {
+                // Get the subject and all its descendants using the nested set model
+                $query->where('_lft', '>=', $subject->_lft)
+                    ->where('_rgt', '<=', $subject->_rgt);
             });
         }
 

@@ -1,4 +1,4 @@
-<div class="selfSelectBoxContainer relative flex-1 w-full pb-3" x-data="{
+<div {{ $attributes->merge(['class' => 'selfSelectBoxContainer relative flex-1 w-full pb-3']) }} x-data="{
     isSelectBoxOpen: false,
     selectedName: '',
     selectedCode: '',
@@ -13,10 +13,10 @@
 }"
     @click.outside="if (!$event.target.closest('.selfSelectBox')) isSelectBoxOpen = false">
 
-    <x-text-input @click="isSelectBoxOpen = true" readonly input_name="{{ $attributes->get('input_name') }}" placeholder="{{ $attributes->get('placeholder') }}"
+    <x-input @click="isSelectBoxOpen = true" :title="$title" readonly name="{{ $attributes->get('input_name') }}" placeholder="{{ $attributes->get('placeholder') }}"
         x-bind:value="selectedName" input_value="{{ $attributes->get('input_value') }}" id="subject_id" label_class="w-full"
-        input_class="border-white subject_name codeSelectBox">
-    </x-text-input>
+        input_class="border-white subject_name codeSelectBox" model_name="selectedName">
+    </x-input>
 
     <input type="hidden" x-bind:value="selectedId" name="{{ $attributes->get('id_field', 'subject_id') }}">
     <input type="hidden" x-bind:value="selectedCode" name="{{ $attributes->get('code_field', 'code') }}">
@@ -25,9 +25,9 @@
         x-show="isSelectBoxOpen" x-transition x-data="searchComponent()" class="subject-select-box">
         <div class="sticky top-0 left-0 right-0 w-full bg-white py-2">
             <div class="relative">
-                <x-text-input x-model="query" @input.debounce.500ms="search(query, index)" input_name="" value="" label_text_class="text-gray-500"
+                <x-input x-model="query" title="" @input.debounce.500ms="search(query, index)" name="" value="" label_text_class="text-gray-500"
                     label_class="w-full" input_class="pe-8 text-sm searchInput" placeholder="{{ __('Search... (heading code or name)') }}">
-                </x-text-input>
+                </x-input>
 
                 <span class="absolute block left-2 top-1/2 translate-y-[-50%]">
                     <svg width="18" height="19" viewBox="0 0 18 19" fill="none" xmlns="http://www.w3.org/2000/svg">

@@ -10,8 +10,9 @@
     'hint2' => false,
     'disabled' => false,
     'required' => false,
+    'model_name' => false,
 ])
-<label {{ $attributes->merge(['class' => 'form-control w-full ' . $attributes->get('class')]) }}>
+<label {{ $attributes->merge(['class' => 'form-control w-full ']) }}>
 
     <div class="label">
         <span class="label-text">{{ $title }} {{ $required ? '*' : '' }}</span>
@@ -21,7 +22,8 @@
     </div>
 
     <input title="{{ $title }}" type="{{ $type }}" name="{{ $name }}" id="{{ $name }}" value="{{ $value ?? '' }}"
-        placeholder="{{ $placeholder ?? '' }}" class="input input-bordered w-full max-w-full" {{ $required ? 'required' : '' }} {{ $disabled ? 'disabled' : '' }} />
+        placeholder="{{ $placeholder ?? '' }}" class="input input-bordered w-full max-w-full" {{ $required ? 'required' : '' }} {{ $disabled ? 'disabled' : '' }}
+        {!! $model_name ? "x-model=\"$model_name\"" : '' !!} />
 
     @if ($errors->first($name))
         <span class="label-text-alt text-rose-700">{{ $errors->first($name) }}</span>
@@ -35,7 +37,6 @@
                     <span class="label-text-alt">{{ $hint2 }}</span>
                 @endif
             </div>
-
         @endif
     @endif
 
