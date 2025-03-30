@@ -1,14 +1,33 @@
-<div class="selfSelectBoxContainer relative flex-1 w-full pb-3" x-data="{ isSelectBoxOpen: false }"
+<div class="selfSelectBoxContainer relative flex-1 w-full pb-3" x-data="{
+    isSelectBoxOpen: false,
+    selectedName: '',
+    selectedCode: '',
+    selectedId: '',
+    updateSelection(name, code, id) {
+        this.selectedName = name;
+        this.selectedCode = code;
+        this.selectedId = id;
+        this.isSelectBoxOpen = false;
+        this.$dispatch('subject-selected', { name, code, id });
+    }
+}"
     @click.outside="if (!$event.target.closest('.selfSelectBox')) isSelectBoxOpen = false">
+
     <x-text-input @click="isSelectBoxOpen = true" readonly input_name="{{ $attributes->get('input_name') }}" placeholder="{{ $attributes->get('placeholder') }}"
-        x-bind:value="transaction.subject" input_value="{{ $attributes->get('input_value') }}" id="subject_id" label_class="w-full"
-        input_class="border-white subject_name codeSelectBox "></x-text-input>
+        x-bind:value="selectedName" input_value="{{ $attributes->get('input_value') }}" id="subject_id" label_class="w-full"
+        input_class="border-white subject_name codeSelectBox">
+    </x-text-input>
+
+    <input type="hidden" x-bind:value="selectedId" name="{{ $attributes->get('id_field', 'subject_id') }}">
+    <input type="hidden" x-bind:value="selectedCode" name="{{ $attributes->get('code_field', 'code') }}">
+
     <div class="selfSelectBox absolute z-[3] top-[40px] w-full h-[300px] bg-white overflow-auto px-4 pb-4 rounded-[16px] shadow-[0px_43px_27px_0px_#00000012]"
-        x-show="isSelectBoxOpen" x-transition x-data="searchComponent()" class="transaction">
+        x-show="isSelectBoxOpen" x-transition x-data="searchComponent()" class="subject-select-box">
         <div class="sticky top-0 left-0 right-0 w-full bg-white py-2">
             <div class="relative">
                 <x-text-input x-model="query" @input.debounce.500ms="search(query, index)" input_name="" value="" label_text_class="text-gray-500"
-                    label_class="w-full" input_class="pe-8 text-sm searchInput" placeholder="{{ __('Search... (heading code or name)') }}"></x-text-input>
+                    label_class="w-full" input_class="pe-8 text-sm searchInput" placeholder="{{ __('Search... (heading code or name)') }}">
+                </x-text-input>
 
                 <span class="absolute block left-2 top-1/2 translate-y-[-50%]">
                     <svg width="18" height="19" viewBox="0 0 18 19" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -73,6 +92,7 @@
                         .then((data) => {
                             const resultDiv = this.$refs.results;
                             const baseResultsDiv = this.$refs.baseResults;
+
                             if (data.length === 0) {
                                 baseResultsDiv.classList.remove('hidden');
                                 resultDiv.innerHTML = '';
@@ -112,7 +132,7 @@
                                             subDiv.innerHTML += `
                                             <a href="javascript:void(0)" 
                                                 class="selfSelectBoxItems flex justify-between mb-4" 
-                                                @click="isSelectBoxOpen= false; transaction.code= '${sub.code}'; transaction.subject= '${sub.name}'; transaction.subject_id= '${sub.id}';">
+                                                @click="updateSelection('${sub.name}', '${sub.code}', '${sub.id}')">
                                                 <span class="selfItemTitle">${sub.name}</span>
                                                 <span class="codeList" data-name="${sub.name}" data-code="${sub.code}" data-id="${sub.id}" hidden></span>
                                                 <span class="selfItemCode">
@@ -124,12 +144,6 @@
                                     }
                                 });
                             };
-                            setTimeout(() => {
-                                t = 0;
-                                document.querySelectorAll(".transaction").forEach(elem => {
-                                    t += 1
-                                })
-                            }, 200);
                         })
                         .catch((error) => {
                             console.error("خطایی رخ داده: ", error);

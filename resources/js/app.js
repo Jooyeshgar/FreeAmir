@@ -293,17 +293,7 @@ if (document.querySelector(".selfSelectBoxContainer")) {
             searchResultDivs = document.querySelectorAll(".searchResultDiv")
     }
 
-    document.getElementById("addTransaction").addEventListener("click", function () {
-        setTimeout(() => {
-            var e = document.getElementById("transactions"),
-                t = e.getElementsByClassName("transaction"),
-                n = t[t.length - 1],
-                a = n.querySelector(".transaction-count").innerText;
-
-            codeInputFiller()
-        }, 200);
-        countInputs()
-    }), document.addEventListener("click", function (e) {
+    document.addEventListener("click", function (e) {
         e.target.closest(".selfSelectBoxContainer") || document.querySelectorAll(".selfSelectBox").forEach(
             function (e) {
                 e.style.display = "none", resultDivs.forEach((e, t) => {

@@ -60,7 +60,9 @@
                         <x-text-input x-bind:value="formatCode(transaction.code)" label_text_class="text-gray-500" label_class="w-full"
                             input_class="border-white value codeInput "></x-text-input>
                     </div>
-                    <x-subject-select-box :subjects="$subjects"></x-subject-select-box>
+                    <div x-on:subject-selected="transaction.code = $event.detail.code; transaction.subject = $event.detail.name; transaction.subject_id = $event.detail.id">
+                        <x-subject-select-box :subjects="$subjects"></x-subject-select-box>
+                    </div>
                     <div class="flex-1 w-[200px] pb-3">
                         <x-text-input x-bind:value="transaction.desc" placeholder="{{ __('this document\'s row description') }}"
                             x-bind:name="'transactions[' + index + '][desc]'" label_text_class="text-gray-500" label_class="w-full"

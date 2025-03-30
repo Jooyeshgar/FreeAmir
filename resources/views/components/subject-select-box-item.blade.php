@@ -2,7 +2,7 @@
     <div class="w-full ps-2 mb-4">
         @if ($allSelectable)
             <a href="javascript:void(0)" class="selfSelectBoxItems flex justify-between mb-4"
-                @click="isSelectBoxOpen= false; transaction.code= '{{ $subject->code }}'; transaction.subject= '{{ $subject->name }}'; transaction.subject_id= '{{ $subject->id }}';">
+                @click="updateSelection('{{ $subject->name }}', '{{ $subject->code }}', '{{ $subject->id }}')">
                 <span class="selfItemTitle">
                     {{ $subject->name }}
                 </span>
@@ -38,7 +38,7 @@
     <div class="ps-1 mt-4">
         <div class="border-s-[1px] ps-7 border-[#ADB5BD]">
             <a href="javascript:void(0)" class="selfSelectBoxItems flex justify-between mb-4"
-                @click="isSelectBoxOpen= false; transaction.code= '{{ $subject->code }}'; transaction.subject= '{{ $subject->name }}'; transaction.subject_id= '{{ $subject->id }}';">
+                @click="updateSelection('{{ $subject->name }}', '{{ $subject->code }}', '{{ $subject->id }}')">
                 <span class="selfItemTitle">
                     {{ $subject->name }}
                 </span>

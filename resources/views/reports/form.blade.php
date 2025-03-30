@@ -1,9 +1,11 @@
 <x-show-message-bags />
-<form action="{{ route('reports.result') }}" method="get">
-
+<form action="{{ route('reports.result') }}" method="get" x-data="{ reportSubject: { selectedName: '', selectedCode: '', selectedId: '' } }">
+    <input type="hidden" name="report_for" value="{{ $type }}">
     <x-card>
-        @component('components.selectbox-subject', ['type' => $type, 'subjects' => $subjects])
-        @endcomponent
+        <div
+            x-on:subject-selected="reportSubject.selectedName = $event.detail.name; reportSubject.selectedCode = $event.detail.code; reportSubject.selectedId = $event.detail.id">
+            <x-subject-select-box :subjects="$subjects" id_field="subject_id" code_field="code" placeholder="{{ __('Select subject') }}"></x-subject-select-box>
+        </div>
         <hr class="{{ $type == 'Journal' ? 'hidden' : '' }}">
         <div class="flex items-center">
             <div class="flex-1 gap-4">

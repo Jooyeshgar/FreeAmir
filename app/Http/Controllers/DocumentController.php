@@ -130,7 +130,7 @@ class DocumentController extends Controller
         return $transactions->map(function ($transaction, $i) {
             return [
                 'id' => $i + 1,
-                'transaction_id' => $transaction->transaction_id,
+                'transaction_id' => $transaction->id,
                 'subject_id' => $transaction->subject_id,
                 'subject' => $transaction->subject?->name,
                 'code' => $transaction->subject?->code,
