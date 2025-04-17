@@ -3,16 +3,33 @@
 @endphp
 <x-report-layout :title="__('Document') . ' #' . formatNumber($document->number)">
     @php
-        $transactions = $document->transactions;
-        $transactionsChunk = $transactions->chunk(17);
-        $pagecount = count($transactionsChunk);
         $current = 1;
-        $sum = 0;
+        $sumDebt = 0;
+        $sumCredit = 0;
         $i = 0;
+        $allTransactions = $document->transactions;
+
+        foreach ($allTransactions as $transaction) {
+            $sumDebt += $transaction->value > 0 ? $transaction->value : 0;
+            $sumCredit += $transaction->value < 0 ? -1 * $transaction->value : 0;
+            $transaction->sign = $transaction->value > 0 ? 1 : 0;
+            $transaction->absValue = abs($transaction->value);
+            $transaction->ledgerSign = $transaction->sign . $transaction->subject->ledger();
+        }
+
+        $allTransactions = $allTransactions->sortByDesc(['sign', 'absValue']);
+        $allTransactions = $allTransactions->groupBy('ledgerSign')->flatten();
+        $transactionsChunk = $allTransactions->chunk(11);
+
+        $pagecount = count($transactionsChunk);
     @endphp
-    @foreach ($transactionsChunk as $transactions)
-        <div class="bg-white p-4 mb-4 rounded-lg print:pr-10">
-            <div class="border border-gray-300 p-4 rounded mb-6 flex">
+
+    @foreach ($transactionsChunk as $pageTransactions)
+        @php
+            $pageTransactionsGroup = $pageTransactions->groupBy('ledgerSign');
+        @endphp
+        <div class="bg-white p-4 mb-4 rounded-lg print:pl-5 break-after-page">
+            <div class="border border-black p-4 rounded mb-6 flex">
                 <div class="flex-grow text-center mb-4">
                     <h1 class="text-xl font-bold">{{ session('active-company-name') }}</h1>
                     <p class="text-lg">سند حسابداری</p>
@@ -23,38 +40,69 @@
                     <p>صفحه: {{ formatNumber($current) }} از {{ formatNumber($pagecount) }}</p>
                 </div>
             </div>
-            <table class="table-auto w-full mb-6 border-collapse border border-gray-300 max-w-full">
+            <table class="w-full mb-6 border-collapse border border-black max-w-full table-fixed">
                 <thead>
                     <tr class="bg-gray-200">
-                        <th class="border border-gray-300 p-2">ردیف</th>
-                        <th class="border border-gray-300 p-2">کد</th>
-                        <th class="border border-gray-300 p-2">شرح</th>
-                        <th class="border border-gray-300 p-2">بدهکار</th>
-                        <th class="border border-gray-300 p-2">بستانکار</th>
+                        <th class="border border-black p-2 w-1/12">{{ __('Row') }}</th>
+                        <th class="border border-black p-2 w-1/12">{{ __('Code') }}</th>
+                        <th class="border border-black p-2 w-6/12 text-right">{{ __('Description') }}</th>
+                        <th class="border border-black p-2 w-2/12">{{ __('Debit') }}</th>
+                        <th class="border border-black p-2 w-2/12">{{ __('Credit') }}</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach ($transactions as $transaction)
+                    @foreach ($pageTransactionsGroup as $transactions)
                         @php
-                            $sum += $transaction->value > 0 ? $transaction->value : 0;
                             $i++;
+                            $firstTransaction = $transactions->first();
+                            $alignLeft = $firstTransaction->value < 0 ? 'text-left' : '';
                         @endphp
                         <tr>
-                            <td class="border p-2 text-center">{{ formatNumber($i) }}</td>
-                            <td class="border p-2 whitespace-normal">{{ $transaction->subject->formattedName() }}</td>
-                            <td class="border p-2 whitespace-normal">{{ $transaction->desc }}</td>
-                            <td class="border p-2">{{ $transaction->value < 0 ? formatNumber($transaction->value * -1) : '' }}</td>
-                            <td class="border p-2">{{ $transaction->value >= 0 ? formatNumber($transaction->value) : '' }}</td>
+                            <td class="border-t border-x border-black p-2 text-center"></td>
+                            <td class="border-t border-x border-black p-2"></td>
+                            <td class="border-t border-x border-black p-2 {{ $alignLeft }}">
+                                <b><u>{{ $firstTransaction->subject->getRoot()->name }}</u></b><br />
+                            </td>
+                            <td class="border-t border-x border-black p-2"></td>
+                            <td class="border-t border-x border-black p-2"></td>
                         </tr>
+                        @foreach ($transactions as $transaction)
+                            <tr>
+                                <td class="border-x border-black p-2 text-center">{{ formatNumber($i) }}</td>
+                                <td class="border-x border-black p-2">{{ $transaction->subject->formattedCode() }}</td>
+                                <td class="border-x border-black p-2 {{ $alignLeft }}">
+                                    {{ $transaction->subject->name }}<br />
+                                    <small class="block truncate">{{ $transaction->desc }}</small>
+                                </td>
+                                <td class="border-x border-black p-2">
+                                    {{ $transaction->value > 0 ? formatNumber($transaction->value) : '' }}
+                                </td>
+                                <td class="border-x border-black p-2">
+                                    {{ $transaction->value < 0 ? formatNumber($transaction->value * -1) : '' }}
+                                </td>
+                            </tr>
+                        @endforeach
                     @endforeach
                 </tbody>
+                <tfoot>
+                    <tr>
+                        <td class="border border-black p-2 text-center"></td>
+                        <td class="border border-black p-2"></td>
+                        <td class="border border-black p-2 text-left">
+                            <b>جمع سند:</b>
+                        </td>
+                        <td class="border border-black p-2">
+                            {{ formatNumber($sumDebt) }}
+                        </td>
+                        <td class="border border-black p-2">
+                            {{ formatNumber($sumCredit) }}
+                        </td>
+                    </tr>
+                </tfoot>
             </table>
-            @if ($pagecount == $current)
-                <div class="text-right text-sm mb-4">
-                    <p>جمع کل: {{ NumberToWordHelper::convert($sum) }}</p>
-                </div>
-            @endif
-            <div class="border border-gray-300 p-4 rounded break-after-page">
+
+            {{-- Footer --}}
+            <div class="border border-black p-4 rounded">
                 <p class="text-sm mb-2">شرح سند: {{ $document->title }}</p>
                 <div class="flex justify-between text-sm">
                     <p>ایجاد کننده: {{ $document->creator->name }}</p>
@@ -68,5 +116,4 @@
             $current++;
         @endphp
     @endforeach
-
 </x-report-layout>

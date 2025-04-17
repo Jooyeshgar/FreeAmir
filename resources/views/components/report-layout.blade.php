@@ -10,7 +10,7 @@
     <style>
         @page {
             size: A4;
-            margin: 20mm;
+            margin: 2mm;
         }
 
         td {
@@ -23,7 +23,7 @@
 
 <body class="printable" dir="{{ app()->getLocale() == 'fa' ? 'rtl' : 'ltr' }}">
 
-    <main class="mx-auto" style="width: 210mm;">
+    <main class="mx-auto">
         {{ $slot }}
     </main>
 

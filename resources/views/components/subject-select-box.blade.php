@@ -13,7 +13,7 @@
 }"
     @click.outside="if (!$event.target.closest('.selfSelectBox')) isSelectBoxOpen = false">
 
-    <x-input @click="isSelectBoxOpen = true" :title="$title" readonly name="{{ $attributes->get('input_name') }}" placeholder="{{ $attributes->get('placeholder') }}"
+    <x-input @click="isSelectBoxOpen = true" title=" " readonly name="{{ $attributes->get('input_name') }}" placeholder="{{ $attributes->get('placeholder') }}"
         x-bind:value="selectedName" input_value="{{ $attributes->get('input_value') }}" id="subject_id" label_class="w-full"
         input_class="border-white subject_name codeSelectBox" model_name="selectedName">
     </x-input>

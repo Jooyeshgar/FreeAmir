@@ -81,4 +81,16 @@ class Subject extends Model
     {
         return formatCode($this->code) . ' ' . $this->name;
     }
+
+    public function ledger()
+    {
+        return substr($this->code, 0, 3);
+    }
+
+    public function getRoot()
+    {
+        $ancestors = $this->ancestors()->get();
+
+        return $ancestors->last();
+    }
 }

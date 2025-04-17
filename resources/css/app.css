@@ -12,16 +12,26 @@
 
 body {
     font-family: Vazirmatn, sans-serif !important;
-    /* direction: rtl; */
+
     padding: .6rem;
 }
 
 .printable {
     background-color: lightgray;
     background-image: none;
-    /* width: 210mm; */
     padding-top: 10px;
     min-height: 100vh;
+    font-size: small;
+    color: black;
+
+    main {
+        width: 200mm;
+    }
+
+    @media print {
+        background-color: white;
+
+    }
 }
 
 jdp-container .jdp-btn-empty,
