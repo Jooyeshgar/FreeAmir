@@ -53,13 +53,12 @@
                 <tbody>
                     @foreach ($pageTransactionsGroup as $transactions)
                         @php
-                            $i++;
                             $firstTransaction = $transactions->first();
                             $alignLeft = $firstTransaction->value < 0 ? 'text-left' : '';
                         @endphp
                         <tr>
-                            <td class="border-t border-x border-black p-2 text-center"></td>
-                            <td class="border-t border-x border-black p-2"></td>
+                            <td class="border-t border-x border-black"></td>
+                            <td class="border-t border-x border-black p-2 text-center"><b><u>{{ $firstTransaction->subject->getRoot()->formattedCode() }}</u></b></td>
                             <td class="border-t border-x border-black p-2 {{ $alignLeft }}">
                                 <b><u>{{ $firstTransaction->subject->getRoot()->name }}</u></b><br />
                             </td>
@@ -68,6 +67,9 @@
                         </tr>
                         @foreach ($transactions as $transaction)
                             <tr>
+                                @php
+                                    $i++;
+                                @endphp
                                 <td class="border-x border-black p-2 text-center">{{ formatNumber($i) }}</td>
                                 <td class="border-x border-black p-2">{{ $transaction->subject->formattedCode() }}</td>
                                 <td class="border-x border-black p-2 {{ $alignLeft }}">
