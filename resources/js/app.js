@@ -4,7 +4,7 @@ import Alpine from 'alpinejs';
 import { Chart, registerables } from 'chart.js';
 
 window.Alpine = Alpine;
-Alpine.start();
+
 
 Chart.register(...registerables);
 
@@ -239,7 +239,7 @@ if (document.querySelector(".selfSelectBoxContainer")) {
                     mainformCodes[index].value = normalizedCode;
 
                     setTimeout(() => {
-                        e.target.value = window.formatCode(normalizedCode);
+                        e.target.value = $store.utils.formatCode(normalizedCode);
                     }, 200);
                 } else {
                     codeSelectBoxes[index].value = "";
@@ -251,34 +251,6 @@ if (document.querySelector(".selfSelectBoxContainer")) {
     }
 
     codeInputFiller()
-
-    window.openSelectBox = function (e) {
-        document.querySelectorAll(".selfSelectBox").forEach(function (e) {
-            e.style.display = "none"
-        }), e.querySelector(".selfSelectBox").style.display = "block"
-    }
-
-    window.formatCode = function (e) {
-        let t = [];
-        for (let n = 0; n < e.length; n += 3) t.push(e.substring(n, n + 3));
-        return e = t.join("/"), ["fa", "fa_IR"].includes("fa") && (e = window.convertToFarsi(e)), e
-    }
-
-    window.convertToFarsi = function (e) {
-        let t = {
-            0: "۰",
-            1: "۱",
-            2: "۲",
-            3: "۳",
-            4: "۴",
-            5: "۵",
-            6: "۶",
-            7: "۷",
-            8: "۸",
-            9: "۹"
-        };
-        return e.replace(/[0-9]/g, e => t[e])
-    }
 
     window.reOrderInputs = function () {
         setTimeout(() => {
@@ -303,3 +275,34 @@ if (document.querySelector(".selfSelectBoxContainer")) {
             })
     });
 }
+
+
+
+Alpine.store('utils', {
+    openSelectBox(e) {
+        document.querySelectorAll(".selfSelectBox").forEach(function (box) {
+            box.style.display = "none";
+        });
+        e.querySelector(".selfSelectBox").style.display = "block";
+    },
+    formatCode(input) {
+        if (!input) return '';
+        const formatted = input.match(/.{1,3}/g)?.join('/') || input;
+        return ['fa', 'fa_IR'].includes('fa') ? this.convertToFarsi(formatted) : formatted;
+    },
+    convertToFarsi(number) {
+        const farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+        return number.replace(/\d/g, digit => farsiDigits[digit]);
+    },
+    convertToEnglish(num) {
+        if (!num) return '';
+        const persianNumbers = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+        const englishNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        return num.toString().replace(/,/g, '') // Remove commas
+            .split('')
+            .map(char => persianNumbers.includes(char) ? englishNumbers[persianNumbers.indexOf(char)] : char)
+            .join('');
+    }
+});
+
+Alpine.start();

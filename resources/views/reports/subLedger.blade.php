@@ -13,14 +13,18 @@
 
     <form action="{{ route('reports.result') }}" method="get" x-data="{ subjectCode: '' }">
         <x-card>
-            <div class="flex gap-4">
+            <div class="flex gap-4" x-data="{
+                selectedName: '',
+                selectedCode: '',
+                selectedId: '',
+            }">
                 <div class="w-1/3">
-                    <x-input x-ref="codeInput" name="code_input" id="code_input" placeholder="{{ __('Subject Code') }}" title="{{ __('Subject') }}"
-                        model_name="subjectCode">
+                    <x-input name="code_input" id="code_input" placeholder="{{ __('Subject Code') }}" title="{{ __('Subject') }}"
+                        x-bind:value="$store.utils.formatCode(selectedCode)">
                     </x-input>
                 </div>
-                <x-subject-select-box class="w-2/3" @subject-selected="subjectCode=formatCode($event.detail.code)" :subjects="$subjects" title="{{ __('Subject name') }}"
-                    id_field="subject_id" placeholder="{{ __('Select a subject') }}" allSelectable="true"></x-subject-select-box>
+                <x-subject-select-box class="w-2/3" :subjects="$subjects" title="{{ __('Subject name') }}" id_field="subject_id" placeholder="{{ __('Select a subject') }}"
+                    allSelectable="true"></x-subject-select-box>
             </div>
 
             @include('reports.form', ['type' => 'subLedger'])

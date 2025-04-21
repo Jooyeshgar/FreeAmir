@@ -1,25 +1,33 @@
-<div {{ $attributes->merge(['class' => 'selfSelectBoxContainer relative flex-1 w-full pb-3']) }} x-data="{
+@props([
+    'subjects',
+    'title' => '',
+    'input_name' => '',
+    'placeholder' => '',
+    'id_field' => 'subject_id',
+    'code_field' => 'code',
+    'bordered' => true,
+    'level' => null,
+    'allSelectable' => false,
+])
+
+<div {{ $attributes->merge(['class' => 'selfSelectBoxContainer relative flex-1 w-full']) }} x-data="{
     isSelectBoxOpen: false,
-    selectedName: '',
-    selectedCode: '',
-    selectedId: '',
+
     updateSelection(name, code, id) {
-        this.selectedName = name;
-        this.selectedCode = code;
-        this.selectedId = id;
-        this.isSelectBoxOpen = false;
-        this.$dispatch('subject-selected', { name, code, id });
+        selectedName = name;
+        selectedCode = code;
+        selectedId = id;
+        isSelectBoxOpen = false;
     }
 }"
     @click.outside="if (!$event.target.closest('.selfSelectBox')) isSelectBoxOpen = false">
 
-    <x-input @click="isSelectBoxOpen = true" title=" " readonly name="{{ $attributes->get('input_name') }}" placeholder="{{ $attributes->get('placeholder') }}"
-        x-bind:value="selectedName" input_value="{{ $attributes->get('input_value') }}" id="subject_id" label_class="w-full"
-        input_class="border-white subject_name codeSelectBox" model_name="selectedName">
+    <x-input @click="isSelectBoxOpen = true" :title="$title" :bordered="$bordered" readonly :name="$input_name" :placeholder="$placeholder" x-bind:value="selectedName"
+        label_class="w-full" input_class="border-white subject_name codeSelectBox" model_name="selectedName">
     </x-input>
 
-    <input type="hidden" x-bind:value="selectedId" name="{{ $attributes->get('id_field', 'subject_id') }}">
-    <input type="hidden" x-bind:value="selectedCode" name="{{ $attributes->get('code_field', 'code') }}">
+    <input type="hidden" x-bind:value="selectedId" name="{{ $id_field }}">
+    <input type="hidden" x-bind:value="selectedCode" name="{{ $code_field }}">
 
     <div class="selfSelectBox absolute z-[3] top-[40px] w-full h-[300px] bg-white overflow-auto px-4 pb-4 rounded-[16px] shadow-[0px_43px_27px_0px_#00000012]"
         x-show="isSelectBoxOpen" x-transition x-data="searchComponent()" class="subject-select-box">
@@ -56,8 +64,8 @@
                 @foreach ($subjects as $subject)
                     @include('components.subject-select-box-item', [
                         'subject' => $subject,
-                        'level' => $attributes->get('level', null),
-                        'allSelectable' => $attributes->get('allSelectable', false),
+                        'level' => $level,
+                        'allSelectable' => $allSelectable,
                     ])
                 @endforeach
             </div>
@@ -111,7 +119,7 @@
                                         <div class="w-full ps-2 mb-4">
                                             <div class="flex justify-between">
                                                 <span>${name}</span>
-                                                <span>${formatCode(code)}</span>
+                                                <span>${$store.utils.formatCode(code)}</span>
                                             </div>
                                         </div>`;
                                     } else {
@@ -120,7 +128,7 @@
                                         <div class="w-full ps-2 mb-4">
                                             <div class="flex justify-between">
                                                 <span>${name}</span>
-                                                <span>${formatCode(code)}</span>
+                                                <span>${$store.utils.formatCode(code)}</span>
                                             </div>
                                         </div>
                                         <div class="ps-1 mt-4">
@@ -132,7 +140,7 @@
                                             subDiv.innerHTML += `
                                             <a href="javascript:void(0)" 
                                                 class="selfSelectBoxItems flex justify-between mb-4" 
-                                                @click="updateSelection('${sub.name}', '${sub.code}', '${sub.id}')">
+                                                @click="$parent.updateSelection('${sub.name}', '${sub.code}', '${sub.id}')">
                                                 <span class="selfItemTitle">${sub.name}</span>
                                                 <span class="codeList" data-name="${sub.name}" data-code="${sub.code}" data-id="${sub.id}" hidden></span>
                                                 <span class="selfItemCode">

@@ -10,7 +10,7 @@
     <style>
         @page {
             size: A4;
-            margin: 2mm;
+            margin: 5mm;
         }
 
         td {
