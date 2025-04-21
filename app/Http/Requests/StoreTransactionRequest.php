@@ -29,16 +29,17 @@ class StoreTransactionRequest extends FormRequest
         ]);
 
         // Convert debit and credit values to float for each document entry
-        if ($this->has('documents')) {
-            $documents = collect($this->input('documents'))->map(function ($document) {
+        if ($this->has('transactions')) {
+            $transactions = collect($this->input('transactions'))->map(function ($transaction) {
                 return [
-                    'debit' => convertToFloat($document['debit']),
-                    'credit' => convertToFloat($document['credit']),
-                    'desc' => $document['desc'],
-                    'subject_id' => $document['subject_id'],
+                    'debit' => convertToFloat($transaction['debit']),
+                    'credit' => convertToFloat($transaction['credit']),
+                    'desc' => $transaction['desc'],
+                    'subject_id' => (int)$transaction['subject_id'],
+                    'transaction_id' => (int)$transaction['transaction_id'] ?? null,
                 ];
             });
-            $this->merge(['documents' => $documents->toArray()]);
+            $this->merge(['transactions' => $transactions->toArray()]);
         }
     }
 
@@ -61,10 +62,10 @@ class StoreTransactionRequest extends FormRequest
                     ->ignore($this->request->get('document_id')), // Ignore the current document ID if updating
             ],
             'date' => 'required',
-            'documents.*.subject_id' => 'required|exists:subjects,id',
-            'documents.*.debit' => 'nullable|required_without:transactions.*.credit|integer|min:0',
-            'documents.*.credit' => 'nullable|required_without:transactions.*.debit|integer|min:0',
-            'documents.*.desc' => 'required|string',
+            'transactions.*.subject_id' => 'required|exists:subjects,id',
+            'transactions.*.debit' => 'nullable|required_without:transactions.*.credit|integer|min:0',
+            'transactions.*.credit' => 'nullable|required_without:transactions.*.debit|integer|min:0',
+            'transactions.*.desc' => 'required|string',
         ];
     }
 }

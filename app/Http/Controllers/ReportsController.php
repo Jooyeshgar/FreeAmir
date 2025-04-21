@@ -10,9 +10,7 @@ use Illuminate\Support\Facades\Validator;
 
 class ReportsController extends Controller
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     public function ledger()
     {
@@ -36,27 +34,31 @@ class ReportsController extends Controller
     public function result(Request $request)
     {
         $this->updateTree();
-        $validator = Validator::make($request->all(), [
+
+        $rules = [
             'report_for' => 'required',
             'report_type' => 'required',
-            'subject_id' => '',
-        ]);
-        $validator->sometimes('subject_id', 'required', function ($input) {
-            return $input->report_for != 'Journal';
-        });
+        ];
 
-        $validator->sometimes(['start_document_number', 'end_document_number'], 'required', function ($input) {
-            return $input->report_type == 'between_numbers';
-        });
+        if ($request->report_for != 'Journal') {
+            $rules['subject_id'] = 'required';
+        }
 
-        $validator->sometimes(['start_date', 'end_date'], 'required', function ($input) {
-            return $input->report_type == 'between_dates';
-        });
-        $validator->sometimes(['specific_date'], 'required', function ($input) {
-            return $input->report_type == 'specific_date';
-        });
+        if ($request->report_type == 'between_numbers') {
+            $rules['start_document_number'] = 'required';
+            $rules['end_document_number'] = 'required';
+        }
 
-        $validator->validate();
+        if ($request->report_type == 'between_dates') {
+            $rules['start_date'] = 'required';
+            $rules['end_date'] = 'required';
+        }
+
+        if ($request->report_type == 'specific_date') {
+            $rules['specific_date'] = 'required';
+        }
+
+        Validator::make($request->all(), $rules)->validate();
 
         $transactions = new Transaction();
 
@@ -64,10 +66,12 @@ class ReportsController extends Controller
             $transactions = $transactions->where('subject_id', $request->subject_id);
         }
         if ($request->subject_id && $request->report_for == 'Ledger') {
-            $transactions = $transactions->whereHas('subject', function ($query) use ($request) {
-                $query->whereHas('ancestors', function ($query) use ($request) {
-                    $query->where('id', $request->subject_id)->whereIsRoot();
-                });
+            $subject = Subject::findOrFail($request->subject_id);
+
+            $transactions = $transactions->whereHas('subject', function ($query) use ($subject) {
+                // Get the subject and all its descendants using the nested set model
+                $query->where('_lft', '>=', $subject->_lft)
+                    ->where('_rgt', '<=', $subject->_rgt);
             });
         }
 
@@ -95,6 +99,7 @@ class ReportsController extends Controller
         }
         $transactions = $transactions->with('document', 'subject')->get();
         $transactionsChunk = $transactions->chunk(env('REPORT_ROW_SIZE', 26));
+
         if ($request->report_for == 'Journal') {
             return view('reports.journalReport', compact('transactionsChunk'));
         }

@@ -1,4 +1,3 @@
-<!-- resources/views/report.blade.php -->
 <x-report-layout :title="__('Journal Report')">
     @php
         $pagecount = count($transactionsChunk);

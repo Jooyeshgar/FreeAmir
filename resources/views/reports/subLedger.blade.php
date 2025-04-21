@@ -9,5 +9,32 @@
             {{ __('Subsidiary Ledger Report') }}
         </span>
     </div>
-    @include('reports.form', ['type' => 'subLedger'])
+    <x-show-message-bags />
+
+    <form action="{{ route('reports.result') }}" method="get" x-data="{ subjectCode: '' }">
+        <x-card>
+            <div class="flex gap-4" x-data="{
+                selectedName: '',
+                selectedCode: '',
+                selectedId: '',
+            }">
+                <div class="w-1/3">
+                    <x-input name="code_input" id="code_input" placeholder="{{ __('Subject Code') }}" title="{{ __('Subject') }}"
+                        x-bind:value="$store.utils.formatCode(selectedCode)">
+                    </x-input>
+                </div>
+                <x-subject-select-box class="w-2/3" :subjects="$subjects" title="{{ __('Subject name') }}" id_field="subject_id" placeholder="{{ __('Select a subject') }}"
+                    allSelectable="true"></x-subject-select-box>
+            </div>
+
+            @include('reports.form', ['type' => 'subLedger'])
+        </x-card>
+        <div class="mt-2 flex gap-2 justify-end">
+            <a href="{{ route('documents.index') }}" type="submit" class="btn btn-default rounded-md">
+                {{ __('Convert to CSV') }}
+            </a>
+            <button type="submit" class="btn btn-default rounded-md"> {{ __('Print') }}</button>
+            <button type="submit" class="btn text-white btn-primary rounded-md"> {{ __('Preview') }}</button>
+        </div>
+    </form>
 </x-app-layout>

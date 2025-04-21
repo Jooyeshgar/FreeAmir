@@ -12,16 +12,26 @@
 
 body {
     font-family: Vazirmatn, sans-serif !important;
-    /* direction: rtl; */
+
     padding: .6rem;
 }
 
 .printable {
     background-color: lightgray;
     background-image: none;
-    /* width: 210mm; */
     padding-top: 10px;
     min-height: 100vh;
+    font-size: small;
+    color: black;
+
+    main {
+        width: 200mm;
+    }
+
+    @media print {
+        background-color: white;
+
+    }
 }
 
 jdp-container .jdp-btn-empty,
@@ -49,17 +59,23 @@ main {
     display: block;
 }
 
-.transaction.active input {
-    border: 1px solid slategray;
-}
+.transaction {
+    &.active {
+        input {
+            border: 1px solid slategray;
+        }
 
-.transaction input:focus {
-    border: 1px solid rgb(56, 121, 207);
-    box-shadow: 0px 0px 1px rgb(56, 121, 207) !important;
-}
+        .removeButton {
+            display: block !important;
+        }
+    }
 
-.transaction.active .removeButton {
-    display: block !important;
+    input {
+        &:focus {
+            border: 1px solid rgb(56, 121, 207);
+            box-shadow: 0px 0px 1px rgb(56, 121, 207) !important;
+        }
+    }
 }
 
 #transactions input {
