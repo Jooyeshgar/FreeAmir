@@ -47,7 +47,7 @@
                     </div>
                 </fieldset>
                 <div class="card-actions">
-                    <button type="submit" class="btn btn-pr">{{ __('Create') }}</button>
+                    <button type="submit" class="btn btn-pr">{{ __('Edit') }}</button>
                 </div>
             </form>
         </div>

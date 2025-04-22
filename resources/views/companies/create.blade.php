@@ -20,7 +20,7 @@
                         <select class="select select-bordered w-full" id="source_year_id" name="source_year_id" required>
                             <option value="">{{ __('Select Source Fiscal Year') }}</option>
                             @foreach ($previousYears as $year)
-                                <option value="{{ $year->id }}">{{ $year->name }}</option>
+                                <option value="{{ $year->id }}">{{ $year->name }} - {{ $year->fiscal_year }}</option>
                             @endforeach
                         </select>
                     </div>

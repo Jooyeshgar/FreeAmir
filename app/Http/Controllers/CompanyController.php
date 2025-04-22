@@ -111,7 +111,7 @@ class CompanyController extends Controller
 
         if ($company->update($validated)) {
             return redirect(route('companies.index'))
-                ->with('success', 'Company updated successfully.');
+                ->with('success', __('Company updated successfully.'));
         }
 
         return redirect(route('companies.index'))

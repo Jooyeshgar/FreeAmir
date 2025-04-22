@@ -13,7 +13,10 @@
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <tr>
-                        <th class="px-4 py-2">{{ __('name') }}</th>
+                        <th class="px-4 py-2">{{ __('Name') }}</th>
+                        <th class="px-4 py-2">{{ __('Year') }}</th>
+                        <th class="px-4 py-2">{{ __('Economical Code') }}</th>
+                        <th class="px-4 py-2">{{ __('Address') }}</th>
                         <th class="px-4 py-2">{{ __('Action') }}</th>
                     </tr>
                 </thead>
@@ -21,11 +24,12 @@
                     @foreach ($companies as $company)
                         <tr>
                             <td class="px-4 py-2">{{ $company->name }}</td>
+                            <td class="px-4 py-2">{{ $company->fiscal_year }}</td>
+                            <td class="px-4 py-2">{{ $company->economical_code }}</td>
+                            <td class="px-4 py-2">{{ $company->address }}</td>
                             <td class="px-4 py-2">
-                                <a href="{{ route('companies.edit', $company) }}"
-                                    class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                <form action="{{ route('companies.destroy', $company) }}" method="POST"
-                                    class="inline-block">
+                                <a href="{{ route('companies.edit', $company) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                <form action="{{ route('companies.destroy', $company) }}" method="POST" class="inline-block">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
