@@ -86,6 +86,15 @@ php artisan serve
 2. Login with the default credentials (email: `admin@example.com`, password: `password`).
 3. Explore the features and functionalities of the application.
 
+
+**Custom Artisan Commands:**
+
+This project includes several custom Artisan commands to facilitate common tasks.
+
+*   **Fiscal Year Management:**
+    *   `fiscal-year:export`: Exports data from a specific fiscal year to a JSON file.
+    *   `fiscal-year:import`: Imports fiscal year data from a JSON file into a new fiscal year. 
+
 **Contributing:**
 
 We welcome contributions to the Amir project! Please refer to the CONTRIBUTING.md: CONTRIBUTING.md file for guidelines on how to submit bug reports, feature requests, and pull requests.

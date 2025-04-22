@@ -23,13 +23,13 @@ Ensure you have a clean MySQL database ready for the Laravel project.
 
 1. Run Laravel's migration and seeding commands to create the new database schema:
    ```bash
-   sail artisan migrate --seed
+   sail artisan migrate:fresh --seed
    ```
    This will create the new tables.
 
 2. Import the SQL file generated in Step 1 into the clean MySQL database. You can use a tool like MySQL Workbench, phpMyAdmin, or the MySQL command line:
    ```bash
-   mysql -u your_username -p your_database_name < old_amir_db.sql
+   (echo "SET FOREIGN_KEY_CHECKS=0;" && cat old_amir_db.sql) | mysql -u your_username -p your_database_name
    ```
    Replace `your_username`, `your_database_name`, and `old_amir_db.sql` with the appropriate values.
    
