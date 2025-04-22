@@ -30,7 +30,9 @@
                     <details>
                         <summary>{{ __('Accounting') }}</summary>
                         <ul>
-                            <li><a href="">{{ __('Document') }}</a></li>
+                            @can('reports.documents')
+                                <li><a href="{{ route('reports.documents') }}">{{ __('Document Report') }}</a></li>
+                            @endcan
                             @can('reports.journal')
                                 <li><a href="{{ route('reports.journal') }}">{{ __('Journal') }}</a></li>
                             @endcan
@@ -73,8 +75,8 @@
         </ul>
     </li>
 @endcanany
-@canany(['subjects.*', 'bank-accounts.*', 'customers.*', 'customer-groups.*', 'companies.*', 'banks.*',
-    'management.users.*', 'management.permissions.*', 'management.roles.*', 'management.configs.*'])
+@canany(['subjects.*', 'bank-accounts.*', 'customers.*', 'customer-groups.*', 'companies.*', 'banks.*', 'management.users.*', 'management.permissions.*',
+    'management.roles.*', 'management.configs.*'])
     <li class="dropdown dropdown-hover">
         <div tabindex="3" role="button">{{ __('Management') }}</div>
         <ul tabindex="3" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
@@ -88,7 +90,7 @@
                 <li><a href="{{ route('customers.index') }}">{{ __('Customers') }} </a></li>
             @endcan
             @can('customer-groups.*')
-                <li><a href="{{ route('customer-groups.index') }}">{{ __('Customers Groups') }} </a></li>
+                <li><a href="{{ route('customer-groups.index') }}">{{ __('Customer Groups') }} </a></li>
             @endcan
             @can('companies.*')
                 <li><a href="{{ route('companies.index') }}">{{ __('Companies') }} </a></li>

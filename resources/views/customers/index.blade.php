@@ -8,7 +8,7 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="card-actions">
-                <a href="{{ route('customers.create') }}" class="btn btn-primary">{{ __('Create customer') }}</a>
+                <a href="{{ route('customers.create') }}" class="btn btn-primary">{{ __('Create Customer') }}</a>
             </div>
             <table class="table w-full mt-4 overflow-auto">
                 <thead>

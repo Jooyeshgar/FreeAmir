@@ -10,7 +10,7 @@
             @csrf
             @method('PUT')
             <div class="card-body">
-                <div class="card-title">{{ __('Edit customer group') }}</div>
+                <div class="card-title">{{ __('Edit Customers Group') }}</div>
                 <x-show-message-bags />
 
                 @include('customerGroups.form')

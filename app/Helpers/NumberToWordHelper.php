@@ -35,7 +35,7 @@ class NumberToWordHelper
             19 => __('nineteen'),
             20 => __('twenty'),
             30 => __('thirty'),
-            40 => __('fourty'),
+            40 => __('forty'),
             50 => __('fifty'),
             60 => __('sixty'),
             70 => __('seventy'),

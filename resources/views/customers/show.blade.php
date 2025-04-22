@@ -55,7 +55,7 @@
                                 </div>
 
                                 <div>
-                                    <p class="text-sm text-gray-600">{{ __('Accountting code') }}</p>
+                                    <p class="text-sm text-gray-600">{{ __('Accounting code') }}</p>
                                     <p class="font-medium">{{ isset($customer->subject) ? $customer->subject->formattedCode() : '-' }}</p>
                                 </div>
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Subject;
 use App\Models\Transaction;
+use App\Models\Document; // Import Document model
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
@@ -20,7 +21,7 @@ class ReportsController extends Controller
 
     public function journal()
     {
-
+        // Subjects might not be needed for the initial form, but keep it if the form requires it
         $subjects = [];
         return view('reports.journal', compact('subjects'));
     }
@@ -31,36 +32,89 @@ class ReportsController extends Controller
         return view('reports.subLedger', compact('subjects'));
     }
 
+    public function documents()
+    {
+        // This method will show the input form for the document report
+        return view('reports.documents');
+    }
+
     public function result(Request $request)
     {
-        $this->updateTree();
-
+        // $this->updateTree(); // Remove this line if it's just for migration
         $rules = [
-            'report_for' => 'required',
-            'report_type' => 'required',
+            'report_for' => 'required|in:Journal,Ledger,subLedger,Document', // Added Document
+            'report_type' => 'required', // e.g., between_numbers, between_dates, specific_date, all
         ];
 
-        if ($request->report_for != 'Journal') {
+        // Add rules based on report_for and report_type
+        if ($request->report_for != 'Journal' && $request->report_for != 'Document') {
+            // Subject is required for Ledger and subLedger
             $rules['subject_id'] = 'required';
         }
 
         if ($request->report_type == 'between_numbers') {
-            $rules['start_document_number'] = 'required';
-            $rules['end_document_number'] = 'required';
+            $rules['start_document_number'] = 'required|numeric';
+            $rules['end_document_number'] = 'required|numeric';
+        } elseif ($request->report_type == 'between_dates') {
+            $rules['start_date'] = 'required|date_format:Y/m/d'; // Adjust format if needed
+            $rules['end_date'] = 'required|date_format:Y/m/d';   // Adjust format if needed
+        } elseif ($request->report_type == 'specific_date') {
+            $rules['specific_date'] = 'required|date_format:Y/m/d'; // Adjust format if needed
+        } elseif ($request->report_type == 'specific_number') { // Added specific number type
+            $rules['specific_document_number'] = 'required|numeric';
         }
 
-        if ($request->report_type == 'between_dates') {
-            $rules['start_date'] = 'required';
-            $rules['end_date'] = 'required';
+        // Allow 'all' type with no date/number restrictions
+        if (!in_array($request->report_type, ['between_numbers', 'between_dates', 'specific_date', 'specific_number', 'all'])) {
+            // If report_type is something else, maybe it requires dates/numbers?
+            // Add more specific validation if needed
         }
 
-        if ($request->report_type == 'specific_date') {
-            $rules['specific_date'] = 'required';
-        }
 
         Validator::make($request->all(), $rules)->validate();
 
-        $transactions = new Transaction();
+        // --- Logic for Document Report ---
+        if ($request->report_for == 'Document') {
+            $documents = Document::query(); // Start building query for Documents
+
+            // Apply filters based on report_type
+            if ($request->report_type == 'between_numbers') {
+                $documents->whereBetween('number', [$request->start_document_number, $request->end_document_number]);
+            } elseif ($request->report_type == 'specific_number') {
+                $documents->where('number', $request->specific_document_number);
+            } elseif ($request->report_type == 'between_dates') {
+                // Convert Jalali dates to Gregorian for database query
+                $startDate = jalali_to_gregorian_date($request->start_date);
+                $endDate = jalali_to_gregorian_date($request->end_date);
+                $documents->whereBetween('date', [$startDate, $endDate]);
+            } elseif ($request->report_type == 'specific_date') {
+                $specificDate = jalali_to_gregorian_date($request->specific_date);
+                $documents->where('date', $specificDate);
+            }
+            // If report_type is 'all', no date/number filter is applied here
+
+            // Apply search filter to document title
+            if ($request->search) {
+                $documents->where('title', 'like', '%' . $request->search . '%');
+            }
+
+            // Order documents for display
+            $documents->orderBy('date', 'asc')->orderBy('number', 'asc');
+
+            // Eager load necessary relationships for the document template
+            // Need transactions and their subjects, plus creator and approver
+            $documents = $documents->with(['transactions.subject', 'creator', 'approver'])->get();
+
+            // Pass the collection of documents to the new report view
+            return view('reports.documentReport', compact('documents'));
+        }
+
+
+        // --- Existing Logic for Journal/Ledger/subLedger Reports ---
+        // Note: This logic fetches Transactions, not Documents.
+        // If you need to modify how Journal reports work (e.g., chunking Documents instead of Transactions),
+        // you would adjust this section. But sticking to the original Journal logic here.
+        $transactions = Transaction::query(); // Start building query for Transactions
 
         if ($request->subject_id && $request->report_for == 'subLedger') {
             $transactions = $transactions->where('subject_id', $request->subject_id);
@@ -75,6 +129,7 @@ class ReportsController extends Controller
             });
         }
 
+        // Filters applied to the document relationship for these reports
         if ($request->search) {
             $transactions = $transactions->whereHas('document', function ($q) use ($request) {
                 $q->where('title', 'like', '%' . $request->search . '%');
@@ -97,21 +152,29 @@ class ReportsController extends Controller
                 $q->where('date', '=', jalali_to_gregorian_date($request->specific_date));
             });
         }
+
+        // Need to eager load document and subject for these reports too
         $transactions = $transactions->with('document', 'subject')->get();
+
+        // Chunking for Journal/Ledger reports (as per original logic)
         $transactionsChunk = $transactions->chunk(env('REPORT_ROW_SIZE', 26));
 
+
         if ($request->report_for == 'Journal') {
+            // Assuming journalReport.blade.php expects $transactionsChunk
             return view('reports.journalReport', compact('transactionsChunk'));
         }
+        // Assuming ledgerReport.blade.php expects $transactionsChunk
         return view('reports.ledgerReport', compact('transactionsChunk'));
+        // --- End Existing Logic ---
     }
 
-    private function updateTree()
-    {
-        //        this function should remove. its just for fix tree one time.
-        $sub = Subject::all();
-        foreach ($sub as $s) {
-            $s->fixTree();
-        }
-    }
+    // private function updateTree()
+    // {
+    //     //        this function should remove. its just for fix tree one time.
+    //     $sub = Subject::all();
+    //     foreach ($sub as $s) {
+    //         $s->fixTree();
+    //     }
+    // }
 }

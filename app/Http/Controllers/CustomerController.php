@@ -90,7 +90,7 @@ class CustomerController extends Controller
 
         $customer->update($validatedData);
 
-        return redirect()->route('customers.index')->with('success', __("'Customer updated successfully.'"));
+        return redirect()->route('customers.index')->with('success', __('Customer updated successfully.'));
     }
 
     public function destroy(Models\Customer $customer)

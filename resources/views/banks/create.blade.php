@@ -9,7 +9,7 @@
         <form action="{{ route('banks.store') }}" method="POST">
             @csrf
             <div class="card-body">
-                <div class="card-title">{{ __('Add bank') }}</div>
+                <div class="card-title">{{ __('Add Bank') }}</div>
                 <x-show-message-bags />
 
                 @include('banks.form')

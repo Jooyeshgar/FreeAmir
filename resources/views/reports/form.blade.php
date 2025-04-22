@@ -18,7 +18,7 @@
     </div>
 
     <div class="flex-1">
-        <x-text-input name="specific_date" label_class="flex-1" data-jdp placeholder="{{ __('Your specific date') }}"></x-text-input>
+        <x-input name="specific_date" label_class="flex-1" data-jdp placeholder="{{ __('Your specific date') }}"></x-input>
     </div>
 </div>
 <div class="flex items-center">
@@ -31,8 +31,8 @@
     </div>
 
     <div class="flex-1 flex gap-2 justify-between">
-        <x-text-input name="start_date" label_class="flex-1" data-jdp placeholder="{{ __('Start date') }}"></x-text-input>
-        <x-text-input name="end_date" label_class="flex-1" data-jdp placeholder="{{ __('End date') }}"></x-text-input>
+        <x-input name="start_date" label_class="flex-1" data-jdp placeholder="{{ __('Start date') }}"></x-input>
+        <x-input name="end_date" label_class="flex-1" data-jdp placeholder="{{ __('End date') }}"></x-input>
     </div>
 </div>
 <div class="flex items-center">
@@ -45,12 +45,12 @@
     </div>
 
     <div class="flex-1 flex gap-2 justify-between">
-        <x-text-input name="start_document_number" label_class="flex-1" placeholder="{{ __('Document start number') }}"></x-text-input>
-        <x-text-input name="end_document_number" label_class="flex-1" placeholder="{{ __('Document end number') }}"></x-text-input>
+        <x-input name="start_document_number" label_class="flex-1" placeholder="{{ __('Document start number') }}"></x-input>
+        <x-input name="end_document_number" label_class="flex-1" placeholder="{{ __('Document end number') }}"></x-input>
     </div>
 </div>
 
 <hr>
 <div class="flex-1">
-    <x-text-input label_class="flex-1 max-w-44" placeholder="{{ __('Search for documents') }}" title="{{ __('Search for documents') }}" name="search"></x-text-input>
+    <x-input label_class="flex-1 max-w-44" placeholder="{{ __('Search for documents') }}" title="{{ __('Search for documents') }}" name="search"></x-input>
 </div>
