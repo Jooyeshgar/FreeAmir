@@ -1,3 +1,5 @@
+SET FOREIGN_KEY_CHECKS=0;
+
 SET @company_id = 1;
 SET @creator_id = 1;
 

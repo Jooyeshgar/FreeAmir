@@ -29,9 +29,9 @@ Ensure you have a clean MySQL database ready for the Laravel project.
 
 2. Import the SQL file generated in Step 1 into the clean MySQL database. You can use a tool like MySQL Workbench, phpMyAdmin, or the MySQL command line:
    ```bash
-   (echo "SET FOREIGN_KEY_CHECKS=0;" && cat old_amir_db.sql) | mysql -u your_username -p your_database_name
+   (echo "SET FOREIGN_KEY_CHECKS=0;" && cat script/old_amir_db.sql) | mysql -h 127.0.0.1 -u root -p freeamir
    ```
-   Replace `your_username`, `your_database_name`, and `old_amir_db.sql` with the appropriate values.
+   Replace `root`, `freeamir` (database name), `127.0.0.1`, and `old_amir_db.sql` with the appropriate values.
    
    This will create some tables with an `_old` suffix to store the imported data temporarily.
 
@@ -40,7 +40,7 @@ Run the SQL script to transform the old schema (tables with `_old` suffix) into 
 
 Execute the following SQL script:
 ```bash
-mysql -u your_username -p your_database_name < oldSchemaToNew.sql
+mysql -h 127.0.0.1 -u your_username -p your_database_name < script/oldSchemaToNew.sql
 ```
 Alternatively, you can run it through your database management tool.
 
@@ -61,3 +61,33 @@ If you encounter errors during the migration process:
 - If you encounter issues, restore your backup and review the steps or contact support.
 
 By following these steps, your Amir Accounting Software database should be successfully migrated from SQLite to MySQL with the new Laravel schema.
+
+## Migrating Multiple SQLite Databases
+
+If you need to merge data from multiple old SQLite databases into a single new MySQL database, the standard migration process needs modification due to potential duplicate IDs across the databases. Here's a recommended approach:
+
+1.  **Process Each SQLite Database Individually:** For *each* old SQLite database (`old_db_1.sqlite`, `old_db_2.sqlite`, etc.):
+    a.  **Create a Temporary Clean Database:** Set up a *separate*, temporary, clean MySQL database. Run `sail artisan migrate:fresh --seed` on this temporary database.
+    b.  **Convert SQLite to SQL:** Use the `sqliteToMysql.py` script to convert the current SQLite database to SQL format (e.g., `python3 sqliteToMysql.py old_db_1.sqlite`).
+    c.  **Import SQL to Temporary DB:** Import the generated `.sql` file into the temporary MySQL database:
+        ```bash
+        (echo "SET FOREIGN_KEY_CHECKS=0;" && cat script/old_db_1.sql) | mysql -h 127.0.0.1 -u temp_user -p temp_db_name
+        ```
+    d.  **Convert Schema in Temporary DB:** Run the `oldSchemaToNew.sql` script on the temporary database to transform the data:
+        ```bash
+        mysql -h 127.0.0.1 -u temp_user -p temp_db_name < script/oldSchemaToNew.sql
+        ```
+    e.  **Export Data to JSON:** Export the relevant data from the *now converted* temporary MySQL database into a structured format like JSON.
+      ```bash
+      sail artisan fiscal-year:export 1
+      ```
+      > Output: `storage/app/exports/fiscal_year_1_<timestamp>.json`
+    f.  **Discard Temporary Database:** You can now drop the temporary MySQL database.
+1.  **Prepare a Clean Target Database:** Start with a clean, migrated, and seeded MySQL database using `sail artisan migrate:fresh --seed`. This will be your final target database.
+3.  **Import JSON Data into Final Database:** Develop a script or process to import the data from all the generated JSON files into your final target MySQL database (from Step 1). This script needs to:
+    *   Handle potential conflicts (e.g., if the same customer exists in multiple databases).
+    *   Ensure relationships are correctly maintained.
+    *   Assign new primary keys as data is inserted, avoiding reliance on the old IDs.
+4.  **Final Verification:** Thoroughly check the data integrity in the final merged database.
+
+This multi-step process ensures that data from each source database is correctly formatted according to the new schema before being merged, mitigating issues with duplicate primary keys. It requires careful planning and potentially custom scripting for the JSON export and import phases.
