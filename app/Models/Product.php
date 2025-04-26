@@ -28,11 +28,6 @@ class Product extends Model
         'company_id',
     ];
 
-    protected static function booted()
-    {
-        static::addGlobalScope(new FiscalYearScope());
-    }
-
     public function productGroup(): BelongsTo
     {
         return $this->belongsTo(ProductGroup::class, 'group');

@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Customer;
+use App\Models\CustomerGroup;
 use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\Product;
+use App\Models\ProductGroup;
 use App\Models\Subject;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
@@ -19,10 +20,11 @@ class HomeController extends Controller
 
     public function index()
     {
-        $customerCount = Customer::count();
+        $customerCount = CustomerGroup::withCount('customers')->get()->sum('customers_count');
+
         $invoiceCount = Invoice::count();
         $documentCount = Document::count();
-        $productCount = Product::count();
+        $productCount = ProductGroup::withCount('products')->get()->sum('products_count');
 
         $cashBooks = Subject::where('parent_id', config('amir.cash_book'))->get();
         $banks = Subject::where('parent_id', config('amir.bank'))->get();
