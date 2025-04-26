@@ -64,10 +64,12 @@ if (document.getElementById('lineChart')) {
             }
         });
     });
+}
 
+if (document.getElementById('gaugeChart')) {  
     document.addEventListener('DOMContentLoaded', () => {
         const ctx = document.getElementById('gaugeChart').getContext('2d');
-        const myChart = new Chart(ctx, {
+        const gaugeChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: ['درآمد از فروش', 'درآمد از تخفیف خرید', 'خالی'],  // برچسب‌ها
@@ -106,65 +108,14 @@ if (document.getElementById('lineChart')) {
                                 return legendItem.text !== 'خالی';
                             }
                         }
-                    },
-                    datalabels: {
-                        color: '#000',  // رنگ متن داخل نمودار
-                        formatter: function (value, context) {
-                            // نمایش مقادیر فقط برای بخش‌های غیر از "خالی"
-                            return context.chart.data.labels[context.dataIndex] !== 'خالی' ? value : '';
-                        },
-                        anchor: 'end',  // موقعیت متن نسبت به نقطه
-                        align: 'end',  // تنظیم متن به بالا
-                        offset: 10,  // فاصله متن از نقطه
-                        textAlign: 'right',  // راست‌چین کردن متن داخل نمودار
                     }
                 }
-
-if(document.getElementById('gaugeChart')) {  
-  document.addEventListener('DOMContentLoaded', () => {
-    const ctx = document.getElementById('gaugeChart').getContext('2d');
-    const gaugeChart = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: ['درآمد از فروش', 'درآمد از تخفیف خرید', 'خالی'],  // برچسب‌ها
-        datasets: [{
-          data: [30, 50, 20],  // مقادیر داده‌ها
-          backgroundColor: ['#FF6B6B', '#FFA726', '#FFFFFF'],  // رنگ‌ها
-          borderWidth: 0,  // حذف حاشیه‌ها
-        }]
-      },
-      options: {
-        responsive: true,  // واکنش‌گرا بودن نمودار
-        maintainAspectRatio: false,  // غیرفعال کردن حفظ نسبت ابعاد
-        aspectRatio: 2,  // نسبت ابعاد عرض به ارتفاع برای بوم
-        circumference: 180,  // تعیین زاویه نمودار (180 درجه)
-        rotation: -90,  // چرخش نمودار برای نمایش از پایین به بالا
-        cutout: '70%',  // تعیین اندازه حفره مرکزی
-        layout: {
-          padding: {
-            top: 0,  // حذف فضای خالی بالا
-            bottom: 0  // حذف فضای خالی پایین
-          }
-        },
-        plugins: {
-          legend: {
-            display: true,  // نمایش یا عدم نمایش لیبل‌های کنار نمودار
-            position: 'right',  // موقعیت لیبل‌ها
-            rtl: true,  // راست‌چین کردن لیبل‌ها
-            labels: {
-              usePointStyle: true,  // نمایش نقطه‌ها به جای مربع‌ها
-              pointStyle: 'circle',  // تعیین سبک نقاط به عنوان دایره
-              boxWidth: 8,  // تنظیم اندازه نقاط (کوچک‌تر کردن آنها)
-              boxHeight: 8,  // تنظیم ارتفاع نقاط
-              textAlign: 'left',  // تنظیم متن به راست
-              filter: function (legendItem, data) {
-                // فقط لیبل‌هایی که نام آنها "خالی" نیست را نمایش بده
-                return legendItem.text !== 'خالی';
-              }
             }
         });
     });
+}
 
+if (document.getElementById('midLineChart')) {
     document.addEventListener('DOMContentLoaded', () => {
         const ctx = document.getElementById('midLineChart').getContext('2d');
 
@@ -293,37 +244,35 @@ if (document.querySelector(".selfSelectBoxContainer")) {
         });
     }
 
-    codeInputFiller()
+    codeInputFiller();
 
     window.reOrderInputs = function () {
         setTimeout(() => {
             document.querySelectorAll(".transaction").forEach(elem => {
                 let t = elem.querySelector(".transaction-count").innerText;
-            })
+            });
         }, 200);
-    }
+    };
 
     function countInputs() {
-        searchInputs = document.querySelectorAll(".searchInput"), resultDivs = document.querySelectorAll(".resultDiv"),
-            searchResultDivs = document.querySelectorAll(".searchResultDiv")
+        searchInputs = document.querySelectorAll(".searchInput");
+        resultDivs = document.querySelectorAll(".resultDiv");
+        searchResultDivs = document.querySelectorAll(".searchResultDiv");
     }
 
     document.addEventListener("click", function (e) {
-        e.target.closest(".selfSelectBoxContainer") || document.querySelectorAll(".selfSelectBox").forEach(
-            function (e) {
-                e.style.display = "none", resultDivs.forEach((e, t) => {
-                    searchInputs[t].value = "", e.style.display = "block", searchResultDivs[t].style
-                        .display = "none"
-                })
-            })
+        if(!e.target.closest(".selfSelectBoxContainer")) {
+            document.querySelectorAll(".selfSelectBox").forEach(function (e) {
+                e.style.display = "none";
+                resultDivs.forEach((e, t) => {
+                    searchInputs[t].value = "";
+                    e.style.display = "block";
+                    searchResultDivs[t].style.display = "none";
+                });
+            });
+        }
     });
-  });
-  
-  
-  
 }
-
-
 
 Alpine.store('utils', {
     openSelectBox(e) {
