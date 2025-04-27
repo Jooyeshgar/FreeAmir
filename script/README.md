@@ -2,7 +2,7 @@
 
 This guide explains how to convert an [old SQLite database format](https://github.com/Jooyeshgar/amir) to a new MySQL database for the Amir Accounting Software built with Laravel.
 
-## Important: Backup Your Data
+## Important: Back Up Your Data
 Before proceeding, **back up all your accounting data**. This migration process involves multiple steps, and there is a risk of data loss if not performed correctly. Ensure you have a complete backup of your SQLite database file and any other critical data.
 
 ## Migration Steps
@@ -66,28 +66,30 @@ By following these steps, your Amir Accounting Software database should be succe
 
 If you need to merge data from multiple old SQLite databases into a single new MySQL database, the standard migration process needs modification due to potential duplicate IDs across the databases. Here's a recommended approach:
 
-1.  **Process Each SQLite Database Individually:** For *each* old SQLite database (`old_db_1.sqlite`, `old_db_2.sqlite`, etc.):
-    a.  **Create a Temporary Clean Database:** Set up a *separate*, temporary, clean MySQL database. Run `sail artisan migrate:fresh --seed` on this temporary database.
-    b.  **Convert SQLite to SQL:** Use the `sqliteToMysql.py` script to convert the current SQLite database to SQL format (e.g., `python3 sqliteToMysql.py old_db_1.sqlite`).
-    c.  **Import SQL to Temporary DB:** Import the generated `.sql` file into the temporary MySQL database:
-        ```bash
-        (echo "SET FOREIGN_KEY_CHECKS=0;" && cat script/old_db_1.sql) | mysql -h 127.0.0.1 -u temp_user -p temp_db_name
-        ```
-    d.  **Convert Schema in Temporary DB:** Run the `oldSchemaToNew.sql` script on the temporary database to transform the data:
-        ```bash
-        mysql -h 127.0.0.1 -u temp_user -p temp_db_name < script/oldSchemaToNew.sql
-        ```
-    e.  **Export Data to JSON:** Export the relevant data from the *now converted* temporary MySQL database into a structured format like JSON.
+1. **Process Each SQLite Database Individually:** For *each* old SQLite database (`old_db_1.sqlite`, `old_db_2.sqlite`, etc.):
+   a. **Create a Temporary Clean Database:** Set up a *separate*, temporary, clean MySQL database. Run `sail artisan migrate:fresh --seed` on this temporary database.
+   b. **Convert SQLite to SQL:** Use the `sqliteToMysql.py` script to convert the current SQLite database to SQL format (e.g., `python3 sqliteToMysql.py old_db_1.sqlite`).
+   c. **Import SQL to Temporary DB:** Import the generated `.sql` file into the temporary MySQL database:
       ```bash
-      sail artisan fiscal-year:export 1
+      (echo "SET FOREIGN_KEY_CHECKS=0;" && cat script/old_db_1.sql) | mysql -h 127.0.0.1 -u temp_user -p temp_db_name
       ```
-      > Output: `storage/app/exports/fiscal_year_1_<timestamp>.json`
-    f.  **Discard Temporary Database:** You can now drop the temporary MySQL database.
-1.  **Prepare a Clean Target Database:** Start with a clean, migrated, and seeded MySQL database using `sail artisan migrate:fresh --seed`. This will be your final target database.
-3.  **Import JSON Data into Final Database:** Develop a script or process to import the data from all the generated JSON files into your final target MySQL database (from Step 1). This script needs to:
-    *   Handle potential conflicts (e.g., if the same customer exists in multiple databases).
-    *   Ensure relationships are correctly maintained.
-    *   Assign new primary keys as data is inserted, avoiding reliance on the old IDs.
-4.  **Final Verification:** Thoroughly check the data integrity in the final merged database.
+   d. **Convert Schema in Temporary DB:** Run the `oldSchemaToNew.sql` script on the temporary database to transform the data:
+      ```bash
+      mysql -h 127.0.0.1 -u temp_user -p temp_db_name < script/oldSchemaToNew.sql
+      ```
+   e. **Export Data to JSON:** Export the relevant data from the *now converted* temporary MySQL database into a structured format like JSON.
+      ```bash
+      sail artisan fiscal-year:export 1 --output exports/old_db_1.json
+      ```
+      > Output: `storage/app/exports/old_db_1.json`
+   f. **Discard Temporary Database:** You can now drop the temporary MySQL database.
+2. **Prepare a Clean Target Database:** Start with a clean, migrated, and seeded MySQL database using `sail artisan migrate:fresh --seed`. This will be your final target database.
+3. **Import JSON Data into Final Database:** 
+   ```bash
+   sail artisan fiscal-year:import exports/old_db_1.json 1403 --name="Fiscal Year 1403" --force
+   ```
+   Don't forget to give access to the current user for this new Fiscal year import.
+   
+4. **Final Verification:** Thoroughly check the data integrity in the final merged database.
 
 This multi-step process ensures that data from each source database is correctly formatted according to the new schema before being merged, mitigating issues with duplicate primary keys. It requires careful planning and potentially custom scripting for the JSON export and import phases.

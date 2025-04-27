@@ -29,9 +29,10 @@ class Subject extends Model
 
         static::creating(function ($subject) {
 
-            $subject->company_id = session('active-company-id');
+            if ($subject->company_id === null) {
+                $subject->company_id = session('active-company-id');
+            }
 
-            // Generate code if not provided
             if (empty($subject->code)) {
                 if (!empty($subject->parent_id)) {
                     $parentSubject = Subject::find($subject->parent_id);

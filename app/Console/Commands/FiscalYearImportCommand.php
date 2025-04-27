@@ -18,11 +18,9 @@ class FiscalYearImportCommand extends Command
      */
     protected $signature = 'fiscal-year:import
                             {file : The path to the JSON import file relative to storage/app}
+                            {fiscal_year : The fiscal year identifier (positive integer)}
                             {--name= : The name for the new fiscal year (Required)}
-                            {--start-date= : The start date (YYYY-MM-DD) for the new fiscal year (Required)}
-                            {--end-date= : The end date (YYYY-MM-DD) for the new fiscal year (Required)}
                             {--force : Skip confirmation prompt}';
-    // Add more options here if your Company model requires other fields on creation
 
     /**
      * The console command description.
@@ -39,58 +37,43 @@ class FiscalYearImportCommand extends Command
     public function handle()
     {
         $inputFile = $this->argument('file');
+        $fiscalYear = $this->argument('fiscal_year');
         $newName = $this->option('name');
-        $newStartDate = $this->option('start-date');
-        $newEndDate = $this->option('end-date');
 
-        // --- Basic Input Validation ---
-        if (empty($newName) || empty($newStartDate) || empty($newEndDate)) {
-            $this->error('The --name, --start-date, and --end-date options are required.');
+        if (empty($newName)) {
+            $this->error('The --name option is required.');
             return Command::FAILURE;
         }
 
-        $validator = Validator::make([
-            'start_date' => $newStartDate,
-            'end_date' => $newEndDate,
-        ], [
-            'start_date' => 'required|date_format:Y-m-d',
-            'end_date' => 'required|date_format:Y-m-d|after_or_equal:start_date',
-        ]);
-
-        if ($validator->fails()) {
-            $this->error('Invalid date format or range:');
-            foreach ($validator->errors()->all() as $error) {
-                $this->error($error);
-            }
+        if (!ctype_digit($fiscalYear) || (int)$fiscalYear <= 0) {
+            $this->error('The fiscal_year argument must be a positive integer.');
             return Command::FAILURE;
         }
+        $fiscalYear = (int)$fiscalYear; // Cast to integer
 
-        // Check if file exists
         if (!Storage::disk('local')->exists($inputFile)) {
             $this->error("Import file not found at: storage/app/{$inputFile}");
             return Command::FAILURE;
         }
-        // --- End Validation ---
-
 
         // --- Confirmation ---
-        $fullPath = Storage::disk('local')->path($inputFile);
+        $fullPath = Storage::path($inputFile); // Use Storage::path() for the absolute path
         $this->warn("You are about to import data from:");
         $this->line($fullPath);
-        $this->warn("This will create a NEW fiscal year named '{$newName}' ({$newStartDate} to {$newEndDate})");
+        $this->warn("This will create a NEW fiscal year entry with:");
+        $this->line("  Name: '{$newName}'");
+        $this->line("  Fiscal Year: {$fiscalYear}");
         $this->warn("And populate it with data from the file.");
 
         if (!$this->option('force') && !$this->confirm('Do you wish to continue?', false)) {
             $this->info('Import cancelled.');
             return Command::INVALID;
         }
-        // --- End Confirmation ---
 
 
         $this->info("Starting import from: {$inputFile}");
 
         try {
-            // Read and decode file
             $jsonContent = Storage::disk('local')->get($inputFile);
             $importData = json_decode($jsonContent, true); // Decode as associative array
 
@@ -101,14 +84,9 @@ class FiscalYearImportCommand extends Command
             // Prepare data for the new Company record
             $newFiscalYearData = [
                 'name' => $newName,
-                'start_date' => $newStartDate,
-                'end_date' => $newEndDate,
-                // Add other required fields for your Company model here
-                // e.g., 'is_active' => false,
-                // 'currency_id' => 1, // Or fetch a default
+                'fiscal_year' => $fiscalYear,
             ];
 
-            // Perform the import using the service
             $newFiscalYear = FiscalYearService::importData($importData, $newFiscalYearData);
 
             $this->info("Fiscal year imported successfully!");
@@ -117,11 +95,10 @@ class FiscalYearImportCommand extends Command
 
             return Command::SUCCESS;
         } catch (Exception $e) {
-            // The service already logs the detailed error
             Log::error("Fiscal Year Import Command Failed: " . $e->getMessage(), [
                 'input_file' => $inputFile,
                 'new_name' => $newName,
-                'exception' => $e // Log exception from command context too if needed
+                'exception' => $e
             ]);
             $this->error("Import failed: " . $e->getMessage());
             $this->error("Check the application logs for more details.");

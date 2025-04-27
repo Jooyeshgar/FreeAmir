@@ -89,52 +89,51 @@ Create a new fiscal year and populate it with data (banks, customers, products, 
 ## Usage
 
 ```bash
-php artisan fiscal-year:import <file> --name=<new_name> --start-date=<yyyy-mm-dd> --end-date=<yyyy-mm-dd> [options]
+php artisan fiscal-year:import <file> <fiscal_year> --name=<new_name> [options]
 ```
 
 ## Arguments
 
-| Argument | Description                                                              | Required |
-|----------|--------------------------------------------------------------------------|----------|
-| `file`   | The path to the JSON import file, relative to the `storage/app` directory. | Yes      |
+| Argument      | Description                                                              | Required |
+|---------------|--------------------------------------------------------------------------|----------|
+| `file`        | The path to the JSON import file, relative to the `storage/app` directory. | Yes      |
+| `fiscal_year` | The fiscal year identifier (positive integer).                           | Yes      |
 
 ---
 
 ## Options
 
-| Option         | Description                                                                                                                            | Required | Default |
-|----------------|----------------------------------------------------------------------------------------------------------------------------------------|----------|---------|
-| `--name`       | The name for the **new** fiscal year being created.                                                                                    | Yes      |         |
-| `--start-date` | The start date for the **new** fiscal year (format: YYYY-MM-DD).                                                                       | Yes      |         |
-| `--end-date`   | The end date for the **new** fiscal year (format: YYYY-MM-DD). Must be on or after the start date.                                      | Yes      |         |
-| `--force`      | Skip the confirmation prompt before starting the import. Use with caution, especially in production environments.                        | No       | `false` |
-| *Note:*        | *Depending on your `Company` model setup, additional required fields might need to be handled within the `FiscalYearService::importData` method.* |          |         |
+| Option    | Description                                                                                                                            | Required | Default |
+|-----------|----------------------------------------------------------------------------------------------------------------------------------------|----------|---------|
+| `--name`  | The name for the **new** fiscal year being created.                                                                                    | Yes      |         |
+| `--force` | Skip the confirmation prompt before starting the import. Use with caution, especially in production environments.                        | No       | `false` |
+| *Note:*   | *Depending on your `Company` model setup, additional required fields might need to be handled within the `FiscalYearService::importData` method.* |          |         |
 
 ## Examples
 
-1. **Import data from `exports/fy1_backup.json` into a new fiscal year named "Fiscal Year 2024":**
-   ```bash
-   sail artisan fiscal-year:import exports/fy1_backup.json --name="Fiscal Year 2024" --start-date=2024-01-01 --end-date=2024-12-31
-   ```
-   > This will prompt for confirmation before proceeding.
+1.  **Import data from `exports/fy1_backup.json` into a new fiscal year named "Fiscal Year 2024" with fiscal year identifier 2024:**
+    ```bash
+    sail artisan fiscal-year:import exports/fy1_backup.json 2024 --name="Fiscal Year 2024"
+    ```
+    >   This will prompt for confirmation before proceeding.
 
-2. **Import data from `archive/old_data.json` forcefully (no confirmation):**
-   ```bash
-   sail artisan fiscal-year:import archive/old_data.json --name="Restored FY" --start-date=2023-07-01 --end-date=2024-06-30 --force
-   ```
+2.  **Import data from `archive/old_data.json` forcefully (no confirmation):**
+    ```bash
+    sail artisan fiscal-year:import archive/old_data.json 2023 --name="Restored FY" --force
+    ```
 
 ## Process
 
 1.  **Validation:**
-    *   Checks if `--name`, `--start-date`, and `--end-date` are provided.
-    *   Validates the date formats (YYYY-MM-DD) and ensures the end date is not before the start date.
+    *   Checks if `--name` is provided.
+    *   Validates that the `fiscal_year` argument is a positive integer.
     *   Verifies that the specified import `file` exists within `storage/app`.
 2.  **Confirmation:**
     *   Displays the full path of the file being imported and the details of the new fiscal year to be created.
     *   Prompts the user to confirm unless `--force` is used.
 3.  **Import Execution:**
     *   Reads and decodes the JSON file.
-    *   Prepares the data for creating a new `Company` record using the provided `--name`, `--start-date`, and `--end-date`.
+    *   Prepares the data for creating a new `Company` record using the provided `--name` and `fiscal_year`.
     *   Calls the `FiscalYearService::importData` method, passing the decoded JSON data and the new fiscal year details. This service handles the actual creation of the new `Company` and the insertion of related data (banks, customers, etc.) associated with the new company ID.
 4.  **Output:**
     *   On success, prints a confirmation message including the ID and name of the newly created fiscal year.
@@ -144,8 +143,8 @@ php artisan fiscal-year:import <file> --name=<new_name> --start-date=<yyyy-mm-dd
 
 ## Error Handling
 
-- If required options (`--name`, `--start-date`, `--end-date`) are missing, an error is shown.
-- Invalid date formats or ranges result in specific error messages.
+- If the required `--name` option is missing, an error is shown.
+- If the `fiscal_year` argument is not a positive integer, an error is shown.
 - If the import file is not found at the specified path, an error is displayed.
 - If the JSON file is invalid or cannot be decoded, an error message is shown.
 - Any exceptions during the `FiscalYearService::importData` process (e.g., database errors, validation issues within the service) will result in an error message being displayed, and details are logged to `storage/logs/laravel.log`.
