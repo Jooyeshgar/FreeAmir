@@ -20,10 +20,11 @@ class SubjectController extends Controller
         return view('subjects.index', compact('subjects'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        if (request('parent_id')) {
-            $parentSubject = Subject::find((int)request('parent_id'));
+
+        if ($request->has('parent_id')) {
+            $parentSubject = Subject::find($request->get('parent_id'));
         } else {
             $parentSubject = null;
         }
