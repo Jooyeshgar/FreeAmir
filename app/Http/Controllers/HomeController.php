@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\CustomerGroup;
 use App\Models\Document;
 use App\Models\Invoice;
-use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Subject;
 use App\Models\Transaction;
@@ -29,6 +28,13 @@ class HomeController extends Controller
         $cashBooks = Subject::where('parent_id', config('amir.cash_book'))->get();
         $banks = Subject::where('parent_id', config('amir.bank'))->get();
 
+        // Calculate bank balances
+        $bankBalances = [];
+        foreach ($banks as $bank) {
+            $balance = Transaction::where('subject_id', $bank->id)->sum('value');
+            $bankBalances[$bank->id] = $balance;
+        }
+
         $latestInvoices = Invoice::latest()->limit(10)->get();
 
         return view('home', compact(
@@ -39,6 +45,7 @@ class HomeController extends Controller
             'latestInvoices',
             'cashBooks',
             'banks',
+            'bankBalances'
         ));
     }
 
@@ -53,8 +60,12 @@ class HomeController extends Controller
         );
         $subjectId = $data['cash_book'];
         $duration = intval($data['duration']);
-        $timeFilter = now()->subMonths($duration * 3);
+        $lastTransaction = Transaction::where('subject_id', $subjectId)
+            ->orderBy('created_at', 'desc')
+            ->first();
+        $lastTransaction = $lastTransaction->created_at ?? now();
 
+        $timeFilter = $lastTransaction->subMonths($duration * 3);
         $transactions = Transaction::where('subject_id', $subjectId)
             ->where('created_at', '>=', $timeFilter)
             ->selectRaw('DATE(created_at) as date, SUM(value) as total_value')

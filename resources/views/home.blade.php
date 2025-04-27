@@ -20,6 +20,7 @@
                     <div>
                         <h2 class="text-[#495057] ms-3">
                             {{ __('Cash balances') }}
+                            
                         </h2>
                     </div>
 
@@ -84,49 +85,49 @@
 
                 <div class="flex flex-wrap text-[#212529] mt-4 max-[850px]:mb-4">
                     <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
-                        <a href="">
+                        <a href="{{ route('subjects.index') }}">
                             امور مالی
                         </a>
                     </div>
 
                     <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
-                        <a href="">
+                        <a href="{{ route('documents.create') }}">
                             صدور سند دستی
                         </a>
                     </div>
 
                     <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
-                        <a href="">
+                        <a href="{{ url('management/configs') }}">
                             مدیریت
                         </a>
                     </div>
 
                     <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
-                        <a href="">
+                        <a href="{{ route('reports.ledger') }}">
                             گزارشات آماری
                         </a>
                     </div>
 
                     <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
-                        <a href="">
+                        <a href="{{ route('bank-accounts.index') }}">
                             امور مالی
                         </a>
                     </div>
 
                     <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
-                        <a href="">
+                        <a href="{{ route('invoices.create') }}">
                             صدور فاکتور
                         </a>
                     </div>
 
                     <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
-                        <a href="">
+                        <a href="{{ route('products.index') }}">
                             صدور فاکتور
                         </a>
                     </div>
 
                     <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
-                        <a href="">
+                        <a href="{{ route('invoices.create') }}?type=retail">
                             فاکتور تک فروشی
                         </a>
                     </div>
@@ -144,9 +145,9 @@
                     </div>
 
                     <div class="flex bg-[#DEE2E6] rounded-[16px] m-1 overflow-hidden">
-                        <a href="#"
+                        <a href="{{ route('documents.index') }}"
                             class="flex items-center justify-center bg-[#DEE2E6] text-[#242424] font-bold rounded-[16px] w-[72px] h-[56px]">
-                            ...
+                            اسناد
                         </a>
                     </div>
                 </div>
@@ -154,7 +155,7 @@
                 <div class="text-[#495057] mt-4">
                     <div class="flex justify-between mx-4 border-b-2 border-b-[#CED4DA] pb-3 mb-4">
                         <p>
-                            نام صندوق
+                            نام بانک
                         </p>
 
                         <p>
@@ -164,39 +165,19 @@
 
                     <div class="flex justify-between mx-4 text-[13px]">
                         <div>
+                            @foreach($banks as $bank)
                             <p class="mb-4">
-                                امورات جاری
+                                {{ $bank->name }}
                             </p>
-
-                            <p class="mb-4">
-                                سرمایه‌گذاری شرکا
-                            </p>
-
-                            <p class="mb-4">
-                                اصلی
-                            </p>
-
-                            <p class="mb-4">
-                                سرمایه‌گذاری‌های متفرقه
-                            </p>
+                            @endforeach
                         </div>
 
                         <div>
+                            @foreach($banks as $bank)
                             <p class="mb-4">
-                                245٬578٬350
+                                {{ number_format($bankBalances[$bank->id] ?? 0) }}
                             </p>
-
-                            <p class="mb-4">
-                                245٬578٬350
-                            </p>
-
-                            <p class="mb-4">
-                                245٬578٬350
-                            </p>
-
-                            <p class="mb-4">
-                                245٬578٬350
-                            </p>
+                            @endforeach
                         </div>
                     </div>
                 </div>
@@ -213,14 +194,14 @@
                     <div class="flex bg-[#DEE2E6] rounded-[16px] m-1 overflow-hidden" x-data="bankSelectHandler()"
                         x-init="initializeBank()">
                         <select class="select bg-[#DEE2E6] text-[#495057] w-full max-w-xs" x-model="selectedBank"
-                            x-on:change="handleBankChange">
+                            @change="handleBankChange">
                             @foreach ($banks as $item)
                                 <option {{ $loop->first ? 'selected' : '' }} value="{{ $item->id }}">
                                     {{ $item->name }}</option>
                             @endforeach
                         </select>
 
-                        <select x-model="selectedDuration" x-on:change="handleBankChange"
+                        <select x-model="selectedDuration" @change="handleBankChange"
                             class="select bg-[#DEE2E6] text-[#495057] w-[120px] max-w-xs">
                             <option value="1">{{ '3 ' . __('Month') }}</option>
                             <option value="2">{{ '6 ' . __('Month') }}</option>
