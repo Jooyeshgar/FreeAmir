@@ -10,6 +10,23 @@
             <div class="card-actions">
                 <x-button href="{{ route('documents.create') }}" class="btn-primary">{{ __('Create Document') }}</x-button>
             </div>
+            <form action="{{ route('documents.index') }}" method="GET">
+                <div class="mt-4 mb-4 grid grid-cols-6 gap-6">
+                    <div class="col-span-2 md:col-span-1">
+                        <x-input name="number" value="{{ request('number') }}" placeholder="{{ __('Doc Number') }}" />
+                    </div>
+                    <div class="col-span-2 md:col-span-1">
+                        <x-text-input data-jdp input_name="date" placeholder="{{ __('date') }}" input_value="{{ request('date') }}"
+                            input_class="datePicker"></x-text-input>
+                    </div>
+                    <div class="col-span-6 md:col-span-3">
+                        <x-input name="text" value="{{ request('text') }}" placeholder="{{ __('Search by document title or transaction description') }}" />
+                    </div>
+                    <div class="col-span-2 md:col-span-1 text-center">
+                        <input type="submit" value="{{ __('Search') }}" class="btn-primary btn" />
+                    </div>
+                </div>
+            </form>
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <th class="p-2 w-12">{{ __('Doc Number') }}</th>

@@ -100,6 +100,26 @@ function convertToFloat($number)
 }
 
 /**
+ * Convert a string number from Persian or English to a int.
+ *
+ * @param mixed $number
+ * @return float
+ */
+function convertToInt($number)
+{
+    $farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹', ','];
+    $englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ''];
+
+    $convertedNumber = str_replace($farsiDigits, $englishDigits, $number);
+
+    $cleanedNumber = preg_replace('/[^0-9\.-]/', '', $convertedNumber);
+
+    $cleanedNumber = preg_replace('/\.(?=.*\.)/', '', $cleanedNumber);
+
+    return intval($cleanedNumber);
+}
+
+/**
  * Convert a date from Jalali to Gregorian based on locale.
  *
  * @param string $date Date in 'YYYY/MM/DD' or 'YYYY-MM-DD' format

@@ -17,7 +17,28 @@ class DocumentController extends Controller
 
     public function index()
     {
-        $documents = Document::orderBy('id', 'desc')->paginate(10);
+        $query = Document::orderBy('id', 'desc');
+
+        if (request()->has('number') && request('number')) {
+            $query->where('number', 'like', '%' . convertToInt(request('number')) . '%');
+        }
+
+        if (request()->has('date') && request('date')) {
+            $query->where('date', convertToGregorian(request('date')));
+        }
+
+        // Search by document title or transaction description
+        if (request()->has('text') && request('text')) {
+            $searchText = request('text');
+            $query->where(function ($q) use ($searchText) {
+                $q->where('title', 'like', '%' . $searchText . '%')
+                    ->orWhereHas('transactions', function ($subQ) use ($searchText) {
+                        $subQ->where('desc', 'like', '%' . $searchText . '%');
+                    });
+            });
+        }
+
+        $documents = $query->paginate(10);
         return view('documents.index', compact('documents'));
     }
 
