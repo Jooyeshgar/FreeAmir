@@ -35,8 +35,7 @@
                 <h3>{{ __('Companies') }}</h3>
                 <div class="grid gap-3 grid-cols-5">
                     @foreach ($companies as $company)
-                        <x-checkbox :title="$company->name" name="company[]" :value="$company->id"
-                            id="company-{{ $role->id }}"
+                        <x-checkbox :title="$company->name" name="company[]" :value="$company->id" id="company-{{ $company->id }}"
                             checked="{{ $user->companies->contains($company) ? true : false }}" />
                     @endforeach
                 </div>

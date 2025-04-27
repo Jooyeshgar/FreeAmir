@@ -22,7 +22,7 @@
                     @foreach ($documents as $document)
                         <tr>
                             <td class="p-2"><a href="{{ route('documents.show', $document->id) }}">{{ formatDocumentNumber($document->number) }}</a></td>
-                            <td class="p-2">{{ $document->title ?? $document->transactions->first()->desc . ' ...' }}</td>
+                            <td class="p-2">{{ $document->title ?? $document->transactions->first()?->desc . ' ...' }}</td>
                             <td class="p-2">{{ formatNumber($document->transactions->where('value', '>', 0)->sum('value')) }}</td>
                             <td class="p-2">{{ formatDate($document->date) }}</td>
                             <td class="p-2">
