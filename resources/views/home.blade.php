@@ -9,7 +9,7 @@
     <main class="mt-10">
         <div>
             <h1 class="text-[#495057] text-[24px]">
-                داشبورد
+                {{ __('Dashboard') }}
             </h1>
         </div>
 
@@ -20,7 +20,7 @@
                     <div>
                         <h2 class="text-[#495057] ms-3">
                             {{ __('Cash balances') }}
-                            
+
                         </h2>
                     </div>
 
@@ -45,8 +45,8 @@
                 </div>
 
                 <div>
-                    <div class="flex justify-between text-[10px] px-5 text-[#495057] mt-3">
-                        <span id="totalCashBook">{{ number_format($totalCashBook ?? 0) }}</span>
+                    {{-- <div class="flex justify-between text-[10px] px-5 text-[#495057] mt-3">
+                        <span id="totalCashBook"></span>
 
                         <span class="flex gap-1">110,154,700 نسبت به ماه قبل <span class="flex text-[#20C997BF]">(11.6
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -54,7 +54,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                         d="m4.5 15.75 7.5-7.5 7.5 7.5" />
                                 </svg>)</span></span>
-                    </div>
+                    </div> --}}
 
                     <div class="p-2">
                         <x-cash-balance-chart :labels="[]" :datas="[]" />
@@ -66,7 +66,7 @@
                 class="gaugeChartContainer w-1/3 max-[850px]:w-full relative bg-[#E9ECEF] rounded-[16px] shadow-[0px_43px_27px_0px_#00000012]">
                 <div class="flex justify-between items-center h-[62px]">
                     <h2 class="text-[#495057] ms-3">
-                        وضعیت اهداف ماهانه
+                        {{ __('Monthly Goals Status') }}
                     </h2>
                 </div>
 
@@ -79,56 +79,56 @@
                 class="w-1/3 max-[850px]:w-full bg-[#E9ECEF] rounded-[16px] shadow-[0px_43px_27px_0px_#00000012] relative">
                 <div class="flex justify-between items-center h-[62px]">
                     <h2 class="text-[#495057] ms-3">
-                        دسترسی سریع
+                        {{ __('Quick Access') }}
                     </h2>
                 </div>
 
                 <div class="flex flex-wrap text-[#212529] mt-4 max-[850px]:mb-4">
                     <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
                         <a href="{{ route('subjects.index') }}">
-                            امور مالی
+                            {{ __('Financial Affairs') }}
                         </a>
                     </div>
 
                     <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
                         <a href="{{ route('documents.create') }}">
-                            صدور سند دستی
+                            {{ __('Manual Document Issuance') }}
                         </a>
                     </div>
 
                     <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
                         <a href="{{ url('management/configs') }}">
-                            مدیریت
+                            {{ __('Management') }}
                         </a>
                     </div>
 
                     <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
                         <a href="{{ route('reports.ledger') }}">
-                            گزارشات آماری
+                            {{ __('Statistical Reports') }}
                         </a>
                     </div>
 
                     <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
                         <a href="{{ route('bank-accounts.index') }}">
-                            امور مالی
+                            {{ __('Financial Affairs') }}
                         </a>
                     </div>
 
                     <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
                         <a href="{{ route('invoices.create') }}">
-                            صدور فاکتور
+                            {{ __('Invoice Issuance') }}
                         </a>
                     </div>
 
                     <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
                         <a href="{{ route('products.index') }}">
-                            صدور فاکتور
+                            {{ __('Invoice Issuance') }}
                         </a>
                     </div>
 
                     <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
                         <a href="{{ route('invoices.create') }}?type=retail">
-                            فاکتور تک فروشی
+                            {{ __('Retail Invoice') }}
                         </a>
                     </div>
                 </div>
@@ -140,14 +140,14 @@
                 <div class="flex justify-between items-center">
                     <div>
                         <h2 class="text-[#495057] ms-3">
-                            موجودی حساب بانکی
+                            {{ __('Bank Account Balance') }}
                         </h2>
                     </div>
 
                     <div class="flex bg-[#DEE2E6] rounded-[16px] m-1 overflow-hidden">
                         <a href="{{ route('documents.index') }}"
                             class="flex items-center justify-center bg-[#DEE2E6] text-[#242424] font-bold rounded-[16px] w-[72px] h-[56px]">
-                            اسناد
+                            {{ __('Documents') }}
                         </a>
                     </div>
                 </div>
@@ -155,28 +155,28 @@
                 <div class="text-[#495057] mt-4">
                     <div class="flex justify-between mx-4 border-b-2 border-b-[#CED4DA] pb-3 mb-4">
                         <p>
-                            نام بانک
+                            {{ __('Bank Name') }}
                         </p>
 
                         <p>
-                            موجودی
+                            {{ __('Balance') }}
                         </p>
                     </div>
 
                     <div class="flex justify-between mx-4 text-[13px]">
                         <div>
-                            @foreach($banks as $bank)
-                            <p class="mb-4">
-                                {{ $bank->name }}
-                            </p>
+                            @foreach ($banks as $bank)
+                                <p class="mb-4">
+                                    {{ $bank->name }}
+                                </p>
                             @endforeach
                         </div>
 
                         <div>
-                            @foreach($banks as $bank)
-                            <p class="mb-4">
-                                {{ number_format($bankBalances[$bank->id] ?? 0) }}
-                            </p>
+                            @foreach ($banks as $bank)
+                                <p class="mb-4">
+                                    {{ number_format($bankBalances[$bank->id] ?? 0) }}
+                                </p>
                             @endforeach
                         </div>
                     </div>
@@ -187,7 +187,7 @@
                 <div class="flex justify-between items-center max-[850px]:flex-col max-[850px]:mt-4">
                     <div>
                         <h2 class="text-[#495057] ms-3">
-                            موجودی حساب بانکی
+                            {{ __('Bank Account Balance') }}
                         </h2>
                     </div>
 
@@ -212,8 +212,8 @@
                 </div>
 
                 <div>
-                    <div class="flex justify-between text-[10px] px-5 text-[#495057] mt-3">
-                        <span id="AccountBalance">{{ number_format($accountBalance ?? 0) }}</span>
+                    {{-- <div class="flex justify-between text-[10px] px-5 text-[#495057] mt-3">
+                        <span id="AccountBalance"></span>
 
                         <span class="flex gap-1">110,154,700 نسبت به ماه قبل <span class="flex text-[#20C997BF]">(11.6
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -221,7 +221,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                         d="m4.5 15.75 7.5-7.5 7.5 7.5" />
                                 </svg>)</span></span>
-                    </div>
+                    </div> --}}
 
                     <div class="p-2">
                         <x-account-balance :labels="[]" :datas="[]" />
@@ -273,9 +273,17 @@
                         }
                     },
                     updateData(data) {
-                        document.getElementById('totalCashBook').innerText = data.sum.toLocaleString();
+                        const formattedLabels = data.labels.map(label => {
+                            if (label.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                const [year, month, day] = label.split('-');
 
-                        cashBalanceLineChart.data.labels = data.labels;
+                                return convertToJalali(year, month, day);
+                            }
+
+                            return label;
+                        });
+
+                        cashBalanceLineChart.data.labels = formattedLabels;
                         cashBalanceLineChart.data.datasets[0].data = data.datas;
                         cashBalanceLineChart.update();
                     }
@@ -322,9 +330,17 @@
                         }
                     },
                     updateData(data) {
-                        document.getElementById('AccountBalance').innerText = data.sum.toLocaleString();
+                        const formattedLabels = data.labels.map(label => {
+                            if (label.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                const [year, month, day] = label.split('-');
 
-                        accountBalanceChart.data.labels = data.labels;
+                                return convertToJalali(year, month, day);
+                            }
+
+                            return label;
+                        });
+
+                        accountBalanceChart.data.labels = formattedLabels;
                         accountBalanceChart.data.datasets[0].data = data.datas;
                         accountBalanceChart.update();
                     }

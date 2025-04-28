@@ -1,5 +1,23 @@
 @props(['labels', 'datas'])
 
+@php
+$convertedLabels = [];
+foreach($labels as $label) {
+    if(preg_match('/^\d{4}-\d{2}-\d{2}$/', $label)) {
+        $parts = explode('-', $label);
+        $year = (int)$parts[0];
+        $month = (int)$parts[1];
+        $day = (int)$parts[2];
+        
+        $jalaliDate = gregorian_to_jalali($year, $month, $day, '/');
+
+        $convertedLabels[] = $jalaliDate;
+    } else {
+        $convertedLabels[] = $label;
+    }
+}
+@endphp
+
 <canvas id="cashBalanceLineChart" class="bg-white rounded-[16px]"></canvas>
 
 @pushOnce('footer')
@@ -8,59 +26,70 @@
         window.addEventListener("DOMContentLoaded", () => {
             const ctx = document.getElementById('cashBalanceLineChart').getContext('2d');
 
-            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-            gradient.addColorStop(0, 'rgba(0, 255, 200, 0.3)');
-            gradient.addColorStop(1, 'rgba(0, 255, 200, 0)');
+            const data = {
+                labels: {!! json_encode($convertedLabels) !!},
+                datasets: [{
+                    label: 'نمودار درصدی',
+                    data: {!! json_encode($datas) !!},
+                    borderColor: '#888',
+                    borderWidth: 5,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: function(context) {
+                        const value = context.raw;
+                        return value >= 0 ? 'green' : 'red';
+                    },
+                    pointBorderWidth: 3,
+                    pointRadius: 6
+                }]
+            };
 
-            cashBalanceLineChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: {!! json_encode($labels) !!},
-                    datasets: [{
-                        data: {!! json_encode($datas) !!},
-                        fill: true,
-                        backgroundColor: gradient,
-                        borderColor: '#00cca3',
-                        borderWidth: 3,
-                        pointBackgroundColor: '#ffffff',
-                        pointBorderColor: '#00cca3',
-                        pointBorderWidth: 3,
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
-                        lineTension: 0.4,
-                    }]
-                },
-                options: {
-                    interaction: {
-                        mode: 'nearest',
-                        intersect: false
-                    },
-                    responsive: true,
-                    scales: {
-                        x: {
-                            display: false,
+            const options = {
+                scales: {
+                    x: {
+                        grid: {
+                            display: true,
+                            color: '#e0e0e0',
                         },
-                        y: {
-                            display: false,
-                            beginAtZero: true,
-                        }
                     },
-                    plugins: {
-                        legend: {
+                    y: {
+                        grid: {
+                            display: true,
+                            color: '#e0e0e0',
+                        },
+                        beginAtZero: false,
+                        ticks: {
                             display: false
-                        },
-                        tooltip: {
-                            enabled: true,
-                            mode: 'nearest',
-                            callbacks: {
-                                label: function(context) {
-                                    let value = context.raw;
-                                    return value.toLocaleString();
-                                }
-                            }
                         }
                     }
+                },
+                plugins: {
+                    legend: {
+                        display: false,
+                    },
+                    tooltip: {
+                        enabled: true,
+                    },
+                    datalabels: {
+                        align: 'top',
+                        anchor: 'end',
+                        color: function(context) {
+                            const value = context.dataset.data[context.dataIndex];
+                            return value >= 0 ? 'green' : 'red';
+                        },
+                        font: {
+                            weight: 'bold',
+                            size: 14,
+                        },
+                        formatter: (value) => value + '%',
+                    }
                 }
+            };
+            cashBalanceLineChart = new Chart(ctx, {
+                type: 'line',
+                data: data,
+                options: options,
             });
         });
     </script>
