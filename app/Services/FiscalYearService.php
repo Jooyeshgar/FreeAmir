@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\FiscalYearSection;
 use App\Models\Company;
 use App\Models\CustomerGroup;
 use App\Models\Subject;
@@ -25,18 +26,25 @@ class FiscalYearService
      */
     public static function getAvailableSections(): array
     {
-        return [
-            'configs' => __('Configs'),
-            'banks' => __('Banks'),
-            'bank_accounts' => __('Bank Accounts'),
-            'customer_groups' => __('Customer Groups'),
-            'customers' => __('Customers'),
-            'product_groups' => __('Product Groups'),
-            'products' => __('Products'),
-            'subjects' => __('Subjects'),
-            'documents' => __('Documents'),
-            'transactions' => __('Transactions'),
-        ];
+        return FiscalYearSection::cli();
+    }
+
+    public static function getUiSections(): array
+    {
+        return FiscalYearSection::ui();
+    }
+
+    /**
+     * Filter an array of section keys to include only valid ones.
+     *
+     * @param array $sections
+     * @return array
+     */
+    protected static function filterValidSections(array $sections): array
+    {
+        return array_filter($sections, function ($section) {
+            return FiscalYearSection::tryFrom($section) !== null;
+        });
     }
 
     /**
@@ -136,7 +144,7 @@ class FiscalYearService
                     $idMappings['customer_groups'] = self::_importCustomerGroups($importData['customer_groups'], $targetYearId, $idMappings['subjects']);
                 }
                 if (in_array('customers', $sectionsToImport) && isset($importData['customers'])) {
-                    self::_importCustomers($importData['customers'], $targetYearId, $idMappings['customer_groups'], $idMappings['subjects']);
+                    $idMappings['customers'] = self::_importCustomers($importData['customers'], $targetYearId, $idMappings['customer_groups'], $idMappings['subjects']);
                 }
                 if (in_array('product_groups', $sectionsToImport) && isset($importData['product_groups'])) {
                     $idMappings['product_groups'] = self::_importProductGroups($importData['product_groups'], $targetYearId, $idMappings['subjects']);
@@ -536,20 +544,5 @@ class FiscalYearService
 
             $newTrans->save();
         }
-    }
-
-
-    /**
-     * Filter an array of section keys to include only valid ones.
-     *
-     * @param array $sections
-     * @return array
-     */
-    protected static function filterValidSections(array $sections): array
-    {
-        $availableSections = self::getAvailableSections();
-        return array_filter($sections, function ($section) use ($availableSections) {
-            return array_key_exists($section, $availableSections);
-        });
     }
 }

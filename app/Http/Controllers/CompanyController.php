@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\FiscalYearSection;
 use App\Models\Company;
 use App\Services\FiscalYearService;
 use Illuminate\Contracts\View\View;
@@ -46,12 +47,9 @@ class CompanyController extends Controller
         // Get previous fiscal years for the current company
         $previousYears = Company::all();
 
-        $availableSection = FiscalYearService::getAvailableSections();
-
         return view('companies.create', [
             'company' => null,
-            'previousYears' => $previousYears,
-            'availableSection' => $availableSection
+            'previousYears' => $previousYears
         ]);
     }
 
@@ -63,7 +61,7 @@ class CompanyController extends Controller
         $fiscalYearRules = [
             'source_year_id' => 'required|exists:companies,id',
             'tables_to_copy' => 'array',
-            'tables_to_copy.*' => 'string|in:' . implode(',', array_keys(FiscalYearService::getAvailableSections()))
+            'tables_to_copy.*' => 'string|in:' . implode(',', array_map(fn($case) => $case->value, FiscalYearSection::cases()))
         ];
 
         $validated = $request->validate(array_merge($this->rules, $fiscalYearRules));

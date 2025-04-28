@@ -1,3 +1,7 @@
+@php
+    use App\Enums\FiscalYearSection;
+@endphp
+
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
@@ -38,14 +42,14 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach ($availableSection as $key => $name)
+                                    @foreach (FiscalYearSection::ui() as $key => $value)
                                         <tr>
                                             <td>
-                                                <input type="checkbox" name="tables_to_copy[]" value="{{ $key }}" id="table_{{ $key }}"
+                                                <input type="checkbox" name="tables_to_copy[]" value="{{ $value }}" id="table_{{ $value }}"
                                                     class="checkbox" checked>
                                             </td>
                                             <td>
-                                                <label for="table_{{ $key }}" class="label-text">{{ $name }}</label>
+                                                <label for="table_{{ $value }}" class="label-text">{{ $key }}</label>
                                             </td>
                                         </tr>
                                     @endforeach
