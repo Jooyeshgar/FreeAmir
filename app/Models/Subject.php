@@ -5,11 +5,10 @@ namespace App\Models;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Kalnoy\Nestedset\NodeTrait;
 
 class Subject extends Model
 {
-    use HasFactory, NodeTrait;
+    use HasFactory;
 
     protected $fillable = [
         'code',
@@ -28,36 +27,21 @@ class Subject extends Model
         static::addGlobalScope(new FiscalYearScope());
 
         static::creating(function ($subject) {
-
-            if ($subject->company_id === null) {
-                $subject->company_id = session('active-company-id');
-            }
-
-            if (empty($subject->code)) {
-                if (!empty($subject->parent_id)) {
-                    $parentSubject = Subject::find($subject->parent_id);
-
-                    if ($parentSubject->hasChildren()) {
-                        // Get last child code and increment it
-                        $lastChildCode = $parentSubject->children()->orderBy('code', 'desc')->first()->code;
-                        $subject->code = str_pad((int) $lastChildCode + 1, strlen($lastChildCode), '0', STR_PAD_LEFT);
-                    } else {
-                        // Create first child code based on parent's code
-                        $firstChildBase = $parentSubject->code . '000';  // Create initial child code format
-                        $subject->code = str_pad((int) $firstChildBase + 1, strlen($firstChildBase), '0', STR_PAD_LEFT);
-                    }
-                } else {
-                    // Handle root-level subjects (no parent)
-                    $lastRootSubject = Subject::whereNull('parent_id')->orderBy('code', 'desc')->first();
-                    $baseCode = $lastRootSubject->code ?? '000';  // Default for first root subject
-                    $subject->code = str_pad((int) $baseCode + 1, strlen($baseCode), '0', STR_PAD_LEFT);
-                }
-            }
+            $subject->company_id ??= session('active-company-id');
+            $subject->code ??= $subject->generateCode();
         });
 
         static::deleting(function ($subject) {
             if ($subject->subjectable()->exists()) {
                 throw new \Exception(__('Cannot delete subject with relationships'));
+            }
+
+            if ($subject->children()->exists()) {
+                throw new \Exception(__('Cannot delete subject with children'));
+            }
+
+            if ($subject->transactions()->exists()) {
+                throw new \Exception(__('Cannot delete subject with transactions'));
             }
         });
     }
@@ -88,10 +72,87 @@ class Subject extends Model
         return substr($this->code, 0, 3);
     }
 
+    public function parent()
+    {
+        return $this->belongsTo(Subject::class, 'parent_id');
+    }
+
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
     public function getRoot()
     {
-        $ancestors = $this->ancestors()->get();
+        return $this->hasParent() ? $this->parent->getRoot() : $this;
+    }
 
-        return $ancestors->last();
+    public function generateCode($code = null)
+    {
+        if ($code) {
+            return str_pad($code, strlen($code), '0', STR_PAD_LEFT);
+        }
+
+        if ($this->hasParent()) {
+            $parentSubject = $this->parent;
+            if ($parentSubject->hasChildren()) {
+                $lastChildCode = $parentSubject->children()->orderBy('code', 'desc')->first()->code;
+                return str_pad((int) $lastChildCode + 1, strlen($lastChildCode), '0', STR_PAD_LEFT);
+            } else {
+                $firstChildBase = $parentSubject->code . '000';
+                return str_pad((int) $firstChildBase + 1, strlen($firstChildBase), '0', STR_PAD_LEFT);
+            }
+        } else {
+            $lastRootSubject = Subject::whereNull('parent_id')->orderBy('code', 'desc')->first();
+            $baseCode = $lastRootSubject->code + 1 ?? '000';
+            return str_pad((int) $baseCode + 1, strlen($baseCode), '0', STR_PAD_LEFT);
+        }
+    }
+
+    /**
+     * Get the children for the subject.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function children()
+    {
+        return $this->hasMany(Subject::class, 'parent_id');
+    }
+
+    public function hasChildren()
+    {
+        return $this->children()->exists();
+    }
+
+    public function hasParent(): bool
+    {
+        return !is_null($this->parent_id);
+    }
+
+    public function isRoot(): bool
+    {
+        return is_null($this->parent_id);
+    }
+
+    public function getAllDescendantIds(): array
+    {
+        $ids = [$this->id];
+
+        foreach ($this->children as $child) {
+            $ids = array_merge($ids, $child->getAllDescendantIds());
+        }
+
+        return $ids;
+    }
+
+    /**
+     * Scope a query to only include root subjects.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeWhereIsRoot($query)
+    {
+        return $query->whereNull('parent_id');
     }
 }

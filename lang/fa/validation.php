@@ -11,6 +11,19 @@ return [
     'alpha_num' => 'فیلد :attribute فقط باید شامل حروف و اعداد باشد.',
     'array' => 'فیلد :attribute باید یک آرایه باشد.',
     'ascii' => 'فیلد :attribute فقط باید شامل کاراکترها و نمادهای الفبایی تک بایتی باشد.',
+    'attributes' =>
+    array(
+        'company' => 'نام شرکت',
+        'email' => 'ایمیل',
+        'mobile' => 'تلفن همراه',
+        'name' => 'نام',
+        'phone' => 'تلفن',
+        'price' => 'قیمت',
+        'subject' => 'سرفصل',
+        'text' => 'متن',
+        'user_id' => 'کاربر',
+        'username' => 'نام کاربری',
+    ),
     'before' => 'فیلد :attribute باید تاریخ قبل از :date باشد.',
     'before_or_equal' => 'فیلد :attribute باید تاریخ قبل یا مساوی :date باشد.',
     'between' => [

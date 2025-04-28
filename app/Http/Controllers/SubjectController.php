@@ -23,7 +23,7 @@ class SubjectController extends Controller
     public function create()
     {
         if (request('parent_id')) {
-            $parentSubject = Subject::find(request('parent_id'))->first();
+            $parentSubject = Subject::find((int)request('parent_id'));
         } else {
             $parentSubject = null;
         }
@@ -33,12 +33,17 @@ class SubjectController extends Controller
 
     public function store(Request $request)
     {
+        if ($request['code']) {
+            $request['code'] = str_pad($request['code'], 3, '0', STR_PAD_LEFT);
+        }
+
         $validatedData = $request->validate([
-            // 'code' => 'required|max:20|unique:subjects',
+            'code' => 'nullable|max:3',
             'name' => 'required|max:60',
             'parent_id' => 'nullable|exists:subjects,id',
             'type' => 'required|in:debtor,creditor,both',
         ]);
+
         Subject::create($validatedData);
 
         return redirect()->route('subjects.index')->with('success', __('Subject created successfully.'));

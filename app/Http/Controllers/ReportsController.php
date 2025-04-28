@@ -110,26 +110,19 @@ class ReportsController extends Controller
         }
 
 
-        // --- Existing Logic for Journal/Ledger/subLedger Reports ---
-        // Note: This logic fetches Transactions, not Documents.
-        // If you need to modify how Journal reports work (e.g., chunking Documents instead of Transactions),
-        // you would adjust this section. But sticking to the original Journal logic here.
-        $transactions = Transaction::query(); // Start building query for Transactions
+        $transactions = Transaction::query();
 
         if ($request->subject_id && $request->report_for == 'subLedger') {
-            $transactions = $transactions->where('subject_id', $request->subject_id);
-        }
-        if ($request->subject_id && $request->report_for == 'Ledger') {
-            $subject = Subject::findOrFail($request->subject_id);
+            if ($request->subject_id) {
+                $subject = Subject::findOrFail($request->subject_id);
 
-            $transactions = $transactions->whereHas('subject', function ($query) use ($subject) {
-                // Get the subject and all its descendants using the nested set model
-                $query->where('_lft', '>=', $subject->_lft)
-                    ->where('_rgt', '<=', $subject->_rgt);
-            });
-        }
+                if ($request->report_for == 'subLedger' || $request->report_for == 'Ledger') {
+                    $subjectIds = $subject->getAllDescendantIds();
 
-        // Filters applied to the document relationship for these reports
+                    $transactions = $transactions->whereIn('subject_id', $subjectIds);
+                }
+            }
+
         if ($request->search) {
             $transactions = $transactions->whereHas('document', function ($q) use ($request) {
                 $q->where('title', 'like', '%' . $request->search . '%');
