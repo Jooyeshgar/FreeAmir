@@ -16,7 +16,7 @@
                     borderColor: '#888',
                     borderWidth: 5,
                     fill: false,
-                    tension: 0.4, 
+                    tension: 0.4,
                     pointBackgroundColor: '#fff',
                     pointBorderColor: function(context) {
                         const value = context.raw;
@@ -28,6 +28,10 @@
             };
 
             const options = {
+                interaction: {
+                    mode: 'nearest',
+                    intersect: false
+                },
                 scales: {
                     x: {
                         grid: {
@@ -40,7 +44,7 @@
                             display: true,
                             color: '#e0e0e0',
                         },
-                        beginAtZero: false,
+                        beginAtZero: true,
                     }
                 },
                 plugins: {
