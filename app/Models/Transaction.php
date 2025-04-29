@@ -22,18 +22,7 @@ class Transaction extends Model
         'value',
     ];
 
-    // /**
-    //  * Get the subject associated with the transaction.
-    //  */
-    // public static function boot()
-    // {
-    //     parent::boot();
 
-    //     static::updated(function ($model) {
-    //         $model->subject->fixTree($model);
-    //         return true;
-    //     });
-    // }
     public function subject()
     {
         return $this->belongsTo(Subject::class);

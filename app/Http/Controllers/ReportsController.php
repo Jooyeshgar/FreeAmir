@@ -21,7 +21,6 @@ class ReportsController extends Controller
 
     public function journal()
     {
-        // Subjects might not be needed for the initial form, but keep it if the form requires it
         $subjects = [];
         return view('reports.journal', compact('subjects'));
     }
@@ -34,19 +33,16 @@ class ReportsController extends Controller
 
     public function documents()
     {
-        // This method will show the input form for the document report
         return view('reports.documents');
     }
 
     public function result(Request $request)
     {
-        // $this->updateTree(); // Remove this line if it's just for migration
         $rules = [
             'report_for' => 'required|in:Journal,Ledger,subLedger,Document', // Added Document
             'report_type' => 'required', // e.g., between_numbers, between_dates, specific_date, all
         ];
 
-        // Add rules based on report_for and report_type
         if ($request->report_for != 'Journal' && $request->report_for != 'Document') {
             // Subject is required for Ledger and subLedger
             $rules['subject_id'] = 'required';
@@ -64,7 +60,6 @@ class ReportsController extends Controller
             $rules['specific_document_number'] = 'required|numeric';
         }
 
-        // Allow 'all' type with no date/number restrictions
         if (!in_array($request->report_type, ['between_numbers', 'between_dates', 'specific_date', 'specific_number', 'all'])) {
             // If report_type is something else, maybe it requires dates/numbers?
             // Add more specific validation if needed
@@ -73,7 +68,6 @@ class ReportsController extends Controller
 
         Validator::make($request->all(), $rules)->validate();
 
-        // --- Logic for Document Report ---
         if ($request->report_for == 'Document') {
             $documents = Document::query(); // Start building query for Documents
 
@@ -122,6 +116,7 @@ class ReportsController extends Controller
                     $transactions = $transactions->whereIn('subject_id', $subjectIds);
                 }
             }
+        }
 
         if ($request->search) {
             $transactions = $transactions->whereHas('document', function ($q) use ($request) {
@@ -146,28 +141,14 @@ class ReportsController extends Controller
             });
         }
 
-        // Need to eager load document and subject for these reports too
         $transactions = $transactions->with('document', 'subject')->get();
 
-        // Chunking for Journal/Ledger reports (as per original logic)
         $transactionsChunk = $transactions->chunk(env('REPORT_ROW_SIZE', 26));
 
 
         if ($request->report_for == 'Journal') {
-            // Assuming journalReport.blade.php expects $transactionsChunk
             return view('reports.journalReport', compact('transactionsChunk'));
         }
-        // Assuming ledgerReport.blade.php expects $transactionsChunk
         return view('reports.ledgerReport', compact('transactionsChunk'));
-        // --- End Existing Logic ---
     }
-
-    // private function updateTree()
-    // {
-    //     //        this function should remove. its just for fix tree one time.
-    //     $sub = Subject::all();
-    //     foreach ($sub as $s) {
-    //         $s->fixTree();
-    //     }
-    // }
 }

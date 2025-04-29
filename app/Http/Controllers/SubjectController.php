@@ -68,17 +68,18 @@ class SubjectController extends Controller
 
         $subject->update($validatedData);
 
-        return redirect()->route('subjects.index')->with('success', __('Subject updated successfully.'));
+        return redirect()->back()->with('success', __('Subject updated successfully.'));
     }
 
 
     public function destroy(Subject $subject)
     {
+
         try {
             $subject->delete();
-            return redirect()->route('subjects.index')->with('success', __('Subject deleted successfully.'));
+            return redirect()->back()->with('success', __('Subject deleted successfully.'));
         } catch (\Exception $e) {
-            return redirect()->route('subjects.index')->with('error', $e->getMessage());
+            return redirect()->back()->with('errors', $e->getMessage());
         }
     }
 

@@ -31,8 +31,8 @@
                     @endphp
                     @foreach ($transactions as $transaction)
                         <tr>
-                            <td class="border p-2" style="text-align: center">{{ formatNumber($transaction->document->number) }}</td>
-                            <td class="border p-2" style="text-align: center">{{ formatDate($transaction->document->date) }}</td>
+                            <td class="border p-2" style="text-align: center">{{ formatNumber($transaction->document?->number) }}</td>
+                            <td class="border p-2" style="text-align: center">{{ formatDate($transaction->document?->date) }}</td>
                             <td class="border p-2">{{ $transaction->desc }}</td>
                             @php
                                 $debit = $transaction->value < 0 ? -1 * $transaction->value : 0;
