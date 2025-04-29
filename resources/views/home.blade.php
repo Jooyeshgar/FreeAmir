@@ -53,11 +53,10 @@
                                     stroke-width="1.5" stroke="currentColor" class="size-3">
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                         d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-                                </svg>)</span></span>
-                    </div> --}}
+                                </svg>)</span></span>                    </div> --}}
 
                     <div class="p-2">
-                        <x-cash-balance-chart :labels="[]" :datas="[]" />
+                        <x-charts.cash-balance-chart :labels="[]" :datas="[]" />
                     </div>
                 </div>
             </div>
@@ -66,12 +65,13 @@
                 class="gaugeChartContainer w-1/3 max-[850px]:w-full relative bg-[#E9ECEF] rounded-[16px] shadow-[0px_43px_27px_0px_#00000012]">
                 <div class="flex justify-between items-center h-[62px]">
                     <h2 class="text-[#495057] ms-3">
-                        {{ __('Monthly Goals Status') }}
+                        {{ __('Income') }}
                     </h2>
                 </div>
 
-                <div class="px-4">
-                    <canvas id="gaugeChart" class="absolute left-0 right-0 w-full ps-2 max-[1200px]:static"></canvas>
+                <div class="p-2">
+                    <x-charts.income-chart :datas="$monthlyIncome" />
+
                 </div>
             </div>
 
@@ -224,7 +224,7 @@
                     </div> --}}
 
                     <div class="p-2">
-                        <x-account-balance :labels="[]" :datas="[]" />
+                        <x-charts.account-balance :labels="[]" :datas="[]" />
                     </div>
                 </div>
             </div>
