@@ -52,6 +52,20 @@ function formatDate(Carbon|null $date)
     return $date->format('Y-m-d');
 }
 
+function formatMinimalDate(Carbon|null $date)
+{
+    if (is_null($date)) {
+        return '';
+    }
+
+    $locale = App::getLocale();
+    if ($locale === 'fa' || $locale === 'fa_IR') {
+        return jdate('m/d', $date->timestamp ?? now());
+    }
+
+    return $date->format('m-d');
+}
+
 function formatCode(string $code)
 {
     $chunks = str_split($code, 3);

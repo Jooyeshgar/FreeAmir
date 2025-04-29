@@ -39,12 +39,11 @@ class ReportsController extends Controller
     public function result(Request $request)
     {
         $rules = [
-            'report_for' => 'required|in:Journal,Ledger,subLedger,Document', // Added Document
-            'report_type' => 'required', // e.g., between_numbers, between_dates, specific_date, all
+            'report_for' => 'required|in:Journal,Ledger,subLedger,Document',
+            'report_type' => 'required',
         ];
 
         if ($request->report_for != 'Journal' && $request->report_for != 'Document') {
-            // Subject is required for Ledger and subLedger
             $rules['subject_id'] = 'required';
         }
 
@@ -52,11 +51,11 @@ class ReportsController extends Controller
             $rules['start_document_number'] = 'required|numeric';
             $rules['end_document_number'] = 'required|numeric';
         } elseif ($request->report_type == 'between_dates') {
-            $rules['start_date'] = 'required|date_format:Y/m/d'; // Adjust format if needed
-            $rules['end_date'] = 'required|date_format:Y/m/d';   // Adjust format if needed
+            $rules['start_date'] = 'required|date_format:Y/m/d';
+            $rules['end_date'] = 'required|date_format:Y/m/d';
         } elseif ($request->report_type == 'specific_date') {
-            $rules['specific_date'] = 'required|date_format:Y/m/d'; // Adjust format if needed
-        } elseif ($request->report_type == 'specific_number') { // Added specific number type
+            $rules['specific_date'] = 'required|date_format:Y/m/d';
+        } elseif ($request->report_type == 'specific_number') {
             $rules['specific_document_number'] = 'required|numeric';
         }
 
@@ -69,15 +68,13 @@ class ReportsController extends Controller
         Validator::make($request->all(), $rules)->validate();
 
         if ($request->report_for == 'Document') {
-            $documents = Document::query(); // Start building query for Documents
+            $documents = Document::query();
 
-            // Apply filters based on report_type
             if ($request->report_type == 'between_numbers') {
                 $documents->whereBetween('number', [$request->start_document_number, $request->end_document_number]);
             } elseif ($request->report_type == 'specific_number') {
                 $documents->where('number', $request->specific_document_number);
             } elseif ($request->report_type == 'between_dates') {
-                // Convert Jalali dates to Gregorian for database query
                 $startDate = jalali_to_gregorian_date($request->start_date);
                 $endDate = jalali_to_gregorian_date($request->end_date);
                 $documents->whereBetween('date', [$startDate, $endDate]);
@@ -85,34 +82,27 @@ class ReportsController extends Controller
                 $specificDate = jalali_to_gregorian_date($request->specific_date);
                 $documents->where('date', $specificDate);
             }
-            // If report_type is 'all', no date/number filter is applied here
 
-            // Apply search filter to document title
             if ($request->search) {
                 $documents->where('title', 'like', '%' . $request->search . '%');
             }
 
-            // Order documents for display
             $documents->orderBy('date', 'asc')->orderBy('number', 'asc');
 
-            // Eager load necessary relationships for the document template
-            // Need transactions and their subjects, plus creator and approver
             $documents = $documents->with(['transactions.subject', 'creator', 'approver'])->get();
 
-            // Pass the collection of documents to the new report view
             return view('reports.documentReport', compact('documents'));
         }
 
 
         $transactions = Transaction::query();
-
-        if ($request->subject_id && $request->report_for == 'subLedger') {
+        $subject = null;
+        if ($request->subject_id) {
             if ($request->subject_id) {
                 $subject = Subject::findOrFail($request->subject_id);
 
                 if ($request->report_for == 'subLedger' || $request->report_for == 'Ledger') {
                     $subjectIds = $subject->getAllDescendantIds();
-
                     $transactions = $transactions->whereIn('subject_id', $subjectIds);
                 }
             }
@@ -141,14 +131,18 @@ class ReportsController extends Controller
             });
         }
 
-        $transactions = $transactions->with('document', 'subject')->get();
+        $transactions = $transactions->with('document', 'subject')
+            ->orderBy(
+                Document::whereColumn('id', 'transactions.document_id')->select('date')
+            )
+            ->get();
 
-        $transactionsChunk = $transactions->chunk(env('REPORT_ROW_SIZE', 26));
+        $transactionsChunk = $transactions->chunk(env('REPORT_ROW_SIZE', 25));
 
 
         if ($request->report_for == 'Journal') {
-            return view('reports.journalReport', compact('transactionsChunk'));
+            return view('reports.journalReport', compact('transactionsChunk', 'subject'));
         }
-        return view('reports.ledgerReport', compact('transactionsChunk'));
+        return view('reports.ledgerReport', compact('transactionsChunk', 'subject'));
     }
 }
