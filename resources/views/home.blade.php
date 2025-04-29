@@ -36,10 +36,10 @@
 
                         <select x-model="selectedDuration" x-on:change="handleCashBookChange"
                             class="select bg-[#DEE2E6] text-[#495057] w-[120px] max-w-xs">
-                            <option value="1">{{ '3 ' . __('Month') }}</option>
-                            <option value="2">{{ '6 ' . __('Month') }}</option>
-                            <option value="3">{{ '9 ' . __('Month') }}</option>
-                            <option value="4">{{ '12 ' . __('Month') }}</option>
+                            <option value="1">{{ '۳ ' . __('Month') }}</option>
+                            <option value="2">{{ '۶ ' . __('Month') }}</option>
+                            <option value="3">{{ '۹ ' . __('Month') }}</option>
+                            <option value="4">{{ '۱۲ ' . __('Month') }}</option>
                         </select>
                     </div>
                 </div>
@@ -175,7 +175,7 @@
                         <div>
                             @foreach ($banks as $bank)
                                 <p class="mb-4">
-                                    {{ number_format($bankBalances[$bank->id] ?? 0) }}
+                                    {{ convertToFarsi(number_format($bankBalances[$bank->id] ?? 0)) }}
                                 </p>
                             @endforeach
                         </div>
@@ -203,10 +203,10 @@
 
                         <select x-model="selectedDuration" @change="handleBankChange"
                             class="select bg-[#DEE2E6] text-[#495057] w-[120px] max-w-xs">
-                            <option value="1">{{ '3 ' . __('Month') }}</option>
-                            <option value="2">{{ '6 ' . __('Month') }}</option>
-                            <option value="3">{{ '9 ' . __('Month') }}</option>
-                            <option value="4">{{ '12 ' . __('Month') }}</option>
+                            <option value="1">{{ '۳ ' . __('Month') }}</option>
+                            <option value="2">{{ '۶ ' . __('Month') }}</option>
+                            <option value="3">{{ '۹ ' . __('Month') }}</option>
+                            <option value="4">{{ '۱۲ ' . __('Month') }}</option>
                         </select>
                     </div>
                 </div>
@@ -277,7 +277,7 @@
                             if (label.match(/^\d{4}-\d{2}-\d{2}$/)) {
                                 const [year, month, day] = label.split('-');
 
-                                return convertToJalali(year, month, day);
+                                return convertToLocaleDigits(convertToJalali(year, month, day));
                             }
 
                             return label;
@@ -334,7 +334,7 @@
                             if (label.match(/^\d{4}-\d{2}-\d{2}$/)) {
                                 const [year, month, day] = label.split('-');
 
-                                return convertToJalali(year, month, day);
+                                return convertToLocaleDigits(convertToJalali(year, month, day));
                             }
 
                             return label;

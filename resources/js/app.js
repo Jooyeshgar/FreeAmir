@@ -57,6 +57,11 @@ function convertToJalali(gy, gm, gd) {
 }
 window.convertToJalali = convertToJalali;
 
+function convertToLocaleDigits(input) {
+    return input.replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[digit]);
+}
+window.convertToLocaleDigits = convertToLocaleDigits;
+
 if (document.getElementById('lineChart')) {
     document.addEventListener('DOMContentLoaded', () => {
         Chart.defaults.font.family = 'vazir'
