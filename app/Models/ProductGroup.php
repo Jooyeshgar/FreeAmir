@@ -31,5 +31,8 @@ class ProductGroup extends Model
         return $this->belongsTo(Subject::class, 'sellId');
     }
 
-    // Define any other methods as needed
+    public function products()
+    {
+        return $this->hasMany(Product::class, 'group', 'id');
+    }
 }

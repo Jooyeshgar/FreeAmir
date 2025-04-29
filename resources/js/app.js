@@ -5,8 +5,62 @@ import { Chart, registerables } from 'chart.js';
 
 window.Alpine = Alpine;
 
-
+window.Chart = Chart;
 Chart.register(...registerables);
+Chart.defaults.font.family = 'vazir'
+
+function convertToJalali(gy, gm, gd) {
+    // Implementation of gregorian_to_jalali function in JavaScript
+    gy = parseInt(gy);
+    gm = parseInt(gm);
+    gd = parseInt(gd);
+
+    var g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+    var jy, days;
+
+    if (gy > 1600) {
+        jy = 979;
+        gy -= 1600;
+    } else {
+        jy = 0;
+        gy -= 621;
+    }
+
+    var gy2 = gm > 2 ? gy + 1 : gy;
+    days =
+        365 * gy +
+        parseInt((gy2 + 3) / 4) -
+        parseInt((gy2 + 99) / 100) +
+        parseInt((gy2 + 399) / 400) -
+        80 +
+        gd +
+        g_d_m[gm - 1];
+    jy += 33 * parseInt(days / 12053);
+    days %= 12053;
+    jy += 4 * parseInt(days / 1461);
+    days %= 1461;
+    jy += parseInt((days - 1) / 365);
+
+    if (days > 365) days = (days - 1) % 365;
+
+    var jm, jd;
+    if (days < 186) {
+        jm = 1 + parseInt(days / 31);
+        jd = 1 + (days % 31);
+    } else {
+        jm = 7 + parseInt((days - 186) / 30);
+        jd = 1 + ((days - 186) % 30);
+    }
+
+    // Format the date as needed (e.g., YYYY/MM/DD or other formats)
+    return `${jy}/${jm < 10 ? "0" + jm : jm}/${jd < 10 ? "0" + jd : jd}`;
+}
+window.convertToJalali = convertToJalali;
+
+function convertToLocaleDigits(input) {
+    return input.replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[digit]);
+}
+window.convertToLocaleDigits = convertToLocaleDigits;
 
 if (document.getElementById('lineChart')) {
     document.addEventListener('DOMContentLoaded', () => {
@@ -63,10 +117,12 @@ if (document.getElementById('lineChart')) {
             }
         });
     });
+}
 
+if (document.getElementById('gaugeChart')) {  
     document.addEventListener('DOMContentLoaded', () => {
         const ctx = document.getElementById('gaugeChart').getContext('2d');
-        const myChart = new Chart(ctx, {
+        const gaugeChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: ['درآمد از فروش', 'درآمد از تخفیف خرید', 'خالی'],  // برچسب‌ها
@@ -105,23 +161,14 @@ if (document.getElementById('lineChart')) {
                                 return legendItem.text !== 'خالی';
                             }
                         }
-                    },
-                    datalabels: {
-                        color: '#000',  // رنگ متن داخل نمودار
-                        formatter: function (value, context) {
-                            // نمایش مقادیر فقط برای بخش‌های غیر از "خالی"
-                            return context.chart.data.labels[context.dataIndex] !== 'خالی' ? value : '';
-                        },
-                        anchor: 'end',  // موقعیت متن نسبت به نقطه
-                        align: 'end',  // تنظیم متن به بالا
-                        offset: 10,  // فاصله متن از نقطه
-                        textAlign: 'right',  // راست‌چین کردن متن داخل نمودار
                     }
                 }
             }
         });
     });
+}
 
+if (document.getElementById('midLineChart')) {
     document.addEventListener('DOMContentLoaded', () => {
         const ctx = document.getElementById('midLineChart').getContext('2d');
 
@@ -250,33 +297,35 @@ if (document.querySelector(".selfSelectBoxContainer")) {
         });
     }
 
-    codeInputFiller()
+    codeInputFiller();
 
     window.reOrderInputs = function () {
         setTimeout(() => {
             document.querySelectorAll(".transaction").forEach(elem => {
                 let t = elem.querySelector(".transaction-count").innerText;
-            })
+            });
         }, 200);
-    }
+    };
 
     function countInputs() {
-        searchInputs = document.querySelectorAll(".searchInput"), resultDivs = document.querySelectorAll(".resultDiv"),
-            searchResultDivs = document.querySelectorAll(".searchResultDiv")
+        searchInputs = document.querySelectorAll(".searchInput");
+        resultDivs = document.querySelectorAll(".resultDiv");
+        searchResultDivs = document.querySelectorAll(".searchResultDiv");
     }
 
     document.addEventListener("click", function (e) {
-        e.target.closest(".selfSelectBoxContainer") || document.querySelectorAll(".selfSelectBox").forEach(
-            function (e) {
-                e.style.display = "none", resultDivs.forEach((e, t) => {
-                    searchInputs[t].value = "", e.style.display = "block", searchResultDivs[t].style
-                        .display = "none"
-                })
-            })
+        if(!e.target.closest(".selfSelectBoxContainer")) {
+            document.querySelectorAll(".selfSelectBox").forEach(function (e) {
+                e.style.display = "none";
+                resultDivs.forEach((e, t) => {
+                    searchInputs[t].value = "";
+                    e.style.display = "block";
+                    searchResultDivs[t].style.display = "none";
+                });
+            });
+        }
     });
 }
-
-
 
 Alpine.store('utils', {
     openSelectBox(e) {

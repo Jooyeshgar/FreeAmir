@@ -22,6 +22,7 @@
     </div>
     @stack('scripts')
 
+    @stack('footer')
 </body>
 
 </html>

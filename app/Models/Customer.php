@@ -69,15 +69,6 @@ class Customer extends Model
 
     protected static function booted()
     {
-        static::addGlobalScope(new FiscalYearScope());
-
-        static::creating(function ($customer) {
-            // Set company_id before creating the customer
-            if (!isset($customer->company_id)) {
-                $customer->company_id = session('active-company-id');
-            }
-        });
-
         static::created(function ($customer) {
             $parentGroup = $customer->group;
             $subject = $customer->subject()->create([
