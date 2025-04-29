@@ -14,7 +14,7 @@ class ConfigController extends Controller
 
     public function index()
     {
-        $subjects = Models\Subject::all();
+        $subjects = Models\Subject::whereNull('parent_id')->get();
         $configs = Models\Config::all();
         $configs = $configs->pluck('value', 'key')->toArray();
 
@@ -25,6 +25,7 @@ class ConfigController extends Controller
     {
         $validatedData = $request->validate([
             'cash_book' => 'nullable|exists:subjects,id|integer',
+            'income' => 'nullable|exists:subjects,id|integer',
             'bank' => 'nullable|exists:banks,id|integer',
             'cash' => 'nullable|numeric',
             'buy_discount' => 'nullable|numeric',
