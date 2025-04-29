@@ -18,6 +18,9 @@
                 :selected="old('cash_book', $configs['cash_book'] ?? '')" />
         </div>
         <div class="col-span-2 md:col-span-1">
+            <x-select name="income" id="income" title="{{ __('Income') }}" :options="$subjects->pluck('name', 'id')" :selected="old('income', $configs['income'] ?? '')" />
+        </div>
+        <div class="col-span-2 md:col-span-1">
             <x-input name="cash" id="cash" title="{{ __('Cash') }}" :value="old('cash', $configs['cash'] ?? '')" />
         </div>
         <div class="col-span-2 md:col-span-1">
@@ -32,3 +35,5 @@
         <div class="col-span-2 md:col-span-1">
             <x-input name="buy_vat" id="buy_vat" title="{{ __('Buy VAT') }}" :value="old('buy_vat', $configs['buy_vat'] ?? '')" />
         </div>
+    </fieldset>
+</div>

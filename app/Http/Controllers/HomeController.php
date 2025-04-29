@@ -93,6 +93,7 @@ class HomeController extends Controller
 
         $transactions = Transaction::where('value', '>', 0)
             ->whereBetween('created_at', [$startDate, $endDate])
+            ->where('subject_id', config('amir.income'))
             ->get();
 
         $monthlyIncome = array_fill(1, 12, 0);
