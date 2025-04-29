@@ -34,10 +34,6 @@ class SubjectController extends Controller
 
     public function store(Request $request)
     {
-        if ($request['code']) {
-            $request['code'] = str_pad($request['code'], 3, '0', STR_PAD_LEFT);
-        }
-
         $validatedData = $request->validate([
             'code' => 'nullable|max:3',
             'name' => 'required|max:60',
@@ -45,9 +41,13 @@ class SubjectController extends Controller
             'type' => 'required|in:debtor,creditor,both',
         ]);
 
-        Subject::create($validatedData);
+        $subject = new Subject();
+        $subject->fill($validatedData);
+        $subject->code = $subject->generateCode($validatedData['code']);
 
-        return redirect()->route('subjects.index')->with('success', __('Subject created successfully.'));
+        $subject->save();
+
+        return redirect()->back()->with('success', __('Subject created successfully.'));
     }
 
     public function edit(Subject $subject)
