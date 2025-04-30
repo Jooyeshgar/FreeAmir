@@ -21,7 +21,6 @@ class DatabaseSeeder extends Seeder
             CustomerGroupSeeder::class,
             ProductGroupSeeder::class,
             RolesAndPermissionsSeeder::class,
-            TransactionSeeder::class,
         ]);
     }
 }

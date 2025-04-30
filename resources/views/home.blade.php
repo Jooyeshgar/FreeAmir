@@ -85,8 +85,8 @@
 
                 <div class="flex flex-wrap text-[#212529] mt-4 max-[850px]:mb-4">
                     <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
-                        <a href="{{ route('subjects.index') }}">
-                            {{ __('Financial Affairs') }}
+                        <a href="{{ route('customers.index') }}">
+                            {{ __('Customer List') }}
                         </a>
                     </div>
 

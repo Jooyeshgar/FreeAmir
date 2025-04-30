@@ -17,7 +17,7 @@ class CreateSubjectsTable extends Migration
             $table->id();
             $table->string('code', 20);
             $table->string('name', 60);
-            $table->unsignedBigInteger('parent_id');
+            $table->unsignedBigInteger('parent_id')->nullable();
             $table->enum('type', ['debtor', 'creditor', 'both'])->default('both');
             $table->timestamps();
 

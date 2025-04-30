@@ -110,10 +110,10 @@ class DocumentService
             'subject_id' => 'required|integer',
             'desc' => 'string',
             'value' => 'required|decimal:0,2',
+            'created_at' => 'nullable|date',
+            'updated_at' => 'nullable|date',
         ]);
-
         if ($validator->fails()) {
-            // dd($data);
             throw new \Exception($validator->errors()->first());
         }
 

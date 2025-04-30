@@ -18,7 +18,8 @@ class CustomerFactory extends Factory
         $name = $this->faker->name;
 
         return [
-            'code' => $this->faker->unique()->numerify('#####'),
+            // 'code' => $this->faker->unique()->numerify('#####'),
+            'company_id' => session('active-company-id'),
             'name' => $name,
             'phone' => substr($this->faker->phoneNumber, 0, 15),
             'cell' => substr($this->faker->phoneNumber, 0, 15),

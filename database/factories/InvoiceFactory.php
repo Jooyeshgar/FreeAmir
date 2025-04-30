@@ -71,7 +71,7 @@ class InvoiceFactory extends Factory
                 $invoice->document,
                 [
                     'value' => $invoiceItem->amount,
-                    'subject_id' => Subject::inRandomOrder()->first()->id,
+                    'subject_id' => Subject::whereNotIn('parent_id', [1, 14])->inRandomOrder()->first()->id,
                     'user_id' => $invoice->creator_id,
                     'desc' => $description
                 ]
@@ -81,7 +81,7 @@ class InvoiceFactory extends Factory
                 $invoice->document,
                 [
                     'value' => -1 * $invoiceItem->amount,
-                    'subject_id' => Subject::inRandomOrder()->first()->id,
+                    'subject_id' => Subject::whereNotIn('parent_id', [1, 14])->inRandomOrder()->first()->id,
                     'user_id' => $invoice->creator_id,
                     'desc' => $description
                 ],

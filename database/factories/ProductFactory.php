@@ -13,6 +13,7 @@ class ProductFactory extends Factory
     {
         return [
             'code' => $this->faker->unique()->word,
+            'company_id' => session('active-company-id'),
             'name' => $this->faker->word,
             'group' => 1,
             'location' => $this->faker->word,
