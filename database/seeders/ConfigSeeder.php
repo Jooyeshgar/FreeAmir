@@ -27,7 +27,7 @@ class ConfigSeeder extends Seeder
             ['type' => 2, 'category' => 1, 'key' => 'bank-wage', 'value' => '31', 'desc' => 'Enter here', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'our_cheque', 'value' => '22', 'desc' => 'Enter here', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'other_cheque', 'value' => '6', 'desc' => 'Enter here', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'income', 'value' => '83', 'desc' => 'Enter here', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'income', 'value' => '23', 'desc' => 'Enter here', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'fund', 'value' => '??', 'desc' => 'Enter here', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'acc-receivable', 'value' => '??', 'desc' => 'Enter here', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'commission', 'value' => '??', 'desc' => 'Enter here', 'company_id' => 1],

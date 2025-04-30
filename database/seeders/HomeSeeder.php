@@ -23,7 +23,24 @@ class HomeSeeder extends Seeder
 
     public function run(): void
     {
-        for ($i = 0; $i < 50; $i++) {
+
+        $banks = [
+            ['name' => 'ملی', 'code' => '010001', 'parent_id' => 1, 'type' => 'both', 'company_id' => 1],
+            ['name' => 'ملت', 'code' => '010002', 'parent_id' => 1, 'type' => 'both', 'company_id' => 1],
+            ['name' => 'شهر', 'code' => '010003', 'parent_id' => 1, 'type' => 'both', 'company_id' => 1],
+        ];
+
+        Subject::insert($banks);
+
+        $cashBooks = [
+            ['name' => 'صندوق ۱', 'code' => '011001001', 'parent_id' => 14, 'type' => 'both', 'company_id' => 1],
+            ['name' => 'صندوق ۲', 'code' => '011001002', 'parent_id' => 14, 'type' => 'both', 'company_id' => 1],
+        ];
+
+        Subject::insert($cashBooks);
+
+
+        for ($i = 0; $i < 150; $i++) {
             $invoice = $this->createInvoice();
             $this->createTransaction($invoice);
         }
@@ -33,15 +50,15 @@ class HomeSeeder extends Seeder
     {
         $jalaliYear = 1404;
         $jalaliMonth = rand(1, 12);
-        
+
         $jalaliDay = rand(1, 28);
-        
-        $jalaliDate = $jalaliYear . '/' . 
-                      ($jalaliMonth < 10 ? '0' . $jalaliMonth : $jalaliMonth) . '/' . 
-                      ($jalaliDay < 10 ? '0' . $jalaliDay : $jalaliDay);
-        
+
+        $jalaliDate = $jalaliYear . '/' .
+            ($jalaliMonth < 10 ? '0' . $jalaliMonth : $jalaliMonth) . '/' .
+            ($jalaliDay < 10 ? '0' . $jalaliDay : $jalaliDay);
+
         $date = jalali_to_gregorian_date($jalaliDate);
-        
+
         $amount = $this->faker->randomFloat(2, 1000, 10000);
         $user = User::inRandomOrder()->first();
 
@@ -87,7 +104,7 @@ class HomeSeeder extends Seeder
             $invoice->document,
             [
                 'value' => $invoiceItem->amount,
-                'subject_id' => Subject::whereIn('parent_id', [1, 14])->inRandomOrder()->first()->id,
+                'subject_id' => Subject::whereIn('parent_id', [1, 14, 23])->inRandomOrder()->first()->id,
                 'user_id' => $invoice->creator_id ?? User::inRandomOrder()->first()->id,
                 'desc' => $description,
                 'created_at' => $invoice->date,
@@ -99,7 +116,7 @@ class HomeSeeder extends Seeder
             $invoice->document,
             [
                 'value' => -1 * $invoiceItem->amount,
-                'subject_id' => Subject::whereNotIn('parent_id', [1, 14])->inRandomOrder()->first()->id,
+                'subject_id' => Subject::whereNotIn('parent_id', [1, 14, 23])->inRandomOrder()->first()->id,
                 'user_id' => $invoice->creator_id ?? User::inRandomOrder()->first()->id,
                 'desc' => $description,
                 'created_at' => $invoice->date,

@@ -29,19 +29,5 @@ class BankAccountSeeder extends Seeder
             ]);
         }
 
-        $banks = [
-            ['name' => 'ملی', 'code' => '010001', 'parent_id' => 1, 'type' => 'both', 'company_id' => 1],
-            ['name' => 'ملت', 'code' => '010002', 'parent_id' => 1, 'type' => 'both', 'company_id' => 1],
-            ['name' => 'شهر', 'code' => '010003', 'parent_id' => 1, 'type' => 'both', 'company_id' => 1],
-        ];
-
-        Subject::insert($banks);
-
-        $cashBooks = [
-            ['name' => 'صندوق ۱', 'code' => '011001001', 'parent_id' => 14, 'type' => 'both', 'company_id' => 1],
-            ['name' => 'صندوق ۲', 'code' => '011001002', 'parent_id' => 14, 'type' => 'both', 'company_id' => 1],
-        ];
-
-        Subject::insert($cashBooks);
     }
 }

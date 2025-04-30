@@ -85,21 +85,23 @@ class HomeController extends Controller
 
     public function getMonthlyIncome()
     {
-        $currentJalaliYear = (int) jdate('Y');
+        $currentJalaliYear = (int) jdate('Y', tr_num: 'en');
 
-        $startDate = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian($currentJalaliYear, '01', '01','/'));
+        $startDate = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian($currentJalaliYear, '01', '01', '/'));
 
-        $endDate = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian($currentJalaliYear + 1, '01', '01','/'))->subDay();
+        $endDate = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian($currentJalaliYear + 1, '01', '01', '/'))->subDay();
+
+        $incomeSubjects = Subject::where('parent_id', config('amir.income'))->get();
 
         $transactions = Transaction::where('value', '>', 0)
             ->whereBetween('created_at', [$startDate, $endDate])
-            ->where('subject_id', config('amir.income'))
+            ->whereIn('subject_id', $incomeSubjects->pluck('id')->toArray())
             ->get();
 
         $monthlyIncome = array_fill(1, 12, 0);
 
         foreach ($transactions as $transaction) {
-            $jalaliMonth = (int) jdate('m', strtotime($transaction->created_at));
+            $jalaliMonth = (int) jdate('m', strtotime($transaction->created_at), tr_num: 'en');
 
             $monthlyIncome[$jalaliMonth] += $transaction->value;
         }
