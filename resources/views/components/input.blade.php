@@ -13,7 +13,7 @@
     'bordered' => true,
     'model_name' => false,
 ])
-<label {{ $attributes->merge(['class' => 'form-control w-full ']) }}>
+<label {{ $attributes->whereDoesntStartWith('x-')->merge(['class' => 'form-control w-full ']) }}>
     @if ($title != '')
         <div class="label">
             <span class="label-text">{{ $title }}{{ $required ? '*' : '' }}</span>
@@ -22,9 +22,9 @@
             @endif
         </div>
     @endif
-    <input title="{{ $title }}" type="{{ $type }}" name="{{ $name }}" id="{{ $name }}" value="{{ $value ?? '' }}"
-        placeholder="{{ $placeholder ?? '' }}" class="input {{ $bordered ? 'input-bordered' : '' }} w-full max-w-full max-h-10" {{ $required ? 'required' : '' }}
-        {{ $disabled ? 'disabled' : '' }} {!! $model_name ? "x-model=\"$model_name\"" : '' !!} />
+    <input {{ $attributes->whereStartsWith('x-')->merge() }} title="{{ $title }}" type="{{ $type }}" name="{{ $name }}" id="{{ $name }}"
+        value="{{ $value ?? '' }}" placeholder="{{ $placeholder ?? '' }}" class="input {{ $bordered ? 'input-bordered' : '' }} w-full max-w-full max-h-10"
+        {{ $required ? 'required' : '' }} {{ $disabled ? 'disabled' : '' }} {!! $model_name ? "x-model=\"$model_name\"" : '' !!} />
 
     @if ($errors->first($name))
         <span class="label-text-alt text-rose-700">{{ $errors->first($name) }}</span>

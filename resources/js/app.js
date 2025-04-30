@@ -119,7 +119,7 @@ if (document.getElementById('lineChart')) {
     });
 }
 
-if (document.getElementById('gaugeChart')) {  
+if (document.getElementById('gaugeChart')) {
     document.addEventListener('DOMContentLoaded', () => {
         const ctx = document.getElementById('gaugeChart').getContext('2d');
         const gaugeChart = new Chart(ctx, {
@@ -313,18 +313,7 @@ if (document.querySelector(".selfSelectBoxContainer")) {
         searchResultDivs = document.querySelectorAll(".searchResultDiv");
     }
 
-    document.addEventListener("click", function (e) {
-        if(!e.target.closest(".selfSelectBoxContainer")) {
-            document.querySelectorAll(".selfSelectBox").forEach(function (e) {
-                e.style.display = "none";
-                resultDivs.forEach((e, t) => {
-                    searchInputs[t].value = "";
-                    e.style.display = "block";
-                    searchResultDivs[t].style.display = "none";
-                });
-            });
-        }
-    });
+
 }
 
 Alpine.store('utils', {
