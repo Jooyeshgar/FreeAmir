@@ -16,9 +16,9 @@
             @include('reports.form', ['type' => 'Journal'])
         </x-card>
         <div class="mt-2 flex gap-2 justify-end">
-            <a href="{{ route('documents.index') }}" type="submit" class="btn btn-default rounded-md">
+            <button type="submit" name="export" value="csv" class="btn btn-default rounded-md">
                 {{ __('Convert to CSV') }}
-            </a>
+            </button>
             <button type="submit" class="btn btn-default rounded-md"> {{ __('Print') }}</button>
             <button type="submit" class="btn text-white btn-primary rounded-md"> {{ __('Preview') }}</button>
         </div>

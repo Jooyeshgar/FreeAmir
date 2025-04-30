@@ -8,6 +8,7 @@ use App\Models\Document; // Import Document model
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
+use Symfony\Component\HttpFoundation\StreamedResponse; // Import StreamedResponse
 
 class ReportsController extends Controller
 {
@@ -137,12 +138,64 @@ class ReportsController extends Controller
             )
             ->get();
 
-        $transactionsChunk = $transactions->chunk(env('REPORT_ROW_SIZE', 25));
+        if ($request->input('export') === 'csv') {
+            $filename = $request->report_for . "_report_" . date('YmdHis') . ".csv";
+            return $this->streamCsvResponse($transactions, $filename);
+        }
 
+        $transactionsChunk = $transactions->chunk(env('REPORT_ROW_SIZE', 25));
 
         if ($request->report_for == 'Journal') {
             return view('reports.journalReport', compact('transactionsChunk', 'subject'));
         }
         return view('reports.ledgerReport', compact('transactionsChunk', 'subject'));
+    }
+
+    /**
+     * Generates and streams a CSV response for a collection of transactions.
+     *
+     * @param Collection $transactions
+     * @param string $filename
+     * @return StreamedResponse
+     */
+    private function streamCsvResponse(Collection $transactions, string $filename): StreamedResponse
+    {
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function () use ($transactions) {
+            $file = fopen('php://output', 'w');
+
+            // Add BOM for UTF-8 Excel compatibility
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            fputcsv($file, [
+                __('Date'),
+                __('Document #'),
+                __('Subject Code'),
+                __('Subject Name'),
+                __('Description'),
+                __('Debit'),
+                __('Credit'),
+            ]);
+
+            foreach ($transactions as $transaction) {
+                fputcsv($file, [
+                    formatDate($transaction->document->date),
+                    formatDocumentNumber($transaction->document->number),
+                    formatCode($transaction->subject->code),
+                    $transaction->subject->name,
+                    $transaction->desc ?? '',
+                    $transaction->debit ?? 0,
+                    $transaction->credit ?? 0,
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

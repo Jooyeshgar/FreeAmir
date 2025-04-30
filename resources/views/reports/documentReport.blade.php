@@ -1,4 +1,4 @@
-<x-report-layout :title="__('Document Report')">
+<x-report-layout :title="__('Documents Report')">
     @forelse ($documents as $document)
         @include('documents.document', ['document' => $document])
 

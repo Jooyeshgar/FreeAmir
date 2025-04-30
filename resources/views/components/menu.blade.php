@@ -31,7 +31,7 @@
                         <summary>{{ __('Accounting') }}</summary>
                         <ul>
                             @can('reports.documents')
-                                <li><a href="{{ route('reports.documents') }}">{{ __('Document Report') }}</a></li>
+                                <li><a href="{{ route('reports.documents') }}">{{ __('Documents Report') }}</a></li>
                             @endcan
                             @can('reports.journal')
                                 <li><a href="{{ route('reports.journal') }}">{{ __('Journal') }}</a></li>
