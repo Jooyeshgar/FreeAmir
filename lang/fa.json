@@ -103,6 +103,8 @@
     "Customer group updated successfully.": "گروه مشتری با موفقیت به روز شد.",
     "Customer updated successfully.": "مشتری با موفقیت به روز شد.",
     "Customers": "مشتریان",
+    "Caution": "هشدار",
+    "Changes to these settings may affect your fiscal data integrity. Please proceed with care.": "تغییرات در این تنظیمات ممکن است بر یکپارچگی داده های مالی شما تأثیر بگذارد. لطفا با احتیاط ادامه دهید.",
     "Date": "تاریخ",
     "Debit": "بدهکاری",
     "Debtor": "بدهکار",

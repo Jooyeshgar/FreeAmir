@@ -24,9 +24,9 @@ class ConfigController extends Controller
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            'cash_book' => 'nullable|exists:subjects,id|integer',
-            'income' => 'nullable|exists:subjects,id|integer',
-            'bank' => 'nullable|exists:banks,id|integer',
+            'cash_book' => 'nullable|exists:subjects,id|numeric',
+            'income' => 'nullable|exists:subjects,id|numeric',
+            'bank' => 'nullable|exists:banks,id|numeric',
             'cash' => 'nullable|numeric',
             'buy_discount' => 'nullable|numeric',
             'sell_discount' => 'nullable|numeric',
