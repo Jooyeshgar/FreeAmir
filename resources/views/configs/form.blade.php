@@ -19,7 +19,7 @@
         </div>
     </x-card>
 
-    <fieldset id="subjectForm" :disabled="!toggleFields" class="grid grid-cols-2 gap-6 border p-5 my-3">
+    <fieldset id="subjectForm" class="grid grid-cols-2 gap-6 border p-5 my-3">
         <legend>{{ __('Subject Info') }}</legend>
         <div class="col-span-2 md:col-span-1">
             <x-select name="cust_subject" id="cust_subject" title="{{ __('Customers') }}" :options="$subjects->pluck('name', 'id')"

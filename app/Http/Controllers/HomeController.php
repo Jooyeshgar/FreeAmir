@@ -64,22 +64,39 @@ class HomeController extends Controller
         );
         $subjectId = $data['cash_book'];
         $duration = intval($data['duration']);
+        
         $lastTransaction = Transaction::where('subject_id', $subjectId)
             ->orderBy('created_at', 'desc')
             ->first();
-        $lastTransaction = $lastTransaction->created_at ?? now();
-
-        $timeFilter = $lastTransaction->subMonths($duration * 3);
-        $transactions = Transaction::where('subject_id', $subjectId)
-            ->where('created_at', '>=', $timeFilter)
-            ->selectRaw('DATE(created_at) as date, SUM(value) as total_value')
+        $endDate = $lastTransaction->created_at ?? now();
+        
+        $startDate = (clone $endDate)->subMonths($duration * 3);
+        
+        $initialBalance = Transaction::where('subject_id', $subjectId)
+            ->where('created_at', '<', $startDate)
+            ->sum('value');
+        
+        $dailyTransactions = Transaction::where('subject_id', $subjectId)
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->selectRaw('DATE(created_at) as date, SUM(value) as daily_change')
             ->groupBy(DB::raw('DATE(created_at)'))
-            ->pluck('total_value', 'date');
+            ->orderBy('date')
+            ->get()
+            ->pluck('daily_change', 'date')
+            ->toArray();
+            
+        $dailyBalances = [];
+        $runningBalance = $initialBalance;
+        
+        foreach ($dailyTransactions as $date => $dailyChange) {
+            $runningBalance += $dailyChange;
+            $dailyBalances[$date] = $runningBalance;
+        }
 
         return response()->json([
-            'labels' => $transactions->keys(),
-            'datas' => $transactions->values(),
-            'sum' => $transactions->sum(),
+            'labels' => array_keys($dailyBalances),
+            'datas' => array_values($dailyBalances),
+            'sum' => end($dailyBalances) ?: $initialBalance,
         ]);
     }
 
