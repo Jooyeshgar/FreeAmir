@@ -8,9 +8,7 @@ use Illuminate\Support\Facades\Storage;
 
 class ConfigController extends Controller
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     public function index()
     {
@@ -26,7 +24,7 @@ class ConfigController extends Controller
         $validatedData = $request->validate([
             'cash_book' => 'nullable|exists:subjects,id|numeric',
             'income' => 'nullable|exists:subjects,id|numeric',
-            'bank' => 'nullable|exists:banks,id|numeric',
+            'bank' => 'nullable|exists:subjects,id|numeric',
             'cash' => 'nullable|exists:subjects,id|numeric',
             'buy_discount' => 'nullable|exists:subjects,id|numeric',
             'sell_discount' => 'nullable|exists:subjects,id|numeric',

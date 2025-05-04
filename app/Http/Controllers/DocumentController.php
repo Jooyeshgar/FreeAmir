@@ -20,7 +20,7 @@ class DocumentController extends Controller
         $query = Document::orderBy('id', 'desc');
 
         if (request()->has('number') && request('number')) {
-            $query->where('number', 'like', '%' . convertToInt(request('number')) . '%');
+            $query->where('number', convertToInt(request('number')));
         }
 
         if (request()->has('date') && request('date')) {

@@ -23,6 +23,7 @@ return [
         'text' => 'متن',
         'user_id' => 'کاربر',
         'username' => 'نام کاربری',
+        'bank' => 'بانک',
     ),
     'before' => 'فیلد :attribute باید تاریخ قبل از :date باشد.',
     'before_or_equal' => 'فیلد :attribute باید تاریخ قبل یا مساوی :date باشد.',

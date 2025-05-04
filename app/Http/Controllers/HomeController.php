@@ -14,9 +14,7 @@ use Illuminate\Support\Carbon;
 
 class HomeController extends Controller
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     public function index()
     {
@@ -64,32 +62,41 @@ class HomeController extends Controller
         );
         $subjectId = $data['cash_book'];
         $duration = intval($data['duration']);
-        
+
         $lastTransaction = Transaction::where('subject_id', $subjectId)
             ->orderBy('created_at', 'desc')
             ->first();
-        $endDate = $lastTransaction->created_at ?? now();
-        
+
+        $endDate = $lastTransaction->document->date ?? now();
+
         $startDate = (clone $endDate)->subMonths($duration * 3);
-        
+
         $initialBalance = Transaction::where('subject_id', $subjectId)
             ->where('created_at', '<', $startDate)
+            ->with('document')
+            ->whereHas('document', function ($query) use ($startDate) {
+                $query->where('date', '<', $startDate);
+            })
             ->sum('value');
-        
-        $dailyTransactions = Transaction::where('subject_id', $subjectId)
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->selectRaw('DATE(created_at) as date, SUM(value) as daily_change')
-            ->groupBy(DB::raw('DATE(created_at)'))
-            ->orderBy('date')
-            ->get()
-            ->pluck('daily_change', 'date')
-            ->toArray();
-            
+
+        $transactions = Transaction::where('subject_id', $subjectId)
+            ->with('document')
+            ->whereHas('document', function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('date', [$startDate, $endDate]);
+            })->get();
+
+        $dailyTransactions = $transactions
+            ->mapToGroups(function ($transaction) {
+                return [optional($transaction->document)->date->toDateString() => $transaction->value];
+            })
+            ->mapWithKeys(function ($values, $date) {
+                return [$date => array_sum($values->toArray())];
+            });
         $dailyBalances = [];
-        $runningBalance = $initialBalance;
-        
+        $runningBalance = -1 * $initialBalance;
+
         foreach ($dailyTransactions as $date => $dailyChange) {
-            $runningBalance += $dailyChange;
+            $runningBalance -= $dailyChange;
             $dailyBalances[$date] = $runningBalance;
         }
 
@@ -97,6 +104,8 @@ class HomeController extends Controller
             'labels' => array_keys($dailyBalances),
             'datas' => array_values($dailyBalances),
             'sum' => end($dailyBalances) ?: $initialBalance,
+            'start_date' => jdate('Y/m/d', $startDate->timestamp, tr_num: 'en'),
+            'end_date' => jdate('Y/m/d', $endDate->timestamp, tr_num: 'en'),
         ]);
     }
 

@@ -14,8 +14,7 @@
         </div>
 
         <section class="flex gap-4 max-[850px]:flex-wrap">
-            <div
-                class="w-1/3 max-[850px]:w-full bg-[#E9ECEF] rounded-[16px] shadow-[0px_43px_27px_0px_#00000012] relative">
+            <div class="w-1/3 max-[850px]:w-full bg-[#E9ECEF] rounded-[16px] shadow-[0px_43px_27px_0px_#00000012] relative">
                 <div class="flex justify-between items-center max-[850px]:flex-col max-[850px]:mt-4">
                     <div>
                         <h2 class="text-[#495057] ms-3">
@@ -24,18 +23,15 @@
                         </h2>
                     </div>
 
-                    <div class="flex bg-[#DEE2E6] rounded-[16px] m-1 overflow-hidden" x-data="cashBookSelectHandler()"
-                        x-init="initializeCashBook()">
-                        <select x-model="selectedCashBook" x-on:change="handleCashBookChange"
-                            class="select bg-[#DEE2E6] text-[#495057] w-[140px] max-w-xs">
+                    <div class="flex bg-[#DEE2E6] rounded-[16px] m-1 overflow-hidden" x-data="cashBookSelectHandler()" x-init="initializeCashBook()">
+                        <select x-model="selectedCashBook" x-on:change="handleCashBookChange" class="select bg-[#DEE2E6] text-[#495057] w-[140px] max-w-xs">
                             @foreach ($cashBooks as $item)
                                 <option {{ $loop->first ? 'selected' : '' }} value="{{ $item->id }}">
                                     {{ $item->name }}</option>
                             @endforeach
                         </select>
 
-                        <select x-model="selectedDuration" x-on:change="handleCashBookChange"
-                            class="select bg-[#DEE2E6] text-[#495057] w-[120px] max-w-xs">
+                        <select x-model="selectedDuration" x-on:change="handleCashBookChange" class="select bg-[#DEE2E6] text-[#495057] w-[120px] max-w-xs">
                             <option value="1">{{ '۳ ' . __('Month') }}</option>
                             <option value="2">{{ '۶ ' . __('Month') }}</option>
                             <option value="3">{{ '۹ ' . __('Month') }}</option>
@@ -61,8 +57,7 @@
                 </div>
             </div>
 
-            <div
-                class="gaugeChartContainer w-1/3 max-[850px]:w-full relative bg-[#E9ECEF] rounded-[16px] shadow-[0px_43px_27px_0px_#00000012]">
+            <div class="gaugeChartContainer w-1/3 max-[850px]:w-full relative bg-[#E9ECEF] rounded-[16px] shadow-[0px_43px_27px_0px_#00000012]">
                 <div class="flex justify-between items-center h-[62px]">
                     <h2 class="text-[#495057] ms-3">
                         {{ __('Income') }}
@@ -75,8 +70,7 @@
                 </div>
             </div>
 
-            <div
-                class="w-1/3 max-[850px]:w-full bg-[#E9ECEF] rounded-[16px] shadow-[0px_43px_27px_0px_#00000012] relative">
+            <div class="w-1/3 max-[850px]:w-full bg-[#E9ECEF] rounded-[16px] shadow-[0px_43px_27px_0px_#00000012] relative">
                 <div class="flex justify-between items-center h-[62px]">
                     <h2 class="text-[#495057] ms-3">
                         {{ __('Quick Access') }}
@@ -175,7 +169,7 @@
                         <div>
                             @foreach ($banks as $bank)
                                 <p class="mb-4">
-                                    {{ convertToFarsi(number_format($bankBalances[$bank->id] ?? 0)) }}
+                                    {{ convertToFarsi(number_format(-1 * $bankBalances[$bank->id] ?? 0)) }}
                                 </p>
                             @endforeach
                         </div>
@@ -191,18 +185,15 @@
                         </h2>
                     </div>
 
-                    <div class="flex bg-[#DEE2E6] rounded-[16px] m-1 overflow-hidden" x-data="bankSelectHandler()"
-                        x-init="initializeBank()">
-                        <select class="select bg-[#DEE2E6] text-[#495057] w-full max-w-xs" x-model="selectedBank"
-                            @change="handleBankChange">
+                    <div class="flex bg-[#DEE2E6] rounded-[16px] m-1 overflow-hidden" x-data="bankSelectHandler()" x-init="initializeBank()">
+                        <select class="select bg-[#DEE2E6] text-[#495057] w-full max-w-xs" x-model="selectedBank" @change="handleBankChange">
                             @foreach ($banks as $item)
                                 <option {{ $loop->first ? 'selected' : '' }} value="{{ $item->id }}">
                                     {{ $item->name }}</option>
                             @endforeach
                         </select>
 
-                        <select x-model="selectedDuration" @change="handleBankChange"
-                            class="select bg-[#DEE2E6] text-[#495057] w-[120px] max-w-xs">
+                        <select x-model="selectedDuration" @change="handleBankChange" class="select bg-[#DEE2E6] text-[#495057] w-[120px] max-w-xs">
                             <option value="1">{{ '۳ ' . __('Month') }}</option>
                             <option value="2">{{ '۶ ' . __('Month') }}</option>
                             <option value="3">{{ '۹ ' . __('Month') }}</option>
