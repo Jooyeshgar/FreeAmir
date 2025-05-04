@@ -286,7 +286,7 @@ if (document.querySelector(".selfSelectBoxContainer")) {
                     mainformCodes[index].value = normalizedCode;
 
                     setTimeout(() => {
-                        e.target.value = $store.utils.formatCode(normalizedCode);
+                        e.target.value = Alpine.store('utils').formatCode(normalizedCode);
                     }, 200);
                 } else {
                     codeSelectBoxes[index].value = "";
@@ -324,6 +324,7 @@ Alpine.store('utils', {
         e.querySelector(".selfSelectBox").style.display = "block";
     },
     formatCode(input) {
+        console.log(input);
         if (!input) return '';
         const formatted = input.match(/.{1,3}/g)?.join('/') || input;
         return ['fa', 'fa_IR'].includes('fa') ? this.convertToFarsi(formatted) : formatted;

@@ -17,7 +17,7 @@
         selectedName = name;
         selectedCode = code;
         selectedId = id;
-        isSelectBoxOpen = false;
+        this.isSelectBoxOpen = false;
     }
 }"
     @click.outside="if (!$event.target.closest('.selfSelectBox')) isSelectBoxOpen = false">
@@ -30,7 +30,7 @@
     <input type="hidden" x-bind:value="selectedCode" name="{{ $code_field }}">
 
     <div class="selfSelectBox absolute z-[3] top-[40px] w-full h-[300px] bg-white overflow-auto px-4 pb-4 rounded-[16px] shadow-[0px_43px_27px_0px_#00000012]"
-        x-show="isSelectBoxOpen" x-transition x-data="searchComponent()" class="subject-select-box">
+        x-show="isSelectBoxOpen" x-transition x-data="searchComponent({{ $allSelectable ? 'true' : 'false' }})" class="subject-select-box">
         <div class="sticky top-0 left-0 right-0 w-full bg-white py-2">
             <div class="relative">
                 <x-input x-model="query" title="" @input.debounce.500ms="search(query, index)" name="" value="" label_text_class="text-gray-500"
@@ -75,11 +75,12 @@
 </div>
 @pushOnce('scripts')
     <script>
-        function searchComponent() {
+        function searchComponent(allSelectable = false) {
             return {
                 query: '',
                 index: 0,
                 csrf: '{{ csrf_token() }}',
+                allSelectable: allSelectable,
                 searchResultDivs: [],
                 resultDivs: [],
                 search(query, index) {
@@ -111,26 +112,47 @@
                                     const {
                                         name,
                                         code,
+                                        id,
                                         sub_subjects: subSubjects
                                     } = item;
 
                                     if (subSubjects.length === 0) {
+                                        // Always selectable when it has no children
                                         resultDiv.innerHTML += `
-                                        <div class="w-full ps-2 mb-4">
+                                        <a href="javascript:void(0)" 
+                                            class="selfSelectBoxItems w-full ps-2 mb-4" 
+                                            @click="updateSelection('${name}', '${code}', '${id}')">
                                             <div class="flex justify-between">
-                                                <span>${name}</span>
-                                                <span>${$store.utils.formatCode(code)}</span>
+                                                <span class="selfItemTitle">${name}</span>
+                                                <span class="selfItemCode">${formatCode(code)}</span>
                                             </div>
-                                        </div>`;
+                                            <span class="selfItemId hidden">${id}</span>
+                                        </a>`;
                                     } else {
                                         const subDivId = `sub-${index}-${i}`;
+                                        
+                                        if (this.allSelectable) {
+                                            resultDiv.innerHTML += `
+                                            <a href="javascript:void(0)" 
+                                                class="selfSelectBoxItems w-full ps-2 mb-4" 
+                                                @click="updateSelection('${name}', '${code}', '${id}')">
+                                                <div class="flex justify-between">
+                                                    <span class="selfItemTitle">${name}</span>
+                                                    <span class="selfItemCode">${Alpine.store('utils').formatCode(code)}</span>
+                                                </div>
+                                                <span class="selfItemId hidden">${id}</span>
+                                            </a>`;
+                                        } else {
+                                            resultDiv.innerHTML += `
+                                            <div class="w-full ps-2 mb-4">
+                                                <div class="flex justify-between">
+                                                    <span>${name}</span>
+                                                    <span>${Alpine.store('utils').formatCode(code)}</span>
+                                                </div>
+                                            </div>`;
+                                        }
+                                        
                                         resultDiv.innerHTML += `
-                                        <div class="w-full ps-2 mb-4">
-                                            <div class="flex justify-between">
-                                                <span>${name}</span>
-                                                <span>${$store.utils.formatCode(code)}</span>
-                                            </div>
-                                        </div>
                                         <div class="ps-1 mt-4">
                                             <div class="border-s-[1px] ps-7 border-[#ADB5BD]" id="${subDivId}"></div>
                                         </div>`;
@@ -140,11 +162,11 @@
                                             subDiv.innerHTML += `
                                             <a href="javascript:void(0)" 
                                                 class="selfSelectBoxItems flex justify-between mb-4" 
-                                                @click="$parent.updateSelection('${sub.name}', '${sub.code}', '${sub.id}')">
+                                                @click="updateSelection('${sub.name}', '${sub.code}', '${sub.id}')">
                                                 <span class="selfItemTitle">${sub.name}</span>
                                                 <span class="codeList" data-name="${sub.name}" data-code="${sub.code}" data-id="${sub.id}" hidden></span>
                                                 <span class="selfItemCode">
-                                                    ${formatCode(sub.code)}
+                                                    ${Alpine.store('utils').formatCode(sub.code)}
                                                 </span>
                                                 <span class="selfItemId hidden">${sub.id}</span>
                                             </a>`;
