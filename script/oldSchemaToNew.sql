@@ -6,7 +6,7 @@ SET @creator_id = 1;
 TRUNCATE TABLE `subjects`;
 
 INSERT INTO `subjects` (
-  `id`, `code`, `name`, `type`, `_lft`, `_rgt`, `parent_id`, `created_at`, `updated_at`, `company_id`)
+  `id`, `code`, `name`, `type`, `parent_id`, `created_at`, `updated_at`, `company_id`)
 SELECT
   `id`,
   `code`,
@@ -16,8 +16,6 @@ SELECT
     WHEN `type` = 1 THEN 'creditor'
     WHEN `type` = 2 THEN 'debtor'
   END AS `type`,
-  `lft` AS `_lft`,
-  `rgt` AS `_rgt`,
   `parent_id`,
   NOW(),
   NOW(),

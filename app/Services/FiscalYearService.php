@@ -217,28 +217,25 @@ class FiscalYearService
             $sourceData['banks'] = Bank::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
-        }
-        if (in_array('bank_accounts', $sections)) {
+
             $sourceData['bank_accounts'] = BankAccount::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
         }
-        if (in_array('customer_groups', $sections)) {
+        if (in_array('customers', $sections)) {
             $sourceData['customer_groups'] = CustomerGroup::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
-        }
-        if (in_array('customers', $sections)) {
+
             $sourceData['customers'] = Customer::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
         }
-        if (in_array('product_groups', $sections)) {
+        if (in_array('products', $sections)) {
             $sourceData['product_groups'] = ProductGroup::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
-        }
-        if (in_array('products', $sections)) {
+
             $sourceData['products'] = Product::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
@@ -247,22 +244,8 @@ class FiscalYearService
             $sourceData['documents'] = \App\Models\Document::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
-        }
 
-        if (in_array('transactions', $sections) && isset($sourceData['documents'])) {
             $documentIds = collect($sourceData['documents'])->pluck('id')->toArray();
-            if (!empty($documentIds)) {
-                $sourceData['transactions'] = \App\Models\Transaction::whereIn('document_id', $documentIds)
-                    ->get()->toArray();
-            } else {
-                $sourceData['transactions'] = [];
-            }
-        } elseif (in_array('transactions', $sections)) {
-            $documents = \App\Models\Document::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
-                ->where('company_id', $sourceYearId)
-                ->select('id')
-                ->get();
-            $documentIds = $documents->pluck('id')->toArray();
             if (!empty($documentIds)) {
                 $sourceData['transactions'] = \App\Models\Transaction::whereIn('document_id', $documentIds)
                     ->get()->toArray();
