@@ -81,6 +81,18 @@ class FiscalYearImportCommand extends Command
                 throw new Exception("Invalid JSON file: " . json_last_error_msg());
             }
 
+            // Debug info about import data size
+            $this->info("Import data analysis:");
+            $this->line("  Raw file size: " . number_format(strlen($jsonContent)) . " bytes");
+            $this->line("  Total records: " . count($importData));
+
+            // Show breakdown by data type if structure is available
+            foreach ($importData as $key => $value) {
+                if (is_array($value)) {
+                    $this->line("  {$key}: " . count($value) . " items");
+                }
+            }
+
             // Prepare data for the new Company record
             $newFiscalYearData = [
                 'name' => $newName,

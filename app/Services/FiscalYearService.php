@@ -134,37 +134,44 @@ class FiscalYearService
                 if (in_array('configs', $sectionsToImport) && isset($importData['configs'])) {
                     self::_importConfigs($importData['configs'], $targetYearId, $idMappings['subjects']);
                 }
-                if (in_array('banks', $sectionsToImport) && isset($importData['banks'])) {
-                    $idMappings['banks'] = self::_importBanks($importData['banks'], $targetYearId);
+                if (in_array('banks', $sectionsToImport)) {
+                    if (isset($importData['banks'])) {
+                        $idMappings['banks'] = self::_importBanks($importData['banks'], $targetYearId);
+                    }
+                    if (isset($importData['bank_accounts']) && !empty($idMappings['banks'])) {
+                        self::_importBankAccounts($importData['bank_accounts'], $targetYearId, $idMappings['banks']);
+                    }
                 }
-                if (in_array('bank_accounts', $sectionsToImport) && isset($importData['bank_accounts'])) {
-                    self::_importBankAccounts($importData['bank_accounts'], $targetYearId, $idMappings['banks']);
+                if (in_array('customers', $sectionsToImport)) {
+                    if (isset($importData['customer_groups'])) {
+                        $idMappings['customer_groups'] = self::_importCustomerGroups($importData['customer_groups'], $targetYearId, $idMappings['subjects']);
+                    }
+                    if (isset($importData['customers']) && !empty($idMappings['customer_groups'])) {
+                        $idMappings['customers'] = self::_importCustomers($importData['customers'], $targetYearId, $idMappings['customer_groups'], $idMappings['subjects']);
+                    }
                 }
-                if (in_array('customer_groups', $sectionsToImport) && isset($importData['customer_groups'])) {
-                    $idMappings['customer_groups'] = self::_importCustomerGroups($importData['customer_groups'], $targetYearId, $idMappings['subjects']);
+                if (in_array('products', $sectionsToImport)) {
+                    if (isset($importData['product_groups'])) {
+                        $idMappings['product_groups'] = self::_importProductGroups($importData['product_groups'], $targetYearId, $idMappings['subjects']);
+                    }
+                    if (isset($importData['products']) && !empty($idMappings['product_groups'])) {
+                        self::_importProducts($importData['products'], $targetYearId, $idMappings['product_groups']);
+                    }
                 }
-                if (in_array('customers', $sectionsToImport) && isset($importData['customers'])) {
-                    $idMappings['customers'] = self::_importCustomers($importData['customers'], $targetYearId, $idMappings['customer_groups'], $idMappings['subjects']);
-                }
-                if (in_array('product_groups', $sectionsToImport) && isset($importData['product_groups'])) {
-                    $idMappings['product_groups'] = self::_importProductGroups($importData['product_groups'], $targetYearId, $idMappings['subjects']);
-                }
-                if (in_array('products', $sectionsToImport) && isset($importData['products'])) {
-                    self::_importProducts($importData['products'], $targetYearId, $idMappings['product_groups']);
-                }
-                if (in_array('documents', $sectionsToImport) && isset($importData['documents'])) {
-                    $idMappings['documents'] = self::_importDocuments($importData['documents'], $targetYearId);
-                }
-                if (in_array('transactions', $sectionsToImport) && isset($importData['transactions'])) {
-                    if (!empty($idMappings['documents']) && !empty($idMappings['subjects'])) {
-
-                        self::_importTransactions($importData['transactions'], $targetYearId, $idMappings['documents'], $idMappings['subjects']);
-                    } else {
-                        Log::warning("Skipping transactions import due to missing document or subject mappings.", [
-                            'target_year_id' => $targetYearId,
-                            'has_document_mapping' => !empty($idMappings['documents']),
-                            'has_subject_mapping' => !empty($idMappings['subjects']),
-                        ]);
+                if (in_array('documents', $sectionsToImport)) {
+                    if (isset($importData['documents'])) {
+                        $idMappings['documents'] = self::_importDocuments($importData['documents'], $targetYearId);
+                    }
+                    if (isset($importData['transactions'])) {
+                        if (!empty($idMappings['documents']) && !empty($idMappings['subjects'])) {
+                            self::_importTransactions($importData['transactions'], $targetYearId, $idMappings['documents'], $idMappings['subjects']);
+                        } else {
+                            Log::warning("Skipping transactions import due to missing document or subject mappings.", [
+                                'target_year_id' => $targetYearId,
+                                'has_document_mapping' => !empty($idMappings['documents']),
+                                'has_subject_mapping' => !empty($idMappings['subjects']),
+                            ]);
+                        }
                     }
                 }
 

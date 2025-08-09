@@ -21,7 +21,10 @@ enum FiscalYearSection: string
 
 	public static function cli(): array
 	{
-		return array_map(fn($case) => [$case->value => $case->label()], self::cases());
+		return array_reduce(self::cases(), function ($carry, $case) {
+			$carry[$case->value] = $case->label();
+			return $carry;
+		}, []);
 	}
 
 	public static function ui(): array
