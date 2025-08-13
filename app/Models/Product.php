@@ -26,10 +26,43 @@ class Product extends Model
         'discount_formula',
         'description',
         'company_id',
+        'subject_id',
     ];
+
+    public static function booted(): void
+    {
+        static::addGlobalScope(new FiscalYearScope());
+
+        static::creating(function ($product) {
+            $product->company_id ??= session('active-company-id');
+        });
+
+         static::created(function ($product) {
+            $parentGroup = $product->productGroup;
+            $subject = $product->subject()->create([
+                'name' => $product->name,
+                'parent_id' => $parentGroup->subject_id ?? 0,
+                'company_id' => session('active-company-id'),
+            ]);
+
+            $product->update(['subject_id' => $subject->id]);
+        });
+
+        static::deleting(function ($product) {
+            // Delete the related subject when the product is deleted
+            if ($product->subject) {
+                $product->subject->delete();
+            }
+        });
+    }
 
     public function productGroup(): BelongsTo
     {
         return $this->belongsTo(ProductGroup::class, 'group');
+    }
+
+    public function subject()
+    {
+        return $this->morphOne(Subject::class, 'subjectable');
     }
 }
