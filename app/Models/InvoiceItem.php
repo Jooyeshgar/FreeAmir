@@ -24,12 +24,12 @@ class InvoiceItem extends Model
 
     public function invoice()
     {
-        return $this->belongsTo(Invoice::class, 'TransId');
+    return $this->belongsTo(Invoice::class, 'invoice_id');
     }
 
     public function product()
     {
-        return $this->belongsTo(Product::class, 'invoice_id');
+    return $this->belongsTo(Product::class, 'product_id');
     }
 
     public function transaction()

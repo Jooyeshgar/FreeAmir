@@ -38,10 +38,13 @@ function formatDocumentNumber(float $number)
     return formatNumber(number_format($number, 2, '/', ''));
 }
 
-function formatDate(Carbon|null $date)
+function formatDate(Carbon|string|null $date)
 {
     if (is_null($date)) {
         return '';
+    }
+    if (is_string($date)) {
+        $date = Carbon::createFromFormat('Y-m-d', $date);
     }
 
     $locale = App::getLocale();
