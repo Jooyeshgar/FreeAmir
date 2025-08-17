@@ -11,7 +11,7 @@
             title="{{ __('previous document number') }}" placeholder="{{ __('previous document number') }}"
             label_text_class="text-gray-500 text-nowrap"></x-text-input>
         <x-text-input input_value="{{ old('number') ?? formatDocumentNumber($previousDocumentNumber + 1) }}"
-            input_name="number" title="{{ __('current document number') }}"
+            input_name="document_number" title="{{ __('current document number') }}"
             placeholder="{{ __('current document number') }}"
             label_text_class="text-gray-500 text-nowrap"></x-text-input>
 
@@ -19,7 +19,7 @@
             title="{{ __('previous invoice number') }}" placeholder="{{ __('previous invoice number') }}"
             label_text_class="text-gray-500 text-nowrap"></x-text-input>
         <x-text-input input_value="{{ old('number') ?? formatDocumentNumber($previousInvoiceNumber + 1) }}"
-            input_name="number" title="{{ __('current invoice number') }}"
+            input_name="invoice_number" title="{{ __('current invoice number') }}"
             placeholder="{{ __('current invoice number') }}"
             label_text_class="text-gray-500 text-nowrap"></x-text-input>
 
@@ -36,19 +36,19 @@
         <div class="text-sm flex-1 min-w-24 max-w-32 text-center text-gray-500 pt-3">
             {{ __('chapter code') }}
         </div>
-        <div class="text-sm flex-1 min-w-80 max-w-80 text-center text-gray-500 pt-3">
+        <div class="text-sm flex-1 min-w-24 max-w-64 text-center text-gray-500 pt-3">
             {{ __('chapter title') }}
         </div>
         <div class="text-sm flex-1 min-w-80 text-center text-gray-500 pt-3">
             {{ __('description') }}
         </div>
-        <div class="text-sm flex-1 min-w-24 max-w-24 text-center text-gray-500 pt-3">
+        <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">
             {{ __('quantity') }}
         </div>
-        <div class="text-sm flex-1 min-w-24 max-w-24 text-center text-gray-500 pt-3">
-            {{ __('fee') }}
+        <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">
+            {{ __('unit') }}
         </div>
-        <div class="text-sm flex-1 min-w-24 max-w-24 text-center text-gray-500 pt-3">
+        <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">
             {{ __('total') }}
         </div>
     </div>
@@ -82,24 +82,24 @@
                         <x-subject-select-box :subjects="$subjects"></x-subject-select-box>
                     </div>
                     <div class="flex-1 w-[200px]">
-                        <x-text-input x-bind:value="transaction.desc" placeholder="{{ __('this document\'s row description') }}"
+                        <x-text-input x-bind:value="transaction.desc" placeholder="{{ __('this invoices row description') }}"
                             x-bind:name="'transactions[' + index + '][desc]'" label_text_class="text-gray-500" label_class="w-full"
                             input_class="border-white "></x-text-input>
                     </div>
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input placeholder="0" x-model.number="transaction.debit" x-bind:name="'transactions[' + index + '][debit]'"
-                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white debitInput"
-                            x-on:input="transaction.debit = convertToEnglish($event.target.value)"></x-text-input>
+                        <x-text-input placeholder="0" x-model.number="transaction.quantity" x-bind:name="'transactions[' + index + '][quantity]'"
+                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white quantityInput"
+                            x-on:input="transaction.quantity = convertToEnglish($event.target.value)"></x-text-input>
                     </div>
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input placeholder="0" x-model.number="transaction.debit" x-bind:name="'transactions[' + index + '][debit]'"
-                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white debitInput"
-                            x-on:input="transaction.debit = convertToEnglish($event.target.value)"></x-text-input>
+                        <x-text-input placeholder="0" x-model.number="transaction.unit" x-bind:name="'transactions[' + index + '][unit]'"
+                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white unitInput"
+                            x-on:input="transaction.unit = convertToEnglish($event.target.value)"></x-text-input>
                     </div>
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input x-model.number="transaction.credit" placeholder="0" x-bind:name="'transactions[' + index + '][credit]'"
-                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white creditInput"
-                            x-on:input="transaction.credit = convertToEnglish($event.target.value)"></x-text-input>
+                        <x-text-input x-model.number="transaction.total" placeholder="0" x-bind:name="'transactions[' + index + '][total]'"
+                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white totalInput"
+                            x-on:input="transaction.total = convertToEnglish($event.target.value)"></x-text-input>
                     </div>
                 </div>
             </template>
@@ -115,17 +115,17 @@
     </div>
     <hr style="">
     <div class="flex justify-end px-4 gap-2">
-        <span class="min-w-24 text-center text-gray-500" id="debitSum"
-            x-text="transactions.reduce((sum, transaction) => sum + (Number(convertToEnglish(transaction.debit || 0)) ), 0)">0</span>
-        <span class="min-w-24 text-center text-gray-500" id="creditSum"
-            x-text="transactions.reduce((sum, transaction) => sum + (Number(convertToEnglish(transaction.credit || 0))), 0)">0</span>
+        <span class="min-w-24 text-center text-gray-500" id="quantitySum"
+            x-text="transactions.reduce((sum, transaction) => sum + (Number(convertToEnglish(transaction.quantity || 0)) ), 0)">0</span>
+        <span class="min-w-24 text-center text-gray-500" id="totalSum"
+            x-text="transactions.reduce((sum, transaction) => sum + (Number(convertToEnglish(transaction.total || 0))), 0)">0</span>
     </div>
 </x-card>
 <div class="mt-4 flex gap-2 justify-end">
-    <a href="{{ route('documents.index') }}" type="submit" class="btn btn-default rounded-md"> {{ __('cancel') }}
+    <a href="{{ route('invoices.index') }}" type="submit" class="btn btn-default rounded-md"> {{ __('cancel') }}
     </a>
     <button id="submitFormPlus" type="button" class="btn btn-default rounded-md">
-        {{ __('save and create new document') }}
+        {{ __('save and create new invoice') }}
     </button>
     <button id="submitForm" type="submit" class="btn text-white btn-primary rounded-md">
         {{ __('save and close form') }} </button>
@@ -144,8 +144,8 @@
                         subject: '',
                         code: '',
                         subject_id: '',
-                        debit: '',
-                        credit: '',
+                        quantity: '',
+                        total: '',
                         desc: ''
                     });
                 }
