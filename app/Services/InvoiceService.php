@@ -6,6 +6,7 @@ use App\Exceptions\InvoiceServiceException;
 use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -36,13 +37,12 @@ class InvoiceService
         $invValidator = Validator::make($invoiceData, [
             'number' => 'required|string|max:255|unique:invoices,number',
             'date' => 'required|date',
-            'customer_id' => 'required|integer|exists:customers,id',
+            // 'customer_id' => 'required|integer|exists:customers,id',
             'addition' => 'numeric|nullable',
             'subtraction' => 'numeric|nullable',
             'ship_date' => 'nullable|date',
             'ship_via' => 'string|nullable|max:255',
             'description' => 'string|nullable|max:255',
-            'vat' => 'numeric|nullable',
             'amount' => 'numeric|nullable',
             'is_sell' => 'required|boolean',
         ]);
@@ -51,10 +51,10 @@ class InvoiceService
             throw new InvoiceServiceException($invValidator->errors()->first());
         }
 
+        // $invoiceData['vat'] = Product:: //TODO; get this data from 1.product - 2.prodcut_group - 3.config 
         // Normalize booleans
         $invoiceData['cash_payment'] = isset($invoiceData['cash_payment']) ? (int) $invoiceData['cash_payment'] : 0;
         $invoiceData['permanent'] = isset($invoiceData['permanent']) ? (int) $invoiceData['permanent'] : 0;
-        $invoiceData['is_sell'] = isset($invoiceData['is_sell']) ? (int) $invoiceData['is_sell'] : 0;
         $invoiceData['active'] = isset($invoiceData['active']) ? (int) $invoiceData['active'] : 0;
 
         $documentData['creator_id'] = $user->id;
@@ -112,7 +112,7 @@ class InvoiceService
             foreach ($items as $item) {
                 $invoiceItem = new InvoiceItem();
                 $invoiceItem->invoice_id = $createdInvoice->id;
-                $invoiceItem->product_id = $item['product_id'] ?? null;
+                $invoiceItem->product_id = $item['product_id'];
                 // allow mapping by transaction_index (position in transactions array)
                 if (isset($item['transaction_index']) && is_numeric($item['transaction_index'])) {
                     $idx = (int) $item['transaction_index'];
@@ -126,8 +126,10 @@ class InvoiceService
                 $invoiceItem->quantity = $item['quantity'] ?? 1;
                 $invoiceItem->unit_price = $item['unit_price'] ?? 0;
                 $invoiceItem->unit_discount = $item['unit_discount'] ?? 0;
-                $invoiceItem->vat = $item['vat'] ?? 0;
+                $invoiceItem->vat = $item['vat'] ?? 0; //TODO: hardcoded !
                 $invoiceItem->description = $item['description'] ?? null;
+                $invoiceItem->amount = $item['amount'] ?? 23.00; //TODO: hardcoded !
+                $invoiceItem->product_id = 3; //TODO: hardcoded !
                 $invoiceItem->save();
             }
         });

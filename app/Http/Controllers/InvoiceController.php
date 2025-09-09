@@ -5,15 +5,15 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Invoice;
+use App\Models\Product;
 use App\Models\Subject;
 use App\Models\Transaction;
+use App\Services\InvoiceService;
 use Illuminate\Http\Request;
 
 class InvoiceController extends Controller
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * Display a listing of the resource.
@@ -48,15 +48,16 @@ class InvoiceController extends Controller
      */
     public function create()
     {
+        $products = Product::all();
         $subjects = Subject::where('parent_id', config('amir.product'))->with('children')->orderBy('code', 'asc')->get();
-        
+        $customers = Subject::whereNull('parent_id')->get();
         $previousInvoiceNumber = Invoice::orderBy('id', 'desc')->first()->number ?? 0;
         $previousDocumentNumber = Document::orderBy('id', 'desc')->first()->number ?? 0;
         $transactions = old('transactions') ?? $this->preparedTransactions(collect([new Transaction]));
 
         $total = count($transactions);
 
-        return view('invoices.create', compact('subjects', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber'));
+        return view('invoices.create', compact('products', 'subjects', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber'));
     }
 
     /**
@@ -64,33 +65,83 @@ class InvoiceController extends Controller
      *
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function store(Request $request)
+    public function store(InvoiceService $service)
     {
-        $data = $request->validate([
-            'code' => 'required|unique:invoices,code|max:255',
-            'date' => 'required|date',
-            'document_id' => 'required|integer|exists:documents,id',
-            'customer_id' => 'required|integer|exists:customers,id',
-            'addition' => 'numeric|nullable',
-            'subtraction' => 'numeric|nullable',
-            'tax' => 'numeric|nullable',
-            'ship_date' => 'nullable|date',
-            'ship_via' => 'string|nullable|max:255',
-            'description' => 'string|nullable|max:255',
-            'vat' => 'numeric|nullable',
-            'amount' => 'numeric|nullable',
-        ]);
+        dd(request()->all());   
+        // Normalize Invoice data
+        $invoiceData = [
+            'document_number' => request()->input('document_number', 0), //TODO; should check the equivalance
+            'date' => now(), //TODO: convert to greg
+            'addition' => request()->input('additions', 0),
+            'subtraction' => request()->input('subtractions', 0),
+            'number' => request()->input('invoice_number' , "23149102341"),
+            'description' => request()->input('title'),
+            'customer_id' => request()->input('customer_id'),
+            'cash_payment' => request()->input('down_payment', 0),
+            'is_sell' => request()->input('invoice_type'),
+        ];
 
-        // Normalize checkbox booleans
-        $data['cash_payment'] = $request->has('cash_payment') ? 1 : 0;
-        $data['permanent'] = $request->has('permanent') ? 1 : 0;
-        $data['is_sell'] = $request->has('is_sell') ? 1 : 0;
-        $data['active'] = $request->has('active') ? 1 : 0;
+        // Normalize Transactions
+        $transactions = [];
+        foreach (request()->input('transactions', []) as $t) {
+            $transactions[] = [
+                'subject_id' => $t['subject_id'] ?? null,
+                'desc' => $t['desc'] ?? null,
+                'value' => $t['total'] ?? 0, // or calculate based on price if needed
+            ];
+        }
 
-        Invoice::create($data);
+        // Normalize Items
+        $items = [];
+        foreach (request()->input('transactions', []) as $index => $t) {
+            $items[] = [
+                'transaction_index' => $index,
+                'product_id' => intval($t['subject_id']), // ! Wrong ID
+                'quantity' => $t['quantity'] ?? 1,
+                'unit_price' => $t['unit'],
+                'unit_discount' => 0,
+                'description' => $t['desc'] ?? null,
+            ];
+        }
 
-        return redirect()->route('invoices.index')->with('success', __('Invoice created successfully.'));
+        $result = $service->createInvoice(auth()->user(), $transactions, $invoiceData, $items);
+
+        return (!empty($result)) ? redirect()->route('invoices.index')->with('success', ('Invoice created successfully.')) : dd("Something Wnt Wrong");
     }
+
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    // public function store(Request $request)
+    // {
+
+    //     $data = $request->validate([
+    //         'code' => 'required|unique:invoices,code|max:255',
+    //         'date' => 'required|date',
+    //         'document_id' => 'required|integer|exists:documents,id',
+    //         'customer_id' => 'required|integer|exists:customers,id',
+    //         'addition' => 'numeric|nullable',
+    //         'subtraction' => 'numeric|nullable',
+    //         'tax' => 'numeric|nullable',
+    //         'ship_date' => 'nullable|date',
+    //         'ship_via' => 'string|nullable|max:255',
+    //         'description' => 'string|nullable|max:255',
+    //         'vat' => 'numeric|nullable',
+    //         'amount' => 'numeric|nullable',
+    //     ]);
+
+    //     // Normalize checkbox booleans
+    //     $data['cash_payment'] = $request->has('cash_payment') ? 1 : 0;
+    //     $data['permanent'] = $request->has('permanent') ? 1 : 0;
+    //     $data['is_sell'] = $request->has('is_sell') ? 1 : 0;
+    //     $data['active'] = $request->has('active') ? 1 : 0;
+
+    //     Invoice::create($data);
+
+    //     return redirect()->route('invoices.index')->with('success', __('Invoice created successfully.'));
+    // }
 
     /**
      * Display the specified resource.

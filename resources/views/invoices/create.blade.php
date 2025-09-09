@@ -9,7 +9,7 @@
         <form action="{{ route('invoices.store') }}" method="POST">
             @csrf
             <div class="card-body">
-                <h2 class="card-title">{{ __('Add invoice') }}</h2>
+                <h2 class="card-title">{{ __('Add Invoice') }}</h2>
                 <x-show-message-bags />
 
                 @php($invoice = $invoice ?? new \App\Models\Invoice())

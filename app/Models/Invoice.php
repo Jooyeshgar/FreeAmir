@@ -14,6 +14,7 @@ class Invoice extends Model
     public $timestamps = true;
 
     protected $fillable = [
+        'number',
         'code',
         'date',
         'document_id',
@@ -24,12 +25,11 @@ class Invoice extends Model
         'cash_payment',
         'ship_date',
         'ship_via',
-        'permanent',
         'description',
         'is_sell',
         'active',
         'vat',
-        'amount',
+        'amount',   
     ];
 
     public static function booted(): void

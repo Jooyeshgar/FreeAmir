@@ -4,21 +4,21 @@
             {{ __('Configs') }}
         </h2>
     </x-slot>
-    <x-show-message-bags/>
+    <x-show-message-bags />
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-                <form action="{{ route('configs.store') }}" method="POST" enctype="multipart/form-data">
-                    @csrf
-                    <div class="card-body">
-                        <div class="card-title">{{ __('Edit Config') }}</div>
-                        <x-show-message-bags/>
+            <form action="{{ route('configs.store') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="card-body">
+                    <div class="card-title">{{ __('Edit Config') }}</div>
+                    <x-show-message-bags />
 
-                        @include('configs.form')
-                        <div class="card-actions">
-                            <button type="submit" class="btn btn-pr"> {{ __('Edit') }} </button>
-                        </div>
+                    @include('configs.form')
+                    <div class="card-actions">
+                        <button type="submit" class="btn btn-pr"> {{ __('Edit') }} </button>
                     </div>
-                </form>
+                </div>
+            </form>
         </div>
     </div>
 </x-app-layout>

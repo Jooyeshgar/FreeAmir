@@ -25,6 +25,7 @@ class CreateProductsTable extends Migration
             $table->decimal('purchace_price', 10, 2);
             $table->decimal('selling_price', 10, 2);
             $table->string('discount_formula', 100)->nullable();
+            $table->decimal('vat')->nullable();
             $table->string('description', 200)->nullable();
 
             $table->foreign('group')->references('id')->on('product_groups')->onDelete('set null');

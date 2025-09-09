@@ -60,7 +60,7 @@ class DocumentController extends Controller
         foreach ($request->input('transactions') as $transactionData) {
             $transactionData = (object) $transactionData;
             $transactions[] = [
-                'subject_id' => $transactionData->subject_id,
+                'subject_i              d' => $transactionData->subject_id,
                 'value' => $transactionData->credit - $transactionData->debit,
                 'desc' => $transactionData->desc
             ];

@@ -24,6 +24,8 @@ class CreateProductGroupsTable extends Migration
             $table->foreign('sellId')->references('id')->on('subjects')->onDelete('set null');
             $table->foreignId('company_id')->constrained()->cascadeOnDelete()->after('name');
 
+            $table->decimal('vat')->nullable();
+
             $table->unique(['company_id', 'code']);
 
             $table->timestamps();

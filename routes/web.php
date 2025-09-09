@@ -34,6 +34,5 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('documents', [Controllers\ReportsController::class, 'documents'])->name('documents');
         Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
     });
-
     Route::get('change-company/{company}', [Controllers\CompanyController::class, 'setActiveCompany'])->name('change-company');
 });
