@@ -14,7 +14,7 @@
                 x-on:change="selectedValue = $event.target.value; window.location.reload();" />
         </div>
         <div class="flex w-1/3">
-                <x-subject-select-box title="{{ __('Customers') }}" :subjects="$customers" id_field="customer_id">
+                <x-subject-select-box :search="false" title="{{ __('Customer') }}" :subjects="$customers" id_field="customer_id">
                 </x-subject-select-box>
         </div>
     </div>
@@ -101,7 +101,7 @@
                             input_class="border-white value codeInput "></x-text-input>
                     </div>
                     <div>
-                        <x-subject-select-box :subjects="$subjects">
+                        <x-subject-select-box :search="false" :subjects="$subjects">
                         </x-subject-select-box>
 
                     </div>

@@ -48,11 +48,18 @@ class InvoiceController extends Controller
      */
     public function create()
     {
+        if (empty(config('amir.product'))) {
+            return redirect()->route('configs.index')->with('error', __('Product Subject is not configured. Please set it in configurations.'));
+        }
+
+        if (empty(config('amir.cust_subject'))) {
+            return redirect()->route('configs.index')->with('error', __('Customer Subject is not configured. Please set it in configurations.'));
+        }
         $products = Product::all();
         $subjects = Subject::where('parent_id', config('amir.product'))->with('children')->orderBy('code', 'asc')->get();
-        $customers = Subject::whereNull('parent_id')->get();
-        $previousInvoiceNumber = Invoice::orderBy('id', 'desc')->first()->number ?? 0;
-        $previousDocumentNumber = Document::orderBy('id', 'desc')->first()->number ?? 0;
+        $customers = Subject::where('parent_id', config('amir.cust_subject'))->with('children')->orderBy('code', 'asc')->get();
+        $previousInvoiceNumber = Invoice::orderBy('id', 'desc')->first()->number ?? 1;
+        $previousDocumentNumber = Document::orderBy('id', 'desc')->first()->number ?? 1;
         $transactions = old('transactions') ?? $this->preparedTransactions(collect([new Transaction]));
 
         $total = count($transactions);
@@ -67,14 +74,14 @@ class InvoiceController extends Controller
      */
     public function store(InvoiceService $service)
     {
-        dd(request()->all());   
+        dd(request()->all());
         // Normalize Invoice data
         $invoiceData = [
             'document_number' => request()->input('document_number', 0), //TODO; should check the equivalance
             'date' => now(), //TODO: convert to greg
             'addition' => request()->input('additions', 0),
             'subtraction' => request()->input('subtractions', 0),
-            'number' => request()->input('invoice_number' , "23149102341"),
+            'number' => request()->input('invoice_number', "23149102341"),
             'description' => request()->input('title'),
             'customer_id' => request()->input('customer_id'),
             'cash_payment' => request()->input('down_payment', 0),

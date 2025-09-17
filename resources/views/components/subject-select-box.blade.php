@@ -8,6 +8,7 @@
     'bordered' => true,
     'level' => null,
     'allSelectable' => false,
+    'search' => true,
 ])
 
 <div {{ $attributes->merge(['class' => 'selfSelectBoxContainer relative flex-1 w-full']) }} x-data="{
@@ -34,6 +35,7 @@
         x-show="isSelectBoxOpen" x-transition x-data="searchComponent({{ $allSelectable ? 'true' : 'false' }})" class="subject-select-box">
         <div class="sticky top-0 left-0 right-0 w-full bg-white py-2">
             <div class="relative">
+                @if ($search)
                 <x-input x-model="query" title="" @input.debounce.500ms="search(query, index)" name=""
                     value="" label_text_class="text-gray-500" label_class="w-full"
                     input_class="pe-8 text-sm searchInput" placeholder="{{ __('Search... (heading code or name)') }}">
@@ -47,6 +49,7 @@
                             fill="#242424" />
                     </svg>
                 </span>
+                @endif
             </div>
         </div>
 
