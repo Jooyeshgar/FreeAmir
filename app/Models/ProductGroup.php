@@ -12,11 +12,23 @@ class ProductGroup extends Model
         'name',
         'buyId',
         'sellId',
+        'vat',
+        'company_id',
+        'subject_id',
+    ];
+
+    protected $attributes = [
+        'vat' => 0,
     ];
 
     public static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope());
+
+        static::creating(function ($model) {
+            $model->company_id = session('active-company-id');
+            $model->subject_id = config('amir.product');
+        });
     }
 
     // Define relationships with other models (e.g., Subject)
