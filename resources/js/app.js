@@ -341,6 +341,61 @@ Alpine.store('utils', {
             .split('')
             .map(char => persianNumbers.includes(char) ? englishNumbers[persianNumbers.indexOf(char)] : char)
             .join('');
+    },
+    formatNumber(val){
+        const s = this.convertToEnglish(String(val ?? ''));
+        const trimmed = s.trim();
+        const isNeg = trimmed.startsWith('-');
+        // Keep only first dot and digits
+        let seenDot = false;
+        let cleaned = '';
+        for (const ch of trimmed.replace(/^\+/, '')) { // drop any leading +
+            if ((ch === '-' && cleaned === '') || /\d/.test(ch)) {
+                cleaned += ch;
+            } else if (ch === '.' && !seenDot) {
+                cleaned += ch;
+                seenDot = true;
+            }
+        }
+
+        if (cleaned === '' || cleaned === '-' || cleaned === '.') return isNeg ? '-' : '';
+
+        const negative = isNeg && cleaned[0] !== '-' ? true : cleaned.startsWith('-');
+        const unsigned = cleaned.replace('-', '');
+        const [intRaw, decRaw = ''] = unsigned.split('.');
+        const intDigits = intRaw.replace(/[^0-9]/g, '') || '0';
+        const intFormatted = Number(intDigits).toLocaleString();
+        const result = intFormatted + (seenDot && decRaw !== '' ? '.' + decRaw.replace(/[^0-9]/g, '') : '');
+        return negative ? '-' + result : result;
+    },
+    cleanupNumber(val) {
+        const s = this.convertToEnglish(String(val ?? ''));
+        const trimmed = s.trim();
+        const isNeg = trimmed.startsWith('-');
+        let seenDot = false;
+        let cleaned = '';
+        for (const ch of trimmed.replace(/^\+/, '')) {
+            if ((ch === '-' && cleaned === '') || /\d/.test(ch)) {
+                cleaned += ch;
+            } else if (ch === '.' && !seenDot) {
+                cleaned += ch;
+                seenDot = true;
+            }
+        }
+        if (cleaned === '-' || cleaned === '' || cleaned === '.') return '';
+        // Ensure only one leading minus and no thousands separators
+        const negative = isNeg && cleaned[0] !== '-' ? true : cleaned.startsWith('-');
+        const unsigned = cleaned.replace('-', '');
+        const [intRaw, decRaw] = unsigned.split('.');
+        const normalized = (intRaw.replace(/[^0-9]/g, '') || '0') + (decRaw !== undefined ? '.' + decRaw.replace(/[^0-9]/g, '') : '');
+        return negative ? '-' + normalized : normalized;
+    },
+    prepareSubmit(event){
+        const form = event.target.closest('form');
+        if (!form) return;
+        form.querySelectorAll('input.locale-number').forEach(inp => {
+            inp.value = this.cleanupNumber(inp.value);
+        });
     }
 });
 
