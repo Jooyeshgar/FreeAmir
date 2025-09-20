@@ -16,8 +16,7 @@
 │   ├── permissions           # مجوزها
 │   └── model_has_permissions # ارتباط کاربر-مجوز
 ├── 🏢 مدیریت شرکت‌ها
-│   ├── companies             # شرکت‌ها
-│   ├── fiscal_years          # سال‌های مالی
+│   ├── companies             # شرکت‌ها (name, logo, address, economical_code, national_code, postal_code, phone_number, fiscal_year)
 │   └── configs               # تنظیمات شرکت
 ├── 📊 هسته حسابداری
 │   ├── subjects              # سرفصل‌های حسابداری
@@ -46,8 +45,7 @@
 ### نمودار ERD ساده‌شده
 
 ```
-companies (1) ──→ (N) fiscal_years
-    │
+companies [name, logo, address, economical_code, national_code, postal_code, phone_number, fiscal_year]
     ├─→ (N) subjects
     ├─→ (N) customers
     ├─→ (N) products
@@ -72,21 +70,21 @@ products ──→ subjects (حساب موجودی)
 ```sql
 CREATE TABLE companies (
     id BIGINT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
+    name VARCHAR(50) NOT NULL,
     logo VARCHAR(255) NULL,
-    address TEXT NULL,
+    address VARCHAR(150) NULL,
     economical_code VARCHAR(15) NULL,
     national_code VARCHAR(12) NULL,
-    postal_code VARCHAR(10) NULL,
-    phone_number VARCHAR(15) NULL,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP
+    postal_code VARCHAR(255) NULL,
+    phone_number VARCHAR(11) NULL,
+    fiscal_year INT UNSIGNED NOT NULL
 );
 ```
 
 **نکات مهم:**
 - هر شرکت مجموعه‌ای مستقل از داده‌ها دارد
 - جداسازی داده‌ها بر اساس `company_id` انجام می‌شود
+- کنترل رفتار سال مالی از طریق ستون `fiscal_year` شرکت و اسکوپ `FiscalYearScope` انجام می‌شود
 - یک کاربر می‌تواند به چند شرکت دسترسی داشته باشد
 
 ### 📅 جدول `fiscal_years` - سال‌های مالی
