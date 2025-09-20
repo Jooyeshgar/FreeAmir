@@ -322,7 +322,7 @@ DocumentService::deleteDocument($documentId);
 ```
 
 ### SubjectCreatorService
-برای ایجاد سرفصل‌ها (اگرچه معمولاً از مدل Subject استفاده می‌شود):
+برای ایجاد سرفصل‌ها (برای تولید خودکار کد حسابداری حتما از این سرویس استفاده کنید):
 
 ```php
 use App\Services\SubjectCreatorService;
@@ -386,8 +386,8 @@ $allData = SomeModel::withoutGlobalScope(FiscalYearScope::class)->get();
 ```
 
 ### مهاجرت و کپی سال مالی
+برای اطلاعات بیشتر ../FiscalYearExportImport.md
 ```php
-// ایجاد سال مالی جدید بر اساس سال قبل
 php artisan fiscal-year:export 1 --sections=subjects,customers
 php artisan fiscal-year:import exported_data.json --name="سال 1404" --year=1404
 ```
