@@ -17,26 +17,26 @@
 
 ### بدهکار و بستانکار چیست؟
 
-- **بدهکار (Debit)**: تراکنش‌هایی که مقدار مثبت دارند - افزایش دارایی یا کاهش بدهی
-- **بستانکار (Credit)**: تراکنش‌هایی که مقدار منفی دارند - کاهش دارایی یا افزایش بدهی
+- **بدهکار (Debit)**: تراکنش‌هایی که مقدار منفی دارند - افزایش دارایی یا هزینه، کاهش بدهی
+- **بستانکار (Credit)**: تراکنش‌هایی که مقدار مثبت دارند - کاهش دارایی یا هزینه، افزایش بدهی یا درآمد
 
 در امیر، تراکنش‌ها با یک فیلد `value` ذخیره می‌شوند:
-- مقدار مثبت = بدهکار
-- مقدار منفی = بستانکار
+- مقدار منفی = بدهکار
+- مقدار مثبت = بستانکار
 
 ```php
 // example: خرید ۱۰۰,۰۰۰ تومان کالا نقداً
 // تراکنش 1: افزایش موجودی کالا (بدهکار)
 $transaction1 = Transaction::create([
     'subject_id' => $inventorySubject->id,
-    'value' => 100000,  // مثبت = بدهکار
+    'value' => -100000,  // منفی = بدهکار
     'desc' => 'خرید کالا'
 ]);
 
 // تراکنش 2: کاهش صندوق (بستانکار)
 $transaction2 = Transaction::create([
     'subject_id' => $cashSubject->id,
-    'value' => -100000,  // منفی = بستانکار
+    'value' => 100000,  // مثبت = بستانکار
     'desc' => 'پرداخت وجه نقد'
 ]);
 ```
@@ -224,16 +224,16 @@ class Transaction extends Model {
         'document_id',  // شناسه سند
         'user_id',      // شناسه کاربر
         'desc',         // شرح تراکنش
-        'value',        // مقدار (مثبت=بدهکار، منفی=بستانکار)
+        'value',        // مقدار (منفی=بدهکار، مثبت=بستانکار)
     ];
     
     // محاسبه خودکار بدهکار/بستانکار
     public function getDebitAttribute() {
-        return $this->value > 0 ? formatNumber($this->value) : '';
-    }
-    
-    public function getCreditAttribute() {
         return $this->value < 0 ? formatNumber(-1 * $this->value) : '';
+    }
+
+    public function getCreditAttribute() {
+        return $this->value > 0 ? formatNumber($this->value) : '';
     }
 }
 ```
@@ -274,22 +274,40 @@ $documentData = [
     'title' => 'فروش کالا به مشتری'
 ];
 
-$transactionsData = [
+// ورودی فرم (همان چیزی که DocumentController::store دریافت می‌کند)
+$requestTransactions = [
     [
         'subject_id' => $cashSubject->id,
-        'value' => 500000,  // بدهکار (افزایش صندوق)
-        'desc' => 'دریافت وجه نقد'
+        'debit' => 500000,
+        'credit' => 0,
+        'desc' => 'دریافت وجه نقد',
     ],
     [
         'subject_id' => $salesSubject->id,
-        'value' => -500000,  // بستانکار (افزایش درآمد)
-        'desc' => 'درآمد حاصل از فروش'
-    ]
+        'debit' => 0,
+        'credit' => 500000,
+        'desc' => 'درآمد حاصل از فروش',
+    ],
 ];
 
+$transactionsData = [];
+foreach ($requestTransactions as $transactionData) {
+    $transactionsData[] = [
+        'subject_id' => $transactionData['subject_id'],
+        'value' => $transactionData['credit'] - $transactionData['debit'], // منطق DocumentController::store
+        'desc' => $transactionData['desc'],
+    ];
+}
+
+// خروجی: مقدار منفی = بدهکار، مقدار مثبت = بستانکار
+// [
+//     ['subject_id' => $cashSubject->id, 'value' => -500000, 'desc' => 'دریافت وجه نقد'],   // بدهکار
+//     ['subject_id' => $salesSubject->id, 'value' => 500000, 'desc' => 'درآمد حاصل از فروش'], // بستانکار
+// ]
+
 $document = DocumentService::createDocument(
-    auth()->user(), 
-    $documentData, 
+    auth()->user(),
+    $documentData,
     $transactionsData
 );
 ```
