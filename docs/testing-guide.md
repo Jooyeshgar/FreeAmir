@@ -707,7 +707,7 @@ public function test_document_list_does_not_have_n_plus_one_problem()
 ### دستورات پایه
 
 ```bash
-# اجرای تمام تست‌ها
+# Run all test
 php artisan test
 
 # اجرای تست‌های خاص
@@ -730,7 +730,6 @@ php artisan test --verbose
 ### تنظیمات محیط تست
 
 ```php
-// در فایل .env.testing
 APP_ENV=testing
 DB_CONNECTION=sqlite
 DB_DATABASE=:memory:

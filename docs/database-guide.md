@@ -320,7 +320,6 @@ CREATE TABLE users (
 ### سیستم نقش‌ها و مجوزها (Spatie Permission)
 
 ```sql
--- نقش‌ها
 CREATE TABLE roles (
     id BIGINT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -353,7 +352,6 @@ CREATE TABLE model_has_roles (
 ### ایندکس‌های مهم
 
 ```sql
--- جدول transactions برای کوئری‌های سریع
 CREATE INDEX idx_transactions_subject_date ON transactions(subject_id, created_at);
 CREATE INDEX idx_transactions_document ON transactions(document_id);
 
@@ -368,32 +366,6 @@ CREATE INDEX idx_documents_number ON documents(number);
 -- جداسازی شرکت‌ها
 CREATE INDEX idx_customers_company ON customers(company_id);
 CREATE INDEX idx_products_company ON products(company_id);
-```
-
-### کوئری‌های بهینه
-
-```sql
--- محاسبه مانده حساب (بهینه)
-SELECT 
-    SUM(value) as balance
-FROM transactions t
-JOIN documents d ON t.document_id = d.id
-WHERE t.subject_id = ? 
-  AND d.company_id = ?
-  AND d.date <= ?;
-
--- گزارش دفتر کل
-SELECT 
-    d.date,
-    d.number,
-    t.desc,
-    t.value,
-    @running_balance := @running_balance + t.value as balance
-FROM transactions t
-JOIN documents d ON t.document_id = d.id
-CROSS JOIN (SELECT @running_balance := 0) r
-WHERE t.subject_id = ?
-ORDER BY d.date, d.number;
 ```
 
 ## 🔄 مایگریشن‌ها و Seeder ها
@@ -471,7 +443,7 @@ public function run()
 ### کنترل دسترسی
 
 ```php
-// در Model ها همیشه فیلتر شرکت اعمال شود
+// in Model ها همیشه فیلتر شرکت اعمال شود
 class Document extends Model
 {
     protected static function booted()
@@ -485,14 +457,6 @@ class Document extends Model
 }
 ```
 
-### Soft Delete برای داده‌های مهم
-
-```php
-// برای جداول حساس
-Schema::table('documents', function (Blueprint $table) {
-    $table->softDeletes();
-});
-```
 
 ### Audit Trail
 
@@ -509,89 +473,3 @@ Schema::create('audit_logs', function (Blueprint $table) {
     $table->timestamp('created_at');
 });
 ```
-
-## 📊 محاسبات مالی
-
-### قوانین مهم
-
-1. **موازنه اسناد**: مجموع بدهکار = مجموع بستانکار
-```sql
-SELECT document_id, SUM(value) as balance
-FROM transactions 
-GROUP BY document_id
-HAVING balance != 0; -- اسناد نامتوازن
-```
-
-2. **محاسبه مانده حساب**:
-```sql
-SELECT 
-    s.name,
-    SUM(t.value) as balance,
-    CASE 
-        WHEN SUM(t.value) > 0 THEN 'بدهکار'
-        WHEN SUM(t.value) < 0 THEN 'بستانکار'
-        ELSE 'صفر'
-    END as balance_type
-FROM subjects s
-LEFT JOIN transactions t ON s.id = t.subject_id
-GROUP BY s.id, s.name;
-```
-
-3. **کنترل یکتایی شماره سند**:
-```sql
-SELECT number, COUNT(*) 
-FROM documents 
-WHERE company_id = ?
-GROUP BY number 
-HAVING COUNT(*) > 1; -- شماره‌های تکراری
-```
-
-## 🔧 نکات عملیاتی
-
-### Backup و Restore
-
-```bash
-# پشتیبان‌گیری
-mysqldump -u user -p amir_db > backup.sql
-
-# بازیابی
-mysql -u user -p amir_db < backup.sql
-```
-
-### بهینه‌سازی کارایی
-
-```sql
--- آنالیز جداول
-ANALYZE TABLE transactions, documents, subjects;
-
--- بهینه‌سازی جداول
-OPTIMIZE TABLE transactions, documents, subjects;
-
--- نمایش کوئری‌های کند
-SHOW FULL PROCESSLIST;
-```
-
-### مانیتورینگ
-
-```sql
--- اندازه جداول
-SELECT 
-    table_name,
-    ROUND(((data_length + index_length) / 1024 / 1024), 2) as size_mb
-FROM information_schema.TABLES 
-WHERE table_schema = 'amir_db'
-ORDER BY size_mb DESC;
-
--- آمار تراکنش‌ها
-SELECT 
-    DATE(created_at) as date,
-    COUNT(*) as transaction_count,
-    SUM(ABS(value)) as total_amount
-FROM transactions 
-GROUP BY DATE(created_at)
-ORDER BY date DESC;
-```
-
----
-
-**نکته مهم**: همیشه قبل از تغییرات ساختاری، پشتیبان مناسب از دیتابیس تهیه کنید و تغییرات را ابتدا در محیط تست آزمایش کنید.

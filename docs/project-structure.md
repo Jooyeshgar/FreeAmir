@@ -37,7 +37,7 @@ FreeAmir/
 دستورات سفارشی Artisan برای عملیات خاص:
 
 ```php
-// مثال: دستور مدیریت سال مالی
+// Example: دستور مدیریت سال مالی
 php artisan fiscal-year:export --year=1403
 php artisan fiscal-year:import --file=data.json --year=1404
 ```
@@ -150,7 +150,7 @@ class FiscalYearService
 تعریف ساختار جداول:
 
 ```php
-// مثال: مایگریشن جدول documents
+// Example: مایگریشن جدول documents
 Schema::create('documents', function (Blueprint $table) {
     $table->id();
     $table->string('number')->unique();
@@ -191,7 +191,6 @@ views/
 مسیرهای وب اپلیکیشن:
 
 ```php
-// گروه‌بندی مسیرها با middleware
 Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::resource('documents', DocumentController::class);
     Route::resource('subjects', SubjectController::class);
@@ -309,7 +308,7 @@ php artisan serve       # اجرای سرور توسعه
 استفاده از پکیج Spatie Permission:
 
 ```php
-// کنترل دسترسی در Controller
+// permission in Controller
 $this->authorize('documents.create');
 
 // کنترل در Blade
