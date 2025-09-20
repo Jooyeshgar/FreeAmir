@@ -17,15 +17,15 @@
 
 ### بدهکار و بستانکار چیست؟
 
-**بدهکار (Debit)**: تراکنش‌هایی که مقدار مثبت دارند - افزایش دارایی یا کاهش بدهی
-**بستانکار (Credit)**: تراکنش‌هایی که مقدار منفی دارند - کاهش دارایی یا افزایش بدهی
+- **بدهکار (Debit)**: تراکنش‌هایی که مقدار مثبت دارند - افزایش دارایی یا کاهش بدهی
+- **بستانکار (Credit)**: تراکنش‌هایی که مقدار منفی دارند - کاهش دارایی یا افزایش بدهی
 
 در امیر، تراکنش‌ها با یک فیلد `value` ذخیره می‌شوند:
 - مقدار مثبت = بدهکار
 - مقدار منفی = بستانکار
 
 ```php
-// مثال: خرید ۱۰۰,۰۰۰ تومان کالا نقداً
+// example: خرید ۱۰۰,۰۰۰ تومان کالا نقداً
 // تراکنش 1: افزایش موجودی کالا (بدهکار)
 $transaction1 = Transaction::create([
     'subject_id' => $inventorySubject->id,
@@ -53,14 +53,13 @@ $transaction2 = Transaction::create([
 3. **تأیید نهایی**: تنها اسناد موازنه قابل تأیید نهایی هستند
 
 ```php
-// کنترل موازنه در کد
 $totalValue = $document->transactions->sum('value');
 if ($totalValue !== 0) {
     throw new DocumentServiceException('سند متوازن نیست');
 }
 ```
 
-## ساختار سرفصل‌های حسابداری (Chart of Subjects)
+## ساختار سرفصل‌های حسابداری
 
 ### سرفصل‌های اصلی
 
@@ -100,7 +99,7 @@ if ($totalValue !== 0) {
 - و به همین ترتیب بی‌نهایت ادامه دارد
 
 ```php
-// مثال: ساختار کدینگ در جدول subjects
+// example: ساختار کدینگ در جدول subjects
 'code'      => '011001',            // کد سرفصل صندوق
 'name'      => 'صندوق',             // نام سرفصل
 'parent_id' => 3,                   // شناسه والد (موجودیهای نقدی)
@@ -109,7 +108,6 @@ if ($totalValue !== 0) {
 
 ### ارتباط گروه‌ها با سرفصل‌ها
 ```php
-// گروه مشتریان به کدام سرفصل متصل شود
 $customerGroupConfig = Config::where('key', 'customer_default_subject')
                             ->where('company_id', session('active-company-id'))
                             ->value('value');
@@ -125,7 +123,6 @@ $productInventoryConfig = Config::where('key', 'product_inventory_subject')
 **هشدار مهم**: برای تولید کد سرفصل‌ها حتماً از `generateCode()` در مدل Subject استفاده کنید:
 
 ```php
-// ایجاد سرفصل جدید
 $subject = new Subject();
 $subject->name = 'صندوق شعبه مرکزی';
 $subject->parent_id = $parentSubject->id;
@@ -142,7 +139,6 @@ $subject->code = $subject->generateCode(15); // کد 015
 برای نمایش کدها از توابع فرمت‌کننده داخل مدل استفاده کنید:
 
 ```php
-// برای نمایش کد فرمت شده
 echo $subject->formattedCode();  // "011/001"
 
 // نمایش کد با نام
@@ -158,8 +154,7 @@ echo $subject->formattedName();     // "011/001 صندوق"
 ### مشتریان (Customers)
 
 ```php
-// هر گروه مشتری به یک سرفصل متصل است
-$customerGroup = CustomerGroup::create([
+$customerGroup = CustomerGroup::create([  // هر گروه مشتری به یک سرفصل متصل است
     'name' => 'مشتریان عمومی',
     'subject_id' => 58  // سرفصل اشخاص متفرقه (012001)
 ]);
@@ -176,8 +171,7 @@ $customer = Customer::create([
 ### کالاها و خدمات
 
 ```php
-// هر گروه کالا نیز به سرفصل‌های مختلف متصل است
-$productGroup = ProductGroup::create([
+$productGroup = ProductGroup::create([// هر گروه کالا نیز به سرفصل‌های مختلف متصل است
     'name' => 'کالاهای اساسی',
     'inventory_subject_id' => 70,             // حساب موجودی (015002)
     'income_subject_id' => 20,                // حساب درآمد فروش (060001)
@@ -249,7 +243,6 @@ class Transaction extends Model {
 اسناد خودکار (فاکتور، چک، ...) از طریق رابطه Polymorphic به سند متصل هستند:
 
 ```php
-// فاکتور خرید/فروش
 class Invoice extends Model {
     public function document() {
         return $this->morphOne(Document::class, 'documentable');
@@ -267,7 +260,6 @@ class Cheque extends Model {
 **نکته بسیار مهم**: اگر سندی رابطه morph داشته باشد، نباید اجازه ویرایش دستی داشته باشد چون از سینک بودن خارج می‌شود:
 
 ```php
-// کنترل در کنترلر یا سرویس
 if ($document->documentable_type && $document->documentable_id) {
     throw new \Exception('اسناد خودکار قابل ویرایش دستی نیستند');
 }
@@ -276,7 +268,7 @@ if ($document->documentable_type && $document->documentable_id) {
 ### نمونه سند در کد
 
 ```php
-// مثال: ثبت فروش ۵۰۰,۰۰۰ تومان نقدی
+// example: ثبت فروش ۵۰۰,۰۰۰ تومان نقدی
 $documentData = [
     'date' => '2024-01-01',
     'title' => 'فروش کالا به مشتری'
@@ -384,7 +376,6 @@ class Company extends Model {    // در واقع FiscalYear است
 همه مدل‌ها از `FiscalYearScope` استفاده می‌کنند:
 
 ```php
-// در هر مدل که به سال مالی مربوط است
 protected static function booted()
 {
     static::addGlobalScope(new FiscalYearScope);
@@ -538,7 +529,7 @@ php artisan fiscal-year:import exported_data.json --name="سال 1404" --year=14
 
 ### ConfigLoader Middleware
 
-`ConfigLoader` تمام تنظیمات را از پایگاه داده خوانده و در `config()` Laravel بارگذاری می‌کند تا در سراسر برنامه قابل دسترسی باشند.
+کدهای `ConfigLoader` تمام تنظیمات را از پایگاه داده خوانده و در `config()` Laravel بارگذاری می‌کند تا در سراسر برنامه قابل دسترسی باشند.
 
 **ویژگی‌ها**:
 - خوانش خودکار تمام configs از پایگاه داده
@@ -551,7 +542,6 @@ php artisan fiscal-year:import exported_data.json --name="سال 1404" --year=14
 
 **در کد Laravel**:
 ```php
-// دسترسی مستقیم
 $cashSubjectId = config('amir.cash');
 
 // با مقدار پیش‌فرض
@@ -570,7 +560,6 @@ $config = Config::where('company_id', session('active-company-id'))
 ### نقش‌ها در سیستم مالی
 برای مدیریت دسترسی ها از [spatie permission](https://spatie.be/docs/laravel-permission/v6/introduction) استفاده می کنیم
 ```php
-// مجوزهای مربوط به حسابداری
 'accounting.documents.create'
 'accounting.documents.edit'
 'accounting.documents.delete'
@@ -582,8 +571,7 @@ $config = Config::where('company_id', session('active-company-id'))
 
 ### 1. همیشه موازنه را کنترل کنید (فقط برای اسناد خودکار)
 ```php
-// برای اسناد خودکار (فاکتور، چک و...)
-$totalValue = collect($transactions)->sum('value');
+$totalValue = collect($transactions)->sum('value'); // برای اسناد خودکار (فاکتور، چک و...)
 if ($totalValue != 0) {
     throw new ValidationException('سند خودکار باید متوازن باشد');
 }
@@ -601,8 +589,7 @@ DB::transaction(function() {
 
 ### 3. همیشه از سرویس‌های ارائه شده استفاده کنید
 ```php
-// اشتباه ❌
-$document = Document::create($data);
+$document = Document::create($data); // اشتباه ❌
 
 // درست ✅
 $document = DocumentService::createDocument($user, $data, $transactions);
@@ -611,7 +598,6 @@ $document = DocumentService::createDocument($user, $data, $transactions);
 
 ### 5. استفاده صحیح از کدهای سرفصل
 ```php
-// برای تولید کد جدید
 $subject->code = $subject->generateCode();
 
 // برای نمایش کد فرمت شده
@@ -621,8 +607,7 @@ echo $subject->formattedCode();  // "001/002/003"
 
 ### 7. همیشه scope های مربوط به شرکت را در نظر بگیرید
 ```php
-// درست ✅ - با scope خودکار
-$subjects = Subject::all();
+$subjects = Subject::all(); // درست ✅ - با scope خودکار
 
 // برای کار بدون scope
 $allSubjects = Subject::withoutGlobalScope(FiscalYearScope::class)->get();
