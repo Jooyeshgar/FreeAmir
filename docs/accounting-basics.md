@@ -1,6 +1,6 @@
-# مبانی حسابداری برای برنامه‌نویسان
+# مبانی حسابداری برای توسعه‌دهندگان امیر
 
-این راهنما برای توسعه‌دهندگانی نوشته شده که می‌خواهند در پروژه **امیر** مشارکت کنند ولی با مفاهیم حسابداری آشنایی کاملی ندارند.
+این راهنما برای توسعه‌دهندگانی نوشته شده که می‌خواهند در پروژه **امیر** مشارکت کنند و نیاز به درک مفاهیم حسابداری و ساختار کد دارند.
 
 ## چرا توسعه‌دهنده باید حسابداری بداند؟
 
@@ -9,6 +9,7 @@
 - طراحی نادرست پایگاه داده
 - عدم رعایت اصول موازنه مالی
 - ایجاد گزارشات نادرست
+- نقض قوانین حسابداری
 
 **نکته مهم**: در سیستم‌های مالی، یک خطای کوچک برنامه‌نویسی می‌تواند منجر به عدم تطبیق حساب‌ها و مشکلات جدی مالی شود.
 
@@ -16,132 +17,259 @@
 
 ### بدهکار و بستانکار چیست؟
 
-**بدهکار (Debit)**: سمت چپ حساب - اضافه شدن دارایی یا کاهش بدهی
-**بستانکار (Credit)**: سمت راست حساب - کاهش دارایی یا اضافه شدن بدهی
+**بدهکار (Debit)**: تراکنش‌هایی که مقدار مثبت دارند - افزایش دارایی یا کاهش بدهی
+**بستانکار (Credit)**: تراکنش‌هایی که مقدار منفی دارند - کاهش دارایی یا افزایش بدهی
 
-```
-مثال: خرید ۱۰۰,۰۰۰ تومان کالا نقداً
-┌─────────────────┬──────────┬──────────┐
-│ شرح             │ بدهکار  │ بستانکار│
-├─────────────────┼──────────┼──────────┤
-│ حساب کالا       │ 100,000  │    -     │
-│ حساب صندوق      │    -     │ 100,000  │
-│ مجموع           │ 100,000  │ 100,000  │
-└─────────────────┴──────────┴──────────┘
+در امیر، تراکنش‌ها با یک فیلد `value` ذخیره می‌شوند:
+- مقدار مثبت = بدهکار
+- مقدار منفی = بستانکار
+
+```php
+// مثال: خرید ۱۰۰,۰۰۰ تومان کالا نقداً
+// تراکنش 1: افزایش موجودی کالا (بدهکار)
+$transaction1 = Transaction::create([
+    'subject_id' => $inventorySubject->id,
+    'value' => 100000,  // مثبت = بدهکار
+    'desc' => 'خرید کالا'
+]);
+
+// تراکنش 2: کاهش صندوق (بستانکار)
+$transaction2 = Transaction::create([
+    'subject_id' => $cashSubject->id,
+    'value' => -100000,  // منفی = بستانکار
+    'desc' => 'پرداخت وجه نقد'
+]);
 ```
 
 ### قانون طلایی: موازنه
 
 **در هر سند، مجموع بدهکار = مجموع بستانکار**
+یعنی مجموع همه تراکنش‌ها باید برابر صفر باشد.
 
-این قانون در کد باید همیشه کنترل شود:
+**نکته مهم**: همیشه اسناد موازنه نیستند! امیر برای راحتی کار اجازه ثبت اسناد غیرموازنه می‌دهد ولی:
+
+1. **اسناد دستی**: می‌توانند غیرموازنه ثبت شوند (برای سهولت کار)
+2. **اسناد خودکار**: همیشه باید موازنه باشند (فاکتور، چک و...)
+3. **تأیید نهایی**: تنها اسناد موازنه قابل تأیید نهایی هستند
 
 ```php
-// مثال کنترل موازنه در کد
-$totalDebit = $document->transactions->sum('debit_amount');
-$totalCredit = $document->transactions->sum('credit_amount');
-
-if ($totalDebit !== $totalCredit) {
+// کنترل موازنه در کد
+$totalValue = $document->transactions->sum('value');
+if ($totalValue !== 0) {
     throw new DocumentServiceException('سند متوازن نیست');
 }
 ```
 
-## ساختار سرفصل‌های حسابداری (Chart of Accounts)
+## ساختار سرفصل‌های حسابداری (Chart of Subjects)
 
 ### سرفصل‌های اصلی
 
 ```
-1. دارایی‌ها (Assets)
-   ├── 1.1 دارایی‌های جاری
-   │   ├── 1.1.1 نقد و بانک
-   │   ├── 1.1.2 حساب‌های دریافتنی
-   │   └── 1.1.3 موجودی کالا
-   ├── 1.2 دارایی‌های ثابت
-   │   ├── 1.2.1 ساختمان
-   │   ├── 1.2.2 ماشین‌آلات
-   │   └── 1.2.3 وسایل نقلیه
+010 - بانکها
+011 - موجودیهای نقدی
+├── 011001 - صندوق
+└── 011002 - تنخواه گردانها
 
-2. بدهی‌ها (Liabilities)
-   ├── 2.1 بدهی‌های جاری
-   │   ├── 2.1.1 حساب‌های پرداختنی
-   │   ├── 2.1.2 مالیات پرداختنی
-   │   └── 2.1.3 حقوق پرداختنی
-   ├── 2.2 بدهی‌های بلندمدت
+012 - بدهکاران/بستانکاران
+└── 012001 - اشخاص متفرقه
 
-3. سرمایه (Equity)
-   ├── 3.1 سرمایه اولیه
-   ├── 3.2 سود انباشته
-   └── 3.3 سود سال جاری
+040 - هزینه ها
+├── 040001 - حقوق پرسنل
+├── 040002 - آب
+├── 040003 - برق
 
-4. درآمدها (Income)
-   ├── 4.1 درآمد فروش
-   ├── 4.2 درآمدهای غیرعملیاتی
-   └── 4.3 سایر درآمدها
+041 - قیمت تمام شده کالای فروش رفته
+└── 041001 - قیمت تمام شده کالای فروش رفته
 
-5. هزینه‌ها (Expenses)
-   ├── 5.1 بهای کالای فروخته شده
-   ├── 5.2 هزینه‌های عملیاتی
-   └── 5.3 هزینه‌های مالی
+050 - درآمدها
+└── 050001 - درآمد متفرقه
+
+060 - فروش
+└── 060001 - فروش
+
 ```
 
-### کدینگ حسابداری
+### کدینگ سرفصل‌ها
 
-در امیر، هر سرفصل کد منحصربه‌فردی دارد:
+**نکته مهم**: کدینگ سرفصل‌ها در امیر سه تا سه تا انجام می‌شود:
+
+- سرفصل کل: `010`
+- سرفصل معین: `011001`
+- سرفصل تفضیلی: `011001001`
+- سرفصل تفضیلی سطح بعد: `011001001001`
+- و به همین ترتیب بی‌نهایت ادامه دارد
 
 ```php
-// مثال: ساختار کدینگ در جدول accounts
-'code'   => '1.1.1.001',  // صندوق شماره 1
-'title'  => 'صندوق فروشگاه',
-'parent' => '1.1.1',      // زیرمجموعه نقد و بانک
-'type'   => 'asset'       // نوع حساب
+// مثال: ساختار کدینگ در جدول subjects
+'code'      => '011001',            // کد سرفصل صندوق
+'name'      => 'صندوق',             // نام سرفصل
+'parent_id' => 3,                   // شناسه والد (موجودیهای نقدی)
+'type'      => 'both'               // نوع حساب
 ```
 
-## گروه‌بندی مشتریان و ارتباط با سرفصل‌ها
+### ارتباط گروه‌ها با سرفصل‌ها
+```php
+// گروه مشتریان به کدام سرفصل متصل شود
+$customerGroupConfig = Config::where('key', 'customer_default_subject')
+                            ->where('company_id', session('active-company-id'))
+                            ->value('value');
+
+// گروه کالاها به کدام سرفصل‌ها متصل شود
+$productInventoryConfig = Config::where('key', 'product_inventory_subject')
+                               ->where('company_id', session('active-company-id'))
+                               ->value('value');
+```
+
+### استفاده از سرویس‌ها برای مدیریت کدها
+
+**هشدار مهم**: برای تولید کد سرفصل‌ها حتماً از `generateCode()` در مدل Subject استفاده کنید:
+
+```php
+// ایجاد سرفصل جدید
+$subject = new Subject();
+$subject->name = 'صندوق شعبه مرکزی';
+$subject->parent_id = $parentSubject->id;
+$subject->type = 'both';
+// کد به صورت خودکار تولید می‌شود
+$subject->save();
+
+// یا اگر می‌خواهید کد خاصی تعیین کنید:
+$subject->code = $subject->generateCode(15); // کد 015
+```
+
+### نمایش کدها
+
+برای نمایش کدها از توابع فرمت‌کننده داخل مدل استفاده کنید:
+
+```php
+// برای نمایش کد فرمت شده
+echo $subject->formattedCode();  // "011/001"
+
+// نمایش کد با نام
+echo $subject->formattedName();     // "011/001 صندوق"
+```
+
+## گروه‌بندی مشتریان، کالاها و ارتباط با سرفصل‌ها
+
+### مفهوم گروه‌بندی
+
+در امیر، هر گروه مشتری یا کالا به یک سرفصل معین متصل است. این ارتباط از طریق تنظیمات (configs) تعریف می‌شود.
 
 ### مشتریان (Customers)
+
 ```php
-// هر مشتری به یک سرفصل "حساب‌های دریافتنی" متصل است
-$customer = new Customer([
-    'name' => 'شرکت الف',
-    'account_id' => $receivableAccount->id  // اتصال به سرفصل
+// هر گروه مشتری به یک سرفصل متصل است
+$customerGroup = CustomerGroup::create([
+    'name' => 'مشتریان عمومی',
+    'subject_id' => 58  // سرفصل اشخاص متفرقه (012001)
 ]);
+
+// هنگام ایجاد مشتری، سرفصل تفضیلی ایجاد می‌شود
+$customer = Customer::create([
+    'name' => 'آقای محمدی',
+    'group_id' => $customerGroup->id
+]);
+
+// سرفصل جدید: اشخاص متفرقه/محمدی با کد مثلاً 012001001
 ```
 
 ### کالاها و خدمات
+
 ```php
-// هر کالا با سرفصل‌های مختلف ارتباط دارد
-$product = new Product([
-    'name' => 'محصول A',
-    'inventory_account_id' => $inventoryAccount->id,  // حساب موجودی
-    'income_account_id' => $salesAccount->id,         // حساب درآمد فروش
-    'expense_account_id' => $cogsAccount->id          // حساب بهای تمام شده
+// هر گروه کالا نیز به سرفصل‌های مختلف متصل است
+$productGroup = ProductGroup::create([
+    'name' => 'کالاهای اساسی',
+    'inventory_subject_id' => 70,             // حساب موجودی (015002)
+    'income_subject_id' => 20,                // حساب درآمد فروش (060001)
+    'expense_subject_id' => 89                // حساب بهای تمام شده (041001)
+]);
+
+// هنگام ایجاد کالا، سرفصل‌های تفضیلی ایجاد می‌شوند
+$product = Product::create([
+    'name' => 'برنج طارم',
+    'group_id' => $productGroup->id
 ]);
 ```
 
-## سند و تراکنش‌ها
+### تعداد سرفصل‌های تفضیلی نامحدود
 
-### ساختار سند
+امیر قابلیت ایجاد سرفصل‌های تفضیلی در سطوح نامحدود را دارد:
 
 ```php
-class Document {
-    public $id;
-    public $date;           // تاریخ سند
-    public $number;         // شماره سند (یکتا در سال مالی)
-    public $description;    // شرح کلی سند
-    public $fiscal_year_id; // سال مالی
-    public $company_id;     // شرکت
+// سطح 1: 010
+// سطح 2: 011001
+// سطح 3: 011001001
+// سطح 4: 011001001001
+// سطح 5: 011001001001001
+// و بی‌نهایت ادامه دارد
+```
+
+## Document و Transaction: ساختار اسناد و تراکنش‌ها
+
+### ساختار کلی
+
+```php
+class Document extends Model {
+    protected $fillable = [
+        'number',       // شماره سند (یکتا در سال مالی)
+        'date',         // تاریخ سند
+        'title',        // شرح کلی سند
+        'permanent',    // آیا سند دائمی است یا موقت
+        'creator_id',   // شناسه کاربر ایجادکننده
+        'company_id',   // شناسه شرکت (سال مالی)
+    ];
     
     public function transactions() {
         return $this->hasMany(Transaction::class);
     }
 }
 
-class Transaction {
-    public $document_id;
-    public $account_id;     // سرفصل
-    public $debit_amount;   // مبلغ بدهکار
-    public $credit_amount;  // مبلغ بستانکار
-    public $description;    // شرح ردیف
+class Transaction extends Model {
+    protected $fillable = [
+        'subject_id',   // شناسه سرفصل
+        'document_id',  // شناسه سند
+        'user_id',      // شناسه کاربر
+        'desc',         // شرح تراکنش
+        'value',        // مقدار (مثبت=بدهکار، منفی=بستانکار)
+    ];
+    
+    // محاسبه خودکار بدهکار/بستانکار
+    public function getDebitAttribute() {
+        return $this->value > 0 ? formatNumber($this->value) : '';
+    }
+    
+    public function getCreditAttribute() {
+        return $this->value < 0 ? formatNumber(-1 * $this->value) : '';
+    }
+}
+```
+
+### اسناد خودکار و رابطه Morph
+
+اسناد خودکار (فاکتور، چک، ...) از طریق رابطه Polymorphic به سند متصل هستند:
+
+```php
+// فاکتور خرید/فروش
+class Invoice extends Model {
+    public function document() {
+        return $this->morphOne(Document::class, 'documentable');
+    }
+}
+
+// چک
+class Cheque extends Model {
+    public function document() {
+        return $this->morphOne(Document::class, 'documentable');
+    }
+}
+```
+
+**نکته بسیار مهم**: اگر سندی رابطه morph داشته باشد، نباید اجازه ویرایش دستی داشته باشد چون از سینک بودن خارج می‌شود:
+
+```php
+// کنترل در کنترلر یا سرویس
+if ($document->documentable_type && $document->documentable_id) {
+    throw new \Exception('اسناد خودکار قابل ویرایش دستی نیستند');
 }
 ```
 
@@ -149,174 +277,298 @@ class Transaction {
 
 ```php
 // مثال: ثبت فروش ۵۰۰,۰۰۰ تومان نقدی
-$document = Document::create([
+$documentData = [
     'date' => '2024-01-01',
-    'number' => '1001',
-    'description' => 'فروش کالا به مشتری',
-    'fiscal_year_id' => $currentFiscalYear->id
-]);
+    'title' => 'فروش کالا به مشتری'
+];
 
-// ردیف 1: افزایش صندوق (بدهکار)
-Transaction::create([
-    'document_id' => $document->id,
-    'account_id' => $cashAccount->id,
-    'debit_amount' => 500000,
-    'credit_amount' => 0,
-    'description' => 'دریافت وجه نقد'
-]);
+$transactionsData = [
+    [
+        'subject_id' => $cashSubject->id,
+        'value' => 500000,  // بدهکار (افزایش صندوق)
+        'desc' => 'دریافت وجه نقد'
+    ],
+    [
+        'subject_id' => $salesSubject->id,
+        'value' => -500000,  // بستانکار (افزایش درآمد)
+        'desc' => 'درآمد حاصل از فروش'
+    ]
+];
 
-// ردیف 2: افزایش درآمد فروش (بستانکار)
-Transaction::create([
-    'document_id' => $document->id,
-    'account_id' => $salesAccount->id,
-    'debit_amount' => 0,
-    'credit_amount' => 500000,
-    'description' => 'درآمد حاصل از فروش'
+$document = DocumentService::createDocument(
+    auth()->user(), 
+    $documentData, 
+    $transactionsData
+);
+```
+
+## سرویس‌های ضروری امیر
+
+### DocumentService
+**مهم**: همیشه از این سرویس برای کار با اسناد استفاده کنید:
+
+```php
+use App\Services\DocumentService;
+
+// ایجاد سند جدید
+$document = DocumentService::createDocument($user, $documentData, $transactionsData);
+
+// به‌روزرسانی سند
+$document = DocumentService::updateDocument($document, $newData);
+
+// تأیید سند (بررسی موازنه)
+DocumentService::approveDocument($document);
+
+// ایجاد تراکنش
+$transaction = DocumentService::createTransaction($document, $transactionData);
+
+// به‌روزرسانی تراکنش‌های سند
+DocumentService::updateDocumentTransactions($documentId, $transactionsData);
+
+// حذف سند (همراه با تراکنش‌ها)
+DocumentService::deleteDocument($documentId);
+```
+
+### SubjectCreatorService
+برای ایجاد سرفصل‌ها (اگرچه معمولاً از مدل Subject استفاده می‌شود):
+
+```php
+use App\Services\SubjectCreatorService;
+
+$subjectService = new SubjectCreatorService();
+$subject = $subjectService->createSubject([
+    'name' => 'صندوق جدید',
+    'parent_code' => '011001',
+    'code' => '005'  // اختیاری
 ]);
 ```
 
-## چرخه حسابداری در FreeAmir
+### FiscalYearService
+برای مدیریت سال‌های مالی و مهاجرت داده:
 
-### 1. ثبت سند
 ```php
-// استفاده از DocumentService
-$documentService = new DocumentService();
-$document = $documentService->createDocument([
-    'date' => $date,
-    'description' => $description,
-    'transactions' => $transactionsData
+use App\Services\FiscalYearService;
+
+// صادرات داده‌های سال مالی
+$data = FiscalYearService::exportData($fiscalYearId, [
+    'subjects',
+    'customers', 
+    'products',
+    'documents'
 ]);
-```
 
-### 2. اعتبارسنجی
-```php
-// کنترل‌های ضروری در DocumentService
-private function validateDocument($data) {
-    // 1. کنترل یکتایی شماره سند
-    $this->checkUniqueDocumentNumber($data['number']);
-    
-    // 2. کنترل موازنه
-    $this->checkBalance($data['transactions']);
-    
-    // 3. کنترل صحت حساب‌ها
-    $this->validateAccounts($data['transactions']);
-}
-```
+// وارد کردن به سال جدید
+$newFiscalYear = FiscalYearService::importData($data, $newFiscalYearData);
 
-### 3. ذخیره و ایجاد تراکنش‌ها
-```php
-DB::transaction(function() use ($documentData) {
-    $document = Document::create($documentData);
-    
-    foreach($transactions as $transaction) {
-        $document->transactions()->create($transaction);
-    }
-});
+// دریافت بخش‌های قابل صادرات
+$availableSections = FiscalYearService::getAvailableSections();
 ```
 
 ## سال مالی و چندشرکته بودن
 
-### مفهوم سال مالی
-سال مالی دوره‌ای است (معمولاً ۱۲ ماه) که حساب‌ها در آن ثبت می‌شوند.
+### مفهوم سال مالی در امیر
+سال مالی در امیر به عنوان "شرکت" (Company) شناخته می‌شود. هر شرکت نمایانگر یک سال مالی مستقل است.
 
 ```php
-class FiscalYear {
-    public $title;          // "سال مالی 1403"
-    public $start_date;     // "1403/01/01"
-    public $end_date;       // "1403/12/29"
-    public $is_closed;      // بسته شده یا خیر
-    public $company_id;     // متعلق به کدام شرکت
+class Company extends Model {    // در واقع FiscalYear است
+    protected $fillable = [
+        'name',          // "سال مالی 1403"
+        'start_date',    // "1403/01/01"
+        'end_date',      // "1403/12/29"
+        'is_closed',     // بسته شده یا خیر
+    ];
 }
 ```
 
-### جداسازی داده‌ها
+### جداسازی داده‌ها با FiscalYearScope
+همه مدل‌ها از `FiscalYearScope` استفاده می‌کنند:
+
 ```php
-// همه کوئری‌ها باید شامل فیلتر سال مالی و شرکت باشند
-$documents = Document::where('fiscal_year_id', $currentFiscalYear->id)
-                    ->where('company_id', $currentCompany->id)
-                    ->get();
+// در هر مدل که به سال مالی مربوط است
+protected static function booted()
+{
+    static::addGlobalScope(new FiscalYearScope);
+}
+
+// برای کار بدون scope در مواقع خاص
+$allData = SomeModel::withoutGlobalScope(FiscalYearScope::class)->get();
 ```
 
-### مهاجرت و کلون سال مالی
+### مهاجرت و کپی سال مالی
 ```php
 // ایجاد سال مالی جدید بر اساس سال قبل
-php artisan fiscal-year:clone --from=1403 --to=1404
+php artisan fiscal-year:export 1 --sections=subjects,customers
+php artisan fiscal-year:import exported_data.json --name="سال 1404" --year=1404
 ```
+
+### تنظیمات شرکت‌ها
+
+تنظیمات در جدول `configs` برای هر شرکت جداگانه نگهداری می‌شود:
 
 ## گزارش‌های مالی
 
 ### دفتر روزنامه (Journal)
-لیست تمام اسناد و تراکنش‌ها به ترتیب تاریخ
+**تعریف**: لیست تمام اسناد و تراکنش‌ها به ترتیب تاریخ ثبت
 
-```php
-// کوئری دفتر روزنامه
-$journalEntries = Transaction::join('documents', 'transactions.document_id', '=', 'documents.id')
-    ->join('accounts', 'transactions.account_id', '=', 'accounts.id')
-    ->where('documents.fiscal_year_id', $fiscalYearId)
-    ->orderBy('documents.date')
-    ->orderBy('documents.number')
-    ->get();
-```
+**خصوصیات**:
+- نمایش **کلیه تراکنش‌ها** بدون استثنا
+- مرتب‌سازی بر اساس **تاریخ** و **شماره سند**
+- شامل تمام سرفصل‌ها (کل، معین، تفضیلی)
+- هر سطر یک تراکنش واحد است
+- نمایش بدهکار و بستانکار هر تراکنش
+
+**کاربرد**:
+- بررسی زمان‌بندی عملیات مالی
+- ردیابی تراکنش‌های خاص
+- کنترل تسلسل اسناد
+
+**نکات مهم**:
+- برای کنترل دستی حساب‌ها بسیار مفید است
+- امکان فیلتر بر اساس تاریخ، سرفصل یا نوع سند
+- در امیر شامل اسناد موقت و دائمی است
 
 ### دفتر کل (General Ledger)
-گردآوری تراکنش‌ها بر اساس هر سرفصل
+**تعریف**: گردآوری و خلاصه‌سازی تراکنش‌ها بر اساس هر سرفصل حسابداری
 
-```php
-// کوئری دفتر کل برای یک حساب
-$ledger = Transaction::join('documents', 'transactions.document_id', '=', 'documents.id')
-    ->where('transactions.account_id', $accountId)
-    ->where('documents.fiscal_year_id', $fiscalYearId)
-    ->orderBy('documents.date')
-    ->get();
+**تفاوت با دفتر روزنامه**:
+- **دفتر روزنامه**: همه تراکنش‌ها بر اساس تاریخ
+- **دفتر کل**: تراکنش‌ها گروه‌بندی شده بر اساس سرفصل
+
+**انواع دفتر کل در امیر**:
+
+#### 1. دفتر کل (سرفصل‌های اصلی)
+- نمایش فقط **سرفصل‌های کل** (مثل دارایی‌ها، بدهی‌ها)
+- مناسب برای بررسی کلی وضعیت مالی
+
+#### 2. دفتر معین (سرفصل‌های معین)
+- نمایش **سرفصل‌های سطح دوم** (مثل نقد و بانک، طلبکاران)
+- جزئیات بیشتر از دفتر کل
+
+#### 3. دفتر تفضیلی (سرفصل‌های تفضیلی)
+- نمایش **یک سرفصل خاص** و همه تراکنش‌هایش
+- در امیر، کل، معین و تفضیلی در یک فرم یکپارچه نمایش داده می‌شوند
+
+**مثال عملی**:
 ```
+انتخاب سرفصل: "صندوق" (011/001)
+نتیجه: همه تراکنش‌های مربوط به این صندوق خاص
+```
+
+**نکات مهم**:
+- برای محاسبه مانده هر حساب استفاده می‌شود
+- امکان نمایش مانده تجمیعی در هر تاریخ
+- در امیر، انتخاب سرفصل والد، تراکنش‌های زیرمجموعه‌ها را نیز نشان می‌دهد
 
 ### ترازنامه (Balance Sheet)
-```php
-// محاسبه مانده حساب‌ها
-$accountBalance = Transaction::where('account_id', $accountId)
-    ->sum('debit_amount') - Transaction::where('account_id', $accountId)
-    ->sum('credit_amount');
+**تعریف**: گزارش وضعیت مالی در یک تاریخ مشخص (عکس فوری از دارایی‌ها، بدهی‌ها و سرمایه)
+
+**ساختار کلاسیک**:
 ```
+دارایی‌ها = بدهی‌ها + سرمایه
+```
+
+**محتوای ترازنامه**:
+- **دارایی‌های جاری**: نقد، طلبکاران، موجودی کالا
+- **دارایی‌های ثابت**: ساختمان، ماشین‌آلات، تجهیزات
+- **بدهی‌های جاری**: بدهکاران، مالیات پرداختنی
+- **بدهی‌های بلندمدت**: وام‌های بانکی
+- **سرمایه**: سرمایه اولیه، سود انباشته
+
+**نکات مهم**:
+- همیشه باید متوازن باشد (دارایی‌ها = بدهی‌ها + سرمایه)
+- فقط شامل حساب‌های **دائمی** (دارایی، بدهی، سرمایه)
+- **حساب‌های موقت** (درآمد، هزینه) در ترازنامه نمایش داده نمی‌شوند
+- در امیر، سود/زیان سال جاری به صورت خودکار در سرمایه منظور می‌شود
+
+**تفاوت با سایر گزارش‌ها**:
+- دفتر روزنامه: همه تراکنش‌ها
+- دفتر کل: تراکنش‌ها گروه‌بندی شده
+- ترازنامه: فقط مانده حساب‌ها در یک تاریخ
 
 ### سود و زیان (Income Statement)
-```php
-// محاسبه درآمدها و هزینه‌ها
-$totalIncome = Account::where('type', 'income')
-    ->join('transactions', 'accounts.id', '=', 'transactions.account_id')
-    ->sum('transactions.credit_amount');
+**تعریف**: گزارش عملکرد مالی در یک **دوره زمانی** (نه یک تاریخ مشخص)
 
-$totalExpenses = Account::where('type', 'expense')
-    ->join('transactions', 'accounts.id', '=', 'transactions.account_id')
-    ->sum('transactions.debit_amount');
+**محتوای گزارش**:
+- **درآمدها**: فروش، درآمدهای غیرعملیاتی
+- **هزینه‌ها**: بهای کالای فروخته شده، هزینه‌های عملیاتی، هزینه‌های مالی
+- **سود/زیان خالص**: درآمدها منهای هزینه‌ها
 
-$netIncome = $totalIncome - $totalExpenses;
+**ساختار کلاسیک**:
 ```
+درآمد فروش
+- بهای کالای فروخته شده
+= سود ناخالص
+
+- هزینه‌های عملیاتی
+= سود عملیاتی
+
++ درآمدهای غیرعملیاتی
+- هزینه‌های غیرعملیاتی
+= سود خالص
+```
+
+**تفاوت‌های کلیدی**:
+
+| ویژگی | ترازنامه | سود و زیان |
+|--------|----------|-------------|
+| زمان | یک تاریخ مشخص | یک دوره زمانی |
+| حساب‌ها | دائمی (دارایی، بدهی، سرمایه) | موقت (درآمد، هزینه) |
+| هدف | وضعیت مالی | عملکرد مالی |
+| تجدید | سالانه باقی می‌ماند | سالانه صفر می‌شود |
+
+**نکات مهم در امیر**:
+- حساب‌های درآمد و هزینه در پایان سال به حساب "سود انباشته" منتقل می‌شوند
+- امکان تولید گزارش برای دوره‌های مختلف (ماهانه، فصلی، سالانه)
+- در صورت زیان، مقدار منفی در سرمایه منظور می‌شود
+
+**ارتباط گزارش‌ها**:
+1. **دفتر روزنامه** → داده‌های خام همه تراکنش‌ها
+2. **دفتر کل** → تجمیع تراکنش‌ها بر اساس سرفصل
+3. **ترازنامه** → مانده حساب‌های دائمی در یک تاریخ
+4. **سود و زیان** → عملکرد حساب‌های موقت در یک دوره
+
+**مهم**: در امیر همه این گزارش‌ها از یک پایگاه داده یکپارچه تولید می‌شوند و باید با یکدیگر تطبیق داشته باشند.
+
 
 ## تنظیمات و پیکربندی
 
-### حساب‌های پیش‌فرض
+### فلسفه طراحی Config در امیر
+
+برای جلوگیری از **hard-code** کردن روابط بین بخش‌های مختلف سیستم، تمام اتصالات و تنظیمات در جدول `configs` ذخیره می‌شوند. این طراحی به کاربران اجازه می‌دهد بدون تغییر کد، تنظیمات را شخصی‌سازی کنند.
+
+### ConfigLoader Middleware
+
+`ConfigLoader` تمام تنظیمات را از پایگاه داده خوانده و در `config()` Laravel بارگذاری می‌کند تا در سراسر برنامه قابل دسترسی باشند.
+
+**ویژگی‌ها**:
+- خوانش خودکار تمام configs از پایگاه داده
+- بارگذاری در `config('amir.key')` برای دسترسی آسان
+- اجرا در هر درخواست HTTP
+
+برای اطلاعات بیشتر ConfigController را مشاهده کنید
+
+### نحوه دسترسی به تنظیمات
+
+**در کد Laravel**:
 ```php
-// در جدول configs
-$defaultCashAccount = Config::where('key', 'default_cash_account')
-                           ->where('company_id', $companyId)
-                           ->value('value');
+// دسترسی مستقیم
+$cashSubjectId = config('amir.cash');
+
+// با مقدار پیش‌فرض
+$bankSubjectId = config('amir.bank', null);
 ```
 
-### بارگذاری تنظیمات
+**برای تنظیمات خاص شرکت**:
 ```php
-// در سرویس‌ها همیشه تنظیمات شرکت جاری بارگذاری شود
-class CompanyConfigService {
-    public function getDefaultAccount($type) {
-        return Config::where('company_id', auth()->user()->current_company_id)
-                    ->where('key', "default_{$type}_account")
-                    ->value('value');
-    }
-}
+$config = Config::where('company_id', session('active-company-id'))
+               ->where('key', 'cash')
+               ->value('value');
 ```
 
 ## امنیت و کنترل دسترسی
 
 ### نقش‌ها در سیستم مالی
+برای مدیریت دسترسی ها از [spatie permission](https://spatie.be/docs/laravel-permission/v6/introduction) استفاده می کنیم
 ```php
 // مجوزهای مربوط به حسابداری
 'accounting.documents.create'
@@ -326,59 +578,56 @@ class CompanyConfigService {
 'accounting.settings.manage'
 ```
 
-### محدودیت دسترسی به داده‌ها
-```php
-// Middleware برای کنترل دسترسی شرکت
-class EnsureCompanyAccess {
-    public function handle($request, Closure $next) {
-        $document = Document::findOrFail($request->id);
-        
-        if ($document->company_id !== auth()->user()->current_company_id) {
-            abort(403, 'دسترسی مجاز نیست');
-        }
-        
-        return $next($request);
-    }
-}
-```
-
 ## نکات مهم برای توسعه‌دهندگان
 
-### 1. همیشه موازنه را کنترل کنید
+### 1. همیشه موازنه را کنترل کنید (فقط برای اسناد خودکار)
 ```php
-// قبل از ذخیره سند
-$totalDebit = collect($transactions)->sum('debit_amount');
-$totalCredit = collect($transactions)->sum('credit_amount');
-
-if ($totalDebit != $totalCredit) {
-    throw new ValidationException('سند متوازن نیست');
+// برای اسناد خودکار (فاکتور، چک و...)
+$totalValue = collect($transactions)->sum('value');
+if ($totalValue != 0) {
+    throw new ValidationException('سند خودکار باید متوازن باشد');
 }
+
+// برای اسناد دستی موازنه اجباری نیست
 ```
 
 ### 2. از Transaction در پایگاه داده استفاده کنید
 ```php
 DB::transaction(function() {
     // عملیات مالی
+    $document = DocumentService::createDocument($user, $data, $transactions);
 });
 ```
 
-### 3. همیشه لاگ تغییرات مالی را ثبت کنید
+### 3. همیشه از سرویس‌های ارائه شده استفاده کنید
 ```php
-// برای رهگیری تغییرات مهم
-DocumentHistory::create([
-    'document_id' => $document->id,
-    'action' => 'updated',
-    'user_id' => auth()->id(),
-    'changes' => json_encode($changes)
-]);
+// اشتباه ❌
+$document = Document::create($data);
+
+// درست ✅
+$document = DocumentService::createDocument($user, $data, $transactions);
 ```
 
-### 4. اعداد اعشاری را درست مدیریت کنید
+
+### 5. استفاده صحیح از کدهای سرفصل
 ```php
-// استفاده از bcmath برای محاسبات مالی دقیق
-$total = bcadd($amount1, $amount2, 2); // 2 رقم اعشار
+// برای تولید کد جدید
+$subject->code = $subject->generateCode();
+
+// برای نمایش کد فرمت شده
+echo $subject->formattedCode();  // "001/002/003"
+```
+
+
+### 7. همیشه scope های مربوط به شرکت را در نظر بگیرید
+```php
+// درست ✅ - با scope خودکار
+$subjects = Subject::all();
+
+// برای کار بدون scope
+$allSubjects = Subject::withoutGlobalScope(FiscalYearScope::class)->get();
 ```
 
 ---
 
-**نکته نهایی**: هرگز فراموش نکنید که در سیستم‌های مالی، دقت بیش از سرعت اولویت دارد. همیشه کدهای خود را چندین بار تست کنید.
+**نکته نهایی**: در سیستم‌های مالی، دقت و پایبندی به استانداردهای حسابداری بیش از سرعت اولویت دارد. همیشه کدهای خود را چندین بار تست کنید و از سرویس‌های ارائه شده در امیر استفاده کنید.
