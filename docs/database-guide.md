@@ -194,7 +194,7 @@ CREATE TABLE transactions (
 ```
 
 **نکات مهم:**
-- `value` مثبت = بدهکار، منفی = بستانکار
+- `value` مثبت = بستانکار، منفی = بدهکار (مطابق منطق «بستانکار - بدهکار» در سرویس اسناد)
 - هر تراکنش به یک سرفصل و سند تعلق دارد
 - مجموع `value` در هر سند باید صفر باشد (موازنه)
 
@@ -202,30 +202,56 @@ CREATE TABLE transactions (
 ```sql
 -- سند فروش 100,000 تومان نقدی
 INSERT INTO transactions VALUES
-(1, 'cash_account_id', 'document_id', 'user_id', 'دریافت نقد', 100000),
-(2, 'sales_account_id', 'document_id', 'user_id', 'فروش کالا', -100000);
--- مجموع: 100000 + (-100000) = 0 ✓
+(1, 'cash_account_id', 'document_id', 'user_id', 'دریافت نقد', -100000),
+(2, 'sales_account_id', 'document_id', 'user_id', 'فروش کالا', 100000);
+-- مجموع: -100000 + 100000 = 0 ✓
 ```
 
 ### 👤 جدول `customers` - مشتریان
 
 ```sql
 CREATE TABLE customers (
-    id BIGINT PRIMARY KEY,
-    name VARCHAR(60) NOT NULL,
-    tel VARCHAR(20) NULL,
-    mobile VARCHAR(15) NULL,
-    fax VARCHAR(20) NULL,
-    address TEXT NULL,
-    email VARCHAR(255) NULL,
-    web_page VARCHAR(255) NULL,
+    id BIGINT UNSIGNED PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    subject_id BIGINT UNSIGNED NULL,
+    phone VARCHAR(15) NULL DEFAULT '',
+    cell VARCHAR(15) NULL DEFAULT '',
+    fax VARCHAR(15) NULL DEFAULT '',
+    address VARCHAR(100) NULL DEFAULT '',
+    postal_code VARCHAR(15) NULL DEFAULT '',
+    email VARCHAR(64) NULL DEFAULT '',
+    ecnmcs_code VARCHAR(20) NULL DEFAULT '',
+    personal_code VARCHAR(15) NULL DEFAULT '',
+    web_page VARCHAR(50) NULL DEFAULT '',
+    responsible VARCHAR(50) NULL DEFAULT '',
+    connector VARCHAR(50) NULL DEFAULT '',
+    group_id BIGINT UNSIGNED NULL,
     desc TEXT NULL,
-    subject_id BIGINT NULL, -- ارتباط با سرفصل
-    company_id BIGINT NOT NULL,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    
+    balance DECIMAL(10,2) NULL DEFAULT 0,
+    credit DECIMAL(10,2) NULL DEFAULT 0,
+    rep_via_email BOOLEAN NULL DEFAULT FALSE,
+    acc_name_1 VARCHAR(50) NULL DEFAULT '',
+    acc_no_1 VARCHAR(30) NULL DEFAULT '',
+    acc_bank_1 VARCHAR(50) NULL DEFAULT '',
+    acc_name_2 VARCHAR(50) NULL DEFAULT '',
+    acc_no_2 VARCHAR(30) NULL DEFAULT '',
+    acc_bank_2 VARCHAR(50) NULL DEFAULT '',
+    type_buyer BOOLEAN NOT NULL DEFAULT FALSE,
+    type_seller BOOLEAN NOT NULL DEFAULT FALSE,
+    type_mate BOOLEAN NOT NULL DEFAULT FALSE,
+    type_agent BOOLEAN NOT NULL DEFAULT FALSE,
+    introducer_id BIGINT UNSIGNED NULL,
+    commission VARCHAR(15) NOT NULL DEFAULT '0',
+    marked BOOLEAN NOT NULL DEFAULT FALSE,
+    reason VARCHAR(200) NULL DEFAULT '',
+    disc_rate VARCHAR(15) NOT NULL DEFAULT '0',
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    company_id BIGINT UNSIGNED NOT NULL,
+
     FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE SET NULL,
+    FOREIGN KEY (group_id) REFERENCES customer_groups(id) ON DELETE SET NULL,
+    FOREIGN KEY (introducer_id) REFERENCES customers(id) ON DELETE SET NULL,
     FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
 );
 ```
@@ -233,68 +259,95 @@ CREATE TABLE customers (
 **نکات مهم:**
 - هر مشتری به یک سرفصل "حساب‌های دریافتنی" متصل است
 - امکان گروه‌بندی مشتریان
-- اطلاعات تماس کامل
+- اطلاعات تماس کامل + تنظیمات مالی (سقف اعتبار، مانده اولیه و پرچم‌های نقش خریدار/فروشنده و ...)
 
 ### 📦 جدول `products` - کالاها
 
 ```sql
 CREATE TABLE products (
-    id BIGINT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    code VARCHAR(50) NULL,
-    unit VARCHAR(20) NULL,
-    description TEXT NULL,
-    buy_price DECIMAL(10,2) NULL,
-    sell_price DECIMAL(10,2) NULL,
-    subject_id BIGINT NULL, -- حساب موجودی
-    company_id BIGINT NOT NULL,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    
-    FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE SET NULL,
-    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+    id BIGINT UNSIGNED PRIMARY KEY,
+    code VARCHAR(20) NOT NULL,
+    name VARCHAR(60) NOT NULL,
+    `group` BIGINT UNSIGNED NULL,
+    location VARCHAR(50) NULL,
+    quantity FLOAT NOT NULL,
+    quantity_warning FLOAT NULL,
+    oversell BOOLEAN NOT NULL DEFAULT FALSE,
+    purchace_price DECIMAL(10,2) NOT NULL,
+    selling_price DECIMAL(10,2) NOT NULL,
+    discount_formula VARCHAR(100) NULL,
+    description VARCHAR(200) NULL,
+    company_id BIGINT UNSIGNED NOT NULL,
+
+    FOREIGN KEY (`group`) REFERENCES product_groups(id) ON DELETE SET NULL,
+    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_company_product_code (company_id, code)
 );
 ```
+
+**نکات مهم:**
+- کد کالا در سطح هر شرکت یکتا است (ایندکس ترکیبی `company_id + code`).
+- ستون‌های `quantity` و `quantity_warning` برای مدیریت موجودی و هشدار کمبود استفاده می‌شوند و `oversell` امکان فروش بیش از موجودی را کنترل می‌کند.
 
 ### 🧾 جدول `invoices` - فاکتورها
 
 ```sql
 CREATE TABLE invoices (
-    id BIGINT PRIMARY KEY,
-    code VARCHAR(50) NOT NULL,
+    id BIGINT UNSIGNED PRIMARY KEY,
+    number VARCHAR(255) NOT NULL,
     date DATE NOT NULL,
-    customer_id BIGINT NOT NULL,
-    document_id BIGINT NULL, -- اتصال به سند حسابداری
-    total_amount DECIMAL(15,2) DEFAULT 0,
-    tax_amount DECIMAL(15,2) DEFAULT 0,
-    discount_amount DECIMAL(15,2) DEFAULT 0,
+    creator_id BIGINT UNSIGNED NULL,
+    approver_id BIGINT UNSIGNED NULL,
+    document_id BIGINT UNSIGNED NULL,
+    company_id BIGINT UNSIGNED NULL,
+    customer_id BIGINT UNSIGNED NOT NULL,
+    addition DECIMAL(16,2) NOT NULL,
+    subtraction DECIMAL(16,2) NOT NULL,
+    vat DECIMAL(16,2) NOT NULL,
+    cash_payment DECIMAL(16,2) NOT NULL,
+    ship_date DATE NULL,
+    ship_via VARCHAR(100) NULL,
     description TEXT NULL,
-    company_id BIGINT NOT NULL,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    
-    FOREIGN KEY (customer_id) REFERENCES customers(id),
+    is_sell BOOLEAN NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT FALSE,
+    amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+
+    UNIQUE KEY invoices_number_unique (number),
+    FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (approver_id) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE SET NULL,
-    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+    FOREIGN KEY (company_id) REFERENCES documents(id) ON DELETE SET NULL,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
 );
 ```
+
+**نکات مهم:**
+- فیلد `number` برای هر فاکتور یکتا است.
+- ستون‌های `addition`، `subtraction`، `vat` و `cash_payment` برای جمع مبالغ جانبی و پرداخت نقدی استفاده می‌شوند.
+- در اسکیما فعلی، کلید خارجی `company_id` به جدول `documents` متصل شده است (در صورت نیاز به ارجاع مستقیم به شرکت باید در مایگریشن اصلاح شود).
 
 ### 📝 جدول `invoice_items` - اقلام فاکتور
 
 ```sql
 CREATE TABLE invoice_items (
-    id BIGINT PRIMARY KEY,
-    invoice_id BIGINT NOT NULL,
-    product_id BIGINT NOT NULL,
-    quantity DECIMAL(10,3) NOT NULL,
+    id BIGINT UNSIGNED PRIMARY KEY,
+    invoice_id BIGINT UNSIGNED NULL,
+    product_id BIGINT UNSIGNED NULL,
+    transaction_id BIGINT UNSIGNED NULL,
+    quantity DECIMAL(10,2) NOT NULL,
     unit_price DECIMAL(10,2) NOT NULL,
-    total_price DECIMAL(15,2) NOT NULL,
+    unit_discount DECIMAL(10,2) NOT NULL,
+    vat DECIMAL(10,2) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
     description TEXT NULL,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    
-    FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
-    FOREIGN KEY (product_id) REFERENCES products(id)
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+
+    FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE SET NULL,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL,
+    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE SET NULL
 );
 ```
 
