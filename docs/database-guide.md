@@ -371,17 +371,36 @@ CREATE INDEX idx_products_company ON products(company_id);
 ### ترتیب اجرای مایگریشن‌ها
 
 ```bash
-1. create_users_table
-2. create_companies_table
-3. create_fiscal_years_table
-4. create_subjects_table
-5. create_documents_table
-6. create_transactions_table
-7. create_customers_table
-8. create_products_table
-9. create_invoices_table
-10. create_invoice_items_table
-# و بقیه جداول...
+1. 2014_04_02_193005_create_translations_table.php
+2. 2014_10_12_000000_create_users_table.php
+3. 2014_10_12_100000_create_password_reset_tokens_table.php
+4. 2019_08_19_000000_create_failed_jobs_table.php
+5. 2019_12_14_000001_create_personal_access_tokens_table.php
+6. 2024_02_15_102710_create_companies_table.php
+7. 2024_03_07_110922_create_banks_table.php
+8. 2024_03_07_112403_create_document_table.php
+9. 2024_03_07_112600_create_config_table.php
+10. 2024_03_07_112610_create_subjects_table.php
+11. 2024_03_07_112700_create_cust_groups_table.php
+12. 2024_03_07_112852_create_customers_table.php
+13. 2024_03_07_113542_create_invoices_table.php
+14. 2024_03_07_114328_create_transactions_table.php
+15. 2024_03_07_114627_create_payments_table.php
+16. 2024_03_07_114800_create_product_groups_table.php
+17. 2024_03_07_114819_create_products_table.php
+18. 2024_03_07_115518_create_transactions2_table.php
+19. 2024_03_07_115800_create_invoice_items_table.php
+20. 2024_03_08_111100_create_bank_accounts_table.php
+21. 2024_03_08_111150_create_cheques_table.php
+22. 2024_03_08_111160_create_cheque_history_table.php
+23. 2024_04_18_113959_create_permission_tables.php
+24. 2024_08_15_142029_create_company_user_table.php
+25. 2024_11_04_104807_add_company_id_to_tables.php
+26. 2024_11_05_073630_add_subjectable_morph.php
+27. 2024_11_05_110711_add_company_id_to_configs.php
+28. 2025_01_21_070839_update_customer_groups_fields.php
+29. 2025_01_22_061444_remove_code_field.php
+30. 2025_03_24_100332_add_id_to_config_table.php
 ```
 
 ### Seeder های اصلی
@@ -391,11 +410,13 @@ CREATE INDEX idx_products_company ON products(company_id);
 public function run()
 {
     $this->call([
-        PermissionSeeder::class,    // مجوزها و نقش‌ها
-        CompanySeeder::class,       // شرکت پیش‌فرض
-        SubjectSeeder::class,       // سرفصل‌های پایه
-        UserSeeder::class,          // کاربر مدیر
-        ConfigSeeder::class,        // تنظیمات پیش‌فرض
+        CompanySeeder::class,             // ایجاد شرکت اولیه
+        ConfigSeeder::class,              // تنظیمات پیش‌فرض شرکت
+        SubjectSeeder::class,             // سرفصل‌های پایه
+        BankSeeder::class,                // بانک‌ها و حساب‌های بانکی
+        CustomerGroupSeeder::class,       // گروه‌های مشتریان
+        ProductGroupSeeder::class,        // گروه‌های کالا
+        RolesAndPermissionsSeeder::class, // نقش‌ها و مجوزهای پایه
     ]);
 }
 ```
@@ -458,16 +479,4 @@ class Document extends Model
 
 ### Audit Trail
 
-```php
-// ردگیری تغییرات
-Schema::create('audit_logs', function (Blueprint $table) {
-    $table->id();
-    $table->string('table_name');
-    $table->bigInteger('record_id');
-    $table->json('old_values')->nullable();
-    $table->json('new_values')->nullable();
-    $table->string('action'); // create, update, delete
-    $table->foreignId('user_id');
-    $table->timestamp('created_at');
-});
-```
+در حال حاضر در مخزن، مایگریشنی برای ایجاد جدول `audit_logs` وجود ندارد. در صورت نیاز به Audit Trail باید مایگریشن، مدل و منطق مربوط به ثبت تغییرات را متناسب با نیاز پروژه اضافه کنید یا از پکیج‌های آماده (مانند [spatie/laravel-activitylog](https://github.com/spatie/laravel-activitylog)) بهره ببرید.
