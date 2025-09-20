@@ -386,7 +386,7 @@ $allData = SomeModel::withoutGlobalScope(FiscalYearScope::class)->get();
 ```
 
 ### مهاجرت و کپی سال مالی
-برای اطلاعات بیشتر ../FiscalYearExportImport.md
+برای اطلاعات بیشتر [FiscalYearExportImport.md](../FiscalYearExportImport.md)
 ```php
 php artisan fiscal-year:export 1 --sections=subjects,customers
 php artisan fiscal-year:import exported_data.json --name="سال 1404" --year=1404
