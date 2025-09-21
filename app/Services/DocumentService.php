@@ -6,6 +6,7 @@ use App\Exceptions\DocumentServiceException;
 use App\Models\Document;
 use App\Models\Transaction;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -118,6 +119,7 @@ class DocumentService
         }
 
         $transaction = new Transaction();
+        $data['user_id'] ??= Auth::id();
         $transaction->fill($data);
         $transaction->document_id = $document->id;
         $transaction->save();

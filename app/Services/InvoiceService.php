@@ -9,6 +9,7 @@ use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -29,13 +30,13 @@ class InvoiceService
     {
         $documentData = [];
         $documentData['date'] = $invoiceData['date'] ?? now()->toDateString();
-        $documentData['title'] = $invoiceData['description'] ?? (__('Invoice') . " " . ($invoiceData['code'] ?? ''));
+        $documentData['title'] = $invoiceData['title'] ?? (__('Invoice') . " " . ($invoiceData['code'] ?? ''));
         // number will be assigned below if empty
         $documentData['number'] = $invoiceData['document_number'] ?? null;
 
         // Validate invoice portion
         $invValidator = Validator::make($invoiceData, [
-            'number' => 'required|string|max:255|unique:invoices,number',
+            'number' => 'required|numeric|min:1|unique:invoices,number',
             'date' => 'required|date',
             // 'customer_id' => 'required|integer|exists:customers,id',
             'addition' => 'numeric|nullable',
@@ -66,78 +67,62 @@ class InvoiceService
 
         $createdDocument = null;
         $createdInvoice = null;
-        $createdTransactions = [];
 
-        DB::transaction(function () use ($documentData, $transactions, $invoiceData, $items, &$createdDocument, &$createdInvoice, &$createdTransactions) {
+        DB::transaction(function () use ($documentData, $transactions, $invoiceData, $items, &$createdDocument, &$createdInvoice) {
             // create document
-            $createdDocument = Document::create($documentData);
+            $createdDocument = DocumentService::createDocument(
+                Auth::user(),
+                $documentData,
+                $transactions
+            );
 
-            // create transactions and keep them
-            foreach ($transactions as $tdata) {
-                $value = 0;
-                // support both value or credit/debit
-                if (isset($tdata['value'])) {
-                    $value = floatval($tdata['value']);
-                } else {
-                    $credit = floatval($tdata['credit'] ?? 0);
-                    $debit = floatval($tdata['debit'] ?? 0);
-                    $value = $credit - $debit;
-                }
-
-                $transaction = new Transaction();
-                $transaction->subject_id = $tdata['subject_id'] ?? null;
-                $transaction->desc = $tdata['desc'] ?? null;
-                $transaction->value = $value;
-                if (isset($tdata['created_at'])) {
-                    $transaction->created_at = $tdata['created_at'];
-                }
-                if (isset($tdata['updated_at'])) {
-                    $transaction->updated_at = $tdata['updated_at'];
-                }
-                $transaction->document_id = $createdDocument->id;
-                $transaction->save();
-
-                $createdTransactions[] = $transaction;
-            }
+            $transactions = $createdDocument->transactions;
 
             // attach document id to invoice and company if present
             $invoiceData['document_id'] = $createdDocument->id;
-            if (!isset($invoiceData['company_id'])) {
-                $invoiceData['company_id'] = session('active-company-id');
-            }
-
+            // initialize totals and create invoice first (with zero totals) to get id
+            $invoiceData['vat'] = 0;
+            $invoiceData['amount'] = 0;
+            $invoiceData['creator_id'] = Auth::id();
+            $invoiceData['active'] = 1;
             $createdInvoice = Invoice::create($invoiceData);
 
-            // create invoice items if provided
+            // single pass: compute totals and create invoice items
             foreach ($items as $item) {
+                $product = Product::find($item['product_id']);
                 $invoiceItem = new InvoiceItem();
                 $invoiceItem->invoice_id = $createdInvoice->id;
-                $invoiceItem->product_id = $item['product_id'];
+                $invoiceItem->product_id = $product->id;
                 // allow mapping by transaction_index (position in transactions array)
                 if (isset($item['transaction_index']) && is_numeric($item['transaction_index'])) {
                     $idx = (int) $item['transaction_index'];
-                    if (isset($createdTransactions[$idx])) {
-                        $invoiceItem->transaction_id = $createdTransactions[$idx]->id;
+                    if (isset($transactions[$idx])) {
+                        $invoiceItem->transaction_id = $transactions[$idx]->id;
                     }
-                } elseif (isset($item['transaction_id'])) {
-                    $invoiceItem->transaction_id = $item['transaction_id'];
                 }
 
                 $invoiceItem->quantity = $item['quantity'] ?? 1;
-                $invoiceItem->unit_price = $item['unit_price'] ?? 0;
-                $invoiceItem->unit_discount = $item['unit_discount'] ?? 0;
-                $invoiceItem->vat = $item['vat'] ?? 0; //TODO: hardcoded !
+                $invoiceItem->unit_price = $invoiceData['is_sell'] ? $product->selling_price : $product->purchace_price;
+                $invoiceItem->unit_discount = $invoiceItem->unit_discount ?? 0;
+                $invoiceItem->vat = (($product->vat ?? $product->productGroup->vat ?? 0) / 100) * ($invoiceItem->quantity * ($invoiceItem->unit_price - ($invoiceData['is_sell'] ? $invoiceItem->unit_discount : 0)));
                 $invoiceItem->description = $item['description'] ?? null;
-                $invoiceItem->amount = $item['amount'] ?? 23.00; //TODO: hardcoded !
-                $invoiceItem->product_id = 3; //TODO: hardcoded !
+                $invoiceItem->amount = $invoiceItem->quantity * $invoiceItem->unit_price - $invoiceItem->unit_discount + $invoiceItem->vat;
                 $invoiceItem->save();
+
+                // accumulate totals
+                $invoiceData['vat'] += $invoiceItem->vat;
+                $invoiceData['amount'] += $invoiceItem->unit_price;
             }
+
+            // update invoice totals after single pass
+            $createdInvoice->vat = $invoiceData['vat'];
+            $createdInvoice->amount = $invoiceData['amount'];
+            $createdInvoice->save();
         });
 
         return [
             'document' => $createdDocument,
             'invoice' => $createdInvoice,
-            'transactions' => $createdTransactions,
         ];
     }
 

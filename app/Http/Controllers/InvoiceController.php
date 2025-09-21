@@ -10,6 +10,7 @@ use App\Models\Subject;
 use App\Models\Transaction;
 use App\Services\InvoiceService;
 use Illuminate\Http\Request;
+use App\Http\Requests\StoreInvoiceRequest;
 
 class InvoiceController extends Controller
 {
@@ -44,7 +45,7 @@ class InvoiceController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory
+     * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory|\Illuminate\Http\RedirectResponse
      */
     public function create()
     {
@@ -72,48 +73,67 @@ class InvoiceController extends Controller
      *
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function store(InvoiceService $service)
+    public function store(StoreInvoiceRequest $request, InvoiceService $service)
     {
-        dd(request()->all());
-        // Normalize Invoice data
+        // Use validated and normalized data
+        $validated = $request->validated();
+
         $invoiceData = [
-            'document_number' => request()->input('document_number', 0), //TODO; should check the equivalance
-            'date' => now(), //TODO: convert to greg
-            'addition' => request()->input('additions', 0),
-            'subtraction' => request()->input('subtractions', 0),
-            'number' => request()->input('invoice_number', "23149102341"),
-            'description' => request()->input('title'),
-            'customer_id' => request()->input('customer_id'),
-            'cash_payment' => request()->input('down_payment', 0),
-            'is_sell' => request()->input('invoice_type'),
+            'title' => $validated['title'],
+            'date' => $validated['date'],
+            'is_sell' => (bool) $validated['invoice_type'],
+            'customer_id' => (int) $validated['customer_id'],
+            'document_number' => $validated['document_number'],
+            'number' => (int) $validated['invoice_number'],
+            'cash_payment' => $validated['cash_payment'] ?? 0,
+            'addition' => $validated['additions'] ?? 0,
+            'subtraction' => $validated['subtractions'] ?? 0,
+            'invoice_id' => $validated['invoice_id'] ?? null,
         ];
 
-        // Normalize Transactions
-        $transactions = [];
-        foreach (request()->input('transactions', []) as $t) {
-            $transactions[] = [
-                'subject_id' => $t['subject_id'] ?? null,
-                'desc' => $t['desc'] ?? null,
-                'value' => $t['total'] ?? 0, // or calculate based on price if needed
-            ];
-        }
+        // Map transactions for document creation (value computed in service using credit/debit or value)
+        $transactions = collect($validated['transactions'])
+            ->map(function ($t) {
+                // We'll send value via 'value' as total with sign positive
+                return [
+                    'subject_id' => $t['subject_id'],
+                    'desc' => $t['desc'] ?? null,
+                    'value' => $t['quantity'] ?? 1,
+                ];
+            })
+            ->toArray();
 
-        // Normalize Items
-        $items = [];
-        foreach (request()->input('transactions', []) as $index => $t) {
-            $items[] = [
-                'transaction_index' => $index,
-                'product_id' => intval($t['subject_id']), // ! Wrong ID
-                'quantity' => $t['quantity'] ?? 1,
-                'unit_price' => $t['unit'],
-                'unit_discount' => 0,
-                'description' => $t['desc'] ?? null,
-            ];
-        }
+        // Prepare invoice items mapping by index to link back to created transactions
+        // Optimize: prefetch subjects and resolve products via morph (Subject::subjectable)
+        $subjectIds = collect($validated['transactions'])
+            ->pluck('subject_id')
+            ->filter()
+            ->unique()
+            ->values();
+        $subjectsById = Subject::with('subjectable')->whereIn('id', $subjectIds)->get()->keyBy('id');
 
+        $items = collect($validated['transactions'])
+            ->values()
+            ->map(function ($t, $index) use ($subjectsById) {
+                $subject = $subjectsById->get($t['subject_id']);
+                $productId = null;
+                if ($subject && $subject->subjectable instanceof Product) {
+                    $productId = $subject->subjectable->id;
+                }
+                return [
+                    'transaction_index' => $index,
+                    'product_id' => $productId,
+                    'quantity' => $t['quantity'] ?? 1,
+                    'description' => $t['desc'] ?? null,
+                ];
+            })
+            ->toArray();
+        // dd($items, $transactions, $invoiceData);
         $result = $service->createInvoice(auth()->user(), $transactions, $invoiceData, $items);
 
-        return (!empty($result)) ? redirect()->route('invoices.index')->with('success', ('Invoice created successfully.')) : dd("Something Wnt Wrong");
+        return (!empty($result))
+            ? redirect()->route('invoices.index')->with('success', ('Invoice created successfully.'))
+            : back()->with('error', __('Something went wrong creating the invoice.'));
     }
 
     /**

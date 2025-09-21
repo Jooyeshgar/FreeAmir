@@ -19,6 +19,7 @@ class Invoice extends Model
         'date',
         'document_id',
         'customer_id',
+        'creator_id',
         'addition',
         'subtraction',
         'tax',
@@ -29,12 +30,15 @@ class Invoice extends Model
         'is_sell',
         'active',
         'vat',
-        'amount',   
+        'amount',
     ];
 
     public static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope());
+        static::creating(function ($model) {
+            $model->company_id = session('active-company-id');
+        });
     }
 
     public function document()
