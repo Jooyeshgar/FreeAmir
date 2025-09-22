@@ -1,17 +1,15 @@
 @can('home.*')
     <li><a href="/" class="hover:rounded-xl">{{ __('Home') }}</a></li>
 @endcan
-{{-- @can('customers.create')
+@can('invoices.create')
     <li class="dropdown dropdown-hover">
         <div tabindex="0" role="button">{{ __('Operation') }}</div>
         <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
-            <li><a href="">{{ __('Receive and pay') }}</a></li>
-            <li><a href="">{{ __('Registration of sales invoice') }}</a></li>
-            <li><a href="">{{ __('Registration of purchase invoice') }}</a></li>
+            <li><a href="{{ route('invoices.index') }}">{{ __('Invoice List') }}</a></li>
             <li><a href="{{ route('customers.create') }}">{{ __('Add Customer') }}</a></li>
         </ul>
     </li>
-@endcan --}}
+@endcan
 @canany(['documents.index', 'documents.create', 'documents.edit'])
     <li class="dropdown dropdown-hover">
         <div tabindex="1" role="button">{{ __('Accounting') }}</div>
@@ -57,7 +55,7 @@
                             @endcan
                             @can('product-groups.index')
                                 <li><a href="{{ route('product-groups.index') }}">{{ __('Product Groups') }}</a>
-                                @endcan
+                            @endcan
                             </li>
                         </ul>
                     </details>
