@@ -16,7 +16,6 @@ class CreateCustomersTable extends Migration
         Schema::create('customers', function (Blueprint $table) {
             $table->id(); // Use auto-incrementing primary key
 
-            $table->string('code', 15)->unique(); // Unique customer code
             $table->string('name', 100);
             $table->unsignedBigInteger('subject_id')->nullable(); // Foreign key to subjects table
             $table->string('phone', 15)->default('')->nullable();

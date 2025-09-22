@@ -24,6 +24,8 @@ class CreateSubjectsTable extends Migration
             $table->foreignId('company_id')->constrained()->cascadeOnDelete()->after('parent_id');
             $table->unique(['company_id', 'code']);
 
+            $table->nullableMorphs('subjectable');
+
             $table->foreign('parent_id')->references('id')->on('subjects')->onDelete('cascade');
         });
     }

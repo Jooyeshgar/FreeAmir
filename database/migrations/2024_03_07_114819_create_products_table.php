@@ -18,6 +18,7 @@ class CreateProductsTable extends Migration
             $table->string('code', 20);
             $table->string('name', 60);
             $table->unsignedBigInteger('group')->nullable();
+            $table->unsignedBigInteger('subject_id')->nullable();
             $table->string('location', 50)->nullable();
             $table->float('quantity');
             $table->float('quantity_warning')->nullable();
@@ -29,6 +30,7 @@ class CreateProductsTable extends Migration
             $table->string('description', 200)->nullable();
 
             $table->foreign('group')->references('id')->on('product_groups')->onDelete('set null');
+            $table->foreign('subject_id')->references('id')->on('subjects')->onDelete('set null');
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
 
             $table->unique(['company_id', 'code']);
