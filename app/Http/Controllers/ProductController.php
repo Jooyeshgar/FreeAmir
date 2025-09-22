@@ -7,10 +7,8 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function __construct()
-    {
-    }
-    
+    public function __construct() {}
+
     public function index()
     {
         $products = Models\Product::with('productGroup')->paginate(12);
@@ -43,9 +41,9 @@ class ProductController extends Controller
         ]);
 
         $validatedData['oversell'] = $request->has('oversell') ? 1 : 0;
-        $validatedData['purchace_price'] = empty($validatedData['purchace_price']) ? 0 : $validatedData['purchace_price'];
-        $validatedData['selling_price'] = empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price'];
-        $validatedData['quantity'] = empty($validatedData['quantity']) ? 0 : $validatedData['quantity'];
+        $validatedData['purchace_price'] = convertToFloat(empty($validatedData['purchace_price']) ? 0 : $validatedData['purchace_price']);
+        $validatedData['selling_price'] = convertToFloat(empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price']);
+        $validatedData['quantity'] = convertToFloat(empty($validatedData['quantity']) ? 0 : $validatedData['quantity']);
 
         Models\Product::create($validatedData);
 
@@ -77,9 +75,9 @@ class ProductController extends Controller
         ]);
 
         $validatedData['oversell'] = $request->has('oversell') ? 1 : 0;
-        $validatedData['purchace_price'] = empty($validatedData['purchace_price']) ? 0 : $validatedData['purchace_price'];
-        $validatedData['selling_price'] = empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price'];
-        $validatedData['quantity'] = empty($validatedData['quantity']) ? 0 : $validatedData['quantity'];
+        $validatedData['purchace_price'] = convertToFloat(empty($validatedData['purchace_price']) ? 0 : $validatedData['purchace_price']);
+        $validatedData['selling_price'] = convertToFloat(empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price']);
+        $validatedData['quantity'] = convertToFloat(empty($validatedData['quantity']) ? 0 : $validatedData['quantity']);
 
         $product->update($validatedData);
 

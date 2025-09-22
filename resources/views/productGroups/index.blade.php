@@ -17,6 +17,8 @@
                     <tr>
                         <th class="px-4 py-2">{{ __('Account code') }}</th>
                         <th class="px-4 py-2">{{ __('Name') }}</th>
+                        <th class="px-4 py-2">{{ __('VAT') }}</th>
+                        <th class="px-4 py-2">{{ __('Products') }}</th>
                         <th class="px-4 py-2">{{ __('Action') }}</th>
                     </tr>
                 </thead>
@@ -24,8 +26,10 @@
 
                     @foreach ($productGroups as $productGroup)
                         <tr>
-                            <td class="px-4 py-2">{{ $productGroup->code }}</td>
+                            <td class="px-4 py-2">{{ $productGroup->subject->formattedCode() }}</td>
                             <td class="px-4 py-2">{{ $productGroup->name }}</td>
+                            <td class="px-4 py-2">{{ formatNumber($productGroup->vat) }}%</td>
+                            <td class="px-4 py-2">{{ formatNumber($productGroup->products->count()) }}</td>
                             <td class="px-4 py-2">
                                 <a href="{{ route('product-groups.edit', $productGroup) }}"
                                     class="btn btn-sm btn-info">{{ __('Edit') }}</a>

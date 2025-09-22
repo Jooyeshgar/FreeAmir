@@ -27,6 +27,7 @@ class Product extends Model
         'description',
         'company_id',
         'subject_id',
+        'vat',
     ];
 
     public static function booted(): void
@@ -37,7 +38,7 @@ class Product extends Model
             $product->company_id ??= session('active-company-id');
         });
 
-         static::created(function ($product) {
+        static::created(function ($product) {
             $parentGroup = $product->productGroup;
             $subject = $product->subject()->create([
                 'name' => $product->name,
