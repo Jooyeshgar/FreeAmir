@@ -16,23 +16,31 @@ class CustomerGroup extends Model
         'company_id',
     ];
 
-    
+
     protected static function boot()
     {
         parent::boot();
 
         static::addGlobalScope(new FiscalYearScope());
-        
-        static::creating(function ($model) {
-            
-            $model->company_id = session('active-company-id');
 
+        static::creating(function ($model) {
+            $model->company_id = session('active-company-id');
+        });
+
+        static::created(function ($customertGroup) {
+            $subject = $customertGroup->subject()->create([
+                'name' => $customertGroup->name,
+                'parent_id' => config('amir.cust_subject'),
+                'company_id' => session('active-company-id'),
+            ]);
+
+            $customertGroup->update(['subject_id' => $subject->id]);
         });
     }
 
     public function subject()
     {
-        return $this->belongsTo(Subject::class);
+        return $this->morphOne(Subject::class, 'subjectable');
     }
 
     public function customers()
