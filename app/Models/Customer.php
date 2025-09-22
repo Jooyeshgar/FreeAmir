@@ -69,6 +69,10 @@ class Customer extends Model
 
     protected static function booted()
     {
+        static::creating(function ($model) {
+            $model->company_id = session('active-company-id');
+        });
+
         static::created(function ($customer) {
             $parentGroup = $customer->group;
             $subject = $customer->subject()->create([
