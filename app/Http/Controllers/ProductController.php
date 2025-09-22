@@ -39,6 +39,7 @@ class ProductController extends Controller
             'selling_price' => 'nullable|min:0|numeric',
             'discount_formula' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
             'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
+            'vat' => 'nullable|numeric|min:0|max:100',
         ]);
 
         $validatedData['oversell'] = $request->has('oversell') ? 1 : 0;
@@ -72,6 +73,7 @@ class ProductController extends Controller
             'selling_price' => 'nullable|min:0|numeric',
             'discount_formula' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
             'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
+            'vat' => 'nullable|numeric|min:0|max:100',
         ]);
 
         $validatedData['oversell'] = $request->has('oversell') ? 1 : 0;

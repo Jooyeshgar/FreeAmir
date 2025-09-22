@@ -27,7 +27,16 @@ class ProductGroup extends Model
 
         static::creating(function ($model) {
             $model->company_id = session('active-company-id');
-            $model->subject_id = config('amir.product');
+        });
+
+        static::created(function ($productGroup) {
+            $subject = $productGroup->subject()->create([
+                'name' => $productGroup->name,
+                'parent_id' => config('amir.product'),
+                'company_id' => session('active-company-id'),
+            ]);
+
+            $productGroup->update(['subject_id' => $subject->id]);
         });
     }
 
@@ -46,5 +55,10 @@ class ProductGroup extends Model
     public function products()
     {
         return $this->hasMany(Product::class, 'group', 'id');
+    }
+
+    public function subject()
+    {
+        return $this->morphOne(Subject::class, 'subjectable');
     }
 }
