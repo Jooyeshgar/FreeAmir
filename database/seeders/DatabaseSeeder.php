@@ -18,8 +18,8 @@ class DatabaseSeeder extends Seeder
             SubjectSeeder::class,
             ConfigSeeder::class,
             BankSeeder::class,
-            CustomerGroupSeeder::class,
-            ProductGroupSeeder::class,
+            // CustomerGroupSeeder::class,
+            // ProductGroupSeeder::class,
             RolesAndPermissionsSeeder::class,
         ]);
     }

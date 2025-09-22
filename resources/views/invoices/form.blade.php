@@ -43,6 +43,9 @@
             input_value="{{ old('date') ?? convertToJalali(now()) }}" label_text_class="text-gray-500 text-nowrap"
             input_class="datePicker"></x-text-input>
     </div>
+    <div class="flex justify-center gap-2 mt-2">
+        <x-textarea name="description" id="description" title="{{ __('description') }}" :value="old('description', '')" />
+    </div>
 </x-card>
 <x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-4" x-data="transactionForm">
     <div class="flex overflow-x-auto overflow-y-hidden gap-2 items-center px-4">

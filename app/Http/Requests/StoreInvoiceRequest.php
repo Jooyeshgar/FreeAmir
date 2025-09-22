@@ -65,6 +65,7 @@ class StoreInvoiceRequest extends FormRequest
     {
         return [
             'title' => 'required|string|min:2|max:255',
+            'description' => 'nullable|string',
             'date' => 'required|date',
 
             // Invoice basics
@@ -98,6 +99,68 @@ class StoreInvoiceRequest extends FormRequest
             'transactions.*.subject_id' => 'required|integer|exists:subjects,id',
             'transactions.*.desc' => 'nullable|string|max:500',
             'transactions.*.quantity' => 'required|numeric|min:1',
+        ];
+    }
+
+    /**
+     * Custom validation messages for invoice rules.
+     */
+    public function messages(): array
+    {
+        return [
+            // General fields
+            'title.required' => __('The Title field is required.'),
+            'title.string' => __('The Title field must be a valid string.'),
+            'title.min' => __('The Title must be at least :min characters.'),
+            'title.max' => __('The Title must not be greater than :max characters.'),
+
+            'description.string' => __('The Description field must be a valid string.'),
+
+            'date.required' => __('The Date field is required.'),
+            'date.date' => __('The Date field must be a valid date.'),
+
+            // Basics
+            'invoice_type.required' => __('Please select the invoice type.'),
+            'invoice_type.in' => __('The selected invoice type is invalid.'),
+
+            'customer_id.required' => __('Please select the customer.'),
+            'customer_id.exists' => __('The selected customer is invalid.'),
+            'customer_id.integer' => __('The customer field must be an integer.'),
+
+            'invoice_id.integer' => __('The invoice ID field must be an integer.'),
+            'invoice_id.exists' => __('The selected invoice ID is invalid.'),
+
+            'document_number.required' => __('The document number field is required.'),
+            'document_number.integer' => __('The document number field must be an integer.'),
+            'document_number.unique' => __('This document number has already been used for this company.'),
+
+            'invoice_number.required' => __('The invoice number field is required.'),
+            'invoice_number.integer' => __('The invoice number field must be an integer.'),
+            'invoice_number.unique' => __('This invoice number has already been used for this company.'),
+
+            // Money-ish
+            'cash_payment.numeric' => __('The cash payment must be a number.'),
+            'cash_payment.min' => __('The cash payment may not be negative.'),
+            'additions.numeric' => __('The additions must be a number.'),
+            'additions.min' => __('The additions may not be negative.'),
+            'subtractions.numeric' => __('The subtractions must be a number.'),
+            'subtractions.min' => __('The subtractions may not be negative.'),
+
+            // Transactions
+            'transactions.required' => __('At least one transaction row is required.'),
+            'transactions.array' => __('The transaction field must be a valid array.'),
+            'transactions.min' => __('At least one transaction row must be provided.'),
+
+            'transactions.*.subject_id.required' => __('The Subject is required for each row.'),
+            'transactions.*.subject_id.integer' => __('The Subject must be an integer.'),
+            'transactions.*.subject_id.exists' => __('The selected Subject does not exist.'),
+
+            'transactions.*.desc.string' => __('The Row description must be a valid string.'),
+            'transactions.*.desc.max' => __('The Row description may not be greater than :max characters.'),
+
+            'transactions.*.quantity.required' => __('The Quantity is required for each row.'),
+            'transactions.*.quantity.numeric' => __('The Quantity must be a number.'),
+            'transactions.*.quantity.min' => __('The Quantity must be at least :min.'),
         ];
     }
 }
