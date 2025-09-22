@@ -198,7 +198,7 @@ $product = Product::create([
 // و بی‌نهایت ادامه دارد
 ```
 
-## Document و Transaction: ساختار اسناد و تراکنش‌ها
+## اسناد (Document) و تراکنش‌ها (Transaction): ساختار اسناد و تراکنش‌ها
 
 ### ساختار کلی
 

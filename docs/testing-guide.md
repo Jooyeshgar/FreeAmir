@@ -31,10 +31,10 @@ php artisan make:test DocumentServiceTest --unit
 برای اجرای تست‌ها می‌توانید از دستورهای متداول زیر استفاده کنید:
 
 ```bash
-php artisan test                        # اجرای همه‌ی تست‌ها
-php artisan test --testsuite=Feature    # فقط تست‌های فیچر
-php artisan test --testsuite=Unit       # فقط تست‌های واحد
-php artisan test --filter=Document      # فیلتر کردن بر اساس نام کلاس یا متد
+php artisan test                        # Run all tests
+php artisan test --testsuite=Feature    # Run only Feature tests
+php artisan test --testsuite=Unit       # Run only Unit tests
+php artisan test --filter=Document      # Filter tests by class or method name
 ```
 
 در صورت نیاز به دیتابیس سریع می‌توانید در فایل `.env.testing` از SQLite در حافظه استفاده کنید:
@@ -143,14 +143,14 @@ class DocumentServiceTest extends TestCase
 
 ## 🏭 کار با Factory ها
 
-Factoryهای زیر در مسیر `database/factories` برای ایجاد داده‌های تستی در دسترس هستند:
+کارخانه‌های داده (Factories) زیر در مسیر `database/factories` برای ایجاد داده‌های تستی در دسترس هستند:
 
 - `CompanyFactory`
 - `UserFactory`
 - `SubjectFactory`
 - `DocumentFactory`
 - `TransactionFactory`
-- `CustomerFactory`، `ProductFactory` و سایر factoryهای مرتبط با ماژول‌های فروش
+- مجموعه‌های `CustomerFactory` و `ProductFactory` و سایر factoryهای مرتبط با ماژول‌های فروش
 
 پیش از استفاده از `DocumentFactory` مطمئن شوید حداقل یک شرکت و کاربر ایجاد کرده‌اید؛ این factory برای مقداردهی شناسه‌ها از رکوردهای موجود استفاده می‌کند.
 
@@ -170,7 +170,7 @@ $document = Document::factory()->create([
 
 ## 💡 نکات تکمیلی
 
-- از trait `RefreshDatabase` برای ریست دیتابیس بین تست‌ها استفاده کنید.
+- از trait `RefreshDatabase` برای ریست دیتابیس بین تست‌ها استفاده کنید. ⚠️ **هشدار**: اجرای این trait پایگاه داده را حذف و دوباره‌سازی می‌کند.
 - برای تست متدهایی که به تاریخ یا زمان متکی‌اند می‌توانید از متد `Carbon::setTestNow()` کمک بگیرید.
 - اگر نیاز به داده‌های نمونه دارید، می‌توانید از seederهای موجود استفاده کرده یا seeder مخصوص تست بسازید و در متد `setUp` اجرا کنید.
 

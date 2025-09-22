@@ -194,7 +194,7 @@ CREATE TABLE transactions (
 ```
 
 **نکات مهم:**
-- `value` مثبت = بستانکار، منفی = بدهکار (مطابق منطق «بستانکار - بدهکار» در سرویس اسناد)
+- مقدار `value` مثبت = بستانکار، منفی = بدهکار (مطابق منطق «بستانکار - بدهکار» در سرویس اسناد)
 - هر تراکنش به یک سرفصل و سند تعلق دارد
 - مجموع `value` در هر سند باید صفر باشد (موازنه)
 
@@ -456,7 +456,7 @@ CREATE INDEX idx_products_company ON products(company_id);
 30. 2025_03_24_100332_add_id_to_config_table.php
 ```
 
-### Seeder های اصلی
+### سیدرهای اصلی (Seeders)
 
 ```php
 // DatabaseSeeder.php
