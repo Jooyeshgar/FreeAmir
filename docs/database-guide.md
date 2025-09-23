@@ -14,14 +14,18 @@
 │   ├── users                 # کاربران سیستم
 │   ├── roles                 # نقش‌ها
 │   ├── permissions           # مجوزها
-│   └── model_has_permissions # ارتباط کاربر-مجوز
+│   ├── model_has_permissions # ارتباط مدل‌-مجوز (Spatie)
+│   ├── model_has_roles       # ارتباط مدل‌-نقش (Spatie)
+│   ├── role_has_permissions  # اتصال نقش و مجوز (Spatie)
+│   └── company_user          # شرکت‌های در دسترس هر کاربر
 ├── 🏢 مدیریت شرکت‌ها
 │   ├── companies             # شرکت‌ها (name, logo, address, economical_code, national_code, postal_code, phone_number, fiscal_year)
 │   └── configs               # تنظیمات شرکت
 ├── 📊 هسته حسابداری
 │   ├── subjects              # سرفصل‌های حسابداری
 │   ├── documents             # اسناد حسابداری
-│   └── transactions          # تراکنش‌های مالی
+│   ├── transactions          # تراکنش‌های مالی
+│   └── transactions2         # جدول تاریخی/سازگاری تراکنش‌ها
 ├── 👤 مدیریت مشتریان
 │   ├── customers             # مشتریان
 │   └── customer_groups       # گروه‌های مشتری
@@ -82,32 +86,14 @@ CREATE TABLE companies (
 ```
 
 **نکات مهم:**
-- هر شرکت مجموعه‌ای مستقل از داده‌ها دارد
-- جداسازی داده‌ها بر اساس `company_id` انجام می‌شود
-- کنترل رفتار سال مالی از طریق ستون `fiscal_year` شرکت و اسکوپ `FiscalYearScope` انجام می‌شود
-- یک کاربر می‌تواند به چند شرکت دسترسی داشته باشد
+- هر شرکت مجموعه‌ای مستقل از داده‌ها دارد.
+- جداسازی داده‌ها از طریق ستون `company_id` و اسکوپ سراسری `FiscalYearScope` انجام می‌شود که مقدار `session('active-company-id')` را روی کوئری‌ها اعمال می‌کند.
+- ستون `fiscal_year` برای نمایش سال مالی شرکت استفاده می‌شود.
+- دسترسی کاربران به شرکت‌ها از طریق جدول میانی `company_user` مدیریت می‌شود و هر کاربر می‌تواند به چند شرکت دسترسی داشته باشد.
 
-### 📅 جدول `fiscal_years` - سال‌های مالی
+### 📅 سال‌های مالی
 
-```sql
-CREATE TABLE fiscal_years (
-    id BIGINT PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    is_closed BOOLEAN DEFAULT FALSE,
-    company_id BIGINT NOT NULL,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    
-    FOREIGN KEY (company_id) REFERENCES companies(id)
-);
-```
-
-**نکات مهم:**
-- هر شرکت چندین سال مالی دارد
-- تمام اسناد و تراکنش‌ها به سال مالی مشخصی تعلق دارند
-- امکان کلون کردن داده‌ها بین سال‌های مالی وجود دارد
+در پیاده‌سازی فعلی جدول مستقلی با نام `fiscal_years` وجود ندارد. هر رکورد از جدول `companies` نماینده یک سال مالی است و انتخاب سال فعال از طریق شناسه شرکت فعال (ذخیره‌شده در `session('active-company-id')`) انجام می‌شود. اسکوپ `FiscalYearScope` روی مدل‌های وابسته اعمال شده تا به صورت خودکار داده‌ها را بر اساس شرکت فعال فیلتر کند.
 
 ### 📊 جدول `subjects` - سرفصل‌های حسابداری
 
@@ -269,6 +255,7 @@ CREATE TABLE products (
     code VARCHAR(20) NOT NULL,
     name VARCHAR(60) NOT NULL,
     `group` BIGINT UNSIGNED NULL,
+    subject_id BIGINT UNSIGNED NULL,
     location VARCHAR(50) NULL,
     quantity FLOAT NOT NULL,
     quantity_warning FLOAT NULL,
@@ -276,10 +263,12 @@ CREATE TABLE products (
     purchace_price DECIMAL(10,2) NOT NULL,
     selling_price DECIMAL(10,2) NOT NULL,
     discount_formula VARCHAR(100) NULL,
+    vat DECIMAL(10,2) NULL,
     description VARCHAR(200) NULL,
     company_id BIGINT UNSIGNED NOT NULL,
 
     FOREIGN KEY (`group`) REFERENCES product_groups(id) ON DELETE SET NULL,
+    FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE SET NULL,
     FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
     UNIQUE KEY unique_company_product_code (company_id, code)
 );
@@ -288,6 +277,8 @@ CREATE TABLE products (
 **نکات مهم:**
 - کد کالا در سطح هر شرکت یکتا است (ایندکس ترکیبی `company_id + code`).
 - ستون‌های `quantity` و `quantity_warning` برای مدیریت موجودی و هشدار کمبود استفاده می‌شوند و `oversell` امکان فروش بیش از موجودی را کنترل می‌کند.
+- پس از ایجاد کالا، ستون `subject_id` با استفاده از `SubjectCreatorService` پر می‌شود تا هر کالا سرفصل مرتبط خود را داشته باشد.
+- ستون `vat` برای نگهداری نرخ مالیات بر ارزش افزودهٔ کالا استفاده می‌شود و مقدار آن اختیاری است.
 
 ### 🧾 جدول `invoices` - فاکتورها
 
@@ -318,7 +309,7 @@ CREATE TABLE invoices (
     FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (approver_id) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE SET NULL,
-    FOREIGN KEY (company_id) REFERENCES documents(id) ON DELETE SET NULL,
+    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE SET NULL,
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
 );
 ```
@@ -326,7 +317,7 @@ CREATE TABLE invoices (
 **نکات مهم:**
 - فیلد `number` برای هر فاکتور یکتا است.
 - ستون‌های `addition`، `subtraction`، `vat` و `cash_payment` برای جمع مبالغ جانبی و پرداخت نقدی استفاده می‌شوند.
-- در اسکیما فعلی، کلید خارجی `company_id` به جدول `documents` متصل شده است (در صورت نیاز به ارجاع مستقیم به شرکت باید در مایگریشن اصلاح شود).
+- ستون `company_id` به جدول `companies` متصل است و با اسکوپ سال مالی فیلتر می‌شود.
 
 ### 📝 جدول `invoice_items` - اقلام فاکتور
 
@@ -393,8 +384,25 @@ CREATE TABLE model_has_roles (
     role_id BIGINT NOT NULL,
     model_type VARCHAR(255) NOT NULL,
     model_id BIGINT NOT NULL,
-    
+
     PRIMARY KEY (role_id, model_id, model_type)
+);
+
+-- اختصاص مجوز مستقیم به مدل
+CREATE TABLE model_has_permissions (
+    permission_id BIGINT NOT NULL,
+    model_type VARCHAR(255) NOT NULL,
+    model_id BIGINT NOT NULL,
+
+    PRIMARY KEY (permission_id, model_id, model_type)
+);
+
+-- ارتباط نقش و مجوز
+CREATE TABLE role_has_permissions (
+    permission_id BIGINT NOT NULL,
+    role_id BIGINT NOT NULL,
+
+    PRIMARY KEY (permission_id, role_id)
 );
 ```
 
@@ -402,22 +410,12 @@ CREATE TABLE model_has_roles (
 
 ### ایندکس‌های مهم
 
-```sql
-CREATE INDEX idx_transactions_subject_date ON transactions(subject_id, created_at);
-CREATE INDEX idx_transactions_document ON transactions(document_id);
-
--- جدول subjects برای جستجوی درختی
-CREATE INDEX idx_subjects_parent ON subjects(parent_id);
-CREATE INDEX idx_subjects_company_code ON subjects(company_id, code);
-
--- جدول documents
-CREATE INDEX idx_documents_company_date ON documents(company_id, date);
-CREATE INDEX idx_documents_number ON documents(number);
-
--- جداسازی شرکت‌ها
-CREATE INDEX idx_customers_company ON customers(company_id);
-CREATE INDEX idx_products_company ON products(company_id);
-```
+- `subjects`: ایندکس یکتا روی `(company_id, code)` و کلید خارجی `parent_id` برای مدیریت ساختار درختی و جلوگیری از تکرار کد سرفصل‌ها.
+- `products`: ایندکس یکتای `(company_id, code)` به‌همراه کلیدهای خارجی روی `group` و `subject_id` برای اتصال به گروه کالا و سرفصل حسابداری.
+- `configs`: ایندکس یکتای `(key, company_id)` برای جداسازی تنظیمات هر شرکت.
+- `bank_accounts`: ایندکس یکتای `(number, company_id)` به‌همراه کلید خارجی `bank_id` جهت مدیریت حساب‌های بانکی.
+- `invoices`: ایندکس یکتای ستون `number` و کلیدهای خارجی به کاربران، اسناد، شرکت و مشتری برای یکپارچگی داده‌ها.
+- `company_user`: کلیدهای خارجی روی `company_id` و `user_id` مسئول نگه‌داری ارتباط کاربران و شرکت‌های مجاز هستند.
 
 ## 🔄 مایگریشن‌ها و Seeder ها
 
@@ -448,12 +446,6 @@ CREATE INDEX idx_products_company ON products(company_id);
 22. 2024_03_08_111160_create_cheque_history_table.php
 23. 2024_04_18_113959_create_permission_tables.php
 24. 2024_08_15_142029_create_company_user_table.php
-25. 2024_11_04_104807_add_company_id_to_tables.php
-26. 2024_11_05_073630_add_subjectable_morph.php
-27. 2024_11_05_110711_add_company_id_to_configs.php
-28. 2025_01_21_070839_update_customer_groups_fields.php
-29. 2025_01_22_061444_remove_code_field.php
-30. 2025_03_24_100332_add_id_to_config_table.php
 ```
 
 ### سیدرهای اصلی (Seeders)
@@ -464,9 +456,9 @@ public function run()
 {
     $this->call([
         CompanySeeder::class,             // ایجاد شرکت اولیه
-        ConfigSeeder::class,              // تنظیمات پیش‌فرض شرکت
         SubjectSeeder::class,             // سرفصل‌های پایه
-        BankSeeder::class,                // بانک‌ها و حساب‌های بانکی
+        ConfigSeeder::class,              // تنظیمات پیش‌فرض شرکت
+        BankSeeder::class,                // بانک‌ها
         CustomerGroupSeeder::class,       // گروه‌های مشتریان
         ProductGroupSeeder::class,        // گروه‌های کالا
         RolesAndPermissionsSeeder::class, // نقش‌ها و مجوزهای پایه
@@ -478,34 +470,15 @@ public function run()
 
 ```php
 // SubjectSeeder.php
-public function run()
+use Illuminate\Support\Facades\DB;
+
+public function run(): void
 {
-    $company = Company::first();
-    
-    // دارایی‌ها
-    $assets = Subject::create([
-        'code' => '1',
-        'name' => 'دارایی‌ها',
-        'company_id' => $company->id,
-        'type' => 'debtor'
-    ]);
-    
-    // دارایی‌های جاری
-    $currentAssets = Subject::create([
-        'code' => '1.1',
-        'name' => 'دارایی‌های جاری', 
-        'parent_id' => $assets->id,
-        'company_id' => $company->id,
-        'type' => 'debtor'
-    ]);
-    
-    // نقد و بانک
-    Subject::create([
-        'code' => '1.1.1',
-        'name' => 'نقد و بانک',
-        'parent_id' => $currentAssets->id,
-        'company_id' => $company->id,
-        'type' => 'debtor'
+    DB::table('subjects')->insert([
+        ['id' => 1, 'code' => '010', 'name' => 'بانکها', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
+        ['id' => 2, 'code' => '040', 'name' => 'هزینه ها', 'parent_id' => null, 'type' => 'debtor', 'company_id' => 1],
+        ['id' => 3, 'code' => '011', 'name' => 'موجودیهای نقدی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
+        // ... ده‌ها سطر دیگر برای سرفصل‌های پایه ...
     ]);
 }
 ```
@@ -515,16 +488,27 @@ public function run()
 ### کنترل دسترسی
 
 ```php
-// in Model ها همیشه فیلتر شرکت اعمال شود
+// Document.php
+use App\Models\Scopes\FiscalYearScope;
+
 class Document extends Model
 {
-    protected static function booted()
+    use HasFactory;
+
+    protected static function booted(): void
     {
-        static::addGlobalScope('company', function (Builder $builder) {
-            if (session('active-company-id')) {
-                $builder->where('company_id', session('active-company-id'));
-            }
-        });
+        static::addGlobalScope(new FiscalYearScope);
+    }
+}
+
+// FiscalYearScope.php
+use Illuminate\Database\Eloquent\{Builder, Model, Scope};
+
+class FiscalYearScope implements Scope
+{
+    public function apply(Builder $builder, Model $model): void
+    {
+        $builder->where('company_id', session('active-company-id'));
     }
 }
 ```
