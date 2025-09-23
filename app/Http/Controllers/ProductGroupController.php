@@ -26,7 +26,6 @@ class ProductGroupController extends Controller
 
     public function store(Request $request)
     {
-        // TODO validate request
         $validatedData = $request->validate([
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
             'vat' => 'nullable|numeric|min:0|max:100',
@@ -44,9 +43,7 @@ class ProductGroupController extends Controller
 
     public function update(Request $request, Models\ProductGroup $productGroup)
     {
-        // TODO validate request
         $validatedData = $request->validate([
-            'code' => 'required|unique:product_groups,code,' . $productGroup->id . ',|regex:/^\d{3}$/',
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
             'vat' => 'nullable|numeric|min:0|max:100',
         ]);
