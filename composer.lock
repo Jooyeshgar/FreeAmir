@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d0ffc98d9765a21194bfb718be1412aa",
+    "content-hash": "d9bf0081ed03afa274f6a77662672d24",
     "packages": [
         {
             "name": "brick/math",
@@ -1393,69 +1393,6 @@
                 }
             ],
             "time": "2023-12-03T19:50:20+00:00"
-        },
-        {
-            "name": "kalnoy/nestedset",
-            "version": "v6.0.4",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/lazychaser/laravel-nestedset.git",
-                "reference": "d81102c980b9962516c0fd8fda21dd916a23a3d7"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/lazychaser/laravel-nestedset/zipball/d81102c980b9962516c0fd8fda21dd916a23a3d7",
-                "reference": "d81102c980b9962516c0fd8fda21dd916a23a3d7",
-                "shasum": ""
-            },
-            "require": {
-                "illuminate/database": "^7.0|^8.0|^9.0|^10.0|^11.0",
-                "illuminate/events": "^7.0|^8.0|^9.0|^10.0|^11.0",
-                "illuminate/support": "^7.0|^8.0|^9.0|^10.0|^11.0",
-                "php": "^7.2.5|^8.0"
-            },
-            "require-dev": {
-                "phpunit/phpunit": "7.*|8.*|9.*|^10.5"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "v5.0.x-dev"
-                },
-                "laravel": {
-                    "providers": [
-                        "Kalnoy\\Nestedset\\NestedSetServiceProvider"
-                    ]
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Kalnoy\\Nestedset\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Alexander Kalnoy",
-                    "email": "lazychaser@gmail.com"
-                }
-            ],
-            "description": "Nested Set Model for Laravel 5.7 and up",
-            "keywords": [
-                "database",
-                "hierarchy",
-                "laravel",
-                "nested sets",
-                "nsm"
-            ],
-            "support": {
-                "issues": "https://github.com/lazychaser/laravel-nestedset/issues",
-                "source": "https://github.com/lazychaser/laravel-nestedset/tree/v6.0.4"
-            },
-            "time": "2024-04-08T06:10:42+00:00"
         },
         {
             "name": "laravel/framework",
@@ -7255,28 +7192,28 @@
         },
         {
             "name": "laravel/sail",
-            "version": "v1.31.1",
+            "version": "v1.44.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/sail.git",
-                "reference": "3d06dd18cee8059baa7b388af00ba47f6d96bd85"
+                "reference": "a09097bd2a8a38e23ac472fa6a6cf5b0d1c1d3fe"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/sail/zipball/3d06dd18cee8059baa7b388af00ba47f6d96bd85",
-                "reference": "3d06dd18cee8059baa7b388af00ba47f6d96bd85",
+                "url": "https://api.github.com/repos/laravel/sail/zipball/a09097bd2a8a38e23ac472fa6a6cf5b0d1c1d3fe",
+                "reference": "a09097bd2a8a38e23ac472fa6a6cf5b0d1c1d3fe",
                 "shasum": ""
             },
             "require": {
-                "illuminate/console": "^9.52.16|^10.0|^11.0",
-                "illuminate/contracts": "^9.52.16|^10.0|^11.0",
-                "illuminate/support": "^9.52.16|^10.0|^11.0",
+                "illuminate/console": "^9.52.16|^10.0|^11.0|^12.0",
+                "illuminate/contracts": "^9.52.16|^10.0|^11.0|^12.0",
+                "illuminate/support": "^9.52.16|^10.0|^11.0|^12.0",
                 "php": "^8.0",
                 "symfony/console": "^6.0|^7.0",
                 "symfony/yaml": "^6.0|^7.0"
             },
             "require-dev": {
-                "orchestra/testbench": "^7.0|^8.0|^9.0",
+                "orchestra/testbench": "^7.0|^8.0|^9.0|^10.0",
                 "phpstan/phpstan": "^1.10"
             },
             "bin": [
@@ -7314,7 +7251,7 @@
                 "issues": "https://github.com/laravel/sail/issues",
                 "source": "https://github.com/laravel/sail"
             },
-            "time": "2024-08-02T07:45:47+00:00"
+            "time": "2025-07-04T16:17:06+00:00"
         },
         {
             "name": "maximebf/debugbar",
@@ -9839,5 +9776,5 @@
         "php": "^8.1"
     },
     "platform-dev": [],
-    "plugin-api-version": "2.3.0"
+    "plugin-api-version": "2.6.0"
 }

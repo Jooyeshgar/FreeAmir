@@ -22,6 +22,7 @@ class ConfigController extends Controller
     public function store(Request $request)
     {
         $validatedData = $request->validate([
+            'cust_subject' => 'nullable|exists:subjects,id|numeric',
             'cash_book' => 'nullable|exists:subjects,id|numeric',
             'income' => 'nullable|exists:subjects,id|numeric',
             'bank' => 'nullable|exists:subjects,id|numeric',
@@ -30,6 +31,7 @@ class ConfigController extends Controller
             'sell_discount' => 'nullable|exists:subjects,id|numeric',
             'sell_vat' => 'nullable|exists:subjects,id|numeric',
             'buy_vat' => 'nullable|exists:subjects,id|numeric',
+            'product' => 'nullable|exists:subjects,id|numeric',
             'sell_free' => 'nullable|exists:subjects,id|numeric',
         ]);
 

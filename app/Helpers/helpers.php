@@ -38,10 +38,13 @@ function formatDocumentNumber(float $number)
     return formatNumber(number_format($number, 2, '/', ''));
 }
 
-function formatDate(Carbon|null $date)
+function formatDate(Carbon|string|null $date)
 {
     if (is_null($date)) {
         return '';
+    }
+    if (is_string($date)) {
+        $date = Carbon::createFromFormat('Y-m-d', $date);
     }
 
     $locale = App::getLocale();
@@ -148,6 +151,31 @@ function convertToGregorian($date)
     }
 
     return $date;
+}
+
+/**
+ * Convert a date from Gregorian to Jalali based on locale.
+ *
+ * Accepts a Carbon instance or a date string in 'YYYY-MM-DD' or 'YYYY/MM/DD'.
+ * When locale is Persian, returns a Jalali date string; otherwise returns the original
+ * date (Carbon formatted as 'Y-m-d' if needed).
+ *
+ * @param \Carbon\Carbon|string|null $date
+ * @return string
+ */
+function convertToJalali($date)
+{
+    $locale = App::getLocale();
+
+    if ($locale === 'fa' || $locale === 'fa_IR') {
+        return gregorian_to_jalali_date($date);
+    }
+
+    if ($date instanceof Carbon) {
+        return $date->format('Y-m-d');
+    }
+
+    return (string) $date;
 }
 
 

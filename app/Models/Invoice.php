@@ -14,17 +14,18 @@ class Invoice extends Model
     public $timestamps = true;
 
     protected $fillable = [
+        'number',
         'code',
         'date',
         'document_id',
         'customer_id',
+        'creator_id',
         'addition',
         'subtraction',
         'tax',
         'cash_payment',
         'ship_date',
         'ship_via',
-        'permanent',
         'description',
         'is_sell',
         'active',
@@ -35,6 +36,9 @@ class Invoice extends Model
     public static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope());
+        static::creating(function ($model) {
+            $model->company_id = session('active-company-id');
+        });
     }
 
     public function document()
@@ -50,5 +54,10 @@ class Invoice extends Model
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function items()
+    {
+        return $this->hasMany(InvoiceItem::class, 'invoice_id');
     }
 }

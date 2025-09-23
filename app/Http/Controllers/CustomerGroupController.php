@@ -8,9 +8,7 @@ use Illuminate\Http\Request;
 
 class CustomerGroupController extends Controller
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     public function index()
     {
@@ -28,7 +26,6 @@ class CustomerGroupController extends Controller
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            'subject_id' => 'required|exists:subjects,id',
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
             'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
         ]);
@@ -47,7 +44,6 @@ class CustomerGroupController extends Controller
     public function update(Request $request, Models\CustomerGroup $customerGroup)
     {
         $validatedData = $request->validate([
-            'subject_id' => 'required|exists:subjects,id',
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
             'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
         ]);

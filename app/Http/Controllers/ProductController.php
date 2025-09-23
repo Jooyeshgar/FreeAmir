@@ -7,10 +7,8 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function __construct()
-    {
-    }
-    
+    public function __construct() {}
+
     public function index()
     {
         $products = Models\Product::with('productGroup')->paginate(12);
@@ -35,16 +33,17 @@ class ProductController extends Controller
             'quantity' => 'nullable|min:0|numeric',
             'quantity_warning' => 'nullable|min:0|numeric',
             'oversell' => 'nullable|in:on,off',
-            'purchace_price' => 'nullable|min:0|numeric',
-            'selling_price' => 'nullable|min:0|numeric',
+            'purchace_price' => 'nullable|string|regex:/^\d{1,3}(,\d{3})*$/',
+            'selling_price' => 'nullable|string|regex:/^\d{1,3}(,\d{3})*$/',
             'discount_formula' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
             'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
+            'vat' => 'nullable|numeric|min:0|max:100',
         ]);
 
         $validatedData['oversell'] = $request->has('oversell') ? 1 : 0;
-        $validatedData['purchace_price'] = empty($validatedData['purchace_price']) ? 0 : $validatedData['purchace_price'];
-        $validatedData['selling_price'] = empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price'];
-        $validatedData['quantity'] = empty($validatedData['quantity']) ? 0 : $validatedData['quantity'];
+        $validatedData['purchace_price'] = convertToFloat(empty($validatedData['purchace_price']) ? 0 : $validatedData['purchace_price']);
+        $validatedData['selling_price'] = convertToFloat(empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price']);
+        $validatedData['quantity'] = convertToFloat(empty($validatedData['quantity']) ? 0 : $validatedData['quantity']);
 
         Models\Product::create($validatedData);
 
@@ -68,16 +67,17 @@ class ProductController extends Controller
             'quantity' => 'nullable|min:0|numeric',
             'quantity_warning' => 'nullable|min:0|numeric',
             'oversell' => 'nullable|in:on,off',
-            'purchace_price' => 'nullable|min:0|numeric',
-            'selling_price' => 'nullable|min:0|numeric',
+            'purchace_price' => 'nullable|string|regex:/^\d{1,3}(,\d{3})*$/',
+            'selling_price' => 'nullable|string|regex:/^\d{1,3}(,\d{3})*$/',
             'discount_formula' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
             'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
+            'vat' => 'nullable|numeric|min:0|max:100',
         ]);
 
         $validatedData['oversell'] = $request->has('oversell') ? 1 : 0;
-        $validatedData['purchace_price'] = empty($validatedData['purchace_price']) ? 0 : $validatedData['purchace_price'];
-        $validatedData['selling_price'] = empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price'];
-        $validatedData['quantity'] = empty($validatedData['quantity']) ? 0 : $validatedData['quantity'];
+        $validatedData['purchace_price'] = convertToFloat(empty($validatedData['purchace_price']) ? 0 : $validatedData['purchace_price']);
+        $validatedData['selling_price'] = convertToFloat(empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price']);
+        $validatedData['quantity'] = convertToFloat(empty($validatedData['quantity']) ? 0 : $validatedData['quantity']);
 
         $product->update($validatedData);
 

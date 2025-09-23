@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Scopes\FiscalYearScope;
+use App\Services\SubjectCreatorService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -69,13 +70,18 @@ class Customer extends Model
 
     protected static function booted()
     {
+        static::creating(function ($model) {
+            $model->company_id = session('active-company-id');
+        });
+
         static::created(function ($customer) {
             $parentGroup = $customer->group;
-            $subject = $customer->subject()->create([
+            $subject = app(SubjectCreatorService::class)->createSubject([
                 'name' => $customer->name,
                 'parent_id' => $parentGroup->subject_id ?? 0,
                 'company_id' => session('active-company-id'),
             ]);
+            $customer->subject()->save($subject);
 
             $customer->update(['subject_id' => $subject->id]);
         });

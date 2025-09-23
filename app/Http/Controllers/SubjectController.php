@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Subject;
+use App\Services\SubjectCreatorService;
 use Illuminate\Http\Request;
 
 class SubjectController extends Controller
@@ -35,17 +36,15 @@ class SubjectController extends Controller
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            'code' => 'nullable|max:3',
             'name' => 'required|max:60',
             'parent_id' => 'nullable|exists:subjects,id',
-            'type' => 'required|in:debtor,creditor,both',
         ]);
 
-        $subject = new Subject();
-        $subject->fill($validatedData);
-        $subject->code = $subject->generateCode($validatedData['code']);
-
-        $subject->save();
+        // company_id comes from session via model hook or we can pass it explicitly
+        app(SubjectCreatorService::class)->createSubject([
+            'name' => $validatedData['name'],
+            'parent_id' => $validatedData['parent_id'] ?? null,
+        ]);
 
         return redirect()->back()->with('success', __('Subject created successfully.'));
     }

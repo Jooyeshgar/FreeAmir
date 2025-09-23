@@ -9,11 +9,14 @@ return new class extends Migration
     public function up()
     {
         Schema::create('configs', function (Blueprint $table) {
-            $table->string('key')->primary(); // Set key as primary key (assuming unique)
+            $table->id();
+            $table->string('key');
             $table->text('value');
-            $table->text('desc')->nullable(); // Allow description to be null
+            $table->text('desc')->nullable();
             $table->string('type');
             $table->string('category');
+            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->unique(['key', 'company_id']);
         });
     }
 

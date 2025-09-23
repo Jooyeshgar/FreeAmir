@@ -15,22 +15,16 @@ class ConfigSeeder extends Seeder
     public function run()
     {
         $configs = [
-            ['type' => 2, 'category' => 1, 'key' => 'cash_book', 'value' => '14', 'desc' => 'Enter here', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'bank', 'value' => '1', 'desc' => 'Enter here', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'cash', 'value' => '3', 'desc' => 'Enter here', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'buy', 'value' => '17', 'desc' => 'Enter here', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'sell', 'value' => '18', 'desc' => 'Enter here', 'company_id' => 1],
-            ['type' => 2, 'category' => 1, 'key' => 'sell-discount', 'value' => '25', 'desc' => 'Enter here', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'tax', 'value' => '33', 'desc' => 'Enter here', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'partners', 'value' => '8', 'desc' => 'Enter here', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'cost', 'value' => '2', 'desc' => 'Enter here', 'company_id' => 1],
-            ['type' => 2, 'category' => 1, 'key' => 'bank-wage', 'value' => '31', 'desc' => 'Enter here', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'our_cheque', 'value' => '22', 'desc' => 'Enter here', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'other_cheque', 'value' => '6', 'desc' => 'Enter here', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'income', 'value' => '23', 'desc' => 'Enter here', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'fund', 'value' => '??', 'desc' => 'Enter here', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'acc-receivable', 'value' => '??', 'desc' => 'Enter here', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'commission', 'value' => '??', 'desc' => 'Enter here', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'cust_subject', 'value' => '4', 'desc' => 'مشتریان', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'cash_book', 'value' => '3', 'desc' => 'موجودی نقدی', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'bank', 'value' => '1', 'desc' => 'بانکها', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'cash', 'value' => '59', 'desc' => 'پول نقد', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'income', 'value' => '23', 'desc' => 'درآمد', 'company_id' => 1],
+            ['type' => 2, 'category' => 1, 'key' => 'sell_discount', 'value' => '55', 'desc' => 'تخفیفات فروش', 'company_id' => 1],
+            ['type' => 2, 'category' => 1, 'key' => 'buy_discount', 'value' => '53', 'desc' => 'تخفیفات خرید', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'sell_vat', 'value' => '41', 'desc' => 'مالیات فروش', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'buy_vat', 'value' => '40', 'desc' => 'مالیات خرید', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'product', 'value' => '9', 'desc' => 'محصولات', 'company_id' => 1],
         ];
 
         Config::insert($configs);
