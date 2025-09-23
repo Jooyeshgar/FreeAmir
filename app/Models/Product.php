@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Scopes\FiscalYearScope;
+use App\Services\SubjectCreatorService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -40,11 +41,12 @@ class Product extends Model
 
         static::created(function ($product) {
             $parentGroup = $product->productGroup;
-            $subject = $product->subject()->create([
+            $subject = app(SubjectCreatorService::class)->createSubject([
                 'name' => $product->name,
                 'parent_id' => $parentGroup->subject_id ?? 0,
                 'company_id' => session('active-company-id'),
             ]);
+            $subject = $product->subject()->save($subject);
 
             $product->update(['subject_id' => $subject->id]);
         });

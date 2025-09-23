@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Scopes\FiscalYearScope;
+use App\Services\SubjectCreatorService;
 use Illuminate\Database\Eloquent\Model;
 
 class ProductGroup extends Model
@@ -30,11 +31,12 @@ class ProductGroup extends Model
         });
 
         static::created(function ($productGroup) {
-            $subject = $productGroup->subject()->create([
+            $subject = app(SubjectCreatorService::class)->createSubject([
                 'name' => $productGroup->name,
                 'parent_id' => config('amir.product'),
                 'company_id' => $productGroup->company_id,
             ]);
+            $productGroup->subject()->save($subject);
 
             $productGroup->update(['subject_id' => $subject->id]);
         });
