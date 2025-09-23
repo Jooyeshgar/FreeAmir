@@ -439,13 +439,12 @@ CREATE TABLE role_has_permissions (
 15. 2024_03_07_114627_create_payments_table.php
 16. 2024_03_07_114800_create_product_groups_table.php
 17. 2024_03_07_114819_create_products_table.php
-18. 2024_03_07_115518_create_transactions2_table.php
-19. 2024_03_07_115800_create_invoice_items_table.php
-20. 2024_03_08_111100_create_bank_accounts_table.php
-21. 2024_03_08_111150_create_cheques_table.php
-22. 2024_03_08_111160_create_cheque_history_table.php
-23. 2024_04_18_113959_create_permission_tables.php
-24. 2024_08_15_142029_create_company_user_table.php
+18. 2024_03_07_115800_create_invoice_items_table.php
+19. 2024_03_08_111100_create_bank_accounts_table.php
+20. 2024_03_08_111150_create_cheques_table.php
+21. 2024_03_08_111160_create_cheque_history_table.php
+22. 2024_04_18_113959_create_permission_tables.php
+23. 2024_08_15_142029_create_company_user_table.php
 ```
 
 ### سیدرهای اصلی (Seeders)
