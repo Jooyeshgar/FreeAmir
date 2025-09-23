@@ -26,14 +26,14 @@ class ProductGroup extends Model
         static::addGlobalScope(new FiscalYearScope());
 
         static::creating(function ($model) {
-            $model->company_id = session('active-company-id');
+            $model->company_id ??= session('active-company-id');
         });
 
         static::created(function ($productGroup) {
             $subject = $productGroup->subject()->create([
                 'name' => $productGroup->name,
                 'parent_id' => config('amir.product'),
-                'company_id' => session('active-company-id'),
+                'company_id' => $productGroup->company_id,
             ]);
 
             $productGroup->update(['subject_id' => $subject->id]);

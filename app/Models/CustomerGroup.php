@@ -24,14 +24,14 @@ class CustomerGroup extends Model
         static::addGlobalScope(new FiscalYearScope());
 
         static::creating(function ($model) {
-            $model->company_id = session('active-company-id');
+            $model->company_id ??= session('active-company-id');
         });
 
         static::created(function ($customertGroup) {
             $subject = $customertGroup->subject()->create([
                 'name' => $customertGroup->name,
                 'parent_id' => config('amir.cust_subject'),
-                'company_id' => session('active-company-id'),
+                'company_id' => $customertGroup->company_id,
             ]);
 
             $customertGroup->update(['subject_id' => $subject->id]);
