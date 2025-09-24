@@ -31,7 +31,7 @@ FreeAmir/
 
 ## 📂 توضیح دایرکتوری‌های اصلی
 
-### `app/` - هسته اپلیکیشن
+### دایرکتوری `app/` - هسته اپلیکیشن
 
 #### `Console/Commands/`
 دستورات سفارشی Artisan برای عملیات خاص:
@@ -70,9 +70,9 @@ class DocumentServiceException extends Exception
 #### `Helpers/`
 توابع کمکی عمومی:
 
-- `helpers.php` - توابع عمومی
-- `jdf.php` - توابع تبدیل تاریخ فارسی
-- `NumberToWordHelper.php` - تبدیل عدد به حروف
+- فایل `helpers.php` - توابع عمومی
+- فایل `jdf.php` - توابع تبدیل تاریخ فارسی
+- فایل `NumberToWordHelper.php` - تبدیل عدد به حروف
 
 #### `Http/`
 لایه HTTP اپلیکیشن:
@@ -91,21 +91,22 @@ Http/
 ```
 
 #### `Models/`
-مدل‌های Eloquent برای پایگاه داده:
+مدل‌های Eloquent موجود در همین پوشه منطق داده را مدیریت می‌کنند. مهم‌ترین فایل‌ها عبارت‌اند از:
 
-**مدل‌های اصلی حسابداری:**
-- `Document.php` - اسناد حسابداری
-- `Transaction.php` - تراکنش‌های مالی
-- `Subject.php` - سرفصل‌های حسابداری
-- `Company.php` - شرکت‌ها
-- `FiscalYear.php` - سال‌های مالی
+- مدل `Document.php` – مدیریت اسناد حسابداری و ارتباط آن‌ها با تراکنش‌ها.
+- مدل `Transaction.php` – ثبت تراکنش‌های مرتبط با اسناد و سناریوهای فروش.
+- مدل `Subject.php` – ساختار درختی سرفصل‌ها و روابط والد/فرزند آن‌ها.
+- مدل `Company.php` – اطلاعات شرکت و نگه‌داشتن شناسه شرکت فعال.
+- مدل `User.php` – کاربران سیستم و ارتباط آن‌ها با شرکت‌ها.
+- مدل‌های `Customer.php` و `CustomerGroup.php` – مدیریت مشتریان و گروه‌بندی آن‌ها.
+- مدل‌های `Product.php` و `ProductGroup.php` – کالاها و گروه‌های کالایی.
+- مدل‌های `Invoice.php` و `InvoiceItem.php` – فاکتورهای فروش و اقلامشان.
+- مدل‌های `Bank.php`، `BankAccount.php`، `Cheque.php` و `ChequeHistory.php` – مدیریت اطلاعات بانکی و چک‌ها.
+- مدل‌های `Config.php` و `Payment.php` – پیکربندی سیستم و پرداخت‌ها.
 
-**مدل‌های کسب‌وکار:**
-- `Customer.php` - مشتریان
-- `Product.php` - کالاها
-- `Invoice.php` - فاکتورها
-- `Bank.php` - بانک‌ها
-- `BankAccount.php` - حساب‌های بانکی
+زیرپوشه `Scopes/` شامل `FiscalYearScope.php` است که بر روی مدل‌های مرتبط اعمال می‌شود تا داده‌ها به شرکت/سال فعال محدود شوند.
+
+> نکته: مدلی با نام `FiscalYear.php` در پروژه وجود ندارد؛ مدیریت سال/شرکت فعال از طریق مدل `Company` و همین اسکوپ انجام می‌شود.
 
 #### `Services/`
 منطق کسب‌وکار پیچیده:
@@ -153,11 +154,13 @@ class FiscalYearService
 // Example: مایگریشن جدول documents
 Schema::create('documents', function (Blueprint $table) {
     $table->id();
-    $table->string('number')->unique();
-    $table->date('date');
-    $table->text('description')->nullable();
-    $table->foreignId('fiscal_year_id');
-    $table->foreignId('company_id');
+    $table->decimal('number', 16, 2)->nullable();
+    $table->string('title')->nullable();
+    $table->date('date')->nullable();
+    $table->date('approved_at')->nullable();
+    $table->foreignId('creator_id')->nullable()->constrained('users')->nullOnDelete();
+    $table->foreignId('approver_id')->nullable()->constrained('users')->nullOnDelete();
+    $table->foreignId('company_id')->nullable()->constrained()->nullOnDelete();
     $table->timestamps();
 });
 ```
@@ -165,8 +168,8 @@ Schema::create('documents', function (Blueprint $table) {
 ### `seeders/`
 داده‌های اولیه:
 
-- `DatabaseSeeder.php` - داده‌های ضروری سیستم
-- `DemoSeeder.php` - داده‌های نمایشی
+- فایل `DatabaseSeeder.php` - داده‌های ضروری سیستم
+- فایل `DemoSeeder.php` - داده‌های نمایشی
 
 ## 🎨 منابع (`resources/`)
 
@@ -182,7 +185,7 @@ views/
 └── components/           # کامپوننت‌های قابل استفاده مجدد
 ```
 
-### `js/` و `css/`
+### فایل‌های `js/` و `css/`
 فایل‌های JavaScript و CSS با Vite مدیریت می‌شوند.
 
 ## 🛣️ مسیریابی (`routes/`)
@@ -213,40 +216,24 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
 مسیرهای API (در صورت نیاز):
 
 ```php
-Route::middleware('auth:sanctum')->group(function () {
-    Route::apiResource('documents', DocumentApiController::class);
+Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+    return $request->user();
 });
 ```
 
+در حال حاضر فایل تنها شامل نمونه‌ی پیش‌فرض لاراول است و می‌توانید مسیرهای API جدید را در همین گروه اضافه کنید.
+
 ## 🧪 تست‌ها (`tests/`)
 
-### `Feature/`
-تست‌های عملکردی (End-to-End):
+ساختار تست‌ها مطابق استاندارد لاراول است و دو تست نمونه به صورت پیش‌فرض در مخزن حضور دارند:
 
-```php
-// tests/Feature/DocumentTest.php
-class DocumentTest extends TestCase
-{
-    public function test_can_create_balanced_document()
-    {
-        // تست ایجاد سند متوازن
-    }
-}
+```
+tests/
+├── Feature/ExampleTest.php   # بررسی پاسخ موفق صفحه‌ی اصلی
+└── Unit/ExampleTest.php      # تست ساده صحت true
 ```
 
-### `Unit/`
-تست‌های واحد:
-
-```php
-// tests/Unit/DocumentServiceTest.php
-class DocumentServiceTest extends TestCase
-{
-    public function test_validates_document_balance()
-    {
-        // تست اعتبارسنجی موازنه سند
-    }
-}
-```
+برای گسترش پوشش تست‌ها می‌توانید فایل‌های جدید با دستور `php artisan make:test` بسازید یا همین نمونه‌ها را ویرایش کنید. راهنمای تست در `docs/testing-guide.md` توضیحات بیشتری ارائه می‌دهد.
 
 ## 🔧 ابزارهای توسعه
 
@@ -281,27 +268,27 @@ php artisan serve       # اجرای سرور توسعه
 ## 📝 کنوانسیون‌های نام‌گذاری
 
 ### کلاس‌ها
-- **Controllers**: `PascalCase` + `Controller` (مثل `DocumentController`)
-- **Models**: `PascalCase` منفرد (مثل `Document`)
-- **Services**: `PascalCase` + `Service` (مثل `DocumentService`)
+- کلاس‌های کنترلر (**Controllers**): `PascalCase` + `Controller` (مثل `DocumentController`)
+- کلاس‌های مدل (**Models**): `PascalCase` منفرد (مثل `Document`)
+- کلاس‌های سرویس (**Services**): `PascalCase` + `Service` (مثل `DocumentService`)
 
 ### فایل‌ها
-- **Views**: `kebab-case` (مثل `document-create.blade.php`)
-- **Migrations**: تاریخ + `snake_case` (مثل `2024_01_01_create_documents_table`)
+- فایل‌های نما (**Views**): `kebab-case` (مثل `document-create.blade.php`)
+- فایل‌های مایگریشن (**Migrations**): تاریخ + `snake_case` (مثل `2024_01_01_create_documents_table`)
 
 ### متغیرها
-- **PHP**: `camelCase` (مثل `$fiscalYear`)
-- **Database**: `snake_case` (مثل `fiscal_year_id`)
+- متغیرهای **PHP**: `camelCase` (مثل `$fiscalYear`)
+- ستون‌های دیتابیس (**Database**): `snake_case` (مثل `fiscal_year_id`)
 
 ### مسیرها
-- **URLs**: `kebab-case` (مثل `/customer-groups`)
-- **Route names**: `dot.notation` (مثل `documents.create`)
+- نشانی‌های وب (**URLs**): `kebab-case` (مثل `/customer-groups`)
+- نام‌های مسیر (**Route names**): `dot.notation` (مثل `documents.create`)
 
 ## 🔒 امنیت
 
 ### Middleware
-- `auth` - احراز هویت کاربر
-- `check-permission` - کنترل مجوزها
+- میان‌افزار `auth` - احراز هویت کاربر
+- میان‌افزار `check-permission` - کنترل مجوزها
 - سایر middleware های Laravel
 
 ### مجوزها
@@ -320,14 +307,14 @@ $this->authorize('documents.create');
 ## 🚀 بهینه‌سازی
 
 ### Caching
-- **Config**: `php artisan config:cache`
-- **Routes**: `php artisan route:cache`
-- **Views**: `php artisan view:cache`
+- کش پیکربندی (**Config**): `php artisan config:cache`
+- کش مسیرها (**Routes**): `php artisan route:cache`
+- کش نماها (**Views**): `php artisan view:cache`
 
 ### Database
-- **Indexes**: روی ستون‌های پرجستجو
-- **Relations**: استفاده از Eager Loading
-- **Pagination**: برای لیست‌های بزرگ
+- نمایه‌ها (**Indexes**): روی ستون‌های پرجستجو
+- روابط (**Relations**): استفاده از Eager Loading
+- صفحه‌بندی (**Pagination**): برای لیست‌های بزرگ
 
 ---
 

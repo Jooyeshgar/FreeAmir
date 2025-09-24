@@ -17,26 +17,26 @@
 
 ### بدهکار و بستانکار چیست؟
 
-- **بدهکار (Debit)**: تراکنش‌هایی که مقدار مثبت دارند - افزایش دارایی یا کاهش بدهی
-- **بستانکار (Credit)**: تراکنش‌هایی که مقدار منفی دارند - کاهش دارایی یا افزایش بدهی
+- **بدهکار (Debit)**: تراکنش‌هایی که مقدار منفی دارند - افزایش دارایی یا هزینه، کاهش بدهی
+- **بستانکار (Credit)**: تراکنش‌هایی که مقدار مثبت دارند - کاهش دارایی یا هزینه، افزایش بدهی یا درآمد
 
 در امیر، تراکنش‌ها با یک فیلد `value` ذخیره می‌شوند:
-- مقدار مثبت = بدهکار
-- مقدار منفی = بستانکار
+- مقدار منفی = بدهکار
+- مقدار مثبت = بستانکار
 
 ```php
 // example: خرید ۱۰۰,۰۰۰ تومان کالا نقداً
 // تراکنش 1: افزایش موجودی کالا (بدهکار)
 $transaction1 = Transaction::create([
     'subject_id' => $inventorySubject->id,
-    'value' => 100000,  // مثبت = بدهکار
+    'value' => -100000,  // منفی = بدهکار
     'desc' => 'خرید کالا'
 ]);
 
 // تراکنش 2: کاهش صندوق (بستانکار)
 $transaction2 = Transaction::create([
     'subject_id' => $cashSubject->id,
-    'value' => -100000,  // منفی = بستانکار
+    'value' => 100000,  // مثبت = بستانکار
     'desc' => 'پرداخت وجه نقد'
 ]);
 ```
@@ -198,23 +198,37 @@ $product = Product::create([
 // و بی‌نهایت ادامه دارد
 ```
 
-## Document و Transaction: ساختار اسناد و تراکنش‌ها
+## اسناد (Document) و تراکنش‌ها (Transaction): ساختار اسناد و تراکنش‌ها
 
 ### ساختار کلی
 
 ```php
 class Document extends Model {
     protected $fillable = [
-        'number',       // شماره سند (یکتا در سال مالی)
+        'number',       // شماره سند (عددی که در سال مالی یکتا می‌شود)
         'date',         // تاریخ سند
         'title',        // شرح کلی سند
-        'permanent',    // آیا سند دائمی است یا موقت
+        'approved_at',  // تاریخ تأیید سند
         'creator_id',   // شناسه کاربر ایجادکننده
-        'company_id',   // شناسه شرکت (سال مالی)
+        'approver_id',  // شناسه کاربر تأییدکننده
+        'company_id',   // شناسه شرکت/سال مالی
     ];
-    
+
+    protected $casts = [
+        'date' => 'date',
+        'approved_at' => 'date',
+    ];
+
     public function transactions() {
         return $this->hasMany(Transaction::class);
+    }
+
+    public function creator() {
+        return $this->belongsTo(User::class, 'creator_id');
+    }
+
+    public function approver() {
+        return $this->belongsTo(User::class, 'approver_id');
     }
 }
 
@@ -224,44 +238,17 @@ class Transaction extends Model {
         'document_id',  // شناسه سند
         'user_id',      // شناسه کاربر
         'desc',         // شرح تراکنش
-        'value',        // مقدار (مثبت=بدهکار، منفی=بستانکار)
+        'value',        // مقدار (منفی=بدهکار، مثبت=بستانکار)
     ];
     
     // محاسبه خودکار بدهکار/بستانکار
     public function getDebitAttribute() {
-        return $this->value > 0 ? formatNumber($this->value) : '';
-    }
-    
-    public function getCreditAttribute() {
         return $this->value < 0 ? formatNumber(-1 * $this->value) : '';
     }
-}
-```
 
-### اسناد خودکار و رابطه Morph
-
-اسناد خودکار (فاکتور، چک، ...) از طریق رابطه Polymorphic به سند متصل هستند:
-
-```php
-class Invoice extends Model {
-    public function document() {
-        return $this->morphOne(Document::class, 'documentable');
+    public function getCreditAttribute() {
+        return $this->value > 0 ? formatNumber($this->value) : '';
     }
-}
-
-// چک
-class Cheque extends Model {
-    public function document() {
-        return $this->morphOne(Document::class, 'documentable');
-    }
-}
-```
-
-**نکته بسیار مهم**: اگر سندی رابطه morph داشته باشد، نباید اجازه ویرایش دستی داشته باشد چون از سینک بودن خارج می‌شود:
-
-```php
-if ($document->documentable_type && $document->documentable_id) {
-    throw new \Exception('اسناد خودکار قابل ویرایش دستی نیستند');
 }
 ```
 
@@ -274,22 +261,40 @@ $documentData = [
     'title' => 'فروش کالا به مشتری'
 ];
 
-$transactionsData = [
+// ورودی فرم (همان چیزی که DocumentController::store دریافت می‌کند)
+$requestTransactions = [
     [
         'subject_id' => $cashSubject->id,
-        'value' => 500000,  // بدهکار (افزایش صندوق)
-        'desc' => 'دریافت وجه نقد'
+        'debit' => 500000,
+        'credit' => 0,
+        'desc' => 'دریافت وجه نقد',
     ],
     [
         'subject_id' => $salesSubject->id,
-        'value' => -500000,  // بستانکار (افزایش درآمد)
-        'desc' => 'درآمد حاصل از فروش'
-    ]
+        'debit' => 0,
+        'credit' => 500000,
+        'desc' => 'درآمد حاصل از فروش',
+    ],
 ];
 
+$transactionsData = [];
+foreach ($requestTransactions as $transactionData) {
+    $transactionsData[] = [
+        'subject_id' => $transactionData['subject_id'],
+        'value' => $transactionData['credit'] - $transactionData['debit'], // منطق DocumentController::store
+        'desc' => $transactionData['desc'],
+    ];
+}
+
+// خروجی: مقدار منفی = بدهکار، مقدار مثبت = بستانکار
+// [
+//     ['subject_id' => $cashSubject->id, 'value' => -500000, 'desc' => 'دریافت وجه نقد'],   // بدهکار
+//     ['subject_id' => $salesSubject->id, 'value' => 500000, 'desc' => 'درآمد حاصل از فروش'], // بستانکار
+// ]
+
 $document = DocumentService::createDocument(
-    auth()->user(), 
-    $documentData, 
+    auth()->user(),
+    $documentData,
     $transactionsData
 );
 ```
@@ -325,13 +330,18 @@ DocumentService::deleteDocument($documentId);
 برای ایجاد سرفصل‌ها (برای تولید خودکار کد حسابداری حتما از این سرویس استفاده کنید):
 
 ```php
+use App\Models\Subject;
 use App\Services\SubjectCreatorService;
 
 $subjectService = new SubjectCreatorService();
+
+// ابتدا سرفصل والد را پیدا کنید (مثلاً صندوق اصلی)
+$parentSubject = Subject::where('code', '011001')->firstOrFail();
+
 $subject = $subjectService->createSubject([
     'name' => 'صندوق جدید',
-    'parent_code' => '011001',
-    'code' => '005'  // اختیاری
+    'parent_id' => $parentSubject->id,
+    'type' => 'debtor',   // اختیاری؛ مقدار پیش‌فرض 'both' است
 ]);
 ```
 
@@ -359,15 +369,19 @@ $availableSections = FiscalYearService::getAvailableSections();
 ## سال مالی و چندشرکته بودن
 
 ### مفهوم سال مالی در امیر
-سال مالی در امیر به عنوان "شرکت" (Company) شناخته می‌شود. هر شرکت نمایانگر یک سال مالی مستقل است.
+سال مالی در امیر به عنوان "شرکت" (Company) شناخته می‌شود. هر شرکت نمایانگر یک سال مالی مستقل است و مقدار عددی سال (مثلاً 1403) در ستون `fiscal_year` همان رکورد نگهداری می‌شود.
 
 ```php
-class Company extends Model {    // در واقع FiscalYear است
+class Company extends Model {    // هر ردیف نمایانگر یک سال مالی است
     protected $fillable = [
-        'name',          // "سال مالی 1403"
-        'start_date',    // "1403/01/01"
-        'end_date',      // "1403/12/29"
-        'is_closed',     // بسته شده یا خیر
+        'name',            // عنوان سال/شرکت (مانند "سال مالی 1403")
+        'logo',            // مسیر لوگو (اختیاری)
+        'address',         // آدرس شرکت
+        'economical_code', // کد اقتصادی
+        'national_code',   // شناسه ملی
+        'postal_code',     // کد پستی
+        'phone_number',    // تلفن تماس
+        'fiscal_year',     // سال مالی به صورت عدد صحیح (مثلاً 1403)
     ];
 }
 ```
