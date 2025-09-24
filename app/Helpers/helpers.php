@@ -191,7 +191,7 @@ if (!function_exists('model_route')) {
     function model_route($model, string $action = 'index', bool $plural = true): string
     {
         $routeName = is_object($model) ? class_basename($model) : $model;
-        $routeName = Str::snake($routeName);
+        $routeName = Str::snake($routeName, '-');
 
         if ($plural) {
             $routeName = Str::plural($routeName);

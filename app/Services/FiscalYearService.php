@@ -325,6 +325,8 @@ class FiscalYearService
                 $newConfig->value = $oldValue; // Keep original value otherwise
             }
 
+            config(['amir.' . $newConfig->key => $newConfig->value]);
+
             $newConfig->save();
         }
     }
@@ -393,6 +395,7 @@ class FiscalYearService
             $newGroup->subject_id = ($oldSubjectId && isset($subjectMapping[$oldSubjectId])) ? $subjectMapping[$oldSubjectId] : null;
 
             $newGroup->save();
+            echo '-----------------' . config('amir.cust_subject') . "\n";
             $mapping[$groupData['id']] = $newGroup->id;
         }
         return $mapping;
@@ -425,7 +428,7 @@ class FiscalYearService
             $newCustomer->company_id = $targetYearId;
             $newCustomer->group_id = $groupMapping[$oldGroupId];
             $newCustomer->subject_id = $subjectMapping[$oldSubjectId];
-            $newCustomer->saveQuietly();
+            $newCustomer->save();
         }
     }
 
