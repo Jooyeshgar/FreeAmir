@@ -8,6 +8,7 @@ use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Subject;
 use App\Models\Transaction;
+use App\Models\ProductGroup;
 use App\Services\InvoiceService;
 use Illuminate\Http\Request;
 use App\Http\Requests\StoreInvoiceRequest;
@@ -57,6 +58,7 @@ class InvoiceController extends Controller
             return redirect()->route('configs.index')->with('error', __('Customer Subject is not configured. Please set it in configurations.'));
         }
         $products = Product::all();
+        $productGroups = ProductGroup::all();
         $subjects = Subject::where('parent_id', config('amir.product'))->with('children')->orderBy('code', 'asc')->get();
         $customers = Subject::where('parent_id', config('amir.cust_subject'))->with('children')->orderBy('code', 'asc')->get();
         $previousInvoiceNumber = Invoice::orderBy('id', 'desc')->first()->number ?? 1;
@@ -65,7 +67,7 @@ class InvoiceController extends Controller
 
         $total = count($transactions);
 
-        return view('invoices.create', compact('products', 'subjects', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber'));
+        return view('invoices.create', compact('products', 'productGroups' , 'subjects', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber'));
     }
 
     /**
@@ -89,6 +91,7 @@ class InvoiceController extends Controller
             'addition' => $validated['additions'] ?? 0,
             'subtraction' => $validated['subtractions'] ?? 0,
             'invoice_id' => $validated['invoice_id'] ?? null,
+            'description' => $validated['description'] ?? null,
         ];
 
         // Map transactions for document creation (value computed in service using credit/debit or value)

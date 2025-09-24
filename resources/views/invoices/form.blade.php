@@ -65,6 +65,9 @@
             {{ __('Quantity') }}
         </div>
         <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">
+            {{ __('VAT') }}
+        </div>
+        <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">
             {{ __('Unit') }}
         </div>
         <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">
@@ -123,6 +126,14 @@
                     </div>
 
                     <div class="flex-1 min-w-24 max-w-32">
+                        <x-text-input x-model.number="transaction.vat"
+                            x-bind:value=$store.utils.formatNumber(getSubjectVat(Number(selectedId)))
+                            x-bind:name="'transactions[' + index + '][vat]'" placeholder="0%"
+                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white" readonly>
+                        </x-text-input>
+                    </div>
+
+                    <div class="flex-1 min-w-24 max-w-32">
                         <x-text-input x-model.number="transaction.unit"
                             x-bind:value=$store.utils.formatNumber(getSubjectPrice(Number(selectedId)))
                             x-bind:name="'transactions[' + index + '][unit]'" placeholder="0"
@@ -132,8 +143,10 @@
 
 
                     <div class="flex-1 min-w-32 max-w-32">
-                        <x-text-input x-bind:value="(transaction.total = (Number($store.utils.convertToEnglish(transaction.quantity)) || 0) * getSubjectPrice(Number(
-                                selectedId))).toLocaleString()" x-bind:name="'transactions[' + index + '][total]'"
+                        <x-text-input x-bind:value="(transaction.total = (Number($store.utils.convertToEnglish(transaction.quantity)) || 0) *
+                                getSubjectPrice(Number(
+                                selectedId)) + (Number($store.utils.convertToEnglish(transaction.quantity)) || 0) *
+                                getSubjectVat(Number(selectedId))).toLocaleString()" x-bind:name="'transactions[' + index + '][total]'"
                             placeholder="0" label_text_class="text-gray-500" label_class="w-full"
                             input_class="border-white" readonly>
                         </x-text-input>
@@ -208,6 +221,7 @@
             Alpine.data('transactionForm', () => ({
                 transactions: {!! json_encode($transactions, JSON_UNESCAPED_UNICODE) !!},
                 products: {!! json_encode($products, JSON_UNESCAPED_UNICODE) !!},
+                productGroups: {!! json_encode($productGroups, JSON_UNESCAPED_UNICODE) !!},
                 addTransaction() {
                     const newId = this.transactions.length ? this.transactions[this.transactions
                         .length - 1].id + 1 : 1;
@@ -229,6 +243,16 @@
                     if (!product) return 0;
                     return (invoice_type == 1) ? product.selling_price : product.purchace_price;
                 },
+                getSubjectVat(subjectId) {
+                    const invoice_type = Number(document.getElementById('invoice_type').value);
+                    const product = this.products.find(p => p.subject_id == subjectId);
+                    const productGroup = this.productGroups.find(pg => pg.id == product.group);
+                    if (!product || !productGroup) return 0;
+                    if (product.vat == null){
+                        return productGroup.vat;
+                    }
+                    return product.vat;
+                }
             }));
         });
     </script>

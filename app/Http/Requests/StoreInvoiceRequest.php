@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Subject;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -30,11 +31,13 @@ class StoreInvoiceRequest extends FormRequest
             'additions' => convertToFloat($this->input('additions', 0)),
             'subtractions' => convertToFloat($this->input('subtractions', 0)),
         ]);
+        $customer = Subject::find($this->input('customer_id'))->subjectable()->first();
+        $this->merge(['customer_id' => $customer->id]);
 
         // Cast invoice_type (0/1 string) to integer boolean-like
         if ($this->has('invoice_type')) {
             $type = $this->input('invoice_type');
-            $this->merge(['invoice_type' => is_bool($type) ? (int)$type : (int)convertToInt($type)]);
+            $this->merge(['invoice_type' => is_bool($type) ? (int) $type : (int) convertToInt($type)]);
         }
 
         // Normalize transactions numeric fields and ids
@@ -71,7 +74,7 @@ class StoreInvoiceRequest extends FormRequest
             // Invoice basics
             'invoice_type' => ['required', Rule::in([0, 1])],
             'customer_id' => 'required|exists:customers,id|integer',
-            'invoice_id'   => 'nullable|integer|exists:invoices,id',
+            'invoice_id' => 'nullable|integer|exists:invoices,id',
             'document_number' => [
                 'required',
                 'integer',

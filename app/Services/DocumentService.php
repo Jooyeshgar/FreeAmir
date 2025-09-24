@@ -109,7 +109,7 @@ class DocumentService
     {
         $validator = Validator::make($data, [
             'subject_id' => 'required|integer',
-            'desc' => 'string',
+            'desc' => 'nullable|string',
             'value' => 'required|decimal:0,2',
             'created_at' => 'nullable|date',
             'updated_at' => 'nullable|date',

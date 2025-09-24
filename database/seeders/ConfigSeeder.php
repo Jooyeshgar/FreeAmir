@@ -28,5 +28,8 @@ class ConfigSeeder extends Seeder
         ];
 
         Config::insert($configs);
+        foreach ($configs as $config) {
+                config(['amir.' . $config['key'] => $config['value']]);
+        }
     }
 }
