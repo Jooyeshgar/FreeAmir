@@ -8,11 +8,6 @@
     </div>
 
     <div class="col-span-2 md:col-span-1">
-        <x-input name="vat" id="vat" title="{{ __('Vat') }}" :value="old('vat', $product->vat ?? '')"
-            placeholder="0" />
-    </div>
-
-    <div class="col-span-2 md:col-span-1">
         <x-input name="code" id="code" title="{{ __('Code') }}" :value="old('code', $product->code ?? '')"
             placeholder="{{ __('Please insert the code') }}" />
     </div>
@@ -35,6 +30,11 @@
     <div class="col-span-2 md:col-span-1">
         <x-input @input="$event.target.value = $store.utils.formatNumber($event.target.value)" name="purchace_price"
             id="purchace_price" title="{{ __('Purchase price') }}" :value="old('purchace_price', $product->purchace_price ?? '')" placeholder="{{ __('Please insert Purchase price') }}" />
+    </div>
+
+    <div class="col-span-2 md:col-span-1">
+        <x-input name="vat" id="vat" title="{{ __('Vat') }}" :value="old('vat', $product->vat ?? '')"
+            placeholder="0" />
     </div>
 
     <div class="col-span-2">
