@@ -26,7 +26,6 @@ class ProductWebsiteController extends Controller
     {
         $validatedData = $request->validate([
             'link' => 'required|regex:/^(https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,6}(\/[^\s]*)?$/',
-            'product_id' => 'required|exists:products,id',
         ]);
 
         $productWebsite->update($validatedData);
