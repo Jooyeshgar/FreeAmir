@@ -38,6 +38,7 @@ class ProductController extends Controller
             'discount_formula' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
             'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
             'vat' => 'nullable|numeric|min:0|max:100',
+            'sstid' => 'nullable|string',
         ]);
 
         $validatedData['oversell'] = $request->has('oversell') ? 1 : 0;
@@ -45,6 +46,7 @@ class ProductController extends Controller
         $validatedData['selling_price'] = convertToFloat(empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price']);
         $validatedData['quantity'] = convertToFloat(empty($validatedData['quantity']) ? 0 : $validatedData['quantity']);
         $validatedData['vat'] = convertToFloat(empty($validatedData['vat']) ? 0 : $validatedData['vat']);
+        $validatedData['sstid'] = empty($validatedData['sstid']) ? null : $validatedData['sstid'];
 
         Models\Product::create($validatedData);
 
@@ -53,7 +55,7 @@ class ProductController extends Controller
 
     public function edit(Models\Product $product)
     {
-        $groups = Models\ProductGroup::select('id', 'name')->get();
+        $groups = Models\ProductGroup::select('id', 'name', 'sstid')->get();
 
         return view('products.edit', compact('product', 'groups'));
     }
@@ -73,6 +75,7 @@ class ProductController extends Controller
             'discount_formula' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
             'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
             'vat' => 'nullable|numeric|min:0|max:100',
+            'sstid' => 'nullable|string',
         ]);
 
         $validatedData['oversell'] = $request->has('oversell') ? 1 : 0;
@@ -80,6 +83,7 @@ class ProductController extends Controller
         $validatedData['selling_price'] = convertToFloat(empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price']);
         $validatedData['quantity'] = convertToFloat(empty($validatedData['quantity']) ? 0 : $validatedData['quantity']);
         $validatedData['vat'] = convertToFloat(empty($validatedData['vat']) ? 0 : $validatedData['vat']);
+        $validatedData['sstid'] = empty($validatedData['sstid']) ? null : $validatedData['sstid'];
 
         $product->update($validatedData);
 

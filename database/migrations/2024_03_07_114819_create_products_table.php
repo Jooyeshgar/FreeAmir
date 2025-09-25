@@ -17,6 +17,8 @@ class CreateProductsTable extends Migration
             $table->id();
             $table->string('code', 20);
             $table->string('name', 60);
+            # nullable may be remove in future!
+            $table->string('sstid')->nullable();
             $table->unsignedBigInteger('group')->nullable();
             $table->unsignedBigInteger('subject_id')->nullable();
             $table->string('location', 50)->nullable();
