@@ -65,6 +65,9 @@
             {{ __('Quantity') }}
         </div>
         <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">
+            {{ __('OFF') }}
+        </div>
+        <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">
             {{ __('VAT') }}
         </div>
         <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">
@@ -151,8 +154,15 @@
                     <div class="flex-1 min-w-32 max-w-32">
                         <x-text-input x-bind:value="(transaction.total = (Number($store.utils.convertToEnglish(transaction.quantity)) || 0) *
                                 getSubjectPrice(Number(
-                                selectedId)) + (Number($store.utils.convertToEnglish(transaction.quantity)) || 0) *
-                                getSubjectVat(Number(selectedId))).toLocaleString()" x-bind:name="'transactions[' + index + '][total]'"
+                                selectedId))
+                                + 
+                                (Number($store.utils.convertToEnglish(transaction.quantity)) || 0) *
+                                getSubjectPrice(Number(
+                                selectedId)) *
+                                (Number($store.utils.formatNumber(getSubjectVat(Number(selectedId))))/100)
+                                -
+                                (Number($store.utils.convertToEnglish(transaction.off)) || 0) 
+                                ).toLocaleString()" x-bind:name="'transactions[' + index + '][total]'"
                             placeholder="0" label_text_class="text-gray-500" label_class="w-full"
                             input_class="border-white" readonly>
                         </x-text-input>

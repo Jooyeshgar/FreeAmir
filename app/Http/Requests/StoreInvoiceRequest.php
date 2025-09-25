@@ -50,6 +50,7 @@ class StoreInvoiceRequest extends FormRequest
                         'subject_id' => isset($t['subject_id']) ? (int) $t['subject_id'] : null,
                         'desc' => $t['desc'] ?? null,
                         'quantity' => isset($t['quantity']) ? convertToFloat($t['quantity']) : null,
+                        'unit_discount' => isset($t['off']) ? convertToFloat($t['off']) : null,
                         'unit' => isset($t['unit']) ? convertToFloat($t['unit']) : null,
                         'total' => isset($t['total']) ? convertToFloat($t['total']) : null,
                     ];
@@ -102,6 +103,7 @@ class StoreInvoiceRequest extends FormRequest
             'transactions.*.subject_id' => 'required|integer|exists:subjects,id',
             'transactions.*.desc' => 'nullable|string|max:500',
             'transactions.*.quantity' => 'required|numeric|min:1',
+            'transactions.*.unit_discount' => 'required|numeric|min:0',
         ];
     }
 

@@ -131,6 +131,7 @@ class InvoiceController extends Controller
                     'product_id' => $productId,
                     'quantity' => $t['quantity'] ?? 1,
                     'description' => $t['desc'] ?? null,
+                    'unit_discount' => $t['unit_discount'] ?? 0,
                 ];
             })
             ->toArray();
