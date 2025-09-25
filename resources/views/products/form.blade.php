@@ -3,7 +3,7 @@
         @php
             $hint = '<a class="link text-blue-500" href="' . route('product-groups.create') . '">اضافه کردن کالا</a>';
         @endphp
-        <x-select title="{{ __('Product group') }}" name="group" id="group" :options="$groups->pluck('name', 'id')"
+        <x-select title="{{ __('Product group') }}" name="group" id="group" :options="$groups->pluck('name', 'id', 'sstid')"
             :selected="$product->group ?? null" :hint="$hint" />
     </div>
 
@@ -18,7 +18,8 @@
     </div>
 
     <div class="col-span-2 md:col-span-1">
-        <x-input name="sstid" id="sstid" title="{{ __('Product SSTID') }}" :value="old('sstid', $product->sstid ?? '')"
+        <x-input name="sstid" id="sstid" title="{{ __('Product SSTID') }}" :value="old('sstid',
+            isset($product) ? ($product->sstid ?: ($groups->find($product->group)->sstid ?? '')) : '')"
             placeholder="{{ __('Please enter the product SSTID') }}" />
     </div>
 

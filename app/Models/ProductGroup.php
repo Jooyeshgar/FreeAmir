@@ -11,6 +11,7 @@ class ProductGroup extends Model
     protected $fillable = [
         'code',
         'name',
+        'sstid',
         'buyId',
         'sellId',
         'vat',

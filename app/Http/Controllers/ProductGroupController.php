@@ -29,6 +29,7 @@ class ProductGroupController extends Controller
         $validatedData = $request->validate([
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
             'vat' => 'nullable|numeric|min:0|max:100',
+            'sstid' => 'nullable|string',
         ]);
 
         Models\ProductGroup::create($validatedData);
@@ -46,6 +47,7 @@ class ProductGroupController extends Controller
         $validatedData = $request->validate([
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
             'vat' => 'nullable|numeric|min:0|max:100',
+            'sstid' => 'nullable|string',
         ]);
 
         $productGroup->update($validatedData);
