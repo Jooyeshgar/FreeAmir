@@ -8,4 +8,10 @@
         <x-input name="vat" id="vat" title="{{ __('VAT') }}" :value="old('vat', $productGroup->vat ?? 0)"
             placeholder="{{ __('Please enter VAT') }}" />
     </div>
+
+    <div class="col-span-2 md:col-span-1">
+        <x-input name="sstid" id="sstid" title="{{ __(key: 'SSTID') }}" :value="old('sstid', $productGroup->sstid ?? '')"
+            placeholder="{{ __('Please enter SSTID') }}" />
+    </div>
+
 </div>
