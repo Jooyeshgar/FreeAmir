@@ -103,7 +103,7 @@ class InvoiceService
 
                 $invoiceItem->quantity = $item['quantity'] ?? 1;
                 $invoiceItem->unit_price = $invoiceData['is_sell'] ? $product->selling_price : $product->purchace_price;
-                $invoiceItem->unit_discount = $invoiceItem->unit_discount ?? 0;
+                $invoiceItem->unit_discount = $item['unit_discount'] ?? 0;
                 $invoiceItem->vat = (($product->vat ?? $product->productGroup->vat ?? 0) / 100) * ($invoiceItem->quantity * ($invoiceItem->unit_price - ($invoiceData['is_sell'] ? $invoiceItem->unit_discount : 0)));
                 $invoiceItem->description = $item['description'] ?? null;
                 $invoiceItem->amount = $invoiceItem->quantity * $invoiceItem->unit_price - $invoiceItem->unit_discount + $invoiceItem->vat;
