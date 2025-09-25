@@ -71,4 +71,6 @@
             id="quantity" title="{{ __('Quantity') }}" :value="old('quantity', $product->quantity ?? '')"
             placeholder="{{ __('Please insert quantity') }}" />
     </div>
+
+    @include('products.websites.index')
 </div>
