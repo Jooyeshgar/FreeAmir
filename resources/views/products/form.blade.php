@@ -72,10 +72,6 @@
             placeholder="{{ __('Please insert quantity') }}" />
     </div>
 
-    @include('products.websites.index', 
-        [
-        'websites' => isset($product) ? $product->productWebsite : '',
-        ]
-    )
+    @include('products.websites.form', ['websites' => isset($product) ? $product->productWebsites : []])
     
 </div>
