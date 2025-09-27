@@ -52,6 +52,12 @@ class Product extends Model
 
             $product->update(['subject_id' => $subject->id]);
         });
+        
+        static::updated(function ($product) {
+            $product->subject->update([
+                'parent_id' => $product->productGroup->subject_id,
+            ]);
+        });
 
         static::deleting(function ($product) {
             // Delete the related subject when the product is deleted

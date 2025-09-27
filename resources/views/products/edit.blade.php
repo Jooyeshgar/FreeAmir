@@ -14,7 +14,7 @@
                 <x-show-message-bags />
 
                 @include('products.form')
-                <div class="card-actions">
+                <div class="card-actions justify-end">
                     <button class="btn btn-pr"> {{ __('Edit') }} </button>
                 </div>
             </div>
