@@ -52,7 +52,7 @@ class ProductController extends Controller
 
         $product = Models\Product::create($validatedData);
 
-        if($validatedData['websites']) {
+        if(isset($validatedData['websites'])) {
             foreach ($validatedData['websites'] as $website) {
                 Models\ProductWebsite::create([
                     'link' => $website['link'],
@@ -87,7 +87,7 @@ class ProductController extends Controller
             'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
             'vat' => 'nullable|numeric|min:0|max:100',
             'sstid' => 'nullable|string',
-            'websites' => 'required|array',
+            'websites' => 'nullable|array',
             'websites.link.*' => 'required|url',
         ]);
 
@@ -100,7 +100,7 @@ class ProductController extends Controller
         
         $product->productWebsites()->delete();
 
-        if($validatedData['websites']) {
+        if(isset($validatedData['websites'])) {
             foreach ($validatedData['websites'] as $website) {
                 Models\ProductWebsite::create([
                     'link' => $website['link'],
