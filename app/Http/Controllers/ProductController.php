@@ -39,6 +39,8 @@ class ProductController extends Controller
             'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
             'vat' => 'nullable|numeric|min:0|max:100',
             'sstid' => 'nullable|string',
+            'websites' => 'nullable|array',
+            'websites.link.*' => 'required|url',
         ]);
 
         $validatedData['oversell'] = $request->has('oversell') ? 1 : 0;
@@ -48,7 +50,16 @@ class ProductController extends Controller
         $validatedData['vat'] = convertToFloat(empty($validatedData['vat']) ? 0 : $validatedData['vat']);
         $validatedData['sstid'] = empty($validatedData['sstid']) ? null : $validatedData['sstid'];
 
-        Models\Product::create($validatedData);
+        $product = Models\Product::create($validatedData);
+
+        if($validatedData['websites']) {
+            foreach ($validatedData['websites'] as $website) {
+                Models\ProductWebsite::create([
+                    'link' => $website['link'],
+                    'product_id' => $product->id,
+                ]);
+            }
+        }
 
         return redirect()->route('products.index')->with('success', 'Product created successfully.');
     }
@@ -76,6 +87,8 @@ class ProductController extends Controller
             'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
             'vat' => 'nullable|numeric|min:0|max:100',
             'sstid' => 'nullable|string',
+            'websites' => 'required|array',
+            'websites.link.*' => 'required|url',
         ]);
 
         $validatedData['oversell'] = $request->has('oversell') ? 1 : 0;
@@ -84,6 +97,17 @@ class ProductController extends Controller
         $validatedData['quantity'] = convertToFloat(empty($validatedData['quantity']) ? 0 : $validatedData['quantity']);
         $validatedData['vat'] = convertToFloat(empty($validatedData['vat']) ? 0 : $validatedData['vat']);
         $validatedData['sstid'] = empty($validatedData['sstid']) ? null : $validatedData['sstid'];
+        
+        $product->productWebsites()->delete();
+
+        if($validatedData['websites']) {
+            foreach ($validatedData['websites'] as $website) {
+                Models\ProductWebsite::create([
+                    'link' => $website['link'],
+                    'product_id' => $product->id,
+                ]);
+            }
+        }
 
         $product->update($validatedData);
 

@@ -61,7 +61,7 @@ class Product extends Model
         });
     }
 
-    public function productWebsite(): HasMany
+    public function productWebsites(): HasMany
     {
         return $this->hasMany(ProductWebsite::class, 'product_id');
     }
