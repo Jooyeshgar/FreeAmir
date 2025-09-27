@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Models\Bank;
 use App\Models\Customer;
-use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class CustomerFactory extends Factory
@@ -15,12 +14,12 @@ class CustomerFactory extends Factory
     {
         session(['active-company-id' => 1]);
         $bankIds = Bank::pluck('id')->toArray();
-        $name = $this->faker->name;
+        // $name = $this->faker->name;
 
         return [
             // 'code' => $this->faker->unique()->numerify('#####'),
             'company_id' => session('active-company-id'),
-            'name' => $name,
+            'name' => $this->faker->name,
             'phone' => substr($this->faker->phoneNumber, 0, 15),
             'cell' => substr($this->faker->phoneNumber, 0, 15),
             'fax' => substr($this->faker->phoneNumber, 0, 15),
