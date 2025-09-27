@@ -21,7 +21,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::resource('companies', Controllers\CompanyController::class);
     Route::resource('bank-accounts', Controllers\BankAccountController::class);
     Route::resource('banks', Controllers\BankController::class);
-    Route::resource('invoices', Controllers\InvoiceController::class);
+    Route::resource('invoices', Controllers\InvoiceController::class)->except(['create']);
     Route::group(['prefix' => 'management'], function () {
         Route::resource('users', Controllers\Management\UserController::class);
         Route::resource('permissions', Controllers\Management\PermissionController::class)->except(['show']);
@@ -36,4 +36,8 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
     });
     Route::get('change-company/{company}', [Controllers\CompanyController::class, 'setActiveCompany'])->name('change-company');
+    
+    Route::group(['prefix' => 'invoices/create', 'as' => 'invoices.create'], function () {
+        Route::get('{invoice_type}',[Controllers\InvoiceController::class, 'create']);
+    });
 });

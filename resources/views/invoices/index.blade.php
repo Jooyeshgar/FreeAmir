@@ -8,7 +8,8 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="card-actions flex items-center gap-3">
-                <a href="{{ route('invoices.create') }}" class="btn btn-primary">{{ __('Create invoice') }}</a>
+                <a href="{{ route('invoices.create', ['invoice_type' => 'buy']) }}" class="btn btn-primary">{{ __('Create buy invoice') }}</a>
+                <a href="{{ route('invoices.create', ['invoice_type' => 'sell']) }}" class="btn btn-primary">{{ __('Create sell invoice') }}</a>
                 <form action="{{ route('invoices.index') }}" method="GET" class="ml-auto">
                     <div class="mt-4 mb-4 grid grid-cols-6 gap-6">
                         <div class="col-span-2 md:col-span-1">

@@ -1,5 +1,5 @@
 <x-card class="rounded-2xl w-full" class_body="p-4">
-    <div class="flex gap-2 items-center" x-data="{
+    <div class="flex gap-2 items-center justify-center" x-data="{
                 selectedName: '',
                 selectedCode: '',
                 selectedId: '',
@@ -9,7 +9,7 @@
                 placeholder="{{ __('Invoice name') }}" label_text_class="text-gray-500"
                 label_class="w-full"></x-text-input>
         </div>
-        <div class="flex w-1/3">
+        <div class="flex w-1/3 hidden">
             <x-select title="{{ __('Invoice Type') }}" name="invoice_type" id="invoice_type" :options="[0 => __('Buy'), 1 => __('Sell')]" x-data="{ selectedValue: {{ old('invoice_type') ?? 0 }} }" x-bind:value="selectedValue"
                 x-on:change="selectedValue = $event.target.value;" />
         </div>

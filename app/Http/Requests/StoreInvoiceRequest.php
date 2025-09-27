@@ -34,11 +34,14 @@ class StoreInvoiceRequest extends FormRequest
         $customer = Subject::find($this->input('customer_id'))->subjectable()->first();
         $this->merge(['customer_id' => $customer->id]);
 
+        if($this->input('invoice_type') == 'buy') $this->merge(['invoice_type' => 1]);
+        else $this->merge(['invoice_type' => 0]);
+
         // Cast invoice_type (0/1 string) to integer boolean-like
-        if ($this->has('invoice_type')) {
-            $type = $this->input('invoice_type');
-            $this->merge(['invoice_type' => is_bool($type) ? (int) $type : (int) convertToInt($type)]);
-        }
+        // if ($this->has('invoice_type')) {
+        //     $type = $this->input('invoice_type');
+        //     $this->merge(['invoice_type' => is_bool($type) ? (int) $type : (int) convertToInt($type)]);
+        // }
 
         // Normalize transactions numeric fields and ids
         if ($this->has('transactions') && is_array($this->input('transactions'))) {
