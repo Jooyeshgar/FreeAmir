@@ -19,7 +19,7 @@ return new class extends Migration
             $table->unsignedBigInteger('document_id')->nullable();
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
 
-            $table->string('desc')->nullable();
+            $table->string('desc', 500)->nullable();
             $table->decimal('value', 14, 2);
             $table->timestamps();
 

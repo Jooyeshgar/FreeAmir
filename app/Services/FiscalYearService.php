@@ -428,7 +428,7 @@ class FiscalYearService
             $newCustomer->company_id = $targetYearId;
             $newCustomer->group_id = $groupMapping[$oldGroupId];
             $newCustomer->subject_id = $subjectMapping[$oldSubjectId];
-            $newCustomer->save();
+            $newCustomer->saveQuietly();
         }
     }
 
