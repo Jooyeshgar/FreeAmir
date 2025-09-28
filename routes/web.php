@@ -13,6 +13,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::resource('subjects', Controllers\SubjectController::class);
     Route::post('subjects/search', [Controllers\SubjectController::class, 'search'])->name('subjects.search');
     Route::resource('documents', Controllers\DocumentController::class);
+    Route::resource('transactions', Controllers\TransactionController::class)->only(['index', 'show']);
     Route::resource('products', Controllers\ProductController::class);
     Route::resource('product-groups', Controllers\ProductGroupController::class);
     Route::resource('customers', Controllers\CustomerController::class);

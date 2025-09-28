@@ -23,7 +23,11 @@
                 <tbody>
                     @foreach ($subjects as $subject)
                         <tr>
-                            <td class="px-4 py-2">{{ $subject->formattedCode() }}</td>
+                            <td class="px-4 py-2">
+                                <a href="{{ route('transactions.index', ['subject_id' => $subject->id]) }}" class="text-primary hover:underline" title="{{ __('View transactions for this subject') }}">
+                                    {{ $subject->formattedCode() }}
+                                </a>
+                            </td>
                             <td class="px-4 py-2">
                                 <a href="{{ route('subjects.index', ['parent_id' => $subject->id]) }}" class="text-primary"> {{ $subject->name }}</a>
                                 @if ($subject->subjectable)
