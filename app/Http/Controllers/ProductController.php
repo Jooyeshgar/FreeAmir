@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models;
+use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
@@ -23,33 +25,10 @@ class ProductController extends Controller
         return view('products.create', compact('groups'));
     }
 
-    public function store(Request $request)
+    public function store(StoreProductRequest $request)
     {
-        $validatedData = $request->validate([
-            'code' => 'required|unique:products,code',
-            'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
-            'group' => 'required|exists:product_groups,id|integer',
-            'location' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
-            'quantity' => 'nullable|min:0|numeric',
-            'quantity_warning' => 'nullable|min:0|numeric',
-            'oversell' => 'nullable|in:on,off',
-            'purchace_price' => 'nullable|string|regex:/^\d{1,3}(,\d{3})*$/',
-            'selling_price' => 'nullable|string|regex:/^\d{1,3}(,\d{3})*$/',
-            'discount_formula' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
-            'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
-            'vat' => 'nullable|numeric|min:0|max:100',
-            'sstid' => 'nullable|string',
-            'websites' => 'nullable|array',
-            'websites.link.*' => 'required|url',
-        ]);
-
-        $validatedData['oversell'] = $request->has('oversell') ? 1 : 0;
-        $validatedData['purchace_price'] = convertToFloat(empty($validatedData['purchace_price']) ? 0 : $validatedData['purchace_price']);
-        $validatedData['selling_price'] = convertToFloat(empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price']);
-        $validatedData['quantity'] = convertToFloat(empty($validatedData['quantity']) ? 0 : $validatedData['quantity']);
-        $validatedData['vat'] = convertToFloat(empty($validatedData['vat']) ? 0 : $validatedData['vat']);
-        $validatedData['sstid'] = empty($validatedData['sstid']) ? null : $validatedData['sstid'];
-
+        $validatedData = $request->getValidatedData();
+        
         $product = Models\Product::create($validatedData);
 
         if(isset($validatedData['websites'])) {
@@ -71,32 +50,9 @@ class ProductController extends Controller
         return view('products.edit', compact('product', 'groups'));
     }
 
-    public function update(Request $request, Models\Product $product)
+    public function update(UpdateProductRequest $request, Models\Product $product)
     {
-        $validatedData = $request->validate([
-            'code' => 'required|exists:products,code',
-            'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
-            'group' => 'required|exists:product_groups,id|integer',
-            'location' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
-            'quantity' => 'nullable|min:0|numeric',
-            'quantity_warning' => 'nullable|min:0|numeric',
-            'oversell' => 'nullable|in:on,off',
-            'purchace_price' => 'nullable|string|regex:/^\d{1,3}(,\d{3})*$/',
-            'selling_price' => 'nullable|string|regex:/^\d{1,3}(,\d{3})*$/',
-            'discount_formula' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
-            'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
-            'vat' => 'nullable|numeric|min:0|max:100',
-            'sstid' => 'nullable|string',
-            'websites' => 'nullable|array',
-            'websites.link.*' => 'required|url',
-        ]);
-
-        $validatedData['oversell'] = $request->has('oversell') ? 1 : 0;
-        $validatedData['purchace_price'] = convertToFloat(empty($validatedData['purchace_price']) ? 0 : $validatedData['purchace_price']);
-        $validatedData['selling_price'] = convertToFloat(empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price']);
-        $validatedData['quantity'] = convertToFloat(empty($validatedData['quantity']) ? 0 : $validatedData['quantity']);
-        $validatedData['vat'] = convertToFloat(empty($validatedData['vat']) ? 0 : $validatedData['vat']);
-        $validatedData['sstid'] = empty($validatedData['sstid']) ? null : $validatedData['sstid'];
+        $validatedData = $request->getValidatedData();
         
         $product->productWebsites()->delete();
 
