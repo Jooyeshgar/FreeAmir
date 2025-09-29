@@ -16,8 +16,6 @@ class CreateProductGroupsTable extends Migration
         Schema::create('product_groups', function (Blueprint $table) {
             $table->id();
             $table->string('name', 60);
-            # nullable may be remove in future!
-            $table->string('sstid')->nullable();
             $table->unsignedBigInteger('buyId')->nullable();
             $table->unsignedBigInteger('sellId')->nullable();
             $table->unsignedBigInteger('subject_id')->nullable();
