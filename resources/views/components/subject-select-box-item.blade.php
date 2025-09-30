@@ -43,7 +43,7 @@
                     {{ $subject->name }}
                 </span>
                 <span class="codeList" data-name="{{ $subject->name }}" data-code="{{ $subject->code }}" data-id="{{ $subject->id }}" hidden></span>
-                <span class="selfItemCode">
+                <span class="selfItemCode" hidden>
                     {{ $subject->formattedCode() }}
                 </span>
                 <span class="selfItemId hidden">{{ $subject->id }}</span>

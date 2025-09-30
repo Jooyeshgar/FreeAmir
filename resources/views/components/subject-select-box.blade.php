@@ -59,7 +59,7 @@
                     {{ __('Title name') }}
                 </span>
 
-                <span>
+                <span hidden>
                     {{ __('Header code') }}
                 </span>
             </div>
