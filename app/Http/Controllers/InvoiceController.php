@@ -26,6 +26,9 @@ class InvoiceController extends Controller
     {
         $builder = Invoice::with('customer', 'document')->orderByDesc('id');
 
+        $is_sell = $request->get('invoice_type') == 'sell'? true : false;
+        $builder = $builder->where('is_sell', $is_sell);
+
         // Optional: Filter by search query
         $searchTerm = $request->get('q');
         if ($searchTerm) {

@@ -5,8 +5,8 @@
                 selectedId: '',
             }">
         <div class="flex w-1/3">
-            <x-text-input input_name="title" title="{{ __('Invoice name') }}" input_value="{{ old('title') ?? '' }}"
-                placeholder="{{ __('Invoice name') }}" label_text_class="text-gray-500"
+            <x-text-input input_name="title" title="{{ __('Invoice Name') }}" input_value="{{ old('title') ?? '' }}"
+                placeholder="{{ __('Invoice Name') }}" label_text_class="text-gray-500"
                 label_class="w-full"></x-text-input>
         </div>
         <div class="flex w-1/3">
@@ -121,6 +121,12 @@
                     <div class="flex-1 min-w-24 max-w-32">
                         <x-text-input placeholder="0" x-model.number="transaction.quantity"
                             x-bind:name="'transactions[' + index + '][quantity]'" x-bind:disabled="!selectedId"
+                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white">
+                        </x-text-input>
+                    </div>
+                    <div class="flex-1 min-w-24 max-w-32" x-data="{ transaction: { off: 0 } }">
+                        <x-text-input placeholder="0" x-model.number="transaction.off"
+                            x-bind:name="'transactions[' + index + '][off]'" x-bind:disabled="!selectedId"
                             label_text_class="text-gray-500" label_class="w-full" input_class="border-white">
                         </x-text-input>
                     </div>
