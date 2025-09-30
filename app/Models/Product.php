@@ -54,7 +54,7 @@ class Product extends Model
         });
         
         static::updated(function ($product) {
-            $product->subject->update([
+            $product->subject()->update([
                 'parent_id' => $product->productGroup->subject_id,
             ]);
         });

@@ -5,18 +5,18 @@
                 selectedId: '',
             }">
         <div class="flex w-1/3">
-            <x-text-input input_name="title" title="{{ __('Invoice Name') }}" input_value="{{ old('title') ?? '' }}"
-                placeholder="{{ __('Invoice Name') }}" label_text_class="text-gray-500"
-                label_class="w-full"></x-text-input>
+            <x-subject-select-box :search="false" title="{{ __('Customer') }}" :subjects="$customers"
+                id_field="customer_id">
+            </x-subject-select-box>
         </div>
         <div class="flex w-1/3 hidden">
             <x-select title="{{ __('Invoice Type') }}" name="invoice_type" id="invoice_type" :options="[0 => __('Buy'), 1 => __('Sell')]" x-data="{ selectedValue: {{ old('invoice_type') ?? 0 }} }" x-bind:value="selectedValue"
                 x-on:change="selectedValue = $event.target.value;" />
         </div>
         <div class="flex w-1/3">
-            <x-subject-select-box :search="false" title="{{ __('Customer') }}" :subjects="$customers"
-                id_field="customer_id">
-            </x-subject-select-box>
+            <x-text-input input_name="title" title="{{ __('Invoice Name') }}" input_value="{{ old('title') ?? '' }}"
+                placeholder="{{ __('Invoice Name') }}" label_text_class="text-gray-500"
+                label_class="w-full"></x-text-input>
         </div>
     </div>
 
@@ -25,11 +25,11 @@
             label_class="w-full hidden"></x-text-input>
         <x-text-input disabled="true" input_value="{{ formatDocumentNumber($previousDocumentNumber) }}"
             title="{{ __('previous document number') }}" placeholder="{{ __('previous document number') }}"
-            label_text_class="text-gray-500 text-nowrap"></x-text-input>
-        <x-text-input input_value="{{ old('number') ?? formatDocumentNumber($previousDocumentNumber + 1) }}"
+            label_text_class="text-gray-500 text-nowrap" hidden></x-text-input>
+        <!-- <x-text-input input_value="{{ old('number') ?? formatDocumentNumber($previousDocumentNumber + 1) }}"
             input_name="document_number" title="{{ __('current document number') }}"
             placeholder="{{ __('current document number') }}"
-            label_text_class="text-gray-500 text-nowrap"></x-text-input>
+            label_text_class="text-gray-500 text-nowrap"></x-text-input> -->
 
         <x-text-input disabled="true" input_value="{{ formatDocumentNumber($previousInvoiceNumber) }}"
             title="{{ __('Previous Invoice Number') }}" placeholder="{{ __('Previous Invoice Number') }}"
@@ -37,6 +37,11 @@
         <x-text-input input_value="{{ old('number') ?? formatDocumentNumber($previousInvoiceNumber + 1) }}"
             input_name="invoice_number" title="{{ __('Current Invoice Number') }}"
             placeholder="{{ __('Current Invoice Number') }}"
+            label_text_class="text-gray-500 text-nowrap"></x-text-input>
+
+        <x-text-input input_value="{{ old('number') ?? formatDocumentNumber($previousDocumentNumber + 1) }}"
+            input_name="document_number" title="{{ __('current document number') }}"
+            placeholder="{{ __('current document number') }}"
             label_text_class="text-gray-500 text-nowrap"></x-text-input>
 
         <x-text-input data-jdp title="{{ __('date') }}" input_name="date" placeholder="{{ __('date') }}"
@@ -52,9 +57,9 @@
         <div class="text-sm flex-1 max-w-8 text-center text-gray-500 pt-3">
             *
         </div>
-        <div class="text-sm flex-1 min-w-24 max-w-32 text-center text-gray-500 pt-3">
+        <!-- <div class="text-sm flex-1 min-w-24 max-w-32 text-center text-gray-500 pt-3">
             {{ __('chapter code') }}
-        </div>
+        </div> -->
         <div class="text-sm flex-1 min-w-24 max-w-64 text-center text-gray-500 pt-3">
             {{ __('chapter title') }}
         </div>
@@ -105,7 +110,7 @@
                             </svg>
                         </button>
                     </div>
-                    <div class="flex-1 min-w-24 max-w-32">
+                    <div class="flex-1 min-w-24 max-w-32" hidden>
                         <x-text-input x-bind:value="$store.utils.formatCode(selectedCode)"
                             label_text_class="text-gray-500" label_class="w-full"
                             input_class="border-white value codeInput "></x-text-input>
@@ -162,9 +167,8 @@
                                 (Number($store.utils.formatNumber(getSubjectVat(Number(selectedId))))/100)
                                 -
                                 (Number($store.utils.convertToEnglish(transaction.off)) || 0) 
-                                ).toLocaleString()" x-bind:name="'transactions[' + index + '][total]'"
-                            placeholder="0" label_text_class="text-gray-500" label_class="w-full"
-                            input_class="border-white" readonly>
+                                ).toLocaleString()" x-bind:name="'transactions[' + index + '][total]'" placeholder="0"
+                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white" readonly>
                         </x-text-input>
                     </div>
                 </div>
@@ -264,7 +268,7 @@
                     const product = this.products.find(p => p.subject_id == subjectId);
                     const productGroup = this.productGroups.find(pg => pg.id == product.group);
                     if (!product || !productGroup) return 0;
-                    if (product.vat == null){
+                    if (product.vat == null) {
                         return productGroup.vat;
                     }
                     return product.vat;

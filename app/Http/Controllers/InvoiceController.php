@@ -62,7 +62,11 @@ class InvoiceController extends Controller
         }
         $products = Product::all();
         $productGroups = ProductGroup::all();
-        $subjects = Subject::where('parent_id', config('amir.product'))->with('children')->orderBy('code', 'asc')->get();
+        $FullSubjects = Subject::where('parent_id', config('amir.product'))->with('children')->orderBy('code', 'asc')->get();
+        foreach ($FullSubjects as $FullSubject) {
+            $subjects = $FullSubject->children;
+        }
+        dd($subjects);
         $customers = Subject::where('parent_id', config('amir.cust_subject'))->with('children')->orderBy('code', 'asc')->get();
         $previousInvoiceNumber = Invoice::orderBy('id', 'desc')->first()->number ?? 1;
         $previousDocumentNumber = Document::orderBy('id', 'desc')->first()->number ?? 1;
