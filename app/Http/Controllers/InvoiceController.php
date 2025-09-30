@@ -15,7 +15,9 @@ use App\Http\Requests\StoreInvoiceRequest;
 
 class InvoiceController extends Controller
 {
-    public function __construct() {}
+    public function __construct()
+    {
+    }
 
     /**
      * Display a listing of the resource.
@@ -26,7 +28,7 @@ class InvoiceController extends Controller
     {
         $builder = Invoice::with('customer', 'document')->orderByDesc('id');
 
-        $is_sell = $request->get('invoice_type') == 'sell'? true : false;
+        $is_sell = $request->get('invoice_type') == 'sell' ? true : false;
         $builder = $builder->where('is_sell', $is_sell);
 
         // Optional: Filter by search query
@@ -62,19 +64,34 @@ class InvoiceController extends Controller
         }
         $products = Product::all();
         $productGroups = ProductGroup::all();
-        $FullSubjects = Subject::where('parent_id', config('amir.product'))->with('children')->orderBy('code', 'asc')->get();
-        foreach ($FullSubjects as $FullSubject) {
-            $subjects = $FullSubject->children;
-        }
-        dd($subjects);
-        $customers = Subject::where('parent_id', config('amir.cust_subject'))->with('children')->orderBy('code', 'asc')->get();
+        $subjects = $this->getProducts();
+        $customers = $this->getCustomers();
         $previousInvoiceNumber = Invoice::orderBy('id', 'desc')->first()->number ?? 1;
         $previousDocumentNumber = Document::orderBy('id', 'desc')->first()->number ?? 1;
         $transactions = old('transactions') ?? $this->preparedTransactions(collect([new Transaction]));
 
         $total = count($transactions);
 
-        return view('invoices.create', compact('products', 'productGroups' , 'subjects', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber'));
+        return view('invoices.create', compact('products', 'productGroups', 'subjects', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber'));
+    }
+
+    private function getProducts()
+    {
+        $full_subjects = Subject::where('parent_id', config('amir.product'))->with('children')->orderBy('code', 'asc')->get();
+        foreach ($full_subjects as $full_subject) {
+            $subjects = $full_subject->children;
+        }
+        return $subjects;
+    }
+
+    private function getCustomers()
+    {
+        $full_customers = Subject::where('parent_id', config('amir.cust_subject'))->with('children')->orderBy('code', 'asc')->get();
+
+        foreach ($full_customers as $full_customer) {
+            $customers = $full_customer->children;
+        }
+        return $customers;
     }
 
     /**
