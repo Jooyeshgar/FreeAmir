@@ -13,7 +13,7 @@
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <tr>
-                        <th class="px-4 py-2">{{ __('Code') }}</th>
+                        <th class="px-4 py-2 hidden">{{ __('Code') }}</th>
                         <th class="px-4 py-2">{{ __('Name') }}</th>
                         <th class="px-4 py-2">{{ __('Action') }}</th>
                     </tr>
@@ -22,7 +22,7 @@
 
                     @foreach ($customerGroups as $customerGroup)
                         <tr>
-                            <td class="px-4 py-2">{{ $customerGroup->subject?->formattedCode() }}</td>
+                            <td class="px-4 py-2 hidden">{{ $customerGroup->subject?->formattedCode() }}</td>
                             <td class="px-4 py-2">{{ $customerGroup->name }}</td>
                             <td class="px-4 py-2">
                                 <a href="{{ route('customer-groups.edit', $customerGroup) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
