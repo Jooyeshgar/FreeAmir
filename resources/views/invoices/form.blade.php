@@ -90,6 +90,10 @@
                         selectedName: transaction.subject,
                         selectedCode: transaction.code,
                         selectedId: transaction.subject_id,
+                        off: 0,
+                    }" x-effect="
+                        if (selectedId && !transaction.unit) {
+                        transaction.unit = getSubjectPrice(Number(selectedId));
                     }">
                     <input type="text" x-bind:value="transaction.transaction_id"
                         x-bind:name="'transactions[' + index + '][transaction_id]'" hidden>
@@ -132,7 +136,7 @@
                             label_text_class="text-gray-500" label_class="w-full" input_class="border-white">
                         </x-text-input>
                     </div>
-                    <div class="flex-1 min-w-24 max-w-32" x-data="{ transaction: { off: 0 } }">
+                    <div class="flex-1 min-w-24 max-w-32">
                         <x-text-input placeholder="0" x-model.number="transaction.off"
                             x-bind:name="'transactions[' + index + '][off]'" x-bind:disabled="!selectedId"
                             label_text_class="text-gray-500" label_class="w-full" input_class="border-white">
@@ -149,40 +153,35 @@
 
                     <div class="flex-1 min-w-24 max-w-32">
                         <x-text-input x-model.number="transaction.unit"
-                            x-bind:value=$store.utils.formatNumber(getSubjectPrice(Number(selectedId)))
                             x-bind:name="'transactions[' + index + '][unit]'" placeholder="0"
-                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white" readonly>
+                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
+                            x-bind:value="$store.utils.formatNumber(transaction.unit)">
                         </x-text-input>
                     </div>
-
 
                     <div class="flex-1 min-w-32 max-w-32">
                         <x-text-input x-bind:value="(transaction.total = (Number($store.utils.convertToEnglish(transaction.quantity)) || 0) *
-                                getSubjectPrice(Number(
-                                selectedId))
-                                + 
-                                (Number($store.utils.convertToEnglish(transaction.quantity)) || 0) *
-                                getSubjectPrice(Number(
-                                selectedId)) *
-                                (Number($store.utils.formatNumber(getSubjectVat(Number(selectedId))))/100)
-                                -
-                                (Number($store.utils.convertToEnglish(transaction.off)) || 0) 
-                                ).toLocaleString()" x-bind:name="'transactions[' + index + '][total]'" placeholder="0"
+                        (Number($store.utils.convertToEnglish(transaction.unit)) || 0) +
+                        ((Number($store.utils.convertToEnglish(transaction.quantity)) || 0) *
+                        (Number($store.utils.convertToEnglish(transaction.unit)) || 0) *
+                        (Number($store.utils.formatNumber(getSubjectVat(Number(selectedId))))/100)) -
+                        (Number($store.utils.convertToEnglish(transaction.off)) || 0) ).toLocaleString()"
+                            x-bind:name="'transactions[' + index + '][total]'" placeholder="0"
                             label_text_class="text-gray-500" label_class="w-full" input_class="border-white" readonly>
                         </x-text-input>
                     </div>
                 </div>
-            </template>
-
-            <button class="flex justify-content gap-4 align-center w-full px-4" id="addTransaction"
-                @click="addTransaction; activeTab = transactions.length;" type="button">
-                <div
-                    class="bg-gray-200 max-h-10 min-h-10 hover:bg-gray-300 border-none btn w-full rounded-md btn-active">
-                    <span class="text-2xl">+</span>
-                    {{ __('Add Transaction') }}
-                </div>
-            </button>
         </div>
+        </template>
+
+        <button class="flex justify-content gap-4 align-center w-full px-4" id="addTransaction"
+            @click="addTransaction; activeTab = transactions.length;" type="button">
+            <div class="bg-gray-200 max-h-10 min-h-10 hover:bg-gray-300 border-none btn w-full rounded-md btn-active">
+                <span class="text-2xl">+</span>
+                {{ __('Add Transaction') }}
+            </div>
+        </button>
+    </div>
     </div>
     <hr style="">
     <div class="flex flex-row justify-between" x-data="{ additionsInput: '', subtractionsInput: '' }">

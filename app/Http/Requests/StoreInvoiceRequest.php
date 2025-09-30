@@ -34,8 +34,9 @@ class StoreInvoiceRequest extends FormRequest
         $customer = Subject::find($this->input('customer_id'))->subjectable()->first();
         $this->merge(['customer_id' => $customer->id]);
 
-        if($this->input('invoice_type') == 'buy') $this->merge(['invoice_type' => 1]);
-        else $this->merge(['invoice_type' => 0]);
+        // 0 for buy, 1 for sell
+        if($this->input('invoice_type') == 'buy') $this->merge(['invoice_type' => 0]);
+        else $this->merge(['invoice_type' => 1]);
 
         // Cast invoice_type (0/1 string) to integer boolean-like
         // if ($this->has('invoice_type')) {
@@ -53,7 +54,7 @@ class StoreInvoiceRequest extends FormRequest
                         'subject_id' => isset($t['subject_id']) ? (int) $t['subject_id'] : null,
                         'desc' => $t['desc'] ?? null,
                         'quantity' => isset($t['quantity']) ? convertToFloat($t['quantity']) : null,
-                        'unit_discount' => isset($t['off']) ? convertToFloat($t['off']) : null,
+                        'unit_discount' => isset($t['off']) ? convertToFloat($t['off']) : 0,
                         'unit' => isset($t['unit']) ? convertToFloat($t['unit']) : null,
                         'total' => isset($t['total']) ? convertToFloat($t['total']) : null,
                     ];

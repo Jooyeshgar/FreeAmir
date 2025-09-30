@@ -40,7 +40,7 @@ class ProductController extends Controller
             }
         }
 
-        return redirect()->route('products.index')->with('success', 'Product created successfully.');
+        return redirect()->route('products.index')->with('success', __('Product created successfully.'));
     }
 
     public function edit(Models\Product $product)
@@ -67,13 +67,13 @@ class ProductController extends Controller
 
         $product->update($validatedData);
 
-        return redirect()->route('products.index')->with('success', 'Product updated successfully.');
+        return redirect()->route('products.index')->with('success', __('Product updated successfully.'));
     }
 
     public function destroy(Models\Product $product)
     {
         $product->delete();
 
-        return redirect()->route('products.index')->with('success', 'Product deleted successfully.');
+        return redirect()->route('products.index')->with('success', __('Product deleted successfully.'));
     }
 }

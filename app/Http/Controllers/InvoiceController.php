@@ -158,9 +158,10 @@ class InvoiceController extends Controller
             ->toArray();
         // dd($items, $transactions, $invoiceData);
         $result = $service->createInvoice(auth()->user(), $transactions, $invoiceData, $items);
+        $invoice_type = $result['invoice']->is_sell == true ? "sell" : "buy" ;
 
         return (!empty($result))
-            ? redirect()->route('invoices.index')->with('success', ('Invoice created successfully.'))
+            ? redirect()->route('invoices.index', ['invoice_type' => $invoice_type])->with('success', __('Invoice created successfully.'))
             : back()->with('error', __('Something went wrong creating the invoice.'));
     }
 
