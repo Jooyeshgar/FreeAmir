@@ -86,6 +86,22 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with('success', 'Product updated successfully.');
     }
 
+    public function show(Models\Product $product)
+    {
+        $product->load('productgroup');
+
+        $invoices = [];
+        $invoice_items = Models\InvoiceItem::where('product_id', $product->id)->get();
+
+        if ($invoice_items->count() > 0) {
+            foreach ($invoice_items as $invoice_item) {
+                $invoice_item['is_sell'] = Models\Invoice::select('is_sell')->find($invoice_item->invoice_id)->is_sell;
+            }
+        }
+
+        return view('products.show', compact('product', 'invoice_items'));
+    }
+
     public function destroy(Models\Product $product)
     {
         $product->delete();
