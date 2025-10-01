@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -16,11 +17,14 @@ class SubjectFactory extends Factory
      */
     public function definition(): array
     {
+        $subject = Subject::inRandomOrder()->first();
+
         return [
             'code' => $this->faker->unique()->ean8(),
             'name' => $this->faker->name(),
-            'parent_id' => 0,
+            'parent_id' => $subject->id,
             'type' => 2,
+            'company_id' => 1,
         ];
     }
 }

@@ -4,10 +4,13 @@ namespace App\Models;
 
 use App\Models\Scopes\FiscalYearScope;
 use App\Services\SubjectCreatorService;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ProductGroup extends Model
 {
+    use HasFactory;
+    
     protected $fillable = [
         'code',
         'name',
