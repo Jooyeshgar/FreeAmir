@@ -77,7 +77,7 @@
 
                 <tbody>
                     @php
-                        $remaining = 100 - $product->quantity;
+                        $remaining = $product->quantity;
 
                         $totalSell = 0;
                         $totalBuy = 0;
