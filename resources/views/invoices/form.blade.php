@@ -4,10 +4,19 @@
                 selectedCode: '',
                 selectedId: '',
             }">
-        <div class="flex w-1/3">
-            <x-subject-select-box :search="false" title="{{ __('Customer') }}" :subjects="$customers"
-                id_field="customer_id">
-            </x-subject-select-box>
+        <div class="flex w-1/4">
+            <div class="flex flex-wrap">
+                <span class="flex flex-col flex-wrap text-gray-500 w-full"> {{ __('Customer') }} </span>
+                <select name="customer_id" id="customer_id"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
+                    <option value="">{{ __('Select Customer') }}</option>
+                    @foreach ($customers as $customer)
+                        <option value="{{ $customer->id }}" {{ old('customer_id') == $customer->id ? 'selected' : '' }}>
+                            {{ $customer->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
         </div>
         <div class="flex w-1/3 hidden">
             <x-select title="{{ __('Invoice Type') }}" name="invoice_type" id="invoice_type" :options="[0 => __('Buy'), 1 => __('Sell')]" x-data="{ selectedValue: {{ old('invoice_type') ?? 0 }} }" x-bind:value="selectedValue"
@@ -16,7 +25,7 @@
         <div class="flex w-1/3">
             <x-text-input input_name="title" title="{{ __('Invoice Name') }}" input_value="{{ old('title') ?? '' }}"
                 placeholder="{{ __('Invoice Name') }}" label_text_class="text-gray-500"
-                label_class="w-full"></x-text-input>
+                label_class="w-1/2"></x-text-input>
         </div>
     </div>
 
@@ -116,10 +125,22 @@
                             label_text_class="text-gray-500" label_class="w-full"
                             input_class="border-white value codeInput "></x-text-input>
                     </div>
-                    <div>
-                        <x-subject-select-box :search="false" :subjects="$subjects">
-                        </x-subject-select-box>
 
+                    <div class="flex-1 min-w-24 max-w-64">
+                        <label class="sr-only">{{ __('Product') }}</label>
+                        <select x-model="selectedId" @change="
+                                transaction.subject_id = Number($event.target.value);
+                                transaction.unit = getSubjectPrice(Number($event.target.value));
+                                transaction.vat = getSubjectVat(Number($event.target.value));
+                            " x-bind:name="'transactions[' + index + '][subject_id]'"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
+                            <option value="">{{ __('Select Product') }}</option>
+                            @foreach ($subjects as $subject)
+                                <option value="{{ $subject->id }}" x-bind:selected="selectedId == {{ $subject->id }}">
+                                    {{ $subject->name }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="flex-1 w-[200px]">
                         <x-text-input x-bind:value="transaction.desc" placeholder="{{ __('description') }}"

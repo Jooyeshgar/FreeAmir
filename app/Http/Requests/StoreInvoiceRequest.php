@@ -35,8 +35,10 @@ class StoreInvoiceRequest extends FormRequest
         $this->merge(['customer_id' => $customer->id]);
 
         // 0 for buy, 1 for sell
-        if($this->input('invoice_type') == 'buy') $this->merge(['invoice_type' => 0]);
-        else $this->merge(['invoice_type' => 1]);
+        if ($this->input('invoice_type') == 'buy')
+            $this->merge(['invoice_type' => 0]);
+        else
+            $this->merge(['invoice_type' => 1]);
 
         // Cast invoice_type (0/1 string) to integer boolean-like
         // if ($this->has('invoice_type')) {
@@ -72,7 +74,7 @@ class StoreInvoiceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => 'required|string|min:2|max:255',
+            'title' => 'nullable|string|min:2|max:255',
             'description' => 'nullable|string',
             'date' => 'required|date',
 
