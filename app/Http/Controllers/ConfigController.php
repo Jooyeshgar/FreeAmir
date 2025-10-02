@@ -9,12 +9,15 @@ use Illuminate\Support\Facades\Storage;
 
 class ConfigController extends Controller
 {
-    public function __construct() {}
+    public function __construct()
+    {
+    }
 
     public function index()
     {
         $configs = Models\Config::all();
-        return view('configs.index', compact('configs'));
+        $subjects = Models\Subject::all();
+        return view('configs.index', compact('subjects', 'configs'));
     }
 
     // public function store(Request $request)
