@@ -27,7 +27,8 @@
                 <div>
                     <div class="text-gray-500">{{ __('Quantity warning') }}</div>
                     <div class="font-semibold">
-                        {{ isset($product->quantity_warning) ? formatNumber($product->quantity_warning) : '' }}</div>
+                        {{ isset($product->quantity_warning) ? formatNumber($product->quantity_warning) : '' }}
+                    </div>
                 </div>
                 <div>
                     <div class="text-gray-500">{{ __('Oversell') }}</div>
@@ -37,12 +38,14 @@
                 <div>
                     <div class="text-gray-500">{{ __('Purchace Price') }}</div>
                     <div class="font-semibold">
-                        {{ isset($product->purchace_price) ? formatNumber($product->purchace_price) : 0 }}</div>
+                        {{ isset($product->purchace_price) ? formatNumber($product->purchace_price) : 0 }}
+                    </div>
                 </div>
                 <div>
                     <div class="text-gray-500">{{ __('Selling Price') }}</div>
                     <div class="font-semibold">
-                        {{ isset($product->selling_price) ? formatNumber($product->selling_price) : 0 }}</div>
+                        {{ isset($product->selling_price) ? formatNumber($product->selling_price) : 0 }}
+                    </div>
                 </div>
                 <div>
                     <div class="text-gray-500">{{ __('Discount Formula') }}</div>
@@ -59,54 +62,65 @@
                     </div>
                 @endif
             </div>
+            <table class="table table-fixed w-3/4 mt-3 overflow-auto">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-2 w-1/6">{{ __('Date') }}</th>
+                        <th class="px-4 py-2 w-1/6">{{ __('Buy') }}</th>
+                        <th class="px-4 py-2 w-1/6">{{ __('Sell') }}</th>
+                        <th class="px-4 py-2 w-1/6">{{ __('Unit Price') }}</th>
+                        <th class="px-4 py-2 w-1/6">{{ __('OFF') }}</th>
+                        <th class="px-4 py-2 w-1/6">{{ __('Remaining') }}</th>
+                    </tr>
+                </thead>
 
-            @if ($invoice_items->where('is_sell', true)->isNotEmpty())
-                <h5 class="mt-6 font-semibold text-gray-700">{{ __('Selling List') }}</h5>
-                <table class="table w-full mt-2 overflow-auto">
-                    <thead>
-                        <tr>
-                            <th class="px-4 py-2">{{ __('Quantity') }}</th>
-                            <th class="px-4 py-2">{{ __('Unit Price') }}</th>
-                            <th class="px-4 py-2">{{ __('Unit Discount') }}</th>
-                            <th class="px-4 py-2">{{ __('Amount') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($invoice_items->where('is_sell', true) as $item)
-                            <tr>
-                                <td class="px-4 py-2">{{ $item->quantity }}</td>
-                                <td class="px-4 py-2">{{ $item->unit_price }}</td>
-                                <td class="px-4 py-2">{{ $item->unit_discount }}</td>
-                                <td class="px-4 py-2">{{ $item->amount }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            @endif
 
-            @if ($invoice_items->where('is_sell', false)->isNotEmpty())
-                <h5 class="mt-6 font-semibold text-gray-700">{{ __('Buying List') }}</h5>
-                <table class="table w-full mt-2 overflow-auto">
-                    <thead>
+                <tbody>
+                    @php
+                        $remaining = 100 - $product->quantity;
+
+                        $totalSell = 0;
+                        $totalBuy = 0;
+                    @endphp
+
+                    @foreach ($invoice_items as $item)
+                        @php
+                            if ($item->is_sell) {
+                                $remaining -= $item->quantity;
+                                $totalSell += $item->quantity;
+                            } else {
+                                $remaining += $item->quantity;
+                                $totalBuy += $item->quantity;
+                            }
+                        @endphp
+
                         <tr>
-                            <th class="px-4 py-2">{{ __('Quantity') }}</th>
-                            <th class="px-4 py-2">{{ __('Unit Price') }}</th>
-                            <th class="px-4 py-2">{{ __('Unit Discount') }}</th>
-                            <th class="px-4 py-2">{{ __('Amount') }}</th>
+                            <td class="px-4 py-2">
+                                {{ gregorian_to_jalali_date($item->updated_at) }}
+                            </td>
+                            <td class="px-4 py-2">{{ $item->is_sell ? (int) $item->quantity : 0 }}</td>
+                            <td class="px-4 py-2">{{ !$item->is_sell ? (int) $item->quantity : 0 }}</td>
+
+                            <td class="px-4 py-2">{{ $item->unit_price }}</td>
+                            <td class="px-4 py-2">{{ $item->unit_discount }}</td>
+
+                            <td class="px-4 py-2 {{ $remaining < 0 ? 'text-red-600 font-bold bg-red-100 rounded' : '' }}">
+                                {{ $remaining }}
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($invoice_items->where('is_sell', false) as $item)
-                            <tr>
-                                <td class="px-4 py-2">{{ $item->quantity }}</td>
-                                <td class="px-4 py-2">{{ $item->unit_price }}</td>
-                                <td class="px-4 py-2">{{ $item->unit_discount }}</td>
-                                <td class="px-4 py-2">{{ $item->amount }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            @endif
+                    @endforeach
+
+                    <tr class="font-bold bg-gray-100">
+                        <td class="px-4 py-2">{{ __('Total') }}</td>
+                        <td class="px-4 py-2">{{ $totalSell }}</td>
+                        <td class="px-4 py-2">{{ $totalBuy }}</td>
+                        <td class="px-4 py-2" colspan="2"></td>
+                        <td class="px-4 py-2 {{ $remaining < 0 ? 'rounded bg-red-500 text-white' : '' }}">
+                            مانده انبار: {{ $remaining }}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
 
             <div class="card-actions justify-end mt-6">
                 <a href="{{ route('products.edit', $product) }}" class="btn btn-info">{{ __('Edit') }}</a>

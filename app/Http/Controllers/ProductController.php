@@ -7,7 +7,9 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function __construct() {}
+    public function __construct()
+    {
+    }
 
     public function index()
     {
@@ -91,7 +93,7 @@ class ProductController extends Controller
         $product->load('productgroup');
 
         $invoices = [];
-        $invoice_items = Models\InvoiceItem::where('product_id', $product->id)->get();
+        $invoice_items = Models\InvoiceItem::where('product_id', $product->id)->orderBy('updated_at')->get();
 
         if ($invoice_items->count() > 0) {
             foreach ($invoice_items as $invoice_item) {
