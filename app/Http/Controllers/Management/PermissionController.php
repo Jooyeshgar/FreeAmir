@@ -79,7 +79,7 @@ class PermissionController extends Controller
         }
 
         return redirect(route('permissions.index'))
-            ->with('success', 'Permission create successfully.');
+            ->with('success', __('Permission create successfully.'));
     }
 
     /**
@@ -117,11 +117,11 @@ class PermissionController extends Controller
 
         if ($permission->update($validated)) {
             return redirect(route('permissions.index'))
-                ->with('success', 'Permission updated successfully');
+                ->with('success', __('Permission updated successfully'));
         }
 
         return redirect(route('permissions.index'))
-            ->with('error', 'An error occurred, Try again.');
+            ->with('error', __('An error occurred, Try again.'));
     }
 
     /**
@@ -133,10 +133,10 @@ class PermissionController extends Controller
     {
         if ($permission->delete()) {
             return redirect(route('permissions.index'))
-                ->with('success', 'Removed successfully.');
+                ->with('success', __('Permission deleted successfully.'));
         }
 
         return redirect(route('permissions.index'))
-            ->with('error', 'An error occurred, Try again.');
+            ->with('error', __('An error occurred, Try again.'));
     }
 }

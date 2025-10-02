@@ -3,13 +3,8 @@
         @php
             $hint = '<a class="link text-blue-500" href="' . route('product-groups.create') . '">اضافه کردن کالا</a>';
         @endphp
-        <x-select title="{{ __('Product group') }}" name="group" id="group" :options="$groups->pluck('name', 'id')"
+        <x-select title="{{ __('Product group') }}" name="group" id="group" :options="$groups->pluck('name', 'id', 'sstid')"
             :selected="$product->group ?? null" :hint="$hint" />
-    </div>
-
-    <div class="col-span-2 md:col-span-1">
-        <x-input name="vat" id="vat" title="{{ __('Vat') }}" :value="old('vat', $product->vat ?? '')"
-            placeholder="0" />
     </div>
 
     <div class="col-span-2 md:col-span-1">
@@ -23,7 +18,8 @@
     </div>
 
     <div class="col-span-2 md:col-span-1">
-        <x-input name="sstid" id="sstid" title="{{ __('Product SSTID') }}" :value="old('sstid', $product->sstid ?? '')"
+        <x-input name="sstid" id="sstid" title="{{ __('Product SSTID') }}" :value="old('sstid',
+            isset($product) ? ($product->sstid ?: ($groups->find($product->group)->sstid ?? '')) : '')"
             placeholder="{{ __('Please enter the product SSTID') }}" />
     </div>
 
@@ -35,6 +31,11 @@
     <div class="col-span-2 md:col-span-1">
         <x-input @input="$event.target.value = $store.utils.formatNumber($event.target.value)" name="purchace_price"
             id="purchace_price" title="{{ __('Purchase price') }}" :value="old('purchace_price', $product->purchace_price ?? '')" placeholder="{{ __('Please insert Purchase price') }}" />
+    </div>
+
+    <div class="col-span-2 md:col-span-1">
+        <x-input name="vat" id="vat" title="{{ __('VAT') }}" :value="old('vat', $product->vat ?? '')"
+            placeholder="0" />
     </div>
 
     <div class="col-span-2">
@@ -70,4 +71,7 @@
             id="quantity" title="{{ __('Quantity') }}" :value="old('quantity', $product->quantity ?? '')"
             placeholder="{{ __('Please insert quantity') }}" />
     </div>
+
+    @include('products.websites.form', ['websites' => isset($product) ? $product->productWebsites : []])
+    
 </div>

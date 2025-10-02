@@ -1,35 +1,44 @@
 <x-card class="rounded-2xl w-full" class_body="p-4">
-    <div class="flex gap-2 items-center" x-data="{
+    <div class="flex gap-2 items-center justify-start" x-data="{
                 selectedName: '',
                 selectedCode: '',
                 selectedId: '',
             }">
-        <div class="flex w-1/3">
-            <x-text-input input_name="title" title="{{ __('Invoice name') }}" input_value="{{ old('title') ?? '' }}"
-                placeholder="{{ __('Invoice name') }}" label_text_class="text-gray-500"
-                label_class="w-full"></x-text-input>
+        <div class="flex w-1/4">
+            <div class="flex flex-wrap">
+                <span class="flex flex-col flex-wrap text-gray-500 w-full"> {{ __('Customer') }} </span>
+                <select name="customer_id" id="customer_id"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
+                    <option value="">{{ __('Select Customer') }}</option>
+                    @foreach ($customers as $customer)
+                        <option value="{{ $customer->id }}" {{ old('customer_id') == $customer->id ? 'selected' : '' }}>
+                            {{ $customer->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
         </div>
-        <div class="flex w-1/3">
+        <div class="flex w-1/3 hidden">
             <x-select title="{{ __('Invoice Type') }}" name="invoice_type" id="invoice_type" :options="[0 => __('Buy'), 1 => __('Sell')]" x-data="{ selectedValue: {{ old('invoice_type') ?? 0 }} }" x-bind:value="selectedValue"
                 x-on:change="selectedValue = $event.target.value;" />
         </div>
         <div class="flex w-1/3">
-            <x-subject-select-box :search="false" title="{{ __('Customer') }}" :subjects="$customers"
-                id_field="customer_id">
-            </x-subject-select-box>
+            <x-text-input input_name="title" title="{{ __('Invoice Name') }}" input_value="{{ old('title') ?? '' }}"
+                placeholder="{{ __('Invoice Name') }}" label_text_class="text-gray-500"
+                label_class="w-1/2"></x-text-input>
         </div>
     </div>
 
-    <div class="flex justify-center gap-2 mt-2">
+    <div class="flex justify-start gap-2 mt-2">
         <x-text-input input_value="" input_name="invoice_id" label_text_class="text-gray-500"
             label_class="w-full hidden"></x-text-input>
         <x-text-input disabled="true" input_value="{{ formatDocumentNumber($previousDocumentNumber) }}"
             title="{{ __('previous document number') }}" placeholder="{{ __('previous document number') }}"
-            label_text_class="text-gray-500 text-nowrap"></x-text-input>
-        <x-text-input input_value="{{ old('number') ?? formatDocumentNumber($previousDocumentNumber + 1) }}"
+            label_text_class="text-gray-500 text-nowrap" hidden></x-text-input>
+        <!-- <x-text-input input_value="{{ old('number') ?? formatDocumentNumber($previousDocumentNumber + 1) }}"
             input_name="document_number" title="{{ __('current document number') }}"
             placeholder="{{ __('current document number') }}"
-            label_text_class="text-gray-500 text-nowrap"></x-text-input>
+            label_text_class="text-gray-500 text-nowrap"></x-text-input> -->
 
         <x-text-input disabled="true" input_value="{{ formatDocumentNumber($previousInvoiceNumber) }}"
             title="{{ __('Previous Invoice Number') }}" placeholder="{{ __('Previous Invoice Number') }}"
@@ -39,12 +48,14 @@
             placeholder="{{ __('Current Invoice Number') }}"
             label_text_class="text-gray-500 text-nowrap"></x-text-input>
 
+        <x-text-input input_value="{{ old('number') ?? formatDocumentNumber($previousDocumentNumber + 1) }}"
+            input_name="document_number" title="{{ __('current document number') }}"
+            placeholder="{{ __('current document number') }}"
+            label_text_class="text-gray-500 text-nowrap"></x-text-input>
+
         <x-text-input data-jdp title="{{ __('date') }}" input_name="date" placeholder="{{ __('date') }}"
             input_value="{{ old('date') ?? convertToJalali(now()) }}" label_text_class="text-gray-500 text-nowrap"
             input_class="datePicker"></x-text-input>
-    </div>
-    <div class="flex justify-center gap-2 mt-2">
-        <x-textarea name="description" id="description" title="{{ __('description') }}" :value="old('description', '')" />
     </div>
 </x-card>
 <x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-4" x-data="transactionForm">
@@ -52,17 +63,20 @@
         <div class="text-sm flex-1 max-w-8 text-center text-gray-500 pt-3">
             *
         </div>
-        <div class="text-sm flex-1 min-w-24 max-w-32 text-center text-gray-500 pt-3">
+        <!-- <div class="text-sm flex-1 min-w-24 max-w-32 text-center text-gray-500 pt-3">
             {{ __('chapter code') }}
-        </div>
+        </div> -->
         <div class="text-sm flex-1 min-w-24 max-w-64 text-center text-gray-500 pt-3">
-            {{ __('chapter title') }}
+            {{ __('Product name') }}
         </div>
         <div class="text-sm flex-1 min-w-80 text-center text-gray-500 pt-3">
             {{ __('description') }}
         </div>
         <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">
             {{ __('Quantity') }}
+        </div>
+        <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">
+            {{ __('OFF') }}
         </div>
         <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">
             {{ __('VAT') }}
@@ -82,6 +96,10 @@
                         selectedName: transaction.subject,
                         selectedCode: transaction.code,
                         selectedId: transaction.subject_id,
+                        off: 0,
+                    }" x-effect="
+                        if (selectedId && !transaction.unit) {
+                        transaction.unit = getSubjectPrice(Number(selectedId));
                     }">
                     <input type="text" x-bind:value="transaction.transaction_id"
                         x-bind:name="'transactions[' + index + '][transaction_id]'" hidden>
@@ -102,15 +120,27 @@
                             </svg>
                         </button>
                     </div>
-                    <div class="flex-1 min-w-24 max-w-32">
+                    <div class="flex-1 min-w-24 max-w-32" hidden>
                         <x-text-input x-bind:value="$store.utils.formatCode(selectedCode)"
                             label_text_class="text-gray-500" label_class="w-full"
                             input_class="border-white value codeInput "></x-text-input>
                     </div>
-                    <div>
-                        <x-subject-select-box :search="false" :subjects="$subjects">
-                        </x-subject-select-box>
 
+                    <div class="flex-1 min-w-24 max-w-64">
+                        <label class="sr-only">{{ __('Product') }}</label>
+                        <select x-model="selectedId" @change="
+                                transaction.subject_id = Number($event.target.value);
+                                transaction.unit = getSubjectPrice(Number($event.target.value));
+                                transaction.vat = getSubjectVat(Number($event.target.value));
+                            " x-bind:name="'transactions[' + index + '][subject_id]'"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
+                            <option value="">{{ __('Select Product') }}</option>
+                            @foreach ($subjects as $subject)
+                                <option value="{{ $subject->id }}" x-bind:selected="selectedId == {{ $subject->id }}">
+                                    {{ $subject->name }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="flex-1 w-[200px]">
                         <x-text-input x-bind:value="transaction.desc" placeholder="{{ __('description') }}"
@@ -121,6 +151,12 @@
                     <div class="flex-1 min-w-24 max-w-32">
                         <x-text-input placeholder="0" x-model.number="transaction.quantity"
                             x-bind:name="'transactions[' + index + '][quantity]'" x-bind:disabled="!selectedId"
+                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white">
+                        </x-text-input>
+                    </div>
+                    <div class="flex-1 min-w-24 max-w-32">
+                        <x-text-input placeholder="0" x-model.number="transaction.off"
+                            x-bind:name="'transactions[' + index + '][off]'" x-bind:disabled="!selectedId"
                             label_text_class="text-gray-500" label_class="w-full" input_class="border-white">
                         </x-text-input>
                     </div>
@@ -135,34 +171,35 @@
 
                     <div class="flex-1 min-w-24 max-w-32">
                         <x-text-input x-model.number="transaction.unit"
-                            x-bind:value=$store.utils.formatNumber(getSubjectPrice(Number(selectedId)))
                             x-bind:name="'transactions[' + index + '][unit]'" placeholder="0"
-                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white" readonly>
+                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
+                            x-bind:value="$store.utils.formatNumber(transaction.unit)">
                         </x-text-input>
                     </div>
-
 
                     <div class="flex-1 min-w-32 max-w-32">
                         <x-text-input x-bind:value="(transaction.total = (Number($store.utils.convertToEnglish(transaction.quantity)) || 0) *
-                                getSubjectPrice(Number(
-                                selectedId)) + (Number($store.utils.convertToEnglish(transaction.quantity)) || 0) *
-                                getSubjectVat(Number(selectedId))).toLocaleString()" x-bind:name="'transactions[' + index + '][total]'"
-                            placeholder="0" label_text_class="text-gray-500" label_class="w-full"
-                            input_class="border-white" readonly>
+                        (Number($store.utils.convertToEnglish(transaction.unit)) || 0) +
+                        ((Number($store.utils.convertToEnglish(transaction.quantity)) || 0) *
+                        (Number($store.utils.convertToEnglish(transaction.unit)) || 0) *
+                        (Number($store.utils.formatNumber(getSubjectVat(Number(selectedId))))/100)) -
+                        (Number($store.utils.convertToEnglish(transaction.off)) || 0) ).toLocaleString()"
+                            x-bind:name="'transactions[' + index + '][total]'" placeholder="0"
+                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white" readonly>
                         </x-text-input>
                     </div>
                 </div>
-            </template>
-
-            <button class="flex justify-content gap-4 align-center w-full px-4" id="addTransaction"
-                @click="addTransaction; activeTab = transactions.length;" type="button">
-                <div
-                    class="bg-gray-200 max-h-10 min-h-10 hover:bg-gray-300 border-none btn w-full rounded-md btn-active">
-                    <span class="text-2xl">+</span>
-                    {{ __('Add Transaction') }}
-                </div>
-            </button>
         </div>
+        </template>
+
+        <button class="flex justify-content gap-4 align-center w-full px-4" id="addTransaction"
+            @click="addTransaction; activeTab = transactions.length;" type="button">
+            <div class="bg-gray-200 max-h-10 min-h-10 hover:bg-gray-300 border-none btn w-full rounded-md btn-active">
+                <span class="text-2xl">+</span>
+                {{ __('Add Transaction') }}
+            </div>
+        </button>
+    </div>
     </div>
     <hr style="">
     <div class="flex flex-row justify-between" x-data="{ additionsInput: '', subtractionsInput: '' }">
@@ -208,6 +245,13 @@
     </div>
 
 </x-card>
+
+<x-card class="rounded-2xl w-full" class_body="p-4">
+    <div class="flex justify-center gap-2 mt-2">
+        <x-textarea name="description" id="description" title="{{ __('description') }}" :value="old('description', '')" />
+    </div>
+</x-card>
+
 <div class="mt-4 flex gap-2 justify-end">
     <a href="{{ route('invoices.index') }}" type="submit" class="btn btn-default rounded-md"> {{ __('cancel') }}
     </a>
@@ -248,7 +292,7 @@
                     const product = this.products.find(p => p.subject_id == subjectId);
                     const productGroup = this.productGroups.find(pg => pg.id == product.group);
                     if (!product || !productGroup) return 0;
-                    if (product.vat == null){
+                    if (product.vat == null) {
                         return productGroup.vat;
                     }
                     return product.vat;
