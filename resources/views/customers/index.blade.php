@@ -13,7 +13,7 @@
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <tr>
-                        <th class="px-4 py-2 hidden">{{ __('Code') }}</th>
+                        <th class="px-4 py-2">{{ __('Code') }}</th>
                         <th class="px-4 py-2">{{ __('Name') }}</th>
                         <th class="px-4 py-2">{{ __('Number') }}</th>
                         <th class="px-4 py-2">{{ __('Email') }}</th>
@@ -25,14 +25,17 @@
 
                     @foreach ($customers as $customer)
                         <tr>
-                            <td class="px-4 py-2 hidden">{{ $customer->subject?->formattedCode() }}</td>
-                            <td class="px-4 py-2"><a href="{{ route('customers.show', $customer) }}">{{ $customer->name }}</a></td>
+                            <td class="px-4 py-2">{{ $customer->subject?->formattedCode() }}</td>
+                            <td class="px-4 py-2"><a
+                                    href="{{ route('customers.show', $customer) }}">{{ $customer->name }}</a></td>
                             <td class="px-4 py-2">{{ $customer->phone }}</td>
                             <td class="px-4 py-2">{{ $customer->email }}</td>
                             <td class="px-4 py-2">{{ $customer->group ? $customer->group->name : '' }}</td>
                             <td class="px-4 py-2">
-                                <a href="{{ route('customers.edit', $customer) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                <form action="{{ route('customers.destroy', $customer) }}" method="POST" class="inline-block">
+                                <a href="{{ route('customers.edit', $customer) }}"
+                                    class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                <form action="{{ route('customers.destroy', $customer) }}" method="POST"
+                                    class="inline-block">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
