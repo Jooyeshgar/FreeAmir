@@ -14,8 +14,8 @@ class ShowMessageBags extends Component
 
     public function render()
     {
-        $types = ['success', 'warning', 'errors', 'info'];
-        $class = ['success' => 'success', 'warning' => 'warning', 'errors' => 'error', 'info' => 'info'];
+        $types = ['success', 'warning', 'errors', 'error', 'info'];
+        $class = ['success' => 'success', 'warning' => 'warning', 'errors' => 'error', 'error' => 'error', 'info' => 'info'];
 
         $msgs = collect();
 
