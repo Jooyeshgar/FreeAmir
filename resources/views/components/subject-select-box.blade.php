@@ -122,7 +122,7 @@
                                     resultDiv.innerHTML += `
                                         <a href="javascript:void(0)" 
                                         class="selfSelectBoxItems w-full ps-2 mb-4"
-                                        onclick="Alpine.store('utils').updateSelection('${name}', '${code}', '${id}')">
+                                        @click="updateSelection('${name}', '${code}', '${id}')">
                                         <div class="flex justify-between">
                                             <span class="selfItemTitle">${name}</span>
                                             <span class="selfItemCode">${Alpine.store('utils').formatCode(code)}</span>
@@ -136,7 +136,7 @@
                                         subItemsHTML += `
                                             <a href="javascript:void(0)" 
                                             class="selfSelectBoxItems flex justify-between mb-4"
-                                            onclick="Alpine.store('utils').updateSelection('${sub.name}', '${sub.code}', '${sub.id}')">
+                                            @click="updateSelection('${sub.name}', '${sub.code}', '${sub.id}')">
                                             <span class="selfItemTitle">${sub.name}</span>
                                             <span class="selfItemCode">${Alpine.store('utils').formatCode(sub.code)}</span>
                                             <span class="selfItemId hidden">${sub.id}</span>
