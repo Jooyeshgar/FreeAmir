@@ -34,7 +34,7 @@
     </div>
 
     <div class="col-span-2 md:col-span-1">
-        <x-input name="vat" id="vat" title="{{ __('Vat') }}" :value="old('vat', $product->vat ?? '')"
+        <x-input name="vat" id="vat" title="{{ __('VAT') }}" :value="old('vat', $product->vat ?? '')"
             placeholder="0" />
     </div>
 

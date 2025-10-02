@@ -48,9 +48,6 @@
             input_value="{{ old('date') ?? convertToJalali(now()) }}" label_text_class="text-gray-500 text-nowrap"
             input_class="datePicker"></x-text-input>
     </div>
-    <div class="flex justify-center gap-2 mt-2">
-        <x-textarea name="description" id="description" title="{{ __('description') }}" :value="old('description', '')" />
-    </div>
 </x-card>
 <x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-4" x-data="transactionForm">
     <div class="flex overflow-x-auto overflow-y-hidden gap-2 items-center px-4">
@@ -61,7 +58,7 @@
             {{ __('chapter code') }}
         </div> -->
         <div class="text-sm flex-1 min-w-24 max-w-64 text-center text-gray-500 pt-3">
-            {{ __('chapter title') }}
+            {{ __('Product name') }}
         </div>
         <div class="text-sm flex-1 min-w-80 text-center text-gray-500 pt-3">
             {{ __('description') }}
@@ -227,6 +224,13 @@
     </div>
 
 </x-card>
+
+<x-card class="rounded-2xl w-full" class_body="p-4">
+    <div class="flex justify-center gap-2 mt-2">
+        <x-textarea name="description" id="description" title="{{ __('description') }}" :value="old('description', '')" />
+    </div>
+</x-card>
+
 <div class="mt-4 flex gap-2 justify-end">
     <a href="{{ route('invoices.index') }}" type="submit" class="btn btn-default rounded-md"> {{ __('cancel') }}
     </a>
