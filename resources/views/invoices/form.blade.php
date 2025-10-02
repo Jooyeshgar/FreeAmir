@@ -1,5 +1,5 @@
 <x-card class="rounded-2xl w-full" class_body="p-4">
-    <div class="flex gap-2 items-center justify-center" x-data="{
+    <div class="flex gap-2 items-center justify-start" x-data="{
                 selectedName: '',
                 selectedCode: '',
                 selectedId: '',
@@ -20,7 +20,7 @@
         </div>
     </div>
 
-    <div class="flex justify-center gap-2 mt-2">
+    <div class="flex justify-start gap-2 mt-2">
         <x-text-input input_value="" input_name="invoice_id" label_text_class="text-gray-500"
             label_class="w-full hidden"></x-text-input>
         <x-text-input disabled="true" input_value="{{ formatDocumentNumber($previousDocumentNumber) }}"
