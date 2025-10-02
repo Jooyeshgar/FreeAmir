@@ -98,6 +98,7 @@
                             <td class="px-4 py-2">
                                 {{ gregorian_to_jalali_date($item->updated_at) }}
                             </td>
+                            <!-- Add link for going to the invoice when click on the item quantity -->
                             <td class="px-4 py-2">{{ $item->is_sell ? (int) $item->quantity : 0 }}</td>
                             <td class="px-4 py-2">{{ !$item->is_sell ? (int) $item->quantity : 0 }}</td>
 
