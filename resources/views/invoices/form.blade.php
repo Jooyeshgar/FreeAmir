@@ -18,10 +18,11 @@
                 </select>
             </div>
         </div>
-        <div class="flex w-1/3 hidden">
+        <!-- <div class="flex w-1/3 hidden">
             <x-select title="{{ __('Invoice Type') }}" name="invoice_type" id="invoice_type" :options="[0 => __('Buy'), 1 => __('Sell')]" x-data="{ selectedValue: {{ old('invoice_type') ?? 0 }} }" x-bind:value="selectedValue"
                 x-on:change="selectedValue = $event.target.value;" />
-        </div>
+        </div> -->
+        <input type="hidden" id="invoice_type" name="invoice_type" value="{{ $invoice_type }}">
         <div class="flex w-1/3">
             <x-text-input input_name="title" title="{{ __('Invoice Name') }}" input_value="{{ old('title') ?? '' }}"
                 placeholder="{{ __('Invoice Name') }}" label_text_class="text-gray-500"
@@ -288,7 +289,6 @@
                     return (invoice_type == 1) ? product.selling_price : product.purchace_price;
                 },
                 getSubjectVat(subjectId) {
-                    const invoice_type = Number(document.getElementById('invoice_type').value);
                     const product = this.products.find(p => p.subject_id == subjectId);
                     const productGroup = this.productGroups.find(pg => pg.id == product.group);
                     if (!product || !productGroup) return 0;
