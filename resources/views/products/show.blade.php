@@ -98,9 +98,26 @@
                             <td class="px-4 py-2">
                                 {{ gregorian_to_jalali_date($item->updated_at) }}
                             </td>
-                            <!-- Add link for going to the invoice when click on the item quantity -->
-                            <td class="px-4 py-2">{{ $item->is_sell ? (int) $item->quantity : 0 }}</td>
-                            <td class="px-4 py-2">{{ !$item->is_sell ? (int) $item->quantity : 0 }}</td>
+
+                            <td class="px-4 py-2">
+                                @if($item->is_sell)
+                                    <a href="{{ route('invoices.show', $item->invoice_id) }}" class="text-primary">
+                                        {{ (int) $item->quantity }}
+                                    </a>
+                                @else
+                                    0
+                                @endif
+                            </td>
+
+                            <td class="px-4 py-2">
+                                @if(!$item->is_sell)
+                                    <a href="{{ route('invoices.show', $item->invoice_id) }}" class="text-primary">
+                                        {{ (int) $item->quantity }}
+                                    </a>
+                                @else
+                                    0
+                                @endif
+                            </td>
 
                             <td class="px-4 py-2">{{ $item->unit_price }}</td>
                             <td class="px-4 py-2">{{ $item->unit_discount }}</td>
