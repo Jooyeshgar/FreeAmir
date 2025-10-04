@@ -9,7 +9,9 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function __construct() {}
+    public function __construct()
+    {
+    }
 
     public function index()
     {
@@ -68,6 +70,22 @@ class ProductController extends Controller
         $product->update($validatedData);
 
         return redirect()->route('products.index')->with('success', __('Product updated successfully.'));
+    }
+
+    public function show(Models\Product $product)
+    {
+        $product->load('productgroup');
+
+        $invoices = [];
+        $invoice_items = Models\InvoiceItem::where('product_id', $product->id)->orderBy('updated_at')->get();
+
+        if ($invoice_items->count() > 0) {
+            foreach ($invoice_items as $invoice_item) {
+                $invoice_item['is_sell'] = Models\Invoice::select('is_sell')->find($invoice_item->invoice_id)->is_sell;
+            }
+        }
+
+        return view('products.show', compact('product', 'invoice_items'));
     }
 
     public function destroy(Models\Product $product)
