@@ -8,7 +8,16 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="card-actions flex items-center gap-3">
-                <a href="{{ route('invoices.create') }}" class="btn btn-primary">{{ __('Create invoice') }}</a>
+                @if (request('invoice_type') === 'buy')
+                    <a href="{{ route('invoices.create', ['invoice_type' => 'buy']) }}" class="btn btn-primary">
+                        {{ __('Create buy invoice') }}
+                    </a>
+                @else
+                    <a href="{{ route('invoices.create', ['invoice_type' => 'sell']) }}" class="btn btn-primary">
+                        {{ __('Create sell invoice') }}
+                    </a>
+                @endif
+
                 <form action="{{ route('invoices.index') }}" method="GET" class="ml-auto">
                     <div class="mt-4 mb-4 grid grid-cols-6 gap-6">
                         <div class="col-span-2 md:col-span-1">
@@ -16,8 +25,7 @@
                                 placeholder="{{ __('Invoice Number') }}" />
                         </div>
                         <div class="col-span-2 md:col-span-1">
-                            <x-input name="date" placeholder="{{ __('date') }}"
-                                value="{{ request('date') }}"></x-input>
+                            <x-input name="date" placeholder="{{ __('date') }}" value="{{ request('date') }}"></x-input>
                         </div>
                         <div class="col-span-6 md:col-span-3">
                             <x-input name="text" value="{{ request('text') }}"
@@ -64,10 +72,9 @@
                             <td class="px-4 py-2">
                                 <a href="{{ route('invoices.show', $invoice) }}"
                                     class="btn btn-sm btn-info">{{ __('View') }}</a>
-                                {{-- <a href="{{ route('invoices.edit', $invoice) }}"
-                                    class="btn btn-sm btn-info">{{ __('Edit') }}</a> --}}
-                                <form action="{{ route('invoices.destroy', $invoice) }}" method="POST"
-                                    class="inline-block">
+                                {{-- <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{
+                                    __('Edit') }}</a> --}}
+                                <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" class="inline-block">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
@@ -88,8 +95,7 @@
 
                     @foreach ($invoices->getUrlRange(1, $invoices->lastPage()) as $page => $url)
                         @if ($page == $invoices->currentPage())
-                            <a href="{{ $url }}"
-                                class="join-item btn btn-square bg-blue-500 text-white">{{ $page }}</a>
+                            <a href="{{ $url }}" class="join-item btn btn-square bg-blue-500 text-white">{{ $page }}</a>
                         @else
                             <a href="{{ $url }}" class="join-item btn btn-square">{{ $page }}</a>
                         @endif

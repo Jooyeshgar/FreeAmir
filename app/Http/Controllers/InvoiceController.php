@@ -15,7 +15,9 @@ use App\Http\Requests\StoreInvoiceRequest;
 
 class InvoiceController extends Controller
 {
-    public function __construct() {}
+    public function __construct()
+    {
+    }
 
     /**
      * Display a listing of the resource.
@@ -25,6 +27,9 @@ class InvoiceController extends Controller
     public function index(Request $request)
     {
         $builder = Invoice::with('customer', 'document')->orderByDesc('id');
+
+        $is_sell = $request->get('invoice_type') == 'sell' ? true : false;
+        $builder = $builder->where('is_sell', $is_sell);
 
         // Optional: Filter by search query
         $searchTerm = $request->get('q');
@@ -59,15 +64,34 @@ class InvoiceController extends Controller
         }
         $products = Product::all();
         $productGroups = ProductGroup::all();
-        $subjects = Subject::where('parent_id', config('amir.product'))->with('children')->orderBy('code', 'asc')->get();
-        $customers = Subject::where('parent_id', config('amir.cust_subject'))->with('children')->orderBy('code', 'asc')->get();
+        $subjects = $this->getProducts();
+        $customers = $this->getCustomers();
         $previousInvoiceNumber = Invoice::orderBy('id', 'desc')->first()->number ?? 1;
         $previousDocumentNumber = Document::orderBy('id', 'desc')->first()->number ?? 1;
         $transactions = old('transactions') ?? $this->preparedTransactions(collect([new Transaction]));
 
         $total = count($transactions);
 
-        return view('invoices.create', compact('products', 'productGroups' , 'subjects', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber'));
+        return view('invoices.create', compact('products', 'productGroups', 'subjects', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber'));
+    }
+
+    private function getProducts()
+    {
+        $full_subjects = Subject::where('parent_id', config('amir.product'))->with('children')->orderBy('code', 'asc')->get();
+        foreach ($full_subjects as $full_subject) {
+            $subjects = $full_subject->children;
+        }
+        return $subjects;
+    }
+
+    private function getCustomers()
+    {
+        $full_customers = Subject::where('parent_id', config('amir.cust_subject'))->with('children')->orderBy('code', 'asc')->get();
+
+        foreach ($full_customers as $full_customer) {
+            $customers = $full_customer->children;
+        }
+        return $customers;
     }
 
     /**
@@ -128,14 +152,16 @@ class InvoiceController extends Controller
                     'product_id' => $productId,
                     'quantity' => $t['quantity'] ?? 1,
                     'description' => $t['desc'] ?? null,
+                    'unit_discount' => $t['unit_discount'] ?? 0,
                 ];
             })
             ->toArray();
         // dd($items, $transactions, $invoiceData);
         $result = $service->createInvoice(auth()->user(), $transactions, $invoiceData, $items);
+        $invoice_type = $result['invoice']->is_sell == true ? "sell" : "buy" ;
 
         return (!empty($result))
-            ? redirect()->route('invoices.index')->with('success', ('Invoice created successfully.'))
+            ? redirect()->route('invoices.index', ['invoice_type' => $invoice_type])->with('success', __('Invoice created successfully.'))
             : back()->with('error', __('Something went wrong creating the invoice.'));
     }
 

@@ -7,6 +7,7 @@ use App\Services\SubjectCreatorService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
 {
@@ -17,6 +18,7 @@ class Product extends Model
     protected $fillable = [
         'code',
         'name',
+        'sstid',
         'group',
         'location',
         'quantity',
@@ -50,6 +52,12 @@ class Product extends Model
 
             $product->update(['subject_id' => $subject->id]);
         });
+        
+        static::updated(function ($product) {
+            $product->subject()->update([
+                'parent_id' => $product->productGroup->subject_id,
+            ]);
+        });
 
         static::deleting(function ($product) {
             // Delete the related subject when the product is deleted
@@ -57,6 +65,11 @@ class Product extends Model
                 $product->subject->delete();
             }
         });
+    }
+
+    public function productWebsites(): HasMany
+    {
+        return $this->hasMany(ProductWebsite::class, 'product_id');
     }
 
     public function productGroup(): BelongsTo

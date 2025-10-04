@@ -109,7 +109,7 @@
                     </div>
 
                     <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
-                        <a href="{{ route('invoices.create') }}">
+                        <a href="{{ route('invoices.create', ['invoice_type'=> 'buy']) }}">
                             {{ __('Invoice Issuance') }}
                         </a>
                     </div>
@@ -121,7 +121,7 @@
                     </div>
 
                     <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
-                        <a href="{{ route('invoices.create') }}?type=retail">
+                        <a href="{{ route('invoices.create', ['invoice_type'=> 'buy'])  }}?type=retail">
                             {{ __('Retail Invoice') }}
                         </a>
                     </div>

@@ -38,7 +38,7 @@
             {{ __('credit') }}
         </div>
     </div>
-    <div class="h-96 overflow-y-auto">
+    <div class="min-h-96 overflow-y-auto">
         <div id="transactions" x-data="{ activeTab: {{ $total }} }">
             <template x-for="(transaction, index) in transactions" :key="transaction.id">
                 <div :class="{ 'active': activeTab === index }" class="transaction flex gap-2 items-center px-4 pb-3" @click="activeTab = index" x-data="{

@@ -82,12 +82,15 @@ class Customer extends Model
                 'company_id' => session('active-company-id'),
             ]);
             $customer->subject()->save($subject);
+        });
 
-            // $customer->update(['subject_id' => $subject->id]);
+        static::updated(function ($customer) {
+            $customer->subject->update([
+                'parent_id' => $customer->group->subject_id,
+            ]);
         });
 
         static::deleted(function ($customer) {
-            // Delete the related subject when the customer is deleted
             if ($customer->subject) {
                 $customer->subject->delete();
             }

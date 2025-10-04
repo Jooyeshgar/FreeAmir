@@ -77,7 +77,7 @@ class RoleController extends Controller
         }
 
         return redirect(route('roles.index'))
-            ->with('success', 'Created successfully.');
+            ->with('success', __('Role created successfully.'));
     }
 
     /**
@@ -111,7 +111,7 @@ class RoleController extends Controller
 
         if ($role->update($validated)) {
             return redirect()->route('roles.index')
-                ->with('success', 'Updated successfully.');
+                ->with('success', __('Role updated successfully.'));
         }
 
         return redirect()->route('roles.index')
@@ -125,7 +125,7 @@ class RoleController extends Controller
     {
         if ($role->delete()) {
             return redirect(route('roles.index'))
-                ->with('success', 'Removed successfully.');
+                ->with('success', __('Role deleted successfully.'));
         }
 
         return redirect(route('roles.index'))

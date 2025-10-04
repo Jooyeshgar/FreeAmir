@@ -60,7 +60,7 @@ class DocumentController extends Controller
         foreach ($request->input('transactions') as $transactionData) {
             $transactionData = (object) $transactionData;
             $transactions[] = [
-                'subject_i              d' => $transactionData->subject_id,
+                'subject_id' => $transactionData->subject_id,
                 'value' => $transactionData->credit - $transactionData->debit,
                 'desc' => $transactionData->desc
             ];
@@ -76,7 +76,7 @@ class DocumentController extends Controller
             ],
             $transactions
         );
-        return redirect()->route('documents.index')->with('success', 'Transactions created successfully.');
+        return redirect()->route('documents.index')->with('success', __('Transactions created successfully.'));
     }
 
     public function show(Document $document)
@@ -114,14 +114,14 @@ class DocumentController extends Controller
 
         DocumentService::updateDocumentTransactions($document->id, $request->input('transactions'));
 
-        return redirect()->route('documents.index')->with('success', 'Transaction updated successfully.');
+        return redirect()->route('documents.index')->with('success', __('Transaction updated successfully.'));
     }
 
     public function destroy(int $documentId)
     {
         DocumentService::deleteDocument($documentId);
 
-        return redirect()->route('documents.index')->with('success', 'Transaction deleted successfully.');
+        return redirect()->route('documents.index')->with('success', __('Transaction deleted successfully.'));
     }
 
     public function fields($customers): array

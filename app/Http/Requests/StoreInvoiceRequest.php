@@ -34,11 +34,17 @@ class StoreInvoiceRequest extends FormRequest
         $customer = Subject::find($this->input('customer_id'))->subjectable()->first();
         $this->merge(['customer_id' => $customer->id]);
 
+        // 0 for buy, 1 for sell
+        if ($this->input('invoice_type') == 'buy')
+            $this->merge(['invoice_type' => 0]);
+        else
+            $this->merge(['invoice_type' => 1]);
+
         // Cast invoice_type (0/1 string) to integer boolean-like
-        if ($this->has('invoice_type')) {
-            $type = $this->input('invoice_type');
-            $this->merge(['invoice_type' => is_bool($type) ? (int) $type : (int) convertToInt($type)]);
-        }
+        // if ($this->has('invoice_type')) {
+        //     $type = $this->input('invoice_type');
+        //     $this->merge(['invoice_type' => is_bool($type) ? (int) $type : (int) convertToInt($type)]);
+        // }
 
         // Normalize transactions numeric fields and ids
         if ($this->has('transactions') && is_array($this->input('transactions'))) {
@@ -50,6 +56,7 @@ class StoreInvoiceRequest extends FormRequest
                         'subject_id' => isset($t['subject_id']) ? (int) $t['subject_id'] : null,
                         'desc' => $t['desc'] ?? null,
                         'quantity' => isset($t['quantity']) ? convertToFloat($t['quantity']) : null,
+                        'unit_discount' => isset($t['off']) ? convertToFloat($t['off']) : 0,
                         'unit' => isset($t['unit']) ? convertToFloat($t['unit']) : null,
                         'total' => isset($t['total']) ? convertToFloat($t['total']) : null,
                     ];
@@ -67,7 +74,7 @@ class StoreInvoiceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => 'required|string|min:2|max:255',
+            'title' => 'nullable|string|min:2|max:255',
             'description' => 'nullable|string',
             'date' => 'required|date',
 
@@ -102,6 +109,7 @@ class StoreInvoiceRequest extends FormRequest
             'transactions.*.subject_id' => 'required|integer|exists:subjects,id',
             'transactions.*.desc' => 'nullable|string|max:500',
             'transactions.*.quantity' => 'required|numeric|min:1',
+            'transactions.*.unit_discount' => 'required|numeric|min:0',
         ];
     }
 

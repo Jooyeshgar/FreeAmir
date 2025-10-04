@@ -82,7 +82,7 @@ class CompanyController extends Controller
         $company->users()->attach($request->user()->id);
 
         return redirect(route('companies.index'))
-            ->with('success', 'Company created successfully.');
+            ->with('success', __('Company created successfully.'));
     }
 
     /**
@@ -123,7 +123,7 @@ class CompanyController extends Controller
     {
         if ($company->delete()) {
             return redirect(route('companies.index'))
-                ->with('success', 'Removed successfully.');
+                ->with('success', __('Company deleted successfully.'));
         }
 
         return redirect(route('companies.index'))

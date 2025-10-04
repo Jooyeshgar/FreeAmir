@@ -9,6 +9,7 @@
         <div class="card bg-gray-100 shadow-xl rounded-xl " style="height: 440px">
 
             @csrf
+            @method('PUT')
             <div class="card-body p-4 ">
 
                 <x-show-message-bags/>
