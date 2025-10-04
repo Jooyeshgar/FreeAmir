@@ -12,8 +12,8 @@
                 <div class="grid grid-cols-2 gap-6">
                     <x-input title="{{ __('Name') }}" name="name" value="{{ old('name') }}" />
                     <x-input title="{{ __('Email') }}" name="email" value="{{ old('email') }}" />
-                    <x-input title="{{ __('Password') }}" name="password" />
-                    <x-input title="{{ __('Confirm Password') }}" name="password_confirmation" />
+                    <x-input title="{{ __('Password') }}" :type="'password'" name="password" />
+                    <x-input title="{{ __('Confirm Password') }}" :type="'password_confirmation'" name="password_confirmation" />
                 </div>
                 @can('management.roles.*')
                     <br />
