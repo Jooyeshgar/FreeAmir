@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models;
 use App\Models\Subject;
+use App\Enums\ConfigTitle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -15,9 +16,13 @@ class ConfigController extends Controller
 
     public function index()
     {
+        $configsTitle = array_map(fn($case) => [
+            'value' => $case->value,
+            'label' => $case->label(),
+        ], ConfigTitle::cases());
         $configs = Models\Config::all();
         $subjects = Models\Subject::all();
-        return view('configs.index', compact('subjects', 'configs'));
+        return view('configs.index', compact('subjects', 'configs', 'configsTitle'));
     }
 
     // public function store(Request $request)

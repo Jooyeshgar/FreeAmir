@@ -45,14 +45,25 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach ($configs as $config)
+                            @foreach ($configsTitle as $configTitle)
                                 <tr>
-                                    <td class="px-4 py-2">{{ $config->desc ?? '' }}</td>
+                                    <td class="px-4 py-2">{{ $configTitle['label'] ?? '' }}</td>
+                                    @php
+                                        $label = null;
+                                        foreach ($configs as $config) {
+                                            if (strtoupper($config->key) === $configTitle['value']) {
+                                                $label = $configTitle['label'];
+                                                $key = $config->key;
+                                                $id = $config->id;
+                                            }
+                                        }
+                                    @endphp
+
                                     <td class="px-4 py-2">
-                                        {{ $subjects->where('id', config('amir.' . $config->key))->first()?->name ?? ''}}
+                                        {{ $subjects->where('id', config('amir.' . $key))->first()?->name ?? ''}}
                                     </td>
                                     <td class="px-4 py-2">
-                                        <a href="{{ route('configs.edit', $config->id) }}"
+                                        <a href="{{ route('configs.edit', $id) }}"
                                             class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                     </td>
                                 </tr>
