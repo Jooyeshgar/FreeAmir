@@ -14,12 +14,12 @@
 │   ├── users                 # کاربران سیستم
 │   ├── roles                 # نقش‌ها
 │   ├── permissions           # مجوزها
-│   ├── model_has_permissions # ارتباط مدل‌-مجوز (Spatie)
-│   ├── model_has_roles       # ارتباط مدل‌-نقش (Spatie)
-│   ├── role_has_permissions  # اتصال نقش و مجوز (Spatie)
+│   ├── model_has_permissions # ارتباط مدل‌-مجوز
+│   ├── model_has_roles       # ارتباط مدل‌-نقش
+│   ├── role_has_permissions  # اتصال نقش و مجوز
 │   └── company_user          # شرکت‌های در دسترس هر کاربر
 ├── 🏢 مدیریت شرکت‌ها
-│   ├── companies             # شرکت‌ها (name, logo, address, economical_code, national_code, postal_code, phone_number, fiscal_year)
+│   ├── companies             # شرکت‌ها
 │   └── configs               # تنظیمات شرکت
 ├── 📊 هسته حسابداری
 │   ├── subjects              # سرفصل‌های حسابداری
@@ -49,7 +49,7 @@
 ### نمودار ERD ساده‌شده
 
 ```
-companies [name, logo, address, economical_code, national_code, postal_code, phone_number, fiscal_year]
+companies
     ├─→ (N) subjects
     ├─→ (N) customers
     ├─→ (N) products
@@ -359,7 +359,7 @@ CREATE TABLE users (
 );
 ```
 
-### سیستم نقش‌ها و مجوزها (Spatie Permission)
+### سیستم نقش‌ها و مجوزها
 
 ```sql
 CREATE TABLE roles (
@@ -388,7 +388,7 @@ CREATE TABLE model_has_roles (
     PRIMARY KEY (role_id, model_id, model_type)
 );
 
--- اختصاص مجوز مستقیم به مدل
+-- اختصاص مجوز به مدل
 CREATE TABLE model_has_permissions (
     permission_id BIGINT NOT NULL,
     model_type VARCHAR(255) NOT NULL,
@@ -417,7 +417,7 @@ CREATE TABLE role_has_permissions (
 - `invoices`: ایندکس یکتای ستون `number` و کلیدهای خارجی به کاربران، اسناد، شرکت و مشتری برای یکپارچگی داده‌ها.
 - `company_user`: کلیدهای خارجی روی `company_id` و `user_id` مسئول نگه‌داری ارتباط کاربران و شرکت‌های مجاز هستند.
 
-## 🔄 مایگریشن‌ها و Seeder ها
+## 🔄 مایگریشن‌ها و سیدرها
 
 ### ترتیب اجرای مایگریشن‌ها
 
@@ -447,7 +447,7 @@ CREATE TABLE role_has_permissions (
 23. 2024_08_15_142029_create_company_user_table.php
 ```
 
-### سیدرهای اصلی (Seeders)
+### سیدرهای اصلی
 
 ```php
 // DatabaseSeeder.php
@@ -465,7 +465,7 @@ public function run()
 }
 ```
 
-### نمونه Seeder برای سرفصل‌ها
+### نمونه سیدر برای سرفصل‌ها
 
 ```php
 // SubjectSeeder.php
