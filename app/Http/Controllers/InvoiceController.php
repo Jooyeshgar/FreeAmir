@@ -53,7 +53,7 @@ class InvoiceController extends Controller
      *
      * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory|\Illuminate\Http\RedirectResponse
      */
-    public function create()
+    public function create($invoice_type)
     {
         if (empty(config('amir.product'))) {
             return redirect()->route('configs.index')->with('error', __('Product Subject is not configured. Please set it in configurations.'));
@@ -72,7 +72,9 @@ class InvoiceController extends Controller
 
         $total = count($transactions);
 
-        return view('invoices.create', compact('products', 'productGroups', 'subjects', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber'));
+        $invoice_type = $invoice_type === 'sell' ? 1 : 0;
+
+        return view('invoices.create', compact('products', 'productGroups', 'subjects', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type'));
     }
 
     private function getProducts()
@@ -158,7 +160,7 @@ class InvoiceController extends Controller
             ->toArray();
         // dd($items, $transactions, $invoiceData);
         $result = $service->createInvoice(auth()->user(), $transactions, $invoiceData, $items);
-        $invoice_type = $result['invoice']->is_sell == true ? "sell" : "buy" ;
+        $invoice_type = $result['invoice']->is_sell == true ? "sell" : "buy";
 
         return (!empty($result))
             ? redirect()->route('invoices.index', ['invoice_type' => $invoice_type])->with('success', __('Invoice created successfully.'))
