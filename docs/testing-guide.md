@@ -37,13 +37,6 @@ php artisan test --testsuite=Unit       # Run only Unit tests
 php artisan test --filter=Document      # Filter tests by class or method name
 ```
 
-در صورت نیاز به دیتابیس سریع می‌توانید در فایل `.env.testing` از SQLite در حافظه استفاده کنید:
-
-```env
-DB_CONNECTION=sqlite
-DB_DATABASE=:memory:
-```
-
 ## 🚀 گسترش تست‌های فیچر
 
 برای سناریوهای HTTP از `Tests\TestCase` به همراه traits لاراول استفاده کنید. نمونه‌ی زیر نشان می‌دهد چگونه می‌توانید از تست نمونه برای بررسی دسترسی به لیست اسناد استفاده کنید:
@@ -150,7 +143,7 @@ class DocumentServiceTest extends TestCase
 - `SubjectFactory`
 - `DocumentFactory`
 - `TransactionFactory`
-- مجموعه‌های `CustomerFactory` و `ProductFactory` و سایر factoryهای مرتبط با ماژول‌های فروش
+- مجموعه‌های `CustomerFactory` و `ProductFactory` و سایر factory های مرتبط با ماژول‌های فروش
 
 پیش از استفاده از `DocumentFactory` مطمئن شوید حداقل یک شرکت و کاربر ایجاد کرده‌اید؛ این factory برای مقداردهی شناسه‌ها از رکوردهای موجود استفاده می‌کند.
 
