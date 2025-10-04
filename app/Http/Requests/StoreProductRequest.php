@@ -46,7 +46,7 @@ class StoreProductRequest extends FormRequest
                 'string',
                 'regex:/^(\d{1,3}(,\d{3})*|\d+)(\\.\\d+)?$/'
             ],
-            'discount_formula' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
+            'discount_formula' => 'nullable|max:100|string|regex:/^[\w\d\s\-\:\.]*$/u',
             'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
             'vat' => 'nullable|numeric|min:0|max:100',
             'sstid' => 'nullable|string',
