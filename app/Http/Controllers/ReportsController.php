@@ -136,6 +136,9 @@ class ReportsController extends Controller
             ->orderBy(
                 Document::whereColumn('id', 'transactions.document_id')->select('date')
             )
+            ->orderBy(
+                Document::whereColumn('id', 'transactions.document_id')->select('number')
+            )
             ->get();
 
         if ($request->input('export') === 'csv') {
