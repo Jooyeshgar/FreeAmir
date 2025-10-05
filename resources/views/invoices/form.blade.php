@@ -18,10 +18,6 @@
                 </select>
             </div>
         </div>
-        <!-- <div class="flex w-1/3 hidden">
-            <x-select title="{{ __('Invoice Type') }}" name="invoice_type" id="invoice_type" :options="[0 => __('Buy'), 1 => __('Sell')]" x-data="{ selectedValue: {{ old('invoice_type') ?? 0 }} }" x-bind:value="selectedValue"
-                x-on:change="selectedValue = $event.target.value;" />
-        </div> -->
         <input type="hidden" id="invoice_type" name="invoice_type" value="{{ $invoice_type }}">
         <div class="flex w-1/3">
             <x-text-input input_name="title" title="{{ __('Invoice Name') }}" input_value="{{ old('title') ?? '' }}" placeholder="{{ __('Invoice Name') }}"
@@ -187,14 +183,6 @@
     <hr style="">
     <div class="flex flex-row justify-between" x-data="{ additionsInput: '', subtractionsInput: '' }">
         <div class="flex justify-start px-4 gap-4 py-3 rounded-b-2xl">
-            <x-text-input placeholder="0" label_text_class="text-gray-500" label_class="w-full" input_name="cash_payment" title="{{ __('Down Payment') }}"
-                input_class="locale-number" @input="$event.target.value = $store.utils.formatNumber($event.target.value)">
-            </x-text-input>
-
-            <x-text-input placeholder="0" label_text_class="text-gray-500" label_class="w-full" input_name="additions" title="{{ __('Additions') }}"
-                input_class="locale-number" x-model="additionsInput" @input="$event.target.value = $store.utils.formatNumber($event.target.value)">
-            </x-text-input>
-
             <x-text-input placeholder="0" label_text_class="text-gray-500" label_class="w-full" input_name="subtractions" title="{{ __('Subtractions') }}"
                 input_class="locale-number" x-model="subtractionsInput" @input="$event.target.value = $store.utils.formatNumber($event.target.value)">
             </x-text-input>

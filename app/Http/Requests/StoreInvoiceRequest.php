@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\InvoiceType;
 use App\Models\Subject;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -27,24 +28,10 @@ class StoreInvoiceRequest extends FormRequest
             'date' => convertToGregorian($this->input('date')),
             'invoice_number' => convertToInt($this->input('invoice_number')),
             'document_number' => convertToInt($this->input('document_number')),
-            'cash_payment' => convertToFloat($this->input('cash_payment', 0)),
-            'additions' => convertToFloat($this->input('additions', 0)),
             'subtractions' => convertToFloat($this->input('subtractions', 0)),
         ]);
         $customer = Subject::find($this->input('customer_id'))->subjectable()->first();
         $this->merge(['customer_id' => $customer->id]);
-
-        // 0 for buy, 1 for sell
-        if ($this->input('invoice_type') == 'buy')
-            $this->merge(['invoice_type' => 0]);
-        else
-            $this->merge(['invoice_type' => 1]);
-
-        // Cast invoice_type (0/1 string) to integer boolean-like
-        // if ($this->has('invoice_type')) {
-        //     $type = $this->input('invoice_type');
-        //     $this->merge(['invoice_type' => is_bool($type) ? (int) $type : (int) convertToInt($type)]);
-        // }
 
         // Normalize transactions numeric fields and ids
         if ($this->has('transactions') && is_array($this->input('transactions'))) {
@@ -79,7 +66,7 @@ class StoreInvoiceRequest extends FormRequest
             'date' => 'required|date',
 
             // Invoice basics
-            'invoice_type' => ['required', Rule::in([0, 1])],
+            'invoice_type' => ['required', Rule::in(array_column(InvoiceType::cases(), 'value'))],
             'customer_id' => 'required|exists:customers,id|integer',
             'invoice_id' => 'nullable|integer|exists:invoices,id',
             'document_number' => [
@@ -100,8 +87,6 @@ class StoreInvoiceRequest extends FormRequest
             ],
 
             // Money-ish optional fields
-            'cash_payment' => 'nullable|numeric|min:0',
-            'additions' => 'nullable|numeric|min:0',
             'subtractions' => 'nullable|numeric|min:0',
 
             // Transactions array
@@ -150,10 +135,6 @@ class StoreInvoiceRequest extends FormRequest
             'invoice_number.unique' => __('This invoice number has already been used for this company.'),
 
             // Money-ish
-            'cash_payment.numeric' => __('The cash payment must be a number.'),
-            'cash_payment.min' => __('The cash payment may not be negative.'),
-            'additions.numeric' => __('The additions must be a number.'),
-            'additions.min' => __('The additions may not be negative.'),
             'subtractions.numeric' => __('The subtractions must be a number.'),
             'subtractions.min' => __('The subtractions may not be negative.'),
 

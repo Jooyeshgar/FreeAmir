@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\InvoiceType;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Invoice;
@@ -28,8 +29,10 @@ class InvoiceController extends Controller
     {
         $builder = Invoice::with('customer', 'document')->orderByDesc('id');
 
-        $is_sell = $request->get('invoice_type') == 'sell' ? true : false;
-        $builder = $builder->where('is_sell', $is_sell);
+        $invoiceType = $request->get('invoice_type');
+        if ($invoiceType && in_array($invoiceType, ['buy', 'sell', 'return_buy', 'return_sell'])) {
+            $builder = $builder->where('invoice_type', $invoiceType);
+        }
 
         // Optional: Filter by search query
         $searchTerm = $request->get('q');
@@ -72,7 +75,8 @@ class InvoiceController extends Controller
 
         $total = count($transactions);
 
-        $invoice_type = $invoice_type === 'sell' ? 1 : 0;
+        // Validate and convert invoice_type to enum value
+        $invoice_type = in_array($invoice_type, ['buy', 'sell', 'return_buy', 'return_sell']) ? $invoice_type : 'sell';
 
         return view('invoices.create', compact('products', 'productGroups', 'subjects', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type'));
     }
@@ -109,28 +113,14 @@ class InvoiceController extends Controller
         $invoiceData = [
             'title' => $validated['title'],
             'date' => $validated['date'],
-            'is_sell' => (bool) $validated['invoice_type'],
+            'invoice_type' => InvoiceType::from($validated['invoice_type']),
             'customer_id' => (int) $validated['customer_id'],
             'document_number' => $validated['document_number'],
             'number' => (int) $validated['invoice_number'],
-            'cash_payment' => $validated['cash_payment'] ?? 0,
-            'addition' => $validated['additions'] ?? 0,
             'subtraction' => $validated['subtractions'] ?? 0,
             'invoice_id' => $validated['invoice_id'] ?? null,
             'description' => $validated['description'] ?? null,
         ];
-
-        // Map transactions for document creation (value computed in service using credit/debit or value)
-        $transactions = collect($validated['transactions'])
-            ->map(function ($t) {
-                // We'll send value via 'value' as total with sign positive
-                return [
-                    'subject_id' => $t['subject_id'],
-                    'desc' => $t['desc'] ?? null,
-                    'value' => $t['quantity'] ?? 1,
-                ];
-            })
-            ->toArray();
 
         // Prepare invoice items mapping by index to link back to created transactions
         // Optimize: prefetch subjects and resolve products via morph (Subject::subjectable)
@@ -158,9 +148,9 @@ class InvoiceController extends Controller
                 ];
             })
             ->toArray();
-        // dd($items, $transactions, $invoiceData);
-        $result = $service->createInvoice(auth()->user(), $transactions, $invoiceData, $items);
-        $invoice_type = $result['invoice']->is_sell == true ? "sell" : "buy";
+
+        $result = $service->createInvoice(auth()->user(), $invoiceData, $items);
+        $invoice_type = $result['invoice']->invoice_type->value;
 
         return (!empty($result))
             ? redirect()->route('invoices.index', ['invoice_type' => $invoice_type])->with('success', __('Invoice created successfully.'))

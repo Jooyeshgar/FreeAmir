@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\InvoiceType;
 use App\Exceptions\InvoiceServiceException;
 use App\Models\Document;
 use App\Models\Invoice;
@@ -20,7 +21,7 @@ class InvoiceService
      * The document and transactions are generated automatically from invoice data.
      *
      * @param User $user
-     * @param array $invoiceData - Invoice details including customer_id, date, is_sell, etc.
+     * @param array $invoiceData - Invoice details including customer_id, date, invoice_type, etc.
      * @param array $items - Invoice items with product_id, quantity, unit_discount, etc.
      * @return array ['document' => Document, 'invoice' => Invoice]
      * @throws InvoiceServiceException
@@ -70,12 +71,17 @@ class InvoiceService
             $invoiceData['amount'] = $buildResult['totalAmount'];
             $invoiceData['creator_id'] = Auth::id();
             $invoiceData['active'] = 1;
+            
+            // Ensure invoice_type is a string value for database storage
+            if ($invoiceData['invoice_type'] instanceof InvoiceType) {
+                $invoiceData['invoice_type'] = $invoiceData['invoice_type']->value;
+            }
 
             // Create invoice
             $createdInvoice = Invoice::create($invoiceData);
 
             // Create invoice items and link to transactions
-            self::createInvoiceItems($createdInvoice, $items, $documentTransactions, $invoiceData['is_sell']);
+            self::createInvoiceItems($createdInvoice, $items, $documentTransactions, $invoiceData['invoice_type']);
         });
 
         return [
@@ -142,7 +148,7 @@ class InvoiceService
 
             // Create new invoice items
             $documentTransactions = $invoice->document->transactions()->get()->all();
-            self::createInvoiceItems($invoice, $items, $documentTransactions, $invoiceData['is_sell']);
+            self::createInvoiceItems($invoice, $items, $documentTransactions, $invoiceData['invoice_type']);
         });
 
         return [
@@ -194,13 +200,11 @@ class InvoiceService
             'number' => 'required|numeric|min:1|unique:invoices,number' . ($invoiceId ? ',' . $invoiceId : ''),
             'date' => 'required|date',
             'customer_id' => 'required|integer|exists:customers,id',
-            'addition' => 'numeric|nullable',
             'subtraction' => 'numeric|nullable',
-            'cash_payment' => 'numeric|nullable',
             'ship_date' => 'nullable|date',
             'ship_via' => 'string|nullable|max:255',
             'description' => 'string|nullable|max:255',
-            'is_sell' => 'required|boolean',
+            'invoice_type' => 'required|string|in:buy,sell,return_buy,return_sell',
         ];
 
         $validator = Validator::make($invoiceData, $rules);
@@ -218,11 +222,14 @@ class InvoiceService
      */
     private static function normalizeInvoiceData(array $invoiceData): array
     {
-        $invoiceData['cash_payment'] = floatval($invoiceData['cash_payment'] ?? 0);
-        $invoiceData['addition'] = floatval($invoiceData['addition'] ?? 0);
         $invoiceData['subtraction'] = floatval($invoiceData['subtraction'] ?? 0);
         $invoiceData['permanent'] = isset($invoiceData['permanent']) ? (int) $invoiceData['permanent'] : 0;
         $invoiceData['active'] = isset($invoiceData['active']) ? (int) $invoiceData['active'] : 1;
+        
+        // Convert InvoiceType enum to string value if it's an enum instance
+        if (isset($invoiceData['invoice_type']) && $invoiceData['invoice_type'] instanceof InvoiceType) {
+            $invoiceData['invoice_type'] = $invoiceData['invoice_type']->value;
+        }
 
         return $invoiceData;
     }
@@ -233,19 +240,24 @@ class InvoiceService
      * @param Invoice $invoice
      * @param array $items
      * @param array $documentTransactions
-     * @param bool $isSell
+     * @param InvoiceType|string $invoiceType
      */
-    private static function createInvoiceItems(Invoice $invoice, array $items, array $documentTransactions, bool $isSell): void
+    private static function createInvoiceItems(Invoice $invoice, array $items, array $documentTransactions, InvoiceType|string $invoiceType): void
     {
+        // Convert string to enum if necessary
+        if (is_string($invoiceType)) {
+            $invoiceType = InvoiceType::from($invoiceType);
+        }
+
         foreach ($items as $index => $item) {
             $product = Product::findOrFail($item['product_id']);
 
             $quantity = $item['quantity'] ?? 1;
-            $unitPrice = $isSell ? $product->selling_price : $product->purchace_price;
+            $unitPrice = $invoiceType->isSell() ? $product->selling_price : $product->purchace_price;
             $unitDiscount = $item['unit_discount'] ?? 0;
 
             // Calculate item discount (only on sell)
-            $itemDiscount = $isSell ? ($unitDiscount * $quantity) : 0;
+            $itemDiscount = $invoiceType->isSell() ? ($unitDiscount * $quantity) : 0;
 
             // Calculate item VAT
             $vatRate = ($product->vat ?? $product->productGroup->vat ?? 0) / 100;
