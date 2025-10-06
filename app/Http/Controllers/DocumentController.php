@@ -126,6 +126,45 @@ class DocumentController extends Controller
         return redirect()->route('documents.index')->with('success', __('Document deleted successfully.'));
     }
 
+    /**
+     * Duplicate the specified document with all its transactions.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function duplicate($id)
+    {
+        $originalDocument = Document::with('transactions')->findOrFail($id);
+        
+        // Get the next document number
+        $nextDocumentNumber = Document::orderBy('id', 'desc')->first()->number + 1;
+        
+        // Prepare transactions data
+        $transactions = [];
+        foreach ($originalDocument->transactions as $transaction) {
+            $transactions[] = [
+                'subject_id' => $transaction->subject_id,
+                'value' => $transaction->value,
+                'desc' => $transaction->desc,
+            ];
+        }
+        
+        // Create the duplicated document
+        $newDocument = DocumentService::createDocument(
+            Auth::user(),
+            [
+                'title' => $originalDocument->title . ' (' . __('Copy') . ')',
+                'number' => $nextDocumentNumber,
+                'date' => $originalDocument->date,
+                'user_id' => Auth::id(),
+            ],
+            $transactions
+        );
+        
+        return redirect()->route('documents.edit', $newDocument->id)
+            ->with('success', __('Document duplicated successfully.'));
+    }
+
     public function fields($customers): array
     {
         return [
