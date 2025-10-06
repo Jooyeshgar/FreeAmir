@@ -4,47 +4,68 @@
             {{ __('Transactions') }}
         </h2>
     </x-slot>
+
     <x-show-message-bags />
+
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="card-actions">
-                <x-button href="{{ route('documents.create') }}" class="btn-primary">{{ __('Create Document') }}</x-button>
+                <x-button href="{{ route('documents.create') }}" class="btn-primary">
+                    {{ __('Create Document') }}
+                </x-button>
             </div>
+
             <form action="{{ route('documents.index') }}" method="GET">
                 <div class="mt-4 mb-4 grid grid-cols-6 gap-6">
                     <div class="col-span-2 md:col-span-1">
                         <x-input name="number" value="{{ request('number') }}" placeholder="{{ __('Doc Number') }}" />
                     </div>
+
                     <div class="col-span-2 md:col-span-1">
-                        <x-text-input data-jdp input_name="date" placeholder="{{ __('date') }}" input_value="{{ request('date') }}"
-                            input_class="datePicker"></x-text-input>
+                        <x-text-input data-jdp input_name="date" placeholder="{{ __('date') }}" input_value="{{ request('date') }}" input_class="datePicker" />
                     </div>
+
                     <div class="col-span-6 md:col-span-3">
                         <x-input name="text" value="{{ request('text') }}" placeholder="{{ __('Search by document title or transaction description') }}" />
                     </div>
+
                     <div class="col-span-2 md:col-span-1 text-center">
-                        <input type="submit" value="{{ __('Search') }}" class="btn-primary btn" />
+                        <input type="submit" value="{{ __('Search') }}" class="btn btn-primary" />
                     </div>
                 </div>
             </form>
+
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
-                    <th class="p-2 w-12">{{ __('Doc Number') }}</th>
-                    <th class="p-2">{{ __('Title') }}</th>
-                    <th class="p-2 w-40">{{ __('Sum') }}</th>
-                    <th class="p-2 w-40">{{ __('Date') }}</th>
-                    <th class="p-2 w-60">{{ __('Action') }}</th>
+                    <tr>
+                        <th class="p-2 w-12">{{ __('Doc Number') }}</th>
+                        <th class="p-2">{{ __('Title') }}</th>
+                        <th class="p-2 w-40">{{ __('Sum') }}</th>
+                        <th class="p-2 w-40">{{ __('Date') }}</th>
+                        <th class="p-2 w-60">{{ __('Action') }}</th>
+                    </tr>
                 </thead>
                 <tbody>
                     @foreach ($documents as $document)
                         <tr>
-                            <td class="p-2"><a href="{{ route('documents.show', $document->id) }}">{{ formatDocumentNumber($document->number) }}</a>
+                            <td class="p-2">
+                                <a href="{{ route('documents.show', $document->id) }}">
+                                    {{ formatDocumentNumber($document->number) }}
+                                </a>
                             </td>
-                            <td class="p-2">{{ $document->title ?? $document->transactions->first()?->desc . ' ...' }}</td>
+
+                            <td class="p-2">
+                                {{ $document->title ?? $document->transactions->first()?->desc . ' ...' }}
+                            </td>
+
                             <td class="p-2">
                                 {{ formatNumber($document->transactions->where('value', '>', 0)->sum('value')) }}
                             </td>
-                            <td class="p-2">{{ formatDate($document->date) }}</td>
+
+                            <td class="p-2">
+                                {{ formatDate($document->date) }}
+                            </td>
+
                             <td class="p-2">
                                 <div class="flex gap-2">
                                     <a href="{{ route('documents.show', $document->id) }}" class="btn btn-sm btn-info btn-square" title="{{ __('View') }}">
@@ -82,18 +103,19 @@
                     @endforeach
                 </tbody>
             </table>
+
             {{ $documents->links() }}
         </div>
-    </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Add confirmation for delete forms
             const deleteForms = document.querySelectorAll('.delete-form');
+
             deleteForms.forEach(form => {
                 form.addEventListener('submit', function(e) {
                     e.preventDefault();
+
                     if (confirm('{{ __('Are you sure you want to delete this document?') }}')) {
                         this.submit();
                     }
