@@ -87,7 +87,7 @@
                 }"
                     x-effect="
                         if (selectedId && !transaction.unit) {
-                        transaction.unit = getSubjectPrice(Number(selectedId));
+                        transaction.unit = getProductPrice(Number(selectedId));
                     }">
                     <input type="text" x-bind:value="transaction.transaction_id" x-bind:name="'transactions[' + index + '][transaction_id]'" hidden>
                     <input type="text" x-bind:value="selectedCode" x-bind:name="'transactions[' + index + '][code]'" hidden>
@@ -112,16 +112,16 @@
                         <label class="sr-only">{{ __('Product') }}</label>
                         <select x-model="selectedId"
                             @change="
-                                transaction.subject_id = Number($event.target.value);
-                                transaction.unit = getSubjectPrice(Number($event.target.value));
-                                transaction.vat = getSubjectVat(Number($event.target.value));
+                                transaction.product_id = Number($event.target.value);
+                                transaction.unit = getProductPrice(Number($event.target.value));
+                                transaction.vat = getProductVat(Number($event.target.value));
                             "
-                            x-bind:name="'transactions[' + index + '][subject_id]'"
+                            x-bind:name="'transactions[' + index + '][product_id]'"
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
                             <option value="">{{ __('Select Product') }}</option>
-                            @foreach ($subjects as $subject)
-                                <option value="{{ $subject->id }}" x-bind:selected="selectedId == {{ $subject->id }}">
-                                    {{ $subject->name }}
+                            @foreach ($products as $product)
+                                <option value="{{ $product->id }}" x-bind:selected="selectedId == {{ $product->id }}">
+                                    {{ $product->name }}
                                 </option>
                             @endforeach
                         </select>
@@ -142,7 +142,7 @@
                     </div>
 
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input x-model.number="transaction.vat" x-bind:value=$store.utils.formatNumber(getSubjectVat(Number(selectedId)))
+                        <x-text-input x-model.number="transaction.vat" x-bind:value=$store.utils.formatNumber(getProductVat(Number(selectedId)))
                             x-bind:name="'transactions[' + index + '][vat]'" placeholder="0%" label_text_class="text-gray-500" label_class="w-full"
                             input_class="border-white">
                         </x-text-input>
@@ -161,7 +161,7 @@
                                 (Number($store.utils.convertToEnglish(transaction.unit)) || 0) +
                                 ((Number($store.utils.convertToEnglish(transaction.quantity)) || 0) *
                                     (Number($store.utils.convertToEnglish(transaction.unit)) || 0) *
-                                    (Number($store.utils.formatNumber(getSubjectVat(Number(selectedId)))) / 100)) -
+                                    (Number($store.utils.formatNumber(getProductVat(Number(selectedId)))) / 100)) -
                                 (Number($store.utils.convertToEnglish(transaction.off)) || 0)).toLocaleString()"
                             x-bind:name="'transactions[' + index + '][total]'" placeholder="0" label_text_class="text-gray-500" label_class="w-full"
                             input_class="border-white" readonly>
@@ -248,14 +248,14 @@
                         desc: ''
                     });
                 },
-                getSubjectPrice(subjectId) {
+                getProductPrice(productId) {
                     const invoice_type = Number(document.getElementById('invoice_type').value);
-                    const product = this.products.find(p => p.subject_id == subjectId);
+                    const product = this.products.find(p => p.subject_id == productId);
                     if (!product) return 0;
-                    return (invoice_type == 1) ? product.selling_price : product.purchace_price;
+                    return (invoice_type == 'sell') ? product.selling_price : product.purchace_price;
                 },
-                getSubjectVat(subjectId) {
-                    const product = this.products.find(p => p.subject_id == subjectId);
+                getProductVat(productId) {
+                    const product = this.products.find(p => p.id == productId);
                     const productGroup = this.productGroups.find(pg => pg.id == product.group);
                     if (!product || !productGroup) return 0;
                     if (product.vat == null) {

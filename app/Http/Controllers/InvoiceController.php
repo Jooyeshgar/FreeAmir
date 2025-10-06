@@ -65,9 +65,8 @@ class InvoiceController extends Controller
         if (empty(config('amir.cust_subject'))) {
             return redirect()->route('configs.index')->with('error', __('Customer Subject is not configured. Please set it in configurations.'));
         }
-        $products = Product::all();
+        $products = Product::with('subject')->orderBy('name', 'asc')->get();
         $productGroups = ProductGroup::all();
-        $subjects = $this->getProducts();
         $customers = $this->getCustomers();
         $previousInvoiceNumber = Invoice::orderBy('id', 'desc')->first()->number ?? 1;
         $previousDocumentNumber = Document::orderBy('id', 'desc')->first()->number ?? 1;
@@ -78,17 +77,10 @@ class InvoiceController extends Controller
         // Validate and convert invoice_type to enum value
         $invoice_type = in_array($invoice_type, ['buy', 'sell', 'return_buy', 'return_sell']) ? $invoice_type : 'sell';
 
-        return view('invoices.create', compact('products', 'productGroups', 'subjects', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type'));
+        return view('invoices.create', compact('products', 'productGroups', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type'));
     }
 
-    private function getProducts()
-    {
-        $full_subjects = Subject::where('parent_id', config('amir.product'))->with('children')->orderBy('code', 'asc')->get();
-        foreach ($full_subjects as $full_subject) {
-            $subjects = $full_subject->children;
-        }
-        return $subjects;
-    }
+
 
     private function getCustomers()
     {
@@ -107,54 +99,42 @@ class InvoiceController extends Controller
      */
     public function store(StoreInvoiceRequest $request, InvoiceService $service)
     {
-        // Use validated and normalized data
         $validated = $request->validated();
 
         $invoiceData = [
             'title' => $validated['title'],
             'date' => $validated['date'],
             'invoice_type' => InvoiceType::from($validated['invoice_type']),
-            'customer_id' => (int) $validated['customer_id'],
+            'customer_id' => $validated['customer_id'],
             'document_number' => $validated['document_number'],
-            'number' => (int) $validated['invoice_number'],
+            'number' => $validated['invoice_number'],
             'subtraction' => $validated['subtractions'] ?? 0,
             'invoice_id' => $validated['invoice_id'] ?? null,
             'description' => $validated['description'] ?? null,
         ];
 
-        // Prepare invoice items mapping by index to link back to created transactions
-        // Optimize: prefetch subjects and resolve products via morph (Subject::subjectable)
-        $subjectIds = collect($validated['transactions'])
-            ->pluck('subject_id')
-            ->filter()
-            ->unique()
-            ->values();
-        $subjectsById = Subject::with('subjectable')->whereIn('id', $subjectIds)->get()->keyBy('id');
+        // Fetch all products by subject_id in one query
+        $subjectIds = collect($validated['transactions'])->pluck('subject_id')->unique();
+        $productsBySubjectId = Product::whereIn('subject_id', $subjectIds)->get()->keyBy('subject_id');
 
-        $items = collect($validated['transactions'])
-            ->values()
-            ->map(function ($t, $index) use ($subjectsById) {
-                $subject = $subjectsById->get($t['subject_id']);
-                $productId = null;
-                if ($subject && $subject->subjectable instanceof Product) {
-                    $productId = $subject->subjectable->id;
-                }
-                return [
-                    'transaction_index' => $index,
-                    'product_id' => $productId,
-                    'quantity' => $t['quantity'] ?? 1,
-                    'description' => $t['desc'] ?? null,
-                    'unit_discount' => $t['unit_discount'] ?? 0,
-                ];
-            })
-            ->toArray();
+        // Map transactions to invoice items
+        $items = collect($validated['transactions'])->map(function ($transaction, $index) use ($productsBySubjectId) {
+            $product = $productsBySubjectId->get($transaction['subject_id']);
+            
+            return [
+                'transaction_index' => $index,
+                'product_id' => $product?->id,
+                'quantity' => $transaction['quantity'] ?? 1,
+                'description' => $transaction['desc'] ?? null,
+                'unit_discount' => $transaction['unit_discount'] ?? 0,
+            ];
+        })->toArray();
 
         $result = $service->createInvoice(auth()->user(), $invoiceData, $items);
-        $invoice_type = $result['invoice']->invoice_type->value;
 
-        return (!empty($result))
-            ? redirect()->route('invoices.index', ['invoice_type' => $invoice_type])->with('success', __('Invoice created successfully.'))
-            : back()->with('error', __('Something went wrong creating the invoice.'));
+        return redirect()
+            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type->value])
+            ->with('success', __('Invoice created successfully.'));
     }
 
     /**

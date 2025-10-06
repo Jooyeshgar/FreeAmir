@@ -28,8 +28,8 @@ class InvoiceService
      */
     public static function createInvoice(User $user, array $invoiceData, array $items = [])
     {
-        // Validate invoice data
-        self::validateInvoiceData($invoiceData);
+        // // Validate invoice data
+        // self::validateInvoiceData($invoiceData);
 
         // Normalize invoice data
         $invoiceData = self::normalizeInvoiceData($invoiceData);
@@ -103,8 +103,8 @@ class InvoiceService
     {
         $invoice = Invoice::findOrFail($invoiceId);
         
-        // Validate invoice data (skip unique check for the current invoice number)
-        self::validateInvoiceData($invoiceData, $invoiceId);
+        // // Validate invoice data (skip unique check for the current invoice number)
+        // self::validateInvoiceData($invoiceData, $invoiceId);
 
         // Normalize invoice data
         $invoiceData = self::normalizeInvoiceData($invoiceData);
@@ -253,11 +253,11 @@ class InvoiceService
             $product = Product::findOrFail($item['product_id']);
 
             $quantity = $item['quantity'] ?? 1;
-            $unitPrice = $invoiceType->isSell() ? $product->selling_price : $product->purchace_price;
+            $unitPrice = $invoiceType == InvoiceType::SELL ? $product->selling_price : $product->purchace_price;
             $unitDiscount = $item['unit_discount'] ?? 0;
 
             // Calculate item discount (only on sell)
-            $itemDiscount = $invoiceType->isSell() ? ($unitDiscount * $quantity) : 0;
+            $itemDiscount = $invoiceType == InvoiceType::SELL ? ($unitDiscount * $quantity) : 0;
 
             // Calculate item VAT
             $vatRate = ($product->vat ?? $product->productGroup->vat ?? 0) / 100;
