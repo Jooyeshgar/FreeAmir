@@ -11,11 +11,11 @@
             @include('reports.form', ['type' => 'Document'])
         </x-card>
         <div class="mt-2 flex gap-2 justify-end">
-            <a href="{{ route('documents.index') }}" type="submit" class="btn btn-default rounded-md">
+            <button type="submit" name="action" value="export_csv" class="btn btn-default rounded-md">
                 {{ __('Convert to CSV') }}
-            </a>
-            <button type="submit" class="btn btn-default rounded-md"> {{ __('Print') }}</button>
-            <button type="submit" class="btn text-white btn-primary rounded-md"> {{ __('Preview') }}</button>
+            </button>
+            <button type="submit" name="action" value="print" class="btn btn-default rounded-md"> {{ __('Print') }}</button>
+            <button type="submit" name="action" value="preview" class="btn text-white btn-primary rounded-md"> {{ __('Preview') }}</button>
         </div>
     </form>
 </x-app-layout>
