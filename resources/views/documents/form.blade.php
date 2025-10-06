@@ -73,14 +73,14 @@
                             input_class="border-white "></x-text-input>
                     </div>
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input placeholder="0" x-model.number="transaction.debit" x-bind:name="'transactions[' + index + '][debit]'"
+                        <x-text-input placeholder="0" x-bind:value="$store.utils.formatNumber(transaction.debit)" x-bind:name="'transactions[' + index + '][debit]'"
                             label_text_class="text-gray-500" label_class="w-full" input_class="border-white debitInput"
-                            x-on:input="transaction.debit = $store.utils.convertToEnglish($event.target.value)"></x-text-input>
+                            x-on:input="transaction.debit = $store.utils.convertToEnglish($event.target.value); $event.target.value = $store.utils.formatNumber(transaction.debit)"></x-text-input>
                     </div>
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input x-model.number="transaction.credit" placeholder="0" x-bind:name="'transactions[' + index + '][credit]'"
+                        <x-text-input placeholder="0" x-bind:value="$store.utils.formatNumber(transaction.credit)" x-bind:name="'transactions[' + index + '][credit]'"
                             label_text_class="text-gray-500" label_class="w-full" input_class="border-white creditInput"
-                            x-on:input="transaction.credit = $store.utils.convertToEnglish($event.target.value)"></x-text-input>
+                            x-on:input="transaction.credit = $store.utils.convertToEnglish($event.target.value); $event.target.value = $store.utils.formatNumber(transaction.credit)"></x-text-input>
                     </div>
                 </div>
             </template>
@@ -108,10 +108,10 @@
     }">
         <div class="flex items-center gap-2">
             <span class="text-gray-500">{{ __('Balance') }}:</span>
-            <span class="min-w-24 text-center text-gray-500" id="diffSum" x-text="balance">0</span>
+            <span class="min-w-24 text-center text-gray-500" id="diffSum" x-text="balance.toLocaleString()">0</span>
         </div>
-        <span class="min-w-24 text-center text-gray-500" id="debitSum" x-text="debitTotal">0</span>
-        <span class="min-w-24 text-center text-gray-500" id="creditSum" x-text="creditTotal">0</span>
+        <span class="min-w-24 text-center text-gray-500" id="debitSum" x-text="debitTotal.toLocaleString()">0</span>
+        <span class="min-w-24 text-center text-gray-500" id="creditSum" x-text="creditTotal.toLocaleString()">0</span>
     </div>
 </x-card>
 <div class="mt-4 flex gap-2 justify-end">
