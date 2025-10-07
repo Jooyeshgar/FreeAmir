@@ -29,6 +29,9 @@
             <p class="text-center text-gray-500">{{ __('No transactions available.') }}</p>
         </div>
     @else
+        @php
+            $balance = 0;
+        @endphp
         @foreach ($transactionsChunk as $transactions)
             <div class="bg-white px-2 pt-3 print:pl-8">
                 <div class="flex justify-between items-start p-4 border border-black rounded-lg mb-4">
@@ -53,9 +56,7 @@
                     </tr>
 
                     <tbody class="border-black" style="border-bottom: solid 1px">
-                        @php
-                            $balance = 0;
-                        @endphp
+
                         @foreach ($transactions as $transaction)
                             <tr>
                                 <td class="border border-black p-2" style="text-align: center">{{ formatNumber($transaction->document?->number) }}</td>

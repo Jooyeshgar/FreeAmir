@@ -22,7 +22,7 @@
                     </div>
 
                     <div class="flex-1 w-[200px]">
-                        <x-text-input x-bind:value="website.link" placeholder="{{ __('website link') }}"
+                        <x-text-input x-bind:value="website.link" placeholder="{{ __('Website') }}"
                             x-bind:name="'websites[' + index + '][link]'" label_text_class="text-gray-500" label_class="w-full"
                             input_class="border-white "></x-text-input>
                     </div>
@@ -47,7 +47,7 @@
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('addWebsite', () => ({
-                websites: {!! json_encode($websites, JSON_UNESCAPED_UNICODE) !!},
+                websites: @json(old('websites', $websites), JSON_UNESCAPED_UNICODE),
                 addWebsite() {
                     const newId = this.websites.length ? this.websites[this.websites.length - 1].id + 1 : 1;
                     this.websites.push({

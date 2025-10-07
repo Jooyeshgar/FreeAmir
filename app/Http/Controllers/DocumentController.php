@@ -9,7 +9,6 @@ use App\Models\Subject;
 use App\Models\Transaction;
 use App\Services\DocumentService;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class DocumentController extends Controller
 {
@@ -31,14 +30,15 @@ class DocumentController extends Controller
         if (request()->has('text') && request('text')) {
             $searchText = request('text');
             $query->where(function ($q) use ($searchText) {
-                $q->where('title', 'like', '%' . $searchText . '%')
+                $q->where('title', 'like', '%'.$searchText.'%')
                     ->orWhereHas('transactions', function ($subQ) use ($searchText) {
-                        $subQ->where('desc', 'like', '%' . $searchText . '%');
+                        $subQ->where('desc', 'like', '%'.$searchText.'%');
                     });
             });
         }
 
         $documents = $query->paginate(10);
+
         return view('documents.index', compact('documents'));
     }
 
@@ -49,8 +49,9 @@ class DocumentController extends Controller
         $transactions = old('transactions') ?? $this->preparedTransactions(collect([new Transaction]));
 
         $total = count($transactions);
-        $document = new Document();
+        $document = new Document;
         $previousDocumentNumber = Document::orderBy('id', 'desc')->first()->number ?? 0;
+
         return view('documents.create', compact('document', 'previousDocumentNumber', 'subjects', 'transactions', 'total'));
     }
 
@@ -62,7 +63,7 @@ class DocumentController extends Controller
             $transactions[] = [
                 'subject_id' => $transactionData->subject_id,
                 'value' => $transactionData->credit - $transactionData->debit,
-                'desc' => $transactionData->desc
+                'desc' => $transactionData->desc,
             ];
         }
 
@@ -72,11 +73,12 @@ class DocumentController extends Controller
                 'title' => $request->title,
                 'number' => $request->number,
                 'date' => $request->date,
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ],
             $transactions
         );
-        return redirect()->route('documents.index')->with('success', __('Transactions created successfully.'));
+
+        return redirect()->route('documents.index')->with('success', __('Document created successfully.'));
     }
 
     public function show(Document $document)
@@ -93,17 +95,17 @@ class DocumentController extends Controller
             $total = -1;
             $subjects = Subject::all();
             $previousDocumentNumber = Document::orderBy('id', 'desc')->where('id', '<', $id)->first()->number ?? 0;
+
             return view('documents.edit', compact('previousDocumentNumber', 'document', 'subjects', 'transactions', 'total'));
         } else {
-            return redirect()->route('documents.index')->with('error', 'Transaction not found.');
+            return redirect()->route('documents.index')->with('error', 'Document not found.');
         }
     }
 
     /**
      * Update the specified document and its transactions.
      *
-     * @param StoreTransactionRequest $request
-     * @param int $id
+     * @param  int  $id
      * @return \Illuminate\Http\RedirectResponse
      */
     public function update(StoreTransactionRequest $request, $id)
@@ -114,14 +116,53 @@ class DocumentController extends Controller
 
         DocumentService::updateDocumentTransactions($document->id, $request->input('transactions'));
 
-        return redirect()->route('documents.index')->with('success', __('Transaction updated successfully.'));
+        return redirect()->route('documents.index')->with('success', __('Document updated successfully.'));
     }
 
     public function destroy(int $documentId)
     {
         DocumentService::deleteDocument($documentId);
 
-        return redirect()->route('documents.index')->with('success', __('Transaction deleted successfully.'));
+        return redirect()->route('documents.index')->with('success', __('Document deleted successfully.'));
+    }
+
+    /**
+     * Duplicate the specified document with all its transactions.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function duplicate($id)
+    {
+        $originalDocument = Document::with('transactions')->findOrFail($id);
+        
+        // Get the next document number
+        $nextDocumentNumber = Document::orderBy('id', 'desc')->first()->number + 1;
+        
+        // Prepare transactions data
+        $transactions = [];
+        foreach ($originalDocument->transactions as $transaction) {
+            $transactions[] = [
+                'subject_id' => $transaction->subject_id,
+                'value' => $transaction->value,
+                'desc' => $transaction->desc,
+            ];
+        }
+        
+        // Create the duplicated document
+        $newDocument = DocumentService::createDocument(
+            Auth::user(),
+            [
+                'title' => $originalDocument->title . ' (' . __('Copy') . ')',
+                'number' => $nextDocumentNumber,
+                'date' => $originalDocument->date,
+                'user_id' => Auth::id(),
+            ],
+            $transactions
+        );
+        
+        return redirect()->route('documents.edit', $newDocument->id)
+            ->with('success', __('Document duplicated successfully.'));
     }
 
     public function fields($customers): array

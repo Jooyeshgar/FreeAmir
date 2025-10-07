@@ -73,14 +73,14 @@
                             input_class="border-white "></x-text-input>
                     </div>
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input placeholder="0" x-model.number="transaction.debit" x-bind:name="'transactions[' + index + '][debit]'"
+                        <x-text-input placeholder="0" x-bind:value="$store.utils.formatNumber(transaction.debit)" x-bind:name="'transactions[' + index + '][debit]'"
                             label_text_class="text-gray-500" label_class="w-full" input_class="border-white debitInput"
-                            x-on:input="transaction.debit = convertToEnglish($event.target.value)"></x-text-input>
+                            x-on:input="transaction.debit = $store.utils.convertToEnglish($event.target.value); $event.target.value = $store.utils.formatNumber(transaction.debit)"></x-text-input>
                     </div>
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input x-model.number="transaction.credit" placeholder="0" x-bind:name="'transactions[' + index + '][credit]'"
+                        <x-text-input placeholder="0" x-bind:value="$store.utils.formatNumber(transaction.credit)" x-bind:name="'transactions[' + index + '][credit]'"
                             label_text_class="text-gray-500" label_class="w-full" input_class="border-white creditInput"
-                            x-on:input="transaction.credit = convertToEnglish($event.target.value)"></x-text-input>
+                            x-on:input="transaction.credit = $store.utils.convertToEnglish($event.target.value); $event.target.value = $store.utils.formatNumber(transaction.credit)"></x-text-input>
                     </div>
                 </div>
             </template>
@@ -95,11 +95,23 @@
         </div>
     </div>
     <hr style="">
-    <div class="flex justify-end px-4 gap-2">
-        <span class="min-w-24 text-center text-gray-500" id="debitSum"
-            x-text="transactions.reduce((sum, transaction) => sum + (Number(convertToEnglish(transaction.debit || 0)) ), 0)">0</span>
-        <span class="min-w-24 text-center text-gray-500" id="creditSum"
-            x-text="transactions.reduce((sum, transaction) => sum + (Number(convertToEnglish(transaction.credit || 0))), 0)">0</span>
+    <div class="flex justify-end px-4 gap-2" x-data="{
+        get debitTotal() {
+            return transactions.reduce((sum, transaction) => sum + (Number($store.utils.convertToEnglish(transaction.debit || 0))), 0);
+        },
+        get creditTotal() {
+            return transactions.reduce((sum, transaction) => sum + (Number($store.utils.convertToEnglish(transaction.credit || 0))), 0);
+        },
+        get balance() {
+            return this.creditTotal - this.debitTotal;
+        }
+    }">
+        <div class="flex items-center gap-2">
+            <span class="text-gray-500">{{ __('Balance') }}:</span>
+            <span class="min-w-24 text-center text-gray-500" id="diffSum" x-text="balance.toLocaleString()">0</span>
+        </div>
+        <span class="min-w-24 text-center text-gray-500" id="debitSum" x-text="debitTotal.toLocaleString()">0</span>
+        <span class="min-w-24 text-center text-gray-500" id="creditSum" x-text="creditTotal.toLocaleString()">0</span>
     </div>
 </x-card>
 <div class="mt-4 flex gap-2 justify-end">
@@ -113,6 +125,9 @@
 </div>
 
 @pushOnce('scripts')
+    <script type="module">
+        jalaliDatepicker.startWatch();
+    </script>
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('transactionForm', () => ({

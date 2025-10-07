@@ -29,29 +29,29 @@ class StoreProductRequest extends FormRequest
             'quantity' => [
                 'nullable',
                 'string',
-                'regex:/^(\d{1,3}(,\d{3})*|\d+)(\\.\\d+)?$/'
+                'regex:/^(\d{1,3}(,\d{3})*|\d+)(\\.\\d+)?$/',
             ],
             'quantity_warning' => [
                 'nullable',
                 'string',
-                'regex:/^(\d{1,3}(,\d{3})*|\d+)(\\.\\d+)?$/'
+                'regex:/^(\d{1,3}(,\d{3})*|\d+)(\\.\\d+)?$/',
             ],
             'purchace_price' => [
                 'nullable',
                 'string',
-                'regex:/^(\d{1,3}(,\d{3})*|\d+)(\\.\\d+)?$/'
+                'regex:/^(\d{1,3}(,\d{3})*|\d+)(\\.\\d+)?$/',
             ],
             'selling_price' => [
                 'nullable',
                 'string',
-                'regex:/^(\d{1,3}(,\d{3})*|\d+)(\\.\\d+)?$/'
+                'regex:/^(\d{1,3}(,\d{3})*|\d+)(\\.\\d+)?$/',
             ],
-            'discount_formula' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
+            'discount_formula' => 'nullable|max:100|string|regex:/^[\w\d\s\-\:\.]*$/u',
             'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
             'vat' => 'nullable|numeric|min:0|max:100',
             'sstid' => 'nullable|string',
             'websites' => 'nullable|array',
-            'websites.link.*' => 'required|url',
+            'websites.*.link' => 'required|url',
         ];
     }
 

@@ -18,8 +18,6 @@
 
             @include('documents.form')
 
-
-
         </form>
     </div>
 </x-app-layout>

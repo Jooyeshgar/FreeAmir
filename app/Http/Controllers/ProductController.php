@@ -2,16 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
-use Illuminate\Http\Request;
+use App\Models;
 
 class ProductController extends Controller
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     public function index()
     {
@@ -30,10 +27,9 @@ class ProductController extends Controller
     public function store(StoreProductRequest $request)
     {
         $validatedData = $request->getValidatedData();
-        
-        $product = Models\Product::create($validatedData);
 
-        if(isset($validatedData['websites'])) {
+        $product = Models\Product::create($validatedData);
+        if (isset($validatedData['websites'])) {
             foreach ($validatedData['websites'] as $website) {
                 Models\ProductWebsite::create([
                     'link' => $website['link'],
@@ -55,10 +51,10 @@ class ProductController extends Controller
     public function update(UpdateProductRequest $request, Models\Product $product)
     {
         $validatedData = $request->getValidatedData();
-        
+
         $product->productWebsites()->delete();
 
-        if(isset($validatedData['websites'])) {
+        if (isset($validatedData['websites'])) {
             foreach ($validatedData['websites'] as $website) {
                 Models\ProductWebsite::create([
                     'link' => $website['link'],
