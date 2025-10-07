@@ -97,7 +97,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div class="card bg-base-200 shadow">
                     <div class="card-body p-4">
-                        <h3 class="card-title text-sm text-gray-500">{{ __('Purchace Price') }}</h3>
+                        <h3 class="card-title text-sm text-gray-500">{{ __('Purchase price') }}</h3>
                         <p class="text-2xl font-bold text-primary">
                             {{ isset($product->purchace_price) ? formatNumber($product->purchace_price) : '0' }}
                         </p>

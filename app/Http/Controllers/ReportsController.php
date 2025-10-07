@@ -39,49 +39,60 @@ class ReportsController extends Controller
 
     public function result(Request $request)
     {
+        if ($request->input('action') === 'preview') {
+            return redirect()->route('transactions.index', $request->except(['action', 'report_for']));
+        }
+
         $rules = [
             'report_for' => 'required|in:Journal,Ledger,subLedger,Document',
-            'report_type' => 'required',
+            'start_document_number' => 'nullable|numeric',
+            'end_document_number' => 'nullable|numeric',
+            'start_date' => 'nullable|date_format:Y/m/d',
+            'end_date' => 'nullable|date_format:Y/m/d',
         ];
 
         if ($request->report_for != 'Journal' && $request->report_for != 'Document') {
             $rules['subject_id'] = 'required';
         }
 
-        if ($request->report_type == 'between_numbers') {
-            $rules['start_document_number'] = 'required|numeric';
-            $rules['end_document_number'] = 'required|numeric';
-        } elseif ($request->report_type == 'between_dates') {
-            $rules['start_date'] = 'required|date_format:Y/m/d';
-            $rules['end_date'] = 'required|date_format:Y/m/d';
-        } elseif ($request->report_type == 'specific_date') {
-            $rules['specific_date'] = 'required|date_format:Y/m/d';
-        } elseif ($request->report_type == 'specific_number') {
-            $rules['specific_document_number'] = 'required|numeric';
-        }
-
-        if (!in_array($request->report_type, ['between_numbers', 'between_dates', 'specific_date', 'specific_number', 'all'])) {
-            // If report_type is something else, maybe it requires dates/numbers?
-            // Add more specific validation if needed
-        }
-
-
-        Validator::make($request->all(), $rules)->validate();
+        Validator::make($request->all(), $rules)->after(function ($validator) use ($request) {
+            // Optional consistency checks
+            if ($request->filled('start_document_number') && $request->filled('end_document_number')) {
+                if ((int)$request->start_document_number > (int)$request->end_document_number) {
+                    $validator->errors()->add('start_document_number', __('Start document number cannot be greater than end document number.'));
+                }
+            }
+            if ($request->filled('start_date') && $request->filled('end_date')) {
+                $start = jalali_to_gregorian_date($request->start_date);
+                $end = jalali_to_gregorian_date($request->end_date);
+                if ($start > $end) {
+                    $validator->errors()->add('start_date', __('Start date cannot be greater than end date.'));
+                }
+            }
+        })->validate();
 
         if ($request->report_for == 'Document') {
             $documents = Document::query();
-
-            if ($request->report_type == 'between_numbers') {
+            // Document number filters
+            if ($request->filled('start_document_number') && $request->filled('end_document_number')) {
                 $documents->whereBetween('number', [$request->start_document_number, $request->end_document_number]);
-            } elseif ($request->report_type == 'specific_number') {
-                $documents->where('number', $request->specific_document_number);
-            } elseif ($request->report_type == 'between_dates') {
+            } elseif ($request->filled('start_document_number')) {
+                $documents->where('number', '>=', $request->start_document_number);
+            } elseif ($request->filled('end_document_number')) {
+                $documents->where('number', '<=', $request->end_document_number);
+            }
+
+            // Date filters (convert Jalali -> Gregorian)
+            if ($request->filled('start_date') && $request->filled('end_date')) {
                 $startDate = jalali_to_gregorian_date($request->start_date);
                 $endDate = jalali_to_gregorian_date($request->end_date);
                 $documents->whereBetween('date', [$startDate, $endDate]);
-            } elseif ($request->report_type == 'specific_date') {
-                $specificDate = jalali_to_gregorian_date($request->specific_date);
-                $documents->where('date', $specificDate);
+            } elseif ($request->filled('start_date')) {
+                $startDate = jalali_to_gregorian_date($request->start_date);
+                $documents->where('date', '>=', $startDate);
+            } elseif ($request->filled('end_date')) {
+                $endDate = jalali_to_gregorian_date($request->end_date);
+                $documents->where('date', '<=', $endDate);
             }
 
             if ($request->search) {
@@ -115,20 +126,33 @@ class ReportsController extends Controller
             });
         }
 
-        if ($request->report_type == 'between_numbers') {
+        // Dynamic combined filters for transaction's related document
+        if ($request->filled('start_document_number') && $request->filled('end_document_number')) {
             $transactions = $transactions->whereHas('document', function ($q) use ($request) {
-                $q->where('number', '>=', $request->start_document_number)->where('number', '<=', $request->end_document_number);
+                $q->whereBetween('number', [$request->start_document_number, $request->end_document_number]);
+            });
+        } elseif ($request->filled('start_document_number')) {
+            $transactions = $transactions->whereHas('document', function ($q) use ($request) {
+                $q->where('number', '>=', $request->start_document_number);
+            });
+        } elseif ($request->filled('end_document_number')) {
+            $transactions = $transactions->whereHas('document', function ($q) use ($request) {
+                $q->where('number', '<=', $request->end_document_number);
             });
         }
 
-        if ($request->report_type == 'between_dates') {
+        if ($request->filled('start_date') && $request->filled('end_date')) {
             $transactions = $transactions->whereHas('document', function ($q) use ($request) {
-                $q->where('date', '>=', jalali_to_gregorian_date($request->start_date))->where('date', '<=', jalali_to_gregorian_date($request->end_date));
+                $q->where('date', '>=', jalali_to_gregorian_date($request->start_date))
+                    ->where('date', '<=', jalali_to_gregorian_date($request->end_date));
             });
-        }
-        if ($request->report_type == 'specific_date') {
+        } elseif ($request->filled('start_date')) {
             $transactions = $transactions->whereHas('document', function ($q) use ($request) {
-                $q->where('date', '=', jalali_to_gregorian_date($request->specific_date));
+                $q->where('date', '>=', jalali_to_gregorian_date($request->start_date));
+            });
+        } elseif ($request->filled('end_date')) {
+            $transactions = $transactions->whereHas('document', function ($q) use ($request) {
+                $q->where('date', '<=', jalali_to_gregorian_date($request->end_date));
             });
         }
 
@@ -141,7 +165,7 @@ class ReportsController extends Controller
             )
             ->get();
 
-        if ($request->input('export') === 'csv') {
+        if ($request->input('action') === 'export_csv') {
             $filename = $request->report_for . "_report_" . date('YmdHis') . ".csv";
             return $this->streamCsvResponse($transactions, $filename);
         }

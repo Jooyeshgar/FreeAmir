@@ -23,31 +23,53 @@
                     </div>
                 </div>
             @endif
-            <form action="{{ route('transactions.index') }}" method="GET">
-                <div class="mt-4 mb-4 grid grid-cols-6 gap-6">
-                    <div class="col-span-6 md:col-span-2" x-data="{
+            <form action="{{ route('transactions.index') }}" method="GET" class="mt-4 mb-4">
+                <div class="grid grid-cols-12 gap-4 items-end">
+                    <!-- Subject Selector -->
+                    <div class="col-span-12 lg:col-span-3" x-data="{
                         selectedName: '{{ $currentSubject ? $currentSubject->name : '' }}',
                         selectedCode: '{{ $currentSubject ? $currentSubject->code : '' }}',
                         selectedId: '{{ request('subject_id', '') }}',
                     }">
                         <x-subject-select-box :subjects="$subjects" title="{{ __('Subject') }}" id_field="subject_id" placeholder="{{ __('All Subjects') }}"
-                            allSelectable="true" class="w-full">
-                        </x-subject-select-box>
+                            allSelectable="true" class="w-full" />
                     </div>
-                    <div class="col-span-2 md:col-span-1">
-                        <x-input name="document_number" value="{{ request('document_number') }}" placeholder="{{ __('Doc Number') }}" />
+
+                    <!-- Date Range -->
+                    <div class="col-span-6 sm:col-span-3 lg:col-span-2">
+                        <x-input name="start_date" value="{{ request('start_date') }}" data-jdp class="w-full" placeholder="{{ __('Start date') }}" />
                     </div>
-                    <div class="col-span-2 md:col-span-1">
-                        <x-text-input data-jdp input_name="date" placeholder="{{ __('date') }}" input_value="{{ request('date') }}"
-                            input_class="datePicker"></x-text-input>
+                    <div class="col-span-6 sm:col-span-3 lg:col-span-2">
+                        <x-input name="end_date" value="{{ request('end_date') }}" data-jdp class="w-full" placeholder="{{ __('End date') }}" />
                     </div>
-                    <div class="col-span-4 md:col-span-1">
-                        <x-input name="text" value="{{ request('text') }}" placeholder="{{ __('Search by description') }}" />
+
+                    <!-- Document Number Range -->
+                    <div class="col-span-6 sm:col-span-3 lg:col-span-2">
+                        <x-input name="start_document_number" value="{{ request('start_document_number') }}" class="w-full"
+                            placeholder="{{ __('Document start number') }}" />
                     </div>
-                    <div class="col-span-2 md:col-span-1 text-center">
-                        <input type="submit" value="{{ __('Search') }}" class="btn-primary btn" />
+                    <div class="col-span-6 sm:col-span-3 lg:col-span-2">
+                        <x-input name="end_document_number" value="{{ request('end_document_number') }}" class="w-full" placeholder="{{ __('Document end number') }}" />
+                    </div>
+
+                    <!-- Search -->
+                    <div class="col-span-12 lg:col-span-3">
+                        <x-input name="search" value="{{ request('search') }}" class="w-full" placeholder="{{ __('Search for documents') }}" />
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="col-span-6 sm:col-span-3 lg:col-span-1 flex gap-2">
+                        <button type="submit" class="btn btn-primary w-full">{{ __('Search') }}</button>
+                    </div>
+                    <div class="col-span-6 sm:col-span-3 lg:col-span-1 flex gap-2">
+                        <a href="{{ route('transactions.index') }}" class="btn btn-outline w-full">{{ __('Clear') }}</a>
                     </div>
                 </div>
+                @pushOnce('scripts')
+                    <script type="module">
+                        jalaliDatepicker.startWatch();
+                    </script>
+                @endPushOnce
             </form>
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
@@ -70,7 +92,7 @@
                                 </a>
                             </td>
                             <td class="p-2">
-                                {{ $transaction->subject->code }} - {{ $transaction->subject->name }}
+                                {{ $transaction->subject?->code }} - {{ $transaction->subject?->name }}
                             </td>
                             <td class="p-2">{{ $transaction->desc }}</td>
                             <td class="p-2 text-red-600">{{ $transaction->debit }}</td>
