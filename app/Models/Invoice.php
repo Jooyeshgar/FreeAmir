@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\InvoiceType;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -20,17 +21,22 @@ class Invoice extends Model
         'document_id',
         'customer_id',
         'creator_id',
-        'addition',
         'subtraction',
         'tax',
-        'cash_payment',
         'ship_date',
         'ship_via',
         'description',
-        'is_sell',
+        'invoice_type',
         'active',
         'vat',
         'amount',
+    ];
+
+    protected $casts = [
+        'invoice_type' => InvoiceType::class,
+        'date' => 'date',
+        'ship_date' => 'date',
+        'active' => 'boolean',
     ];
 
     public static function booted(): void

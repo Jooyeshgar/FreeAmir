@@ -47,7 +47,7 @@
             <tr class="bg-gray-200">
                 <th class="border border-black p-2"></th>
                 <th class="border border-black p-2">{{ __('Code') }}</th>
-                <th class="border border-black p-2 text-right">{{ __('Description') }}</th>
+                <th class="border border-black p-2">{{ __('Description') }}</th>
                 <th class="border border-black p-2">{{ __('Debit') }}</th>
                 <th class="border border-black p-2">{{ __('Credit') }}</th>
             </tr>

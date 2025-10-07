@@ -19,6 +19,7 @@ class InvoiceItem extends Model
         'unit_price',
         'unit_discount',
         'vat',
+        'amount',
         'description',
     ];
 
