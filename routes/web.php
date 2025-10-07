@@ -37,13 +37,15 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
     });
     Route::get('change-company/{company}', [Controllers\CompanyController::class, 'setActiveCompany'])->name('change-company');
-    
+
     Route::group(['prefix' => 'invoices/create', 'as' => 'invoices.create'], function () {
-        Route::get('{invoice_type}',[Controllers\InvoiceController::class, 'create']);
+        Route::get('{invoice_type}', [Controllers\InvoiceController::class, 'create']);
     });
 
     Route::group(['prefix' => 'invoices', 'as' => 'invoices.index'], function () {
-        Route::get('',[Controllers\InvoiceController::class, 'index']);
+        Route::get('', [Controllers\InvoiceController::class, 'index']);
     });
 
+    Route::get('/backup/run', [App\Http\Controllers\BackupController::class, 'run'])
+        ->name('backup.run');
 });
