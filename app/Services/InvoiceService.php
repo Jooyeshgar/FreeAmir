@@ -20,10 +20,10 @@ class InvoiceService
      * Create a document, its transactions, an invoice and invoice items.
      * The document and transactions are generated automatically from invoice data.
      *
-     * @param User $user
-     * @param array $invoiceData - Invoice details including customer_id, date, invoice_type, etc.
-     * @param array $items - Invoice items with product_id, quantity, unit_discount, etc.
+     * @param  array  $invoiceData  - Invoice details including customer_id, date, invoice_type, etc.
+     * @param  array  $items  - Invoice items with product_id, quantity, unit_discount, etc.
      * @return array ['document' => Document, 'invoice' => Invoice]
+     *
      * @throws InvoiceServiceException
      */
     public static function createInvoice(User $user, array $invoiceData, array $items = [])
@@ -42,7 +42,7 @@ class InvoiceService
         // Prepare document data
         $documentData = [
             'date' => $invoiceData['date'] ?? now()->toDateString(),
-            'title' => $invoiceData['title'] ?? (__('Invoice') . " " . ($invoiceData['number'] ?? '')),
+            'title' => $invoiceData['title'] ?? (__('Invoice').' '.($invoiceData['number'] ?? '')),
             'number' => $invoiceData['document_number'] ?? null,
             'creator_id' => $user->id,
             'company_id' => session('active-company-id'),
@@ -68,10 +68,10 @@ class InvoiceService
             // Prepare invoice data
             $invoiceData['document_id'] = $createdDocument->id;
             $invoiceData['vat'] = $buildResult['totalVat'];
-            $invoiceData['amount'] = $buildResult['totalAmount'];
+            $invoiceData['amount'] = $buildResult['totalAmount'] - $buildResult['subtractions'];
             $invoiceData['creator_id'] = Auth::id();
             $invoiceData['active'] = 1;
-            
+
             // Ensure invoice_type is a string value for database storage
             if ($invoiceData['invoice_type'] instanceof InvoiceType) {
                 $invoiceData['invoice_type'] = $invoiceData['invoice_type']->value;
@@ -93,16 +93,14 @@ class InvoiceService
     /**
      * Update an existing invoice and its related document/transactions.
      *
-     * @param int $invoiceId
-     * @param array $invoiceData
-     * @param array $items
      * @return array ['document' => Document, 'invoice' => Invoice]
+     *
      * @throws InvoiceServiceException
      */
     public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = []): array
     {
         $invoice = Invoice::findOrFail($invoiceId);
-        
+
         // // Validate invoice data (skip unique check for the current invoice number)
         // self::validateInvoiceData($invoiceData, $invoiceId);
 
@@ -159,15 +157,12 @@ class InvoiceService
 
     /**
      * Delete invoice and its related document and transactions.
-     *
-     * @param int $invoiceId
-     * @return void
      */
     public static function deleteInvoice(int $invoiceId): void
     {
         DB::transaction(function () use ($invoiceId) {
             $invoice = Invoice::find($invoiceId);
-            if (!$invoice) {
+            if (! $invoice) {
                 return;
             }
 
@@ -190,14 +185,14 @@ class InvoiceService
     /**
      * Validate invoice data.
      *
-     * @param array $invoiceData
-     * @param int|null $invoiceId - Pass when updating to skip unique check for current invoice
+     * @param  int|null  $invoiceId  - Pass when updating to skip unique check for current invoice
+     *
      * @throws InvoiceServiceException
      */
     private static function validateInvoiceData(array $invoiceData, ?int $invoiceId = null): void
     {
         $rules = [
-            'number' => 'required|numeric|min:1|unique:invoices,number' . ($invoiceId ? ',' . $invoiceId : ''),
+            'number' => 'required|numeric|min:1|unique:invoices,number'.($invoiceId ? ','.$invoiceId : ''),
             'date' => 'required|date',
             'customer_id' => 'required|integer|exists:customers,id',
             'subtraction' => 'numeric|nullable',
@@ -216,16 +211,13 @@ class InvoiceService
 
     /**
      * Normalize invoice data (convert booleans, set defaults).
-     *
-     * @param array $invoiceData
-     * @return array
      */
     private static function normalizeInvoiceData(array $invoiceData): array
     {
         $invoiceData['subtraction'] = floatval($invoiceData['subtraction'] ?? 0);
         $invoiceData['permanent'] = isset($invoiceData['permanent']) ? (int) $invoiceData['permanent'] : 0;
         $invoiceData['active'] = isset($invoiceData['active']) ? (int) $invoiceData['active'] : 1;
-        
+
         // Convert InvoiceType enum to string value if it's an enum instance
         if (isset($invoiceData['invoice_type']) && $invoiceData['invoice_type'] instanceof InvoiceType) {
             $invoiceData['invoice_type'] = $invoiceData['invoice_type']->value;
@@ -236,11 +228,6 @@ class InvoiceService
 
     /**
      * Create invoice items from items array.
-     *
-     * @param Invoice $invoice
-     * @param array $items
-     * @param array $documentTransactions
-     * @param InvoiceType|string $invoiceType
      */
     private static function createInvoiceItems(Invoice $invoice, array $items, array $documentTransactions, InvoiceType|string $invoiceType): void
     {

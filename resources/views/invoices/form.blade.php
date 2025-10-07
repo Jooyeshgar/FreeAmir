@@ -220,7 +220,7 @@
 </x-card>
 
 <div class="mt-4 flex gap-2 justify-end">
-    <a href="{{ route('invoices.index') }}" type="submit" class="btn btn-default rounded-md"> {{ __('cancel') }}
+    <a href="{{ route('invoices.index', ['invoice_type' => $invoice_type]) }}" type="submit" class="btn btn-default rounded-md"> {{ __('cancel') }}
     </a>
     <button id="submitForm" type="submit" class="btn text-white btn-primary rounded-md">
         {{ __('save and close form') }} </button>
@@ -233,6 +233,7 @@
                 transactions: {!! json_encode($transactions, JSON_UNESCAPED_UNICODE) !!},
                 products: {!! json_encode($products, JSON_UNESCAPED_UNICODE) !!},
                 productGroups: {!! json_encode($productGroups, JSON_UNESCAPED_UNICODE) !!},
+                invoice_type: {!! json_encode($invoice_type, JSON_UNESCAPED_UNICODE) !!},
                 addTransaction() {
                     const newId = this.transactions.length ? this.transactions[this.transactions
                         .length - 1].id + 1 : 1;
@@ -249,10 +250,9 @@
                     });
                 },
                 getProductPrice(productId) {
-                    const invoice_type = Number(document.getElementById('invoice_type').value);
-                    const product = this.products.find(p => p.subject_id == productId);
+                    const product = this.products.find(p => p.id == productId);
                     if (!product) return 0;
-                    return (invoice_type == 'sell') ? product.selling_price : product.purchace_price;
+                    return (this.invoice_type == 'sell') ? product.selling_price : product.purchace_price;
                 },
                 getProductVat(productId) {
                     const product = this.products.find(p => p.id == productId);
