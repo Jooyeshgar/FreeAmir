@@ -136,7 +136,7 @@
                             title="{{ __('Subject Code') }}" x-bind:value="$store.utils.formatCode(selectedCode)">
                         </x-input>
                     </div>
-                    <x-subject-select-box class="w-2/3" :subjects="$subjects" title="{{ __('Sell VAT') }}"
+                    <x-subject-select-box class="w-2/3" :subjects="$subjects" title="{{ __('Sell Vat') }}"
                         id_field="sell_vat"
                         placeholder="{{ $subjects->where('id', config('amir.sell_vat'))->first()?->name ?? __('Select a subject') }}"
                         allSelectable="true"></x-subject-select-box>
@@ -154,7 +154,7 @@
                             title="{{ __('Subject Code') }}" x-bind:value="$store.utils.formatCode(selectedCode)">
                         </x-input>
                     </div>
-                    <x-subject-select-box class="w-2/3" :subjects="$subjects" title="{{ __('Buy VAT') }}" id_field="buy_vat"
+                    <x-subject-select-box class="w-2/3" :subjects="$subjects" title="{{ __('Buy Vat') }}" id_field="buy_vat"
                         placeholder="{{ $subjects->where('id', config('amir.buy_vat'))->first()?->name ?? __('Select a subject') }}"
                         allSelectable="true"></x-subject-select-box>
                 </div>
