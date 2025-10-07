@@ -3,22 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Enums\InvoiceType;
+use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\Product;
+use App\Models\ProductGroup;
 use App\Models\Subject;
 use App\Models\Transaction;
-use App\Models\ProductGroup;
 use App\Services\InvoiceService;
 use Illuminate\Http\Request;
-use App\Http\Requests\StoreInvoiceRequest;
 
 class InvoiceController extends Controller
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * Display a listing of the resource.
@@ -31,7 +29,7 @@ class InvoiceController extends Controller
 
         $invoiceType = $request->get('invoice_type');
         if ($invoiceType && in_array($invoiceType, ['buy', 'sell', 'return_buy', 'return_sell'])) {
-            $builder = $builder->where('invoice_type', $invoiceType);
+            $builder = $builder->where('is_sell', $invoiceType);
         }
 
         // Optional: Filter by search query
@@ -80,8 +78,6 @@ class InvoiceController extends Controller
         return view('invoices.create', compact('products', 'productGroups', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type'));
     }
 
-
-
     private function getCustomers()
     {
         $full_customers = Subject::where('parent_id', config('amir.cust_subject'))->with('children')->orderBy('code', 'asc')->get();
@@ -89,6 +85,7 @@ class InvoiceController extends Controller
         foreach ($full_customers as $full_customer) {
             $customers = $full_customer->children;
         }
+
         return $customers;
     }
 
@@ -120,7 +117,7 @@ class InvoiceController extends Controller
         // Map transactions to invoice items
         $items = collect($validated['transactions'])->map(function ($transaction, $index) use ($productsBySubjectId) {
             $product = $productsBySubjectId->get($transaction['subject_id']);
-            
+
             return [
                 'transaction_index' => $index,
                 'product_id' => $product?->id,
@@ -235,6 +232,7 @@ class InvoiceController extends Controller
     {
         try {
             $invoice->delete();
+
             return redirect()->route('invoices.index')->with('success', __('Invoice deleted successfully.'));
         } catch (\Exception $e) {
             return redirect()->route('invoices.index')->with('error', $e->getMessage());
