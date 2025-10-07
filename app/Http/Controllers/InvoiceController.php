@@ -29,7 +29,7 @@ class InvoiceController extends Controller
 
         $invoiceType = $request->get('invoice_type');
         if ($invoiceType && in_array($invoiceType, ['buy', 'sell', 'return_buy', 'return_sell'])) {
-            $builder = $builder->where('is_sell', $invoiceType);
+            $builder = $builder->where('invoice_type', $invoiceType);
         }
 
         // Optional: Filter by search query
@@ -112,7 +112,7 @@ class InvoiceController extends Controller
 
         // Fetch all products by subject_id in one query
         $subjectIds = collect($validated['transactions'])->pluck('subject_id')->unique();
-        $productsBySubjectId = Product::whereIn('subject_id', $subjectIds)->get()->keyBy('subject_id');
+        $productsBySubjectId = Product::whereIn('id', $subjectIds)->get()->keyBy('id');
 
         // Map transactions to invoice items
         $items = collect($validated['transactions'])->map(function ($transaction, $index) use ($productsBySubjectId) {
