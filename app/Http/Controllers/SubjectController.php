@@ -38,36 +38,67 @@ class SubjectController extends Controller
         $validatedData = $request->validate([
             'name' => 'required|max:60',
             'parent_id' => 'nullable|exists:subjects,id',
+            'code' => 'nullable|string|max:3',
         ]);
 
-        // company_id comes from session via model hook or we can pass it explicitly
-        app(SubjectCreatorService::class)->createSubject([
+        $data = [
             'name' => $validatedData['name'],
             'parent_id' => $validatedData['parent_id'] ?? null,
-        ]);
+        ];
 
-        return redirect()->back()->with('success', __('Subject created successfully.'));
+        if (!empty($validatedData['code'])) {
+            $data['code'] = str_pad($validatedData['code'], 3, '0', STR_PAD_LEFT);
+        }
+
+        $subject = app(SubjectCreatorService::class)->createSubject($data);
+
+        $redirectUrl = route('subjects.index');
+        if ($subject->parent_id) {
+            $redirectUrl .= '?parent_id=' . $subject->parent_id;
+        }
+
+        return redirect($redirectUrl)->with('success', __('Subject with code :code created successfully.', ['code' => $subject->formattedCode()]));
     }
 
     public function edit(Subject $subject)
     {
-        $parentSubjects = Subject::where('parent_id', null)->get();
+        $parentSubject = $subject->parent;
 
-        return view('subjects.edit', compact('subject', 'parentSubjects'));
+        return view('subjects.edit', compact('subject', 'parentSubject'));
     }
 
     public function update(Request $request, Subject $subject)
     {
         $validatedData = $request->validate([
-            'code' => 'required|max:20|unique:subjects,code,' . $subject->id,
+            'code' => 'required|max:20',
             'name' => 'required|max:60',
-            'parent_id' => 'nullable|exists:subjects,id',
             'type' => 'required|in:debtor,creditor,both',
         ]);
 
-        $subject->update($validatedData);
+        $fullCode = $subject->parent->code . str_pad($validatedData['code'], 3, '0', STR_PAD_LEFT);
 
-        return redirect()->back()->with('success', __('Subject updated successfully.'));
+        $existingSubject = Subject::where('code', $fullCode)
+            ->where('id', '!=', $subject->id)
+            ->where('company_id', $subject->company_id)
+            ->first();
+        
+        if ($existingSubject) {
+            return redirect()->back()
+                ->withErrors(['code' => __('The code :code already exists in this company.', ['code' => $fullCode])])
+                ->withInput();
+        }
+
+        $subject->update([
+            'code' => $fullCode,
+            'name' => $validatedData['name'],
+            'type' => $validatedData['type'],
+        ]);
+
+        $redirectUrl = route('subjects.index');
+        if ($subject->parent_id) {
+            $redirectUrl .= '?parent_id=' . $subject->parent_id;
+        }
+        return redirect($redirectUrl)->with('success', __('Subject updated successfully.'));
     }
 
 

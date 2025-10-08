@@ -6,8 +6,9 @@
     </x-slot>
 
     <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('subjects.store') }}" method="POST">
+        <form action="{{ route('subjects.update', $subject->id) }}" method="POST">
             @csrf
+            @method('PUT')
             <div class="card-body">
                 <div class="card-title">{{ __('Edit subject') }}</div>
                 <x-show-message-bags />

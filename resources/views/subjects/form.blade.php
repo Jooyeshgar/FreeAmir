@@ -7,15 +7,24 @@
             'debtor' => __('Debtor'),
             'creditor' => __('Creditor'),
             'both' => __('Both'),
-        ]" :selected="old('type', $subject->type ?? '')" />
+        ]" :selected="old('type', $subject->type ?? 'both')" />
     </div>
     <div class="col-span-2 md:col-span-1">
         <x-input name="parent_name" id="parent_name" title="{{ __('Subject') }}" value="{{ $parentSubject->name ?? __('Main Subject') }}" disabled />
         <input type="hidden" name="parent_id" value="{{ $parentSubject->id ?? null }}">
     </div>
     <div class="col-span-2 md:col-span-1">
-        <x-input name="code" id="code" title="{{ __('Code') }}" :value="old('code', $subject->code ?? '')" placeholder="{{ __('Code will generate automatically') }}"
-            hint="{{ __('Code should be unique') }}" />
+        <div class="flex gap-2 items-end">
+            <div>
+                <x-input name="code" id="code" title="{{ __('Code') }}" placeholder="{{ __('Code will generate automatically') }}"
+                    value="{{ old('code', isset($subject) && $subject->code ? substr($subject->code, -3) : '') }}" />
+            </div>
+            <div>
+                <div class="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-700">
+                    {{ $parentSubject->formattedCode() }}
+                </div>
+            </div>
+        </div>
     </div>
 
 </div>
