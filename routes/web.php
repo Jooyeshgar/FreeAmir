@@ -46,6 +46,6 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('', [Controllers\InvoiceController::class, 'index']);
     });
 
-    Route::get('/backup/run', [App\Http\Controllers\BackupController::class, 'run'])
-        ->name('backup.run');
+    Route::get('/backup/manual', [\App\Http\Controllers\BackupController::class, 'manualBackup'])
+        ->name('backup.manual');
 });
