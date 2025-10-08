@@ -60,6 +60,10 @@ class StoreInvoiceRequest extends FormRequest
      */
     public function rules(): array
     {
+        // Get the invoice from route if editing
+        $invoice = $this->route('invoice');
+        $isEditing = $invoice !== null;
+
         return [
             'title' => 'nullable|string|min:2|max:255',
             'description' => 'nullable|string',
@@ -75,7 +79,8 @@ class StoreInvoiceRequest extends FormRequest
                 Rule::unique('documents', 'number')
                     ->where(function ($query) {
                         return $query->where('company_id', session('active-company-id'));
-                    }),
+                    })
+                    ->ignore($isEditing ? $invoice->document_id : null),
             ],
             'invoice_number' => [
                 'required',
@@ -83,7 +88,8 @@ class StoreInvoiceRequest extends FormRequest
                 Rule::unique('invoices', 'number')
                     ->where(function ($query) {
                         return $query->where('company_id', session('active-company-id'));
-                    }),
+                    })
+                    ->ignore($isEditing ? $invoice->id : null),
             ],
 
             // Money-ish optional fields
