@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 
 class LoginController extends Controller
@@ -34,6 +35,11 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
+        Artisan::call('backup:company', [
+            'company_id' => session('active-company-id'),
+            '--public-only' => false,
+        ]);
+
         Auth::logout();
         $request->session()->invalidate(); // Optional: Invalidate session for added security
         $request->session()->regenerateToken(); // Optional: Regenerate session token for CSRF protection

@@ -9,8 +9,8 @@ use App\Models\ProductGroup;
 use App\Models\Subject;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Artisan;
 
 class HomeController extends Controller
 {
@@ -18,6 +18,11 @@ class HomeController extends Controller
 
     public function index()
     {
+        Artisan::call('backup:company', [
+            'company_id' => session('active-company-id'),
+            '--public-only' => false,
+        ]);
+
         $customerCount = CustomerGroup::withCount('customers')->get()->sum('customers_count');
 
         $invoiceCount = Invoice::count();
@@ -50,7 +55,6 @@ class HomeController extends Controller
             'monthlyIncome'
         ));
     }
-
 
     public function subjectDetail(Request $request)
     {
@@ -145,7 +149,7 @@ class HomeController extends Controller
             9 => 'آذر',
             10 => 'دی',
             11 => 'بهمن',
-            12 => 'اسفند'
+            12 => 'اسفند',
         ];
 
         foreach ($monthlyIncome as $month => $income) {

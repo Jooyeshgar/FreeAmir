@@ -2,15 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 
 class BackupController extends Controller
 {
-    public function run(): RedirectResponse
+    public function manualBackup(Request $request)
     {
-        Artisan::call('backup:run --only-db');
+        $company_id = session('active-company-id');
+        Artisan::call('backup:company', [
+            'company_id' => $company_id,
+            '--public-only' => false,
+        ]);
 
-        return back()->with('success', __('Backup completed successfully.'));
+        return back()->with('success', 'Backup completed successfully.');
     }
 }

@@ -39,7 +39,6 @@ class HomeSeeder extends Seeder
 
         Subject::insert($cashBooks);
 
-
         for ($i = 0; $i < 150; $i++) {
             $invoice = $this->createInvoice();
             $this->createTransaction($invoice);
@@ -53,9 +52,9 @@ class HomeSeeder extends Seeder
 
         $jalaliDay = rand(1, 28);
 
-        $jalaliDate = $jalaliYear . '/' .
-            ($jalaliMonth < 10 ? '0' . $jalaliMonth : $jalaliMonth) . '/' .
-            ($jalaliDay < 10 ? '0' . $jalaliDay : $jalaliDay);
+        $jalaliDate = $jalaliYear.'/'.
+            ($jalaliMonth < 10 ? '0'.$jalaliMonth : $jalaliMonth).'/'.
+            ($jalaliDay < 10 ? '0'.$jalaliDay : $jalaliDay);
 
         $date = jalali_to_gregorian_date($jalaliDate);
 
@@ -67,7 +66,7 @@ class HomeSeeder extends Seeder
         $document = DocumentService::createDocument(
             $user,
             [
-                'date' => $date
+                'date' => $date,
             ],
             []
         );
@@ -77,17 +76,18 @@ class HomeSeeder extends Seeder
             'date' => $date,
             'document_id' => $document->id,
             'customer_id' => $customer->id,
-            'addition' => $this->faker->randomFloat(2, 0, 1000),
+            // 'addition' => $this->faker->randomFloat(2, 0, 1000),
             'subtraction' => $this->faker->randomFloat(2, 0, 1000),
-            'cash_payment' => $this->faker->randomFloat(2, 1000, $amount),
+            // 'cash_payment' => $this->faker->randomFloat(2, 1000, $amount),
             'ship_date' => $this->faker->optional()->date(),
             'ship_via' => $this->faker->company(),
             'description' => $this->faker->sentence(),
-            'is_sell' => $this->faker->boolean,
+            'invoice_type' => $this->faker->randomElement(['buy', 'sell', 'return_buy', 'return_sell']),
             'active' => true,
             'vat' => $this->faker->randomNumber(5),
             'amount' => $amount,
         ]);
+
         return $invoice;
     }
 
