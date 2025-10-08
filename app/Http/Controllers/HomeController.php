@@ -10,7 +10,6 @@ use App\Models\Subject;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Artisan;
 
 class HomeController extends Controller
 {
@@ -18,11 +17,6 @@ class HomeController extends Controller
 
     public function index()
     {
-        Artisan::call('backup:company', [
-            'company_id' => session('active-company-id'),
-            '--public-only' => false,
-        ]);
-
         $customerCount = CustomerGroup::withCount('customers')->get()->sum('customers_count');
 
         $invoiceCount = Invoice::count();
