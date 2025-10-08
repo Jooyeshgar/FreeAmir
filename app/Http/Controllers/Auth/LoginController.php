@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
@@ -24,6 +25,11 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
+            $companies_id = User::find(Auth::id())->companies->pluck('id')->toArray();
+            Artisan::call('backup:company', [
+                'company_id' => $companies_id,
+                '--public-only' => false,
+            ]);
 
             return redirect()->intended('/');
         }
@@ -35,8 +41,9 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
+        $companies_id = User::find(Auth::id())->companies->pluck('id')->toArray();
         Artisan::call('backup:company', [
-            'company_id' => session('active-company-id'),
+            'company_id' => $companies_id,
             '--public-only' => false,
         ]);
 

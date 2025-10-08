@@ -10,16 +10,16 @@ use Illuminate\Support\Facades\Storage;
 
 class CompanyBackup extends Command
 {
-    protected $signature = 'backup:company {company_id} {--public-only}';
+    protected $signature = 'backup:company {company_id*} {--public-only}';
 
     protected $description = 'Backup public and company-related tables dynamically';
 
     public function handle()
     {
-        $companyId = $this->argument('company_id');
+        $companyIds = (array) $this->argument('company_id');
         $publicOnly = $this->option('public-only');
         $timestamp = now()->format('Y_m_d_His');
-        $baseName = "company_{$companyId}_{$timestamp}";
+        $baseName = 'companies_'.implode('_', $companyIds)."_{$timestamp}";
         $encryptedFile = "{$baseName}.sql.enc";
 
         $storageDisk = Storage::disk('local');
@@ -107,7 +107,7 @@ class CompanyBackup extends Command
             ? $publicTables
             : array_unique(array_merge($publicTables, $companyRelatedTables));
 
-        $sqlDump = '';
+        $sqlDump = "SET NAMES 'utf8mb4';\nSET FOREIGN_KEY_CHECKS = 0;\n\n";
 
         foreach ($tablesToBackup as $table) {
             if (! Schema::hasTable($table)) {
@@ -118,13 +118,20 @@ class CompanyBackup extends Command
             $rows = collect();
 
             if ($hasCompanyId) {
-                $rows = DB::table($table)->where('company_id', $companyId)->get();
+                // Collect all rows for each company
+                $rows = DB::table($table)
+                    ->whereIn('company_id', $companyIds)
+                    ->get();
             } elseif ($table === 'companies') {
-                $rows = DB::table($table)->where('id', $companyId)->get();
+                $rows = DB::table($table)
+                    ->whereIn('id', $companyIds)
+                    ->get();
             } elseif ($table === 'company_user') {
-                $rows = DB::table($table)->where('company_id', $companyId)->get();
+                $rows = DB::table($table)
+                    ->whereIn('company_id', $companyIds)
+                    ->get();
             } elseif (in_array($table, $companyRelatedTables)) {
-                // Table indirectly linked to company tables
+                // Related tables: we might need to inspect foreign keys
                 $foreignKeys = DB::select('
                 SELECT COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
                 FROM information_schema.KEY_COLUMN_USAGE
@@ -140,7 +147,7 @@ class CompanyBackup extends Command
 
                         if (Schema::hasColumn($refTable, 'company_id')) {
                             $refIds = DB::table($refTable)
-                                ->where('company_id', $companyId)
+                                ->whereIn('company_id', $companyIds)
                                 ->pluck($refCol)
                                 ->toArray();
 
@@ -161,23 +168,26 @@ class CompanyBackup extends Command
                 continue;
             }
 
+            $tableEsc = '`'.str_replace('`', '``', $table).'`';
             $this->info("Backing up table: {$table} ({$rows->count()} rows)");
 
-            $sqlDump .= "TRUNCATE TABLE `$table`;\n";
+            $sqlDump .= "TRUNCATE TABLE {$tableEsc};\n";
             foreach ($rows as $row) {
                 $rowArr = (array) $row;
-                $columns = array_keys($rowArr);
-                $values = array_map(function ($v) {
-                    return is_null($v) ? 'NULL' : DB::getPdo()->quote($v);
-                }, $rowArr);
-                $sqlDump .= "INSERT INTO `$table` (".implode(',', $columns).') VALUES ('.implode(',', $values).");\n";
+                $columns = array_map(fn ($col) => '`'.str_replace('`', '``', $col).'`', array_keys($rowArr));
+                $values = array_map(fn ($v) => is_null($v) ? 'NULL' : DB::getPdo()->quote($v), array_values($rowArr));
+
+                $sqlDump .= "INSERT INTO {$tableEsc} (".implode(',', $columns).') VALUES ('.implode(',', $values).");\n";
             }
+            $sqlDump .= "\n";
         }
 
-        // Encrypt and save the SQL dump
+        $sqlDump .= "\nSET FOREIGN_KEY_CHECKS = 1;\n";
+
+        // Encrypt and save
         $encryptedContent = Crypt::encryptString($sqlDump);
         $storageDisk->put("backups/{$encryptedFile}", $encryptedContent);
 
-        $this->info("Backup saved: storage/app/backups/{$encryptedFile}");
+        $this->info("Combined backup saved: storage/app/backups/{$encryptedFile}");
     }
 }
