@@ -88,7 +88,7 @@
                 <div :class="{ 'active': activeTab === index }" class="transaction flex gap-2 items-center px-4 pb-3" @click="activeTab = index" x-data="{
                     selectedName: transaction.subject,
                     selectedCode: transaction.code,
-                    selectedId: transaction.subject_id,
+                    selectedId: transaction.product_id || null,
                     off: 0,
                 }"
                     x-effect="
@@ -97,7 +97,7 @@
                     }">
                     <input type="text" x-bind:value="transaction.transaction_id" x-bind:name="'transactions[' + index + '][transaction_id]'" hidden>
                     <input type="text" x-bind:value="selectedCode" x-bind:name="'transactions[' + index + '][code]'" hidden>
-                    <input type="text" x-bind:value="selectedId" x-bind:name="'transactions[' + index + '][subject_id]'" hidden>
+                    <input type="text" x-bind:value="getProductSubjectId(selectedId)" x-bind:name="'transactions[' + index + '][subject_id]'" hidden>
 
                     <div class="relative flex-1 text-center max-w-8 pt-2 pb-2 transaction-count-container">
                         <span class="transaction-count block" x-text="index + 1"></span>
@@ -119,6 +119,7 @@
                         <select x-model="selectedId"
                             @change="
                                 transaction.product_id = Number($event.target.value);
+                                transaction.subject_id = getProductSubjectId(Number($event.target.value));
                                 transaction.unit = getProductPrice(Number($event.target.value));
                                 transaction.vat = getProductVat(Number($event.target.value));
                             "
@@ -126,7 +127,7 @@
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
                             <option value="">{{ __('Select Product') }}</option>
                             @foreach ($products as $product)
-                                <option value="{{ $product->id }}" x-bind:selected="selectedId == {{ $product->id }}">
+                                <option value="{{ $product->id }}">
                                     {{ $product->name }}
                                 </option>
                             @endforeach
@@ -277,6 +278,11 @@
                         return productGroup.vat;
                     }
                     return product.vat;
+                },
+                getProductSubjectId(productId) {
+                    const product = this.products.find(p => p.id == productId);
+                    if (!product) return null;
+                    return product.subject_id;
                 }
             }));
         });

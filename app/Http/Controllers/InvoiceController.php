@@ -112,7 +112,7 @@ class InvoiceController extends Controller
 
         // Fetch all products by subject_id in one query
         $subjectIds = collect($validated['transactions'])->pluck('subject_id')->unique();
-        $productsBySubjectId = Product::whereIn('id', $subjectIds)->get()->keyBy('id');
+        $productsBySubjectId = Product::whereIn('subject_id', $subjectIds)->get()->keyBy('subject_id');
 
         // Map transactions to invoice items
         $items = collect($validated['transactions'])->map(function ($transaction, $index) use ($productsBySubjectId) {
@@ -201,7 +201,8 @@ class InvoiceController extends Controller
             return [
                 'id' => $index + 1,
                 'transaction_id' => $transaction->id ?? null,
-                'subject_id' => $product->id ?? null,
+                'product_id' => $product->id ?? null,
+                'subject_id' => $product->subject_id ?? null,
                 'subject' => $product->name ?? '',
                 'code' => $product->subject->code ?? '',
                 'desc' => $transaction->desc ?? $item->description ?? '',
@@ -252,7 +253,7 @@ class InvoiceController extends Controller
 
         // Fetch all products by subject_id in one query
         $subjectIds = collect($validated['transactions'])->pluck('subject_id')->unique();
-        $productsBySubjectId = Product::whereIn('id', $subjectIds)->get()->keyBy('id');
+        $productsBySubjectId = Product::whereIn('subject_id', $subjectIds)->get()->keyBy('subject_id');
 
         // Map transactions to invoice items
         $items = collect($validated['transactions'])->map(function ($transaction, $index) use ($productsBySubjectId) {
