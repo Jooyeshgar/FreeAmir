@@ -183,53 +183,99 @@ class InvoiceController extends Controller
         return view('invoices.show', compact('invoice', 'invoiceItems'));
     }
 
-    // /**
-    //  * Show the form for editing the specified resource.
-    //  *
-    //  * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory
-    //  */
-    // public function edit(Invoice $invoice)
-    // {
-    //     $invoice->load('customer', 'document'); // Eager load customer and document data
+    /**
+     * Show the form for editing the specified resource.
+     *
+     * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory
+     */
+    public function edit(Invoice $invoice)
+    {
+        $invoice->load('customer', 'document.transactions', 'items.product'); // Eager load relationships
 
-    //     $customers = Customer::pluck('name', 'id');
-    //     $documents = Document::pluck('number', 'id');
+        $customers = $this->getCustomers();
+        $products = Product::with('subject')->orderBy('name', 'asc')->get();
+        $productGroups = ProductGroup::all();
 
-    //     return view('invoices.edit', compact('invoice', 'customers', 'documents'));
-    // }
+        // Prepare transactions from invoice items
+        $transactions = $invoice->items->map(function ($item, $index) {
+            $transaction = $item->transaction;
+            $product = $item->product;
 
-    // /**
-    //  * Update the specified resource in storage.
-    //  *
-    //  * @return \Illuminate\Http\RedirectResponse
-    //  */
-    // public function update(Request $request, Invoice $invoice)
-    // {
-    //     $data = $request->validate([
-    //         'code' => 'required|unique:invoices,code,' . $invoice->id . '|max:255',
-    //         'date' => 'required|date',
-    //         'document_id' => 'required|integer|exists:documents,id',
-    //         'customer_id' => 'required|integer|exists:customers,id',
-    //         'addition' => 'numeric|nullable',
-    //         'subtraction' => 'numeric|nullable',
-    //         'tax' => 'numeric|nullable',
-    //         'ship_date' => 'nullable|date',
-    //         'ship_via' => 'string|nullable|max:255',
-    //         'description' => 'string|nullable|max:255',
-    //         'vat' => 'numeric|nullable',
-    //         'amount' => 'numeric|nullable',
-    //     ]);
+            return [
+                'id' => $index + 1,
+                'transaction_id' => $transaction->id ?? null,
+                'subject_id' => $product->id ?? null,
+                'subject' => $product->name ?? '',
+                'code' => $product->subject->code ?? '',
+                'desc' => $transaction->desc ?? $item->description ?? '',
+                'quantity' => $item->quantity ?? 1,
+                'unit' => $transaction ? abs($transaction->value) / ($item->quantity ?: 1) : 0,
+                'off' => $item->unit_discount ?? 0,
+                'vat' => $product->vat ?? 0,
+                'total' => $transaction ? abs($transaction->value) : 0,
+                'credit' => $transaction->credit ?? 0,
+                'debit' => $transaction->debit ?? 0,
+            ];
+        });
 
-    //     // Normalize checkbox booleans
-    //     $data['cash_payment'] = $request->has('cash_payment') ? 1 : 0;
-    //     $data['permanent'] = $request->has('permanent') ? 1 : 0;
-    //     $data['is_sell'] = $request->has('is_sell') ? 1 : 0;
-    //     $data['active'] = $request->has('active') ? 1 : 0;
+        $total = $transactions->count();
+        $invoice_type = $invoice->invoice_type->value;
 
-    //     $invoice->update($data);
+        return view('invoices.edit', compact(
+            'invoice',
+            'customers',
+            'total',
+            'products',
+            'transactions',
+            'productGroups',
+            'invoice_type'
+        ));
+    }
 
-    //     return redirect()->route('invoices.index')->with('success', __('Invoice updated successfully.'));
-    // }
+    /**
+     * Update the specified resource in storage.
+     *
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function update(StoreInvoiceRequest $request, Invoice $invoice, InvoiceService $service)
+    {
+        $validated = $request->validated();
+
+        $invoiceData = [
+            'title' => $validated['title'],
+            'date' => $validated['date'],
+            'invoice_type' => InvoiceType::from($validated['invoice_type']),
+            'customer_id' => $validated['customer_id'],
+            'document_number' => $validated['document_number'],
+            'number' => $validated['invoice_number'],
+            'subtraction' => $validated['subtractions'] ?? 0,
+            'invoice_id' => $validated['invoice_id'] ?? null,
+            'description' => $validated['description'] ?? null,
+        ];
+
+        // Fetch all products by subject_id in one query
+        $subjectIds = collect($validated['transactions'])->pluck('subject_id')->unique();
+        $productsBySubjectId = Product::whereIn('id', $subjectIds)->get()->keyBy('id');
+
+        // Map transactions to invoice items
+        $items = collect($validated['transactions'])->map(function ($transaction, $index) use ($productsBySubjectId) {
+            $product = $productsBySubjectId->get($transaction['subject_id']);
+
+            return [
+                'transaction_index' => $index,
+                'product_id' => $product?->id,
+                'quantity' => $transaction['quantity'] ?? 1,
+                'description' => $transaction['desc'] ?? null,
+                'unit_discount' => $transaction['unit_discount'] ?? 0,
+            ];
+        })->toArray();
+
+        $result = $service->updateInvoice($invoice->id, $invoiceData, $items);
+
+        return redirect()
+            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type->value])
+            ->with('success', __('Invoice updated successfully.'));
+    }
 
     public function destroy(Invoice $invoice)
     {
