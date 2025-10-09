@@ -201,6 +201,7 @@ class InvoiceController extends Controller
         $transactions = $invoice->items->map(function ($item, $index) {
             $transaction = $item->transaction;
             $product = $item->product;
+            dd($item);
 
             return [
                 'id' => $index + 1,
@@ -213,13 +214,12 @@ class InvoiceController extends Controller
                 'quantity' => $item->quantity ?? 1,
                 'unit' => $transaction ? abs($transaction->value) / ($item->quantity ?: 1) : 0,
                 'off' => $item->unit_discount ?? 0,
-                'vat' => $product->vat ?? 0,
+                'vat' => (abs($item->vat) != 0) ? abs($transaction->value) / abs($item->vat) : 0,
                 'total' => $transaction ? abs($transaction->value) : 0,
                 'credit' => $transaction->credit ?? 0,
                 'debit' => $transaction->debit ?? 0,
             ];
         });
-
         $total = $transactions->count();
         $invoice_type = $invoice->invoice_type->value;
 
