@@ -1,15 +1,17 @@
 <x-card class="rounded-2xl w-full" class_body="p-4">
     <div class="flex gap-2 items-center justify-start" x-data="{
-        selectedCustomerId: {{ old('customer_id', $invoice->customer_id ?? '') ?: 'null' }},
+        selectedName: '',
+        selectedCode: '',
+        selectedId: '',
     }">
         <div class="flex w-1/4">
             <div class="flex flex-wrap">
                 <span class="flex flex-col flex-wrap text-gray-500 w-full"> {{ __('Customer') }} </span>
-                <select name="customer_id" id="customer_id" x-model="selectedCustomerId"
+                <select name="customer_id" id="customer_id"
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
                     <option value="">{{ __('Select Customer') }}</option>
                     @foreach ($customers as $customer)
-                        <option value="{{ $customer->id }}" x-bind:selected="selectedCustomerId == {{ $invoice->customer_id }}">
+                        <option value="{{ $customer->id }}" {{ old('customer_id') == $customer->id ? 'selected' : '' }}>
                             {{ $customer->name }}
                         </option>
                     @endforeach
@@ -18,38 +20,26 @@
         </div>
         <input type="hidden" id="invoice_type" name="invoice_type" value="{{ $invoice_type }}">
         <div class="flex w-1/3">
-            <x-text-input input_name="title" title="{{ __('Invoice Name') }}" 
-                input_value="{{ old('title') ?? ($invoice->document->title ?? '') }}" 
-                placeholder="{{ __('Invoice Name') }}"
+            <x-text-input input_name="title" title="{{ __('Invoice Name') }}" input_value="{{ old('title') ?? '' }}" placeholder="{{ __('Invoice Name') }}"
                 label_text_class="text-gray-500" label_class="w-1/2"></x-text-input>
         </div>
     </div>
 
     <div class="flex justify-start gap-2 mt-2">
         <x-text-input input_value="" input_name="invoice_id" label_text_class="text-gray-500" label_class="w-full hidden"></x-text-input>
-        @if (!$invoice->exists)
-            <x-text-input disabled="true" input_value="{{ formatDocumentNumber($previousInvoiceNumber) }}"
-                title="{{ __('Previous Invoice Number') }}"
-                placeholder="{{ __('Previous Invoice Number') }}" label_text_class="text-gray-500 text-nowrap"></x-text-input>
-        @endif
-        
-        <x-text-input 
-            input_value="{{ old('invoice_number') ?? formatDocumentNumber($invoice->number ?? ($previousInvoiceNumber + 1)) }}" 
-            input_name="invoice_number"
-            title="{{ __('Current Invoice Number') }}" 
-            placeholder="{{ __('Current Invoice Number') }}" 
-            label_text_class="text-gray-500 text-nowrap"></x-text-input>
+        <x-text-input disabled="true" input_value="{{ formatDocumentNumber($previousDocumentNumber) }}" title="{{ __('previous document number') }}"
+            placeholder="{{ __('previous document number') }}" label_text_class="text-gray-500 text-nowrap" hidden></x-text-input>
 
-        <x-text-input 
-            input_value="{{ old('document_number') ?? formatDocumentNumber($invoice->document->number ?? ($previousDocumentNumber + 1)) }}" 
-            input_name="document_number"
-            title="{{ __('current document number') }}" 
-            placeholder="{{ __('current document number') }}" 
-            label_text_class="text-gray-500 text-nowrap"></x-text-input>
+        <x-text-input disabled="true" input_value="{{ formatDocumentNumber($previousInvoiceNumber) }}" title="{{ __('Previous Invoice Number') }}"
+            placeholder="{{ __('Previous Invoice Number') }}" label_text_class="text-gray-500 text-nowrap"></x-text-input>
+        <x-text-input input_value="{{ old('number') ?? formatDocumentNumber($previousInvoiceNumber + 1) }}" input_name="invoice_number"
+            title="{{ __('Current Invoice Number') }}" placeholder="{{ __('Current Invoice Number') }}" label_text_class="text-gray-500 text-nowrap"></x-text-input>
+
+        <x-text-input input_value="{{ old('number') ?? formatDocumentNumber($previousDocumentNumber + 1) }}" input_name="document_number"
+            title="{{ __('current document number') }}" placeholder="{{ __('current document number') }}" label_text_class="text-gray-500 text-nowrap"></x-text-input>
 
         <x-text-input data-jdp title="{{ __('date') }}" input_name="date" placeholder="{{ __('date') }}"
-            input_value="{{ old('date') ?? convertToJalali($invoice->date ?? now()) }}" 
-            label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
+            input_value="{{ old('date') ?? convertToJalali(now()) }}" label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
     </div>
 </x-card>
 <x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-4" x-data="transactionForm">
@@ -92,8 +82,6 @@
                         if (selectedId && !transaction.unit) {
                         transaction.unit = getProductPrice(Number(selectedId));
                     }">
-                    <input type="text" x-bind:value="transaction.transaction_id" x-bind:name="'transactions[' + index + '][transaction_id]'" hidden>
-                    <input type="text" x-bind:value="selectedCode" x-bind:name="'transactions[' + index + '][code]'" hidden>
                     <input type="text" x-bind:value="getProductSubjectId(selectedId)" x-bind:name="'transactions[' + index + '][subject_id]'" hidden>
 
                     <div class="relative flex-1 text-center max-w-8 pt-2 pb-2 transaction-count-container">
@@ -147,41 +135,29 @@
                     </div>
 
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input
-                            x-model.number="transaction.vat"
-                            x-bind:name="'transactions[' + index + '][vat]'"
-                            placeholder="0%"
+                        <x-text-input x-model.number="transaction.vat" x-bind:value=$store.utils.formatNumber(getProductVat(Number(selectedId)))
+                            x-bind:name="'transactions[' + index + '][vat]'" placeholder="0%" label_text_class="text-gray-500" label_class="w-full"
                             input_class="border-white">
                         </x-text-input>
                     </div>
 
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input
-                            x-model.number="transaction.unit"
-                            x-bind:name="'transactions[' + index + '][unit]'"
-                            placeholder="0"
-                            input_class="border-white">
+                        <x-text-input x-model.number="transaction.unit" x-bind:name="'transactions[' + index + '][unit]'" placeholder="0"
+                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
+                            x-bind:value="$store.utils.formatNumber(transaction.unit)">
                         </x-text-input>
                     </div>
 
                     <div class="flex-1 min-w-32 max-w-32">
                         <x-text-input
-                            x-bind:value="(
-                                transaction.total = (
-                                    (Number(transaction.quantity) || 0) *
-                                    (Number(transaction.unit) || 0) +
-                                    ((Number(transaction.quantity) || 0) *
-                                    (Number(transaction.unit) || 0) *
-                                    (Number(transaction.vat) / 100)) -
-                                    (Number(transaction.off) || 0)
-                                )
-                            ).toLocaleString()"
-                            x-bind:name="'transactions[' + index + '][total]'"
-                            placeholder="0"
-                            label_text_class="text-gray-500"
-                            label_class="w-full"
-                            input_class="border-white"
-                            readonly>
+                            x-bind:value="(transaction.total = (Number($store.utils.convertToEnglish(transaction.quantity)) || 0) *
+                                (Number($store.utils.convertToEnglish(transaction.unit)) || 0) +
+                                ((Number($store.utils.convertToEnglish(transaction.quantity)) || 0) *
+                                    (Number($store.utils.convertToEnglish(transaction.unit)) || 0) *
+                                    (Number($store.utils.formatNumber(transaction.vat)) / 100)) -
+                                (Number($store.utils.convertToEnglish(transaction.off)) || 0)).toLocaleString()"
+                            x-bind:name="'transactions[' + index + '][total]'" placeholder="0" label_text_class="text-gray-500" label_class="w-full"
+                            input_class="border-white" readonly>
                         </x-text-input>
                     </div>
                 </div>
@@ -198,18 +174,10 @@
     </div>
     </div>
     <hr style="">
-    <div class="flex flex-row justify-between" x-data="{ additionsInput: '', subtractionsInput: '{{ old('subtractions') ?? ($invoice->subtraction ?? 0) }}' }">
+    <div class="flex flex-row justify-between" x-data="{ subtractionsInput: '{{ old('subtractions') ?? ($invoice->subtraction ?? 0) }}' }">
         <div class="flex justify-start px-4 gap-4 py-3 rounded-b-2xl">
-            <x-text-input 
-                placeholder="0" 
-                label_text_class="text-gray-500" 
-                label_class="w-full" 
-                input_name="subtractions" 
-                title="{{ __('Subtractions') }}"
-                input_value="{{ old('subtractions') ?? ($invoice->subtraction ?? 0) }}"
-                input_class="locale-number" 
-                x-model="subtractionsInput" 
-                @input="$event.target.value = $store.utils.formatNumber($event.target.value)">
+            <x-text-input placeholder="0" label_text_class="text-gray-500" label_class="w-full" input_name="subtractions" title="{{ __('Subtractions') }}"
+                input_class="locale-number" x-model="subtractionsInput" @input="$event.target.value = $store.utils.formatNumber($event.target.value)">
             </x-text-input>
         </div>
         <div class="flex justify-end px-4 gap-4 py-3 rounded-b-2xl">
@@ -227,7 +195,6 @@
                 <span class="text-lg font-bold text-green-600"
                     x-text="(
                         transactions.reduce((sum, t) => sum + (Number($store.utils.convertToEnglish(t.total)) || 0), 0)
-                        + (Number($store.utils.cleanupNumber(additionsInput) || 0))
                         - (Number($store.utils.cleanupNumber(subtractionsInput) || 0))
                     ).toLocaleString()">
                     0
@@ -240,8 +207,7 @@
 
 <x-card class="rounded-2xl w-full" class_body="p-4">
     <div class="flex justify-center gap-2 mt-2">
-        <x-textarea name="description" id="description" title="{{ __('description') }}" 
-            :value="old('description', $invoice->description ?? '')" />
+        <x-textarea name="description" id="description" title="{{ __('description') }}" :value="old('description', '')" />
     </div>
 </x-card>
 
@@ -270,8 +236,9 @@
                         id: newId,
                         name: '',
                         subject: '',
-                        code: '',
                         subject_id: '',
+                        product_id: '',
+                        code: '',
                         quantity: 0,
                         unit: 0,
                         total: 0,
