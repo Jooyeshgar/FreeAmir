@@ -38,9 +38,8 @@ class StoreInvoiceRequest extends FormRequest
             $transactions = collect($this->input('transactions'))
                 ->map(function ($t) {
                     return [
-                        'transaction_id' => isset($t['transaction_id']) ? (int) $t['transaction_id'] : null,
-                        'code' => $t['code'] ?? null,
                         'subject_id' => isset($t['subject_id']) ? (int) $t['subject_id'] : null,
+                        'vat' => isset($t['vat']) ? convertToFloat($t['vat']) : null,
                         'desc' => $t['desc'] ?? null,
                         'quantity' => isset($t['quantity']) ? convertToFloat($t['quantity']) : null,
                         'unit_discount' => isset($t['off']) ? convertToFloat($t['off']) : 0,
@@ -98,6 +97,7 @@ class StoreInvoiceRequest extends FormRequest
             // Transactions array
             'transactions' => 'required|array|min:1',
             'transactions.*.subject_id' => 'required|integer|exists:subjects,id',
+            'transactions.*.vat' => 'required|numeric|min:0',
             'transactions.*.desc' => 'nullable|string|max:500',
             'transactions.*.quantity' => 'required|numeric|min:1',
             'transactions.*.unit_discount' => 'required|numeric|min:0',

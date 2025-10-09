@@ -125,6 +125,7 @@ class InvoiceController extends Controller
                 'quantity' => $transaction['quantity'] ?? 1,
                 'description' => $transaction['desc'] ?? null,
                 'unit_discount' => $transaction['unit_discount'] ?? 0,
+                'vat' => $transaction['vat'] ?? 0,
             ];
         })->toArray();
 
@@ -253,11 +254,9 @@ class InvoiceController extends Controller
             'invoice_id' => $validated['invoice_id'] ?? null,
             'description' => $validated['description'] ?? null,
         ];
-
         // Fetch all products by subject_id in one query
         $subjectIds = collect($validated['transactions'])->pluck('subject_id')->unique();
         $productsBySubjectId = Product::whereIn('subject_id', $subjectIds)->get()->keyBy('subject_id');
-
         // Map transactions to invoice items
         $items = collect($validated['transactions'])->map(function ($transaction, $index) use ($productsBySubjectId) {
             $product = $productsBySubjectId->get($transaction['subject_id']);
@@ -268,6 +267,7 @@ class InvoiceController extends Controller
                 'quantity' => $transaction['quantity'] ?? 1,
                 'description' => $transaction['desc'] ?? null,
                 'unit_discount' => $transaction['unit_discount'] ?? 0,
+                'vat' => $transaction['vat'] ?? 0,
             ];
         })->toArray();
 
