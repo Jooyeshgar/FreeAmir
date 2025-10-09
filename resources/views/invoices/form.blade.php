@@ -176,7 +176,7 @@
     </div>
     </div>
     <hr style="">
-    <div class="flex flex-row justify-between" x-data="{ additionsInput: '', subtractionsInput: '{{ old('subtractions') ?? ($invoice->subtraction ?? 0) }}' }">
+    <div class="flex flex-row justify-between" x-data="{ subtractionsInput: '{{ old('subtractions') ?? ($invoice->subtraction ?? 0) }}' }">
         <div class="flex justify-start px-4 gap-4 py-3 rounded-b-2xl">
             <x-text-input 
                 placeholder="0" 
@@ -205,7 +205,6 @@
                 <span class="text-lg font-bold text-green-600"
                     x-text="(
                         transactions.reduce((sum, t) => sum + (Number($store.utils.convertToEnglish(t.total)) || 0), 0)
-                        + (Number($store.utils.cleanupNumber(additionsInput) || 0))
                         - (Number($store.utils.cleanupNumber(subtractionsInput) || 0))
                     ).toLocaleString()">
                     0
