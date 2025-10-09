@@ -57,9 +57,6 @@
         <div class="text-sm flex-1 max-w-8 text-center text-gray-500 pt-3">
             *
         </div>
-        <!-- <div class="text-sm flex-1 min-w-24 max-w-32 text-center text-gray-500 pt-3">
-            {{ __('chapter code') }}
-        </div> -->
         <div class="text-sm flex-1 min-w-24 max-w-64 text-center text-gray-500 pt-3">
             {{ __('Product name') }}
         </div>
