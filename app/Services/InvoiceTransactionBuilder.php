@@ -85,7 +85,7 @@ class InvoiceTransactionBuilder
             $unitPrice = $invoiceType->isSell() ? $product->selling_price : $product->purchace_price;
             $itemDiscount = $item['unit_discount'] ?? 0;
 
-            $vatRate = ($product->vat ?? $product->productGroup->vat ?? 0) / 100;
+            $vatRate = ($item['vat'] ?? $product->productGroup->vat ?? 0) / 100;
             $itemVat = $vatRate * ($quantity * $unitPrice);
 
             $itemAmount = ($quantity * $unitPrice);

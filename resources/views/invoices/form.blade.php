@@ -244,11 +244,11 @@
                         id: newId,
                         name: '',
                         subject: '',
-                        code: '',
                         subject_id: '',
                         quantity: 0,
                         unit: 0,
                         total: 0,
+                        vat: 0,
                         desc: ''
                     });
                 },
