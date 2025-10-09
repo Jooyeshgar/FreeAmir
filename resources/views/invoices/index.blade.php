@@ -72,8 +72,8 @@
                             <td class="px-4 py-2">
                                 <a href="{{ route('invoices.show', $invoice) }}"
                                     class="btn btn-sm btn-info">{{ __('View') }}</a>
-                                {{-- <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{
-                                    __('Edit') }}</a> --}}
+                                <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{
+                                    __('Edit') }}</a> 
                                 <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" class="inline-block">
                                     @csrf
                                     @method('DELETE')

@@ -65,11 +65,6 @@
                     <div class="font-semibold">{{ $invoice->description ?? '-' }}</div>
                 </div>
             </div>
-
-            <div class="card-actions justify-end mt-6">
-                <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-info">{{ __('Edit') }}</a>
-                <a href="{{ route('invoices.index') }}" class="btn">{{ __('Back') }}</a>
-            </div>
         </div>
     </div>
 </x-app-layout>
