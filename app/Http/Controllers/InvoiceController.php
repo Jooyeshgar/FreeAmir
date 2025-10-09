@@ -191,6 +191,7 @@ class InvoiceController extends Controller
 
         $customers = $this->getCustomers();
         $products = Product::with('subject')->orderBy('name', 'asc')->get();
+        $productGroups = ProductGroup::all();
 
         // Prepare transactions from invoice items
         $transactions = $invoice->items->map(function ($item, $index) {
@@ -224,6 +225,7 @@ class InvoiceController extends Controller
             'total',
             'products',
             'transactions',
+            'productGroups',
             'invoice_type'
         ));
     }
