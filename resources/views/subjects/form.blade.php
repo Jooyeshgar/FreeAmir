@@ -10,8 +10,13 @@
         ]" :selected="old('type', $subject->type ?? 'both')" />
     </div>
     <div class="col-span-2 md:col-span-1">
-        <x-input name="parent_name" id="parent_name" title="{{ __('Subject') }}" value="{{ $parentSubject->name ?? __('Main Subject') }}" disabled />
-        <input type="hidden" name="parent_id" value="{{ $parentSubject->id ?? null }}">
+        @if (isset($subject))
+            <x-subject-select-box :subjects="$subjects" name="parent_id" id_field="parent_id" title="{{ __('Parent Subject') }}" allSelectable="true" :selected="old('parent_id', $subject->parent_id)"
+                :exclude-id="$subject->id" />
+        @else
+            <x-input name="parent_name" id="parent_name" title="{{ __('Subject') }}" value="{{ $parentSubject->name ?? __('Main Subject') }}" disabled />
+            <input type="hidden" name="parent_id" value="{{ $parentSubject->id ?? null }}">
+        @endif
     </div>
     <div class="col-span-2 md:col-span-1">
         <div class="flex gap-2 items-end">

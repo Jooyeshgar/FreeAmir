@@ -12,13 +12,16 @@ class SubjectController extends Controller
 
     public function index(Request $request)
     {
+        $currentParent = null;
+        
         if ($request->has('parent_id')) {
-            $subjects = Subject::find($request->get('parent_id'))->children()->with('subjectable')->get();
+            $currentParent = Subject::find($request->get('parent_id'));
+            $subjects = $currentParent->children()->with('subjectable')->get();
         } else {
             $subjects = Subject::whereIsRoot()->with('subjectable')->get();
         }
 
-        return view('subjects.index', compact('subjects'));
+        return view('subjects.index', compact('subjects', 'currentParent'));
     }
 
     public function create(Request $request)
@@ -63,8 +66,9 @@ class SubjectController extends Controller
     public function edit(Subject $subject)
     {
         $parentSubject = $subject->parent;
+        $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->get();
 
-        return view('subjects.edit', compact('subject', 'parentSubject'));
+        return view('subjects.edit', compact('subject', 'parentSubject', 'subjects'));
     }
 
     public function update(Request $request, Subject $subject)
@@ -72,33 +76,23 @@ class SubjectController extends Controller
         $validatedData = $request->validate([
             'code' => 'required|max:20',
             'name' => 'required|max:60',
+            'parent_id' => 'nullable|exists:subjects,id',
             'type' => 'required|in:debtor,creditor,both',
         ]);
 
-        $fullCode = $subject->parent->code . str_pad($validatedData['code'], 3, '0', STR_PAD_LEFT);
+        try {
+            $updatedSubject = app(SubjectCreatorService::class)->editSubject($subject, $validatedData);
 
-        $existingSubject = Subject::where('code', $fullCode)
-            ->where('id', '!=', $subject->id)
-            ->where('company_id', $subject->company_id)
-            ->first();
-        
-        if ($existingSubject) {
+            $redirectUrl = route('subjects.index');
+            if ($updatedSubject->parent_id) {
+                $redirectUrl .= '?parent_id=' . $updatedSubject->parent_id;
+            }
+            return redirect($redirectUrl)->with('success', __('Subject updated successfully.'));
+        } catch (\InvalidArgumentException $e) {
             return redirect()->back()
-                ->withErrors(['code' => __('The code :code already exists in this company.', ['code' => $fullCode])])
+                ->withErrors(['code' => $e->getMessage()])
                 ->withInput();
         }
-
-        $subject->update([
-            'code' => $fullCode,
-            'name' => $validatedData['name'],
-            'type' => $validatedData['type'],
-        ]);
-
-        $redirectUrl = route('subjects.index');
-        if ($subject->parent_id) {
-            $redirectUrl .= '?parent_id=' . $subject->parent_id;
-        }
-        return redirect($redirectUrl)->with('success', __('Subject updated successfully.'));
     }
 
 
