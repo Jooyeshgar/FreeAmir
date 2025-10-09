@@ -64,7 +64,7 @@
                                 @endif
                             </td>
                             <td class="px-4 py-2">{{ isset($invoice->date) ? formatDate($invoice->date) : '' }}</td>
-                            <td class="px-4 py-2">{{ isset($invoice->amount) ? formatNumber($invoice->amount) : '' }}
+                            <td class="px-4 py-2">{{ isset($invoice->amount) ? formatNumber($invoice->amount - $invoice->subtraction) : '' }}
                             </td>
                             <td class="px-4 py-2">
                                 {{ $invoice->permanent ?? false ? __('Permanent') : __('Draft') }}
