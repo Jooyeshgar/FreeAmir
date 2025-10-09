@@ -9,7 +9,6 @@ use App\Models\ProductGroup;
 use App\Models\Subject;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 
 class HomeController extends Controller
@@ -50,7 +49,6 @@ class HomeController extends Controller
             'monthlyIncome'
         ));
     }
-
 
     public function subjectDetail(Request $request)
     {
@@ -145,7 +143,7 @@ class HomeController extends Controller
             9 => 'آذر',
             10 => 'دی',
             11 => 'بهمن',
-            12 => 'اسفند'
+            12 => 'اسفند',
         ];
 
         foreach ($monthlyIncome as $month => $income) {

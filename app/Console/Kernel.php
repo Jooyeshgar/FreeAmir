@@ -13,6 +13,13 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         // $schedule->command('inspire')->hourly();
+
+        $companyIds = \App\Models\Company::pluck('id')->toArray();
+
+        foreach ($companyIds as $id) {
+            $schedule->command("backup:company {$id}")
+                ->dailyAt('00:00');
+        }
     }
 
     /**

@@ -117,6 +117,9 @@
         @canany(['management.configs.index', 'management.configs.create', 'management.configs.edit'])
             <li><a href="{{ route('configs.index') }}">{{ __('Configs') }}</a></li>
         @endcanany
+        @canany(['backup.manual'])
+            <li><a href="{{ route('backup.manual') }}">{{ __('Backup') }}</a></li>
+        @endcanany
         <li><a href="https://github.com/Jooyeshgar/FreeAmir/issues">{{ __('Support') }}</a></li>
     </ul>
 </li>

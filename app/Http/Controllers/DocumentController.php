@@ -135,10 +135,10 @@ class DocumentController extends Controller
     public function duplicate($id)
     {
         $originalDocument = Document::with('transactions')->findOrFail($id);
-        
+
         // Get the next document number
         $nextDocumentNumber = Document::orderBy('id', 'desc')->first()->number + 1;
-        
+
         // Prepare transactions data
         $transactions = [];
         foreach ($originalDocument->transactions as $transaction) {
@@ -148,19 +148,19 @@ class DocumentController extends Controller
                 'desc' => $transaction->desc,
             ];
         }
-        
+
         // Create the duplicated document
         $newDocument = DocumentService::createDocument(
             Auth::user(),
             [
-                'title' => $originalDocument->title . ' (' . __('Copy') . ')',
+                'title' => $originalDocument->title.' ('.__('Copy').')',
                 'number' => $nextDocumentNumber,
                 'date' => $originalDocument->date,
                 'user_id' => Auth::id(),
             ],
             $transactions
         );
-        
+
         return redirect()->route('documents.edit', $newDocument->id)
             ->with('success', __('Document duplicated successfully.'));
     }
@@ -172,9 +172,7 @@ class DocumentController extends Controller
             'date' => ['label' => 'date', 'type' => 'date'],
             'bill' => ['label' => 'bill', 'type' => 'number'],
             'customer_id' => ['label' => 'customer', 'type' => 'select', 'options' => $customers],
-            'addition' => ['label' => 'addition', 'type' => 'number'],
             'subtraction' => ['label' => 'subtraction', 'type' => 'number'],
-            'tax' => ['label' => 'tax', 'type' => 'number'],
             'payable_amount' => ['label' => 'payable_amount', 'type' => 'number'],
             'cash_payment' => ['label' => 'cash_payment', 'type' => 'number'],
             'destination' => ['label' => 'destination', 'type' => 'text'],
