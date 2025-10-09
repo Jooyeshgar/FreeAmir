@@ -118,10 +118,11 @@
                         <label class="sr-only">{{ __('Product') }}</label>
                         <select x-model="selectedId"
                             @change="
-                                transaction.product_id = Number($event.target.value);
-                                transaction.subject_id = getProductSubjectId(Number($event.target.value));
-                                transaction.unit = getProductPrice(Number($event.target.value));
-                                transaction.vat = getProductVat(Number($event.target.value));
+                                const pid = Number($event.target.value);
+                                transaction.product_id = pid;
+                                transaction.subject_id = getProductSubjectId(pid);
+                                if (!transaction.unit || transaction.unit === 0) transaction.unit = getProductPrice(pid);
+                                if (!transaction.vat || transaction.vat === 0) transaction.vat = getProductVat(pid);
                             "
                             x-bind:name="'transactions[' + index + '][product_id]'"
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
@@ -149,29 +150,41 @@
                     </div>
 
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input x-model.number="transaction.vat" x-bind:value=$store.utils.formatNumber(getProductVat(Number(selectedId)))
-                            x-bind:name="'transactions[' + index + '][vat]'" placeholder="0%" label_text_class="text-gray-500" label_class="w-full"
+                        <x-text-input
+                            x-model.number="transaction.vat"
+                            x-bind:name="'transactions[' + index + '][vat]'"
+                            placeholder="0%"
                             input_class="border-white">
                         </x-text-input>
                     </div>
 
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input x-model.number="transaction.unit" x-bind:name="'transactions[' + index + '][unit]'" placeholder="0"
-                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
-                            x-bind:value="$store.utils.formatNumber(transaction.unit)">
+                        <x-text-input
+                            x-model.number="transaction.unit"
+                            x-bind:name="'transactions[' + index + '][unit]'"
+                            placeholder="0"
+                            input_class="border-white">
                         </x-text-input>
                     </div>
 
                     <div class="flex-1 min-w-32 max-w-32">
                         <x-text-input
-                            x-bind:value="(transaction.total = (Number($store.utils.convertToEnglish(transaction.quantity)) || 0) *
-                                (Number($store.utils.convertToEnglish(transaction.unit)) || 0) +
-                                ((Number($store.utils.convertToEnglish(transaction.quantity)) || 0) *
-                                    (Number($store.utils.convertToEnglish(transaction.unit)) || 0) *
-                                    (Number($store.utils.formatNumber(getProductVat(Number(selectedId)))) / 100)) -
-                                (Number($store.utils.convertToEnglish(transaction.off)) || 0)).toLocaleString()"
-                            x-bind:name="'transactions[' + index + '][total]'" placeholder="0" label_text_class="text-gray-500" label_class="w-full"
-                            input_class="border-white" readonly>
+                            x-bind:value="(
+                                transaction.total = (
+                                    (Number(transaction.quantity) || 0) *
+                                    (Number(transaction.unit) || 0) +
+                                    ((Number(transaction.quantity) || 0) *
+                                    (Number(transaction.unit) || 0) *
+                                    (Number(transaction.vat) / 100)) -
+                                    (Number(transaction.off) || 0)
+                                )
+                            ).toLocaleString()"
+                            x-bind:name="'transactions[' + index + '][total]'"
+                            placeholder="0"
+                            label_text_class="text-gray-500"
+                            label_class="w-full"
+                            input_class="border-white"
+                            readonly>
                         </x-text-input>
                     </div>
                 </div>
@@ -243,6 +256,9 @@
 </div>
 
 @pushOnce('scripts')
+    <script type="module">
+        jalaliDatepicker.startWatch();
+    </script>
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('transactionForm', () => ({
