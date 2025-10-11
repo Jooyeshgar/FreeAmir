@@ -154,12 +154,12 @@
 
                     <div class="flex-1 min-w-32 max-w-32">
                         <x-text-input
-                            x-bind:value="(transaction.total = (Number($store.utils.convertToEnglish(transaction.quantity)) || 0) *
-                                (Number($store.utils.convertToEnglish(transaction.unit)) || 0) +
-                                ((Number($store.utils.convertToEnglish(transaction.quantity)) || 0) *
-                                    (Number($store.utils.convertToEnglish(transaction.unit)) || 0) *
-                                    (Number($store.utils.convertToEnglish(transaction.vat)) / 100)) -
-                                (Number($store.utils.convertToEnglish(transaction.off)) || 0)).toLocaleString()"
+                            x-bind:value="(transaction.total = ((Number(transaction.quantity)) || 0) *
+                                ((Number(transaction.unit)) || 0) +
+                                ((Number(transaction.quantity)) || 0) *
+                                    ((Number(transaction.unit)) || 0) *
+                                    (Number(transaction.vat)) / 100)) -
+                                (Number(transaction.off)) || 0)).toLocaleString()"
                             x-bind:name="'transactions[' + index + '][total]'" placeholder="0" label_text_class="text-gray-500" label_class="w-full"
                             input_class="border-white" readonly>
                         </x-text-input>
@@ -178,15 +178,15 @@
     </div>
     </div>
     <hr style="">
-    <div class="flex flex-row justify-between" x-data="{ subtractionsInput: '{{ old('subtractions') ?? ($invoice->subtraction ?? 0) }}' }">
+    <div class="flex flex-row justify-between" x-data="{ subtractionsInput: '{{ old('subtraction') ?? ($invoice->subtraction ?? 0) }}' }">
         <div class="flex justify-start px-4 gap-4 py-3 rounded-b-2xl">
             <x-text-input 
                 placeholder="0" 
                 label_text_class="text-gray-500" 
                 label_class="w-full" 
-                input_name="subtractions" 
+                input_name="subtraction" 
                 title="{{ __('Subtractions') }}"
-                input_value="{{ old('subtractions') ?? ($invoice->subtraction ?? 0) }}"
+                input_value="{{ old('subtraction') ?? ($invoice->subtraction ?? 0) }}"
                 input_class="locale-number" 
                 x-model="subtractionsInput" 
                 @input="$event.target.value = $store.utils.formatNumber($event.target.value)">
