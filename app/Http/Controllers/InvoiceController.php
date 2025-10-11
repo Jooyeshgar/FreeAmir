@@ -114,6 +114,8 @@ class InvoiceController extends Controller
                 'description' => $transaction['desc'] ?? null,
                 'unit_discount' => $transaction['unit_discount'] ?? 0,
                 'vat' => $transaction['vat'] ?? 0,
+                'unit' => $transaction['unit'] ?? 0,
+                'total' => $transaction['total'] ?? 0,
             ];
         })->toArray();
 
@@ -208,6 +210,8 @@ class InvoiceController extends Controller
                 'description' => $transaction['desc'] ?? null,
                 'unit_discount' => $transaction['unit_discount'] ?? 0,
                 'vat' => $transaction['vat'] ?? 0,
+                'unit' => $transaction['unit'] ?? 0,
+                'total' => $transaction['total'] ?? 0,
             ];
         })->toArray();
 

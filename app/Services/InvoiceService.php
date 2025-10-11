@@ -237,7 +237,7 @@ class InvoiceService
             $product = Product::findOrFail($item['product_id']);
 
             $quantity = $item['quantity'] ?? 1;
-            $unitPrice = $invoiceType == InvoiceType::SELL ? $product->selling_price : $product->purchace_price;
+            $unitPrice = $item['unit'];
             $unitDiscount = $item['unit_discount'] ?? 0;
 
             // Calculate item discount (only on sell)
