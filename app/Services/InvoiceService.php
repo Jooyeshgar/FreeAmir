@@ -28,9 +28,6 @@ class InvoiceService
      */
     public static function createInvoice(User $user, array $invoiceData, array $items = [])
     {
-        // // Validate invoice data
-        // self::validateInvoiceData($invoiceData);
-
         // Normalize invoice data
         $invoiceData = self::normalizeInvoiceData($invoiceData);
 
@@ -68,7 +65,7 @@ class InvoiceService
             // Prepare invoice data
             $invoiceData['document_id'] = $createdDocument->id;
             $invoiceData['vat'] = $buildResult['totalVat'];
-            $invoiceData['amount'] = $buildResult['totalAmount'] - $buildResult['subtractions'];
+            $invoiceData['amount'] = $buildResult['totalAmount'];
             $invoiceData['creator_id'] = Auth::id();
             $invoiceData['active'] = 1;
 
@@ -244,14 +241,15 @@ class InvoiceService
             $unitDiscount = $item['unit_discount'] ?? 0;
 
             // Calculate item discount (only on sell)
-            $itemDiscount = $invoiceType == InvoiceType::SELL ? ($unitDiscount * $quantity) : 0;
+            // $itemDiscount = $invoiceType == InvoiceType::SELL ? ($unitDiscount * $quantity) : 0;
 
             // Calculate item VAT
-            $vatRate = ($product->vat ?? $product->productGroup->vat ?? 0) / 100;
-            $itemVat = $vatRate * ($quantity * $unitPrice - $itemDiscount);
+            $vatRate = ($item['vat'] ?? 0) / 100;
+
+            $itemVat = $vatRate * ($quantity * $unitPrice);
 
             // Calculate item amount (price - discount, VAT is separate but included in total)
-            $itemAmount = $quantity * $unitPrice - $itemDiscount + $itemVat;
+            $itemAmount = $quantity * $unitPrice - $unitDiscount + $itemVat;
 
             // Link to the corresponding transaction (first N transactions are for items)
             $transactionId = null;
