@@ -27,7 +27,7 @@ class StoreInvoiceRequest extends FormRequest
             'date' => convertToGregorian($this->input('date')),
             'invoice_number' => convertToInt($this->input('invoice_number')),
             'document_number' => convertToInt($this->input('document_number')),
-            'subtractions' => convertToFloat($this->input('subtractions', 0)),
+            'subtractions' => convertToFloat($this->input('subtraction', 0)),
             'customer_id' => convertToInt($this->input('customer_id')),
         ]);
 
