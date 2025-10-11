@@ -128,25 +128,27 @@
                             label_text_class="text-gray-500" label_class="w-full" input_class="border-white" x-bind:disabled="!selectedId"></x-text-input>
                     </div>
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input placeholder="0" x-model.number="transaction.quantity" x-bind:name="'transactions[' + index + '][quantity]'"
+                        <x-text-input placeholder="0" x-bind:value="$store.utils.formatNumber(Number(transaction.quantity))" x-bind:name="'transactions[' + index + '][quantity]'"
                             x-bind:disabled="!selectedId" label_text_class="text-gray-500" label_class="w-full" input_class="border-white">
                         </x-text-input>
                     </div>
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input placeholder="0" x-model.number="transaction.off" x-bind:name="'transactions[' + index + '][off]'" x-bind:disabled="!selectedId"
-                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white">
-                        </x-text-input>
-                    </div>
-
-                    <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input placeholder="0" x-model.number="transaction.vat" x-bind:name="'transactions[' + index + '][vat]'"
-                            x-bind:disabled="!selectedId" label_text_class="text-gray-500" label_class="w-full" input_class="border-white">
+                        <x-text-input placeholder="0" x-bind:value="$store.utils.formatNumber(Number(transaction.off))" x-bind:name="'transactions[' + index + '][off]'" x-bind:disabled="!selectedId"
+                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
+                            x-on:input="transaction.off = $store.utils.convertToEnglish($event.target.value); $event.target.value = $store.utils.formatNumber(transaction.off)">
                         </x-text-input>
                     </div>
 
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input placeholder="0" x-model.number="transaction.unit" x-bind:name="'transactions[' + index + '][unit]'"
+                        <x-text-input placeholder="0" x-bind:value="transaction.vat" x-bind:name="'transactions[' + index + '][vat]'"
                             x-bind:disabled="!selectedId" label_text_class="text-gray-500" label_class="w-full" input_class="border-white">
+                        </x-text-input>
+                    </div>
+
+                    <div class="flex-1 min-w-24 max-w-32">
+                        <x-text-input placeholder="0" x-bind:value="$store.utils.formatNumber(Number(transaction.unit))" x-bind:name="'transactions[' + index + '][unit]'"
+                            x-bind:disabled="!selectedId" label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
+                            x-on:input="transaction.unit = $store.utils.convertToEnglish($event.target.value); $event.target.value = $store.utils.formatNumber(transaction.unit)">
                         </x-text-input>
                     </div>
 

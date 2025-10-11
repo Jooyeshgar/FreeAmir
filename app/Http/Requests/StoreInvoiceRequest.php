@@ -95,7 +95,7 @@ class StoreInvoiceRequest extends FormRequest
             // Transactions array
             'transactions' => 'required|array|min:1',
             'transactions.*.subject_id' => 'required|integer|exists:subjects,id',
-            'transactions.*.vat' => 'required|numeric|min:0',
+            'transactions.*.vat' => 'required|numeric|min:0|max:100',
             'transactions.*.desc' => 'nullable|string|max:500',
             'transactions.*.quantity' => 'required|numeric|min:1',
             'transactions.*.unit_discount' => 'required|numeric|min:0',
