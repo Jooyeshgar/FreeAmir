@@ -145,9 +145,7 @@
                     <p align="center" class="bold">کالا</p>
                 </td>
                 <td class="border" width="1%">
-                    <div style="position: relative">
-                        <p class="vertical bold" style="position: absolute; right: 7mm; top: -3mm; rotate: -90; width: 100mm;font-size:10px;">ردیف</p>
-                    </div>
+                    <p class="vertical bold" style="width: 2mm; height: 15mm; rotate: -90; font-size:10px;">ردیف</p>
                 </td>
             </tr>
             @php
