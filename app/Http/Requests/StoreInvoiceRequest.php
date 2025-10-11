@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use App\Enums\InvoiceType;
-use App\Models\Subject;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -29,9 +28,8 @@ class StoreInvoiceRequest extends FormRequest
             'invoice_number' => convertToInt($this->input('invoice_number')),
             'document_number' => convertToInt($this->input('document_number')),
             'subtractions' => convertToFloat($this->input('subtractions', 0)),
+            'customer_id' => convertToInt($this->input('customer_id')),
         ]);
-        $customer = Subject::find($this->input('customer_id'))->subjectable()->first();
-        $this->merge(['customer_id' => $customer->id]);
 
         // Normalize transactions numeric fields and ids
         if ($this->has('transactions') && is_array($this->input('transactions'))) {
