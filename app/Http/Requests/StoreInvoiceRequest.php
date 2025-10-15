@@ -99,8 +99,8 @@ class StoreInvoiceRequest extends FormRequest
             'transactions.*.desc' => 'nullable|string|max:500',
             'transactions.*.quantity' => 'required|numeric|min:1',
             'transactions.*.unit_discount' => 'required|numeric|min:0',
-            'transactions.*.unit' => 'required|numeric',
-            'transactions.*.total' => 'required|numeric',
+            'transactions.*.unit' => 'required|numeric|min:1',
+            'transactions.*.total' => 'required|numeric|min:1',
         ];
     }
 
