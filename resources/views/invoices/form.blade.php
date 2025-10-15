@@ -232,6 +232,9 @@
 </div>
 
 @pushOnce('scripts')
+    <script type="module">
+        jalaliDatepicker.startWatch();
+    </script>
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('transactionForm', () => ({
