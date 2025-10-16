@@ -33,20 +33,20 @@ class AncillaryCostController extends Controller
             ->with('success', __('Ancillary Cost created successfully.'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(AncillaryCost $ancillaryCost)
     {
-        //
+        $invoices = Invoice::select('id', 'number')->get();
+
+        return view('ancillaryCosts.edit', compact('ancillaryCost', 'invoices'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, AncillaryCost $ancillaryCost)
+    public function update(StoreAncillaryCostRequest $request, AncillaryCost $ancillaryCost)
     {
-        //
+        $ancillaryCost->update($request->validated());
+
+        return redirect()
+            ->route('ancillary-costs.index')
+            ->with('success', __('Ancillary Cost updated successfully.'));
     }
 
     public function destroy(AncillaryCost $ancillaryCost)
@@ -55,6 +55,6 @@ class AncillaryCostController extends Controller
 
         return redirect()
             ->route('ancillary-costs.index')
-            ->with('success', __('ancillary costs deleted successfully.'));
+            ->with('success', __('Ancillary Cost deleted successfully.'));
     }
 }
