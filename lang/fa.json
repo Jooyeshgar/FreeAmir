@@ -410,6 +410,7 @@
     "The Date field is required.": "تاریخ الزامی است.",
     "The Date field must be a valid date.": "فرمت تاریخ نامعتبر است.",
     "The Description field must be a valid string.": "توضیحات باید یک رشته معتبر باشد.",
+    "The Description field is required.": "شرح الزامی است.",
     "The Quantity is required for each row.": "تعداد برای هر ردیف الزامی است.",
     "The Quantity must be a number.": "تعداد باید عددی باشد.",
     "The Quantity must be at least :min.": "تعداد باید حداقل :min باشد.",

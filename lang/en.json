@@ -410,6 +410,7 @@
     "The Date field is required.": "The Date field is required.",
     "The Date field must be a valid date.": "The Date field must be a valid date.",
     "The Description field must be a valid string.": "The Description field must be a valid string.",
+    "The Description field is required.": "The Date Description is required.",
     "The Quantity is required for each row.": "The Quantity is required for each row.",
     "The Quantity must be a number.": "The Quantity must be a number.",
     "The Quantity must be at least :min.": "The Quantity must be at least :min.",

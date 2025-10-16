@@ -27,6 +27,8 @@ class AncillaryCostController extends Controller
     public function store(StoreAncillaryCostRequest $request)
     {
         AncillaryCost::create($request->validated());
+        $total_invoice_amount = Invoice::find($request->invoice_id)->amount;
+        dd($total_invoice_amount);
 
         return redirect()
             ->route('ancillary-costs.index')
