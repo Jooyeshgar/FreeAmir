@@ -145,7 +145,6 @@ class InvoiceController extends Controller
         $customers = Customer::all();
         $products = Product::with('subject')->orderBy('name', 'asc')->get();
         $productGroups = [];
-        $previousDocumentNumber = null;
 
         // Prepare transactions from invoice items
         $transactions = $invoice->items->map(function ($item, $index) {
@@ -177,7 +176,6 @@ class InvoiceController extends Controller
             'transactions',
             'productGroups',
             'invoice_type',
-            'previousDocumentNumber'
         ));
     }
 
