@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('ancillary_costs', function (Blueprint $table) {
             $table->id();
-            $table->string('description', 200)->nullable();
+            $table->string('description', 200)->notNullable();
             $table->decimal('amount', 18, 2)->default(0);
             $table->date('date');
             $table->foreignId('invoice_id')->constrained()->onDelete('cascade');
