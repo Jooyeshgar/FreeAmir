@@ -6,11 +6,11 @@
     </x-slot>
 
     <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('ancillaryCosts.update', $ancillaryCost) }}" method="POST">
+        <form action="{{ route('ancillary-costs.update', $ancillaryCost) }}" method="POST">
             @csrf
             @method('PUT')
             <div class="card-body">
-                <div class="card-title">{{ __('Edit ancillary cost') }}</div>
+                <div class="card-title">{{ __('Edit Ancillary Cost') }}</div>
                 <x-show-message-bags />
 
                 @include('ancillaryCosts.form')
