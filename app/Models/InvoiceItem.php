@@ -23,14 +23,16 @@ class InvoiceItem extends Model
         'description',
     ];
 
+    public static function booted(): void {}
+
     public function invoice()
     {
-    return $this->belongsTo(Invoice::class, 'invoice_id');
+        return $this->belongsTo(Invoice::class, 'invoice_id');
     }
 
     public function product()
     {
-    return $this->belongsTo(Product::class, 'product_id');
+        return $this->belongsTo(Product::class, 'product_id');
     }
 
     public function transaction()

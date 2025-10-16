@@ -63,7 +63,7 @@
                 <tr>
                     <td class="border-t border-x border-black"></td>
                     <td class="border-t border-x border-black p-2 text-center">
-                        <b>{{ formatCode($firstTransaction?->subject->ledger()) }}</b>
+                        <b>{{ formatCode($firstTransaction?->subject?->ledger() ?? '') }}</b>
                     </td>
                     <td class="border-t border-x border-black p-2 {{ $groupAlignLeft }}">
                         <b>{{ $firstTransaction?->subject?->getRoot()?->name }}</b>
