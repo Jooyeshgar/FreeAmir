@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreAncillaryCostRequest;
 use App\Models\AncillaryCost;
 use App\Models\Invoice;
 use Illuminate\Http\Request;
@@ -23,7 +24,14 @@ class AncillaryCostController extends Controller
         return view('ancillaryCosts.create', compact('invoices'));
     }
 
-    public function store(Request $request) {}
+    public function store(StoreAncillaryCostRequest $request)
+    {
+        AncillaryCost::create($request->validated());
+
+        return redirect()
+            ->route('ancillary-costs.index')
+            ->with('success', __('Ancillary Cost created successfully.'));
+    }
 
     /**
      * Display the specified resource.
@@ -52,5 +60,9 @@ class AncillaryCostController extends Controller
     public function destroy(AncillaryCost $ancillaryCost)
     {
         $ancillaryCost->delete();
+
+        return redirect()
+            ->route('ancillary-costs.index')
+            ->with('success', __('ancillary costs deleted successfully.'));
     }
 }
