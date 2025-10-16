@@ -13,21 +13,24 @@
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <tr>
-                        <th class="px-4 py-2">{{ __('Description') }}</th>
-                        <th class="px-4 py-2">{{ __('Amount') }}</th>
-                        <th class="px-4 py-2">{{ __('Date') }}</th>
-                        <th class="px-4 py-2">{{ __('Invoice') }}</th>
+                        <th class="p-2 w-40">{{ __('Description') }}</th>
+                        <th class="p-2 w-20">{{ __('Amount') }}</th>
+                        <th class="p-2 w-20">{{ __('Date') }}</th>
+                        <th class="p-2 w-20">{{ __('Invoice') }}</th>
+                        <th class="p-2 w-40">{{ __('Action') }}</th>
                     </tr>
                 </thead>
                 <tbody>
 
                     @foreach ($ancillaryCosts as $ancillaryCost)
                         <tr>
-                            <td class="px-4 py-2">{{ $ancillaryCost->description }}</td>
-                            <td class="px-4 py-2">{{ formatNumber($ancillaryCost->amount) }}</td>
-                            <td class="px-4 py-2">{{ formatDate($ancillaryCost->date) }}</td>
-                            <td class="px-4 py-2">{{ $ancillaryCost->invoice ? $ancillaryCost->invoice->number : '' }}</td>
-                            <td class="px-4 py-2">
+                            <td class="p-2">{{ $ancillaryCost->description }}</td>
+                            <td class="p-2">{{ formatNumber($ancillaryCost->amount) }}</td>
+                            <td class="p-2">{{ formatDate($ancillaryCost->date) }}</td>
+                            <td class="p-2">{{ $ancillaryCost->invoice ? $ancillaryCost->invoice->number : '' }}</td>
+                            <td class="p-2">
+                                <a href="{{ route('ancillary-costs.show', $ancillaryCost) }}"
+                                    class="btn btn-sm btn-info">{{ __('View') }}</a>
                                 <a href="{{ route('ancillary-costs.edit', $ancillaryCost) }}"
                                     class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                 <form action="{{ route('ancillary-costs.destroy', $ancillaryCost) }}" method="POST" class="inline-block">
