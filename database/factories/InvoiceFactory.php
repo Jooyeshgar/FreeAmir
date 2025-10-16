@@ -3,10 +3,8 @@
 namespace Database\Factories;
 
 use App\Models\Customer;
-use App\Models\Document;
 use App\Models\InvoiceItem;
 use App\Models\Subject;
-use App\Models\Transaction;
 use App\Models\User;
 use App\Services\DocumentService;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -30,7 +28,7 @@ class InvoiceFactory extends Factory
         $document = DocumentService::createDocument(
             $user,
             [
-                'date' => $date
+                'date' => $date,
             ],
             []
         );
@@ -47,7 +45,7 @@ class InvoiceFactory extends Factory
             'ship_date' => $this->faker->optional()->dateTime(),
             'ship_via' => $this->faker->company(),
             'description' => $this->faker->persianSentence(),
-            'is_sell' => $this->faker->boolean,
+            'invoice_type' => $this->faker->randomElement(['buy', 'sell']),
             'active' => true,
             'vat' => $this->faker->randomNumber(5),
             'amount' => $amount,
@@ -71,7 +69,7 @@ class InvoiceFactory extends Factory
                     'value' => $invoiceItem->amount,
                     'subject_id' => Subject::whereNotIn('parent_id', [1, 14])->inRandomOrder()->first()->id,
                     'user_id' => $invoice->creator_id,
-                    'desc' => $description
+                    'desc' => $description,
                 ]
             );
 
@@ -81,7 +79,7 @@ class InvoiceFactory extends Factory
                     'value' => -1 * $invoiceItem->amount,
                     'subject_id' => Subject::whereNotIn('parent_id', [1, 14])->inRandomOrder()->first()->id,
                     'user_id' => $invoice->creator_id,
-                    'desc' => $description
+                    'desc' => $description,
                 ],
             );
         });
