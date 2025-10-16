@@ -29,8 +29,6 @@
                             <td class="p-2">{{ formatDate($ancillaryCost->date) }}</td>
                             <td class="p-2">{{ $ancillaryCost->invoice ? $ancillaryCost->invoice->number : '' }}</td>
                             <td class="p-2">
-                                <a href="{{ route('ancillary-costs.show', $ancillaryCost) }}"
-                                    class="btn btn-sm btn-info">{{ __('View') }}</a>
                                 <a href="{{ route('ancillary-costs.edit', $ancillaryCost) }}"
                                     class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                 <form action="{{ route('ancillary-costs.destroy', $ancillaryCost) }}" method="POST" class="inline-block">
