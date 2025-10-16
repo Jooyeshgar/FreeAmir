@@ -17,7 +17,7 @@ class TransactionFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'value' => $this->faker->randomFloat(2, 100, 1000),
         ];
     }
 }
