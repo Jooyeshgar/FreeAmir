@@ -25,7 +25,7 @@ class StoreAncillaryCostRequest extends FormRequest
     {
         return [
             'invoice_id' => 'nullable|integer|exists:invoices,id',
-            'description' => 'nullable|string',
+            'description' => 'required|string',
             'date' => 'required|date',
             'amount' => 'required|numeric|min:1',
         ];
@@ -35,6 +35,7 @@ class StoreAncillaryCostRequest extends FormRequest
     {
         return [
             'description.string' => __('The Description field must be a valid string.'),
+            'description.required' => __('The Description field is required.'),
             'date.required' => __('The Date field is required.'),
             'date.date' => __('The Date field must be a valid date.'),
             'invoice_id.integer' => __('The invoice ID field must be an integer.'),
