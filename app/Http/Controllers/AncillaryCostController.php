@@ -3,25 +3,27 @@
 namespace App\Http\Controllers;
 
 use App\Models\AncillaryCost;
+use App\Models\Invoice;
 use Illuminate\Http\Request;
 
 class AncillaryCostController extends Controller
 {
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function index(Request $request)
     {
-        //
+        $ancillaryCosts = AncillaryCost::with('invoice')->paginate(12);
+        $ancillaryCosts->appends($request->query());
+
+        return view('ancillaryCosts.index', compact('ancillaryCosts'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function create()
     {
-        //
+        $invoices = Invoice::select('id', 'number')->get();
+
+        return view('ancillaryCosts.create', compact('invoices'));
     }
+
+    public function store(Request $request) {}
 
     /**
      * Display the specified resource.
@@ -47,11 +49,8 @@ class AncillaryCostController extends Controller
         //
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(AncillaryCost $ancillaryCost)
     {
-        //
+        $ancillaryCost->delete();
     }
 }

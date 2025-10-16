@@ -8,6 +8,7 @@
             <li><a href="{{ route('invoices.index', ['invoice_type' => 'sell']) }}">{{ __('Invoice Sell List') }}</a></li>
             <li><a href="{{ route('invoices.index', ['invoice_type' => 'buy']) }}">{{ __('Invoice Buy List') }}</a></li>
             <li><a href="{{ route('customers.create') }}">{{ __('Add Customer') }}</a></li>
+            <li><a href="{{ route('ancillary-costs.index') }}">{{ __('Ancillary Cost List') }}</a></li>
         </ul>
     </li>
 @endcan
