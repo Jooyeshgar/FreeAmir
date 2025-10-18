@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\InvoiceType;
+use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -48,6 +49,37 @@ class StoreInvoiceRequest extends FormRequest
                 ->toArray();
             $this->merge(['transactions' => $transactions]);
         }
+    }
+
+    /**
+     * Configure the validator instance.
+     */
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            // Only validate warehouse quantity for "sell" invoice type
+            if ($this->input('invoice_type') == 'sell') {
+                $transactions = $this->input('transactions', []);
+
+                foreach ($transactions as $index => $transaction) {
+                    if (! isset($transaction['subject_id']) || ! isset($transaction['quantity'])) {
+                        continue;
+                    }
+
+                    // Get the product by subject_id
+                    $product = Product::where('subject_id', $transaction['subject_id'])->first();
+
+                    if ($product && $product->quantity < $transaction['quantity']) {
+                        $validator->errors()->add(
+                            "transactions.{$index}.quantity",
+                            "{$product->quantity} ".__('item(s) of')." '{$product->name}' ".__('are available.'),
+                        );
+                    }
+                }
+            }
+        });
+
+        return $validator;
     }
 
     /**
