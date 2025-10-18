@@ -156,8 +156,8 @@
                         <x-text-input
                             x-bind:value="(transaction.total = (Number($store.utils.convertToEnglish(transaction.quantity)) || 0) *
                                 (Number($store.utils.convertToEnglish(transaction.unit)) || 0) +
-                                ((Number($store.utils.convertToEnglish(transaction.quantity)) || 0) *
-                                    (Number($store.utils.convertToEnglish(transaction.unit)) || 0) *
+                                (((Number($store.utils.convertToEnglish(transaction.quantity)) || 0) *
+                                    (Number($store.utils.convertToEnglish(transaction.unit)) || 0) - (Number($store.utils.convertToEnglish(transaction.off)) || 0)) *
                                     (Number($store.utils.convertToEnglish(transaction.vat)) / 100)) -
                                 (Number($store.utils.convertToEnglish(transaction.off)) || 0)).toLocaleString()"
                             x-bind:name="'transactions[' + index + '][total]'" placeholder="0" label_text_class="text-gray-500" label_class="w-full"
