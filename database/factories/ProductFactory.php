@@ -17,7 +17,7 @@ class ProductFactory extends Factory
             'name' => $this->faker->name,
             'group' => 1,
             'location' => $this->faker->streetAddress,
-            'quantity' => $this->faker->randomDigitNotNull,
+            'quantity' => $this->faker->numberBetween(10, 1000),
             'quantity_warning' => $this->faker->randomDigitNotNull,
             'oversell' => $this->faker->boolean,
             'purchace_price' => $this->faker->randomFloat(2, 0, 1000),
