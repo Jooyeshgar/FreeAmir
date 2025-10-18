@@ -172,8 +172,15 @@ class InvoiceService
                 return;
             }
 
-            // delete invoice items
-            InvoiceItem::where('invoice_id', $invoiceId)->delete();
+            // Convert InvoiceType enum to string value if it's an enum instance
+            if (isset($invoice->invoice_type) && $invoice->invoice_type instanceof InvoiceType) {
+                $invoice_type = $invoice->invoice_type->value;
+            }
+
+            // delete invoice items and update product quantities
+            $InvoiceItems = InvoiceItem::where('invoice_id', $invoiceId);
+            ProductService::updateProductQuantities($InvoiceItems->get()->toArray(), $invoice_type, true);
+            $InvoiceItems->delete();
 
             $documentId = $invoice->document_id;
 
