@@ -85,7 +85,7 @@ class InvoiceTransactionBuilder
             $unitPrice = $item['unit'];
             $itemDiscount = $item['unit_discount'] ?? 0;
             $vatRate = ($item['vat'] ?? 0) / 100;
-            $itemVat = $vatRate * ($quantity * $unitPrice);
+            $itemVat = $vatRate * ($quantity * $unitPrice - $itemDiscount);
             $itemAmount = $quantity * $unitPrice;
 
             $this->totalDiscount += $itemDiscount;
