@@ -7,7 +7,6 @@ use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Invoice;
-use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Transaction;
@@ -235,12 +234,7 @@ class InvoiceController extends Controller
     public function destroy(Invoice $invoice)
     {
         try {
-            $transaction_ids = InvoiceItem::where('invoice_id', $invoice->id)->pluck('transaction_id');
-            foreach ($transaction_ids as $transaction_id) {
-                Transaction::find($transaction_id)->delete();
-            }
-            InvoiceItem::where('invoice_id', $invoice->id)->delete();
-            $invoice->delete();
+            InvoiceService::deleteInvoice($invoice->id);
 
             return redirect()->route('invoices.index')->with('success', __('Invoice deleted successfully.'));
         } catch (\Exception $e) {
