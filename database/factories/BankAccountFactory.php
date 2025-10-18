@@ -15,7 +15,7 @@ class BankAccountFactory extends Factory
 
         return [
             'name' => $this->faker->name,
-            'number'=> uniqid('BA-'),
+            'number' => uniqid('BA-'),
             'type' => $this->faker->randomDigit(),
             'owner' => $this->faker->name(),
             'bank_id' => $this->faker->randomElement($bankIds),
@@ -24,7 +24,7 @@ class BankAccountFactory extends Factory
             'bank_address' => $this->faker->address,
             'bank_phone' => substr($this->faker->phoneNumber, 0, 15),
             'bank_web_page' => $this->faker->url,
-            'desc' => $this->faker->text,
+            'desc' => $this->faker->persianSentence(),
         ];
     }
 }

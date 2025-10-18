@@ -24,6 +24,7 @@ class InvoiceItemFactory extends Factory
         $amount = $total + $vat;
 
         return [
+            'description' => $this->faker->persianSentence(),
             'quantity' => $quantity,
             'unit_price' => $unit_price,
             'unit_discount' => $unit_discount,
