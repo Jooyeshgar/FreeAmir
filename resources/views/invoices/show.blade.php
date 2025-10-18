@@ -275,11 +275,11 @@
                     <p align="right"><br></p>
                 </td>
                 <td colspan="6" class="border mainlineheight" width="44%">
-                    <p align="right"></p>
+                    <p align="right">
                         @if(strlen($invoice->description) < 3)
                             :توضیحات
                         @else
-                            :توضیحات <span>{{ $invoice->description }}</span>
+                            توضیحات: {{ $invoice->description }}
                         @endif
                     </p>
                 </td>
