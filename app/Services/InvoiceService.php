@@ -79,6 +79,9 @@ class InvoiceService
 
             // Create invoice items and link to transactions
             self::createInvoiceItems($createdInvoice, $items, $documentTransactions, $invoiceData['invoice_type']);
+
+            // Update product quantities
+            ProductService::updateProductQuantities($items, $invoiceData['invoice_type']);
         });
 
         return [
@@ -138,12 +141,18 @@ class InvoiceService
 
             $invoice->update($invoiceData);
 
-            // Delete old invoice items
-            InvoiceItem::where('invoice_id', $invoice->id)->delete();
+            // Delete old invoice items and update product quantities
+            $InvoiceItems = InvoiceItem::where('invoice_id', $invoice->id);
+            ProductService::updateProductQuantities($InvoiceItems->get()->toArray(), $invoiceData['invoice_type'], true);
+
+            $InvoiceItems->delete();
 
             // Create new invoice items
             $documentTransactions = $invoice->document->transactions()->get()->all();
             self::createInvoiceItems($invoice, $items, $documentTransactions, $invoiceData['invoice_type']);
+
+            // Update product quantities
+            ProductService::updateProductQuantities($items, $invoiceData['invoice_type']);
         });
 
         return [

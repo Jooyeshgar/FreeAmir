@@ -7,36 +7,41 @@ use App\Models\Product;
 
 class ProductService
 {
-    public static function sellable(Product $product, InvoiceItem $invoiceItem)
+    public static function updateProductQuantities(array $invoiceItems, $invoice_type, $deletingInvoiceItem = false)
     {
-        if ($product->quantity >= $invoiceItem->quantity) {
-            return true;
+        foreach ($invoiceItems as $invoiceItem) {
+            $product = Product::find($invoiceItem['product_id']);
+            if (! $deletingInvoiceItem) {
+                if ($invoice_type == 'buy') {
+                    $product->quantity += $invoiceItem['quantity'];
+                } elseif ($invoice_type == 'sell') {
+                    $product->quantity -= $invoiceItem['quantity'];
+                }
+            } else {
+                if ($invoice_type == 'buy') {
+                    $product->quantity -= $invoiceItem['quantity'];
+                } elseif ($invoice_type == 'sell') {
+                    $product->quantity += $invoiceItem['quantity'];
+                }
+            }
+            $product->update();
         }
-
-        return false;
     }
 
-    public static function editQuantity(Product $product, InvoiceItem $invoiceItem)
-    {
-        $invoice_type = $invoiceItem->invoice_type;
-        if ($invoice_type->value == 'buy') {
-            $product->quantity += $invoiceItem->quantity;
-        } elseif ($invoice_type->value == 'sell') {
-            $product->quantity -= $invoiceItem->quantity;
-        }
-        $product->update();
-    }
+    // public static function updateAverageCost(array $products, InvoiceItem $invoiceItem)
+    // {
+    //     foreach ($products as $product) {
+    //         $product = Product::find($product->id);
+    //         $previous_total_value = $product->quantity * $product->average_cost;
+    //         $new_purchase_value = $invoiceItem->quantity * $invoiceItem->unit_price;
 
-    public static function updateAverageCost(Product $product, InvoiceItem $invoiceItem)
-    {
-        $previous_total_value = $product->quantity * $product->average_cost;
-        $new_purchase_value = $invoiceItem->quantity * $invoiceItem->unit_price;
+    //         $total_quantity = $product->quantity + $invoiceItem->quantity;
+    //         $total_value = $previous_total_value + $new_purchase_value;
 
-        $total_quantity = $product->quantity + $invoiceItem->quantity;
-        $total_value = $previous_total_value + $new_purchase_value;
-
-        $product->quantity = $total_quantity;
-        $product->average_cost = $total_value / $total_quantity;
-        $product->save();
-    }
+    //         $product->quantity = $total_quantity;
+    //         $product->average_cost = $total_value / $total_quantity;
+    //         dd($product);
+    //         $product->update();
+    //     }
+    // }
 }
