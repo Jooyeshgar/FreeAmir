@@ -152,27 +152,33 @@
                     </thead>
                     <tbody>
                         @php
-                            $remaining = $product->quantity;
-
                             $totalSell = 0;
                             $totalBuy = 0;
+
+                            foreach ($invoice_items as $item) {
+                                if ($item->invoice_type->value == 'sell') {
+                                    $totalSell += $item->quantity;
+                                } else {
+                                    $totalBuy += $item->quantity;
+                                }
+                            }
+
+                            $remaining = $product->quantity + $totalBuy - $totalSell;
                         @endphp
 
                         @foreach ($invoice_items as $item)
                             @php
                                 if ($item->invoice_type->value == 'sell') {
-                                    $remaining -= $item->quantity;
-                                    $totalSell += $item->quantity;
-                                } else {
                                     $remaining += $item->quantity;
-                                    $totalBuy += $item->quantity;
+                                } else {
+                                    $remaining -= $item->quantity;
                                 }
                             @endphp
 
                             <tr class="hover">
                                 <td class="px-4 py-3">
                                     <span class="badge badge-ghost">
-                                        {{ gregorian_to_jalali_date($item->updated_at) }}
+                                        {{ formatDate($item->updated_at) }}
                                     </span>
                                 </td>
 
@@ -183,7 +189,7 @@
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                                             </svg>
-                                            {{ (int) $item->quantity }}
+                                            {{ formatNumber($item->quantity) }}
                                         </a>
                                     @else
                                         <span class="text-gray-400">-</span>
@@ -197,7 +203,7 @@
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
                                             </svg>
-                                            {{ (int) $item->quantity }}
+                                            {{ formatNumber($item->quantity) }}
                                         </a>
                                     @else
                                         <span class="text-gray-400">-</span>
