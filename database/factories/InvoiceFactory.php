@@ -68,7 +68,7 @@ class InvoiceFactory extends Factory
                 'quantity' => $quantity,
                 'unit_price' => $invoice->amount / $quantity,
                 'unit_discount' => 0,
-                'vat' => $invoice->vat,
+                'vat' => 0,
                 'amount' => $invoice->amount,
             ]);
 
