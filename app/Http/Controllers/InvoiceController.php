@@ -152,6 +152,11 @@ class InvoiceController extends Controller
         $transactions = $invoice->items->map(function ($item, $index) {
             $item->quantity = ($item->quantity != 0) ? $item->quantity : 1;
             $item->unit_price = ($item->unit_price != 0) ? $item->unit_price : 1;
+            $item->unit_discount = ($item->unit_discount != 0) ? $item->unit_discount : 0;
+
+            // Calculate VAT percentage: (vat_amount / subtotal_before_vat) * 100
+            $subtotalBeforeVat = $item->amount - $item->vat;
+            $vatPercentage = $subtotalBeforeVat > 0 ? ($item->vat / $subtotalBeforeVat) * 100 : 0;
 
             return [
                 'id' => $index + 1,
@@ -163,7 +168,7 @@ class InvoiceController extends Controller
                 'quantity' => $item->quantity,
                 'unit' => $item->unit_price,
                 'off' => $item->unit_discount,
-                'vat' => ($item->vat / $item->unit_price) / $item->quantity * 100,
+                'vat' => $vatPercentage,
                 'total' => $item->amount,
             ];
         });
