@@ -170,15 +170,15 @@
 
             @foreach($invoiceItems as $index => $invoiceItem)
                 @php
-                    $itemQuantity = abs($invoiceItem->quantity);
-                    $unitPrice = abs($invoiceItem->unit_price);
+                    $itemQuantity = $invoiceItem->quantity;
+                    $unitPrice = $invoiceItem->unit_price;
                     $totalPrice = $itemQuantity * $unitPrice;
                     $invoiceTotalPrice += $totalPrice;
-                    $discountPrice = abs($invoiceItem->unit_discount) ?? 0;
+                    $discountPrice = $invoiceItem->unit_discount ?? 0;
                     $invoiceTotalDiscount += $discountPrice;
                     $totalPriceAfterDiscount = $totalPrice - $discountPrice;
                     $invoiceTotalPriceAfterDiscount += $totalPriceAfterDiscount;
-                    $vatPrice = abs($invoiceItem->vat) ?? 0;
+                    $vatPrice = $invoiceItem->vat ?? 0;
                     $total = ($totalPriceAfterDiscount + $vatPrice) ?? 0;
 
                 @endphp
@@ -211,7 +211,10 @@
                         <p align="center">{{ $invoiceItem->description }}</p>
                     </td>
                     <td class="border center mainlineheight" style="border border-right: none;">
-                        <p align="center">{{ convertToFarsi($invoiceItem->product->code) ?? '' }}</p>
+                        @php
+                            $code = substr(strrchr(formatCode($invoiceItem->product->code ?? ''), '/'), 1); 
+                        @endphp
+                        <p align="center">{{ $code ?? '' }}</p>
                     </td>
                     <td class="border center mainlineheight">
                         <p align="center" class="bold">{{ convertToFarsi($index + 1) }}</p>

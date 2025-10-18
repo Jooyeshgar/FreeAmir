@@ -3,10 +3,8 @@
 namespace Database\Factories;
 
 use App\Models\Customer;
-use App\Models\Document;
 use App\Models\InvoiceItem;
 use App\Models\Subject;
-use App\Models\Transaction;
 use App\Models\User;
 use App\Services\DocumentService;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -26,11 +24,12 @@ class InvoiceFactory extends Factory
         $date = $this->faker->date();
         $amount = $this->faker->randomFloat(2, 1000, 10000);
         $user = User::inRandomOrder()->first();
+        $customer = Customer::inRandomOrder()->first();
 
         $document = DocumentService::createDocument(
             $user,
             [
-                'date' => $date
+                'date' => $date,
             ],
             []
         );
@@ -39,7 +38,7 @@ class InvoiceFactory extends Factory
             'number' => $this->faker->unique()->numerify('#####'),
             'date' => $date,
             'document_id' => $document->id,
-            'customer_id' => Customer::factory(),
+            'customer_id' => $customer->id,
             'creator_id' => $user->id,
             'company_id' => 1,
             'approver_id' => $this->faker->randomElement([null, $user->id]),
@@ -71,7 +70,7 @@ class InvoiceFactory extends Factory
                     'value' => $invoiceItem->amount,
                     'subject_id' => Subject::whereNotIn('parent_id', [1, 14])->inRandomOrder()->first()->id,
                     'user_id' => $invoice->creator_id,
-                    'desc' => $description
+                    'desc' => $description,
                 ]
             );
 
@@ -81,7 +80,7 @@ class InvoiceFactory extends Factory
                     'value' => -1 * $invoiceItem->amount,
                     'subject_id' => Subject::whereNotIn('parent_id', [1, 14])->inRandomOrder()->first()->id,
                     'user_id' => $invoice->creator_id,
-                    'desc' => $description
+                    'desc' => $description,
                 ],
             );
         });
