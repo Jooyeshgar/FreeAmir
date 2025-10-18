@@ -12,7 +12,7 @@ class ProductFactory extends Factory
     public function definition()
     {
         return [
-            'code' => $this->faker->unique()->numerify('#####'),
+            'code' => '019001'.$this->faker->unique()->numerify('###'),
             'company_id' => session('active-company-id'),
             'name' => $this->faker->name,
             'group' => 1,
