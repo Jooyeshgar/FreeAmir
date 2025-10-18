@@ -246,7 +246,7 @@ class InvoiceService
             // Calculate item VAT
             $vatRate = ($item['vat'] ?? 0) / 100;
 
-            $itemVat = $vatRate * ($quantity * $unitPrice);
+            $itemVat = $vatRate * ($quantity * $unitPrice - $unitDiscount);
 
             // Calculate item amount (price - discount, VAT is separate but included in total)
             $itemAmount = $quantity * $unitPrice - $unitDiscount + $itemVat;

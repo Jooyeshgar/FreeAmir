@@ -90,7 +90,7 @@ class InvoiceTransactionBuilder
 
             $this->totalDiscount += $itemDiscount;
             $this->totalVat += $itemVat;
-            $this->totalAmount += $itemAmount + $itemVat - $itemDiscount;
+            $this->totalAmount += $itemAmount - $itemDiscount + $itemVat;
 
             $this->transactions[] = [
                 'subject_id' => $product->subject_id,
