@@ -23,7 +23,40 @@ class InvoiceItem extends Model
         'description',
     ];
 
-    public static function booted(): void {}
+    public static function booted(): void
+    {
+        static::created(function (InvoiceItem $invoiceItem) {
+            $invoiceItem->load('product', 'invoice');
+            $invoice_type = $invoiceItem->invoice->invoice_type;
+            if ($invoice_type->value == 'buy') {
+                $invoiceItem->product->quantity += $invoiceItem->quantity;
+            } elseif ($invoice_type->value == 'sell') {
+                $invoiceItem->product->quantity -= $invoiceItem->quantity;
+            }
+            $invoiceItem->product->update();
+        });
+        static::updated(function (InvoiceItem $invoiceItem) {
+            $invoiceItem->load('product', 'invoice');
+            $invoice_type = $invoiceItem->invoice->invoice_type;
+            if ($invoice_type->value == 'buy') {
+                $invoiceItem->product->quantity += $invoiceItem->quantity;
+            } elseif ($invoice_type->value == 'sell') {
+                $invoiceItem->product->quantity -= $invoiceItem->quantity;
+            }
+            $invoiceItem->product->update();
+        });
+        // static::deleted(function (InvoiceItem $invoiceItem) {
+        //     $invoiceItem->load('product', 'invoice');
+        //     $invoice_type = $invoiceItem->invoice->invoice_type;
+        //     dd($invoiceItem->product);
+        //     if ($invoice_type->value == 'buy') {
+        //         $invoiceItem->product->quantity -= $invoiceItem->quantity;
+        //     } elseif ($invoice_type->value == 'sell') {
+        //         $invoiceItem->product->quantity += $invoiceItem->quantity;
+        //     }
+        //     $invoiceItem->product->update();
+        // });
+    }
 
     public function invoice()
     {
