@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Company;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
@@ -62,6 +63,7 @@ class HomeSeeder extends Seeder
         $user = User::inRandomOrder()->first();
 
         $customer = Customer::inRandomOrder()->first() ?? Customer::factory()->create();
+        $company = Company::inRandomOrder()->first() ?? Company::factory()->create();
 
         $document = DocumentService::createDocument(
             $user,
@@ -72,6 +74,7 @@ class HomeSeeder extends Seeder
         );
 
         $invoice = Invoice::create([
+            'company_id' => $company->id,
             'number' => $this->faker->unique()->numerify('#####'),
             'date' => $date,
             'document_id' => $document->id,
