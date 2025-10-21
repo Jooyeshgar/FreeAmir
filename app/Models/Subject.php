@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Scopes\FiscalYearScope;
+use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -32,15 +33,15 @@ class Subject extends Model
 
         static::deleting(function ($subject) {
             if (!is_null($subject->subjectable_type) && !is_null($subject->subjectable_id) && $subject->subjectable()->exists()) {
-                throw new \Exception(__('Cannot delete subject with relationships'));
+                throw new Exception(__('Cannot delete subject with relationships'));
             }
 
             if ($subject->children()->exists()) {
-                throw new \Exception(__('Cannot delete subject with children'));
+                throw new Exception(__('Cannot delete subject with children'));
             }
 
             if ($subject->transactions()->exists()) {
-                throw new \Exception(__('Cannot delete subject with transactions'));
+                throw new Exception(__('Cannot delete subject with transactions'));
             }
         });
     }
@@ -83,6 +84,69 @@ class Subject extends Model
     public function getRoot()
     {
         return $this->hasParent() ? $this->parent->getRoot() : $this;
+    }
+
+    /**
+     * Generates a hierarchical code for the subject based on parent-child relationships.
+     *
+     * Format: Parent code + Child sequence (e.g., 001001, 001002, 002001, 002001001)
+     * - Root level subjects have 3-digit codes (001, 002, etc.)
+     * - Each child level adds 3 digits to the parent code
+     * - Maximum children per parent is 999
+     *
+     * @param int|null $code Optional specific code number to use (without padding)
+     * @return string The generated code for the subject
+     * @throws \Exception When trying to exceed the maximum of 999 children
+     */
+    public function generateCode($code = null)
+    {
+        if ($this->hasParent()) {
+            $parentSubject = $this->parent;
+            $parentCode = $parentSubject->code;
+
+            if ($code !== null) {
+                if ($code > 999) {
+                    throw new Exception("Child code cannot exceed 999");
+                }
+                return $parentCode . str_pad($code, 3, '0', STR_PAD_LEFT);
+            }
+
+            if ($parentSubject->hasChildren()) {
+                $lastChild = $parentSubject->children()->orderBy('code', 'desc')->first();
+                $lastChildCode = $lastChild->code;
+
+                $childPart = substr($lastChildCode, -3);
+                $nextChildNumber = (int)$childPart + 1;
+
+                if ($nextChildNumber > 999) {
+                    throw new Exception("Maximum of 999 children reached for parent " . $parentCode);
+                }
+
+                return $parentCode . str_pad($nextChildNumber, 3, '0', STR_PAD_LEFT);
+            } else {
+                return $parentCode . '001';
+            }
+        } else {
+            if ($code !== null) {
+                if ($code > 999) {
+                    throw new Exception("Root code cannot exceed 999");
+                }
+                return str_pad($code, 3, '0', STR_PAD_LEFT);
+            }
+
+            $lastRootSubject = Subject::whereNull('parent_id')->orderBy('code', 'desc')->first();
+            $nextRootNumber = 1;
+
+            if ($lastRootSubject) {
+                $nextRootNumber = (int)$lastRootSubject->code + 1;
+
+                if ($nextRootNumber > 999) {
+                    throw new Exception("Maximum of 999 root subjects reached");
+                }
+            }
+
+            return str_pad($nextRootNumber, 3, '0', STR_PAD_LEFT);
+        }
     }
 
     /**
