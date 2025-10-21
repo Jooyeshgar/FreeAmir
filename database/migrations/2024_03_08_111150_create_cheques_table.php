@@ -15,6 +15,7 @@ class CreateChequesTable extends Migration
             $table->date('due_date')->notNullable();
             $table->string('serial', 50)->notNullable();
             $table->enum('status', [1, 2, 3, 4, 5])->notNullable();
+            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->unsignedBigInteger('customer_id')->notNullable();
             $table->unsignedBigInteger('account_id')->notNullable();
             $table->unsignedBigInteger('transaction_id')->notNullable();

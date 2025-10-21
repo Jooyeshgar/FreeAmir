@@ -31,7 +31,7 @@ class BankController extends Controller
 
         Models\Bank::create($validatedData);
 
-        return redirect()->route('banks.index')->with('success', 'Bank created successfully.');
+        return redirect()->route('banks.index')->with('success', __('Bank created successfully.'));
     }
 
     public function edit(Models\Bank $bank)
@@ -47,13 +47,13 @@ class BankController extends Controller
 
         $bank->update($validatedData);
 
-        return redirect()->route('banks.index')->with('success', 'Bank updated successfully.');
+        return redirect()->route('banks.index')->with('success', __('Bank updated successfully.'));
     }
 
     public function destroy(Models\Bank $bank)
     {
         $bank->delete();
 
-        return redirect()->route('banks.index')->with('success', 'Bank deleted successfully.');
+        return redirect()->route('banks.index')->with('success', __('Bank deleted successfully.'));
     }
 }

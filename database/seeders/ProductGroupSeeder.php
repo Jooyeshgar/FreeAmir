@@ -9,10 +9,14 @@ class ProductGroupSeeder extends Seeder
 {
     public function run()
     {
-        $productGroups = [
-            ['code' => 'general', 'name' => 'عمومی', 'buyId' => 1, 'sellId' => 1, 'company_id' => 1],
+        $productGroup = [
+            'name' => 'عمومی',
+            'vat' => 10,
+            'buyId' => 1,
+            'sellId' => 1,
+            'company_id' => 1,
         ];
 
-        ProductGroup::insert($productGroups);
+        ProductGroup::create($productGroup);
     }
 }

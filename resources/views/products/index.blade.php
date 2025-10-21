@@ -18,6 +18,7 @@
                         <th class="px-4 py-2">{{ __('Quantity') }}</th>
                         <th class="px-4 py-2">{{ __('Buy price') }}</th>
                         <th class="px-4 py-2">{{ __('Sell price') }}</th>
+                        <th class="px-4 py-2">{{ __('VAT') }}</th>
                         <th class="px-4 py-2">{{ __('Product group') }}</th>
                         <th class="px-4 py-2">{{ __('Action') }}</th>
                     </tr>
@@ -26,17 +27,20 @@
 
                     @foreach ($products as $product)
                         <tr>
-                            <td class="px-4 py-2">{{ $product->code }}</td>
-                            <td class="px-4 py-2">{{ $product->name }}</td>
-                            <td class="px-4 py-2">{{ $product->quantity }}</td>
-                            <td class="px-4 py-2">{{ $product->purchace_price }}</td>
-                            <td class="px-4 py-2">{{ $product->selling_price }}</td>
+                            <td class="px-4 py-2">{{ formatCode($product->code) }}</td>
+                            <td class="px-4 py-2">
+                                <a href="{{ route('products.show', $product) }}" class="text-primary">
+                                    {{ $product->name }}</a>
+                            </td>
+                            <td class="px-4 py-2">{{ formatNumber($product->quantity) }}</td>
+                            <td class="px-4 py-2">{{ formatNumber($product->purchace_price) }}</td>
+                            <td class="px-4 py-2">{{ formatNumber($product->selling_price) }}</td>
+                            <td class="px-4 py-2">{{ formatNumber($product->vat) }}%</td>
                             <td class="px-4 py-2">{{ $product->productGroup ? $product->productGroup->name : '' }}</td>
                             <td class="px-4 py-2">
                                 <a href="{{ route('products.edit', $product) }}"
                                     class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                <form action="{{ route('products.destroy', $product) }}" method="POST"
-                                    class="inline-block">
+                                <form action="{{ route('products.destroy', $product) }}" method="POST" class="inline-block">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
@@ -58,8 +62,7 @@
                     {{-- Pagination Elements --}}
                     @foreach ($products->getUrlRange(1, $products->lastPage()) as $page => $url)
                         @if ($page == $products->currentPage())
-                            <a href="{{ $url }}"
-                                class="join-item btn btn-square bg-blue-500 text-white">{{ $page }}</a>
+                            <a href="{{ $url }}" class="join-item btn btn-square bg-blue-500 text-white">{{ $page }}</a>
                         @else
                             <a href="{{ $url }}" class="join-item btn btn-square">{{ $page }}</a>
                         @endif

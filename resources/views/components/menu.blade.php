@@ -1,17 +1,16 @@
 @can('home.*')
     <li><a href="/" class="hover:rounded-xl">{{ __('Home') }}</a></li>
 @endcan
-{{-- @can('customers.create')
+@can('invoices.create')
     <li class="dropdown dropdown-hover">
         <div tabindex="0" role="button">{{ __('Operation') }}</div>
         <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
-            <li><a href="">{{ __('Receive and pay') }}</a></li>
-            <li><a href="">{{ __('Registration of sales invoice') }}</a></li>
-            <li><a href="">{{ __('Registration of purchase invoice') }}</a></li>
+            <li><a href="{{ route('invoices.index', ['invoice_type' => 'sell']) }}">{{ __('Invoice Sell List') }}</a></li>
+            <li><a href="{{ route('invoices.index', ['invoice_type' => 'buy']) }}">{{ __('Invoice Buy List') }}</a></li>
             <li><a href="{{ route('customers.create') }}">{{ __('Add Customer') }}</a></li>
         </ul>
     </li>
-@endcan --}}
+@endcan
 @canany(['documents.index', 'documents.create', 'documents.edit'])
     <li class="dropdown dropdown-hover">
         <div tabindex="1" role="button">{{ __('Accounting') }}</div>
@@ -47,22 +46,22 @@
                     </details>
                 </li>
             @endcanany
-            @canany(['products.index', 'product-groups.index'])
-                <li>
-                    <details>
-                        <summary>{{ __('Warehouse') }}</summary>
-                        <ul>
-                            @can('products.index')
-                                <li><a href="{{ route('products.index') }}">{{ __('Products') }}</a></li>
-                            @endcan
-                            @can('product-groups.index')
-                                <li><a href="{{ route('product-groups.index') }}">{{ __('Product Groups') }}</a>
-                                @endcan
-                            </li>
-                        </ul>
-                    </details>
-                </li>
-            @endcanany
+            <!-- @canany(['products.index', 'product-groups.index'])
+                                                    <li>
+                                                        <details>
+                                                            <summary>{{ __('Warehouse') }}</summary>
+                                                            <ul>
+                                                                @can('products.index')
+                                                                    <li><a href="{{ route('products.index') }}">{{ __('Products') }}</a></li>
+                                                                @endcan
+                                                                @can('product-groups.index')
+                                                                    <li><a href="{{ route('product-groups.index') }}">{{ __('Product Groups') }}</a>
+                                                                @endcan
+                                                                </li>
+                                                            </ul>
+                                                        </details>
+                                                    </li>
+                                                @endcanany -->
             {{-- <li>
                 <details>
                     <summary>{{ __('Customers') }}</summary>
@@ -75,9 +74,19 @@
         </ul>
     </li>
 @endcanany
+
+@canany(['products.index', 'product-groups.index']) <li class="dropdown dropdown-hover">
+        <div tabindex="3" role="button">{{ __('Warehouse') }}</div>
+        <ul tabindex="3" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
+            <li><a href="{{ route('products.index') }}">{{ __('Products') }}</a></li>
+            <li><a href="{{ route('product-groups.index') }}">{{ __('Product Groups') }}</a></li>
+        </ul>
+    </li>
+@endcanany
+
 <li class="dropdown dropdown-hover">
-    <div tabindex="3" role="button">{{ __('Management') }}</div>
-    <ul tabindex="3" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
+    <div tabindex="4" role="button">{{ __('Management') }}</div>
+    <ul tabindex="4" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
         @canany(['subjects.index', 'subjects.create', 'subjects.edit'])
             <li><a href="{{ route('subjects.index') }}">{{ __('Subjects') }}</a></li>
         @endcanany

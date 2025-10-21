@@ -10,9 +10,11 @@ class CreateCustGroupsTable extends Migration
     {
         Schema::create('customer_groups', function (Blueprint $table) {
             $table->id();
-            $table->string('code', 20)->unique();
             $table->string('name', 50);
             $table->text('description')->nullable();
+            $table->unsignedBigInteger('subject_id')->nullable();
+            $table->foreign('subject_id')->references('id')->on('subjects')->onDelete('set null');
+            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
         });
     }
 

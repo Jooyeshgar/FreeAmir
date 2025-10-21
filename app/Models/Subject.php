@@ -29,7 +29,6 @@ class Subject extends Model
 
         static::creating(function ($subject) {
             $subject->company_id ??= session('active-company-id');
-            $subject->code ??= $subject->generateCode();
         });
 
         static::deleting(function ($subject) {

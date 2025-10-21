@@ -16,9 +16,7 @@ class CreateCustomersTable extends Migration
         Schema::create('customers', function (Blueprint $table) {
             $table->id(); // Use auto-incrementing primary key
 
-            $table->string('code', 15)->unique(); // Unique customer code
             $table->string('name', 100);
-            $table->unsignedBigInteger('subject_id')->nullable(); // Foreign key to subjects table
             $table->string('phone', 15)->default('')->nullable();
             $table->string('cell', 15)->default('')->nullable();
             $table->string('fax', 15)->default('')->nullable();
@@ -53,7 +51,6 @@ class CreateCustomersTable extends Migration
 
             $table->timestamps(); // Enable timestamps for created_at and updated_at
 
-            $table->foreign('subject_id')->references('id')->on('subjects')->onDelete('set null'); // Allow null for subj_id
             $table->foreign('group_id')->references('id')->on('customer_groups')->onDelete('set null'); // Allow null for group_id
             $table->foreign('introducer_id')->references('id')->on('customers')->onDelete('set null'); // Allow null for introducer_id
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();

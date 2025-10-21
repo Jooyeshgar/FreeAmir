@@ -15,16 +15,17 @@ class CreateProductGroupsTable extends Migration
     {
         Schema::create('product_groups', function (Blueprint $table) {
             $table->id();
-            $table->string('code', 20);
             $table->string('name', 60);
             $table->unsignedBigInteger('buyId')->nullable();
             $table->unsignedBigInteger('sellId')->nullable();
+            $table->unsignedBigInteger('subject_id')->nullable();
 
             $table->foreign('buyId')->references('id')->on('subjects')->onDelete('set null');
             $table->foreign('sellId')->references('id')->on('subjects')->onDelete('set null');
             $table->foreignId('company_id')->constrained()->cascadeOnDelete()->after('name');
+            $table->foreign('subject_id')->references('id')->on('subjects')->onDelete('set null');
 
-            $table->unique(['company_id', 'code']);
+            $table->decimal('vat')->nullable();
 
             $table->timestamps();
         });

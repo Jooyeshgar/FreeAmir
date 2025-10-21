@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\InvoiceType;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,27 +15,36 @@ class Invoice extends Model
     public $timestamps = true;
 
     protected $fillable = [
+        'number',
         'code',
         'date',
         'document_id',
         'customer_id',
-        'addition',
+        'creator_id',
         'subtraction',
         'tax',
-        'cash_payment',
         'ship_date',
         'ship_via',
-        'permanent',
         'description',
-        'is_sell',
+        'invoice_type',
         'active',
         'vat',
         'amount',
     ];
 
+    protected $casts = [
+        'invoice_type' => InvoiceType::class,
+        'date' => 'date',
+        'ship_date' => 'date',
+        'active' => 'boolean',
+    ];
+
     public static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope());
+        static::creating(function ($model) {
+            $model->company_id = session('active-company-id');
+        });
     }
 
     public function document()
@@ -50,5 +60,10 @@ class Invoice extends Model
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function items()
+    {
+        return $this->hasMany(InvoiceItem::class, 'invoice_id');
     }
 }

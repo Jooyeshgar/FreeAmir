@@ -16,7 +16,10 @@ SELECT
     WHEN `type` = 1 THEN 'creditor'
     WHEN `type` = 2 THEN 'debtor'
   END AS `type`,
-  `parent_id`,
+  CASE 
+    WHEN `parent_id` = 0 THEN NULL
+    ELSE `parent_id`
+  END AS `parent_id`,
   NOW(),
   NOW(),
   @company_id
@@ -27,7 +30,7 @@ DROP TABLE `subject_old`;
 TRUNCATE TABLE `customers`;
 
 INSERT INTO `customers` (
-  `id`, `name`, `subject_id`, `phone`, `cell`, `fax`, `address`, `postal_code`, 
+  `id`, `name`, `phone`, `cell`, `fax`, `address`, `postal_code`, 
   `email`, `ecnmcs_code`, `personal_code`, `web_page`, `responsible`, `connector`, 
   `group_id`, `desc`, `balance`, `credit`, `rep_via_email`, `acc_name_1`, `acc_no_1`, 
   `acc_bank_1`, `acc_name_2`, `acc_no_2`, `acc_bank_2`, `type_buyer`, `type_seller`, 
@@ -35,7 +38,7 @@ INSERT INTO `customers` (
   `disc_rate`, `created_at`, `updated_at`, `company_id`
 )
 SELECT
-  `custId`, `custName`, `custSubj`, COALESCE(`custPhone`, ''), 
+  `custId`, `custName`, COALESCE(`custPhone`, ''), 
   COALESCE(`custCell`, ''), COALESCE(`custFax`, ''), COALESCE(`custAddress`, ''), 
   COALESCE(`custPostalCode`, ''), COALESCE(`custEmail`, ''), COALESCE(`custEcnmcsCode`, ''), 
   COALESCE(`custPersonalCode`, ''), COALESCE(`custWebPage`, ''), COALESCE(`custResposible`, ''), 
@@ -80,6 +83,30 @@ SELECT
 FROM `notebook_old`;
 
 DROP TABLE `notebook_old`;
+
+TRUNCATE TABLE `configs`;
+
+INSERT INTO `configs` (`type`, `category`, `key`, `value`, `desc`, `company_id`)
+SELECT 
+  `cfgType` AS `type`,
+  `cfgCat` AS `category`,
+  CASE 
+    WHEN `cfgKey` = 'custSubject' THEN 'cust_subject'
+    WHEN `cfgKey` = 'bank' THEN 'bank'
+    WHEN `cfgKey` = 'cash' THEN 'cash'
+    WHEN `cfgKey` = 'income' THEN 'income'
+    WHEN `cfgKey` = 'sell-discount' THEN 'sell_discount'
+    WHEN `cfgKey` = 'buy-discount' THEN 'buy_discount'
+    WHEN `cfgKey` = 'sell-vat' THEN 'sell_vat'
+    WHEN `cfgKey` = 'buy-vat' THEN 'buy_vat'
+  END AS `key`,
+  COALESCE(`cfgValue`, '') AS `value`,
+  `cfgDesc` AS `desc`,
+  @company_id
+FROM `config_old`
+WHERE `cfgKey` IN ('custSubject', 'bank', 'cash', 'income', 'sell-discount', 'buy-discount', 'sell-vat', 'buy-vat');
+
+DROP TABLE `config_old`;
 
 DROP TABLE IF EXISTS `bankAccounts_old`;
 DROP TABLE IF EXISTS `BankNames_old`;

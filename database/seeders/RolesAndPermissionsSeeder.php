@@ -44,9 +44,21 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // create roles and assign created permissions
         $role = Role::create(['name' => 'Super-Admin']);
+        $role->givePermissionTo(Permission::all());
 
         $role = Role::create(['name' => 'Acountant']);
         $role->givePermissionTo(Permission::where('name', 'NOT LIKE', '%management%')->get());
+
+        $role = Role::create(['name' => 'Warehousekeeper']);
+        $role->givePermissionTo(Permission::where('name', 'LIKE', '%products%')
+            ->orWhere('name', 'LIKE', '%product-groups%')
+            ->orWhere('name', 'LIKE', '%home%')
+            ->get());
+
+        $role = Role::create(['name' => 'Seller']);
+        $role->givePermissionTo(Permission::where('name', 'LIKE', '%invoices%')
+            ->orWhere('name', 'LIKE', '%home%')
+            ->get());
 
         // Create admin user
         $admin = User::create([

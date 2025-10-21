@@ -7,8 +7,23 @@
     <x-show-message-bags />
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <div class="card-actions">
-                <a href="{{ route('subjects.create', ['parent_id' => request('parent_id', null)]) }}" class="btn btn-primary">{{ __('Create Subject') }}</a>
+            <div class="card-actions ">
+                <div>
+                    <a href="{{ route('subjects.create', ['parent_id' => request('parent_id', null)]) }}" class="btn btn-primary">{{ __('Create Subject') }}</a>
+                </div>
+                @if($currentParent)
+                    @php
+                        $upUrl = route('subjects.index');
+                        if ($currentParent->parent_id) {
+                            $upUrl .= '?parent_id=' . $currentParent->parent_id;
+                        }
+                    @endphp
+
+                    <span class="ml-2 text-lg leading-[3rem] font-semibold grow">{{ $currentParent->name }}</span>
+                    <a href="{{ $upUrl }}" class="btn btn-outline">
+                        ← {{ __('Go Up') }}
+                    </a>
+                @endif
             </div>
             <table class="table w-full mt-4">
                 <thead>
@@ -23,7 +38,11 @@
                 <tbody>
                     @foreach ($subjects as $subject)
                         <tr>
-                            <td class="px-4 py-2">{{ $subject->formattedCode() }}</td>
+                            <td class="px-4 py-2">
+                                <a href="{{ route('transactions.index', ['subject_id' => $subject->id]) }}" class="text-primary hover:underline" title="{{ __('View transactions for this subject') }}">
+                                    {{ $subject->formattedCode() }}
+                                </a>
+                            </td>
                             <td class="px-4 py-2">
                                 <a href="{{ route('subjects.index', ['parent_id' => $subject->id]) }}" class="text-primary"> {{ $subject->name }}</a>
                                 @if ($subject->subjectable)

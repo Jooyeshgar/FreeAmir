@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
 use App\Models;
-use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function __construct()
-    {
-    }
-    
+    public function __construct() {}
+
     public function index()
     {
         $products = Models\Product::with('productGroup')->paginate(12);
@@ -25,69 +24,70 @@ class ProductController extends Controller
         return view('products.create', compact('groups'));
     }
 
-    public function store(Request $request)
+    public function store(StoreProductRequest $request)
     {
-        $validatedData = $request->validate([
-            'code' => 'required|unique:products,code',
-            'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
-            'group' => 'required|exists:product_groups,id|integer',
-            'location' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
-            'quantity' => 'nullable|min:0|numeric',
-            'quantity_warning' => 'nullable|min:0|numeric',
-            'oversell' => 'nullable|in:on,off',
-            'purchace_price' => 'nullable|min:0|numeric',
-            'selling_price' => 'nullable|min:0|numeric',
-            'discount_formula' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
-            'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
-        ]);
+        $validatedData = $request->getValidatedData();
 
-        $validatedData['oversell'] = $request->has('oversell') ? 1 : 0;
-        $validatedData['purchace_price'] = empty($validatedData['purchace_price']) ? 0 : $validatedData['purchace_price'];
-        $validatedData['selling_price'] = empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price'];
-        $validatedData['quantity'] = empty($validatedData['quantity']) ? 0 : $validatedData['quantity'];
+        $product = Models\Product::create($validatedData);
+        if (isset($validatedData['websites'])) {
+            foreach ($validatedData['websites'] as $website) {
+                Models\ProductWebsite::create([
+                    'link' => $website['link'],
+                    'product_id' => $product->id,
+                ]);
+            }
+        }
 
-        Models\Product::create($validatedData);
-
-        return redirect()->route('products.index')->with('success', 'Product created successfully.');
+        return redirect()->route('products.index')->with('success', __('Product created successfully.'));
     }
 
     public function edit(Models\Product $product)
     {
-        $groups = Models\ProductGroup::select('id', 'name')->get();
+        $groups = Models\ProductGroup::select('id', 'name', 'sstid')->get();
 
         return view('products.edit', compact('product', 'groups'));
     }
 
-    public function update(Request $request, Models\Product $product)
+    public function update(UpdateProductRequest $request, Models\Product $product)
     {
-        $validatedData = $request->validate([
-            'code' => 'required|exists:products,code',
-            'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
-            'group' => 'required|exists:product_groups,id|integer',
-            'location' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
-            'quantity' => 'nullable|min:0|numeric',
-            'quantity_warning' => 'nullable|min:0|numeric',
-            'oversell' => 'nullable|in:on,off',
-            'purchace_price' => 'nullable|min:0|numeric',
-            'selling_price' => 'nullable|min:0|numeric',
-            'discount_formula' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
-            'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
-        ]);
+        $validatedData = $request->getValidatedData();
 
-        $validatedData['oversell'] = $request->has('oversell') ? 1 : 0;
-        $validatedData['purchace_price'] = empty($validatedData['purchace_price']) ? 0 : $validatedData['purchace_price'];
-        $validatedData['selling_price'] = empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price'];
-        $validatedData['quantity'] = empty($validatedData['quantity']) ? 0 : $validatedData['quantity'];
+        $product->productWebsites()->delete();
+
+        if (isset($validatedData['websites'])) {
+            foreach ($validatedData['websites'] as $website) {
+                Models\ProductWebsite::create([
+                    'link' => $website['link'],
+                    'product_id' => $product->id,
+                ]);
+            }
+        }
 
         $product->update($validatedData);
 
-        return redirect()->route('products.index')->with('success', 'Product updated successfully.');
+        return redirect()->route('products.index')->with('success', __('Product updated successfully.'));
+    }
+
+    public function show(Models\Product $product)
+    {
+        $product->load('productgroup');
+
+        $invoices = [];
+        $invoice_items = Models\InvoiceItem::where('product_id', $product->id)->orderBy('updated_at')->get();
+
+        if ($invoice_items->count() > 0) {
+            foreach ($invoice_items as $invoice_item) {
+                $invoice_item['invoice_type'] = Models\Invoice::select('invoice_type')->find($invoice_item->invoice_id)->invoice_type;
+            }
+        }
+
+        return view('products.show', compact('product', 'invoice_items'));
     }
 
     public function destroy(Models\Product $product)
     {
         $product->delete();
 
-        return redirect()->route('products.index')->with('success', 'Product deleted successfully.');
+        return redirect()->route('products.index')->with('success', __('Product deleted successfully.'));
     }
 }

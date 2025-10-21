@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Subject;
+use App\Services\SubjectCreatorService;
 use Illuminate\Http\Request;
 
 class SubjectController extends Controller
@@ -11,13 +12,16 @@ class SubjectController extends Controller
 
     public function index(Request $request)
     {
+        $currentParent = null;
+        
         if ($request->has('parent_id')) {
-            $subjects = Subject::find($request->get('parent_id'))->children()->with('subjectable')->get();
+            $currentParent = Subject::find($request->get('parent_id'));
+            $subjects = $currentParent->children()->with('subjectable')->get();
         } else {
             $subjects = Subject::whereIsRoot()->with('subjectable')->get();
         }
 
-        return view('subjects.index', compact('subjects'));
+        return view('subjects.index', compact('subjects', 'currentParent'));
     }
 
     public function create(Request $request)
@@ -35,40 +39,60 @@ class SubjectController extends Controller
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            'code' => 'nullable|max:3',
             'name' => 'required|max:60',
             'parent_id' => 'nullable|exists:subjects,id',
-            'type' => 'required|in:debtor,creditor,both',
+            'code' => 'nullable|string|max:3',
         ]);
 
-        $subject = new Subject();
-        $subject->fill($validatedData);
-        $subject->code = $subject->generateCode($validatedData['code']);
+        $data = [
+            'name' => $validatedData['name'],
+            'parent_id' => $validatedData['parent_id'] ?? null,
+        ];
 
-        $subject->save();
+        if (!empty($validatedData['code'])) {
+            $data['code'] = str_pad($validatedData['code'], 3, '0', STR_PAD_LEFT);
+        }
 
-        return redirect()->back()->with('success', __('Subject created successfully.'));
+        $subject = app(SubjectCreatorService::class)->createSubject($data);
+
+        $redirectUrl = route('subjects.index');
+        if ($subject->parent_id) {
+            $redirectUrl .= '?parent_id=' . $subject->parent_id;
+        }
+
+        return redirect($redirectUrl)->with('success', __('Subject with code :code created successfully.', ['code' => $subject->formattedCode()]));
     }
 
     public function edit(Subject $subject)
     {
-        $parentSubjects = Subject::where('parent_id', null)->get();
+        $parentSubject = $subject->parent;
+        $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->get();
 
-        return view('subjects.edit', compact('subject', 'parentSubjects'));
+        return view('subjects.edit', compact('subject', 'parentSubject', 'subjects'));
     }
 
     public function update(Request $request, Subject $subject)
     {
         $validatedData = $request->validate([
-            'code' => 'required|max:20|unique:subjects,code,' . $subject->id,
+            'code' => 'required|max:20',
             'name' => 'required|max:60',
             'parent_id' => 'nullable|exists:subjects,id',
             'type' => 'required|in:debtor,creditor,both',
         ]);
 
-        $subject->update($validatedData);
+        try {
+            $updatedSubject = app(SubjectCreatorService::class)->editSubject($subject, $validatedData);
 
-        return redirect()->back()->with('success', __('Subject updated successfully.'));
+            $redirectUrl = route('subjects.index');
+            if ($updatedSubject->parent_id) {
+                $redirectUrl .= '?parent_id=' . $updatedSubject->parent_id;
+            }
+            return redirect($redirectUrl)->with('success', __('Subject updated successfully.'));
+        } catch (\InvalidArgumentException $e) {
+            return redirect()->back()
+                ->withErrors(['code' => $e->getMessage()])
+                ->withInput();
+        }
     }
 
 

@@ -7,10 +7,8 @@ use Illuminate\Http\Request;
 
 class ProductGroupController extends Controller
 {
-    public function __construct()
-    {
-    }
-    
+    public function __construct() {}
+
     public function index()
     {
         $productGroups = Models\ProductGroup::paginate(12);
@@ -20,20 +18,23 @@ class ProductGroupController extends Controller
 
     public function create()
     {
+        if (empty(config('amir.product'))) {
+            return redirect()->route('configs.index')->with('error', __('Product Subject is not configured. Please set it in configurations.'));
+        }
         return view('productGroups.create');
     }
 
     public function store(Request $request)
     {
-        // TODO validate request
         $validatedData = $request->validate([
-            'code' => 'required|unique:product_groups,code|regex:/^\d{3}$/',
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
+            'vat' => 'nullable|numeric|min:0|max:100',
+            'sstid' => 'nullable|string',
         ]);
 
         Models\ProductGroup::create($validatedData);
 
-        return redirect()->route('product-groups.index')->with('success', 'Product group created successfully.');
+        return redirect()->route('product-groups.index')->with('success', __('Product group created successfully.'));
     }
 
     public function edit(Models\ProductGroup $productGroup)
@@ -43,21 +44,21 @@ class ProductGroupController extends Controller
 
     public function update(Request $request, Models\ProductGroup $productGroup)
     {
-        // TODO validate request
         $validatedData = $request->validate([
-            'code' => 'required|unique:product_groups,code,'.$productGroup->id.',|regex:/^\d{3}$/',
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
+            'vat' => 'nullable|numeric|min:0|max:100',
+            'sstid' => 'nullable|string',
         ]);
 
         $productGroup->update($validatedData);
 
-        return redirect()->route('product-groups.index')->with('success', 'Product group updated successfully.');
+        return redirect()->route('product-groups.index')->with('success', __('Product group updated successfully.'));
     }
 
     public function destroy(Models\ProductGroup $productGroup)
     {
         $productGroup->delete();
 
-        return redirect()->route('product-groups.index')->with('success', 'Product group deleted successfully.');
+        return redirect()->route('product-groups.index')->with('success', __('Product group deleted successfully.'));
     }
 }

@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('configs', function (Blueprint $table) {
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+        Schema::table('invoices', function (Blueprint $table) {
+            $table->dropColumn(['addition', 'cash_payment']);
         });
     }
 
@@ -21,8 +21,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('configs', function (Blueprint $table) {
-            $table->dropForeign('company_id');
+        Schema::table('invoices', function (Blueprint $table) {
+            $table->decimal('addition', 16, 2);
+            $table->decimal('cash_payment', 16, 2);
         });
     }
 };
