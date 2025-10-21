@@ -6,7 +6,6 @@ use App\Models\Customer;
 use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\Subject;
-use App\Models\Transaction;
 use App\Models\User;
 use App\Services\DocumentService;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -26,6 +25,7 @@ class InvoiceFactory extends Factory
         $date = $this->faker->date();
         $amount = $this->faker->randomFloat(2, 1000, 10000);
         $user = User::inRandomOrder()->first();
+        $customer = Customer::inRandomOrder()->first();
 
         $document = DocumentService::createDocument(
             $user,
@@ -39,7 +39,7 @@ class InvoiceFactory extends Factory
             'number' => $this->faker->unique()->numerify('#####'),
             'date' => $date,
             'document_id' => $document->id,
-            'customer_id' => Customer::factory(),
+            'customer_id' => $customer->id,
             'creator_id' => $user->id,
             'company_id' => 1,
             'approver_id' => $this->faker->randomElement([null, $user->id]),

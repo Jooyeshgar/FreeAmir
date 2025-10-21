@@ -7,6 +7,7 @@ use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Subject;
@@ -175,9 +176,11 @@ class InvoiceController extends Controller
      */
     public function show(Invoice $invoice)
     {
-        $invoice->load('customer', 'document'); // Eager load customer and document data
+        $invoice->load('customer');
+        $invoiceItems = InvoiceItem::where('invoice_id', $invoice->id)->get();
+        $invoiceItems->load('product');
 
-        return view('invoices.show', compact('invoice'));
+        return view('invoices.show', compact('invoice', 'invoiceItems'));
     }
 
     // /**

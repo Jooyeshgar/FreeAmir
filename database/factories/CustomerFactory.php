@@ -32,7 +32,7 @@ class CustomerFactory extends Factory
             'responsible' => $this->faker->name,
             'connector' => $this->faker->name,
             'group_id' => 1,
-            'desc' => $this->faker->text,
+            'desc' => $this->faker->persianSentence(),
             'balance' => $this->faker->randomFloat(2, 0, 10000),
             'credit' => $this->faker->randomFloat(2, 0, 10000),
             'rep_via_email' => $this->faker->boolean,
