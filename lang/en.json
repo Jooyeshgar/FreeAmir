@@ -265,6 +265,7 @@
     "Owner": "Owner",
     "Parent": "Parent",
     "Parent Subject": "Parent Subject",
+    "Parent Subject Change Warning": "Warning: Changing the parent subject can affect accounting reports and balances. Please make a backup before proceeding.",
     "Password": "Password",
     "Permanent": "Permanent",
     "Permission create successfully.": "Permission create successfully.",
