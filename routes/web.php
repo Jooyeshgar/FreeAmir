@@ -24,6 +24,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::resource('banks', Controllers\BankController::class);
     Route::resource('invoices', Controllers\InvoiceController::class)->except(['index', 'create']);
     Route::resource('ancillary-costs', Controllers\AncillaryCostController::class)->except(['show']);
+    Route::get('ancillary-costs/get-products/{invoice_id}', [Controllers\AncillaryCostController::class, 'getInvoiceProducts'])->name('ancillary-costs.get-products');
     Route::group(['prefix' => 'management'], function () {
         Route::resource('users', Controllers\Management\UserController::class);
         Route::resource('permissions', Controllers\Management\PermissionController::class)->except(['show']);
