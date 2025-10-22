@@ -1,0 +1,72 @@
+/* Font Faces */
+@font-face {
+    font-family: 'Sahel';
+    src: url('../fonts/Sahel.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Sahel';
+    src: url('../fonts/Sahel-Bold.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+/* Page Setup */
+@page {
+    margin: 5mm 5mm 0 5mm;
+    size: A4 landscape;
+}
+
+/* Body Styles */
+body {
+    height: 100%;
+    font-size: 10pt;
+}
+
+/* Table Styles */
+table {
+    font-family: "Sahel";
+    font-size: 12pt;
+    height: 100%;
+}
+
+/* Utility Classes */
+.none {
+    border: none;
+}
+
+.border {
+    border: 1px solid #000;
+}
+
+.right {
+    text-align: right;
+    direction: rtl;
+}
+
+.center {
+    text-align: center !important;
+    direction: rtl;
+}
+
+.pink {
+    background-color: #ffe0eb;
+}
+
+.bold {
+    font-weight: bold;
+    font-size: 10pt;
+}
+
+.lheight {
+    line-height: 1.5em;
+    text-align: right;
+}
+
+.mainlineheight {
+    line-height: 0;
+}
+
+.vertical {
+    writing-mode: vertical-rl;
+}

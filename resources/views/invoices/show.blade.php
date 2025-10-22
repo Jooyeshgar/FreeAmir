@@ -3,75 +3,7 @@
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <style>
-        .none {
-            border: none;
-        }
-
-        .border {
-            border: 1px solid #000;
-        }
-
-        .right {
-            text-align: right;
-            direction: rtl;
-        }
-
-        .center {
-            text-align: center !important;
-            direction: rtl;
-        }
-
-        .pink {
-            background-color: #ffe0eb;
-        }
-
-        table {
-            font-family: "Sahel";
-            font-size: 12pt;
-            height: 100%;
-        }
-
-        .bold {
-            font-weight: bold;
-            font-size: 10pt;
-        }
-
-        .lheight {
-            line-height: 1.5em;
-            text-align: right;
-        }
-
-        .mainlineheight {
-            line-height: 0;
-        }
-
-        @page {
-            margin: 5mm 5mm 0 5mm;
-            size: A4 landscape;
-        }
-
-        @font-face {
-            font-family: 'Sahel';
-            src: url('../fonts/Sahel.ttf') format('truetype');
-        }
-
-        @font-face {
-            font-family: 'Sahel';
-            src: url('../fonts/Sahel-Bold.ttf') format('truetype');
-            font-weight: bold;
-            font-style: normal;
-        }
-
-        body {
-            height: 100%;
-            font-size: 10pt;
-        }
-
-        .vertical {
-            writing-mode: vertical-rl;
-        }
-    </style>
+    @vite(['resources/css/invoice.css'])
 </head>
 
 <body>
