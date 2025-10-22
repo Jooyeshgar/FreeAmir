@@ -7,6 +7,8 @@
         <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
             <li><a href="{{ route('invoices.index', ['invoice_type' => 'sell']) }}">{{ __('Invoice Sell List') }}</a></li>
             <li><a href="{{ route('invoices.index', ['invoice_type' => 'buy']) }}">{{ __('Invoice Buy List') }}</a></li>
+            <li><a href="{{ route('invoices.index', ['invoice_type' => 'return_buy']) }}">{{ __('Invoice Return Buy List') }}</a></li>
+            <li><a href="{{ route('invoices.index', ['invoice_type' => 'return_sell']) }}">{{ __('Invoice Return Sell List') }}</a></li>
             <li><a href="{{ route('customers.create') }}">{{ __('Add Customer') }}</a></li>
             <li><a href="{{ route('ancillary-costs.index') }}">{{ __('Ancillary Cost List') }}</a></li>
         </ul>

@@ -12,9 +12,17 @@
                     <a href="{{ route('invoices.create', ['invoice_type' => 'buy']) }}" class="btn btn-primary">
                         {{ __('Create buy invoice') }}
                     </a>
-                @else
+                @elseif (request('invoice_type') === 'sell')
                     <a href="{{ route('invoices.create', ['invoice_type' => 'sell']) }}" class="btn btn-primary">
                         {{ __('Create sell invoice') }}
+                    </a>
+                @elseif (request('invoice_type') === 'return_buy')
+                    <a href="{{ route('invoices.create', ['invoice_type' => 'return_buy']) }}" class="btn btn-primary">
+                        {{ __('Create return buy invoice') }}
+                    </a>
+                @elseif (request('invoice_type') === 'return_sell')
+                    <a href="{{ route('invoices.create', ['invoice_type' => 'return_sell']) }}" class="btn btn-primary">
+                        {{ __('Create return sell invoice') }}
                     </a>
                 @endif
 
