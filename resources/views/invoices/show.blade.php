@@ -3,7 +3,63 @@
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    @vite(['resources/css/invoice.css'])
+    <style>
+        .none {
+            border: none;
+        }
+
+        .border {
+            border: 1px solid #000;
+        }
+
+        .right {
+            text-align: right;
+            direction: rtl;
+        }
+
+        .center {
+            text-align: center !important;
+            direction: rtl;
+        }
+
+        .pink {
+            background-color: #ffe0eb;
+        }
+
+        table {
+            font-family: "sahel";
+            font-size: 12pt;
+            height: 100%;
+        }
+
+        .bold {
+            font-weight: bold;
+            font-size: 10pt;
+        }
+
+        .lheight {
+            line-height: 1.5em;
+            text-align: right;
+        }
+
+        .mainlineheight {
+            line-height: 0;
+        }
+
+        @page {
+            margin: 5mm 5mm 0 5mm;
+        }
+
+        body {
+            height: 100%;
+            font-size: 10pt;
+            font-family: "sahel";
+        }
+
+        .vertical {
+            writing-mode: vertical-rl;
+        }
+    </style>
 </head>
 
 <body>
@@ -85,7 +141,7 @@
         </tbody>
     </table>
 
-    <table width="100%" cellspacing="0" cellpadding="4" style="text-align:right;table-layout:fixed;margin-left:2px;">
+    <table width="100%" cellspacing="0" style="text-align:right;table-layout:fixed;margin-left:2px;">
         <tbody>
             <tr valign="top" style="line-height:1em;">
                 <td class="border" style="border-right: none;" width="15%">
@@ -104,10 +160,10 @@
                 <td class="border" style="border-right: none;" width="4%">
                     <p align="center" class="bold">مبلغ تخفیف</p>
                 </td>
-                <td class="border" style="border-right: none;" width="8%">
+                <td class="border" style="border-right: none;" width="5%">
                     <p align="center" class="bold">مبلغ کل (ریال)</p>
                 </td>
-                <td class="border" style="border-right: none;" width="8%">
+                <td class="border" style="border-right: none;" width="5%">
                     <p align="center" class="bold">مبلغ واحد (ریال)</p>
                 </td>
                 <td class="border" style="border-right: none;" width="4%">
@@ -119,7 +175,7 @@
                 <td class="border" style="border-right: none;" width="20%">
                     <p align="center" class="bold">شرح کالا یا خدمات</p>
                 </td>
-                <td class="border" style="border-right: none;" width="4%">
+                <td class="border" style="border-right: none;" width="2%">
                     <p align="center" class="bold">کد کالا</p>
                 </td>
                 <td class="border" width="2%">
@@ -251,3 +307,5 @@
         </tbody>
     </table>
 </body>
+
+</html>
