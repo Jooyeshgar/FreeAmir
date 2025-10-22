@@ -17,4 +17,9 @@ class AncillaryCost extends Model
     {
         return $this->belongsTo(Invoice::class);
     }
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
 }
