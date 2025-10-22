@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum AncillaryCostDescriptionsType: string
+enum AncillaryCostType: string
 {
     case Initial_Purchase_Price_Of_Goods = 'Initial_Purchase_Price_Of_Goods';
     case Transportation_Costs = 'Transportation_Costs';
