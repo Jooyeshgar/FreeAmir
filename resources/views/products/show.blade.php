@@ -156,9 +156,9 @@
                             $totalBuy = 0;
 
                             foreach ($invoice_items as $item) {
-                                if ($item->invoice_type->value == 'sell') {
+                                if ($item->invoice_type->isSell()) {
                                     $totalSell += $item->quantity;
-                                } else {
+                                } elseif ($item->invoice_type->isBuy()) {
                                     $totalBuy += $item->quantity;
                                 }
                             }
@@ -168,9 +168,9 @@
 
                         @foreach ($invoice_items as $item)
                             @php
-                                if ($item->invoice_type->value == 'sell') {
+                                if ($item->invoice_type->isSell()) {
                                     $remaining += $item->quantity;
-                                } else {
+                                } elseif ($item->invoice_type->isBuy()) {
                                     $remaining -= $item->quantity;
                                 }
                             @endphp
@@ -183,7 +183,7 @@
                                 </td>
 
                                 <td class="px-4 py-3 text-center">
-                                    @if ($item->invoice_type->value == 'sell')
+                                    @if ($item->invoice_type->isSell())
                                         <a href="{{ route('invoices.show', $item->invoice_id) }}"
                                             class="badge badge-success gap-2 hover:badge-success hover:brightness-110 transition-all">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -197,7 +197,7 @@
                                 </td>
 
                                 <td class="px-4 py-3 text-center">
-                                    @if ($item->invoice_type->value == 'buy')
+                                    @if ($item->invoice_type->isBuy())
                                         <a href="{{ route('invoices.show', $item->invoice_id) }}"
                                             class="badge badge-info gap-2 hover:badge-info hover:brightness-110 transition-all">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
