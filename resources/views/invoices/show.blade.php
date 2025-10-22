@@ -3,63 +3,7 @@
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <style>
-        .none {
-            border: none;
-        }
-
-        .border {
-            border: 1px solid #000;
-        }
-
-        .right {
-            text-align: right;
-            direction: rtl;
-        }
-
-        .center {
-            text-align: center !important;
-            direction: rtl;
-        }
-
-        .pink {
-            background-color: #ffe0eb;
-        }
-
-        table {
-            font-family: "sahel";
-            font-size: 12pt;
-            height: 100%;
-        }
-
-        .bold {
-            font-weight: bold;
-            font-size: 10pt;
-        }
-
-        .lheight {
-            line-height: 1.5em;
-            text-align: right;
-        }
-
-        .mainlineheight {
-            line-height: 0;
-        }
-
-        @page {
-            margin: 5mm 5mm 0 5mm;
-        }
-
-        body {
-            height: 100%;
-            font-size: 10pt;
-            font-family: "sahel";
-        }
-
-        .vertical {
-            writing-mode: vertical-rl;
-        }
-    </style>
+    @vite(['resources/css/invoice.css'])
 </head>
 
 <body>
@@ -70,8 +14,12 @@
                 <td rowspan="2" class="none" style="text-align:center;font-weight:bold;font-size:20px; width:80%;">
                     @if ($invoice->invoice_type->value == 'buy')
                         صورتحساب خرید کالا و خدمات
-                    @else
+                    @elseif ($invoice->invoice_type->value == 'sell')
                         صورتحساب فروش کالا و خدمات
+                    @elseif ($invoice->invoice_type->value == 'return_buy')
+                        صورتحساب برگشت از خرید
+                    @elseif ($invoice->invoice_type->value == 'return_sell')
+                        صورتحساب برگشت از فروش
                     @endif
                 </td>
             </tr>
@@ -87,7 +35,7 @@
         <tbody>
             <tr>
                 <td colspan="4" class="border center pink mainlineheight">
-                    @if ($invoice->invoice_type->value == 'buy')
+                    @if ($invoice->invoice_type->value == 'buy' || $invoice->invoice_type->value == 'return_buy')
                         <p align="center" class="bold">مشخصات خریدار</p>
                     @else
                         <p align="center" class="bold">مشخصات فروشنده</p>
@@ -114,7 +62,7 @@
 
             <tr>
                 <td class="pink center border mainlineheight" colspan="4" width="100%">
-                    @if ($invoice->invoice_type->value == 'buy')
+                    @if ($invoice->invoice_type->value == 'buy' || $invoice->invoice_type->value == 'return_buy')
                         <p align="center" class="bold">مشخصات فروشنده</p>
                     @else
                         <p align="center" class="bold">مشخصات خریدار</p>

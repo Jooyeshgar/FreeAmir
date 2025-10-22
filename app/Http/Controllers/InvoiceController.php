@@ -132,7 +132,7 @@ class InvoiceController extends Controller
 
         $pdf = PDF::loadView('invoices.show', compact('invoice'));
 
-        return $pdf->stream('invoice-' . ($invoice->number ?? $invoice->id) . '.pdf');
+        return $pdf->stream('invoice-'.($invoice->number ?? $invoice->id).'.pdf');
     }
 
     /**
