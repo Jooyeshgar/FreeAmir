@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AncillaryCostType;
 use Illuminate\Database\Eloquent\Model;
 
 class AncillaryCost extends Model
@@ -11,6 +12,11 @@ class AncillaryCost extends Model
         'amount',
         'date',
         'invoice_id',
+    ];
+
+    protected $casts = [
+        'description' => AncillaryCostType::class,
+        'date' => 'date',
     ];
 
     public function invoice()
