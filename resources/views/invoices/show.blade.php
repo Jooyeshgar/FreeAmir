@@ -153,7 +153,7 @@
         </tbody>
     </table>
 
-    <table width="100%" cellspacing="0" style="text-align:right;table-layout:fixed;margin-left:2px;">
+    <table width="100%" cellspacing="0" cellpadding="4" style="text-align:right;table-layout:fixed;margin-left:2px;">
         <tbody>
             <tr valign="top" style="line-height:1em;">
                 <td class="border" style="border-right: none;" width="15%">
@@ -172,10 +172,10 @@
                 <td class="border" style="border-right: none;" width="4%">
                     <p align="center" class="bold">مبلغ تخفیف</p>
                 </td>
-                <td class="border" style="border-right: none;" width="5%">
+                <td class="border" style="border-right: none;" width="8%">
                     <p align="center" class="bold">مبلغ کل (ریال)</p>
                 </td>
-                <td class="border" style="border-right: none;" width="5%">
+                <td class="border" style="border-right: none;" width="8%">
                     <p align="center" class="bold">مبلغ واحد (ریال)</p>
                 </td>
                 <td class="border" style="border-right: none;" width="4%">
@@ -187,7 +187,7 @@
                 <td class="border" style="border-right: none;" width="20%">
                     <p align="center" class="bold">شرح کالا یا خدمات</p>
                 </td>
-                <td class="border" style="border-right: none;" width="2%">
+                <td class="border" style="border-right: none;" width="4%">
                     <p align="center" class="bold">کد کالا</p>
                 </td>
                 <td class="border" width="2%">
@@ -200,7 +200,7 @@
                 $invoiceTotalDiscount = 0;
             @endphp
 
-            @foreach ($invoiceItems as $index => $invoiceItem)
+            @foreach ($invoice->items as $index => $invoiceItem)
                 @php
                     $itemQuantity = $invoiceItem->quantity;
                     $unitPrice = $invoiceItem->unit_price;
@@ -313,42 +313,9 @@
                         @else
                             توضیحات: {{ $invoice->description }}
                         @endif
-                        </div>
-                        </div>
-                    <div>
-                        <div class="text-gray-500">{{ __('Amount') }}</div>
-                        <div class="font-semibold">{{ isset($invoice->amount) ? formatNumber($invoice->amount) : '' }}</div>
-                    </div>
-                    <div>
-                        <div class="text-gray-500">{{ __('VAT') }}</div>
-                        <div class="font-semibold">{{ isset($invoice->vat) ? formatNumber($invoice->vat) : '' }}</div>
-                    </div>
-                    <div>
-                        <div class="text-gray-500">{{ __('Addition/Subtraction/Tax') }}</div>
-                        <div class="font-semibold">
-                            {{ __('Addition') }}: {{ formatNumber($invoice->addition ?? 0) }} -
-                            {{ __('Subtraction') }}: {{ formatNumber($invoice->subtraction ?? 0) }} -
-                            {{ __('Tax') }}: {{ formatNumber($invoice->tax ?? 0) }}
-                        </div>
-                    </div>
-                    <div>
-                        <div class="text-gray-500">{{ __('Ship info') }}</div>
-                        <div class="font-semibold">
-                            {{ __('Ship date') }}: {{ $invoice->ship_date ? formatDate($invoice->ship_date) : '-' }}
-                            - {{ __('Ship via') }}: {{ $invoice->ship_via ?? '-' }}
-                        </div>
-                    </div>
-                    <div>
-                        <div class="text-gray-500">{{ __('Status') }}</div>
-                        <div class="font-semibold">
-                            {{ $invoice->permanent ?? false ? __('Permanent') : __('Draft') }} ·
-                            {{ $invoice->cash_payment ?? false ? __('Cash') : __('Credit') }} ·
-                            {{ $invoice->is_sell ?? false ? __('Sell') : __('Buy') }}
-                        </div>
-                    </div>
-                    <div class="md:col-span-2">
-                        <div class="text-gray-500">{{ __('Description') }}</div>
-                        <div class="font-semibold">{{ $invoice->description ?? '-' }}</div>
-                    </div>
-                </div>
-            </div>
+                    </p>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</body>
