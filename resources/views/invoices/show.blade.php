@@ -350,7 +350,5 @@
                         <div class="text-gray-500">{{ __('Description') }}</div>
                         <div class="font-semibold">{{ $invoice->description ?? '-' }}</div>
                     </div>
-                    </div>
-                    </div>
-                    </div>
-                    </x-app-layout>
+                </div>
+            </div>
