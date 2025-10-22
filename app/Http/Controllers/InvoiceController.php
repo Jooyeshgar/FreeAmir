@@ -150,10 +150,6 @@ class InvoiceController extends Controller
 
         // Prepare transactions from invoice items
         $transactions = $invoice->items->map(function ($item, $index) {
-            $item->quantity = ($item->quantity != 0) ? $item->quantity : 1;
-            $item->unit_price = ($item->unit_price != 0) ? $item->unit_price : 1;
-            $item->unit_discount = ($item->unit_discount != 0) ? $item->unit_discount : 0;
-
             // Calculate VAT percentage: (vat_amount / subtotal_before_vat) * 100
             $subtotalBeforeVat = $item->amount - $item->vat;
             $vatPercentage = $subtotalBeforeVat > 0 ? ($item->vat / $subtotalBeforeVat) * 100 : 0;
