@@ -14,9 +14,6 @@
                 <x-show-message-bags />
 
                 @include('ancillaryCosts.form')
-                <div class="card-actions justify-end">
-                    <button class="btn btn-pr"> {{ __('Edit') }} </button>
-                </div>
             </div>
         </form>
     </div>
