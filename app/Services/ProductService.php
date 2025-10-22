@@ -2,25 +2,26 @@
 
 namespace App\Services;
 
+use App\Enums\InvoiceType;
 use App\Models\InvoiceItem;
 use App\Models\Product;
 
 class ProductService
 {
-    public static function updateProductQuantities(array $invoiceItems, $invoice_type, $deletingInvoiceItem = false)
+    public static function updateProductQuantities(array $invoiceItems, InvoiceType $invoice_type, $deletingInvoiceItem = false)
     {
         foreach ($invoiceItems as $invoiceItem) {
             $product = Product::find($invoiceItem['product_id']);
             if (! $deletingInvoiceItem) {
-                if ($invoice_type == 'buy') {
+                if ($invoice_type->isBuy()) {
                     $product->quantity += $invoiceItem['quantity'];
-                } elseif ($invoice_type == 'sell') {
+                } elseif ($invoice_type->isSell()) {
                     $product->quantity -= $invoiceItem['quantity'];
                 }
             } else {
-                if ($invoice_type == 'buy') {
+                if ($invoice_type->isBuy()) {
                     $product->quantity -= $invoiceItem['quantity'];
-                } elseif ($invoice_type == 'sell') {
+                } elseif ($invoice_type->isSell()) {
                     $product->quantity += $invoiceItem['quantity'];
                 }
             }

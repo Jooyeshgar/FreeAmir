@@ -81,7 +81,7 @@ class InvoiceService
             self::createInvoiceItems($createdInvoice, $items, $documentTransactions, $invoiceData['invoice_type']);
 
             // Update product quantities
-            ProductService::updateProductQuantities($items, $invoiceData['invoice_type']);
+            ProductService::updateProductQuantities($items, InvoiceType::from($invoiceData['invoice_type']));
         });
 
         return [
@@ -143,16 +143,16 @@ class InvoiceService
 
             // Delete old invoice items and update product quantities
             $InvoiceItems = InvoiceItem::where('invoice_id', $invoice->id);
-            ProductService::updateProductQuantities($InvoiceItems->get()->toArray(), $invoiceData['invoice_type'], true);
+            ProductService::updateProductQuantities($InvoiceItems->get()->toArray(), InvoiceType::from($invoiceData['invoice_type']), true);
 
             $InvoiceItems->delete();
 
             // Create new invoice items
             $documentTransactions = $invoice->document->transactions()->get()->all();
-            self::createInvoiceItems($invoice, $items, $documentTransactions, $invoiceData['invoice_type']);
+            self::createInvoiceItems($invoice, $items, $documentTransactions, InvoiceType::from($invoiceData['invoice_type']));
 
             // Update product quantities
-            ProductService::updateProductQuantities($items, $invoiceData['invoice_type']);
+            ProductService::updateProductQuantities($items, InvoiceType::from($invoiceData['invoice_type']));
         });
 
         return [
@@ -171,15 +171,9 @@ class InvoiceService
             if (! $invoice) {
                 return;
             }
-
-            // Convert InvoiceType enum to string value if it's an enum instance
-            if (isset($invoice->invoice_type) && $invoice->invoice_type instanceof InvoiceType) {
-                $invoice_type = $invoice->invoice_type->value;
-            }
-
             // delete invoice items and update product quantities
             $InvoiceItems = InvoiceItem::where('invoice_id', $invoiceId);
-            ProductService::updateProductQuantities($InvoiceItems->get()->toArray(), $invoice_type, true);
+            ProductService::updateProductQuantities($InvoiceItems->get()->toArray(), $invoice->invoice_type, true);
             $InvoiceItems->delete();
 
             $documentId = $invoice->document_id;
