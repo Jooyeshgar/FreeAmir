@@ -5,13 +5,27 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreAncillaryCostRequest;
 use App\Models\AncillaryCost;
 use App\Models\Invoice;
+use App\Services\AncillaryCostService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AncillaryCostController extends Controller
 {
     public function index(Request $request)
     {
-        $ancillaryCosts = AncillaryCost::with('invoice')->paginate(12);
+        // Group by invoice, description and date; sum the amount for display per row
+        $ancillaryCosts = AncillaryCost::select(
+            'invoice_id',
+            'description',
+            'date',
+            DB::raw('SUM(amount) as amount'),
+            DB::raw('MIN(id) as id') // representative id for edit/delete routes
+        )
+            ->with('invoice')
+            ->groupBy('invoice_id', 'description', 'date')
+            ->orderByDesc('date')
+            ->paginate(12);
+
         $ancillaryCosts->appends($request->query());
 
         return view('ancillaryCosts.index', compact('ancillaryCosts'));
@@ -19,7 +33,11 @@ class AncillaryCostController extends Controller
 
     public function create()
     {
-        $invoices = Invoice::select('id', 'number')->where('invoice_type', 'sell')->orWhere('invoice_type', 'return_sell')->get();
+        // Ancillary costs are applicable to SELL invoices per inventory accounting guide
+        $invoices = Invoice::select('id', 'number')
+            ->where('invoice_type', 'sell')
+            ->orderByDesc('date')
+            ->get();
         $ancillaryCost = new AncillaryCost;
         $ancillaryCosts = old('ancillaryCosts') ?? $this->preparedAncillaryCosts(collect([new AncillaryCost]));
 
@@ -30,9 +48,10 @@ class AncillaryCostController extends Controller
     {
         $validated = $request->validated();
 
+        // Create one ancillary cost per product using the service (which updates average cost)
         if (! empty($validated['ancillaryCosts'])) {
             foreach ($validated['ancillaryCosts'] as $costData) {
-                AncillaryCost::create([
+                AncillaryCostService::createAncillaryCost([
                     'invoice_id' => $validated['invoice_id'],
                     'date' => $validated['date'],
                     'product_id' => $costData['product_id'],
@@ -49,7 +68,7 @@ class AncillaryCostController extends Controller
 
     public function edit(AncillaryCost $ancillaryCost)
     {
-        $invoices = Invoice::select('id', 'number')->get();
+        $invoices = Invoice::select('id', 'number')->where('invoice_type', 'sell')->orderByDesc('date')->get();
 
         // Get all ancillary costs for the same invoice to allow editing
         $ancillaryCostsCollection = AncillaryCost::where('invoice_id', $ancillaryCost->invoice_id)->get();
@@ -62,17 +81,19 @@ class AncillaryCostController extends Controller
     {
         $validated = $request->validated();
 
-        // Delete all existing ancillary costs for this invoice
-        AncillaryCost::where('invoice_id', $validated['invoice_id'])->delete();
+        // Replace the existing ancillary costs of this invoice: reverse previous distribution then recreate
+        $existing = AncillaryCost::where('invoice_id', $validated['invoice_id'])->get();
+        foreach ($existing as $existingCost) {
+            AncillaryCostService::deleteAncillaryCost($existingCost->id);
+        }
 
-        // Create new ones
         if (! empty($validated['ancillaryCosts'])) {
             foreach ($validated['ancillaryCosts'] as $costData) {
-                AncillaryCost::create([
+                AncillaryCostService::createAncillaryCost([
                     'invoice_id' => $validated['invoice_id'],
                     'date' => $validated['date'],
                     'product_id' => $costData['product_id'],
-                    'description' => $costData['description'],
+                    'description' => $validated['description'],
                     'amount' => $costData['amount'],
                 ]);
             }
@@ -85,7 +106,14 @@ class AncillaryCostController extends Controller
 
     public function destroy(AncillaryCost $ancillaryCost)
     {
-        $ancillaryCost->delete();
+        // Delete the whole group (same invoice_id, date and description) to keep index grouped behavior consistent
+        $groupQuery = AncillaryCost::where('invoice_id', $ancillaryCost->invoice_id)
+            ->where('date', $ancillaryCost->date)
+            ->where('description', $ancillaryCost->description);
+
+        $groupQuery->get()->each(function ($cost) {
+            AncillaryCostService::deleteAncillaryCost($cost->id);
+        });
 
         return redirect()
             ->route('ancillary-costs.index')
