@@ -15,21 +15,24 @@ class StoreAncillaryCostRequest extends FormRequest
     {
         $ancillaryCostsInput = $this->input('ancillaryCosts', []);
         $processedCosts = [];
+        $total = 0;
 
         if (! empty($ancillaryCostsInput)) {
             foreach ($ancillaryCostsInput as $key => $cost) {
-                // Only include costs with amount > 0
+
                 $amount = convertToFloat($cost['amount'] ?? 0);
-                if ($amount > 0) {
+                if ($amount >= 0) {
                     $processedCosts[] = [
                         'product_id' => $cost['product_id'] ?? null,
                         'amount' => $amount,
                     ];
                 }
+                $total += $amount;
             }
         }
 
         $this->merge([
+            'amount' => convertToFloat($total),
             'date' => convertToGregorian($this->input('date')),
             'invoice_id' => convertToInt($this->input('invoice_id')),
             'ancillaryCosts' => $processedCosts,
@@ -39,6 +42,7 @@ class StoreAncillaryCostRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'amount' => 'required|numeric|min:0',
             'invoice_id' => 'required|integer|exists:invoices,id',
             'date' => 'required|date',
             'description' => 'required|string',

@@ -29,7 +29,6 @@ class AncillaryCostController extends Controller
     public function store(StoreAncillaryCostRequest $request)
     {
         $validated = $request->validated();
-        dd($validated);
 
         if (! empty($validated['ancillaryCosts'])) {
             foreach ($validated['ancillaryCosts'] as $costData) {
@@ -37,7 +36,7 @@ class AncillaryCostController extends Controller
                     'invoice_id' => $validated['invoice_id'],
                     'date' => $validated['date'],
                     'product_id' => $costData['product_id'],
-                    'description' => $costData['description'],
+                    'description' => $validated['description'],
                     'amount' => $costData['amount'],
                 ]);
             }
