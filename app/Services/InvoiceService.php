@@ -272,6 +272,7 @@ class InvoiceService
                 'product_id' => $product->id,
                 'transaction_id' => $transactionId,
                 'quantity' => $quantity,
+                'cost_at_time_of_sale' => $invoiceType->isSell() ? $product->average_cost : null,
                 'unit_price' => $unitPrice,
                 'unit_discount' => $unitDiscount,
                 'vat' => $itemVat,

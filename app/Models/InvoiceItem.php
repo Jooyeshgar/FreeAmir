@@ -18,6 +18,7 @@ class InvoiceItem extends Model
         'quantity',
         'unit_price',
         'unit_discount',
+        'cost_at_time_of_sale',
         'vat',
         'amount',
         'description',
