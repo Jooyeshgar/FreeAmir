@@ -3,7 +3,7 @@
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    @vite(['resources/css/invoice.css'])
+    <link rel="stylesheet" href="{{ resource_path('css/invoice.css') }}">
 </head>
 
 <body>
@@ -56,7 +56,8 @@
                     دفتر مرکزی: اصفهان میدان امام حسین ارگ جهان نما فاز ۴ طبقه ۴ واحد ۱۶
                 </td>
                 <td class="right none" width="6%" style="border-right:1px solid #000;">
-                    <img src="/images/logo.png" width="90" height="80" align="left">
+                @php $logo = base64_encode(file_get_contents(public_path('images/logo.png'))); @endphp
+                    <img src="data:image/png;base64,{{ $logo }}" width="90" height="80" align="left">
                 </td>
             </tr>
 
@@ -83,7 +84,8 @@
                     {{ $invoice->customer->address }}
                 </td>
                 <td class="right none" width="6%" style="border-right:1px solid #000;">
-                    <img src="/images/user.jpg" width="90" height="80" align="left">
+                    @php $user = base64_encode(file_get_contents(public_path('images/user.jpg'))); @endphp
+                    <img src="data:image/jpeg;base64,{{ $user }}" width="90" height="80" align="left">
                 </td>
             </tr>
         </tbody>
