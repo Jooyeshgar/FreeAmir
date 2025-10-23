@@ -148,10 +148,12 @@ class InvoiceService
             // Delete old invoice items and update product quantities and the average cost
             $InvoiceItems = InvoiceItem::where('invoice_id', $invoice->id);
 
-            // Delete old ancillary costs
-            $ancillaryCosts = AncillaryCost::where('invoice_id', $invoice->id);
-            foreach ($ancillaryCosts as $ancillaryCost) {
-                AncillaryCostService::deleteAncillaryCost($ancillaryCost->id);
+            $ancillaryCosts = AncillaryCost::where('invoice_id', $invoice->id)->get()->all();
+            // Delete old ancillary costs if not null
+            if (! empty($ancillaryCosts)) {
+                foreach ($ancillaryCosts as $ancillaryCost) {
+                    AncillaryCostService::deleteAncillaryCost($ancillaryCost->id);
+                }
             }
 
             ProductService::updateProductQuantities($InvoiceItems->get()->toArray(), InvoiceType::from($invoiceData['invoice_type']), true);
@@ -165,8 +167,10 @@ class InvoiceService
             $documentTransactions = $invoice->document->transactions()->get()->all();
             self::createInvoiceItems($invoice, $items, $documentTransactions, InvoiceType::from($invoiceData['invoice_type']));
 
-            // Recreate ancillary costs
-            AncillaryCostService::createAncillaryCost($ancillaryCosts->get()->all());
+            // Recreate ancillary costs if not null
+            if (! empty($ancillaryCosts)) {
+                AncillaryCostService::createAncillaryCost($ancillaryCosts);
+            }
 
             // Update product quantities
             ProductService::updateProductQuantities($items, InvoiceType::from($invoiceData['invoice_type']));
@@ -194,12 +198,13 @@ class InvoiceService
             // delete invoice items and update product quantities
             $invoiceItems = InvoiceItem::where('invoice_id', $invoiceId);
 
-            // Delete old ancillary costs
-            $ancillaryCosts = AncillaryCost::where('invoice_id', $invoiceId);
-            foreach ($ancillaryCosts as $ancillaryCost) {
-                AncillaryCostService::deleteAncillaryCost($ancillaryCost->id);
+            $ancillaryCosts = AncillaryCost::where('invoice_id', $invoiceId)->get()->all();
+            // Delete old ancillary costs if not null
+            if (! empty($ancillaryCosts)) {
+                foreach ($ancillaryCosts as $ancillaryCost) {
+                    AncillaryCostService::deleteAncillaryCost($ancillaryCost->id);
+                }
             }
-
             ProductService::updateProductQuantities($invoiceItems->get()->toArray(), $invoice->invoice_type, true);
 
             // Reverse cost updates for buy or sell invoices
