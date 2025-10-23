@@ -60,41 +60,6 @@ class AncillaryCostService
     }
 
     /**
-     * Update an existing ancillary cost.
-     * This will recalculate the distribution.
-     *
-     * @param  int  $ancillaryCostId  The ID of the ancillary cost
-     * @param  array  $data  Updated data
-     * @return AncillaryCost The updated ancillary cost
-     *
-     * @throws \Exception
-     */
-    public static function updateAncillaryCost(int $ancillaryCostId, array $data): AncillaryCost
-    {
-        $ancillaryCost = AncillaryCost::findOrFail($ancillaryCostId);
-
-        // Validate data
-        self::validateAncillaryCostData($data);
-
-        DB::transaction(function () use ($ancillaryCost, $data) {
-            // Reverse the previous distribution
-            self::reverseAncillaryCostDistribution($ancillaryCost);
-
-            // Update the ancillary cost
-            $ancillaryCost->update([
-                'description' => $data['description'] ?? $ancillaryCost->description,
-                'amount' => $data['amount'] ?? $ancillaryCost->amount,
-                'date' => $data['date'] ?? $ancillaryCost->date,
-            ]);
-
-            // Redistribute with new values
-            CostService::distributeAncillaryCost($ancillaryCost);
-        });
-
-        return $ancillaryCost->fresh();
-    }
-
-    /**
      * Delete an ancillary cost and reverse its distribution.
      *
      * @param  int  $ancillaryCostId  The ID of the ancillary cost
