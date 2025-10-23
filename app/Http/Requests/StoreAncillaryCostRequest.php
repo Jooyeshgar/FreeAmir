@@ -13,36 +13,54 @@ class StoreAncillaryCostRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $ancillaryCostsInput = $this->input('ancillaryCosts', []);
+        $processedCosts = [];
+
+        if (! empty($ancillaryCostsInput)) {
+            foreach ($ancillaryCostsInput as $key => $cost) {
+                // Only include costs with amount > 0
+                $amount = convertToFloat($cost['amount'] ?? 0);
+                if ($amount > 0) {
+                    $processedCosts[] = [
+                        'product_id' => $cost['product_id'] ?? null,
+                        'amount' => $amount,
+                    ];
+                }
+            }
+        }
+
         $this->merge([
             'date' => convertToGregorian($this->input('date')),
             'invoice_id' => convertToInt($this->input('invoice_id')),
-            'amount' => convertToFloat($this->input('amount')),
-            'description' => $this->input('description'),
+            'ancillaryCosts' => $processedCosts,
         ]);
     }
 
     public function rules(): array
     {
         return [
-            'invoice_id' => 'nullable|integer|exists:invoices,id',
-            'description' => 'required|string',
+            'invoice_id' => 'required|integer|exists:invoices,id',
             'date' => 'required|date',
-            'amount' => 'required|numeric|min:1',
+            'description' => 'required|string',
+            'ancillaryCosts' => 'nullable|array',
+            'ancillaryCosts.*.product_id' => 'required|integer|exists:products,id',
+            'ancillaryCosts.*.amount' => 'required|numeric|min:0',
         ];
     }
 
     public function messages(): array
     {
         return [
-            'description.string' => __('The Description field must be a valid string.'),
-            'description.required' => __('The Description field is required.'),
-            'date.required' => __('The Date field is required.'),
-            'date.date' => __('The Date field must be a valid date.'),
+            'invoice_id.required' => __('The Invoice field is required.'),
             'invoice_id.integer' => __('The invoice ID field must be an integer.'),
             'invoice_id.exists' => __('The selected invoice ID is invalid.'),
-            'amount.required' => __('The Amount field is required.'),
-            'amount.numeric' => __('The Amount field must be a number.'),
-            'amount.min' => __('The Amount must be at least :min.'),
+            'date.required' => __('The Date field is required.'),
+            'date.date' => __('The Date field must be a valid date.'),
+            'ancillaryCosts.*.product_id.required' => __('Product is required for each ancillary cost.'),
+            'ancillaryCosts.*.product_id.exists' => __('The selected product is invalid.'),
+            'ancillaryCosts.*.amount.required' => __('Amount is required for each ancillary cost.'),
+            'ancillaryCosts.*.amount.numeric' => __('Amount must be a number.'),
+            'ancillaryCosts.*.amount.min' => __('Amount must be at least :min.'),
         ];
     }
 }
