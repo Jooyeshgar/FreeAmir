@@ -12,6 +12,7 @@ class AncillaryCost extends Model
         'amount',
         'date',
         'invoice_id',
+        'product_id',
     ];
 
     protected $casts = [
