@@ -19,17 +19,29 @@ class AncillaryCostController extends Controller
 
     public function create()
     {
-        $invoices = Invoice::select('id', 'number')->get();
+        $invoices = Invoice::select('id', 'number')->where('invoice_type', 'sell')->orWhere('invoice_type', 'return_sell')->get();
+        $ancillaryCost = new AncillaryCost;
         $ancillaryCosts = old('ancillaryCosts') ?? $this->preparedAncillaryCosts(collect([new AncillaryCost]));
 
-        $total = count($ancillaryCosts);
-
-        return view('ancillaryCosts.create', compact('invoices', 'ancillaryCosts', 'total'));
+        return view('ancillaryCosts.create', compact('invoices', 'ancillaryCost', 'ancillaryCosts'));
     }
 
     public function store(StoreAncillaryCostRequest $request)
     {
-        AncillaryCost::create($request->validated());
+        $validated = $request->validated();
+        dd($validated);
+
+        if (! empty($validated['ancillaryCosts'])) {
+            foreach ($validated['ancillaryCosts'] as $costData) {
+                AncillaryCost::create([
+                    'invoice_id' => $validated['invoice_id'],
+                    'date' => $validated['date'],
+                    'product_id' => $costData['product_id'],
+                    'description' => $costData['description'],
+                    'amount' => $costData['amount'],
+                ]);
+            }
+        }
 
         return redirect()
             ->route('ancillary-costs.index')
@@ -40,12 +52,32 @@ class AncillaryCostController extends Controller
     {
         $invoices = Invoice::select('id', 'number')->get();
 
-        return view('ancillaryCosts.edit', compact('ancillaryCost', 'invoices'));
+        // Get all ancillary costs for the same invoice to allow editing
+        $ancillaryCostsCollection = AncillaryCost::where('invoice_id', $ancillaryCost->invoice_id)->get();
+        $ancillaryCosts = $this->preparedAncillaryCosts($ancillaryCostsCollection);
+
+        return view('ancillaryCosts.edit', compact('ancillaryCost', 'invoices', 'ancillaryCosts'));
     }
 
     public function update(StoreAncillaryCostRequest $request, AncillaryCost $ancillaryCost)
     {
-        $ancillaryCost->update($request->validated());
+        $validated = $request->validated();
+
+        // Delete all existing ancillary costs for this invoice
+        AncillaryCost::where('invoice_id', $validated['invoice_id'])->delete();
+
+        // Create new ones
+        if (! empty($validated['ancillaryCosts'])) {
+            foreach ($validated['ancillaryCosts'] as $costData) {
+                AncillaryCost::create([
+                    'invoice_id' => $validated['invoice_id'],
+                    'date' => $validated['date'],
+                    'product_id' => $costData['product_id'],
+                    'description' => $costData['description'],
+                    'amount' => $costData['amount'],
+                ]);
+            }
+        }
 
         return redirect()
             ->route('ancillary-costs.index')
@@ -76,15 +108,12 @@ class AncillaryCostController extends Controller
 
     private function preparedAncillaryCosts($ancillaryCosts)
     {
-        return $ancillaryCosts->map(function ($ancillaryCost, $i) {
+        return $ancillaryCosts->map(function ($ancillaryCost) {
             return [
-                'id' => $i + 1,
-                'date' => $ancillaryCost->date,
-                'product_id' => $ancillaryCost->product_id,
-                'invoice_id' => $ancillaryCost->invoice_id,
-                'description' => $ancillaryCost->description,
-                'amount' => $ancillaryCost->amount,
+                'product_id' => $ancillaryCost->product_id ?? '',
+                'description' => $ancillaryCost->description?->value ?? '',
+                'amount' => $ancillaryCost->amount ?? 0,
             ];
-        });
+        })->toArray();
     }
 }
