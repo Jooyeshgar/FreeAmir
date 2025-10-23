@@ -77,13 +77,14 @@ class CostService
     {
         foreach ($invoice->items as $invoiceItem) {
             $product = $invoiceItem->product;
+            $unitCost = $invoiceItem->unit_price;
 
             if ($invoiceType->isBuy()) {
                 // For buy invoices, update weighted average cost
-                $unitCost = $invoiceItem->unit_price;
                 self::updateWeightedAverageCost($product, $invoiceItem->quantity, $unitCost);
             } elseif ($invoiceType->isSell()) {
                 // For sell invoices, capture cost at time of sale
+                self::updateWeightedAverageCost($product, -1 * $invoiceItem->quantity, $unitCost);
                 self::setCostAtTimeOfSale($invoiceItem);
             }
         }
@@ -100,8 +101,8 @@ class CostService
     {
         $invoice = $ancillaryCost->invoice;
 
-        // Only distribute for buy invoices
-        if (! $invoice->invoice_type->isBuy()) {
+        // Only distribute for sell invoices
+        if (! $invoice->invoice_type->isSell()) {
             return;
         }
 
@@ -146,11 +147,8 @@ class CostService
      * @param  float  $itemQuantity  The quantity that was purchased (for reference)
      * @param  float  $ancillaryCostShare  The share of ancillary cost for this product
      */
-    public static function recalculateAverageCostWithAncillary(
-        Product $product,
-        float $itemQuantity,
-        float $ancillaryCostShare
-    ): void {
+    public static function recalculateAverageCostWithAncillary(Product $product, float $itemQuantity, float $ancillaryCostShare): void
+    {
         $currentStock = $product->quantity;
         $currentAverageCost = $product->average_cost ?? 0;
 
@@ -169,7 +167,7 @@ class CostService
     }
 
     /**
-     * Reverse cost updates when deleting an invoice item (for buy invoices).
+     * Reverse cost updates when deleting an invoice item (for buy and sell invoices).
      * This recalculates the average cost by removing the item's contribution.
      *
      * @param  InvoiceItem  $invoiceItem  The invoice item being deleted
@@ -177,7 +175,7 @@ class CostService
      */
     public static function reverseCostUpdate(InvoiceItem $invoiceItem, InvoiceType $invoiceType): void
     {
-        if (! $invoiceType->isBuy()) {
+        if (! $invoiceType->isBuy() && ! $invoiceType->isSell()) {
             return;
         }
 
@@ -193,14 +191,15 @@ class CostService
             return;
         }
 
-        // Calculate what the total value would be without this purchase
+        // Calculate what the total value would be without this invoice item and save as new average cost
         $currentTotalValue = $currentStock * $currentAverageCost;
         $itemValue = $invoiceItem->quantity * $invoiceItem->unit_price;
         $newTotalValue = $currentTotalValue - $itemValue;
 
-        // Recalculate average (will be done after quantity is updated)
-        // We don't update here because quantity hasn't been adjusted yet
-        // This is a placeholder for potential future use
+        $newAverageCost = $newTotalValue / $currentStock;
+
+        $product->average_cost = $newAverageCost;
+        $product->save();
     }
 
     /**
