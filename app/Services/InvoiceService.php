@@ -147,7 +147,9 @@ class InvoiceService
             // Delete old invoice items and update product quantities and the average cost
             $InvoiceItems = InvoiceItem::where('invoice_id', $invoice->id);
             ProductService::updateProductQuantities($InvoiceItems->get()->toArray(), InvoiceType::from($invoiceData['invoice_type']), true);
-            CostService::reverseCostUpdate($InvoiceItems, $invoice->invoice_type);
+            foreach ($InvoiceItems as $InvoiceItem) {
+                CostService::reverseCostUpdate($InvoiceItem, $invoice->invoice_type);
+            }
             $InvoiceItems->delete();
 
             // Create new invoice items
