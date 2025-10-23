@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 /**
- * Service for handling ancillary costs (هزینه‌های جانبی).
+ * Service for handling ancillary costs.
  * Ancillary costs are additional costs related to purchasing goods such as:
  * - Transportation costs
  * - Insurance
@@ -35,9 +35,9 @@ class AncillaryCostService
 
         $invoice = Invoice::findOrFail($data['invoice_id']);
 
-        // Only buy invoices can have ancillary costs
-        if (! $invoice->invoice_type->isBuy()) {
-            throw new \Exception(__('Ancillary costs can only be added to purchase invoices'));
+        // Only sell invoices can have ancillary costs
+        if (! $invoice->invoice_type->isSell()) {
+            throw new \Exception(__('Ancillary costs can only be added to sales invoices'));
         }
 
         $ancillaryCost = null;
