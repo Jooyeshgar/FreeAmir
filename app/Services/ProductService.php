@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Enums\InvoiceType;
-use App\Models\InvoiceItem;
 use App\Models\Product;
 
 class ProductService
@@ -39,43 +38,6 @@ class ProductService
                 }
             }
             $product->save();
-        }
-    }
-
-    /**
-     * Update average cost for a product based on invoice item.
-     * This method delegates to CostService for actual calculations.
-     *
-     * @param  Product  $product  The product to update
-     * @param  InvoiceItem  $invoiceItem  The invoice item
-     * @param  InvoiceType  $invoiceType  Type of invoice
-     * @param  bool  $deletingInvoiceItem  Whether we're deleting the item
-     * @return void
-     *
-     * @deprecated Use CostService methods directly instead
-     */
-    public static function updateAverageCost(
-        Product $product,
-        InvoiceItem $invoiceItem,
-        InvoiceType $invoiceType,
-        bool $deletingInvoiceItem = false
-    ): void {
-        if ($deletingInvoiceItem) {
-            CostService::reverseCostUpdate($invoiceItem, $invoiceType);
-
-            return;
-        }
-
-        if ($invoiceType->isBuy()) {
-            // For buy invoices, update weighted average cost
-            CostService::updateWeightedAverageCost(
-                $product,
-                $invoiceItem->quantity,
-                $invoiceItem->unit_price
-            );
-        } elseif ($invoiceType->isSell()) {
-            // For sell invoices, set cost at time of sale
-            CostService::setCostAtTimeOfSale($invoiceItem);
         }
     }
 }
