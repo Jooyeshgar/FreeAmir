@@ -83,7 +83,7 @@ class InvoiceService
             // Update product quantities
             ProductService::updateProductQuantities($items, InvoiceType::from($invoiceData['invoice_type']));
 
-            // Process costs (weighted average for buy, cost_at_time_of_sale for sell)
+            // Process costs (weighted average for both, cost_at_time_of_sale for sell)
             CostService::processInvoiceCosts($createdInvoice, InvoiceType::from($invoiceData['invoice_type']));
         });
 
@@ -144,20 +144,19 @@ class InvoiceService
 
             $invoice->update($invoiceData);
 
-            // Delete old invoice items and update product quantities
+            // Delete old invoice items and update product quantities and the average cost
             $InvoiceItems = InvoiceItem::where('invoice_id', $invoice->id);
             ProductService::updateProductQuantities($InvoiceItems->get()->toArray(), InvoiceType::from($invoiceData['invoice_type']), true);
-
+            CostService::reverseCostUpdate($InvoiceItems, $invoice->invoice_type);
             $InvoiceItems->delete();
 
             // Create new invoice items
             $documentTransactions = $invoice->document->transactions()->get()->all();
             self::createInvoiceItems($invoice, $items, $documentTransactions, InvoiceType::from($invoiceData['invoice_type']));
-
             // Update product quantities
             ProductService::updateProductQuantities($items, InvoiceType::from($invoiceData['invoice_type']));
 
-            // Process costs (weighted average for buy, cost_at_time_of_sale for sell)
+            // Process costs (weighted average for both, cost_at_time_of_sale for sell)
             CostService::processInvoiceCosts($invoice, InvoiceType::from($invoiceData['invoice_type']));
         });
 
@@ -181,8 +180,8 @@ class InvoiceService
             $invoiceItems = InvoiceItem::where('invoice_id', $invoiceId);
             ProductService::updateProductQuantities($invoiceItems->get()->toArray(), $invoice->invoice_type, true);
 
-            // Reverse cost updates for buy invoices
-            if ($invoice->invoice_type->isBuy()) {
+            // Reverse cost updates for buy or sell invoices
+            if ($invoice->invoice_type->isBuy() || $invoice->invoice_type->isSell()) {
                 foreach ($invoiceItems->get() as $invoiceItem) {
                     CostService::reverseCostUpdate($invoiceItem, $invoice->invoice_type);
                 }
