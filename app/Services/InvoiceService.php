@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\InvoiceType;
 use App\Exceptions\InvoiceServiceException;
+use App\Models\AncillaryCost;
 use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
@@ -146,15 +147,27 @@ class InvoiceService
 
             // Delete old invoice items and update product quantities and the average cost
             $InvoiceItems = InvoiceItem::where('invoice_id', $invoice->id);
+
+            // Delete old ancillary costs
+            $ancillaryCosts = AncillaryCost::where('invoice_id', $invoice->id);
+            foreach ($ancillaryCosts as $ancillaryCost) {
+                AncillaryCostService::deleteAncillaryCost($ancillaryCost->id);
+            }
+
             ProductService::updateProductQuantities($InvoiceItems->get()->toArray(), InvoiceType::from($invoiceData['invoice_type']), true);
             foreach ($InvoiceItems as $InvoiceItem) {
                 CostService::reverseCostUpdate($InvoiceItem, $invoice->invoice_type);
             }
+
             $InvoiceItems->delete();
 
             // Create new invoice items
             $documentTransactions = $invoice->document->transactions()->get()->all();
             self::createInvoiceItems($invoice, $items, $documentTransactions, InvoiceType::from($invoiceData['invoice_type']));
+
+            // Recreate ancillary costs
+            AncillaryCostService::createAncillaryCost($ancillaryCosts->get()->all());
+
             // Update product quantities
             ProductService::updateProductQuantities($items, InvoiceType::from($invoiceData['invoice_type']));
 
@@ -180,6 +193,13 @@ class InvoiceService
             }
             // delete invoice items and update product quantities
             $invoiceItems = InvoiceItem::where('invoice_id', $invoiceId);
+
+            // Delete old ancillary costs
+            $ancillaryCosts = AncillaryCost::where('invoice_id', $invoiceId);
+            foreach ($ancillaryCosts as $ancillaryCost) {
+                AncillaryCostService::deleteAncillaryCost($ancillaryCost->id);
+            }
+
             ProductService::updateProductQuantities($invoiceItems->get()->toArray(), $invoice->invoice_type, true);
 
             // Reverse cost updates for buy or sell invoices
