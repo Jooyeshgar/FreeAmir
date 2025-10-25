@@ -26,6 +26,7 @@ class StoreInvoiceRequest extends FormRequest
         // Normalize top-level scalars
         $this->merge([
             'date' => convertToGregorian($this->input('date')),
+            'invoice_id' => convertToInt($this->input('invoice_id')) ?? 0,
             'invoice_number' => convertToInt($this->input('invoice_number')),
             'document_number' => convertToInt($this->input('document_number')),
             'subtractions' => convertToFloat($this->input('subtraction', 0)),
