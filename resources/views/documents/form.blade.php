@@ -11,7 +11,7 @@
         <div class="flex-1"></div>
         <x-text-input disabled="true" input_value="{{ formatDocumentNumber($previousDocumentNumber) }}" input_name="" title="{{ __('previous document number') }}"
             placeholder="{{ __('previous document number') }}" label_text_class="text-gray-500 text-nowrap"></x-text-input>
-        <x-text-input input_value="{{ old('number') ?? formatDocumentNumber($document->number ?? $previousDocumentNumber + 1) }}" input_name="number"
+        <x-text-input input_value="{{ old('number') ?? convertToFarsi($document->number ?? $previousDocumentNumber + 1) }}" input_name="number"
             title="{{ __('current document number') }}" placeholder="{{ __('current document number') }}" label_text_class="text-gray-500 text-nowrap"></x-text-input>
         <x-text-input data-jdp title="{{ __('date') }}" input_name="date" placeholder="{{ __('date') }}"
             input_value="{{ old('date') ?? $document->FormattedDate }}" label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>

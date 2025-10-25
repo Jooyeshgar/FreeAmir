@@ -21,11 +21,11 @@ class StoreTransactionRequest extends FormRequest
     protected function prepareForValidation()
     {
         $this->merge([
-            'date' => convertToGregorian($this->input('date'))
+            'date' => convertToGregorian($this->input('date')),
         ]);
 
         $this->merge([
-            'number' => convertToFloat($this->input('number'))
+            'number' => convertToFloat($this->input('number')),
         ]);
 
         // Convert debit and credit values to float for each document entry
@@ -35,8 +35,8 @@ class StoreTransactionRequest extends FormRequest
                     'debit' => convertToFloat($transaction['debit']),
                     'credit' => convertToFloat($transaction['credit']),
                     'desc' => $transaction['desc'],
-                    'subject_id' => (int)$transaction['subject_id'],
-                    'transaction_id' => (int)$transaction['transaction_id'] ?? null,
+                    'subject_id' => (int) $transaction['subject_id'],
+                    'transaction_id' => (int) $transaction['transaction_id'] ?? null,
                 ];
             });
             $this->merge(['transactions' => $transactions->toArray()]);
@@ -54,7 +54,7 @@ class StoreTransactionRequest extends FormRequest
             'title' => 'nullable|string|min:3|max:255',
             'number' => [
                 'required',
-                'integer',
+                'decimal:0,2',
                 Rule::unique('documents', 'number')
                     ->where(function ($query) {
                         return $query->where('company_id', session('active-company-id'));

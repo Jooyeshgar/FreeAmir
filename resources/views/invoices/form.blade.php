@@ -28,20 +28,20 @@
     <div class="flex justify-start gap-2 mt-2">
         <x-text-input input_value="{{ old('invoice_id') ?? $invoice->id ?? '' }}" input_name="invoice_id" label_text_class="text-gray-500" label_class="w-full hidden"></x-text-input>
         @if (!$invoice->exists)
-            <x-text-input disabled="true" input_value="{{ formatDocumentNumber($previousInvoiceNumber) }}"
+            <x-text-input disabled="true" input_value="{{ convertToFarsi($previousInvoiceNumber) }}"
                 title="{{ __('Previous Invoice Number') }}"
                 placeholder="{{ __('Previous Invoice Number') }}" label_text_class="text-gray-500 text-nowrap"></x-text-input>
         @endif
         
         <x-text-input 
-            input_value="{{ old('invoice_number') ?? formatDocumentNumber($invoice->number ?? ($previousInvoiceNumber + 1)) }}" 
+            input_value="{{ old('invoice_number') ?? convertToFarsi($invoice->number ?? ($previousInvoiceNumber + 1)) }}" 
             input_name="invoice_number"
             title="{{ __('Current Invoice Number') }}" 
             placeholder="{{ __('Current Invoice Number') }}" 
             label_text_class="text-gray-500 text-nowrap"></x-text-input>
 
         <x-text-input 
-            input_value="{{ old('document_number') ?? formatDocumentNumber($invoice->document->number ?? ($previousDocumentNumber + 1)) }}" 
+            input_value="{{ old('document_number') ?? convertToFarsi(convertToInt($invoice->document->number ?? ($previousDocumentNumber + 1))) }}" 
             input_name="document_number"
             title="{{ __('current document number') }}" 
             placeholder="{{ __('current document number') }}" 

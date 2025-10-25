@@ -19,7 +19,7 @@ class DocumentController extends Controller
         $query = Document::orderBy('id', 'desc');
 
         if (request()->has('number') && request('number')) {
-            $query->where('number', convertToInt(request('number')));
+            $query->where('number', convertToFloat(request('number')));
         }
 
         if (request()->has('date') && request('date')) {
@@ -135,10 +135,10 @@ class DocumentController extends Controller
     public function duplicate($id)
     {
         $originalDocument = Document::with('transactions')->findOrFail($id);
-        
+
         // Get the next document number
         $nextDocumentNumber = Document::orderBy('id', 'desc')->first()->number + 1;
-        
+
         // Prepare transactions data
         $transactions = [];
         foreach ($originalDocument->transactions as $transaction) {
@@ -148,19 +148,19 @@ class DocumentController extends Controller
                 'desc' => $transaction->desc,
             ];
         }
-        
+
         // Create the duplicated document
         $newDocument = DocumentService::createDocument(
             Auth::user(),
             [
-                'title' => $originalDocument->title . ' (' . __('Copy') . ')',
+                'title' => $originalDocument->title.' ('.__('Copy').')',
                 'number' => $nextDocumentNumber,
                 'date' => $originalDocument->date,
                 'user_id' => Auth::id(),
             ],
             $transactions
         );
-        
+
         return redirect()->route('documents.edit', $newDocument->id)
             ->with('success', __('Document duplicated successfully.'));
     }
