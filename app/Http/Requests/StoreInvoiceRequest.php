@@ -3,7 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\InvoiceType;
-use App\Models\Subject;
+use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -26,21 +26,20 @@ class StoreInvoiceRequest extends FormRequest
         // Normalize top-level scalars
         $this->merge([
             'date' => convertToGregorian($this->input('date')),
+            'invoice_id' => convertToInt($this->input('invoice_id')),
             'invoice_number' => convertToInt($this->input('invoice_number')),
             'document_number' => convertToInt($this->input('document_number')),
-            'subtractions' => convertToFloat($this->input('subtractions', 0)),
+            'subtractions' => convertToFloat($this->input('subtraction', 0)),
+            'customer_id' => convertToInt($this->input('customer_id')),
         ]);
-        $customer = Subject::find($this->input('customer_id'))->subjectable()->first();
-        $this->merge(['customer_id' => $customer->id]);
 
         // Normalize transactions numeric fields and ids
         if ($this->has('transactions') && is_array($this->input('transactions'))) {
             $transactions = collect($this->input('transactions'))
                 ->map(function ($t) {
                     return [
-                        'transaction_id' => isset($t['transaction_id']) ? (int) $t['transaction_id'] : null,
-                        'code' => $t['code'] ?? null,
                         'subject_id' => isset($t['subject_id']) ? (int) $t['subject_id'] : null,
+                        'vat' => isset($t['vat']) ? convertToFloat($t['vat']) : null,
                         'desc' => $t['desc'] ?? null,
                         'quantity' => isset($t['quantity']) ? convertToFloat($t['quantity']) : null,
                         'unit_discount' => isset($t['off']) ? convertToFloat($t['off']) : 0,
@@ -54,12 +53,47 @@ class StoreInvoiceRequest extends FormRequest
     }
 
     /**
+     * Configure the validator instance.
+     */
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            // Only validate warehouse quantity for "sell" invoice type
+            if ($this->input('invoice_type') == 'sell') {
+                $transactions = $this->input('transactions', []);
+
+                foreach ($transactions as $index => $transaction) {
+                    if (! isset($transaction['subject_id']) || ! isset($transaction['quantity'])) {
+                        continue;
+                    }
+
+                    // Get the product by subject_id
+                    $product = Product::where('subject_id', $transaction['subject_id'])->first();
+
+                    if ($product && $product->quantity < $transaction['quantity']) {
+                        $validator->errors()->add(
+                            "transactions.{$index}.quantity",
+                            "{$product->quantity} ".__('item(s) of')." '{$product->name}' ".__('are available.'),
+                        );
+                    }
+                }
+            }
+        });
+
+        return $validator;
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
+        // Get the invoice from route if editing
+        $invoice = $this->route('invoice');
+        $isEditing = $invoice !== null;
+
         return [
             'title' => 'nullable|string|min:2|max:255',
             'description' => 'nullable|string',
@@ -68,14 +102,15 @@ class StoreInvoiceRequest extends FormRequest
             // Invoice basics
             'invoice_type' => ['required', Rule::in(array_column(InvoiceType::cases(), 'value'))],
             'customer_id' => 'required|exists:customers,id|integer',
-            'invoice_id' => 'nullable|integer|exists:invoices,id',
+            'invoice_id' => Rule::when($invoice !== null, ['required', 'integer', 'exists:invoices,id']),
             'document_number' => [
                 'required',
                 'integer',
                 Rule::unique('documents', 'number')
                     ->where(function ($query) {
                         return $query->where('company_id', session('active-company-id'));
-                    }),
+                    })
+                    ->ignore($isEditing ? $invoice->document_id : null),
             ],
             'invoice_number' => [
                 'required',
@@ -83,7 +118,8 @@ class StoreInvoiceRequest extends FormRequest
                 Rule::unique('invoices', 'number')
                     ->where(function ($query) {
                         return $query->where('company_id', session('active-company-id'));
-                    }),
+                    })
+                    ->ignore($isEditing ? $invoice->id : null),
             ],
 
             // Money-ish optional fields
@@ -92,9 +128,12 @@ class StoreInvoiceRequest extends FormRequest
             // Transactions array
             'transactions' => 'required|array|min:1',
             'transactions.*.subject_id' => 'required|integer|exists:subjects,id',
+            'transactions.*.vat' => 'required|numeric|min:0|max:100',
             'transactions.*.desc' => 'nullable|string|max:500',
             'transactions.*.quantity' => 'required|numeric|min:1',
             'transactions.*.unit_discount' => 'required|numeric|min:0',
+            'transactions.*.unit' => 'required|numeric|min:0',
+            'transactions.*.total' => 'required|numeric|min:0',
         ];
     }
 

@@ -31,6 +31,7 @@ class Product extends Model
         'company_id',
         'subject_id',
         'vat',
+        'average_cost',
     ];
 
     public static function booted(): void

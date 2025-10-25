@@ -58,29 +58,21 @@ class InvoiceFactory extends Factory
     {
         return $this->afterCreating(function ($invoice) {
             $description = $this->faker->persianSentence();
-
             $quantity = $this->faker->randomFloat(0, 1, 10);
-            $unit_price = $this->faker->randomFloat(0, 100, 1000);
-            $unit_discount = $this->faker->randomFloat(0, 0, 10);
             $product = Product::inRandomOrder()->first();
-            $transaction = Transaction::factory()->create();
-            $total = $quantity * $unit_price - $unit_discount;
-            $vat = $total * 0.1;
-            $amount = $total + $vat;
 
-            $invoiceItem = InvoiceItem::factory()->create([
+            $invoiceItem = InvoiceItem::create([
                 'invoice_id' => $invoice->id,
                 'description' => $description,
                 'product_id' => $product->id,
-                'transaction_id' => $transaction->id,
-                'quantity' => $this->faker->randomFloat(0, 1, 10),
-                'unit_price' => $unit_price,
-                'unit_discount' => $unit_discount,
-                'vat' => $vat,
-                'amount' => $amount,
+                'quantity' => $quantity,
+                'unit_price' => $invoice->amount / $quantity,
+                'unit_discount' => 0,
+                'vat' => 0,
+                'amount' => $invoice->amount,
             ]);
 
-            DocumentService::createTransaction(
+            $transaction = DocumentService::createTransaction(
                 $invoice->document,
                 [
                     'value' => $invoiceItem->amount,
@@ -89,6 +81,9 @@ class InvoiceFactory extends Factory
                     'desc' => $description,
                 ]
             );
+
+            $invoiceItem->transaction_id = $transaction->id;
+            $invoiceItem->update();
 
             DocumentService::createTransaction(
                 $invoice->document,

@@ -23,6 +23,8 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::resource('bank-accounts', Controllers\BankAccountController::class);
     Route::resource('banks', Controllers\BankController::class);
     Route::resource('invoices', Controllers\InvoiceController::class)->except(['index', 'create']);
+    Route::resource('ancillary-costs', Controllers\AncillaryCostController::class)->except(['show']);
+    Route::get('ancillary-costs/get-products/{invoice_id}', [Controllers\AncillaryCostController::class, 'getInvoiceProducts'])->name('ancillary-costs.get-products');
     Route::group(['prefix' => 'management'], function () {
         Route::resource('users', Controllers\Management\UserController::class);
         Route::resource('permissions', Controllers\Management\PermissionController::class)->except(['show']);
@@ -37,13 +39,13 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
     });
     Route::get('change-company/{company}', [Controllers\CompanyController::class, 'setActiveCompany'])->name('change-company');
-    
+
     Route::group(['prefix' => 'invoices/create', 'as' => 'invoices.create'], function () {
-        Route::get('{invoice_type}',[Controllers\InvoiceController::class, 'create']);
+        Route::get('{invoice_type}', [Controllers\InvoiceController::class, 'create']);
     });
 
     Route::group(['prefix' => 'invoices', 'as' => 'invoices.index'], function () {
-        Route::get('',[Controllers\InvoiceController::class, 'index']);
+        Route::get('', [Controllers\InvoiceController::class, 'index']);
     });
 
 });

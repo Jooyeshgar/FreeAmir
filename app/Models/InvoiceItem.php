@@ -18,6 +18,7 @@ class InvoiceItem extends Model
         'quantity',
         'unit_price',
         'unit_discount',
+        'cost_at_time_of_sale',
         'vat',
         'amount',
         'description',
@@ -25,12 +26,12 @@ class InvoiceItem extends Model
 
     public function invoice()
     {
-    return $this->belongsTo(Invoice::class, 'invoice_id');
+        return $this->belongsTo(Invoice::class, 'invoice_id');
     }
 
     public function product()
     {
-    return $this->belongsTo(Product::class, 'product_id');
+        return $this->belongsTo(Product::class, 'product_id');
     }
 
     public function transaction()

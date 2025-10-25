@@ -94,7 +94,7 @@
 
             <!-- Pricing Section -->
             <div class="divider text-lg font-semibold">{{ __('Pricing Information') }}</div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                 <div class="card bg-base-200 shadow">
                     <div class="card-body p-4">
                         <h3 class="card-title text-sm text-gray-500">{{ __('Purchase price') }}</h3>
@@ -112,6 +112,33 @@
                         </p>
                     </div>
                 </div>
+
+                <div class="card bg-base-200 shadow">
+                    <div class="card-body p-4">
+                        <h3 class="card-title text-sm text-gray-500">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            {{ __('Average Cost') }}
+                        </h3>
+                        <p class="text-2xl font-bold text-accent" title="{{ __('Weighted moving average cost') }}">
+                            {{ isset($product->average_cost) ? formatNumber($product->average_cost) : '0' }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- <div class="card bg-base-200 shadow">
+                    <div class="card-body p-4">
+                        <h3 class="card-title text-sm text-gray-500">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                            {{ __('Profit per Unit') }}
+                        </h3>
+                        @php
+                            $profitPerUnit = ($product->selling_price ?? 0) - ($product->average_cost ?? 0);
+                        @endphp
+                        <p class="text-2xl font-bold {{ $profitPerUnit >= 0 ? 'text-success' : 'text-error' }}">
+                            {{ formatNumber($profitPerUnit) }}
+                        </p>
+                    </div>
+                </div> -->
 
                 <div class="card bg-base-200 shadow">
                     <div class="card-body p-4">
@@ -152,38 +179,44 @@
                     </thead>
                     <tbody>
                         @php
-                            $remaining = $product->quantity;
-
                             $totalSell = 0;
                             $totalBuy = 0;
+
+                            foreach ($invoice_items as $item) {
+                                if ($item->invoice_type->isSell()) {
+                                    $totalSell += $item->quantity;
+                                } elseif ($item->invoice_type->isBuy()) {
+                                    $totalBuy += $item->quantity;
+                                }
+                            }
+
+                            $remaining = $product->quantity - $totalBuy + $totalSell;
                         @endphp
 
                         @foreach ($invoice_items as $item)
                             @php
-                                if ($item->is_sell) {
+                                if ($item->invoice_type->isSell()) {
                                     $remaining -= $item->quantity;
-                                    $totalSell += $item->quantity;
-                                } else {
+                                } elseif ($item->invoice_type->isBuy()) {
                                     $remaining += $item->quantity;
-                                    $totalBuy += $item->quantity;
                                 }
                             @endphp
 
                             <tr class="hover">
                                 <td class="px-4 py-3">
                                     <span class="badge badge-ghost">
-                                        {{ gregorian_to_jalali_date($item->updated_at) }}
+                                        {{ formatDate($item->updated_at) }}
                                     </span>
                                 </td>
 
                                 <td class="px-4 py-3 text-center">
-                                    @if ($item->is_sell)
+                                    @if ($item->invoice_type->isBuy())
                                         <a href="{{ route('invoices.show', $item->invoice_id) }}"
                                             class="badge badge-success gap-2 hover:badge-success hover:brightness-110 transition-all">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                                             </svg>
-                                            {{ (int) $item->quantity }}
+                                            {{ formatNumber($item->quantity) }}
                                         </a>
                                     @else
                                         <span class="text-gray-400">-</span>
@@ -191,13 +224,13 @@
                                 </td>
 
                                 <td class="px-4 py-3 text-center">
-                                    @if (!$item->is_sell)
+                                    @if ($item->invoice_type->isSell())
                                         <a href="{{ route('invoices.show', $item->invoice_id) }}"
                                             class="badge badge-info gap-2 hover:badge-info hover:brightness-110 transition-all">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
                                             </svg>
-                                            {{ (int) $item->quantity }}
+                                            {{ formatNumber($item->quantity) }}
                                         </a>
                                     @else
                                         <span class="text-gray-400">-</span>
@@ -226,10 +259,10 @@
                         <tr class="font-bold">
                             <td class="px-4 py-4">{{ __('Total') }}</td>
                             <td class="px-4 py-4 text-center">
-                                <span class="badge badge-success badge-lg">{{ formatNumber($totalSell) }}</span>
+                                <span class="badge badge-success badge-lg">{{ formatNumber($totalBuy) }}</span>
                             </td>
                             <td class="px-4 py-4 text-center">
-                                <span class="badge badge-info badge-lg">{{ formatNumber($totalBuy) }}</span>
+                                <span class="badge badge-info badge-lg">{{ formatNumber($totalSell) }}</span>
                             </td>
                             <td class="px-4 py-4 text-center" colspan="2"></td>
                             <td class="px-4 py-4 text-center">

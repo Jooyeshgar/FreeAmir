@@ -17,9 +17,9 @@ class SubjectFactory extends Factory
     public function definition(): array
     {
         return [
+            'company_id' => 1,
             'code' => $this->faker->unique()->ean8(),
             'name' => $this->faker->name(),
-            'parent_id' => 0,
             'type' => 2,
         ];
     }

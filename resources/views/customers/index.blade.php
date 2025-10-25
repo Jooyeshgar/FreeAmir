@@ -15,7 +15,7 @@
                     <tr>
                         <th class="px-4 py-2">{{ __('Code') }}</th>
                         <th class="px-4 py-2">{{ __('Name') }}</th>
-                        <th class="px-4 py-2">{{ __('Number') }}</th>
+                        <th class="px-4 py-2">{{ __('Phone number') }}</th>
                         <th class="px-4 py-2">{{ __('Email') }}</th>
                         <th class="px-4 py-2">{{ __('Account Plan Group') }}</th>
                         <th class="px-4 py-2">{{ __('Action') }}</th>

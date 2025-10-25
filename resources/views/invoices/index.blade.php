@@ -12,9 +12,17 @@
                     <a href="{{ route('invoices.create', ['invoice_type' => 'buy']) }}" class="btn btn-primary">
                         {{ __('Create buy invoice') }}
                     </a>
-                @else
+                @elseif (request('invoice_type') === 'sell')
                     <a href="{{ route('invoices.create', ['invoice_type' => 'sell']) }}" class="btn btn-primary">
                         {{ __('Create sell invoice') }}
+                    </a>
+                @elseif (request('invoice_type') === 'return_buy')
+                    <a href="{{ route('invoices.create', ['invoice_type' => 'return_buy']) }}" class="btn btn-primary">
+                        {{ __('Create return buy invoice') }}
+                    </a>
+                @elseif (request('invoice_type') === 'return_sell')
+                    <a href="{{ route('invoices.create', ['invoice_type' => 'return_sell']) }}" class="btn btn-primary">
+                        {{ __('Create return sell invoice') }}
                     </a>
                 @endif
 
@@ -64,7 +72,7 @@
                                 @endif
                             </td>
                             <td class="px-4 py-2">{{ isset($invoice->date) ? formatDate($invoice->date) : '' }}</td>
-                            <td class="px-4 py-2">{{ isset($invoice->amount) ? formatNumber($invoice->amount) : '' }}
+                            <td class="px-4 py-2">{{ isset($invoice->amount) ? formatNumber($invoice->amount - $invoice->subtraction) : '' }}
                             </td>
                             <td class="px-4 py-2">
                                 {{ $invoice->permanent ?? false ? __('Permanent') : __('Draft') }}
@@ -72,8 +80,8 @@
                             <td class="px-4 py-2">
                                 <a href="{{ route('invoices.show', $invoice) }}"
                                     class="btn btn-sm btn-info">{{ __('View') }}</a>
-                                {{-- <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{
-                                    __('Edit') }}</a> --}}
+                                <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{
+                                    __('Edit') }}</a> 
                                 <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" class="inline-block">
                                     @csrf
                                     @method('DELETE')

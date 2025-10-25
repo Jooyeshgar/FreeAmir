@@ -7,13 +7,12 @@ use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Invoice;
-use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\ProductGroup;
-use App\Models\Subject;
 use App\Models\Transaction;
 use App\Services\InvoiceService;
 use Illuminate\Http\Request;
+use PDF;
 
 class InvoiceController extends Controller
 {
@@ -66,9 +65,9 @@ class InvoiceController extends Controller
         }
         $products = Product::with('subject')->orderBy('name', 'asc')->get();
         $productGroups = ProductGroup::all();
-        $customers = $this->getCustomers();
-        $previousInvoiceNumber = Invoice::orderBy('id', 'desc')->first()->number ?? 1;
-        $previousDocumentNumber = Document::orderBy('id', 'desc')->first()->number ?? 1;
+        $customers = Customer::all('name', 'id');
+        $previousInvoiceNumber = Invoice::orderBy('id', 'desc')->first()->number ?? 0;
+        $previousDocumentNumber = Document::orderBy('id', 'desc')->first()->number ?? 0;
         $transactions = old('transactions') ?? $this->preparedTransactions(collect([new Transaction]));
 
         $total = count($transactions);
@@ -77,17 +76,6 @@ class InvoiceController extends Controller
         $invoice_type = in_array($invoice_type, ['buy', 'sell', 'return_buy', 'return_sell']) ? $invoice_type : 'sell';
 
         return view('invoices.create', compact('products', 'productGroups', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type'));
-    }
-
-    private function getCustomers()
-    {
-        $full_customers = Subject::where('parent_id', config('amir.cust_subject'))->with('children')->orderBy('code', 'asc')->get();
-
-        foreach ($full_customers as $full_customer) {
-            $customers = $full_customer->children;
-        }
-
-        return $customers;
     }
 
     /**
@@ -113,7 +101,7 @@ class InvoiceController extends Controller
 
         // Fetch all products by subject_id in one query
         $subjectIds = collect($validated['transactions'])->pluck('subject_id')->unique();
-        $productsBySubjectId = Product::whereIn('id', $subjectIds)->get()->keyBy('id');
+        $productsBySubjectId = Product::whereIn('subject_id', $subjectIds)->get()->keyBy('subject_id');
 
         // Map transactions to invoice items
         $items = collect($validated['transactions'])->map(function ($transaction, $index) use ($productsBySubjectId) {
@@ -125,6 +113,9 @@ class InvoiceController extends Controller
                 'quantity' => $transaction['quantity'] ?? 1,
                 'description' => $transaction['desc'] ?? null,
                 'unit_discount' => $transaction['unit_discount'] ?? 0,
+                'vat' => $transaction['vat'] ?? 0,
+                'unit' => $transaction['unit'] ?? 0,
+                'total' => $transaction['total'] ?? 0,
             ];
         })->toArray();
 
@@ -135,110 +126,116 @@ class InvoiceController extends Controller
             ->with('success', __('Invoice created successfully.'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    // public function store(Request $request)
-    // {
+    public function show(Invoice $invoice)
+    {
+        $invoice->load('customer', 'items.product');
 
-    //     $data = $request->validate([
-    //         'code' => 'required|unique:invoices,code|max:255',
-    //         'date' => 'required|date',
-    //         'document_id' => 'required|integer|exists:documents,id',
-    //         'customer_id' => 'required|integer|exists:customers,id',
-    //         'addition' => 'numeric|nullable',
-    //         'subtraction' => 'numeric|nullable',
-    //         'tax' => 'numeric|nullable',
-    //         'ship_date' => 'nullable|date',
-    //         'ship_via' => 'string|nullable|max:255',
-    //         'description' => 'string|nullable|max:255',
-    //         'vat' => 'numeric|nullable',
-    //         'amount' => 'numeric|nullable',
-    //     ]);
+        $pdf = PDF::loadView('invoices.show', compact('invoice'));
 
-    //     // Normalize checkbox booleans
-    //     $data['cash_payment'] = $request->has('cash_payment') ? 1 : 0;
-    //     $data['permanent'] = $request->has('permanent') ? 1 : 0;
-    //     $data['is_sell'] = $request->has('is_sell') ? 1 : 0;
-    //     $data['active'] = $request->has('active') ? 1 : 0;
-
-    //     Invoice::create($data);
-
-    //     return redirect()->route('invoices.index')->with('success', __('Invoice created successfully.'));
-    // }
+        return $pdf->stream('invoice-'.($invoice->number ?? $invoice->id).'.pdf');
+    }
 
     /**
-     * Display the specified resource.
+     * Show the form for editing the specified resource.
      *
      * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory
      */
-    public function show(Invoice $invoice)
+    public function edit(Invoice $invoice)
     {
-        $invoice->load('customer');
-        $invoiceItems = InvoiceItem::where('invoice_id', $invoice->id)->get();
-        $invoiceItems->load('product');
+        $invoice->load('customer', 'document.transactions', 'items.product'); // Eager load relationships
 
-        return view('invoices.show', compact('invoice', 'invoiceItems'));
+        $customers = Customer::all();
+        $products = Product::with('subject')->orderBy('name', 'asc')->get();
+        $productGroups = [];
+
+        // Prepare transactions from invoice items
+        $transactions = $invoice->items->map(function ($item, $index) {
+            // Calculate VAT percentage: (vat_amount / subtotal_before_vat) * 100
+            $subtotalBeforeVat = $item->amount - $item->vat;
+            $vatPercentage = $subtotalBeforeVat > 0 ? ($item->vat / $subtotalBeforeVat) * 100 : 0;
+
+            return [
+                'id' => $index + 1,
+                'transaction_id' => $item->transaction_id,
+                'product_id' => $item->product_id,
+                'subject_id' => $item->product->subject_id,
+                'subject' => $item->product->name,
+                'desc' => $item->description,
+                'quantity' => $item->quantity,
+                'unit' => $item->unit_price,
+                'off' => $item->unit_discount,
+                'vat' => $vatPercentage,
+                'total' => $item->amount,
+            ];
+        });
+        $total = $transactions->count();
+        $invoice_type = $invoice->invoice_type->value;
+
+        return view('invoices.edit', compact(
+            'invoice',
+            'customers',
+            'total',
+            'products',
+            'transactions',
+            'productGroups',
+            'invoice_type',
+        ));
     }
 
-    // /**
-    //  * Show the form for editing the specified resource.
-    //  *
-    //  * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory
-    //  */
-    // public function edit(Invoice $invoice)
-    // {
-    //     $invoice->load('customer', 'document'); // Eager load customer and document data
+    /**
+     * Update the specified resource in storage.
+     *
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function update(StoreInvoiceRequest $request, Invoice $invoice, InvoiceService $service)
+    {
+        $validated = $request->validated();
 
-    //     $customers = Customer::pluck('name', 'id');
-    //     $documents = Document::pluck('number', 'id');
+        $invoiceData = [
+            'title' => $validated['title'],
+            'date' => $validated['date'],
+            'invoice_type' => InvoiceType::from($validated['invoice_type']),
+            'customer_id' => $validated['customer_id'],
+            'document_number' => $validated['document_number'],
+            'number' => $validated['invoice_number'],
+            'subtraction' => $validated['subtractions'] ?? 0,
+            'invoice_id' => $validated['invoice_id'] ?? null,
+            'description' => $validated['description'] ?? null,
+        ];
+        // Fetch all products by subject_id in one query
+        $subjectIds = collect($validated['transactions'])->pluck('subject_id')->unique();
+        $productsBySubjectId = Product::whereIn('subject_id', $subjectIds)->get()->keyBy('subject_id');
+        // Map transactions to invoice items
+        $items = collect($validated['transactions'])->map(function ($transaction, $index) use ($productsBySubjectId) {
+            $product = $productsBySubjectId->get($transaction['subject_id']);
 
-    //     return view('invoices.edit', compact('invoice', 'customers', 'documents'));
-    // }
+            return [
+                'transaction_index' => $index,
+                'product_id' => $product?->id,
+                'quantity' => $transaction['quantity'] ?? 1,
+                'description' => $transaction['desc'] ?? null,
+                'unit_discount' => $transaction['unit_discount'] ?? 0,
+                'vat' => $transaction['vat'] ?? 0,
+                'unit' => $transaction['unit'] ?? 0,
+                'total' => $transaction['total'] ?? 0,
+            ];
+        })->toArray();
 
-    // /**
-    //  * Update the specified resource in storage.
-    //  *
-    //  * @return \Illuminate\Http\RedirectResponse
-    //  */
-    // public function update(Request $request, Invoice $invoice)
-    // {
-    //     $data = $request->validate([
-    //         'code' => 'required|unique:invoices,code,' . $invoice->id . '|max:255',
-    //         'date' => 'required|date',
-    //         'document_id' => 'required|integer|exists:documents,id',
-    //         'customer_id' => 'required|integer|exists:customers,id',
-    //         'addition' => 'numeric|nullable',
-    //         'subtraction' => 'numeric|nullable',
-    //         'tax' => 'numeric|nullable',
-    //         'ship_date' => 'nullable|date',
-    //         'ship_via' => 'string|nullable|max:255',
-    //         'description' => 'string|nullable|max:255',
-    //         'vat' => 'numeric|nullable',
-    //         'amount' => 'numeric|nullable',
-    //     ]);
+        $result = $service->updateInvoice($invoice->id, $invoiceData, $items);
 
-    //     // Normalize checkbox booleans
-    //     $data['cash_payment'] = $request->has('cash_payment') ? 1 : 0;
-    //     $data['permanent'] = $request->has('permanent') ? 1 : 0;
-    //     $data['is_sell'] = $request->has('is_sell') ? 1 : 0;
-    //     $data['active'] = $request->has('active') ? 1 : 0;
-
-    //     $invoice->update($data);
-
-    //     return redirect()->route('invoices.index')->with('success', __('Invoice updated successfully.'));
-    // }
+        return redirect()
+            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type->value])
+            ->with('success', __('Invoice updated successfully.'));
+    }
 
     public function destroy(Invoice $invoice)
     {
         try {
-            $invoice->delete();
+            InvoiceService::deleteInvoice($invoice->id);
 
-            return redirect()->route('invoices.index')->with('success', __('Invoice deleted successfully.'));
+            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->value])->with('success', __('Invoice deleted successfully.'));
         } catch (\Exception $e) {
-            return redirect()->route('invoices.index')->with('error', $e->getMessage());
+            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->value])->with('error', $e->getMessage());
         }
     }
 

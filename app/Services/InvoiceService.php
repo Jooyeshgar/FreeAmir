@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\InvoiceType;
 use App\Exceptions\InvoiceServiceException;
+use App\Models\AncillaryCost;
 use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
@@ -28,9 +29,6 @@ class InvoiceService
      */
     public static function createInvoice(User $user, array $invoiceData, array $items = [])
     {
-        // // Validate invoice data
-        // self::validateInvoiceData($invoiceData);
-
         // Normalize invoice data
         $invoiceData = self::normalizeInvoiceData($invoiceData);
 
@@ -68,7 +66,7 @@ class InvoiceService
             // Prepare invoice data
             $invoiceData['document_id'] = $createdDocument->id;
             $invoiceData['vat'] = $buildResult['totalVat'];
-            $invoiceData['amount'] = $buildResult['totalAmount'] - $buildResult['subtractions'];
+            $invoiceData['amount'] = $buildResult['totalAmount'];
             $invoiceData['creator_id'] = Auth::id();
             $invoiceData['active'] = 1;
 
@@ -82,6 +80,12 @@ class InvoiceService
 
             // Create invoice items and link to transactions
             self::createInvoiceItems($createdInvoice, $items, $documentTransactions, $invoiceData['invoice_type']);
+
+            // Update product quantities
+            ProductService::updateProductQuantities($items, InvoiceType::from($invoiceData['invoice_type']));
+
+            // Process costs (weighted average for both, cost_at_time_of_sale for sell)
+            CostService::processInvoiceCosts($createdInvoice, InvoiceType::from($invoiceData['invoice_type']));
         });
 
         return [
@@ -141,12 +145,38 @@ class InvoiceService
 
             $invoice->update($invoiceData);
 
-            // Delete old invoice items
-            InvoiceItem::where('invoice_id', $invoice->id)->delete();
+            // Delete old invoice items and update product quantities and the average cost
+            $InvoiceItems = InvoiceItem::where('invoice_id', $invoice->id);
+
+            $ancillaryCosts = AncillaryCost::where('invoice_id', $invoice->id)->get()->all();
+            // Delete old ancillary costs if not null
+            if (! empty($ancillaryCosts)) {
+                foreach ($ancillaryCosts as $ancillaryCost) {
+                    AncillaryCostService::deleteAncillaryCost($ancillaryCost->id);
+                }
+            }
+
+            ProductService::updateProductQuantities($InvoiceItems->get()->toArray(), InvoiceType::from($invoiceData['invoice_type']), true);
+            foreach ($InvoiceItems as $InvoiceItem) {
+                CostService::reverseCostUpdate($InvoiceItem, $invoice->invoice_type);
+            }
+
+            $InvoiceItems->delete();
 
             // Create new invoice items
             $documentTransactions = $invoice->document->transactions()->get()->all();
-            self::createInvoiceItems($invoice, $items, $documentTransactions, $invoiceData['invoice_type']);
+            self::createInvoiceItems($invoice, $items, $documentTransactions, InvoiceType::from($invoiceData['invoice_type']));
+
+            // Recreate ancillary costs if not null
+            if (! empty($ancillaryCosts)) {
+                AncillaryCostService::createAncillaryCost($ancillaryCosts);
+            }
+
+            // Update product quantities
+            ProductService::updateProductQuantities($items, InvoiceType::from($invoiceData['invoice_type']));
+
+            // Process costs (weighted average for both, cost_at_time_of_sale for sell)
+            CostService::processInvoiceCosts($invoice, InvoiceType::from($invoiceData['invoice_type']));
         });
 
         return [
@@ -165,9 +195,26 @@ class InvoiceService
             if (! $invoice) {
                 return;
             }
+            // delete invoice items and update product quantities
+            $invoiceItems = InvoiceItem::where('invoice_id', $invoiceId);
 
-            // delete invoice items
-            InvoiceItem::where('invoice_id', $invoiceId)->delete();
+            $ancillaryCosts = AncillaryCost::where('invoice_id', $invoiceId)->get()->all();
+            // Delete old ancillary costs if not null
+            if (! empty($ancillaryCosts)) {
+                foreach ($ancillaryCosts as $ancillaryCost) {
+                    AncillaryCostService::deleteAncillaryCost($ancillaryCost->id);
+                }
+            }
+            ProductService::updateProductQuantities($invoiceItems->get()->toArray(), $invoice->invoice_type, true);
+
+            // Reverse cost updates for buy or sell invoices
+            if ($invoice->invoice_type->isBuy() || $invoice->invoice_type->isSell()) {
+                foreach ($invoiceItems->get() as $invoiceItem) {
+                    CostService::reverseCostUpdate($invoiceItem, $invoice->invoice_type);
+                }
+            }
+
+            $invoiceItems->delete();
 
             $documentId = $invoice->document_id;
 
@@ -240,18 +287,19 @@ class InvoiceService
             $product = Product::findOrFail($item['product_id']);
 
             $quantity = $item['quantity'] ?? 1;
-            $unitPrice = $invoiceType == InvoiceType::SELL ? $product->selling_price : $product->purchace_price;
+            $unitPrice = $item['unit'];
             $unitDiscount = $item['unit_discount'] ?? 0;
 
             // Calculate item discount (only on sell)
-            $itemDiscount = $invoiceType == InvoiceType::SELL ? ($unitDiscount * $quantity) : 0;
+            // $itemDiscount = $invoiceType == InvoiceType::SELL ? ($unitDiscount * $quantity) : 0;
 
             // Calculate item VAT
-            $vatRate = ($product->vat ?? $product->productGroup->vat ?? 0) / 100;
-            $itemVat = $vatRate * ($quantity * $unitPrice - $itemDiscount);
+            $vatRate = ($item['vat'] ?? 0) / 100;
+
+            $itemVat = $vatRate * ($quantity * $unitPrice - $unitDiscount);
 
             // Calculate item amount (price - discount, VAT is separate but included in total)
-            $itemAmount = $quantity * $unitPrice - $itemDiscount + $itemVat;
+            $itemAmount = $quantity * $unitPrice - $unitDiscount + $itemVat;
 
             // Link to the corresponding transaction (first N transactions are for items)
             $transactionId = null;
@@ -264,6 +312,7 @@ class InvoiceService
                 'product_id' => $product->id,
                 'transaction_id' => $transactionId,
                 'quantity' => $quantity,
+                'cost_at_time_of_sale' => $invoiceType->isSell() ? $product->average_cost : null,
                 'unit_price' => $unitPrice,
                 'unit_discount' => $unitDiscount,
                 'vat' => $itemVat,

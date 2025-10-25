@@ -1,0 +1,55 @@
+.none {
+    border: none;
+}
+
+.border {
+    border: 1px solid #000;
+}
+
+.right {
+    text-align: right;
+    direction: rtl;
+}
+
+.center {
+    text-align: center !important;
+    direction: rtl;
+}
+
+.pink {
+    background-color: #ffe0eb;
+}
+
+table {
+    font-family: "sahel";
+    font-size: 12pt;
+    height: 100%;
+}
+
+.bold {
+    font-weight: bold;
+    font-size: 10pt;
+}
+
+.lheight {
+    line-height: 1.5em;
+    text-align: right;
+}
+
+.mainlineheight {
+    line-height: 0;
+}
+
+@page {
+    margin: 5mm 5mm 0 5mm;
+}
+
+body {
+    height: 100%;
+    font-size: 10pt;
+    font-family: "sahel";
+}
+
+.vertical {
+    writing-mode: vertical-rl;
+}

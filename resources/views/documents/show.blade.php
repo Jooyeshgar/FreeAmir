@@ -9,7 +9,7 @@
         $sumCredit += $transaction->value < 0 ? -1 * $transaction->value : 0;
         $transaction->sign = $transaction->value > 0 ? 1 : 0;
         $transaction->absValue = abs($transaction->value);
-        $transaction->ledgerSign = $transaction->sign . $transaction->subject->ledger();
+        $transaction->ledgerSign = $transaction->sign . $transaction->subject?->ledger();
     }
 
     $allTransactions = $allTransactions->sortByDesc(['sign', 'absValue']);

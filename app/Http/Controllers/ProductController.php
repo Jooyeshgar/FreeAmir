@@ -77,7 +77,8 @@ class ProductController extends Controller
 
         if ($invoice_items->count() > 0) {
             foreach ($invoice_items as $invoice_item) {
-                $invoice_item['invoice_type'] = Models\Invoice::select('invoice_type')->find($invoice_item->invoice_id)->invoice_type;
+                $invoice_item->load('invoice');
+                $invoice_item->invoice_type = $invoice_item->invoice->invoice_type;
             }
         }
 

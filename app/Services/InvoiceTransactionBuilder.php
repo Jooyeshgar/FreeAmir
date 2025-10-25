@@ -82,17 +82,15 @@ class InvoiceTransactionBuilder
             }
 
             $quantity = $item['quantity'] ?? 1;
-            $unitPrice = $invoiceType->isSell() ? $product->selling_price : $product->purchace_price;
+            $unitPrice = $item['unit'];
             $itemDiscount = $item['unit_discount'] ?? 0;
-
-            $vatRate = ($product->vat ?? $product->productGroup->vat ?? 0) / 100;
-            $itemVat = $vatRate * ($quantity * $unitPrice);
-
-            $itemAmount = ($quantity * $unitPrice);
+            $vatRate = ($item['vat'] ?? 0) / 100;
+            $itemVat = $vatRate * ($quantity * $unitPrice - $itemDiscount);
+            $itemAmount = $quantity * $unitPrice;
 
             $this->totalDiscount += $itemDiscount;
             $this->totalVat += $itemVat;
-            $this->totalAmount += $itemAmount + $itemVat - $itemDiscount;
+            $this->totalAmount += $itemAmount - $itemDiscount + $itemVat;
 
             $this->transactions[] = [
                 'subject_id' => $product->subject_id,
@@ -150,10 +148,7 @@ class InvoiceTransactionBuilder
      */
     private function buildCustomerTransaction(): void
     {
-        $customerId = $this->invoiceData['customer_id'] ?? null;
-        if (! $customerId) {
-            return;
-        }
+        $customerId = $this->invoiceData['customer_id'];
 
         $cashPayment = floatval($this->invoiceData['cash_payment'] ?? 0);
 

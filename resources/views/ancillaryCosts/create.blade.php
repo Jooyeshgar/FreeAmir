@@ -1,19 +1,18 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Create Invoice') }}
+            {{ __('Create Ancillary Cost') }}
         </h2>
     </x-slot>
 
     <div class="">
-        <form action="{{ route('invoices.store') }}" method="POST">
+        <form action="{{ route('ancillary-costs.store') }}" method="POST">
             @csrf
             <div class="card-body">
-                <h2 class="card-title">{{ __('Add Invoice') . ' ' . __($invoice_type) }}</h2>
+                <h2 class="card-title">{{ __('Add Ancillary Cost') }}</h2>
                 <x-show-message-bags />
 
-                @php($invoice = $invoice ?? new \App\Models\Invoice())
-                @include('invoices.form')
+                @include('ancillaryCosts.form')
             </div>
         </form>
     </div>
