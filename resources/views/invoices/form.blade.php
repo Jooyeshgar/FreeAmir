@@ -26,7 +26,7 @@
     </div>
 
     <div class="flex justify-start gap-2 mt-2">
-        <x-text-input input_value="{{ old('invoice_id') ?? formatDocumentNumber($invoice->id ?? '') }}" input_name="invoice_id" label_text_class="text-gray-500" label_class="w-full hidden"></x-text-input>
+        <x-text-input input_value="{{ old('invoice_id') ?? $invoice->id ?? '' }}" input_name="invoice_id" label_text_class="text-gray-500" label_class="w-full hidden"></x-text-input>
         @if (!$invoice->exists)
             <x-text-input disabled="true" input_value="{{ formatDocumentNumber($previousInvoiceNumber) }}"
                 title="{{ __('Previous Invoice Number') }}"

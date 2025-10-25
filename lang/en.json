@@ -52,6 +52,7 @@
     "At least one transaction row is required.": "At least one transaction row is required.",
     "At least one transaction row must be provided.": "At least one transaction row must be provided.",
     "Average Cost": "Average Cost",
+    "Edit Invoice": "Edit Invoice",
     "Ancillary Cost created successfully.": "Ancillary Cost created successfully.",
     "Ancillary Cost updated successfully.": "Ancillary Cost updated successfully.",
     "Ancillary Cost deleted successfully.": "Ancillary Cost deleted successfully.",

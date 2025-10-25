@@ -10,7 +10,7 @@
             @csrf
             @method('PUT')
             <div class="card-body">
-                <h2 class="card-title">{{ __('Edit Invoice') }}</h2>
+                <h2 class="card-title">{{ __('Edit Invoice')  . ' ' . __($invoice_type) }}</h2>
                 <x-show-message-bags />
 
                 @php($invoice_type = $invoice->invoice_type->value)
