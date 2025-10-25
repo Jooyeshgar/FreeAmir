@@ -5,7 +5,7 @@
         </h2>
     </x-slot>
 
-    <div class="card bg-base-100 shadow-xl">
+    <div class="">
         <form action="{{ route('ancillary-costs.store') }}" method="POST">
             @csrf
             <div class="card-body">
