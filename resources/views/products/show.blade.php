@@ -196,15 +196,15 @@
                                 }
                             }
 
-                            $remaining = $product->quantity + $totalBuy - $totalSell;
+                            $remaining = $product->quantity - $totalBuy + $totalSell;
                         @endphp
 
                         @foreach ($invoice_items as $item)
                             @php
                                 if ($item->invoice_type->isSell()) {
-                                    $remaining += $item->quantity;
-                                } elseif ($item->invoice_type->isBuy()) {
                                     $remaining -= $item->quantity;
+                                } elseif ($item->invoice_type->isBuy()) {
+                                    $remaining += $item->quantity;
                                 }
                             @endphp
 
