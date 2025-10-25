@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Product;
+use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class ProductFactory extends Factory
