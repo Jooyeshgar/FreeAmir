@@ -26,7 +26,7 @@ class StoreInvoiceRequest extends FormRequest
         // Normalize top-level scalars
         $this->merge([
             'date' => convertToGregorian($this->input('date')),
-            'invoice_id' => convertToInt($this->input('invoice_id')) ?? 0,
+            'invoice_id' => convertToInt($this->input('invoice_id')),
             'invoice_number' => convertToInt($this->input('invoice_number')),
             'document_number' => convertToInt($this->input('document_number')),
             'subtractions' => convertToFloat($this->input('subtraction', 0)),
@@ -102,7 +102,7 @@ class StoreInvoiceRequest extends FormRequest
             // Invoice basics
             'invoice_type' => ['required', Rule::in(array_column(InvoiceType::cases(), 'value'))],
             'customer_id' => 'required|exists:customers,id|integer',
-            'invoice_id' => 'nullable|integer|exists:invoices,id',
+            'invoice_id' => Rule::when($invoice !== null, ['required', 'integer', 'exists:invoices,id']),
             'document_number' => [
                 'required',
                 'integer',
