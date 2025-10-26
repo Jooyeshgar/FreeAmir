@@ -4,9 +4,8 @@ namespace App\Services;
 
 use App\Enums\AncillaryCostType;
 use App\Models\AncillaryCost;
-use App\Models\AncillaryCostItem;
 use App\Models\Invoice;
-use App\Models\Product;
+use App\Services\CostOfGoodsService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -49,7 +48,7 @@ class AncillaryCostService
 
             $ancillaryCost->load(['items.product', 'invoice.items.product']);
 
-            CostService::distributeAncillaryCost($ancillaryCost);
+            CostOfGoodsService::distributeAncillaryCost($ancillaryCost);
 
             return $ancillaryCost;
         });
@@ -68,7 +67,7 @@ class AncillaryCostService
         return DB::transaction(function () use ($ancillaryCost, $data, $invoice) {
             $ancillaryCost->loadMissing(['items.product', 'invoice.items.product']);
 
-            self::reverseAncillaryCostDistribution($ancillaryCost);
+            CostOfGoodsService::reverseAncillaryCostDistribution($ancillaryCost);
 
             $ancillaryCost->items()->delete();
 
@@ -84,7 +83,7 @@ class AncillaryCostService
 
             $ancillaryCost->load(['items.product', 'invoice.items.product']);
 
-            CostService::distributeAncillaryCost($ancillaryCost);
+            CostOfGoodsService::distributeAncillaryCost($ancillaryCost);
 
             return $ancillaryCost;
         });
@@ -102,7 +101,7 @@ class AncillaryCostService
         $ancillaryCost = AncillaryCost::with(['items.product', 'invoice.items.product'])->findOrFail($ancillaryCostId);
 
         DB::transaction(function () use ($ancillaryCost) {
-            self::reverseAncillaryCostDistribution($ancillaryCost);
+            CostOfGoodsService::reverseAncillaryCostDistribution($ancillaryCost);
 
             $ancillaryCost->items()->delete();
 
@@ -118,31 +117,7 @@ class AncillaryCostService
      */
     private static function reverseAncillaryCostDistribution(AncillaryCost $ancillaryCost): void
     {
-        $ancillaryCost->loadMissing(['items.product', 'invoice.items.product']);
-
-        if ($ancillaryCost->items->isNotEmpty()) {
-            $ancillaryCost->items
-                ->groupBy('product_id')
-                ->each(function ($items) {
-                    /** @var AncillaryCostItem $first */
-                    $first = $items->first();
-                    $product = $first?->product;
-
-                    if (! $product) {
-                        return;
-                    }
-
-                    $totalShare = $items->sum(function (AncillaryCostItem $item) {
-                        return (float) $item->amount + (float) ($item->vat ?? 0);
-                    });
-
-                    self::subtractShareFromProduct($product, $totalShare);
-                });
-
-            return;
-        }
-
-        self::reverseDistributionUsingInvoiceTotals($ancillaryCost);
+        CostOfGoodsService::reverseAncillaryCostDistribution($ancillaryCost);
     }
 
     /**
@@ -185,61 +160,6 @@ class AncillaryCostService
         $ancillaryCost->items()->createMany($payload);
     }
 
-    private static function subtractShareFromProduct(Product $product, float $share): void
-    {
-        if ($share <= 0) {
-            return;
-        }
-
-        $currentStock = (float) $product->quantity;
-
-        if ($currentStock <= 0) {
-            return;
-        }
-
-        $currentAverageCost = (float) ($product->average_cost ?? 0);
-        $currentTotalValue = $currentStock * $currentAverageCost;
-        $newTotalValue = max(0, $currentTotalValue - $share);
-        $newAverageCost = $currentStock > 0 ? $newTotalValue / $currentStock : 0;
-
-        $product->average_cost = max(0, $newAverageCost);
-        $product->save();
-    }
-
-    private static function reverseDistributionUsingInvoiceTotals(AncillaryCost $ancillaryCost): void
-    {
-        $invoice = $ancillaryCost->invoice;
-
-        if (! $invoice) {
-            return;
-        }
-
-        $invoiceItems = $invoice->items;
-
-        $totalInvoiceValue = $invoiceItems->sum(function ($item) {
-            return $item->quantity * $item->unit_price;
-        });
-
-        if ($totalInvoiceValue == 0) {
-            return;
-        }
-
-        $totalAncillaryAmount = (float) $ancillaryCost->amount + (float) ($ancillaryCost->vat ?? 0);
-
-        foreach ($invoiceItems as $invoiceItem) {
-            $itemValue = $invoiceItem->quantity * $invoiceItem->unit_price;
-            $costShareRatio = $itemValue / $totalInvoiceValue;
-            $ancillaryCostShare = $totalAncillaryAmount * $costShareRatio;
-
-            $product = $invoiceItem->product;
-
-            if (! $product) {
-                continue;
-            }
-
-            self::subtractShareFromProduct($product, $ancillaryCostShare);
-        }
-    }
 
     /**
      * Validate ancillary cost data.
