@@ -4,25 +4,47 @@ namespace App\Enums;
 
 enum AncillaryCostType: string
 {
-    case Initial_Purchase_Price_Of_Goods = 'Initial_Purchase_Price_Of_Goods';
-    case Transportation_Costs = 'Transportation_Costs';
-    case Shipping_Insurance = 'Shipping_Insurance';
-    case Customs_Fees_And_Import_Duties = 'Customs_Fees_And_Import_Duties';
-    case Non_Refundable_Taxes = 'Non_Refundable_Taxes';
-    case Loading_And_Unloading_Costs = 'Loading_And_Unloading_Costs';
-    case Other_Costs = 'Other_Costs';
+    case Shipping = 'Transportation_Costs';
+    case Insurance = 'Shipping_Insurance';
+    case Customs = 'Customs_Fees_And_Import_Duties';
+    case Taxes = 'Non_Refundable_Taxes';
+    case Loading = 'Loading_And_Unloading_Costs';
+    case Other = 'Other_Costs';
 
     // Get translated label
     public function label(): string
     {
         return match ($this) {
-            self::Initial_Purchase_Price_Of_Goods => __('Initial Purchase Price Of Goods'),
-            self::Transportation_Costs => __('Transportation Costs'),
-            self::Shipping_Insurance => __('Shipping Insurance'),
-            self::Customs_Fees_And_Import_Duties => __('Customs Fees And Import Duties'),
-            self::Non_Refundable_Taxes => __('Non Refundable Taxes'),
-            self::Loading_And_Unloading_Costs => __('Loading And Unloading Costs'),
-            self::Other_Costs => __('Other Costs'),
+            self::Shipping => __('Transportation Costs'),
+            self::Insurance => __('Shipping Insurance'),
+            self::Customs => __('Customs Fees And Import Duties'),
+            self::Taxes => __('Non Refundable Taxes'),
+            self::Loading => __('Loading And Unloading Costs'),
+            self::Other => __('Other Costs'),
         };
+    }
+
+    public static function labels(): array
+    {
+        return array_map(
+            fn(self $case) => $case->label(),
+            self::cases()
+        );
+    }
+
+    public static function options(): array
+    {
+        return array_combine(
+            self::values(),
+            self::labels()
+        );
+    }
+
+    public static function values(): array
+    {
+        return array_map(
+            fn (self $case) => $case->value,
+            self::cases()
+        );
     }
 }

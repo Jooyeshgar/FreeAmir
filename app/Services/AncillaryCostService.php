@@ -35,9 +35,8 @@ class AncillaryCostService
 
         $invoice = Invoice::findOrFail($data['invoice_id']);
 
-        // Only sell invoices can have ancillary costs
-        if (! $invoice->invoice_type->isSell()) {
-            throw new \Exception(__('Ancillary costs can only be added to sales invoices'));
+        if (! $invoice->invoice_type->isBuy()) {
+            throw new \Exception(__('Ancillary costs can only be added to but invoices'));
         }
 
         $ancillaryCost = null;
