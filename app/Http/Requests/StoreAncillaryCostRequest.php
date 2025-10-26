@@ -45,7 +45,7 @@ class StoreAncillaryCostRequest extends FormRequest
             'amount' => 'required|numeric|min:0',
             'invoice_id' => 'required|integer|exists:invoices,id',
             'date' => 'required|date',
-            'description' => 'required|string',
+            'type' => 'required|string',
             'ancillaryCosts' => 'nullable|array',
             'ancillaryCosts.*.product_id' => 'required|integer|exists:products,id',
             'ancillaryCosts.*.amount' => 'required|numeric|min:0',

@@ -4,12 +4,12 @@ namespace App\Enums;
 
 enum AncillaryCostType: string
 {
-    case Shipping = 'Transportation_Costs';
-    case Insurance = 'Shipping_Insurance';
-    case Customs = 'Customs_Fees_And_Import_Duties';
-    case Taxes = 'Non_Refundable_Taxes';
-    case Loading = 'Loading_And_Unloading_Costs';
-    case Other = 'Other_Costs';
+    case Shipping = 'Shipping';
+    case Insurance = 'Insurance';
+    case Customs = 'Customs';
+    case Taxes = 'Taxes';
+    case Loading = 'Loading';
+    case Other = 'Other';
 
     // Get translated label
     public function label(): string

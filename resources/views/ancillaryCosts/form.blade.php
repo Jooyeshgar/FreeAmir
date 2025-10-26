@@ -4,14 +4,11 @@
             <div class="flex w-1/4">
                 <div class="flex flex-wrap w-full">
                     <span class="flex flex-col flex-wrap text-gray-500 w-full"> {{ __('Invoice') }} </span>
-                    <select name="invoice_id" id="invoice_id" 
-                        x-model="selectedInvoiceId"
-                        @change="loadInvoiceProducts($event.target.value)"
+                    <select name="invoice_id" id="invoice_id" x-model="selectedInvoiceId" @change="loadInvoiceProducts($event.target.value)"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
                         <option value="">{{ __('Select Invoice') }}</option>
                         @foreach ($invoices as $invoice)
-                            <option value="{{ $invoice->id }}" 
-                                {{ (old('invoice_id') ?? ($ancillaryCost->invoice_id ?? null)) == $invoice->id ? 'selected' : '' }}>
+                            <option value="{{ $invoice->id }}" {{ (old('invoice_id') ?? ($ancillaryCost->invoice_id ?? null)) == $invoice->id ? 'selected' : '' }}>
                                 {{ formatDocumentNumber($invoice->number) }}
                             </option>
                         @endforeach
@@ -22,21 +19,23 @@
             <div class="flex w-1/4">
                 <div class="flex flex-wrap w-full">
                     <span class="flex flex-col flex-wrap text-gray-500 w-full"> {{ __('Cost Type') }} </span>
-                    <select name="description" id="description" 
-                        x-model="selectedCostType"
+                    <select name="type" id="type" x-model="selectedCostType"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
                         <option value="">{{ __('Select Cost Type') }}</option>
                         @foreach (App\Enums\AncillaryCostType::cases() as $type)
-                            <option value="{{ $type->value }}">{{ $type->label() }}</option>
+                            <option value="{{ $type->value }}" {{ $ancillaryCost->type == $type ? 'selected' : '' }}>{{ $type->label() }}</option>
                         @endforeach
                     </select>
                 </div>
             </div>
-
+            <div class="flex w-1/4">
+                <x-text-input title="{{ __('VAT') }}" input_name="vat" placeholder="0" input_value="{{ old('vat') ?? $ancillaryCost->vat }}"
+                    input_class="w-full"></x-text-input>
+            </div>
             <div class="flex w-1/4">
                 <x-text-input data-jdp title="{{ __('date') }}" input_name="date" placeholder="{{ __('date') }}"
-                    input_value="{{ old('date') ?? convertToJalali($ancillaryCost->date ?? now()) }}" 
-                    label_text_class="text-gray-500 text-nowrap" input_class="datePicker w-full"></x-text-input>
+                    input_value="{{ old('date') ?? convertToJalali($ancillaryCost->date ?? now()) }}" label_text_class="text-gray-500 text-nowrap"
+                    input_class="datePicker w-full"></x-text-input>
             </div>
         </div>
     </x-card>
@@ -60,7 +59,7 @@
                     <p>{{ __('Please select an invoice to see its products') }}</p>
                 </div>
             </template>
-            
+
             <template x-if="availableProducts && availableProducts.length > 0">
                 <div>
                     <template x-for="(product, index) in availableProducts" :key="product.id">
@@ -76,13 +75,8 @@
                             </div>
 
                             <div class="flex-1 min-w-32 max-w-48">
-                                <x-text-input placeholder="0" 
-                                    ::value="productAmounts[product.id] || 0"
-                                    x-bind:name="'ancillaryCosts[' + index + '][amount]'"
-                                    x-bind:disabled="!selectedCostType" 
-                                    label_text_class="text-gray-500" 
-                                    label_class="w-full" 
-                                    input_class="border-gray-300"
+                                <x-text-input placeholder="0" ::value="productAmounts[product.id] || 0" x-bind:name="'ancillaryCosts[' + index + '][amount]'" x-bind:disabled="!selectedCostType"
+                                    label_text_class="text-gray-500" label_class="w-full" input_class="border-gray-300"
                                     x-on:input="updateProductAmount(product.id, $event.target.value)">
                                 </x-text-input>
                             </div>
@@ -96,8 +90,13 @@
             <div class="flex justify-end px-4 gap-4 py-3">
                 <div class="flex items-center gap-2 px-4 py-2 bg-white shadow-sm rounded-xl border border-gray-200">
                     <span class="text-sm font-medium text-gray-500">{{ __('Total') }}:</span>
-                    <span class="text-lg font-bold text-green-600"
-                        x-text="calculateTotal().toLocaleString()">
+                    <span class="text-lg font-bold text-green-600" x-text="calculateTotal().toLocaleString()">
+                        0
+                    </span>
+                </div>
+                <div class="flex items-center gap-2 px-4 py-2 bg-white shadow-sm rounded-xl border border-gray-200">
+                    <span class="text-sm font-medium text-gray-500">{{ __('Total with VAT') }}:</span>
+                    <span class="text-lg font-bold text-green-600" x-text="calculateTotalWithVat().toLocaleString()">
                         0
                     </span>
                 </div>
@@ -107,11 +106,11 @@
 </div>
 
 <div class="mt-4 flex gap-2 justify-end">
-    <a href="{{ route('ancillary-costs.index') }}" type="submit" class="btn btn-default rounded-md"> 
+    <a href="{{ route('ancillary-costs.index') }}" type="submit" class="btn btn-default rounded-md">
         {{ __('cancel') }}
     </a>
     <button id="submitForm" type="submit" class="btn text-white btn-primary rounded-md">
-        {{ __('save and close form') }} 
+        {{ __('save and close form') }}
     </button>
 </div>
 
@@ -124,15 +123,16 @@
             Alpine.data('ancillaryCostForm', () => ({
                 availableProducts: [],
                 productAmounts: {},
-                selectedInvoiceId: {{ old('invoice_id') ?? $ancillaryCost->invoice_id ?? 'null' }},
-                selectedCostType: '{{ old('description') ?? $ancillaryCost->description?->value ?? '' }}',
-                
+                selectedInvoiceId: {{ old('invoice_id') ?? ($ancillaryCost->invoice_id ?? 'null') }},
+                selectedCostType: '{{ old('description') ?? ($ancillaryCost->description?->value ?? '') }}',
+                vatPercentage: '{{ old('vat') ?? ($ancillaryCost->vat ?? 0) }}',
+
                 init() {
                     // If editing and invoice_id exists, load products
                     if (this.selectedInvoiceId) {
                         this.loadInvoiceProducts(this.selectedInvoiceId);
                     }
-                    
+
                     // Load existing amounts if editing
                     const existingCosts = {!! json_encode($ancillaryCosts ?? [], JSON_UNESCAPED_UNICODE) !!};
                     if (existingCosts && existingCosts.length > 0) {
@@ -153,6 +153,12 @@
                     return Object.values(this.productAmounts).reduce((sum, amount) => {
                         return sum + (Number(this.$store.utils.convertToEnglish(amount)) || 0);
                     }, 0);
+                },
+
+                calculateTotalWithVat() {
+                    const total = this.calculateTotal();
+                    const vatPercent = Number(this.$store.utils.convertToEnglish(this.vatPercentage)) || 0;
+                    return total + (total * vatPercent / 100);
                 },
 
                 loadInvoiceProducts(invoiceId) {

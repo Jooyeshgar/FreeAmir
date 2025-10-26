@@ -19,10 +19,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('ancillary_costs', function (Blueprint $table) {
-			$table->dropColumn('description');
+            $table->dropColumn('description');
             $table->dropConstrainedForeignId('product_id');
             $table->decimal('vat', 18, 2)->default(0)->after('amount');
-			$table->enum('type', $this->enumValues)->after('amount');
+            $table->enum('type', $this->enumValues)->after('amount');
         });
 
         Schema::create('ancillary_cost_items', function (Blueprint $table) {

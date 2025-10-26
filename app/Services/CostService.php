@@ -101,32 +101,50 @@ class CostService
     {
         $invoice = $ancillaryCost->invoice;
 
-        if (! $invoice->invoice_type->isBuy()) {
+        if (! $invoice || ! $invoice->invoice_type->isBuy()) {
+            return;
+        }
+
+        $ancillaryCost->loadMissing(['items.product', 'invoice.items.product']);
+
+        if ($ancillaryCost->items->isNotEmpty()) {
+            $ancillaryCost->items
+                ->groupBy('product_id')
+                ->each(function ($items) {
+                    $first = $items->first();
+                    $product = $first?->product;
+
+                    if (! $product) {
+                        return;
+                    }
+
+                    $totalShare = $items->sum(function ($item) {
+                        return (float) $item->amount + (float) ($item->vat ?? 0);
+                    });
+
+                    self::recalculateAverageCostWithAncillary($product, $product->quantity, $totalShare);
+                });
+
             return;
         }
 
         $invoiceItems = $invoice->items;
 
-        // Calculate total invoice value (sum of item values)
         $totalInvoiceValue = $invoiceItems->sum(function ($item) {
             return $item->quantity * $item->unit_price;
         });
 
-        // Avoid division by zero
         if ($totalInvoiceValue == 0) {
             return;
         }
 
-        // Distribute cost across items
+        $totalAncillaryAmount = (float) $ancillaryCost->amount + (float) ($ancillaryCost->vat ?? 0);
+
         foreach ($invoiceItems as $invoiceItem) {
             $itemValue = $invoiceItem->quantity * $invoiceItem->unit_price;
             $costShareRatio = $itemValue / $totalInvoiceValue;
-            $ancillaryCostShare = $ancillaryCost->amount * $costShareRatio;
+            $ancillaryCostShare = $totalAncillaryAmount * $costShareRatio;
 
-            // Calculate new unit cost including ancillary cost share
-            $newUnitCost = $invoiceItem->unit_price + ($ancillaryCostShare / $invoiceItem->quantity);
-
-            // Recalculate average cost for the product
             self::recalculateAverageCostWithAncillary(
                 $invoiceItem->product,
                 $invoiceItem->quantity,
