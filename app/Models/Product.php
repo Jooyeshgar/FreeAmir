@@ -29,12 +29,14 @@ class Product extends Model
         'discount_formula',
         'description',
         'company_id',
-        'subject_id',
+        'sales_subject_id',
+        'cogs_subject_id',
+        'inventory_subject_id',
         'vat',
         'average_cost',
     ];
 
-    public static function booted(): void
+    protected static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope());
 
@@ -44,30 +46,43 @@ class Product extends Model
 
         static::created(function ($product) {
             $parentGroup = $product->productGroup;
-            $subject = app(SubjectCreatorService::class)->createSubject([
-                'name' => $product->name,
+            $subjectCreator = app(SubjectCreatorService::class);
+
+            // Create the three subjects
+            $sales = $subjectCreator->createSubject([
+                'name' => $product->name . ' - Sales Revenue',
                 'parent_id' => $parentGroup->subject_id ?? 0,
                 'company_id' => session('active-company-id'),
             ]);
-            $subject = $product->subject()->save($subject);
 
-            $product->update(['subject_id' => $subject->id]);
-        });
-        
-        static::updated(function ($product) {
-            $product->subject()->update([
-                'parent_id' => $product->productGroup->subject_id,
+            $cogs = $subjectCreator->createSubject([
+                'name' => $product->name . ' - Cost of Goods Sold',
+                'parent_id' => $parentGroup->subject_id ?? 0,
+                'company_id' => session('active-company-id'),
+            ]);
+
+            $inventory = $subjectCreator->createSubject([
+                'name' => $product->name . ' - Inventory',
+                'parent_id' => $parentGroup->subject_id ?? 0,
+                'company_id' => session('active-company-id'),
+            ]);
+
+            $product->update([
+                'sales_subject_id' => $sales->id,
+                'cogs_subject_id' => $cogs->id,
+                'inventory_subject_id' => $inventory->id,
             ]);
         });
 
         static::deleting(function ($product) {
-            // Delete the related subject when the product is deleted
-            if ($product->subject) {
-                $product->subject->delete();
-            }
+            // Delete related subjects
+            $product->salesSubject?->delete();
+            $product->cogsSubject?->delete();
+            $product->inventorySubject?->delete();
         });
     }
 
+    // Relationships
     public function productWebsites(): HasMany
     {
         return $this->hasMany(ProductWebsite::class, 'product_id');
@@ -78,8 +93,18 @@ class Product extends Model
         return $this->belongsTo(ProductGroup::class, 'group');
     }
 
-    public function subject()
+    public function salesSubject(): BelongsTo
     {
-        return $this->morphOne(Subject::class, 'subjectable');
+        return $this->belongsTo(Subject::class, 'sales_subject_id');
+    }
+
+    public function cogsSubject(): BelongsTo
+    {
+        return $this->belongsTo(Subject::class, 'cogs_subject_id');
+    }
+
+    public function inventorySubject(): BelongsTo
+    {
+        return $this->belongsTo(Subject::class, 'inventory_subject_id');
     }
 }
