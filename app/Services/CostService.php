@@ -101,8 +101,7 @@ class CostService
     {
         $invoice = $ancillaryCost->invoice;
 
-        // Only distribute for sell invoices
-        if (! $invoice->invoice_type->isSell()) {
+        if (! $invoice->invoice_type->isBuy()) {
             return;
         }
 

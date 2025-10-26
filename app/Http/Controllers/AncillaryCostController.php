@@ -35,7 +35,7 @@ class AncillaryCostController extends Controller
     {
         // Ancillary costs are applicable to SELL invoices per inventory accounting guide
         $invoices = Invoice::select('id', 'number')
-            ->where('invoice_type', 'sell')
+            ->where('invoice_type', 'buy')
             ->orderByDesc('date')
             ->get();
         $ancillaryCost = new AncillaryCost;
@@ -68,7 +68,7 @@ class AncillaryCostController extends Controller
 
     public function edit(AncillaryCost $ancillaryCost)
     {
-        $invoices = Invoice::select('id', 'number')->where('invoice_type', 'sell')->orderByDesc('date')->get();
+        $invoices = Invoice::select('id', 'number')->where('invoice_type', 'buy')->orderByDesc('date')->get();
 
         // Get all ancillary costs for the same invoice to allow editing
         $ancillaryCostsCollection = AncillaryCost::where('invoice_id', $ancillaryCost->invoice_id)->get();
