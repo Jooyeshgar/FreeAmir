@@ -36,7 +36,7 @@
                         </div>
                         <div class="text-sm text-right w-1/4">
                             <p>تاریخ سند: {{ $document->formatted_date }}</p>
-                            <p>شماره سند: {{ convertToFarsi($document->number) }}</p>
+                            <p>شماره سند: {{ formatDocumentNumber($document->number) }}</p>
                         </div>
                     </div>
                 </td>

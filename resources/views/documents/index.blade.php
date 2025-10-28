@@ -50,7 +50,7 @@
                         <tr>
                             <td class="p-2">
                                 <a href="{{ route('documents.show', $document->id) }}">
-                                    {{ convertToFarsi($document->number) }}
+                                    {{ formatDocumentNumber($document->number) }}
                                 </a>
                             </td>
 

@@ -68,7 +68,7 @@
                             <td class="px-4 py-2">
                                 @if ($invoice->document)
                                     <a class="link"
-                                        href="{{ route('documents.show', $invoice->document_id) }}">{{ convertToFarsi($invoice->document->number) }}</a>
+                                        href="{{ route('documents.show', $invoice->document_id) }}">{{ formatDocumentNumber($invoice->document->number) }}</a>
                                 @endif
                             </td>
                             <td class="px-4 py-2">{{ isset($invoice->date) ? formatDate($invoice->date) : '' }}</td>
