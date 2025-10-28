@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Enums\AncillaryCostType;
 use App\Models\AncillaryCost;
 use App\Models\Invoice;
-use App\Services\CostOfGoodsService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -38,10 +37,11 @@ class AncillaryCostService
         return DB::transaction(function () use ($data, $invoice) {
             $ancillaryCost = AncillaryCost::create([
                 'invoice_id' => $invoice->id,
+                'company_id' => $data['company_id'],
                 'date' => $data['date'] ?? now()->toDateString(),
                 'type' => AncillaryCostType::from($data['type']),
                 'amount' => $data['amount'],
-                'vat' => $data['vat'] ?? 0,
+                'vat' => $data['vat'] * ($data['amount'] ?? 0) ?? 0,
             ]);
 
             self::syncAncillaryCostItems($ancillaryCost, $data['ancillaryCosts'] ?? []);
@@ -72,11 +72,12 @@ class AncillaryCostService
             $ancillaryCost->items()->delete();
 
             $ancillaryCost->update([
+                'company_id' => $ancillaryCost['company_id'],
                 'invoice_id' => $invoice->id,
                 'date' => $data['date'] ?? now()->toDateString(),
                 'type' => AncillaryCostType::from($data['type']),
                 'amount' => $data['amount'],
-                'vat' => $data['vat'] ?? 0,
+                'vat' => $data['vat'] * ($data['amount'] ?? 0) ?? 0,
             ]);
 
             self::syncAncillaryCostItems($ancillaryCost, $data['ancillaryCosts'] ?? []);
@@ -150,16 +151,16 @@ class AncillaryCostService
 
         $payload = collect($items)->map(function (array $item) use ($ancillaryCost) {
             return [
+                'company_id' => $ancillaryCost->company_id,
                 'product_id' => $item['product_id'],
                 'type' => $ancillaryCost->type,
                 'amount' => $item['amount'],
-                'vat' => $item['vat'] ?? 0,
+                'vat' => $item['vat'] * ($item['amount'] ?? 0) ?? 0,
             ];
         })->all();
 
         $ancillaryCost->items()->createMany($payload);
     }
-
 
     /**
      * Validate ancillary cost data.
