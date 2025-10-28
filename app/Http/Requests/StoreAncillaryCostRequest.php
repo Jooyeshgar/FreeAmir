@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\AncillaryCostType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreAncillaryCostRequest extends FormRequest
 {
@@ -33,6 +35,8 @@ class StoreAncillaryCostRequest extends FormRequest
 
         $this->merge([
             'amount' => convertToFloat($total),
+            'type' => $this->input('type'),
+            'vat' => convertToFloat($this->input('vat')),
             'date' => convertToGregorian($this->input('date')),
             'invoice_id' => convertToInt($this->input('invoice_id')),
             'ancillaryCosts' => $processedCosts,
@@ -44,8 +48,9 @@ class StoreAncillaryCostRequest extends FormRequest
         return [
             'amount' => 'required|numeric|min:0',
             'invoice_id' => 'required|integer|exists:invoices,id',
+            'vat' => 'nullable|numeric|min:0|max:100',
             'date' => 'required|date',
-            'type' => 'required|string',
+            'type' => ['required', Rule::in(array_column(AncillaryCostType::cases(), 'value'))],
             'ancillaryCosts' => 'nullable|array',
             'ancillaryCosts.*.product_id' => 'required|integer|exists:products,id',
             'ancillaryCosts.*.amount' => 'required|numeric|min:0',
@@ -55,6 +60,11 @@ class StoreAncillaryCostRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'type.required' => __('The Type field is required.'),
+            'type.in' => __('The selected Type is invalid.'),
+            'vat.numeric' => __('VAT must be a number.'),
+            'vat.min' => __('VAT must be at least :min.'),
+            'vat.max' => __('VAT may not be greater than :max.'),
             'invoice_id.required' => __('The Invoice field is required.'),
             'invoice_id.integer' => __('The invoice ID field must be an integer.'),
             'invoice_id.exists' => __('The selected invoice ID is invalid.'),
