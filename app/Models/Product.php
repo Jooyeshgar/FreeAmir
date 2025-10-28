@@ -38,7 +38,7 @@ class Product extends Model
 
     protected static function booted(): void
     {
-        static::addGlobalScope(new FiscalYearScope());
+        static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($product) {
             $product->company_id ??= session('active-company-id');
@@ -50,22 +50,28 @@ class Product extends Model
 
             // Create the three subjects
             $sales = $subjectCreator->createSubject([
-                'name' => $product->name . ' - Sales Revenue',
+                'name' => $product->name.' - Sales Revenue',
                 'parent_id' => $parentGroup->subject_id ?? 0,
                 'company_id' => session('active-company-id'),
             ]);
+            $sales->subjectable()->associate($product);
+            $sales->save();
 
             $cogs = $subjectCreator->createSubject([
-                'name' => $product->name . ' - Cost of Goods Sold',
+                'name' => $product->name.' - Cost of Goods Sold',
                 'parent_id' => $parentGroup->subject_id ?? 0,
                 'company_id' => session('active-company-id'),
             ]);
+            $cogs->subjectable()->associate($product);
+            $cogs->save();
 
             $inventory = $subjectCreator->createSubject([
-                'name' => $product->name . ' - Inventory',
+                'name' => $product->name.' - Inventory',
                 'parent_id' => $parentGroup->subject_id ?? 0,
                 'company_id' => session('active-company-id'),
             ]);
+            $inventory->subjectable()->associate($product);
+            $inventory->save();
 
             $product->update([
                 'sales_subject_id' => $sales->id,
@@ -74,7 +80,7 @@ class Product extends Model
             ]);
         });
 
-        static::deleting(function ($product) {
+        static::deleted(function ($product) {
             // Delete related subjects
             $product->salesSubject?->delete();
             $product->cogsSubject?->delete();
