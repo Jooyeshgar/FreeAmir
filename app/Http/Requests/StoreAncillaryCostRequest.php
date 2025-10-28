@@ -31,6 +31,7 @@ class StoreAncillaryCostRequest extends FormRequest
                 }
                 $total += $amount;
             }
+            $total += $total * ($this->input('vat') ?? 0) / 100;
         }
 
         $this->merge([
