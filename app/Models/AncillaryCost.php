@@ -24,6 +24,11 @@ class AncillaryCost extends Model
         'vat' => 'decimal:2',
     ];
 
+    public static function booted(): void
+    {
+        static::addGlobalScope(new FiscalYearScope());
+    }
+    
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);

@@ -22,6 +22,11 @@ class AncillaryCostItem extends Model
         'vat' => 'decimal:2',
     ];
 
+    public static function booted(): void
+    {
+        static::addGlobalScope(new FiscalYearScope());
+    }
+
     public function ancillaryCost(): BelongsTo
     {
         return $this->belongsTo(AncillaryCost::class);
