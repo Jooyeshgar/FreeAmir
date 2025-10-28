@@ -93,7 +93,7 @@ class InvoiceTransactionBuilder
             $this->totalAmount += $itemAmount - $itemDiscount + $itemVat;
 
             $this->transactions[] = [
-                'subject_id' => $product->subject_id,
+                'subject_id' => $product->inventory_subject_id,
                 'desc' => $item['description'] ?? $product->name,
                 'value' => $invoiceType->isSell() ? $itemAmount : -$itemAmount,
             ];
