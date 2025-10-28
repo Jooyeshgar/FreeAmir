@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AncillaryCostType;
+use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -24,7 +25,7 @@ class AncillaryCostItem extends Model
 
     public static function booted(): void
     {
-        static::addGlobalScope(new FiscalYearScope());
+        static::addGlobalScope(new FiscalYearScope);
     }
 
     public function ancillaryCost(): BelongsTo
