@@ -28,7 +28,7 @@
                                 <a class="link"
                                     href="{{ route('invoices.show', $ancillaryCost->invoice_id) }}">{{ formatDocumentNumber($ancillaryCost->invoice->number) ?? '' }}</a>
                             </td>
-                            <td class="p-2">{{ $ancillaryCost->description }}</td>
+                            <td class="p-2">{{ $ancillaryCost->type->label() }}</td>
                             <td class="p-2">{{ formatDate($ancillaryCost->date) }}</td>
                             <td class="p-2">{{ formatNumber($ancillaryCost->amount) }}</td>
                             <td class="p-2">

@@ -19,18 +19,22 @@
             <div class="flex w-1/4">
                 <div class="flex flex-wrap w-full">
                     <span class="flex flex-col flex-wrap text-gray-500 w-full"> {{ __('Cost Type') }} </span>
-                    <select name="type" id="type" x-model="selectedCostType"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
+                    <select name="type"
+                            id="type"
+                            x-model="selectedCostType"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm
+                                focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
                         <option value="">{{ __('Select Cost Type') }}</option>
                         @foreach (App\Enums\AncillaryCostType::cases() as $type)
-                            <option value="{{ $type->value }}" {{ $ancillaryCost->type == $type ? 'selected' : '' }}>{{ $type->label() }}</option>
+                            <option value="{{ $type->value }}">{{ $type->label() }}</option>
                         @endforeach
                     </select>
                 </div>
             </div>
             <div class="flex w-1/4">
-                <x-text-input title="{{ __('VAT') }}" input_name="vat" placeholder="0" input_value="{{ old('vat') ?? $ancillaryCost->vat }}"
-                    input_class="w-full"></x-text-input>
+                <x-text-input placeholder="0" title="{{ __('VAT') }}" input_name="vat" x-model="vat" input_value="{{ old('vat') ?? $ancillaryCost->vat }}"
+                    label_text_class="text-gray-500" label_class="w-full" input_class="border-white">
+                </x-text-input>
             </div>
             <div class="flex w-1/4">
                 <x-text-input data-jdp title="{{ __('date') }}" input_name="date" placeholder="{{ __('date') }}"
@@ -96,7 +100,7 @@
                 </div>
                 <div class="flex items-center gap-2 px-4 py-2 bg-white shadow-sm rounded-xl border border-gray-200">
                     <span class="text-sm font-medium text-gray-500">{{ __('Total with VAT') }}:</span>
-                    <span class="text-lg font-bold text-green-600" x-text="calculateTotalWithVat().toLocaleString()">
+                    <span class="text-lg font-bold text-green-600" x-text="calculateTotalWithVat(Number($store.utils.convertToEnglish(vat))).toLocaleString()">
                         0
                     </span>
                 </div>
@@ -125,7 +129,8 @@
                 productAmounts: {},
                 selectedInvoiceId: {{ old('invoice_id') ?? ($ancillaryCost->invoice_id ?? 'null') }},
                 selectedCostType: '{{ old('description') ?? ($ancillaryCost->description?->value ?? '') }}',
-                vatPercentage: '{{ old('vat') ?? ($ancillaryCost->vat ?? 0) }}',
+                selectedCostType: '{{ old('type') ?? ($ancillaryCost->type ?? '') }}',
+                vat: '{{ old('vat') ?? ($ancillaryCost->vat ?? 0) }}',
 
                 init() {
                     // If editing and invoice_id exists, load products
@@ -134,7 +139,7 @@
                     }
 
                     // Load existing amounts if editing
-                    const existingCosts = {!! json_encode($ancillaryCosts ?? [], JSON_UNESCAPED_UNICODE) !!};
+                    const existingCosts = {!! json_encode($ancillaryCostItems ?? [], JSON_UNESCAPED_UNICODE) !!};
                     if (existingCosts && existingCosts.length > 0) {
                         existingCosts.forEach(cost => {
                             if (cost.product_id && cost.amount) {
@@ -155,9 +160,11 @@
                     }, 0);
                 },
 
-                calculateTotalWithVat() {
+                calculateTotalWithVat(vat) {
                     const total = this.calculateTotal();
-                    const vatPercent = Number(this.$store.utils.convertToEnglish(this.vatPercentage)) || 0;
+                    const vatPercent = Number(this.$store.utils.convertToEnglish(vat)) || 0;
+                    console.log('VAT Percent:', vatPercent);
+
                     return total + (total * vatPercent / 100);
                 },
 
