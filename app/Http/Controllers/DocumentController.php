@@ -50,7 +50,7 @@ class DocumentController extends Controller
 
         $total = count($transactions);
         $document = new Document;
-        $previousDocumentNumber = Document::orderBy('id', 'desc')->first()->number ?? 0;
+        $previousDocumentNumber = floor(Document::orderBy('id', 'desc')->first()->number) ?? 0;
 
         return view('documents.create', compact('document', 'previousDocumentNumber', 'subjects', 'transactions', 'total'));
     }

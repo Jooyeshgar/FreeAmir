@@ -24,9 +24,16 @@ class StoreTransactionRequest extends FormRequest
             'date' => convertToGregorian($this->input('date')),
         ]);
 
-        $this->merge([
-            'number' => convertToFloat($this->input('number')),
-        ]);
+        if ($this->has('number') && str_contains($this->input('number'), '/')) {
+            $documentNumber = str_replace('/', '.', $this->input('number'));
+            $this->merge([
+                'number' => convertToFloat($documentNumber),
+            ]);
+        } else {
+            $this->merge([
+                'number' => convertToFloat($this->input('number')),
+            ]);
+        }
 
         // Convert debit and credit values to float for each document entry
         if ($this->has('transactions')) {
