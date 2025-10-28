@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
  * Format a number with separators, parentheses for negatives,
  * and optionally convert to Farsi if the locale is Persian.
  *
- * @param float|int $number
+ * @param  float|int  $number
  * @return string
  */
 function formatNumber($number)
@@ -32,10 +32,18 @@ function formatNumber($number)
 function formatDocumentNumber(float $number)
 {
     if (floor($number) == $number) {
-        return formatNumber((string) intval($number));
+        return formatNumber(intval($number));
     }
 
-    return formatNumber(number_format($number, 2, '/', ''));
+    $chunks = str_replace('.', '', number_format($number, 2, '.', ''));
+    $chunks = str_split($chunks, 3);
+    $documentNumber = implode('/', $chunks);
+
+    if (in_array(App::getLocale(), ['fa', 'fa_IR'])) {
+        $documentNumber = convertToFarsi($documentNumber);
+    }
+
+    return $documentNumber;
 }
 
 function formatDate(Carbon|string|null $date)
@@ -55,7 +63,7 @@ function formatDate(Carbon|string|null $date)
     return $date->format('Y-m-d');
 }
 
-function formatMinimalDate(Carbon|null $date)
+function formatMinimalDate(?Carbon $date)
 {
     if (is_null($date)) {
         return '';
@@ -85,7 +93,7 @@ function formatCode(string $code)
 /**
  * Convert a number string to Farsi digits.
  *
- * @param string $number
+ * @param  string  $number
  * @return string
  */
 function convertToFarsi($number)
@@ -99,7 +107,7 @@ function convertToFarsi($number)
 /**
  * Convert a string number from Persian or English to a float.
  *
- * @param mixed $number
+ * @param  mixed  $number
  * @return float
  */
 function convertToFloat($number)
@@ -119,7 +127,7 @@ function convertToFloat($number)
 /**
  * Convert a string number from Persian or English to a int.
  *
- * @param mixed $number
+ * @param  mixed  $number
  * @return float
  */
 function convertToInt($number)
@@ -139,7 +147,7 @@ function convertToInt($number)
 /**
  * Convert a date from Jalali to Gregorian based on locale.
  *
- * @param string $date Date in 'YYYY/MM/DD' or 'YYYY-MM-DD' format
+ * @param  string  $date  Date in 'YYYY/MM/DD' or 'YYYY-MM-DD' format
  * @return string Converted date in Gregorian format (if locale is Persian), otherwise original date
  */
 function convertToGregorian($date)
@@ -160,7 +168,7 @@ function convertToGregorian($date)
  * When locale is Persian, returns a Jalali date string; otherwise returns the original
  * date (Carbon formatted as 'Y-m-d' if needed).
  *
- * @param \Carbon\Carbon|string|null $date
+ * @param  \Carbon\Carbon|string|null  $date
  * @return string
  */
 function convertToJalali($date)
@@ -178,14 +186,13 @@ function convertToJalali($date)
     return (string) $date;
 }
 
-
-if (!function_exists('model_route')) {
+if (! function_exists('model_route')) {
     /**
      * Convert a model class or instance to a route name.
      *
-     * @param string|object $model The model class name or instance
-     * @param string $action The action for the route (default: 'index')
-     * @param bool $plural Whether to pluralize the route name (default: true)
+     * @param  string|object  $model  The model class name or instance
+     * @param  string  $action  The action for the route (default: 'index')
+     * @param  bool  $plural  Whether to pluralize the route name (default: true)
      * @return string The route name
      */
     function model_route($model, string $action = 'index', bool $plural = true): string
@@ -197,6 +204,6 @@ if (!function_exists('model_route')) {
             $routeName = Str::plural($routeName);
         }
 
-        return $routeName . '.' . $action;
+        return $routeName.'.'.$action;
     }
 }
