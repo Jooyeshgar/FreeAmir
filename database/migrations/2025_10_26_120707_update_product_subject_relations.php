@@ -10,9 +10,8 @@ return new class extends Migration
     {
         Schema::table('products', function (Blueprint $table) {
             // Drop old morph column
-            if (Schema::hasColumn('products', 'subject_id')) {
-                $table->dropColumn('subject_id');
-            }
+            $table->dropForeign('products_subject_id_foreign');
+            $table->dropColumn('subject_id');
 
             // Add new subject relations
             $table->foreignId('sales_subject_id')->nullable()->constrained('subjects')->nullOnDelete();
@@ -27,7 +26,8 @@ return new class extends Migration
             $table->dropConstrainedForeignId('sales_subject_id');
             $table->dropConstrainedForeignId('cogs_subject_id');
             $table->dropConstrainedForeignId('inventory_subject_id');
-            $table->unsignedBigInteger('subject_id')->nullable();
+
+            $table->foreign('subject_id')->references('id')->on('subjects')->onDelete('set null');
         });
     }
 };
