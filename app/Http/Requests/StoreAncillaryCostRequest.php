@@ -18,6 +18,7 @@ class StoreAncillaryCostRequest extends FormRequest
         $ancillaryCostsInput = $this->input('ancillaryCosts', []);
         $processedCosts = [];
         $total = 0;
+        $vat = 0;
 
         if (! empty($ancillaryCostsInput)) {
             foreach ($ancillaryCostsInput as $key => $cost) {
@@ -31,13 +32,14 @@ class StoreAncillaryCostRequest extends FormRequest
                 }
                 $total += $amount;
             }
-            $total += $total * ($this->input('vat') ?? 0) / 100;
+            $vatPercent = ($this->input('vat') ?? 0) / 100;
+            $total += $total * $vatPercent;
         }
 
         $this->merge([
             'amount' => convertToFloat($total),
             'type' => $this->input('type'),
-            'vat' => convertToFloat($this->input('vat')),
+            'vat' => convertToFloat($vatPercent),
             'date' => convertToGregorian($this->input('date')),
             'invoice_id' => convertToInt($this->input('invoice_id')),
             'ancillaryCosts' => $processedCosts,
