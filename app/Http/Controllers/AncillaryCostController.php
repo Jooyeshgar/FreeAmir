@@ -36,6 +36,7 @@ class AncillaryCostController extends Controller
     public function store(StoreAncillaryCostRequest $request)
     {
         $validated = $request->validated();
+        $validated['company_id'] = session('active-company-id');
 
         AncillaryCostService::createAncillaryCost($validated);
 
@@ -63,6 +64,7 @@ class AncillaryCostController extends Controller
     public function update(StoreAncillaryCostRequest $request, AncillaryCost $ancillaryCost)
     {
         $validated = $request->validated();
+        $validated['company_id'] = session('active-company-id');
 
         AncillaryCostService::updateAncillaryCost($ancillaryCost, $validated);
 
