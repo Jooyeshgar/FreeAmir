@@ -85,7 +85,7 @@ class InvoiceService
             ProductService::updateProductQuantities($items, InvoiceType::from($invoiceData['invoice_type']));
 
             // Process costs (weighted average for both, cost_at_time_of_sale for sell)
-            CostService::processInvoiceCosts($createdInvoice, InvoiceType::from($invoiceData['invoice_type']));
+            // CostService::processInvoiceCosts($createdInvoice, InvoiceType::from($invoiceData['invoice_type']));
         });
 
         return [
@@ -157,9 +157,9 @@ class InvoiceService
             }
 
             ProductService::updateProductQuantities($InvoiceItems->get()->toArray(), InvoiceType::from($invoiceData['invoice_type']), true);
-            foreach ($InvoiceItems as $InvoiceItem) {
-                CostService::reverseCostUpdate($InvoiceItem, $invoice->invoice_type);
-            }
+            // foreach ($InvoiceItems as $InvoiceItem) {
+            //     CostService::reverseCostUpdate($InvoiceItem, $invoice->invoice_type);
+            // }
 
             $InvoiceItems->delete();
 
@@ -176,7 +176,7 @@ class InvoiceService
             ProductService::updateProductQuantities($items, InvoiceType::from($invoiceData['invoice_type']));
 
             // Process costs (weighted average for both, cost_at_time_of_sale for sell)
-            CostService::processInvoiceCosts($invoice, InvoiceType::from($invoiceData['invoice_type']));
+            // CostService::processInvoiceCosts($invoice, InvoiceType::from($invoiceData['invoice_type']));
         });
 
         return [
@@ -208,11 +208,11 @@ class InvoiceService
             ProductService::updateProductQuantities($invoiceItems->get()->toArray(), $invoice->invoice_type, true);
 
             // Reverse cost updates for buy or sell invoices
-            if ($invoice->invoice_type->isBuy() || $invoice->invoice_type->isSell()) {
-                foreach ($invoiceItems->get() as $invoiceItem) {
-                    CostService::reverseCostUpdate($invoiceItem, $invoice->invoice_type);
-                }
-            }
+            // if ($invoice->invoice_type->isBuy() || $invoice->invoice_type->isSell()) {
+            //     foreach ($invoiceItems->get() as $invoiceItem) {
+            //         CostService::reverseCostUpdate($invoiceItem, $invoice->invoice_type);
+            //     }
+            // }
 
             $invoiceItems->delete();
 
