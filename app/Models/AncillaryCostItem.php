@@ -15,6 +15,7 @@ class AncillaryCostItem extends Model
         'type',
         'amount',
         'vat',
+        'company_id',
     ];
 
     protected $casts = [

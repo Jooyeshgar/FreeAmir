@@ -16,6 +16,7 @@ class AncillaryCost extends Model
         'vat',
         'date',
         'invoice_id',
+        'company_id',
     ];
 
     protected $casts = [
