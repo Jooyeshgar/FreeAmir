@@ -109,10 +109,6 @@ class SubjectSeeder extends Seeder
 
             ['id' => 19, 'code' => '062001', 'name' => 'خرید', 'parent_id' => 17, 'type' => 'debtor', 'company_id' => 1],
 
-            ['id' => 42, 'code' => '063001', 'name' => 'برگشت از خرید', 'parent_id' => 24, 'type' => 'both', 'company_id' => 1],
-            ['id' => 53, 'code' => '063002', 'name' => 'تخفیفات خرید', 'parent_id' => 24, 'type' => 'both', 'company_id' => 1],
-
-            ['id' => 91, 'code' => '064001', 'name' => 'حسابهای انتظامی به نفع شرکت', 'parent_id' => 90, 'type' => 'both', 'company_id' => 1],
             ['id' => 92, 'code' => '064002', 'name' => 'حسابهای انتظامی به عهده شرکت', 'parent_id' => 90, 'type' => 'both', 'company_id' => 1],
 
             ['id' => 94, 'code' => '065001', 'name' => 'طرف حساب انتظامی به نفع شرکت', 'parent_id' => 93, 'type' => 'both', 'company_id' => 1],

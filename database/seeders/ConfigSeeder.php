@@ -25,11 +25,14 @@ class ConfigSeeder extends Seeder
             ['type' => 3, 'category' => 1, 'key' => 'sell_vat', 'value' => '41', 'desc' => 'مالیات فروش', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'buy_vat', 'value' => '40', 'desc' => 'مالیات خرید', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'product', 'value' => '9', 'desc' => 'محصولات', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'inventory', 'value' => '103', 'desc' => 'محصولات', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'return_sales', 'value' => '25', 'desc' => 'برگشت از فروش', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'cost_of_goods', 'value' => '102', 'desc' => 'بهای تمام شده کالا', 'company_id' => 1],
         ];
 
         Config::insert($configs);
         foreach ($configs as $config) {
-                config(['amir.' . $config['key'] => $config['value']]);
+            config(['amir.'.$config['key'] => $config['value']]);
         }
     }
 }
