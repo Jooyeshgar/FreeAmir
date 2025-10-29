@@ -24,16 +24,16 @@ class ProductService
             }
 
             if (! $deletingInvoiceItem) {
-                if ($invoice_type->isBuy()) {
+                if ($invoice_type === InvoiceType::BUY) {
                     $product->quantity += $invoiceItem['quantity'];
-                } elseif ($invoice_type->isSell()) {
+                } elseif ($invoice_type === InvoiceType::SELL) {
                     $product->quantity -= $invoiceItem['quantity'];
                 }
             } else {
                 // Reverse the operation when deleting
-                if ($invoice_type->isBuy()) {
+                if ($invoice_type === InvoiceType::BUY) {
                     $product->quantity -= $invoiceItem['quantity'];
-                } elseif ($invoice_type->isSell()) {
+                } elseif ($invoice_type === InvoiceType::SELL) {
                     $product->quantity += $invoiceItem['quantity'];
                 }
             }
