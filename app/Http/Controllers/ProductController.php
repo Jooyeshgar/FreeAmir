@@ -70,23 +70,17 @@ class ProductController extends Controller
 
     public function show(Models\Product $product)
     {
-        $product->load('productgroup');
+        $product->load('productgroup', 'invoiceItems.invoice');
 
-        $invoices = [];
-        $invoice_items = Models\InvoiceItem::where('product_id', $product->id)->orderBy('updated_at')->get();
-
-        if ($invoice_items->count() > 0) {
-            foreach ($invoice_items as $invoice_item) {
-                $invoice_item->load('invoice');
-                $invoice_item->invoice_type = $invoice_item->invoice->invoice_type;
-            }
-        }
-
-        return view('products.show', compact('product', 'invoice_items'));
+        return view('products.show', compact('product'));
     }
 
     public function destroy(Models\Product $product)
     {
+        if ($product->invoiceItems()->exists()) {
+            return redirect()->route('products.index')->with('error', __('Cannot delete product with existing invoice items.'));
+        }
+
         $product->delete();
 
         return redirect()->route('products.index')->with('success', __('Product deleted successfully.'));
