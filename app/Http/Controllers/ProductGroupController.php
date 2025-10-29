@@ -21,6 +21,7 @@ class ProductGroupController extends Controller
         if (empty(config('amir.product'))) {
             return redirect()->route('configs.index')->with('error', __('Product Subject is not configured. Please set it in configurations.'));
         }
+
         return view('productGroups.create');
     }
 
@@ -57,6 +58,10 @@ class ProductGroupController extends Controller
 
     public function destroy(Models\ProductGroup $productGroup)
     {
+        if ($productGroup->products()->exists()) {
+            return redirect()->route('product-groups.index')->with('error', __('Cannot delete product group with existing products.'));
+        }
+
         $productGroup->delete();
 
         return redirect()->route('product-groups.index')->with('success', __('Product group deleted successfully.'));

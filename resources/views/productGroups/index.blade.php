@@ -33,12 +33,15 @@
                             <td class="px-4 py-2">
                                 <a href="{{ route('product-groups.edit', $productGroup) }}"
                                     class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                <form action="{{ route('product-groups.destroy', $productGroup) }}" method="POST"
-                                    class="inline-block">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                </form>
+                                    @if ($productGroup->products()->exists())
+                                        <span class="btn btn-sm btn-disabled" title="{{ __('Cannot delete product group that is used in products') }}">{{ __('Delete') }}</span>
+                                    @else 
+                                        <form action="{{ route('product-groups.destroy', $productGroup) }}" method="POST" class="inline-block">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                        </form>
+                                    @endif
                             </td>
                         </tr>
                     @endforeach
