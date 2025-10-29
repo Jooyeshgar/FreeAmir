@@ -156,7 +156,7 @@ class InvoiceService
 
             if ($invoice->invoice_type === InvoiceType::BUY) {
                 foreach ($InvoiceItems as $InvoiceItem) {
-                    CostOfGoodsService::reverseCostUpdate($InvoiceItem, $invoice->invoice_type);
+                    CostOfGoodsService::reverseCostUpdate($InvoiceItem);
                 }
             }
 
@@ -209,7 +209,7 @@ class InvoiceService
             // Reverse cost updates for buy invoices
             if ($invoice->invoice_type === InvoiceType::BUY) {
                 foreach ($invoiceItems->get() as $invoiceItem) {
-                    CostOfGoodsService::reverseCostUpdate($invoiceItem, $invoice->invoice_type);
+                    CostOfGoodsService::reverseCostUpdate($invoiceItem);
                 }
             }
 
