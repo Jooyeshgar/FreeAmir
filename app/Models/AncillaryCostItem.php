@@ -14,14 +14,12 @@ class AncillaryCostItem extends Model
         'product_id',
         'type',
         'amount',
-        'vat',
         'company_id',
     ];
 
     protected $casts = [
         'type' => AncillaryCostType::class,
         'amount' => 'decimal:2',
-        'vat' => 'decimal:2',
     ];
 
     public static function booted(): void
