@@ -41,7 +41,7 @@ class AncillaryCostService
                 'date' => $data['date'] ?? now()->toDateString(),
                 'type' => AncillaryCostType::from($data['type']),
                 'amount' => $data['amount'],
-                'vat' => $data['vat'] * ($data['amount'] ?? 0) ?? 0,
+                'vat' => $data['vatPrice'] ?? 0,
             ]);
 
             self::syncAncillaryCostItems($ancillaryCost, $data['ancillaryCosts'] ?? []);
@@ -77,7 +77,7 @@ class AncillaryCostService
                 'date' => $data['date'] ?? now()->toDateString(),
                 'type' => AncillaryCostType::from($data['type']),
                 'amount' => $data['amount'],
-                'vat' => $data['vat'] * ($data['amount'] ?? 0) ?? 0,
+                'vat' => $data['vatPrice'] ?? 0,
             ]);
 
             self::syncAncillaryCostItems($ancillaryCost, $data['ancillaryCosts'] ?? []);
@@ -155,7 +155,6 @@ class AncillaryCostService
                 'product_id' => $item['product_id'],
                 'type' => $ancillaryCost->type,
                 'amount' => $item['amount'],
-                'vat' => $item['vat'] * ($item['amount'] ?? 0) ?? 0,
             ];
         })->all();
 
@@ -175,14 +174,14 @@ class AncillaryCostService
 
         $validator = Validator::make($data, [
             'invoice_id' => 'required|integer|exists:invoices,id',
+            'vatPrice' => 'nullable|numeric|min:0',
+            'vatPercentage' => 'nullable|numeric|min:0|max:100',
             'date' => 'required|date',
             'type' => ['required', Rule::in($allowedTypes)],
             'amount' => 'required|numeric|min:0',
-            'vat' => 'nullable|numeric|min:0',
-            'ancillaryCosts' => 'nullable|array',
+            'ancillaryCosts' => 'required|array',
             'ancillaryCosts.*.product_id' => 'required_with:ancillaryCosts|integer|exists:products,id',
             'ancillaryCosts.*.amount' => 'required_with:ancillaryCosts|numeric|min:0',
-            'ancillaryCosts.*.vat' => 'nullable|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
