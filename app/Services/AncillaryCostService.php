@@ -48,7 +48,7 @@ class AncillaryCostService
 
             $ancillaryCost->load(['items.product', 'invoice.items.product']);
 
-            CostOfGoodsService::distributeAncillaryCost($ancillaryCost);
+            CostOfGoodsService::updateProductAverageCostOnAddingAncillaryCost($ancillaryCost);
 
             return $ancillaryCost;
         });
@@ -67,7 +67,7 @@ class AncillaryCostService
         return DB::transaction(function () use ($ancillaryCost, $data, $invoice) {
             $ancillaryCost->loadMissing(['items.product', 'invoice.items.product']);
 
-            CostOfGoodsService::reverseAncillaryCostDistribution($ancillaryCost);
+            CostOfGoodsService::reverseUpdateProductAverageCostForAncillaryCost($ancillaryCost);
 
             $ancillaryCost->items()->delete();
 
@@ -84,7 +84,7 @@ class AncillaryCostService
 
             $ancillaryCost->load(['items.product', 'invoice.items.product']);
 
-            CostOfGoodsService::distributeAncillaryCost($ancillaryCost);
+            CostOfGoodsService::updateProductAverageCostOnAddingAncillaryCost($ancillaryCost);
 
             return $ancillaryCost;
         });
@@ -102,34 +102,12 @@ class AncillaryCostService
         $ancillaryCost = AncillaryCost::with(['items.product', 'invoice.items.product'])->findOrFail($ancillaryCostId);
 
         DB::transaction(function () use ($ancillaryCost) {
-            CostOfGoodsService::reverseAncillaryCostDistribution($ancillaryCost);
+            CostOfGoodsService::reverseUpdateProductAverageCostForAncillaryCost($ancillaryCost);
 
             $ancillaryCost->items()->delete();
 
             $ancillaryCost->delete();
         });
-    }
-
-    /**
-     * Reverse the distribution of an ancillary cost.
-     * This subtracts the distributed cost from product average costs.
-     *
-     * @param  AncillaryCost  $ancillaryCost  The ancillary cost to reverse
-     */
-    private static function reverseAncillaryCostDistribution(AncillaryCost $ancillaryCost): void
-    {
-        CostOfGoodsService::reverseAncillaryCostDistribution($ancillaryCost);
-    }
-
-    /**
-     * Get all ancillary costs for an invoice.
-     *
-     * @param  int  $invoiceId  The invoice ID
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
-    public static function getInvoiceAncillaryCosts(int $invoiceId)
-    {
-        return AncillaryCost::where('invoice_id', $invoiceId)->get();
     }
 
     /**
