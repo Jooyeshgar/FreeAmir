@@ -65,6 +65,7 @@ class CostOfGoodsService
 
             if ($invoiceType === InvoiceType::BUY) {
                 self::updateWeightedAverageCost($product, $invoiceItem->quantity, $unitCost);
+                self::setCostAtTimeOfSale($invoiceItem);
             } elseif ($invoiceType === InvoiceType::SELL) {
                 self::setCostAtTimeOfSale($invoiceItem);
             }
