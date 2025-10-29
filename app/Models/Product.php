@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ConfigTitle;
 use App\Models\Scopes\FiscalYearScope;
 use App\Services\SubjectCreatorService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -29,7 +30,8 @@ class Product extends Model
         'discount_formula',
         'description',
         'company_id',
-        'sales_subject_id',
+        'return_sales_subject_id',
+        'income_subject_id',
         'cogs_subject_id',
         'inventory_subject_id',
         'vat',
@@ -48,43 +50,96 @@ class Product extends Model
             $parentGroup = $product->productGroup;
             $subjectCreator = app(SubjectCreatorService::class);
 
-            // Create the three subjects
-            $sales = $subjectCreator->createSubject([
-                'name' => $product->name.' - Sales Revenue',
-                'parent_id' => $parentGroup->subject_id ?? 0,
-                'company_id' => session('active-company-id'),
+            // Create the four subjects
+            $incomeSubject = $subjectCreator->createSubject([
+                'name' => $product->name.' '.ConfigTitle::INCOME->value,
+                'parent_id' => $parentGroup->income_subject_id ?? 0,
+                'company_id' => $parentGroup->company_id,
             ]);
-            $sales->subjectable()->associate($product);
-            $sales->save();
+            $incomeSubject->subjectable()->associate($product);
 
-            $cogs = $subjectCreator->createSubject([
-                'name' => $product->name.' - Cost of Goods Sold',
-                'parent_id' => $parentGroup->subject_id ?? 0,
-                'company_id' => session('active-company-id'),
+            $return_salesSubject = $subjectCreator->createSubject([
+                'name' => $product->name.' '.ConfigTitle::RETURN_SALES->value,
+                'parent_id' => $parentGroup->return_sales_subject_id ?? 0,
+                'company_id' => $parentGroup->company_id,
             ]);
-            $cogs->subjectable()->associate($product);
-            $cogs->save();
+            $return_salesSubject->subjectable()->associate($product);
 
-            $inventory = $subjectCreator->createSubject([
-                'name' => $product->name.' - Inventory',
-                'parent_id' => $parentGroup->subject_id ?? 0,
-                'company_id' => session('active-company-id'),
+            $cogsSubject = $subjectCreator->createSubject([
+                'name' => $product->name.' '.ConfigTitle::COST_OF_GOODS->value,
+                'parent_id' => $parentGroup->cogs_subject_id ?? 0,
+                'company_id' => $parentGroup->company_id,
             ]);
-            $inventory->subjectable()->associate($product);
-            $inventory->save();
+            $cogsSubject->subjectable()->associate($product);
+
+            $inventorySubject = $subjectCreator->createSubject([
+                'name' => $product->name.' '.ConfigTitle::INVENTORY->value,
+                'parent_id' => $parentGroup->inventory_subject_id ?? 0,
+                'company_id' => $parentGroup->company_id,
+            ]);
+            $inventorySubject->subjectable()->associate($product);
 
             $product->update([
-                'sales_subject_id' => $sales->id,
-                'cogs_subject_id' => $cogs->id,
-                'inventory_subject_id' => $inventory->id,
+                'income_subject_id' => $incomeSubject->id,
+                'cogs_subject_id' => $cogsSubject->id,
+                'inventory_subject_id' => $inventorySubject->id,
+                'return_sales_subject_id' => $return_salesSubject->id,
             ]);
+        });
+
+        static::updated(function ($product) {
+            $parentGroup = $product->productGroup;
+            $subjectCreator = app(SubjectCreatorService::class);
+
+            if (! $product->incomeSubject) {
+                // Create the four subjects
+                $incomeSubject = $subjectCreator->createSubject([
+                    'name' => $product->name.' '.ConfigTitle::INCOME->value,
+                    'parent_id' => $parentGroup->income_subject_id ?? 0,
+                    'company_id' => $parentGroup->company_id,
+                ]);
+                $incomeSubject->subjectable()->associate($product);
+                $incomeSubject->save();
+
+                $return_salesSubject = $subjectCreator->createSubject([
+                    'name' => $product->name.' '.ConfigTitle::RETURN_SALES->value,
+                    'parent_id' => $parentGroup->return_sales_subject_id ?? 0,
+                    'company_id' => $parentGroup->company_id,
+                ]);
+                $return_salesSubject->subjectable()->associate($product);
+                $return_salesSubject->save();
+
+                $cogsSubject = $subjectCreator->createSubject([
+                    'name' => $product->name.' '.ConfigTitle::COST_OF_GOODS->value,
+                    'parent_id' => $parentGroup->cogs_subject_id ?? 0,
+                    'company_id' => $parentGroup->company_id,
+                ]);
+                $cogsSubject->subjectable()->associate($product);
+                $cogsSubject->save();
+
+                $inventorySubject = $subjectCreator->createSubject([
+                    'name' => $product->name.' '.ConfigTitle::INVENTORY->value,
+                    'parent_id' => $parentGroup->inventory_subject_id ?? 0,
+                    'company_id' => $parentGroup->company_id,
+                ]);
+                $inventorySubject->subjectable()->associate($product);
+                $inventorySubject->save();
+
+                $product->updateQuietly([
+                    'income_subject_id' => $incomeSubject->id,
+                    'cogs_subject_id' => $cogsSubject->id,
+                    'inventory_subject_id' => $inventorySubject->id,
+                    'return_sales_subject_id' => $return_salesSubject->id,
+                ]);
+            }
         });
 
         static::deleted(function ($product) {
             // Delete related subjects
-            $product->salesSubject?->delete();
+            $product->incomeSubject?->delete();
             $product->cogsSubject?->delete();
             $product->inventorySubject?->delete();
+            $product->returnSalesSubject?->delete();
         });
     }
 
@@ -99,9 +154,14 @@ class Product extends Model
         return $this->belongsTo(ProductGroup::class, 'group');
     }
 
-    public function salesSubject(): BelongsTo
+    public function incomeSubject(): BelongsTo
     {
-        return $this->belongsTo(Subject::class, 'sales_subject_id');
+        return $this->belongsTo(Subject::class, 'income_subject_id');
+    }
+
+    public function returnSalesSubject(): BelongsTo
+    {
+        return $this->belongsTo(Subject::class, 'return_sales_subject_id');
     }
 
     public function cogsSubject(): BelongsTo
