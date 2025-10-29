@@ -155,7 +155,8 @@ class InvoiceService
             ProductService::updateProductQuantities($InvoiceItems->get()->toArray(), InvoiceType::from($invoiceData['invoice_type']), true);
 
             if ($invoice->invoice_type === InvoiceType::BUY) {
-                foreach ($InvoiceItems as $InvoiceItem) {
+
+                foreach ($InvoiceItems->get() as $InvoiceItem) {
                     CostOfGoodsService::reverseCostUpdate($InvoiceItem);
                 }
             }
