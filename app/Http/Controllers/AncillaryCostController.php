@@ -54,9 +54,10 @@ class AncillaryCostController extends Controller
             return [
                 'product_id' => $item->product_id,
                 'amount' => $item->amount,
-                'vat' => $item->vat,
             ];
         })->toArray();
+
+        $ancillaryCost['vat'] = ($ancillaryCost['amount'] - $ancillaryCost['vat']) / 100 ?? 0;
 
         return view('ancillaryCosts.edit', compact('ancillaryCost', 'invoices', 'ancillaryCostItems'));
     }
