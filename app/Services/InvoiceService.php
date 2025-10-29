@@ -13,7 +13,6 @@ use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 
 class InvoiceService
 {
@@ -84,8 +83,8 @@ class InvoiceService
             // Update product quantities
             ProductService::updateProductQuantities($items, InvoiceType::from($invoiceData['invoice_type']));
 
-            // Process costs (weighted average for both, cost_at_time_of_sale for sell)
-            // CostService::processInvoiceCosts($createdInvoice, InvoiceType::from($invoiceData['invoice_type']));
+            // Process costs (weighted average for buy, cost_at_time_of_sale for sell)
+            CostOfGoodsService::processInvoiceCosts($createdInvoice, InvoiceType::from($invoiceData['invoice_type']));
         });
 
         return [
@@ -104,9 +103,6 @@ class InvoiceService
     public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = []): array
     {
         $invoice = Invoice::findOrFail($invoiceId);
-
-        // // Validate invoice data (skip unique check for the current invoice number)
-        // self::validateInvoiceData($invoiceData, $invoiceId);
 
         // Normalize invoice data
         $invoiceData = self::normalizeInvoiceData($invoiceData);
@@ -157,9 +153,12 @@ class InvoiceService
             }
 
             ProductService::updateProductQuantities($InvoiceItems->get()->toArray(), InvoiceType::from($invoiceData['invoice_type']), true);
-            // foreach ($InvoiceItems as $InvoiceItem) {
-            //     CostService::reverseCostUpdate($InvoiceItem, $invoice->invoice_type);
-            // }
+
+            if ($invoice->invoice_type === InvoiceType::BUY) {
+                foreach ($InvoiceItems as $InvoiceItem) {
+                    CostOfGoodsService::reverseCostUpdate($InvoiceItem, $invoice->invoice_type);
+                }
+            }
 
             $InvoiceItems->delete();
 
@@ -175,8 +174,8 @@ class InvoiceService
             // Update product quantities
             ProductService::updateProductQuantities($items, InvoiceType::from($invoiceData['invoice_type']));
 
-            // Process costs (weighted average for both, cost_at_time_of_sale for sell)
-            // CostService::processInvoiceCosts($invoice, InvoiceType::from($invoiceData['invoice_type']));
+            // Process costs (weighted average for buy, cost_at_time_of_sale for sell)
+            CostOfGoodsService::processInvoiceCosts($invoice, InvoiceType::from($invoiceData['invoice_type']));
         });
 
         return [
@@ -207,12 +206,12 @@ class InvoiceService
             }
             ProductService::updateProductQuantities($invoiceItems->get()->toArray(), $invoice->invoice_type, true);
 
-            // Reverse cost updates for buy or sell invoices
-            // if ($invoice->invoice_type->isBuy() || $invoice->invoice_type->isSell()) {
-            //     foreach ($invoiceItems->get() as $invoiceItem) {
-            //         CostService::reverseCostUpdate($invoiceItem, $invoice->invoice_type);
-            //     }
-            // }
+            // Reverse cost updates for buy invoices
+            if ($invoice->invoice_type === InvoiceType::BUY) {
+                foreach ($invoiceItems->get() as $invoiceItem) {
+                    CostOfGoodsService::reverseCostUpdate($invoiceItem, $invoice->invoice_type);
+                }
+            }
 
             $invoiceItems->delete();
 
@@ -227,33 +226,6 @@ class InvoiceService
                 Document::where('id', $documentId)->delete();
             }
         });
-    }
-
-    /**
-     * Validate invoice data.
-     *
-     * @param  int|null  $invoiceId  - Pass when updating to skip unique check for current invoice
-     *
-     * @throws InvoiceServiceException
-     */
-    private static function validateInvoiceData(array $invoiceData, ?int $invoiceId = null): void
-    {
-        $rules = [
-            'number' => 'required|numeric|min:1|unique:invoices,number'.($invoiceId ? ','.$invoiceId : ''),
-            'date' => 'required|date',
-            'customer_id' => 'required|integer|exists:customers,id',
-            'subtraction' => 'numeric|nullable',
-            'ship_date' => 'nullable|date',
-            'ship_via' => 'string|nullable|max:255',
-            'description' => 'string|nullable|max:255',
-            'invoice_type' => 'required|string|in:buy,sell,return_buy,return_sell',
-        ];
-
-        $validator = Validator::make($invoiceData, $rules);
-
-        if ($validator->fails()) {
-            throw new InvoiceServiceException($validator->errors()->first());
-        }
     }
 
     /**
@@ -289,9 +261,6 @@ class InvoiceService
             $quantity = $item['quantity'] ?? 1;
             $unitPrice = $item['unit'];
             $unitDiscount = $item['unit_discount'] ?? 0;
-
-            // Calculate item discount (only on sell)
-            // $itemDiscount = $invoiceType == InvoiceType::SELL ? ($unitDiscount * $quantity) : 0;
 
             // Calculate item VAT
             $vatRate = ($item['vat'] ?? 0) / 100;
