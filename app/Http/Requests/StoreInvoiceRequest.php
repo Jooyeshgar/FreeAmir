@@ -28,10 +28,19 @@ class StoreInvoiceRequest extends FormRequest
             'date' => convertToGregorian($this->input('date')),
             'invoice_id' => convertToInt($this->input('invoice_id')),
             'invoice_number' => convertToInt($this->input('invoice_number')),
-            'document_number' => convertToFloat($this->input('document_number')),
             'subtractions' => convertToFloat($this->input('subtraction', 0)),
             'customer_id' => convertToInt($this->input('customer_id')),
         ]);
+
+        if (str_contains($this->input('document_number'), '/')) {
+            $this->merge([
+                'document_number' => convertToFloat(str_replace('/', '.', $this->input('document_number'))),
+            ]);
+        } else {
+            $this->merge([
+                'document_number' => convertToFloat($this->input('document_number')),
+            ]);
+        }
 
         // Normalize transactions numeric fields and ids
         if ($this->has('transactions') && is_array($this->input('transactions'))) {
