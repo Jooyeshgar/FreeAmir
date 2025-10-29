@@ -30,13 +30,15 @@ class StoreAncillaryCostRequest extends FormRequest
                 }
                 $total += $amount;
             }
+            $vatPrice = $total * ($this->input('vat') ?? 0) / 100;
             $total += $total * ($this->input('vat') ?? 0) / 100;
         }
 
         $this->merge([
+            'vatPrice' => convertToFloat($vatPrice),
             'amount' => convertToFloat($total),
             'type' => $this->input('type'),
-            'vat' => convertToFloat(($this->input('vat') ?? 0)),
+            'vatPercentage' => convertToFloat(($this->input('vat') ?? 0)),
             'date' => convertToGregorian($this->input('date')),
             'invoice_id' => convertToInt($this->input('invoice_id')),
             'ancillaryCosts' => $processedCosts,
@@ -48,10 +50,11 @@ class StoreAncillaryCostRequest extends FormRequest
         return [
             'amount' => 'required|numeric|min:0',
             'invoice_id' => 'required|integer|exists:invoices,id',
-            'vat' => 'nullable|numeric|min:0|max:100',
+            'vatPrice' => 'nullable|numeric|min:0',
+            'vatPercentage' => 'nullable|numeric|min:0|max:100',
             'date' => 'required|date',
             'type' => ['required', Rule::in(array_column(AncillaryCostType::cases(), 'value'))],
-            'ancillaryCosts' => 'nullable|array',
+            'ancillaryCosts' => 'required|array',
             'ancillaryCosts.*.product_id' => 'required|integer|exists:products,id',
             'ancillaryCosts.*.amount' => 'required|numeric|min:0',
         ];
@@ -62,9 +65,9 @@ class StoreAncillaryCostRequest extends FormRequest
         return [
             'type.required' => __('The Type field is required.'),
             'type.in' => __('The selected Type is invalid.'),
-            'vat.numeric' => __('VAT must be a number.'),
-            'vat.min' => __('VAT must be at least :min.'),
-            'vat.max' => __('VAT may not be greater than :max.'),
+            'vatPercentage.numeric' => __('VAT must be a number.'),
+            'vatPercentage.min' => __('VAT must be at least :min.'),
+            'vatPercentage.max' => __('VAT may not be greater than :max.'),
             'invoice_id.required' => __('The Invoice field is required.'),
             'invoice_id.integer' => __('The invoice ID field must be an integer.'),
             'invoice_id.exists' => __('The selected invoice ID is invalid.'),
