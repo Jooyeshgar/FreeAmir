@@ -36,7 +36,7 @@ class Product extends Model
 
     public static function booted(): void
     {
-        static::addGlobalScope(new FiscalYearScope());
+        static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($product) {
             $product->company_id ??= session('active-company-id');
@@ -53,7 +53,7 @@ class Product extends Model
 
             $product->update(['subject_id' => $subject->id]);
         });
-        
+
         static::updated(function ($product) {
             $product->subject()->update([
                 'parent_id' => $product->productGroup->subject_id,
@@ -81,5 +81,10 @@ class Product extends Model
     public function subject()
     {
         return $this->morphOne(Subject::class, 'subjectable');
+    }
+
+    public function invoiceItems(): HasMany
+    {
+        return $this->hasMany(InvoiceItem::class, 'product_id');
     }
 }
