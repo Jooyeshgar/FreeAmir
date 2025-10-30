@@ -20,7 +20,8 @@ class SubjectSeeder extends Seeder
             ['id' => 5, 'code' => '067', 'name' => 'تراز افتتاحیه', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 6, 'code' => '013', 'name' => 'اسناد دریافتنی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 8, 'code' => '068', 'name' => 'جاری شرکا', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
-            ['id' => 9, 'code' => '019', 'name' => 'محصولات', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
+            ['id' => 9, 'code' => '019', 'name' => 'موجودی کالا', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
+            // ['id' => 9, 'code' => '019', 'name' => 'محصولات', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 17, 'code' => '062', 'name' => 'خرید', 'parent_id' => null, 'type' => 'debtor', 'company_id' => 1],
             ['id' => 18, 'code' => '060', 'name' => 'فروش', 'parent_id' => null, 'type' => 1, 'company_id' => 1],
             ['id' => 22, 'code' => '020', 'name' => 'اسناد پرداختنی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
@@ -39,7 +40,7 @@ class SubjectSeeder extends Seeder
             ['id' => 93, 'code' => '065', 'name' => 'طرف حسابهای انتظامی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 97, 'code' => '066', 'name' => 'تخفیفات نقدی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 102, 'code' => '070', 'name' => 'بهای تمام شده', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
-            ['id' => 103, 'code' => '080', 'name' => 'موجودی کالا', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
+            // ['id' => 103, 'code' => '080', 'name' => 'موجودی کالا', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 104, 'code' => '090', 'name' => 'درآمد فروش', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
 
             ['id' => 10, 'code' => '040001', 'name' => 'حقوق پرسنل', 'parent_id' => 2, 'type' => 'debtor', 'company_id' => 1],
