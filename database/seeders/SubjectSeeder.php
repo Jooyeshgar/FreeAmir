@@ -25,7 +25,7 @@ class SubjectSeeder extends Seeder
             ['id' => 18, 'code' => '060', 'name' => 'فروش', 'parent_id' => null, 'type' => 1, 'company_id' => 1],
             ['id' => 22, 'code' => '020', 'name' => 'اسناد پرداختنی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 23, 'code' => '050', 'name' => 'درآمدها', 'parent_id' => null, 'type' => 1, 'company_id' => 1],
-            ['id' => 25, 'code' => '061', 'name' => 'برگشت از فروش', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
+            ['id' => 25, 'code' => '061', 'name' => 'برگشت از فروش و نخفیفات', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 38, 'code' => '018', 'name' => 'سایر حسابهای دریافتنی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 39, 'code' => '023', 'name' => 'سایر حسابهای پرداختنی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 67, 'code' => '014', 'name' => 'اسناد در جریان وصول', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
@@ -107,8 +107,6 @@ class SubjectSeeder extends Seeder
 
             ['id' => 55, 'code' => '061001', 'name' => 'تخفیفات فروش', 'parent_id' => 25, 'type' => 'both', 'company_id' => 1],
             ['id' => 43, 'code' => '061002', 'name' => 'برگشت از فروش', 'parent_id' => 25, 'type' => 'both', 'company_id' => 1],
-
-            ['id' => 19, 'code' => '062001', 'name' => 'خرید', 'parent_id' => 17, 'type' => 'debtor', 'company_id' => 1],
 
             ['id' => 92, 'code' => '064002', 'name' => 'حسابهای انتظامی به عهده شرکت', 'parent_id' => 90, 'type' => 'both', 'company_id' => 1],
 

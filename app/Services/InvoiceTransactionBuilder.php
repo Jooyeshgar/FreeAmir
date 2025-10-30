@@ -71,6 +71,14 @@ class InvoiceTransactionBuilder
         ];
     }
 
+    private function buildCostOfGoodsTransaction(): void {}
+
+    private function buildInventoryTransaction(): void {}
+
+    private function buildReturnSaleTransaction(): void {}
+
+    private function buildIncomeTransaction(): void {}
+
     /**
      * Create a transaction for each invoice item.
      */
