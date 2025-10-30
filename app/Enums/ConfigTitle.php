@@ -14,6 +14,7 @@ enum ConfigTitle: string
     case SELL_VAT = 'SELL_VAT';
     case BUY_VAT = 'BUY_VAT';
     case PRODUCT = 'PRODUCT';
+    case SALES_REVENUE = 'SALES_REVENUE';
     case INVENTORY = 'INVENTORY';
     case COST_OF_GOODS = 'COST_OF_GOODS';
     case RETURN_SALES = 'RETURN_SALES';
@@ -35,6 +36,7 @@ enum ConfigTitle: string
             self::INVENTORY => __('Inventory'),
             self::COST_OF_GOODS => __('Cost of Goods Sold'),
             self::RETURN_SALES => __('Return Sales'),
+            self::SALES_REVENUE => __('Sales Revenue'),
         };
     }
 }

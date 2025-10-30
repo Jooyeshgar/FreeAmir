@@ -40,6 +40,7 @@ class SubjectSeeder extends Seeder
             ['id' => 97, 'code' => '066', 'name' => 'تخفیفات نقدی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 102, 'code' => '070', 'name' => 'بهای تمام شده', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 103, 'code' => '080', 'name' => 'موجودی کالا', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
+            ['id' => 104, 'code' => '090', 'name' => 'درآمد فروش', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
 
             ['id' => 10, 'code' => '040001', 'name' => 'حقوق پرسنل', 'parent_id' => 2, 'type' => 'debtor', 'company_id' => 1],
             ['id' => 11, 'code' => '040002', 'name' => 'آب', 'parent_id' => 2, 'type' => 'debtor', 'company_id' => 1],

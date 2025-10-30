@@ -54,6 +54,14 @@ class InvoiceTransactionBuilder
 
         $this->buildCustomerTransaction();
 
+        $this->buildCostOfGoodsTransaction();
+
+        $this->buildInventoryTransaction();
+
+        $this->buildReturnSaleTransaction();
+
+        $this->buildIncomeTransaction();
+
         return [
             'transactions' => $this->transactions,
             'totalVat' => $this->totalVat,
