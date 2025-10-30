@@ -2,22 +2,26 @@
 
 namespace App\Services;
 
-use App\Models\AncillaryCost;
 use App\Models\Customer;
+use App\Models\Invoice;
+use App\Models\Product;
 
 /**
- * Helper class to build document transactions from invoice data.
+ * Helper class to build document transactions from ancillary cost data.
  * Follows separation of concerns by isolating transaction generation logic.
  */
 class AncillaryCostTransactionBuilder
 {
     private array $transactions = [];
 
-    private AncillaryCost $ancillaryCost;
+    private array $data;
 
-    public function __construct(AncillaryCost $ancillaryCost)
+    private array $ancillaryCost;
+
+    public function __construct(array $data)
     {
-        $this->ancillaryCost = $ancillaryCost;
+        $this->data = $data;
+        $this->ancillaryCost = $data['ancillaryCosts'] ?? [];
     }
 
     /**
@@ -41,11 +45,15 @@ class AncillaryCostTransactionBuilder
      */
     private function buildAncillaryCostTransaction(): void
     {
-        $this->transactions[] = [
-            'subject_id' => config('amir.inventory'),
-            'desc' => __('Ancillary Cost'),
-            'value' => $this->ancillaryCost->amount - $this->ancillaryCost->vat,
-        ];
+        foreach ($this->ancillaryCost as $item) {
+            $product = Product::find($item['product_id']);
+
+            $this->transactions[] = [
+                'subject_id' => $product->inventory_subject_id,
+                'desc' => __('Ancillary Cost for :item', ['item' => $product->name]),
+                'value' => -$item['amount'],
+            ];
+        }
     }
 
     /**
@@ -53,11 +61,11 @@ class AncillaryCostTransactionBuilder
      */
     private function buildVatTransaction(): void
     {
-        if ($this->ancillaryCost->vat > 0) {
+        if ($this->data['vatPrice'] > 0) {
             $this->transactions[] = [
                 'subject_id' => config('amir.buy_vat'),
                 'desc' => __('Ancillary Cost VAT/Tax'),
-                'value' => $this->ancillaryCost->vat,
+                'value' => -$this->data['vatPrice'],
             ];
         }
     }
@@ -67,13 +75,14 @@ class AncillaryCostTransactionBuilder
      */
     private function buildCustomerTransaction(): void
     {
-        $customerId = $this->ancillaryCost->invoice->customer_id;
+        $invoice = Invoice::find($this->data['invoice_id']);
+        $customerId = $invoice->customer_id;
         $subject_id = Customer::find($customerId)->subject->id;
 
         $this->transactions[] = [
             'subject_id' => $subject_id,
             'desc' => __('Customer total'),
-            'value' => $this->ancillaryCost->amount,
+            'value' => $this->data['amount'],
         ];
     }
 }

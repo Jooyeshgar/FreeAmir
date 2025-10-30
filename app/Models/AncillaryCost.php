@@ -17,6 +17,7 @@ class AncillaryCost extends Model
         'date',
         'invoice_id',
         'company_id',
+        'document_id',
     ];
 
     protected $casts = [
@@ -34,6 +35,11 @@ class AncillaryCost extends Model
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    public function document(): BelongsTo
+    {
+        return $this->belongsTo(Document::class);
     }
 
     public function items(): HasMany

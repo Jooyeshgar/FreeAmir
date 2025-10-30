@@ -57,7 +57,8 @@ class AncillaryCostController extends Controller
             ];
         })->toArray();
 
-        $ancillaryCost['vat'] = ($ancillaryCost['amount'] - $ancillaryCost['vat']) / 100 ?? 0;
+        // Convert VAT amount to VAT percentage
+        $ancillaryCost['vat'] = $ancillaryCost['vat'] != 0 ? ($ancillaryCost['amount'] - $ancillaryCost['vat']) / $ancillaryCost['vat'] : 0;
 
         return view('ancillaryCosts.edit', compact('ancillaryCost', 'invoices', 'ancillaryCostItems'));
     }

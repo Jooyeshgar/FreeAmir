@@ -146,16 +146,15 @@ class InvoiceService
 
             $ancillaryCosts = AncillaryCost::where('invoice_id', $invoice->id)->get()->all();
             // Delete old ancillary costs if not null
-            if (! empty($ancillaryCosts)) {
-                foreach ($ancillaryCosts as $ancillaryCost) {
-                    AncillaryCostService::deleteAncillaryCost($ancillaryCost->id);
-                }
-            }
+            // if (! empty($ancillaryCosts)) {
+            //     foreach ($ancillaryCosts as $ancillaryCost) {
+            //         AncillaryCostService::deleteAncillaryCost($ancillaryCost->id);
+            //     }
+            // }
 
             ProductService::updateProductQuantities($InvoiceItems->get()->toArray(), InvoiceType::from($invoiceData['invoice_type']), true);
 
             if ($invoice->invoice_type === InvoiceType::BUY) {
-
                 foreach ($InvoiceItems->get() as $InvoiceItem) {
                     CostOfGoodsService::reverseCostUpdate($InvoiceItem);
                 }
@@ -168,9 +167,24 @@ class InvoiceService
             self::createInvoiceItems($invoice, $items, $documentTransactions, InvoiceType::from($invoiceData['invoice_type']));
 
             // Recreate ancillary costs if not null
-            if (! empty($ancillaryCosts)) {
-                AncillaryCostService::createAncillaryCost($ancillaryCosts);
-            }
+
+            // ## Hint: Correct this
+
+            // if (! empty($ancillaryCosts)) {
+            //     foreach ($ancillaryCosts as $ancillaryCost) {
+            //         $ancillaryCost->loadMissing(['items']);
+            //         $data = [
+            //             'vatPrice' => $ancillaryCost->vat,
+            //             'amount' => $ancillaryCost->amount,
+            //             'type' => $ancillaryCost->type->value,
+            //             'vatPercentage' => $ancillaryCost->vat_percentage,
+            //             'date' => $ancillaryCost->date,
+            //             'invoice_id' => $ancillaryCost->invoice_id,
+            //             'ancillaryCosts' => $ancillaryCost->toArray() ?? [],
+            //         ];
+            //         AncillaryCostService::updateAncillaryCost(auth()->user(), $ancillaryCost, $data);
+            //     }
+            // }
 
             // Update product quantities
             ProductService::updateProductQuantities($items, InvoiceType::from($invoiceData['invoice_type']));

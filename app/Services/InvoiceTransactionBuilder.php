@@ -54,13 +54,13 @@ class InvoiceTransactionBuilder
 
         $this->buildCustomerTransaction();
 
-        $this->buildCostOfGoodsTransaction();
+        // $this->buildCostOfGoodsTransaction();
 
-        $this->buildInventoryTransaction();
+        // $this->buildInventoryTransaction();
 
-        $this->buildReturnSaleTransaction();
+        // $this->buildReturnSaleTransaction();
 
-        $this->buildIncomeTransaction();
+        // $this->buildIncomeTransaction();
 
         return [
             'transactions' => $this->transactions,
@@ -71,13 +71,42 @@ class InvoiceTransactionBuilder
         ];
     }
 
-    private function buildCostOfGoodsTransaction(): void {}
+    private function buildCostOfGoodsTransaction(): void
+    {
 
-    private function buildInventoryTransaction(): void {}
+        $this->transactions[] = [
+            'subject_id' => config('amir.cost_of_goods'),
+            'desc' => __('Cost of Goods Sold'),
+            'value' => $this->totalAmount,
+        ];
+    }
 
-    private function buildReturnSaleTransaction(): void {}
+    private function buildInventoryTransaction(): void
+    {
+        $this->transactions[] = [
+            'subject_id' => config('amir.product'),
+            'desc' => __('Inventory'),
+            'value' => $this->totalAmount,
+        ];
+    }
 
-    private function buildIncomeTransaction(): void {}
+    private function buildReturnSaleTransaction(): void
+    {
+        $this->transactions[] = [
+            'subject_id' => config('amir.return_sale'),
+            'desc' => __('Return Sale'),
+            'value' => -$this->totalAmount,
+        ];
+    }
+
+    private function buildIncomeTransaction(): void
+    {
+        $this->transactions[] = [
+            'subject_id' => config('amir.income'),
+            'desc' => __('Income'),
+            'value' => $this->totalAmount,
+        ];
+    }
 
     /**
      * Create a transaction for each invoice item.

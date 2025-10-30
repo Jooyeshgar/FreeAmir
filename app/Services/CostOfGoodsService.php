@@ -93,11 +93,14 @@ class CostOfGoodsService
                 return;
             }
 
+            $invoice_item = $item->ancillaryCost->invoice->items->where('product_id', $item->product->id)->first();
+            $amountPerItem = $item->amount / $invoice_item->quantity ?? 0;
+
             $currentStock = (float) $product->quantity;
             $currentAverageCost = (float) ($product->average_cost ?? 0);
             $currentTotalValue = $currentStock * $currentAverageCost;
 
-            $newTotalValue = $currentTotalValue + $item->amount;
+            $newTotalValue = $currentTotalValue + $amountPerItem;
             $newAverageCost = $newTotalValue / $currentStock;
 
             $product->average_cost = $newAverageCost;
@@ -116,6 +119,9 @@ class CostOfGoodsService
         foreach ($ancillaryCost->items as $item) {
             $product = $item->product;
 
+            $invoice_item = $item->ancillaryCost->invoice->items->where('product_id', $item->product->id)->first();
+            $amountPerItem = $item->amount / $invoice_item->quantity ?? 0;
+
             if (! $product) {
                 return;
             }
@@ -124,7 +130,7 @@ class CostOfGoodsService
             $currentAverageCost = (float) ($product->average_cost ?? 0);
             $currentTotalValue = $currentStock * $currentAverageCost;
 
-            $newTotalValue = max(0, $currentTotalValue - $item->amount);
+            $newTotalValue = max(0, $currentTotalValue - $amountPerItem);
 
             $newAverageCost = $newTotalValue / $currentStock;
 

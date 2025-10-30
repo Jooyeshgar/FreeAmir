@@ -62,8 +62,8 @@ class ProductGroup extends Model
             $cogsSubject->subjectable()->associate($productGroup);
 
             $inventorySubject = $subjectCreator->createSubject([
-                'name' => $productGroup->name.' '.ConfigTitle::INVENTORY->value,
-                'parent_id' => config('amir.inventory'),
+                'name' => $productGroup->name.' '.ConfigTitle::PRODUCT->value,
+                'parent_id' => config('amir.product'),
                 'company_id' => $productGroup->company_id,
             ]);
             $inventorySubject->subjectable()->associate($productGroup);
@@ -105,8 +105,8 @@ class ProductGroup extends Model
                 $cogsSubject->save();
 
                 $inventorySubject = $subjectCreator->createSubject([
-                    'name' => $productGroup->name.' '.ConfigTitle::INVENTORY->value,
-                    'parent_id' => config('amir.inventory'),
+                    'name' => $productGroup->name.' '.ConfigTitle::PRODUCT->value,
+                    'parent_id' => config('amir.product'),
                     'company_id' => $productGroup->company_id,
                 ]);
                 $inventorySubject->subjectable()->associate($productGroup);
