@@ -53,11 +53,13 @@ class AncillaryCostTransactionBuilder
      */
     private function buildVatTransaction(): void
     {
-        $this->transactions[] = [
-            'subject_id' => config('amir.buy_vat'),
-            'desc' => __('Ancillary Cost VAT/Tax'),
-            'value' => $this->ancillaryCost->vat,
-        ];
+        if ($this->ancillaryCost->vat > 0) {
+            $this->transactions[] = [
+                'subject_id' => config('amir.buy_vat'),
+                'desc' => __('Ancillary Cost VAT/Tax'),
+                'value' => $this->ancillaryCost->vat,
+            ];
+        }
     }
 
     /**
