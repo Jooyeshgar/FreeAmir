@@ -38,7 +38,7 @@ class AncillaryCostController extends Controller
         $validated = $request->validated();
         $validated['company_id'] = session('active-company-id');
 
-        AncillaryCostService::createAncillaryCost($validated);
+        AncillaryCostService::createAncillaryCost(auth()->user(), $validated);
 
         return redirect()
             ->route('ancillary-costs.index')
@@ -67,7 +67,7 @@ class AncillaryCostController extends Controller
         $validated = $request->validated();
         $validated['company_id'] = session('active-company-id');
 
-        AncillaryCostService::updateAncillaryCost($ancillaryCost, $validated);
+        AncillaryCostService::updateAncillaryCost(auth()->user(), $ancillaryCost, $validated);
 
         return redirect()
             ->route('ancillary-costs.index')
