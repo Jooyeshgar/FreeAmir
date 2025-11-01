@@ -21,15 +21,18 @@ class ConfigSeeder extends Seeder
             ['type' => 3, 'category' => 1, 'key' => 'cash', 'value' => '59', 'desc' => 'پول نقد', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'income', 'value' => '23', 'desc' => 'درآمد', 'company_id' => 1],
             ['type' => 2, 'category' => 1, 'key' => 'sell_discount', 'value' => '55', 'desc' => 'تخفیفات فروش', 'company_id' => 1],
-            ['type' => 2, 'category' => 1, 'key' => 'buy_discount', 'value' => '53', 'desc' => 'تخفیفات خرید', 'company_id' => 1],
+            ['type' => 2, 'category' => 1, 'key' => 'buy_discount', 'value' => '98', 'desc' => 'تخفیفات خرید', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'sell_vat', 'value' => '41', 'desc' => 'مالیات فروش', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'buy_vat', 'value' => '40', 'desc' => 'مالیات خرید', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'product', 'value' => '9', 'desc' => 'محصولات', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'inventory', 'value' => '9', 'desc' => 'موجودی کالا', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'sales_returns', 'value' => '43', 'desc' => 'برگشت از فروش', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'cost_of_goods_sold', 'value' => '102', 'desc' => 'بهای تمام شده کالا فروش رقته', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'sales_revenue', 'value' => '104', 'desc' => 'درآمد فروش', 'company_id' => 1],
         ];
 
         Config::insert($configs);
         foreach ($configs as $config) {
-                config(['amir.' . $config['key'] => $config['value']]);
+            config(['amir.'.$config['key'] => $config['value']]);
         }
     }
 }

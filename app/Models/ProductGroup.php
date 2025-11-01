@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Scopes\FiscalYearScope;
 use App\Services\SubjectCreatorService;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProductGroup extends Model
 {
@@ -16,7 +17,10 @@ class ProductGroup extends Model
         'sellId',
         'vat',
         'company_id',
-        'subject_id',
+        'sales_returns_subject_id',
+        'income_subject_id',
+        'cogs_subject_id',
+        'inventory_subject_id',
     ];
 
     protected $attributes = [
@@ -25,34 +29,89 @@ class ProductGroup extends Model
 
     public static function booted(): void
     {
-        static::addGlobalScope(new FiscalYearScope());
+        static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($model) {
             $model->company_id ??= session('active-company-id');
         });
 
         static::created(function ($productGroup) {
-            $subject = app(SubjectCreatorService::class)->createSubject([
+            $subjectCreator = app(SubjectCreatorService::class);
+            $productGroup->company_id = $productGroup->company_id ?? session('active-company-id');
+
+            $incomeSubject = $subjectCreator->createSubject(data: [
                 'name' => $productGroup->name,
-                'parent_id' => config('amir.product'),
+                'parent_id' => config('amir.income'),
                 'company_id' => $productGroup->company_id,
             ]);
-            $productGroup->subject()->save($subject);
+            $incomeSubject->subjectable()->associate($productGroup);
+            $incomeSubject->save();
 
-            $productGroup->update(['subject_id' => $subject->id]);
+            $sales_returnsSubject = $subjectCreator->createSubject([
+                'name' => $productGroup->name,
+                'parent_id' => config('amir.sales_returns'),
+                'company_id' => $productGroup->company_id,
+            ]);
+            $sales_returnsSubject->subjectable()->associate($productGroup);
+            $sales_returnsSubject->save();
+
+            $cogsSubject = $subjectCreator->createSubject([
+                'name' => $productGroup->name,
+                'parent_id' => config('amir.cost_of_goods_sold'),
+                'company_id' => $productGroup->company_id,
+            ]);
+            $cogsSubject->subjectable()->associate($productGroup);
+            $cogsSubject->save();
+
+            $inventorySubject = $subjectCreator->createSubject([
+                'name' => $productGroup->name,
+                'parent_id' => config('amir.inventory'),
+                'company_id' => $productGroup->company_id,
+            ]);
+            $inventorySubject->subjectable()->associate($productGroup);
+            $inventorySubject->save();
+
+            $productGroup->updateQuietly([
+                'income_subject_id' => $incomeSubject->id,
+                'cogs_subject_id' => $cogsSubject->id,
+                'inventory_subject_id' => $inventorySubject->id,
+                'sales_returns_subject_id' => $sales_returnsSubject->id,
+            ]);
         });
-    }
 
-    // Define relationships with other models (e.g., Subject)
+        static::updated(function ($productGroup) {
+            $subjectCreator = app(SubjectCreatorService::class);
 
-    public function buySubject()
-    {
-        return $this->belongsTo(Subject::class, 'buyId');
-    }
+            // Update subjects
+            $subjectCreator->editSubject($productGroup->inventorySubject, [
+                'name' => $productGroup->name,
+                'parent_id' => config('amir.inventory'),
+                'company_id' => $productGroup->company_id,
+            ]);
+            $subjectCreator->editSubject($productGroup->cogsSubject, [
+                'name' => $productGroup->name,
+                'parent_id' => config('amir.cost_of_goods_sold'),
+                'company_id' => $productGroup->company_id,
+            ]);
+            $subjectCreator->editSubject($productGroup->salesReturnsSubject, [
+                'name' => $productGroup->name,
+                'parent_id' => config('amir.sales_returns'),
+                'company_id' => $productGroup->company_id,
+            ]);
+            $subjectCreator->editSubject($productGroup->incomeSubject, [
+                'name' => $productGroup->name,
+                'parent_id' => config('amir.income'),
+                'company_id' => $productGroup->company_id,
+            ]);
+        });
 
-    public function sellSubject()
-    {
-        return $this->belongsTo(Subject::class, 'sellId');
+        static::deleted(function ($productGroup) {
+            // Delete related productGroup
+            $productGroup->incomeSubject?->delete();
+            $productGroup->cogsSubject?->delete();
+            $productGroup->inventorySubject?->delete();
+            $productGroup->salesReturnsSubject?->delete();
+        });
     }
 
     public function products()
@@ -60,8 +119,23 @@ class ProductGroup extends Model
         return $this->hasMany(Product::class, 'group', 'id');
     }
 
-    public function subject()
+    public function incomeSubject(): BelongsTo
     {
-        return $this->morphOne(Subject::class, 'subjectable');
+        return $this->belongsTo(Subject::class, 'income_subject_id');
+    }
+
+    public function salesReturnsSubject(): BelongsTo
+    {
+        return $this->belongsTo(Subject::class, 'sales_returns_subject_id');
+    }
+
+    public function cogsSubject(): BelongsTo
+    {
+        return $this->belongsTo(Subject::class, 'cogs_subject_id');
+    }
+
+    public function inventorySubject(): BelongsTo
+    {
+        return $this->belongsTo(Subject::class, 'inventory_subject_id');
     }
 }

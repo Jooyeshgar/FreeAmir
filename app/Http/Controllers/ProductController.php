@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models;
+use App\Services\ProductService;
 
 class ProductController extends Controller
 {
@@ -28,15 +29,7 @@ class ProductController extends Controller
     {
         $validatedData = $request->getValidatedData();
 
-        $product = Models\Product::create($validatedData);
-        if (isset($validatedData['websites'])) {
-            foreach ($validatedData['websites'] as $website) {
-                Models\ProductWebsite::create([
-                    'link' => $website['link'],
-                    'product_id' => $product->id,
-                ]);
-            }
-        }
+        ProductService::create($validatedData);
 
         return redirect()->route('products.index')->with('success', __('Product created successfully.'));
     }
@@ -48,22 +41,11 @@ class ProductController extends Controller
         return view('products.edit', compact('product', 'groups'));
     }
 
-    public function update(UpdateProductRequest $request, Models\Product $product)
+    public function update(UpdateProductRequest $request, Models\Product $product, ProductService $productService)
     {
         $validatedData = $request->getValidatedData();
 
-        $product->productWebsites()->delete();
-
-        if (isset($validatedData['websites'])) {
-            foreach ($validatedData['websites'] as $website) {
-                Models\ProductWebsite::create([
-                    'link' => $website['link'],
-                    'product_id' => $product->id,
-                ]);
-            }
-        }
-
-        $product->update($validatedData);
+        $productService->update($product, $validatedData);
 
         return redirect()->route('products.index')->with('success', __('Product updated successfully.'));
     }
@@ -75,13 +57,9 @@ class ProductController extends Controller
         return view('products.show', compact('product'));
     }
 
-    public function destroy(Models\Product $product)
+    public function destroy(Models\Product $product, ProductService $productService)
     {
-        if ($product->invoiceItems()->exists()) {
-            return redirect()->route('products.index')->with('error', __('Cannot delete product with existing invoice items.'));
-        }
-
-        $product->delete();
+        $productService->delete($product);
 
         return redirect()->route('products.index')->with('success', __('Product deleted successfully.'));
     }
