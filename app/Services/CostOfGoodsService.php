@@ -100,8 +100,8 @@ class CostOfGoodsService
             $currentAverageCost = (float) ($product->average_cost ?? 0);
             $currentTotalValue = $currentStock * $currentAverageCost;
 
-            $newTotalValue = $currentTotalValue + $amountPerItem;
-            $newAverageCost = $newTotalValue / $currentStock;
+            $newTotalValue = $currentTotalValue + ($amountPerItem * $invoice_item->quantity);
+            $newAverageCost = $currentStock != 0 ? $newTotalValue / $currentStock : 0;
 
             $product->average_cost = $newAverageCost;
             $product->save();
@@ -113,7 +113,7 @@ class CostOfGoodsService
      */
     public static function reverseUpdateProductAverageCostForAncillaryCost(AncillaryCost $ancillaryCost)
     {
-        $ancillaryCost->loadMissing(['items.product']);
+        $ancillaryCost->loadMissing(['items.product', 'invoice']);
 
         // Revert products average cost based on ancillary cost items
         foreach ($ancillaryCost->items as $item) {
@@ -130,9 +130,9 @@ class CostOfGoodsService
             $currentAverageCost = (float) ($product->average_cost ?? 0);
             $currentTotalValue = $currentStock * $currentAverageCost;
 
-            $newTotalValue = max(0, $currentTotalValue - $amountPerItem);
+            $newTotalValue = max(0, $currentTotalValue - ($amountPerItem * $invoice_item->quantity));
 
-            $newAverageCost = $newTotalValue / $currentStock;
+            $newAverageCost = $currentStock != 0 ? $newTotalValue / $currentStock : 0;
 
             $product->average_cost = $newAverageCost;
             $product->save();
