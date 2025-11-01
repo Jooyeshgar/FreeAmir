@@ -77,7 +77,7 @@ class AncillaryCostController extends Controller
 
     public function destroy(AncillaryCost $ancillaryCost)
     {
-        AncillaryCostService::deleteAncillaryCost($ancillaryCost->id);
+        AncillaryCostService::deleteAncillaryCost($ancillaryCost);
 
         return redirect()
             ->route('ancillary-costs.index')
