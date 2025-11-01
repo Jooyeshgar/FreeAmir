@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\InvoiceType;
 use App\Models\Product;
+use App\Models\ProductWebsite;
 
 class ProductService
 {
@@ -39,5 +40,41 @@ class ProductService
             }
             $product->save();
         }
+    }
+
+    public static function create(array $validatedData)
+    {
+        $product = Product::create($validatedData);
+
+        if (isset($validatedData['websites'])) {
+            foreach ($validatedData['websites'] as $website) {
+                ProductWebsite::create([
+                    'link' => $website['link'],
+                    'product_id' => $product->id,
+                ]);
+            }
+        }
+    }
+
+    public static function update(Product $product, array $validatedData)
+    {
+        $product->productWebsites()->delete();
+
+        if (isset($validatedData['websites'])) {
+            foreach ($validatedData['websites'] as $website) {
+                ProductWebsite::create([
+                    'link' => $website['link'],
+                    'product_id' => $product->id,
+                ]);
+            }
+        }
+
+        $product->update($validatedData);
+    }
+
+    public static function delete(Product $product)
+    {
+        $product->productWebsites()->delete();
+        $product->delete();
     }
 }
