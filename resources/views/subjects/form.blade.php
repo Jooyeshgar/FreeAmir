@@ -26,7 +26,7 @@
             </div>
             <div>
                 <div class="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-700">
-                    {{ $parentSubject->formattedCode() }}
+                    {{ $parentSubject?->formattedCode() }}
                 </div>
             </div>
         </div>

@@ -6,25 +6,20 @@ use App\Enums\AncillaryCostType;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class AncillaryCost extends Model
+class AncillaryCostItem extends Model
 {
     protected $fillable = [
+        'ancillary_cost_id',
+        'product_id',
         'type',
         'amount',
-        'vat',
-        'date',
-        'invoice_id',
         'company_id',
-        'document_id',
     ];
 
     protected $casts = [
         'type' => AncillaryCostType::class,
-        'date' => 'date',
         'amount' => 'decimal:2',
-        'vat' => 'decimal:2',
     ];
 
     public static function booted(): void
@@ -32,18 +27,13 @@ class AncillaryCost extends Model
         static::addGlobalScope(new FiscalYearScope);
     }
 
-    public function invoice(): BelongsTo
+    public function ancillaryCost(): BelongsTo
     {
-        return $this->belongsTo(Invoice::class);
+        return $this->belongsTo(AncillaryCost::class);
     }
 
-    public function document(): BelongsTo
+    public function product(): BelongsTo
     {
-        return $this->belongsTo(Document::class);
-    }
-
-    public function items(): HasMany
-    {
-        return $this->hasMany(AncillaryCostItem::class);
+        return $this->belongsTo(Product::class);
     }
 }

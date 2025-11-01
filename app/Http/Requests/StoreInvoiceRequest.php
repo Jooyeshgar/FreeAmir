@@ -38,7 +38,7 @@ class StoreInvoiceRequest extends FormRequest
             $transactions = collect($this->input('transactions'))
                 ->map(function ($t) {
                     return [
-                        'subject_id' => isset($t['subject_id']) ? (int) $t['subject_id'] : null,
+                        'inventory_subject_id' => isset($t['inventory_subject_id']) ? (int) $t['inventory_subject_id'] : null,
                         'vat' => isset($t['vat']) ? convertToFloat($t['vat']) : null,
                         'desc' => $t['desc'] ?? null,
                         'quantity' => isset($t['quantity']) ? convertToFloat($t['quantity']) : null,
@@ -63,12 +63,12 @@ class StoreInvoiceRequest extends FormRequest
                 $transactions = $this->input('transactions', []);
 
                 foreach ($transactions as $index => $transaction) {
-                    if (! isset($transaction['subject_id']) || ! isset($transaction['quantity'])) {
+                    if (! isset($transaction['inventory_subject_id']) || ! isset($transaction['quantity'])) {
                         continue;
                     }
 
-                    // Get the product by subject_id
-                    $product = Product::where('subject_id', $transaction['subject_id'])->first();
+                    // Get the product by inventory_subject_id
+                    $product = Product::where('inventory_subject_id', $transaction['inventory_subject_id'])->first();
 
                     if ($product && $product->quantity < $transaction['quantity']) {
                         $validator->errors()->add(
@@ -127,7 +127,7 @@ class StoreInvoiceRequest extends FormRequest
 
             // Transactions array
             'transactions' => 'required|array|min:1',
-            'transactions.*.subject_id' => 'required|integer|exists:subjects,id',
+            'transactions.*.inventory_subject_id' => 'required|integer|exists:subjects,id',
             'transactions.*.vat' => 'required|numeric|min:0|max:100',
             'transactions.*.desc' => 'nullable|string|max:500',
             'transactions.*.quantity' => 'required|numeric|min:1',
@@ -182,9 +182,9 @@ class StoreInvoiceRequest extends FormRequest
             'transactions.array' => __('The transaction field must be a valid array.'),
             'transactions.min' => __('At least one transaction row must be provided.'),
 
-            'transactions.*.subject_id.required' => __('The Subject is required for each row.'),
-            'transactions.*.subject_id.integer' => __('The Subject must be an integer.'),
-            'transactions.*.subject_id.exists' => __('The selected Subject does not exist.'),
+            'transactions.*.inventory_subject_id.required' => __('The Inventory Subject is required for each row.'),
+            'transactions.*.inventory_subject_id.integer' => __('The Inventory Subject must be an integer.'),
+            'transactions.*.inventory_subject_id.exists' => __('The selected Inventory Subject does not exist.'),
 
             'transactions.*.desc.string' => __('The Row description must be a valid string.'),
             'transactions.*.desc.max' => __('The Row description may not be greater than :max characters.'),

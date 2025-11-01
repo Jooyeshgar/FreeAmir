@@ -64,9 +64,21 @@ class ConfigController extends Controller
     // }
 
 
-    public function edit(Models\Config $config)
+    public function edit($key)
     {
-        // $subjects = Models\Subject::whereNull('parent_id')->get();
+        $config = Models\Config::where('key', $key)->first();
+        
+        // If config doesn't exist, create a new instance (not saved yet)
+        if (!$config) {
+            $config = new Models\Config();
+            $config->company_id = session('active-company-id');
+            $config->key = $key;
+            $config->value = 0;
+            $config->type = '2';
+            $config->category = '1';
+            $config->desc = ConfigTitle::from(strtoupper($key))->label();
+            $config->save();
+        }
         $subjects = Models\Subject::all();
         return view('configs.edit', compact('subjects', 'config'));
     }
@@ -74,28 +86,15 @@ class ConfigController extends Controller
     public function update(Request $request)
     {
         $validatedData = $request->validate([
-            'cust_subject' => 'nullable|exists:subjects,id|numeric',
-            'cash_book' => 'nullable|exists:subjects,id|numeric',
-            'income' => 'nullable|exists:subjects,id|numeric',
-            'bank' => 'nullable|exists:subjects,id|numeric',
-            'cash' => 'nullable|exists:subjects,id|numeric',
-            'buy_discount' => 'nullable|exists:subjects,id|numeric',
-            'sell_discount' => 'nullable|exists:subjects,id|numeric',
-            'sell_vat' => 'nullable|exists:subjects,id|numeric',
-            'buy_vat' => 'nullable|exists:subjects,id|numeric',
-            'product' => 'nullable|exists:subjects,id|numeric',
-            'sell_free' => 'nullable|exists:subjects,id|numeric',
-            'code' => 'required|exists:subjects,code|string',
+            'code' => 'required|exists:subjects,code|numeric',
+            'key' => 'required|string',
         ]);
 
-        foreach ($validatedData as $key => $value) {
-            if ($key != 'code') {
-                $config = Models\Config::where('key', $key)->first();
-            }
-        }
-
         $subject_id = Subject::where('code', $validatedData['code'])->first()->id;
-        $config['value'] = (string) $subject_id;
+        
+        $config = Models\Config::where('key', $validatedData['key'])->first();
+        
+        $config->value = (string) $subject_id;
         $config->update();
 
         return redirect()->route('configs.index')->with('success', __('Config updated successfully.'));

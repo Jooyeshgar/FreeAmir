@@ -18,8 +18,7 @@
                 <div class="ml-3">
                     <p class="text-sm text-yellow-700">
                         <strong class="font-bold">{{ __('Caution') }}: </strong>
-                        <span
-                            class="font-medium">{{ __('Changes to these settings may affect your fiscal data integrity. Please proceed with care.') }}</span>
+                        <span class="font-medium">{{ __('Changes to these settings may affect your fiscal data integrity. Please proceed with care.') }}</span>
                     </p>
                 </div>
             </div>
@@ -48,23 +47,11 @@
                             @foreach ($configsTitle as $configTitle)
                                 <tr>
                                     <td class="px-4 py-2">{{ $configTitle['label'] ?? '' }}</td>
-                                    @php
-                                        $label = null;
-                                        foreach ($configs as $config) {
-                                            if (strtoupper($config->key) === $configTitle['value']) {
-                                                $label = $configTitle['label'];
-                                                $key = $config->key;
-                                                $id = $config->id;
-                                            }
-                                        }
-                                    @endphp
-
                                     <td class="px-4 py-2">
-                                        {{ $subjects->where('id', config('amir.' . $key))->first()?->name ?? ''}}
+                                        {{ $subjects->where('id', config('amir.' . strtolower($configTitle['value'])))->first()?->name ?? __('N/A') }}
                                     </td>
                                     <td class="px-4 py-2">
-                                        <a href="{{ route('configs.edit', $id) }}"
-                                            class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                        <a href="{{ route('configs.edit', strtolower($configTitle['value'])) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                     </td>
                                 </tr>
                             @endforeach
@@ -73,4 +60,5 @@
                 </div>
             </div>
         </div>
+    </div>
 </x-app-layout>
