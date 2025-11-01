@@ -35,13 +35,9 @@ function formatDocumentNumber(float $number)
         return formatNumber(intval($number));
     }
 
-    $chunks = str_replace('.', '', number_format($number, 2, '.', ''));
-    $chunks = str_split($chunks, 3);
-    $documentNumber = implode('/', $chunks);
-
-    if (in_array(App::getLocale(), ['fa', 'fa_IR'])) {
-        $documentNumber = convertToFarsi($documentNumber);
-    }
+    $documentNumber = in_array(App::getLocale(), ['fa', 'fa_IR']) ?
+        convertToFarsi(number_format($number, 2, '/')) :
+            number_format($number, 2, '');
 
     return $documentNumber;
 }
