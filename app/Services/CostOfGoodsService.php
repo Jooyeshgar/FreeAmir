@@ -100,7 +100,7 @@ class CostOfGoodsService
             $currentAverageCost = (float) ($product->average_cost ?? 0);
             $currentTotalValue = $currentStock * $currentAverageCost;
 
-            $newTotalValue = $currentTotalValue + ($amountPerItem * $invoice_item->quantity);
+            $newTotalValue = $currentTotalValue + $amountPerItem;
             $newAverageCost = $currentStock != 0 ? $newTotalValue / $currentStock : 0;
 
             $product->average_cost = $newAverageCost;

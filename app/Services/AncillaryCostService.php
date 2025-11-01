@@ -108,8 +108,6 @@ class AncillaryCostService
                 $transactions
             );
 
-            $ancillaryCost->loadMissing(['items.product', 'invoice.items.product']);
-
             CostOfGoodsService::reverseUpdateProductAverageCostForAncillaryCost($ancillaryCost);
 
             $ancillaryCost->items()->delete();
@@ -137,10 +135,8 @@ class AncillaryCostService
      *
      * @throws \Exception
      */
-    public static function deleteAncillaryCost(int $ancillaryCostId): void
+    public static function deleteAncillaryCost(AncillaryCost $ancillaryCost): void
     {
-        $ancillaryCost = AncillaryCost::with(['items.product', 'invoice.items.product'])->findOrFail($ancillaryCostId);
-
         DB::transaction(function () use ($ancillaryCost) {
             CostOfGoodsService::reverseUpdateProductAverageCostForAncillaryCost($ancillaryCost);
 
