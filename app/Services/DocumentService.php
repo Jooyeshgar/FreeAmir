@@ -9,22 +9,19 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\ValidationException;
 
 class DocumentService
 {
     /**
      * Create a new document.
      *
-     * @param array $data
-     * @param array $transactions
      * @return Document
      */
     public static function createDocument(User $user, array $data, array $transactions)
     {
 
         $validator = Validator::make($data, [
-            'number' => 'nullable|integer',
+            'number' => 'nullable|decimal:0,2',
             'title' => 'nullable|string',
             'date' => 'required|date',
         ]);
@@ -56,14 +53,12 @@ class DocumentService
     /**
      * Update an existing document.
      *
-     * @param Document $document
-     * @param array $data
      * @return Document
      */
     public static function updateDocument(Document $document, array $data)
     {
         $validator = Validator::make($data, [
-            'number' => 'integer',
+            'number' => 'decimal:0,2',
             'title' => 'nullable|string|min:3|max:255',
             'date' => 'date',
         ]);
@@ -81,7 +76,6 @@ class DocumentService
     /**
      * Approve a document.
      *
-     * @param Document $document
      * @return bool
      */
     public static function approveDocument(Document $document)
@@ -101,8 +95,6 @@ class DocumentService
     /**
      * Create a new transaction for a document.
      *
-     * @param Document $document
-     * @param array $data
      * @return Transaction
      */
     public static function createTransaction(Document $document, array $data)
@@ -118,7 +110,7 @@ class DocumentService
             throw new \Exception($validator->errors()->first());
         }
 
-        $transaction = new Transaction();
+        $transaction = new Transaction;
         $data['user_id'] ??= Auth::id();
         $transaction->fill($data);
         $transaction->document_id = $document->id;
@@ -130,8 +122,6 @@ class DocumentService
     /**
      * Update an existing transaction.
      *
-     * @param Transaction $transaction
-     * @param array $data
      * @return Transaction
      */
     public static function updateTransaction(Transaction $transaction, array $data)
