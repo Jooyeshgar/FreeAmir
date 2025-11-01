@@ -144,13 +144,14 @@ class InvoiceService
             // Delete old invoice items and update product quantities and the average cost
             $InvoiceItems = InvoiceItem::where('invoice_id', $invoice->id);
 
-            $ancillaryCosts = AncillaryCost::where('invoice_id', $invoice->id)->get()->all();
+            $ancillaryCosts = AncillaryCost::where('invoice_id', $invoice->id)
+                ->with(['invoice', 'document', 'items'])->get();
             // Delete old ancillary costs if not null
-            // if (! empty($ancillaryCosts)) {
-            //     foreach ($ancillaryCosts as $ancillaryCost) {
-            //         AncillaryCostService::deleteAncillaryCost($ancillaryCost->id);
-            //     }
-            // }
+            if (! empty($ancillaryCosts)) {
+                foreach ($ancillaryCosts as $ancillaryCost) {
+                    AncillaryCostService::deleteAncillaryCost($ancillaryCost);
+                }
+            }
 
             ProductService::updateProductQuantities($InvoiceItems->get()->toArray(), InvoiceType::from($invoiceData['invoice_type']), true);
 
@@ -167,24 +168,12 @@ class InvoiceService
             self::createInvoiceItems($invoice, $items, $documentTransactions, InvoiceType::from($invoiceData['invoice_type']));
 
             // Recreate ancillary costs if not null
-
-            // ## Hint: Correct this
-
-            // if (! empty($ancillaryCosts)) {
-            //     foreach ($ancillaryCosts as $ancillaryCost) {
-            //         $ancillaryCost->loadMissing(['items']);
-            //         $data = [
-            //             'vatPrice' => $ancillaryCost->vat,
-            //             'amount' => $ancillaryCost->amount,
-            //             'type' => $ancillaryCost->type->value,
-            //             'vatPercentage' => $ancillaryCost->vat_percentage,
-            //             'date' => $ancillaryCost->date,
-            //             'invoice_id' => $ancillaryCost->invoice_id,
-            //             'ancillaryCosts' => $ancillaryCost->toArray() ?? [],
-            //         ];
-            //         AncillaryCostService::updateAncillaryCost(auth()->user(), $ancillaryCost, $data);
-            //     }
-            // }
+            if (! empty($ancillaryCosts)) {
+                foreach ($ancillaryCosts as $ancillaryCost) {
+                    $preparedAncillaryCostData = self::preparingAncillaryCostData($ancillaryCost);
+                    AncillaryCostService::createAncillaryCost(auth()->user(), $preparedAncillaryCostData);
+                }
+            }
 
             // Update product quantities
             ProductService::updateProductQuantities($items, InvoiceType::from($invoiceData['invoice_type']));
@@ -216,7 +205,7 @@ class InvoiceService
             // Delete old ancillary costs if not null
             if (! empty($ancillaryCosts)) {
                 foreach ($ancillaryCosts as $ancillaryCost) {
-                    AncillaryCostService::deleteAncillaryCost($ancillaryCost->id);
+                    AncillaryCostService::deleteAncillaryCost($ancillaryCost);
                 }
             }
             ProductService::updateProductQuantities($invoiceItems->get()->toArray(), $invoice->invoice_type, true);
@@ -241,6 +230,39 @@ class InvoiceService
                 Document::where('id', $documentId)->delete();
             }
         });
+    }
+
+    private static function preparingAncillaryCostData(AncillaryCost $ancillaryCost): array
+    {
+        $data = [
+            'vatPrice' => (float) $ancillaryCost->vat,
+            'amount' => (float) $ancillaryCost->amount,
+            'type' => $ancillaryCost->type->value,
+            'vatPercentage' => $ancillaryCost->vat_percentage,
+            'date' => $ancillaryCost->date,
+            'invoice_id' => $ancillaryCost->invoice_id,
+            'company_id' => session('active-company-id'),
+        ];
+
+        $ancillaryCostItems = $ancillaryCost->items->toArray() ?? [];
+        $processedCosts = [];
+        $total = 0;
+        if (! empty($ancillaryCostItems)) {
+            foreach ($ancillaryCostItems as $key => $cost) {
+
+                $amount = convertToFloat($cost['amount'] ?? 0);
+                if ($amount >= 0) {
+                    $processedCosts[] = [
+                        'product_id' => $cost['product_id'] ?? null,
+                        'amount' => $amount,
+                    ];
+                }
+                $total += $amount;
+            }
+        }
+        $data['ancillaryCosts'] = $processedCosts;
+
+        return $data;
     }
 
     /**
