@@ -172,7 +172,7 @@
                         </x-input>
                     </div>
                     <x-subject-select-box class="w-2/3" :subjects="$subjects" title="{{ __('Product') }}" id_field="product"
-                        placeholder="{{ $subjects->where('id', config('amir.product'))->first()?->name ?? __('Select a subject') }}"
+                        placeholder="{{ $subjects->where('id', config('amir.inventory'))->first()?->name ?? __('Select a subject') }}"
                         allSelectable="true"></x-subject-select-box>
                 </div>
             </div>

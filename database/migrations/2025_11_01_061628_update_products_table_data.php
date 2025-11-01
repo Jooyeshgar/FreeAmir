@@ -24,13 +24,13 @@ return new class extends Migration
             $incomeSubject->subjectable()->associate($product);
             $incomeSubject->save();
 
-            $return_salesSubject = $subjectCreator->createSubject([
+            $salesReturnsSubject = $subjectCreator->createSubject([
                 'name' => $product->name,
-                'parent_id' => $parentGroup->return_sales_subject_id ?? 0,
+                'parent_id' => $parentGroup->salesReturnsSubject ?? 0,
                 'company_id' => $parentGroup->company_id,
             ]);
-            $return_salesSubject->subjectable()->associate($product);
-            $return_salesSubject->save();
+            $salesReturnsSubject->subjectable()->associate($product);
+            $salesReturnsSubject->save();
 
             $cogsSubject = $subjectCreator->createSubject([
                 'name' => $product->name,
@@ -52,7 +52,7 @@ return new class extends Migration
                 'income_subject_id' => $incomeSubject->id,
                 'cogs_subject_id' => $cogsSubject->id,
                 'inventory_subject_id' => $inventorySubject->id,
-                'return_sales_subject_id' => $return_salesSubject->id,
+                'sales_returns_subject_id' => $salesReturnsSubject->id,
             ]);
         }
     }
@@ -69,7 +69,7 @@ return new class extends Migration
             $product->incomeSubject?->delete();
             $product->cogsSubject?->delete();
             $product->inventorySubject?->delete();
-            $product->returnSalesSubject?->delete();
+            $product->salesReturnsSubject?->delete();
             $subjectCreator->createSubject([
                 'name' => $product->name,
                 'parent_id' => $parentGroup->subject_id ?? 0,

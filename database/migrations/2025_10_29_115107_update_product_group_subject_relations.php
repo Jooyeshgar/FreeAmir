@@ -14,7 +14,7 @@ return new class extends Migration
             $table->dropColumn('subject_id');
 
             // Add new subject relations
-            $table->foreignId('return_sales_subject_id')->nullable()->constrained('subjects')->nullOnDelete();
+            $table->foreignId('sales_returns_subject_id')->nullable()->constrained('subjects')->nullOnDelete();
             $table->foreignId('cogs_subject_id')->nullable()->constrained('subjects')->nullOnDelete();
             $table->foreignId('inventory_subject_id')->nullable()->constrained('subjects')->nullOnDelete();
             $table->foreignId('income_subject_id')->nullable()->constrained('subjects')->nullOnDelete();

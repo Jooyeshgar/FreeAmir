@@ -15,7 +15,7 @@ return new class extends Migration
             $table->dropForeign('products_sales_subject_id_foreign');
             $table->dropColumn('sales_subject_id');
 
-            $table->foreignId('return_sales_subject_id')->nullable()->constrained('subjects')->nullOnDelete();
+            $table->foreignId('sales_returns_subject_id')->nullable()->constrained('subjects')->nullOnDelete();
             $table->foreignId('income_subject_id')->nullable()->constrained('subjects')->nullOnDelete();
         });
     }

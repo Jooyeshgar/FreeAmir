@@ -35,7 +35,7 @@ class Product extends Model
         'income_subject_id',
         'cogs_subject_id',
         'inventory_subject_id',
-        'return_sales_subject_id',
+        'sales_returns_subject_id',
     ];
 
     public static function booted(): void
@@ -59,13 +59,13 @@ class Product extends Model
             $incomeSubject->subjectable()->associate($product);
             $incomeSubject->save();
 
-            $return_salesSubject = $subjectCreator->createSubject([
+            $sales_returnsSubject = $subjectCreator->createSubject([
                 'name' => $product->name,
-                'parent_id' => $parentGroup->return_sales_subject_id ?? 0,
+                'parent_id' => $parentGroup->sales_returns_subject_id ?? 0,
                 'company_id' => $parentGroup->company_id,
             ]);
-            $return_salesSubject->subjectable()->associate($product);
-            $return_salesSubject->save();
+            $sales_returnsSubject->subjectable()->associate($product);
+            $sales_returnsSubject->save();
 
             $cogsSubject = $subjectCreator->createSubject([
                 'name' => $product->name,
@@ -87,7 +87,7 @@ class Product extends Model
                 'income_subject_id' => $incomeSubject->id,
                 'cogs_subject_id' => $cogsSubject->id,
                 'inventory_subject_id' => $inventorySubject->id,
-                'return_sales_subject_id' => $return_salesSubject->id,
+                'sales_returns_subject_id' => $sales_returnsSubject->id,
             ]);
         });
 
@@ -106,9 +106,9 @@ class Product extends Model
                 'parent_id' => $parentGroup->inventory_subject_id ?? 0,
                 'company_id' => $parentGroup->company_id,
             ]);
-            $subjectCreator->editSubject($product->returnSalesSubject, [
+            $subjectCreator->editSubject($product->salesReturnsSubject, [
                 'name' => $product->name,
-                'parent_id' => $parentGroup->return_sales_subject_id ?? 0,
+                'parent_id' => $parentGroup->sales_returns_subject_id ?? 0,
                 'company_id' => $parentGroup->company_id,
             ]);
             $subjectCreator->editSubject($product->incomeSubject, [
@@ -123,7 +123,7 @@ class Product extends Model
             $product->incomeSubject?->delete();
             $product->cogsSubject?->delete();
             $product->inventorySubject?->delete();
-            $product->returnSalesSubject?->delete();
+            $product->salesReturnsSubject?->delete();
         });
     }
 
@@ -147,9 +147,9 @@ class Product extends Model
         return $this->belongsTo(Subject::class, 'income_subject_id');
     }
 
-    public function returnSalesSubject(): BelongsTo
+    public function salesReturnsSubject(): BelongsTo
     {
-        return $this->belongsTo(Subject::class, 'return_sales_subject_id');
+        return $this->belongsTo(Subject::class, 'sales_returns_subject_id');
     }
 
     public function cogsSubject(): BelongsTo

@@ -23,17 +23,17 @@ return new class extends Migration
             $incomeSubject->subjectable()->associate($productGroup);
             $incomeSubject->save();
 
-            $return_salesSubject = $subjectCreator->createSubject([
+            $salesReturnsSubject = $subjectCreator->createSubject([
                 'name' => $productGroup->name,
-                'parent_id' => config('amir.return_sales'),
+                'parent_id' => config('amir.sales_returns'),
                 'company_id' => $productGroup->company_id,
             ]);
-            $return_salesSubject->subjectable()->associate($productGroup);
-            $return_salesSubject->save();
+            $salesReturnsSubject->subjectable()->associate($productGroup);
+            $salesReturnsSubject->save();
 
             $cogsSubject = $subjectCreator->createSubject([
                 'name' => $productGroup->name,
-                'parent_id' => config('amir.cost_of_goods'),
+                'parent_id' => config('amir.cost_of_goods_sold'),
                 'company_id' => $productGroup->company_id,
             ]);
             $cogsSubject->subjectable()->associate($productGroup);
@@ -41,7 +41,7 @@ return new class extends Migration
 
             $inventorySubject = $subjectCreator->createSubject([
                 'name' => $productGroup->name,
-                'parent_id' => config('amir.product'),
+                'parent_id' => config('amir.inventory'),
                 'company_id' => $productGroup->company_id,
             ]);
             $inventorySubject->subjectable()->associate($productGroup);
@@ -51,7 +51,7 @@ return new class extends Migration
                 'income_subject_id' => $incomeSubject->id,
                 'cogs_subject_id' => $cogsSubject->id,
                 'inventory_subject_id' => $inventorySubject->id,
-                'return_sales_subject_id' => $return_salesSubject->id,
+                'sales_returns_subject_id' => $salesReturnsSubject->id,
             ]);
         }
     }
@@ -68,11 +68,11 @@ return new class extends Migration
             $productGroup->incomeSubject?->delete();
             $productGroup->cogsSubject?->delete();
             $productGroup->inventorySubject?->delete();
-            $productGroup->returnSalesSubject?->delete();
+            $productGroup->salesReturnsSubject?->delete();
 
             $subjectCreator->createSubject([
                 'name' => $productGroup->name,
-                'parent_id' => config('amir.product') ?? 0,
+                'parent_id' => config('amir.inventory') ?? 0,
                 'company_id' => $productGroup->company_id,
             ]);
         }

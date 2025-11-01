@@ -17,7 +17,7 @@ class ProductGroup extends Model
         'sellId',
         'vat',
         'company_id',
-        'return_sales_subject_id',
+        'sales_returns_subject_id',
         'income_subject_id',
         'cogs_subject_id',
         'inventory_subject_id',
@@ -47,17 +47,17 @@ class ProductGroup extends Model
             $incomeSubject->subjectable()->associate($productGroup);
             $incomeSubject->save();
 
-            $return_salesSubject = $subjectCreator->createSubject([
+            $sales_returnsSubject = $subjectCreator->createSubject([
                 'name' => $productGroup->name,
-                'parent_id' => config('amir.return_sales'),
+                'parent_id' => config('amir.sales_returns'),
                 'company_id' => $productGroup->company_id,
             ]);
-            $return_salesSubject->subjectable()->associate($productGroup);
-            $return_salesSubject->save();
+            $sales_returnsSubject->subjectable()->associate($productGroup);
+            $sales_returnsSubject->save();
 
             $cogsSubject = $subjectCreator->createSubject([
                 'name' => $productGroup->name,
-                'parent_id' => config('amir.cost_of_goods'),
+                'parent_id' => config('amir.cost_of_goods_sold'),
                 'company_id' => $productGroup->company_id,
             ]);
             $cogsSubject->subjectable()->associate($productGroup);
@@ -65,7 +65,7 @@ class ProductGroup extends Model
 
             $inventorySubject = $subjectCreator->createSubject([
                 'name' => $productGroup->name,
-                'parent_id' => config('amir.product'),
+                'parent_id' => config('amir.inventory'),
                 'company_id' => $productGroup->company_id,
             ]);
             $inventorySubject->subjectable()->associate($productGroup);
@@ -75,7 +75,7 @@ class ProductGroup extends Model
                 'income_subject_id' => $incomeSubject->id,
                 'cogs_subject_id' => $cogsSubject->id,
                 'inventory_subject_id' => $inventorySubject->id,
-                'return_sales_subject_id' => $return_salesSubject->id,
+                'sales_returns_subject_id' => $sales_returnsSubject->id,
             ]);
         });
 
@@ -85,17 +85,17 @@ class ProductGroup extends Model
             // Update subjects
             $subjectCreator->editSubject($productGroup->inventorySubject, [
                 'name' => $productGroup->name,
-                'parent_id' => config('amir.product'),
+                'parent_id' => config('amir.inventory'),
                 'company_id' => $productGroup->company_id,
             ]);
             $subjectCreator->editSubject($productGroup->cogsSubject, [
                 'name' => $productGroup->name,
-                'parent_id' => config('amir.cost_of_goods'),
+                'parent_id' => config('amir.cost_of_goods_sold'),
                 'company_id' => $productGroup->company_id,
             ]);
-            $subjectCreator->editSubject($productGroup->returnSalesSubject, [
+            $subjectCreator->editSubject($productGroup->salesReturnsSubject, [
                 'name' => $productGroup->name,
-                'parent_id' => config('amir.return_sales'),
+                'parent_id' => config('amir.sales_returns'),
                 'company_id' => $productGroup->company_id,
             ]);
             $subjectCreator->editSubject($productGroup->incomeSubject, [
@@ -110,7 +110,7 @@ class ProductGroup extends Model
             $productGroup->incomeSubject?->delete();
             $productGroup->cogsSubject?->delete();
             $productGroup->inventorySubject?->delete();
-            $productGroup->returnSalesSubject?->delete();
+            $productGroup->salesReturnsSubject?->delete();
         });
     }
 
@@ -124,9 +124,9 @@ class ProductGroup extends Model
         return $this->belongsTo(Subject::class, 'income_subject_id');
     }
 
-    public function returnSalesSubject(): BelongsTo
+    public function salesReturnsSubject(): BelongsTo
     {
-        return $this->belongsTo(Subject::class, 'return_sales_subject_id');
+        return $this->belongsTo(Subject::class, 'sales_returns_subject_id');
     }
 
     public function cogsSubject(): BelongsTo
