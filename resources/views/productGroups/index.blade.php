@@ -8,8 +8,7 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="card-actions">
-                <a href="{{ route('product-groups.create') }}"
-                    class="btn btn-primary">{{ __('Create product group') }}</a>
+                <a href="{{ route('product-groups.create') }}" class="btn btn-primary">{{ __('Create product group') }}</a>
             </div>
 
             <table class="table w-full mt-4 overflow-auto">
@@ -26,15 +25,13 @@
 
                     @foreach ($productGroups as $productGroup)
                         <tr>
-                            <td class="px-4 py-2">{{ formatCode($productGroup->inventory_subject_id) }}</td>
+                            <td class="px-4 py-2">{{ $productGroup->sstid }}</td>
                             <td class="px-4 py-2">{{ $productGroup->name }}</td>
                             <td class="px-4 py-2">{{ formatNumber($productGroup->vat) }}%</td>
                             <td class="px-4 py-2">{{ formatNumber($productGroup->products->count()) }}</td>
                             <td class="px-4 py-2">
-                                <a href="{{ route('product-groups.edit', $productGroup) }}"
-                                    class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                <form action="{{ route('product-groups.destroy', $productGroup) }}" method="POST"
-                                    class="inline-block">
+                                <a href="{{ route('product-groups.edit', $productGroup) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                <form action="{{ route('product-groups.destroy', $productGroup) }}" method="POST" class="inline-block">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>

@@ -69,8 +69,12 @@ function formatMinimalDate(Carbon|null $date)
     return $date->format('m-d');
 }
 
-function formatCode(string $code)
+function formatCode(string|null $code)
 {
+    if (is_null($code)) {
+        return '';
+    }
+
     $chunks = str_split($code, 3);
 
     $code = implode('/', $chunks);

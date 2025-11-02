@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models;
+use App\Services\ProductGroupService;
 use Illuminate\Http\Request;
 
 class ProductGroupController extends Controller
 {
-    public function __construct() {}
+    public function __construct(
+        private readonly ProductGroupService $productGroupService,
+    ) {}
 
     public function index()
     {
@@ -32,7 +35,7 @@ class ProductGroupController extends Controller
             'sstid' => 'nullable|string',
         ]);
 
-        Models\ProductGroup::create($validatedData);
+        $this->productGroupService->create($validatedData);
 
         return redirect()->route('product-groups.index')->with('success', __('Product group created successfully.'));
     }
@@ -50,14 +53,14 @@ class ProductGroupController extends Controller
             'sstid' => 'nullable|string',
         ]);
 
-        $productGroup->update($validatedData);
+        $this->productGroupService->update($productGroup, $validatedData);
 
         return redirect()->route('product-groups.index')->with('success', __('Product group updated successfully.'));
     }
 
     public function destroy(Models\ProductGroup $productGroup)
     {
-        $productGroup->delete();
+        $this->productGroupService->delete($productGroup);
 
         return redirect()->route('product-groups.index')->with('success', __('Product group deleted successfully.'));
     }
