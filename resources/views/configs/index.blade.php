@@ -40,15 +40,23 @@
                         <thead>
                             <tr>
                                 <th class="px-4 py-2">{{ __('Subject') }}</th>
+                                <th class="px-4 py-2">{{ __('Code') }}</th>
                                 <th class="px-4 py-2">{{ __('Value') }}</th>
+                                <th class="px-4 py-2"></th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach ($configsTitle as $configTitle)
+                                @php
+                                    $subject = $subjects->where('id', config('amir.' . strtolower($configTitle['value'])))->first();
+                                @endphp
                                 <tr>
                                     <td class="px-4 py-2">{{ $configTitle['label'] ?? '' }}</td>
                                     <td class="px-4 py-2">
-                                        {{ $subjects->where('id', config('amir.' . strtolower($configTitle['value'])))->first()?->name ?? __('N/A') }}
+                                        {{ $subject?->formattedCode() ?? '' }}
+                                    </td>
+                                    <td class="px-4 py-2">
+                                        {{ $subject?->fullname() ?? __('N/A') }}
                                     </td>
                                     <td class="px-4 py-2">
                                         <a href="{{ route('configs.edit', strtolower($configTitle['value'])) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
