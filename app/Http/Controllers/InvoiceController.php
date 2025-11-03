@@ -12,7 +12,6 @@ use App\Models\ProductGroup;
 use App\Models\Transaction;
 use App\Services\InvoiceService;
 use Illuminate\Http\Request;
-use PDF;
 
 class InvoiceController extends Controller
 {
@@ -128,11 +127,24 @@ class InvoiceController extends Controller
 
     public function show(Invoice $invoice)
     {
+        $invoice->load([
+            'customer',
+            'document',
+            'document.transactions',
+            'items.product',
+        ]);
+
+        return view('invoices.show', compact('invoice'));
+    }
+
+    public function print(Invoice $invoice)
+    {
         $invoice->load('customer', 'items.product');
 
-        $pdf = PDF::loadView('invoices.show', compact('invoice'));
+    $pdf = app('dompdf.wrapper');
+    $pdf->loadView('invoices.print', compact('invoice'));
 
-        return $pdf->stream('invoice-'.($invoice->number ?? $invoice->id).'.pdf');
+    return $pdf->stream('invoice-' . ($invoice->number ?? $invoice->id) . '.pdf');
     }
 
     /**

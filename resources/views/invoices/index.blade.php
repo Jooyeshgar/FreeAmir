@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-app-layout :title="__('Invoices')">
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
             {{ __('Invoices') }}
@@ -29,15 +29,13 @@
                 <form action="{{ route('invoices.index') }}" method="GET" class="ml-auto">
                     <div class="mt-4 mb-4 grid grid-cols-6 gap-6">
                         <div class="col-span-2 md:col-span-1">
-                            <x-input name="number" value="{{ request('number') }}"
-                                placeholder="{{ __('Invoice Number') }}" />
+                            <x-input name="number" value="{{ request('number') }}" placeholder="{{ __('Invoice Number') }}" />
                         </div>
                         <div class="col-span-2 md:col-span-1">
                             <x-input name="date" placeholder="{{ __('date') }}" value="{{ request('date') }}"></x-input>
                         </div>
                         <div class="col-span-6 md:col-span-3">
-                            <x-input name="text" value="{{ request('text') }}"
-                                placeholder="{{ __('Search by customer name or transaction description') }}" />
+                            <x-input name="text" value="{{ request('text') }}" placeholder="{{ __('Search by customer name or transaction description') }}" />
                         </div>
                         <div class="col-span-2 md:col-span-1 text-center">
                             <input type="submit" value="{{ __('Search') }}" class="btn-primary btn" />
@@ -62,7 +60,9 @@
                     @foreach ($invoices as $invoice)
                         <tr>
                             <td class="px-4 py-2">
-                                {{ convertToFarsi($invoice->number) }}
+                                <a href="{{ route('invoices.show', $invoice) }}" class="link link-hover">
+                                    {{ convertToFarsi($invoice->number) }}
+                                </a>
                             </td>
                             <td class="px-4 py-2">{{ $invoice->customer->name ?? '' }}</td>
                             <td class="px-4 py-2">
@@ -78,10 +78,9 @@
                                 {{ $invoice->permanent ?? false ? __('Permanent') : __('Draft') }}
                             </td>
                             <td class="px-4 py-2">
-                                <a href="{{ route('invoices.show', $invoice) }}"
-                                    class="btn btn-sm btn-info">{{ __('View') }}</a>
-                                <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{
-                                    __('Edit') }}</a> 
+                                <a href="{{ route('invoices.show', $invoice) }}" target="_blank" rel="noopener" class="btn btn-sm btn-info">{{ __('Show') }}</a>
+                                <a href="{{ route('invoices.print', $invoice) }}" target="_blank" rel="noopener" class="btn btn-sm btn-info">{{ __('Print') }}</a>
+                                <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                 <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" class="inline-block">
                                     @csrf
                                     @method('DELETE')
