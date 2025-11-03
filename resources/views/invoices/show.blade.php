@@ -1,145 +1,155 @@
 <x-app-layout :title="__('Invoice') . ' ' . $invoice->invoice_type->label() . ' #' . convertToFarsi($invoice->number ?? $invoice->id)">
 
-    <div class="space-y-6">
-        <x-show-message-bags />
-
-        @php
-            $typeLabels = [
-                'buy' => __('Buy invoice'),
-                'sell' => __('Sell invoice'),
-                'return_buy' => __('Return buy invoice'),
-                'return_sell' => __('Return sell invoice'),
-            ];
-            $items = $invoice->items ?? collect();
-            $subTotal = $items->reduce(fn($carry, $item) => $carry + ($item->quantity ?? 0) * ($item->unit_price ?? 0), 0);
-            $discountTotal = $items->reduce(fn($carry, $item) => $carry + ($item->unit_discount ?? 0), 0);
-            $vatTotal = $items->reduce(fn($carry, $item) => $carry + ($item->vat ?? 0), 0);
-            $grandTotal = ($invoice->amount ?? 0) - ($invoice->subtraction ?? 0);
-        @endphp
-
-        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mt-5 ">
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-header bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 px-6 py-4 rounded-t-2xl border-b-2 border-primary/20">
             <div>
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-white">
                     {{ __('Invoice') }} {{ $invoice->invoice_type->label() }} #{{ convertToFarsi($invoice->number ?? $invoice->id) }}
-                    <span class="badge {{ $invoice->permanent ? 'badge-success' : 'badge-warning' }}">
-                        {{ $invoice->permanent ? __('Permanent') : __('Draft') }}
-                    </span>
                 </h2>
-                <p class="text-sm text-gray-500">
+                <p class="text-sm text-gray-500 dark:text-gray-300 mt-1">
                     {{ __('Issued on :date', ['date' => $invoice->date ? formatDate($invoice->date) : __('Unknown')]) }}
                 </p>
             </div>
-            <div class="flex flex-wrap gap-2">
-                <a href="{{ route('invoices.print', $invoice) }}" class="btn btn-outline" target="_blank" rel="noopener">
-                    {{ __('Print PDF') }}
-                </a>
-                <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-primary">
-                    {{ __('Edit invoice') }}
-                </a>
-                @if ($invoice->document)
-                    <a href="{{ route('documents.show', $invoice->document) }}" class="btn btn-primary">
-                        {{ formatDocumentNumber($invoice->document->number) }}
-                    </a>
-                @endif
-            </div>
-        </div>
-        <div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div class="rounded-xl border border-blue-100 bg-white/80 p-5 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-wide text-blue-500">{{ __('Subtotal') }}</p>
-                <p class="mt-2 text-2xl font-semibold text-blue-800">{{ formatNumber($subTotal) }}</p>
-            </div>
-            <div class="rounded-xl border border-amber-100 bg-amber-50/80 p-5 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-wide text-amber-500">{{ __('Discounts') }}</p>
-                <p class="mt-2 text-2xl font-semibold text-amber-800">{{ formatNumber($discountTotal) }}</p>
-            </div>
-            <div class="rounded-xl border border-emerald-100 bg-emerald-50/80 p-5 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-wide text-emerald-500">{{ __('VAT') }}</p>
-                <p class="mt-2 text-2xl font-semibold text-emerald-800">{{ formatNumber($vatTotal) }}</p>
-            </div>
-            <div class="rounded-xl border border-indigo-100 bg-indigo-50/80 p-5 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-wide text-indigo-500">{{ __('Grand total') }}</p>
-                <p class="mt-2 text-2xl font-semibold text-indigo-800">{{ formatNumber($grandTotal) }}</p>
+            <div class="flex flex-wrap gap-2 mt-2">
+                <span class="badge badge-lg badge-primary gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 7h.01M7 3h10a2 2 0 012 2v4a2 2 0 01-.586 1.414l-7 7a2 2 0 01-2.828 0l-4.586-4.586A2 2 0 014 12V5a2 2 0 012-2z" />
+                    </svg>
+                    {{ $invoice->invoice_type->label() }}
+                </span>
+                <span class="badge badge-lg {{ $invoice->permanent ? 'badge-success' : 'badge-warning' }} gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {{ $invoice->permanent ? __('Permanent') : __('Draft') }}
+                </span>
             </div>
         </div>
 
-        @if ($invoice->description)
-            <div class="mt-6 rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-slate-600">
-                <p class="text-sm font-medium text-slate-500">{{ __('Notes') }}</p>
-                <p class="mt-1 leading-relaxed">
-                    {{ $invoice->description }}
-                </p>
-            </div>
-        @endif
+        <div class="card-body space-y-8">
+            <x-show-message-bags />
 
-        <div class="card border border-slate-200 bg-white shadow-lg shadow-emerald-100/40">
-            <div class="card-body">
+            @php
+                $items = $invoice->items ?? collect();
+                $subTotal = $items->reduce(fn($carry, $item) => $carry + ($item->quantity ?? 0) * ($item->unit_price ?? 0), 0);
+                $discountTotal = $items->reduce(fn($carry, $item) => $carry + ($item->unit_discount ?? 0), 0);
+                $vatTotal = $items->reduce(fn($carry, $item) => $carry + ($item->vat ?? 0), 0);
+                $grandTotal = ($invoice->amount ?? 0) - ($invoice->subtraction ?? 0);
+            @endphp
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="stats shadow bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60">
+                    <div class="stat">
+                        <div class="stat-title text-blue-500">{{ __('Subtotal') }}</div>
+                        <div class="stat-value text-blue-600">{{ formatNumber($subTotal) }}</div>
+                        <div class="stat-desc text-blue-400">{{ __('Before discounts and tax') }}</div>
+                    </div>
+                </div>
+
+                <div class="stats shadow bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200/60">
+                    <div class="stat">
+                        <div class="stat-title text-amber-500">{{ __('Discounts') }}</div>
+                        <div class="stat-value text-amber-600">{{ formatNumber($discountTotal) }}</div>
+                        <div class="stat-desc text-amber-400">{{ __('Total deductions') }}</div>
+                    </div>
+                </div>
+
+                <div class="stats shadow bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/60">
+                    <div class="stat">
+                        <div class="stat-title text-emerald-500">{{ __('VAT') }}</div>
+                        <div class="stat-value text-emerald-600">{{ formatNumber($vatTotal) }}</div>
+                        <div class="stat-desc text-emerald-400">{{ __('Collected tax') }}</div>
+                    </div>
+                </div>
+
+                <div class="stats shadow bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/60">
+                    <div class="stat">
+                        <div class="stat-title text-indigo-500">{{ __('Grand total') }}</div>
+                        <div class="stat-value text-indigo-600">{{ formatNumber($grandTotal) }}</div>
+                        <div class="stat-desc text-indigo-400">{{ __('Payable amount') }}</div>
+                    </div>
+                </div>
+            </div>
+
+            @if ($invoice->description)
+                <div>
+                    <div class="divider text-lg font-semibold">{{ __('Notes') }}</div>
+                    <div class="alert bg-base-200 shadow-sm">
+                        <div>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-info shrink-0 w-6 h-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>{{ $invoice->description }}</span>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            <div>
+                <div class="divider text-lg font-semibold">{{ __('Customer Details') }}</div>
                 @if ($invoice->customer)
-                    <div class="flex flex-col gap-4">
-                        <p class="text-xl font-semibold text-emerald-600">
-
-                        </p>
-                        <dl class="grid grid-cols-1 gap-3 text-sm text-slate-600 md:grid-cols-4">
-                            <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                                <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Customer') }}</dt>
-                                <dd class="text-sm font-semibold text-slate-700">
-                                    {{ $invoice->customer->name }}
-                                </dd>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="card bg-base-200 shadow">
+                            <div class="card-body p-4">
+                                <h3 class="card-title text-xs uppercase tracking-wide text-gray-500">{{ __('Customer') }}</h3>
+                                <p class="text-lg font-semibold text-gray-800">{{ $invoice->customer->name }}</p>
                             </div>
-                            <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                                <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Phone') }}</dt>
-                                <dd class="text-sm font-semibold text-slate-700">
-                                    {{ $invoice->customer->phone ? convertToFarsi($invoice->customer->phone) : '' }}
-                                </dd>
+                        </div>
+                        <div class="card bg-base-200 shadow">
+                            <div class="card-body p-4">
+                                <h3 class="card-title text-xs uppercase tracking-wide text-gray-500">{{ __('Phone') }}</h3>
+                                <p class="text-lg font-semibold text-gray-800">{{ $invoice->customer->phone ? convertToFarsi($invoice->customer->phone) : '—' }}</p>
                             </div>
-                            <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                                <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Economic code') }}</dt>
-                                <dd class="text-sm font-semibold text-slate-700">
-                                    {{ $invoice->customer->ecnmcs_code ? convertToFarsi($invoice->customer->ecnmcs_code) : '' }}
-                                </dd>
+                        </div>
+                        <div class="card bg-base-200 shadow">
+                            <div class="card-body p-4">
+                                <h3 class="card-title text-xs uppercase tracking-wide text-gray-500">{{ __('Economic code') }}</h3>
+                                <p class="text-lg font-semibold text-gray-800">
+                                    {{ $invoice->customer->ecnmcs_code ? convertToFarsi($invoice->customer->ecnmcs_code) : '—' }}</p>
                             </div>
-                            <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                                <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Postal code') }}</dt>
-                                <dd class="text-sm font-semibold text-slate-700">
-                                    {{ $invoice->customer->postal_code ? convertToFarsi($invoice->customer->postal_code) : '' }}
-                                </dd>
+                        </div>
+                        <div class="card bg-base-200 shadow">
+                            <div class="card-body p-4">
+                                <h3 class="card-title text-xs uppercase tracking-wide text-gray-500">{{ __('Postal code') }}</h3>
+                                <p class="text-lg font-semibold text-gray-800">
+                                    {{ $invoice->customer->postal_code ? convertToFarsi($invoice->customer->postal_code) : '—' }}</p>
                             </div>
-                            <div class="flex flex-col gap-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 md:col-span-4">
-                                <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Address') }}</dt>
-                                <dd class="text-sm font-semibold text-slate-700 leading-relaxed">
-                                    {{ $invoice->customer->address ?: '' }}
-                                </dd>
+                        </div>
+                        <div class="card bg-base-200 shadow md:col-span-2 lg:col-span-4">
+                            <div class="card-body p-4">
+                                <h3 class="card-title text-xs uppercase tracking-wide text-gray-500">{{ __('Address') }}</h3>
+                                <p class="text-sm font-medium text-gray-700 leading-relaxed">{{ $invoice->customer->address ?: '—' }}</p>
                             </div>
-                        </dl>
+                        </div>
                     </div>
                 @else
-                    <p class="rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-emerald-700">{{ __('No customer is attached to this invoice.') }}</p>
+                    <div class="alert bg-emerald-50 border border-emerald-200 text-emerald-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 1010 10A10 10 0 0012 2z" />
+                        </svg>
+                        <span>{{ __('No customer is attached to this invoice.') }}</span>
+                    </div>
                 @endif
             </div>
-        </div>
 
-        <div class="card border border-slate-200 bg-white shadow-lg shadow-indigo-100/50">
-            <div class="card-body overflow-x-auto">
-                <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <h3 class="card-title text-lg text-indigo-600">{{ __('Items') }}</h3>
-                    <span class="text-sm text-indigo-400">
-                        {{ __('Total items: :count', ['count' => convertToFarsi($items->count())]) }}
-                    </span>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="table w-full mt-4">
-                        <thead class="bg-indigo-50 text-indigo-600">
-                            <tr class="text-xs uppercase tracking-wide">
-                                <th class="text-left">#</th>
-                                <th class="text-left">{{ __('Product') }}</th>
-                                <th class="text-left">{{ __('Description') }}</th>
-                                <th class="text-right">{{ __('Quantity') }}</th>
-                                <th class="text-right">{{ __('Unit price') }}</th>
-                                <th class="text-right">{{ __('Discount') }}</th>
-                                <th class="text-right">{{ __('VAT') }}</th>
-                                <th class="text-right">{{ __('Total') }}</th>
+            <div>
+                <div class="divider text-lg font-semibold">{{ __('Items') }}</div>
+                <div class="overflow-x-auto shadow-lg rounded-lg">
+                    <table class="table table-zebra w-full">
+                        <thead class="bg-base-300">
+                            <tr>
+                                <th class="px-4 py-3">#</th>
+                                <th class="px-4 py-3 text-left">{{ __('Product') }}</th>
+                                <th class="px-4 py-3 text-left">{{ __('Description') }}</th>
+                                <th class="px-4 py-3 text-right">{{ __('Quantity') }}</th>
+                                <th class="px-4 py-3 text-right">{{ __('Unit price') }}</th>
+                                <th class="px-4 py-3 text-right">{{ __('Discount') }}</th>
+                                <th class="px-4 py-3 text-right">{{ __('VAT') }}</th>
+                                <th class="px-4 py-3 text-right">{{ __('Total') }}</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100">
+                        <tbody>
                             @forelse ($items as $index => $item)
                                 @php
                                     $quantity = $item->quantity ?? 0;
@@ -149,9 +159,9 @@
                                     $lineBase = $quantity * $unitPrice - $discount;
                                     $lineTotal = $lineBase + $vat;
                                 @endphp
-                                <tr class="transition-colors hover:bg-indigo-50/70">
-                                    <td>{{ convertToFarsi($index + 1) }}</td>
-                                    <td>
+                                <tr class="hover">
+                                    <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
+                                    <td class="px-4 py-3">
                                         @if ($item->product)
                                             <a href="{{ route('products.show', $item->product) }}" class="link link-hover link-primary">
                                                 {{ $item->product->name }}
@@ -160,22 +170,63 @@
                                             <span class="text-gray-500">{{ __('Removed product') }}</span>
                                         @endif
                                     </td>
-                                    <td>{{ $item->description }}</td>
-                                    <td class="text-right">{{ formatNumber($quantity) }}</td>
-                                    <td class="text-right">{{ formatNumber($unitPrice) }}</td>
-                                    <td class="text-right">{{ formatNumber($discount) }}</td>
-                                    <td class="text-right">{{ formatNumber($vat) }}</td>
-                                    <td class="text-right">{{ formatNumber($lineTotal) }}</td>
+                                    <td class="px-4 py-3">{{ $item->description }}</td>
+                                    <td class="px-4 py-3 text-right">{{ formatNumber($quantity) }}</td>
+                                    <td class="px-4 py-3 text-right">{{ formatNumber($unitPrice) }}</td>
+                                    <td class="px-4 py-3 text-right">{{ formatNumber($discount) }}</td>
+                                    <td class="px-4 py-3 text-right">{{ formatNumber($vat) }}</td>
+                                    <td class="px-4 py-3 text-right">{{ formatNumber($lineTotal) }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="py-6 text-center text-gray-500">
+                                    <td colspan="8" class="px-4 py-6 text-center text-gray-500">
                                         {{ __('There are no items on this invoice yet.') }}
                                     </td>
                                 </tr>
                             @endforelse
                         </tbody>
+                        <tfoot class="bg-base-300">
+                            <tr>
+                                <td colspan="8" class="px-4 py-3 text-right text-sm text-gray-600">
+                                    {{ __('Total items: :count', ['count' => convertToFarsi($items->count())]) }}
+                                </td>
+                            </tr>
+                        </tfoot>
                     </table>
+                </div>
+            </div>
+
+            <div class="card-actions justify-between mt-4">
+                <a href="{{ route('invoices.index') }}" class="btn btn-ghost gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    {{ __('Back') }}
+                </a>
+                <div class="flex flex-wrap gap-2">
+                    <a href="{{ route('invoices.print', $invoice) }}" class="btn btn-outline gap-2" target="_blank" rel="noopener">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M7 8h10M7 12h10m-7 8h4m-7-4h10V8a2 2 0 00-2-2h-2V4a2 2 0 00-2-2h-2a2 2 0 00-2 2v2H9a2 2 0 00-2 2v8z" />
+                        </svg>
+                        {{ __('Print PDF') }}
+                    </a>
+                    <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-primary gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        {{ __('Edit invoice') }}
+                    </a>
+                    @if ($invoice->document)
+                        <a href="{{ route('documents.show', $invoice->document) }}" class="btn btn-secondary gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12h6m2 8H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2z" />
+                            </svg>
+                            {{ formatDocumentNumber($invoice->document->number) }}
+                        </a>
+                    @endif
                 </div>
             </div>
         </div>
