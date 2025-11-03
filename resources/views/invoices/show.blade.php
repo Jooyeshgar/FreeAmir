@@ -6,7 +6,7 @@
                 <h2 class="text-2xl font-bold text-gray-800 dark:text-white">
                     {{ __('Invoice') }} {{ $invoice->invoice_type->label() }} #{{ convertToFarsi($invoice->number ?? $invoice->id) }}
                 </h2>
-                <p class="text-sm text-gray-500 dark:text-gray-300 mt-1">
+                <p class="mt-1 float-end">
                     {{ __('Issued on :date', ['date' => $invoice->date ? formatDate($invoice->date) : __('Unknown')]) }}
                 </p>
             </div>
