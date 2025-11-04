@@ -188,4 +188,16 @@ class CostOfGoodsService
     {
         return (float) $product->quantity * (float) ($product->average_cost ?? 0);
     }
+
+    private function getPreviousInvoice(Invoice $invoice)
+    {
+        return Invoice::where('number', '<', $invoice->number)
+            ->where('invoice_type', $invoice->invoice_type)->orderByDesc('number')->first();
+    }
+
+    private function getNextInvoice(Invoice $invoice)
+    {
+        return Invoice::where('number', '>', $invoice->number)
+            ->where('invoice_type', $invoice->invoice_type)->orderBy('number')->first();
+    }
 }

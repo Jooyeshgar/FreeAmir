@@ -49,8 +49,14 @@
             <div class="text-sm flex-1 max-w-8 text-center text-gray-500">
                 #
             </div>
-            <div class="text-sm flex-1 min-w-64 text-center text-gray-500">
+            <div class="text-sm flex-1 min-w-48 text-center text-gray-500">
                 {{ __('Product') }}
+            </div>
+             <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500">
+                {{ __('Quantity') }}
+            </div>
+            <div class="text-sm flex-1 min-w-32 max-w-48 text-center text-gray-500">
+                {{ __('Amount per unit') }}
             </div>
             <div class="text-sm flex-1 min-w-32 max-w-48 text-center text-gray-500">
                 {{ __('Amount') }}
@@ -72,10 +78,20 @@
                                 <span class="text-gray-600" x-text="index + 1"></span>
                             </div>
 
-                            <div class="flex-1 min-w-64">
+                            <div class="flex-1 min-w-48 text-center">
                                 <span class="text-gray-800" x-text="product.name"></span>
                                 <input type="hidden" x-bind:name="'ancillaryCosts[' + index + '][product_id]'" x-bind:value="product.id">
                                 <input type="hidden" x-bind:name="'ancillaryCosts[' + index + '][description]'" x-bind:value="selectedCostType">
+                            </div>
+
+                            <div class="flex-1 min-w-32 max-w-32">
+                                <input type="text" x-bind:value="product.quantity ?? 0" readonly
+                                       class="mt-1 block w-full rounded-md border-gray-200 bg-gray-100 text-gray-700 px-3 py-2 text-center" />
+                            </div>
+
+                            <div class="flex-1 min-w-32 max-w-48">
+                                <input type="text" x-bind:value="calculateAmountPerUnit(product.id, product.quantity)" readonly
+                                       class="mt-1 block w-full rounded-md border-gray-200 bg-gray-100 text-gray-700 px-3 py-2 text-center" />
                             </div>
 
                             <div class="flex-1 min-w-32 max-w-48">
@@ -84,7 +100,7 @@
                                     x-on:input="updateProductAmount(product.id, $event.target.value)">
                                 </x-text-input>
                             </div>
-                        </div>
+                            
                     </template>
                 </div>
             </template>
@@ -94,13 +110,13 @@
             <div class="flex justify-end px-4 gap-4 py-3">
                 <div class="flex items-center gap-2 px-4 py-2 bg-white shadow-sm rounded-xl border border-gray-200">
                     <span class="text-sm font-medium text-gray-500">{{ __('Total') }}:</span>
-                    <span class="text-lg font-bold text-green-600" x-text="calculateTotal().toLocaleString()">
+                    <span class="text-lg font-bold text-green-600" x-text="calculateTotal().toLocaleString('fa-IR')">
                         0
                     </span>
                 </div>
                 <div class="flex items-center gap-2 px-4 py-2 bg-white shadow-sm rounded-xl border border-gray-200">
                     <span class="text-sm font-medium text-gray-500">{{ __('Total with VAT') }}:</span>
-                    <span class="text-lg font-bold text-green-600" x-text="calculateTotalWithVat(Number($store.utils.convertToEnglish(vat))).toLocaleString()">
+                    <span class="text-lg font-bold text-green-600" x-text="calculateTotalWithVat(Number(vat)).toLocaleString('fa-IR')">
                         0
                     </span>
                 </div>
@@ -128,7 +144,6 @@
                 availableProducts: [],
                 productAmounts: {},
                 selectedInvoiceId: {{ old('invoice_id') ?? ($ancillaryCost->invoice_id ?? 'null') }},
-                selectedCostType: '{{ old('description') ?? ($ancillaryCost->description?->value ?? '') }}',
                 selectedCostType: '{{ old('type') ?? ($ancillaryCost->type ?? '') }}',
                 vat: '{{ old('vat') ?? ($ancillaryCost->vat ?? 0) }}',
 
@@ -166,6 +181,14 @@
                     console.log('VAT Percent:', vatPercent);
 
                     return total + (total * vatPercent / 100);
+                },
+
+                calculateAmountPerUnit(productId, quantity) {
+                    const productQuantity = Number(this.$store.utils.convertToEnglish(quantity ?? 0)) || 0;
+                    if (!productQuantity) return Number(this.$store.utils.convertToEnglish(0));
+                    const amount = Number(this.$store.utils.convertToEnglish(this.productAmounts[productId] ?? 0)) || 0;
+                    const perUnit = amount / productQuantity;
+                    return perUnit.toLocaleString('fa-IR', { maximumFractionDigits: 2 });
                 },
 
                 loadInvoiceProducts(invoiceId) {

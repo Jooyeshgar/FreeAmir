@@ -57,8 +57,10 @@ class AncillaryCostController extends Controller
             ];
         })->toArray();
 
-        // Convert VAT amount to VAT percentage
-        $ancillaryCost['vat'] = $ancillaryCost['vat'] != 0 ? ($ancillaryCost['amount'] - $ancillaryCost['vat']) / $ancillaryCost['vat'] : 0;
+        // Calculate VAT percentage: (vat_amount / subtotal_before_vat) * 100
+        $subtotalBeforeVat = $ancillaryCost['amount'] - $ancillaryCost['vat'];
+        $vatPercentage = $subtotalBeforeVat > 0 ? ($ancillaryCost['vat'] / $subtotalBeforeVat) * 100 : 0;
+        $ancillaryCost['vat'] = $vatPercentage;
 
         return view('ancillaryCosts.edit', compact('ancillaryCost', 'invoices', 'ancillaryCostItems'));
     }
@@ -91,6 +93,7 @@ class AncillaryCostController extends Controller
             return [
                 'id' => $item->product->id,
                 'name' => $item->product->name,
+                'quantity' => (int) $item->quantity,
             ];
         })->unique('id')->values();
 
