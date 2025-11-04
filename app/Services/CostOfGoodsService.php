@@ -28,12 +28,12 @@ class CostOfGoodsService
     {
         $ancillaryCosts = $invoice->ancillaryCosts;
         if(!is_null($ancillaryCosts)) $ancillaryCosts->loadMissing('items');
-dd($ancillaryCosts);
+
         foreach ($invoice->items as $invoiceItem) {
             $product = $invoiceItem->product;
             $availableQuantity = (float) $invoiceItem->quantity_at;
             $totalCosts = $invoiceItem->amount - ($invoiceItem->vat ?? 0); // total cost per product excluding VAT
-            $totalCosts += $ancillaryCosts ? $ancillaryCosts->items->where('product_id', $product->id)->sum('amount') : 0; // without VAT
+            $totalCosts += $ancillaryCosts ? $ancillaryCosts->flatMap->items->where('product_id', $product->id)->sum('amount') : 0; // without VAT
             $previousInvoice = self::getPreviousInvoice($invoice, $product->id);
 
             if ($previousInvoice) {
