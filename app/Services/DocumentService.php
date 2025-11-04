@@ -58,7 +58,7 @@ class DocumentService
     public static function updateDocument(Document $document, array $data)
     {
         $validator = Validator::make($data, [
-            'number' => 'decimal:0,2',
+            'number' => 'nullable|decimal:0,2',
             'title' => 'nullable|string|min:3|max:255',
             'date' => 'date',
         ]);
@@ -150,7 +150,7 @@ class DocumentService
         $existingTransactionIds = [];
         foreach ($transactionsData as $transactionData) {
             $transaction = Transaction::updateOrCreate(
-                ['id' => $transactionData['transaction_id']],
+                ['id' => $transactionData['transaction_id']?? null],
                 [
                     'document_id' => $documentId,
                     'subject_id' => $transactionData['subject_id'],

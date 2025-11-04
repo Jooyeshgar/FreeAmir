@@ -18,9 +18,10 @@ class InvoiceItem extends Model
         'quantity',
         'unit_price',
         'unit_discount',
-        'cost_at_time_of_sale',
+        'cog_after',
+        'quantity_at',
         'vat',
-        'amount',
+        'amount',   // total amount after discount and after vat
         'description',
     ];
 
