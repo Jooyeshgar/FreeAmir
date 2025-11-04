@@ -2,16 +2,12 @@
 
 namespace App\Services;
 
-use App\Enums\ConfigTitle;
 use App\Enums\InvoiceType;
 use App\Models\Product;
 
 class ProductService
 {
-    public function __construct(
-        private readonly SubjectCreatorService $subjectCreator,
-    ) {
-    }
+    public function __construct(private readonly SubjectCreatorService $subjectCreator) {}
 
     public function create(array $data): Product
     {
@@ -61,7 +57,7 @@ class ProductService
         $product->inventorySubject?->delete();
     }
 
-    public static function updateProductQuantities(array $invoiceItems, InvoiceType $invoice_type, bool $deletingInvoiceItem = false): void
+    public static function syncProductQuantities(array $invoiceItems, InvoiceType $invoice_type, bool $deletingInvoiceItem = false): void
     {
         foreach ($invoiceItems as $invoiceItem) {
             $product = Product::find($invoiceItem['product_id']);
@@ -162,7 +158,7 @@ class ProductService
         $dirtyIds = [];
 
         foreach ($updatedIds as $column => $id) {
-            if ($product->$column !== $id) {
+            if ($id !== $product->$column) {
                 $dirtyIds[$column] = $id;
             }
         }

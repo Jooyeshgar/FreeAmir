@@ -26,10 +26,13 @@ class InvoiceTransactionBuilder
 
     private float $subtractions = 0;
 
+    private InvoiceType $invoiceType;
+
     public function __construct(array $items, array $invoiceData)
     {
         $this->items = $items;
         $this->invoiceData = $invoiceData;
+        $this->invoiceType = $invoiceData['invoice_type'];
     }
 
     /**
@@ -117,13 +120,6 @@ class InvoiceTransactionBuilder
      */
     private function buildItemTransactions(): void
     {
-        $invoiceType = $this->invoiceData['invoice_type'] ?? InvoiceType::SELL;
-
-        // Convert string to enum if necessary
-        if (is_string($invoiceType)) {
-            $invoiceType = InvoiceType::from($invoiceType);
-        }
-
         foreach ($this->items as $item) {
             $product = Product::find($item['product_id']);
             if (! $product) {
@@ -144,8 +140,8 @@ class InvoiceTransactionBuilder
             $this->transactions[] = [
                 'subject_id' => $product->inventory_subject_id,
                 'desc' => $item['description'] ?? $product->name,
-                'credit' => $invoiceType->isSell() ? $itemAmount : 0,
-                'debit' => $invoiceType->isSell() ? 0 : $itemAmount,
+                'credit' => $this->invoiceType->isSell() ? $itemAmount : 0,
+                'debit' => $this->invoiceType->isSell() ? 0 : $itemAmount,
             ];
         }
     }
@@ -156,16 +152,14 @@ class InvoiceTransactionBuilder
     private function buildDiscountTransaction(): void
     {
         if ($this->totalDiscount > 0) {
-            $invoiceType = $this->invoiceData['invoice_type'] ?? InvoiceType::SELL;
-            // Convert string to enum if necessary
-            if (is_string($invoiceType)) {
-                $invoiceType = InvoiceType::from($invoiceType);
-            }
-            $discountSubjectId = $invoiceType->isSell() ? config('amir.sell_discount') : config('amir.buy_discount');
+
+            $discountSubjectId = $this->invoiceType->isSell() ? config('amir.sell_discount') : config('amir.buy_discount');
+
             $this->transactions[] = [
                 'subject_id' => $discountSubjectId,
                 'desc' => __('Invoice discount'),
-                'value' => $invoiceType->isSell() ? -$this->totalDiscount : $this->totalDiscount,
+                'credit' => $this->invoiceType->isSell() ? 0 : $this->totalDiscount,
+                'debit' => $this->invoiceType->isSell() ? $this->totalDiscount : 0,
             ];
         }
     }
@@ -176,19 +170,13 @@ class InvoiceTransactionBuilder
     private function buildVatTransaction(): void
     {
         if ($this->totalVat > 0) {
-            $invoiceType = $this->invoiceData['invoice_type'] ?? InvoiceType::SELL;
 
-            // Convert string to enum if necessary
-            if (is_string($invoiceType)) {
-                $invoiceType = InvoiceType::from($invoiceType);
-            }
-
-            $vatSubjectId = $invoiceType->isSell() ? config('amir.sell_vat') : config('amir.buy_vat');
+            $vatSubjectId = $this->invoiceType->isSell() ? config('amir.sell_vat') : config('amir.buy_vat');
 
             $this->transactions[] = [
                 'subject_id' => $vatSubjectId,
                 'desc' => __('Invoice VAT/Tax'),
-                'value' => $invoiceType->isSell() ? $this->totalVat : -$this->totalVat,
+                'value' => $this->invoiceType->isSell() ? $this->totalVat : -$this->totalVat,
             ];
         }
     }
@@ -204,17 +192,11 @@ class InvoiceTransactionBuilder
 
         $customerTotal = $this->totalAmount - $this->subtractions - $cashPayment;
 
-        $invoiceType = $this->invoiceData['invoice_type'] ?? InvoiceType::SELL;
-
-        // Convert string to enum if necessary
-        if (is_string($invoiceType)) {
-            $invoiceType = InvoiceType::from($invoiceType);
-        }
         $subject_id = Customer::find($customerId)->subject->id;
         $this->transactions[] = [
             'subject_id' => $subject_id,
             'desc' => __('Customer total'),
-            'value' => $invoiceType->isSell() ? -$customerTotal : $customerTotal,
+            'value' => $this->invoiceType->isSell() ? -$customerTotal : $customerTotal,
         ];
     }
 
@@ -226,19 +208,14 @@ class InvoiceTransactionBuilder
         $this->subtractions = floatval($this->invoiceData['subtraction'] ?? 0);
 
         if ($this->subtractions > 0) {
-            $invoiceType = $this->invoiceData['invoice_type'] ?? InvoiceType::SELL;
 
-            // Convert string to enum if necessary
-            if (is_string($invoiceType)) {
-                $invoiceType = InvoiceType::from($invoiceType);
-            }
-
-            $subtractionSubjectId = $invoiceType->isSell() ? config('amir.sell_discount') : config('amir.buy_discount');
+            $subtractionSubjectId = $this->invoiceType->isSell() ? config('amir.sell_discount') : config('amir.buy_discount');
 
             $this->transactions[] = [
                 'subject_id' => $subtractionSubjectId,
                 'desc' => $this->invoiceData['subtraction_desc'] ?? __('Deductions'),
-                'value' => $invoiceType->isSell() ? -$this->subtractions : $this->subtractions,
+                'credit' => $this->invoiceType->isSell() ? 0 : $this->subtractions,
+                'debit' => $this->invoiceType->isSell() ? $this->subtractions : 0,
             ];
         }
     }

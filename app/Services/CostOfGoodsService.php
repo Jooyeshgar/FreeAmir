@@ -2,15 +2,12 @@
 
 namespace App\Services;
 
-use App\Enums\InvoiceType;
-use App\Models\AncillaryCost;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
 
 class CostOfGoodsService
 {
-
     /**
      * Update the average cost of products based on invoice items and ancillary costs.
      *
@@ -22,8 +19,7 @@ class CostOfGoodsService
      * The average cost is calculated using the weighted average formula:
      * Average Cost = (Total Costs + Previous COG * Available Quantity) / (Available Quantity + New Quantity)
      *
-     * @param Invoice $invoice The invoice containing the items whose products need cost updates
-     * 
+     * @param  Invoice  $invoice  The invoice containing the items whose products need cost updates
      * @return void
      *
      * @throws \Exception May throw exceptions related to database operations during save
@@ -43,60 +39,13 @@ class CostOfGoodsService
             if ($previousInvoice) {
                 $previousInvoiceItem = $previousInvoice->items->where('product_id', $product->id)->first();
                 if ($previousInvoiceItem) {
-                     $totalCosts += $previousInvoiceItem->cog_after * $availableQuantity;
+                    $totalCosts += $previousInvoiceItem->cog_after * $availableQuantity;
                 }
             }
             $product->average_cost = $totalCosts / ($availableQuantity + $invoiceItem->quantity);
             $product->save();
         }
     }
-
-    /**
-     * Update the weighted average cost for a product after a purchase.
-     */
-    private static function updateWeightedAverageCost(Product $product, float $newQuantity, float $newUnitCost)
-    {
-        $previousStock = (float) $product->quantity;
-        $previousAverageCost = (float) ($product->average_cost ?? 0);
-
-        if ($previousStock == 0 || $previousAverageCost == 0) {
-            $product->average_cost = $newUnitCost;
-            $product->save();
-
-            return;
-        }
-
-        $previousTotalValue = $previousStock * $previousAverageCost;
-        $newPurchaseValue = $newQuantity * $newUnitCost;
-
-        $totalStock = $previousStock + $newQuantity;
-
-        if ($totalStock <= 0) {
-            $product->average_cost = 0;
-            $product->save();
-
-            return;
-        }
-
-        $totalValue = $previousTotalValue + $newPurchaseValue;
-        $newAverageCost = $totalValue / $totalStock;
-
-        $product->average_cost = $newAverageCost;
-        $product->save();
-    }
-
-    /**
-     * Capture the product's average cost at the moment of buy.
-     */
-    private static function setCostAtTimeOfBuy(InvoiceItem $invoiceItem)
-    {
-        $product = $invoiceItem->product;
-        $invoiceItem->cog_after = $product->average_cost ?? 0;
-        $invoiceItem->save();
-    }
-
-
-
 
     /**
      * Calculate gross profit for a sale invoice item.
@@ -122,13 +71,15 @@ class CostOfGoodsService
     {
         return Invoice::where('number', '<', $invoice->number)
             ->where('invoice_type', $invoice->invoice_type)
-            ->whereHas('items', fn($query) => $query->where('product_id', $productId))
+            ->whereHas('items', fn ($query) => $query->where('product_id', $productId))
             ->orderByDesc('number')->first();
     }
 
-    private function getNextInvoice(Invoice $invoice)
+    private static function getNextInvoice(Invoice $invoice, $productId)
     {
         return Invoice::where('number', '>', $invoice->number)
-            ->where('invoice_type', $invoice->invoice_type)->orderBy('number')->first();
+            ->where('invoice_type', $invoice->invoice_type)
+            ->whereHas('items', fn ($query) => $query->where('product_id', $productId))
+            ->orderByDesc('number')->first();
     }
 }
