@@ -79,19 +79,21 @@ class AncillaryCostService
     {
         self::validateAncillaryCostData($data);
 
-        $invoice = Invoice::findOrFail($data['invoice_id']);
+        $invoice = $ancillaryCost->invoice; // Invoice::findOrFail($data['invoice_id']);
 
-        if (! $invoice->invoice_type === InvoiceType::BUY) {
-            throw new \Exception(__('Ancillary costs can only be added to buy invoices'));
-        }
+        // if (! $invoice->invoice_type === InvoiceType::BUY) {
+        //     throw new \Exception(__('Ancillary costs can only be added to buy invoices'));
+        // }
+
+        $data['date'] ??= now()->toDateString();
 
         // Prepare document data
         $documentData = [
-            'date' => $data['date'] ?? now()->toDateString(),
-            'title' => (__('Ancillary Cost').' '.($invoice->number ?? '')),
-            'number' => $ancillaryCost->document->number,
-            'creator_id' => $user->id,
-            'company_id' => session('active-company-id'),
+            'date' => $data['date'],
+            'title' => $ancillaryCost->type->label().' '.($invoice->number ?? ''),
+            // 'number' => $ancillaryCost->document->number,
+            // 'creator_id' => $user->id,
+            // 'company_id' => session('active-company-id'),
         ];
 
         $transactionBuilder = new AncillaryCostTransactionBuilder($data);
@@ -100,23 +102,19 @@ class AncillaryCostService
         DB::transaction(function () use ($ancillaryCost, $data, $documentData, $transactions) {
 
             $ancillaryCost->document->transactions()->delete();
-            $ancillaryCost->document()->delete();
+            // $ancillaryCost->document()->delete();
 
-            $document = DocumentService::createDocument(
-                Auth::user(),
-                $documentData,
-                $transactions
-            );
+            $document = $ancillaryCost->document;
 
-            CostOfGoodsService::reverseUpdateProductAverageCostForAncillaryCost($ancillaryCost);
+            // CostOfGoodsService::reverseUpdateProductAverageCostForAncillaryCost($ancillaryCost);
 
-            $ancillaryCost->items()->delete();
+            // $ancillaryCost->items()->delete();
 
             $ancillaryCost->update([
-                'document_id' => $document->id,
+                // 'document_id' => $document->id,
                 'invoice_id' => $ancillaryCost->invoice_id,
-                'company_id' => $data['company_id'],
-                'date' => $data['date'] ?? now()->toDateString(),
+                // 'company_id' => $data['company_id'],
+                'date' => $data['date'],
                 'type' => AncillaryCostType::from($data['type']),
                 'amount' => $data['amount'],
                 'vat' => $data['vatPrice'] ?? 0,
@@ -150,20 +148,23 @@ class AncillaryCostService
 
     private static function syncAncillaryCostItems(AncillaryCost $ancillaryCost, array $items): void
     {
-        if (empty($items)) {
-            return;
+        $itemIds = [];
+
+        foreach ($items as $item) {
+            $ancillaryCostItem = $ancillaryCost->items()->updateOrCreate(
+                [
+                    'product_id' => $item['product_id'],
+                ],
+                [
+                    'type' => $ancillaryCost->type,
+                    'amount' => $item['amount'],
+                ]
+            );
+
+            $itemIds[] = $ancillaryCostItem->id;
         }
 
-        $ancillaryCostItems = collect($items)->map(function (array $item) use ($ancillaryCost) {
-            return [
-                'company_id' => $ancillaryCost->company_id,
-                'product_id' => $item['product_id'],
-                'type' => $ancillaryCost->type,
-                'amount' => $item['amount'],
-            ];
-        })->all();
-
-        $ancillaryCost->items()->createMany($ancillaryCostItems);
+        $ancillaryCost->items()->whereNotIn('id', $itemIds)->delete();
     }
 
     /**
