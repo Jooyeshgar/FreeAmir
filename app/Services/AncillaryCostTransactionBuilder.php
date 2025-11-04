@@ -51,7 +51,8 @@ class AncillaryCostTransactionBuilder
             $this->transactions[] = [
                 'subject_id' => $product->inventory_subject_id,
                 'desc' => __('Ancillary Cost for :item', ['item' => $product->name]),
-                'value' => -$item['amount'],
+                'credit' => 0,
+                'debit' => $item['amount'],
             ];
         }
     }
@@ -65,7 +66,8 @@ class AncillaryCostTransactionBuilder
             $this->transactions[] = [
                 'subject_id' => config('amir.buy_vat'),
                 'desc' => __('Ancillary Cost VAT/Tax'),
-                'value' => -$this->data['vatPrice'],
+                'credit' => 0,
+                'debit' => $this->data['vatPrice'],
             ];
         }
     }
@@ -82,7 +84,8 @@ class AncillaryCostTransactionBuilder
         $this->transactions[] = [
             'subject_id' => $subject_id,
             'desc' => __('Customer total'),
-            'value' => $this->data['amount'],
+            'credit' => $this->data['amount'],
+            'debit' => 0,
         ];
     }
 }

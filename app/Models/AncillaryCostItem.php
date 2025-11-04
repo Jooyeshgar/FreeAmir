@@ -14,18 +14,12 @@ class AncillaryCostItem extends Model
         'product_id',
         'type',
         'amount',
-        'company_id',
     ];
 
     protected $casts = [
         'type' => AncillaryCostType::class,
         'amount' => 'decimal:2',
     ];
-
-    public static function booted(): void
-    {
-        static::addGlobalScope(new FiscalYearScope);
-    }
 
     public function ancillaryCost(): BelongsTo
     {

@@ -62,7 +62,7 @@ class AncillaryCostService
 
             self::syncAncillaryCostItems($ancillaryCost, $data['ancillaryCosts'] ?? []);
 
-            CostOfGoodsService::UpdateProductsAverageCost($invoice);
+            CostOfGoodsService::updateProductsAverageCost($invoice);
         });
     }
 
@@ -70,35 +70,37 @@ class AncillaryCostService
     {
         self::validateAncillaryCostData($data);
 
-        $invoice = $ancillaryCost->invoice; // Invoice::findOrFail($data['invoice_id']);
+        DB::transaction(function () use ($ancillaryCost, $data) {
 
-        $data['date'] ??= now()->toDateString();
+            $type = AncillaryCostType::from($data['type']);
 
-        $documentData = [
-            'date' => $data['date'],
-            'title' => $ancillaryCost->type->label().' '.($invoice->number ?? ''),
-        ];
+            $documentData = [
+                'date' => $data['date'],
+                'title' => $type->label().' '.($invoice->number ?? ''),
+            ];
 
-        $transactionBuilder = new AncillaryCostTransactionBuilder($data);
-        $transactions = $transactionBuilder->build();
-
-        DB::transaction(function () use ($ancillaryCost, $data, $documentData, $invoice, $transactions) {
+            $transactionBuilder = new AncillaryCostTransactionBuilder($data);
+            $transactions = $transactionBuilder->build();
 
             $document = $ancillaryCost->document;
             DocumentService::updateDocument($document, $documentData);
             DocumentService::updateDocumentTransactions($document->id, $transactions);
 
             $ancillaryCost->update([
-                'invoice_id' => $ancillaryCost->invoice_id,
+                'invoice_id' => $data['invoice_id'],
                 'date' => $data['date'],
-                'type' => AncillaryCostType::from($data['type']),
+                'type' => $type,
                 'amount' => $data['amount'],
                 'vat' => $data['vatPrice'] ?? 0,
             ]);
 
+            $invoice = $ancillaryCost->invoice; // Invoice::findOrFail($data['invoice_id']);
+
+            $data['date'] ??= now()->toDateString();
+
             self::syncAncillaryCostItems($ancillaryCost, $data['ancillaryCosts'] ?? []);
 
-            CostOfGoodsService::UpdateProductsAverageCost($invoice);
+            CostOfGoodsService::updateProductsAverageCost($invoice);
         });
     }
 
@@ -119,7 +121,7 @@ class AncillaryCostService
             $ancillaryCost->items()->delete();
             $ancillaryCost->delete();
 
-            CostOfGoodsService::UpdateProductsAverageCost($invoice);
+            CostOfGoodsService::updateProductsAverageCost($invoice);
         });
     }
 

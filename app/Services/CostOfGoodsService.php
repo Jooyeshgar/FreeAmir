@@ -24,18 +24,18 @@ class CostOfGoodsService
      *
      * @throws \Exception May throw exceptions related to database operations during save
      */
-    public static function UpdateProductsAverageCost(Invoice $invoice)
+    public static function updateProductsAverageCost(Invoice $invoice)
     {
-        $ancillaryCosts = $invoice->ancillaryCost;
-        $ancillaryCosts->loadMissing('items');
-
+        $ancillaryCosts = $invoice->ancillaryCosts;
+        if(!is_null($ancillaryCosts)) $ancillaryCosts->loadMissing('items');
+dd($ancillaryCosts);
         foreach ($invoice->items as $invoiceItem) {
             $product = $invoiceItem->product;
             $availableQuantity = (float) $invoiceItem->quantity_at;
             $totalCosts = $invoiceItem->amount - ($invoiceItem->vat ?? 0); // total cost per product excluding VAT
             $totalCosts += $ancillaryCosts ? $ancillaryCosts->items->where('product_id', $product->id)->sum('amount') : 0; // without VAT
-
             $previousInvoice = self::getPreviousInvoice($invoice, $product->id);
+
             if ($previousInvoice) {
                 $previousInvoiceItem = $previousInvoice->items->where('product_id', $product->id)->first();
                 if ($previousInvoiceItem) {

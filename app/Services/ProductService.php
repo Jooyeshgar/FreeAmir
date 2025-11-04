@@ -3,7 +3,10 @@
 namespace App\Services;
 
 use App\Enums\InvoiceType;
+use App\Models\InvoiceItem;
 use App\Models\Product;
+use Exception;
+use Illuminate\Database\Eloquent\Collection;
 
 class ProductService
 {
@@ -56,8 +59,30 @@ class ProductService
         $product->cogsSubject?->delete();
         $product->inventorySubject?->delete();
     }
+    public static function syncProductQuantities(Collection $oldInvoiceItems, array $invoiceItems, InvoiceType $invoice_type): void
+    {
+        $addInvoiceItems = [];
+        $deletedInvoiceItems = [];
+        $changedIds = [];
+        
+        foreach ($invoiceItems as $invoiceItem) {
+            $oldInvoiceItem = $oldInvoiceItems->where('product_id', $invoiceItem['product_id'])->first();
+            if(is_null($oldInvoiceItem)) {
+                $addInvoiceItems[] = $invoiceItem;
+            }
+            else{
+                $changedIds[] = $oldInvoiceItem->id;
+                self::updateProductQuantities($oldInvoiceItem->toArray(), $invoiceItem, $invoice_type);
+            }
+        }
 
-    public static function syncProductQuantities(array $invoiceItems, InvoiceType $invoice_type, bool $deletingInvoiceItem = false): void
+        $deletedInvoiceItems = $oldInvoiceItems->whereNotIn('id', $changedIds)->toArray();
+
+        self::addProductsQuantities($addInvoiceItems, $invoice_type);
+        self::subProductsQuantities($deletedInvoiceItems, $invoice_type);
+    }
+
+    public static function addProductsQuantities(array $invoiceItems, InvoiceType $invoice_type): void
     {
         foreach ($invoiceItems as $invoiceItem) {
             $product = Product::find($invoiceItem['product_id']);
@@ -65,20 +90,49 @@ class ProductService
                 continue;
             }
 
-            if (! $deletingInvoiceItem) {
-                if ($invoice_type === InvoiceType::BUY) {
-                    $product->quantity += $invoiceItem['quantity'];
-                } elseif ($invoice_type === InvoiceType::SELL) {
-                    $product->quantity -= $invoiceItem['quantity'];
-                }
-            } else {
-                if ($invoice_type === InvoiceType::BUY) {
-                    $product->quantity -= $invoiceItem['quantity'];
-                } elseif ($invoice_type === InvoiceType::SELL) {
-                    $product->quantity += $invoiceItem['quantity'];
-                }
+            if ($invoice_type === InvoiceType::BUY) {
+                $product->quantity += $invoiceItem['quantity'];
+            } elseif ($invoice_type === InvoiceType::SELL) {
+                $product->quantity -= $invoiceItem['quantity'];
             }
 
+            $product->save();
+        }
+    }
+
+    public static function subProductsQuantities(array $invoiceItems, InvoiceType $invoice_type): void
+    {
+        foreach ($invoiceItems as $invoiceItem) {
+            $product = Product::find($invoiceItem['product_id']);
+            if (! $product) {
+                continue;
+            }
+
+            if ($invoice_type === InvoiceType::BUY) {
+                $product->quantity -= $invoiceItem['quantity'];
+            } elseif ($invoice_type === InvoiceType::SELL) {
+                $product->quantity += $invoiceItem['quantity'];
+            }
+
+            $product->save();
+        }
+    }
+
+    public static function updateProductQuantities(array $oldItem, array $newItem, InvoiceType $invoice_type): void
+    {
+        $product = Product::find($newItem['product_id']);
+
+        if (! $product) {
+            throw new Exception(__("Product not found"), 404);
+        }
+
+        $diff = $newItem['quantity'] - $oldItem['quantity'];
+        if ($diff !== 0) {
+            if ($invoice_type === InvoiceType::BUY) {
+                $product->quantity += $diff;
+            } elseif ($invoice_type === InvoiceType::SELL) {
+                $product->quantity -= $diff;
+            }
             $product->save();
         }
     }

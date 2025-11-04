@@ -11,6 +11,7 @@ use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\User;
+use Exception;
 use Illuminate\Support\Facades\DB;
 
 class InvoiceService
@@ -46,9 +47,6 @@ class InvoiceService
         DB::transaction(function () use ($documentData, $user, $transactions, $invoiceData, $items, $buildResult, &$createdDocument, &$createdInvoice) {
             $createdDocument = DocumentService::createDocument($user, $documentData, $transactions);
 
-            $documentTransactions = $createdDocument->transactions->all();
-
-            // Prepare invoice data
             $invoiceData['document_id'] = $createdDocument->id;
             $invoiceData['vat'] = $buildResult['totalVat'];
             $invoiceData['amount'] = $buildResult['totalAmount'];
@@ -57,12 +55,10 @@ class InvoiceService
 
             $createdInvoice = Invoice::create($invoiceData);
 
-            // Create invoice items and link to transactions
-            self::syncInvoiceItems($createdInvoice, $items, $documentTransactions);
+            ProductService::syncProductQuantities(collect([]), $items, $createdInvoice->invoice_type);
+            self::syncInvoiceItems($createdInvoice, $items);
 
-            ProductService::syncProductQuantities($items, $createdInvoice->invoice_type);
-
-            CostOfGoodsService::UpdateProductsAverageCost($createdInvoice);
+            CostOfGoodsService::updateProductsAverageCost($createdInvoice);
         });
 
         return [
@@ -84,7 +80,6 @@ class InvoiceService
 
         $invoiceData = self::normalizeInvoiceData($invoiceData);
 
-        // Build transactions using the transaction builder
         $transactionBuilder = new InvoiceTransactionBuilder($items, $invoiceData);
         $buildResult = $transactionBuilder->build();
         $transactions = $buildResult['transactions'];
@@ -106,29 +101,12 @@ class InvoiceService
 
             $invoice->update($invoiceData);
 
-            // Delete old invoice items and update product quantities and the average cost
             $oldInvoiceItems = $invoice->items;
 
-            // ProductService::updateProductQuantities($InvoiceItems->get()->toArray(), InvoiceType::from($invoiceData['invoice_type']), true);
+            ProductService::syncProductQuantities($oldInvoiceItems, $items, $invoice->invoice_type);
+            self::syncInvoiceItems($invoice, $items);
 
-            // $InvoiceItems->delete();
-
-            // Create new invoice items
-            $documentTransactions = $invoice->document->transactions()->get()->all();
-            self::syncInvoiceItems($invoice, $items, $documentTransactions);
-
-            // Recreate ancillary costs if not null
-            if (! empty($ancillaryCosts)) {
-                foreach ($ancillaryCosts as $ancillaryCost) {
-                    $preparedAncillaryCostData = self::preparingAncillaryCostData($ancillaryCost);
-                    AncillaryCostService::createAncillaryCost(auth()->user(), $preparedAncillaryCostData);
-                }
-            }
-
-            // Update product quantities
-            ProductService::syncProductQuantities($items, $invoice->invoice_type);
-
-            CostOfGoodsService::UpdateProductsAverageCost($invoice);
+            CostOfGoodsService::updateProductsAverageCost($invoice);
         });
 
         return [
@@ -144,20 +122,22 @@ class InvoiceService
     {
         DB::transaction(function () use ($invoiceId) {
             $invoice = Invoice::find($invoiceId);
+
             if (! $invoice) {
-                return;
+                throw new Exception(__('Invoice not found'), 404);
             }
+
+            if($invoice->ancillaryCosts->isNotEmpty()){
+                throw new Exception(__('Invoice has associated ancillary costs and cannot be deleted'), 400);
+            }
+
             $invoiceItems = $invoice->items;
 
             $invoice->items()->delete();
 
-            foreach ($invoice->ancillaryCosts as $ancillaryCost) {
-                AncillaryCostService::deleteAncillaryCost($ancillaryCost);
-            }
+            ProductService::subProductsQuantities($invoiceItems->get()->toArray(), $invoice->invoice_type);
 
-            ProductService::syncProductQuantities($invoiceItems->get()->toArray(), $invoice->invoice_type, true);
-
-            CostOfGoodsService::UpdateProductsAverageCost($invoice);
+            // CostOfGoodsService::updateProductsAverageCost($invoice);
 
             $invoice->document_id ? DocumentService::deleteDocument($invoice->document_id) : null;
 
@@ -208,14 +188,17 @@ class InvoiceService
             'permanent' => isset($invoiceData['permanent']) ? (int) $invoiceData['permanent'] : 0,
             'active' => isset($invoiceData['active']) ? (int) $invoiceData['active'] : 1,
             'invoice_type' => $invoiceData['invoice_type'],
+            'customer_id' => $invoiceData['customer_id'],
         ];
 
         return $invoiceData;
     }
 
-    private static function syncInvoiceItems(Invoice $invoice, array $items, array $documentTransactions): void
+    private static function syncInvoiceItems(Invoice $invoice, array $items): void
     {
-        foreach ($items as $index => $item) {
+        $itemId = [];
+
+        foreach ($items as $item) {
             $product = Product::findOrFail($item['product_id']);
 
             $quantity = $item['quantity'] ?? 1;
@@ -230,26 +213,22 @@ class InvoiceService
             // Calculate item amount (price - discount, VAT is separate but included in total)
             $itemAmount = $quantity * $unitPrice - $unitDiscount + $itemVat;
 
-            // Link to the corresponding transaction (first N transactions are for items)
-            $transactionId = null;
-            $documentTransactions->where('product_id', $product->id);
-            if (isset($documentTransactions[$index])) {
-                $transactionId = $documentTransactions[$index]->id;
-            }
-
-            InvoiceItem::create([
+            $invoiceItem = InvoiceItem::updateOrCreate([
+                'id' => $item['id'] ?? null,
+            ], [
                 'invoice_id' => $invoice->id,
                 'product_id' => $product->id,
-                'transaction_id' => $transactionId,
                 'quantity' => $quantity,
-                'cog_after' => $product->average_cost,      // must be updated after creating invoice
-                'quantity_at' => $product->quantity,
+                'cog_after' => $product->average_cost ?? $unitPrice,                                            // must be updated after creating invoice
+                'quantity_at' => ($product->quantity > $quantity) ? $product->quantity - $quantity : 0,         // quantity before this invoice
                 'unit_price' => $unitPrice,
                 'unit_discount' => $unitDiscount,
                 'vat' => $itemVat,
                 'description' => $item['description'] ?? null,
                 'amount' => $itemAmount,
             ]);
+            $itemId[] = $invoiceItem->id;
         }
+        $invoice->items()->whereNotIn('id', $itemId)->delete();
     }
 }

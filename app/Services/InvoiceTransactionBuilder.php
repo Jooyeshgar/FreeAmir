@@ -176,7 +176,8 @@ class InvoiceTransactionBuilder
             $this->transactions[] = [
                 'subject_id' => $vatSubjectId,
                 'desc' => __('Invoice VAT/Tax'),
-                'value' => $this->invoiceType->isSell() ? $this->totalVat : -$this->totalVat,
+                'credit' => $this->invoiceType->isSell() ? 0 : $this->totalVat,
+                'debit' => $this->invoiceType->isSell() ? $this->totalVat : 0,
             ];
         }
     }
@@ -196,7 +197,8 @@ class InvoiceTransactionBuilder
         $this->transactions[] = [
             'subject_id' => $subject_id,
             'desc' => __('Customer total'),
-            'value' => $this->invoiceType->isSell() ? -$customerTotal : $customerTotal,
+            'credit' => $this->invoiceType->isSell() ? 0 : $customerTotal,
+            'debit' => $this->invoiceType->isSell() ? $customerTotal : 0,
         ];
     }
 
