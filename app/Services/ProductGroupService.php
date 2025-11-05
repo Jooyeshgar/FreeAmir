@@ -40,7 +40,7 @@ class ProductGroupService
     public function deleteSubjects(ProductGroup $productGroup): void
     {
         $productGroup->incomeSubject?->delete();
-        $productGroup->returnSalesSubject?->delete();
+        $productGroup->salesReturnsSubject?->delete();
         $productGroup->cogsSubject?->delete();
         $productGroup->inventorySubject?->delete();
     }
@@ -54,8 +54,8 @@ class ProductGroupService
                 'relation' => 'incomeSubject',
                 'config_key' => 'amir.sales_revenue',
             ],
-            'return_sales_subject_id' => [
-                'relation' => 'returnSalesSubject',
+            'sales_returns_subject_id' => [
+                'relation' => 'salesReturnsSubject',
                 'config_key' => 'amir.return_sales',
             ],
             'cogs_subject_id' => [

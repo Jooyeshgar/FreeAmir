@@ -55,7 +55,7 @@ class ProductService
     public function deleteSubjects(Product $product): void
     {
         $product->incomeSubject?->delete();
-        $product->returnSalesSubject?->delete();
+        $product->salesReturnsSubject?->delete();
         $product->cogsSubject?->delete();
         $product->inventorySubject?->delete();
     }
@@ -139,7 +139,7 @@ class ProductService
 
     protected function syncSubjects(Product $product): void
     {
-        $product->loadMissing('productGroup', 'incomeSubject', 'returnSalesSubject', 'cogsSubject', 'inventorySubject');
+        $product->loadMissing('productGroup', 'incomeSubject', 'salesReturnsSubject', 'cogsSubject', 'inventorySubject');
 
         $group = $product->productGroup;
         $companyId = $product->company_id ?? $group?->company_id ?? session('active-company-id');
@@ -153,9 +153,9 @@ class ProductService
                 'relation' => 'incomeSubject',
                 'parent_column' => 'income_subject_id',
             ],
-            'return_sales_subject_id' => [
-                'relation' => 'returnSalesSubject',
-                'parent_column' => 'return_sales_subject_id',
+            'sales_returns_subject_id' => [
+                'relation' => 'salesReturnsSubject',
+                'parent_column' => 'sales_returns_subject_id',
             ],
             'cogs_subject_id' => [
                 'relation' => 'cogsSubject',

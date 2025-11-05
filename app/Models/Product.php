@@ -28,7 +28,7 @@ class Product extends Model
         'discount_formula',
         'description',
         'company_id',
-        'return_sales_subject_id',
+        'sales_returns_subject_id',
         'income_subject_id',
         'cogs_subject_id',
         'inventory_subject_id',
@@ -70,10 +70,10 @@ class Product extends Model
     {
         return $this->hasMany(InvoiceItem::class, 'product_id');
     }
-    
-    public function returnSalesSubject(): BelongsTo
+
+    public function salesReturnsSubject(): BelongsTo
     {
-        return $this->belongsTo(Subject::class, 'return_sales_subject_id');
+        return $this->belongsTo(Subject::class, 'sales_returns_subject_id');
     }
 
     public function cogsSubject(): BelongsTo
