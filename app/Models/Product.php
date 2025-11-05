@@ -66,6 +66,11 @@ class Product extends Model
         return $this->belongsTo(Subject::class, 'income_subject_id');
     }
 
+    public function invoiceItems(): HasMany
+    {
+        return $this->hasMany(InvoiceItem::class, 'product_id');
+    }
+    
     public function returnSalesSubject(): BelongsTo
     {
         return $this->belongsTo(Subject::class, 'return_sales_subject_id');
