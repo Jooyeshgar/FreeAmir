@@ -28,10 +28,19 @@ class StoreInvoiceRequest extends FormRequest
             'date' => convertToGregorian($this->input('date')),
             'invoice_id' => convertToInt($this->input('invoice_id')),
             'invoice_number' => convertToInt($this->input('invoice_number')),
-            'document_number' => convertToInt($this->input('document_number')),
             'subtractions' => convertToFloat($this->input('subtraction', 0)),
             'customer_id' => convertToInt($this->input('customer_id')),
         ]);
+
+        if (str_contains($this->input('document_number'), '/')) {
+            $this->merge([
+                'document_number' => convertToFloat(str_replace('/', '.', $this->input('document_number'))),
+            ]);
+        } else {
+            $this->merge([
+                'document_number' => convertToFloat($this->input('document_number')),
+            ]);
+        }
 
         // Normalize transactions numeric fields and ids
         if ($this->has('transactions') && is_array($this->input('transactions'))) {
@@ -101,7 +110,7 @@ class StoreInvoiceRequest extends FormRequest
             'invoice_id' => Rule::when($invoice !== null, ['required', 'integer', 'exists:invoices,id']),
             'document_number' => [
                 'required',
-                'integer',
+                'decimal:0,2',
                 Rule::unique('documents', 'number')
                     ->where(function ($query) {
                         return $query->where('company_id', session('active-company-id'));
@@ -158,7 +167,7 @@ class StoreInvoiceRequest extends FormRequest
             'invoice_id.exists' => __('The selected invoice ID is invalid.'),
 
             'document_number.required' => __('The document number field is required.'),
-            'document_number.integer' => __('The document number field must be an integer.'),
+            'document_number.decimal' => __('The document number field must be a decimal number.'),
             'document_number.unique' => __('This document number has already been used for this company.'),
 
             'invoice_number.required' => __('The invoice number field is required.'),
