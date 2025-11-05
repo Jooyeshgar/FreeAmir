@@ -66,8 +66,8 @@ class InvoiceController extends Controller
         $products = Product::with('inventorySubject')->orderBy('name', 'asc')->get();
         $productGroups = ProductGroup::all();
         $customers = Customer::all('name', 'id');
-        $previousInvoiceNumber = floor(Invoice::orderBy('number', 'desc')->first()?->number) ?? 0;
-        $previousDocumentNumber = floor(Document::orderBy('number', 'desc')->first()?->number) ?? 0;
+        $previousInvoiceNumber = Invoice::max('number') ?? 0;
+        $previousDocumentNumber = Document::max('number') ?? 0;
         $transactions = old('transactions') ?? $this->preparedTransactions(collect([new Transaction]));
 
         $total = count($transactions);
