@@ -90,7 +90,7 @@
                         if (selectedId && !transaction.unit) {
                         transaction.unit = getProductPrice(Number(selectedId));
                     }">
-                    <input type="text" x-bind:value="getProductSubjectId(selectedId)" x-bind:name="'transactions[' + index + '][subject_id]'" hidden>
+                    <input type="text" x-bind:value="getProductInventorySubjectId(selectedId)" x-bind:name="'transactions[' + index + '][inventory_subject_id]'" hidden>
 
                     <div class="relative flex-1 text-center max-w-8 pt-2 pb-2 transaction-count-container">
                         <span class="transaction-count block" x-text="index + 1"></span>
@@ -108,7 +108,7 @@
                         <select x-model="selectedId"
                             @change="
                                 transaction.product_id = Number($event.target.value);
-                                transaction.subject_id = getProductSubjectId(Number($event.target.value));
+                                transaction.inventory_subject_id = getProductInventorySubjectId(Number($event.target.value));
                                 transaction.unit = getProductPrice(Number($event.target.value));
                                 transaction.vat = getProductVat(Number($event.target.value));
                                 transaction.off = 0;
@@ -249,7 +249,7 @@
                         id: newId,
                         name: '',
                         subject: '',
-                        subject_id: '',
+                        inventory_subject_id: '',
                         quantity: 0,
                         unit: 0,
                         total: 0,
@@ -271,10 +271,10 @@
                     }
                     return product.vat;
                 },
-                getProductSubjectId(productId) {
+                getProductInventorySubjectId(productId) {
                     const product = this.products.find(p => p.id == productId);
                     if (!product) return null;
-                    return product.subject_id;
+                    return product.inventory_subject_id;
                 }
             }));
         });

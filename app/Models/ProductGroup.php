@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
+use App\Enums\ConfigTitle;
 use App\Models\Scopes\FiscalYearScope;
-use App\Services\SubjectCreatorService;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProductGroup extends Model
 {
@@ -16,7 +17,10 @@ class ProductGroup extends Model
         'sellId',
         'vat',
         'company_id',
-        'subject_id',
+        'sales_returns_subject_id',
+        'income_subject_id',
+        'cogs_subject_id',
+        'inventory_subject_id',
     ];
 
     protected $attributes = [
@@ -25,34 +29,13 @@ class ProductGroup extends Model
 
     public static function booted(): void
     {
-        static::addGlobalScope(new FiscalYearScope());
+        static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($model) {
             $model->company_id ??= session('active-company-id');
         });
 
-        static::created(function ($productGroup) {
-            $subject = app(SubjectCreatorService::class)->createSubject([
-                'name' => $productGroup->name,
-                'parent_id' => config('amir.product'),
-                'company_id' => $productGroup->company_id,
-            ]);
-            $productGroup->subject()->save($subject);
-
-            $productGroup->update(['subject_id' => $subject->id]);
-        });
-    }
-
-    // Define relationships with other models (e.g., Subject)
-
-    public function buySubject()
-    {
-        return $this->belongsTo(Subject::class, 'buyId');
-    }
-
-    public function sellSubject()
-    {
-        return $this->belongsTo(Subject::class, 'sellId');
+        // subject lifecycle handled via ProductGroupSubjectService outside the model
     }
 
     public function products()
@@ -60,8 +43,23 @@ class ProductGroup extends Model
         return $this->hasMany(Product::class, 'group', 'id');
     }
 
-    public function subject()
+    public function incomeSubject(): BelongsTo
     {
-        return $this->morphOne(Subject::class, 'subjectable');
+        return $this->belongsTo(Subject::class, 'income_subject_id');
+    }
+
+    public function salesReturnsSubject(): BelongsTo
+    {
+        return $this->belongsTo(Subject::class, 'sales_returns_subject_id');
+    }
+
+    public function cogsSubject(): BelongsTo
+    {
+        return $this->belongsTo(Subject::class, 'cogs_subject_id');
+    }
+
+    public function inventorySubject(): BelongsTo
+    {
+        return $this->belongsTo(Subject::class, 'inventory_subject_id');
     }
 }

@@ -58,13 +58,13 @@ class DocumentService
     public static function updateDocument(Document $document, array $data)
     {
         $validator = Validator::make($data, [
-            'number' => 'decimal:0,2',
+            'number' => 'nullable|decimal:0,2',
             'title' => 'nullable|string|min:3|max:255',
             'date' => 'date',
         ]);
 
         if ($validator->fails()) {
-            throw new \Exception($validator->errors()->first());
+            throw new ValidationException($validator);
         }
 
         $document->fill($data);
@@ -83,7 +83,9 @@ class DocumentService
         $sum = $document->transactions()->sum('value');
 
         if ($sum !== 0) {
-            throw new \Exception('The sum of transactions must be zero');
+            throw ValidationException::withMessages([
+                'transactions' => ['The sum of transactions must be zero']
+            ]);
         }
 
         $document->approved_at = now();
@@ -107,7 +109,7 @@ class DocumentService
             'updated_at' => 'nullable|date',
         ]);
         if ($validator->fails()) {
-            throw new \Exception($validator->errors()->first());
+            throw new ValidationException($validator);
         }
 
         $transaction = new Transaction;
@@ -134,7 +136,7 @@ class DocumentService
         ]);
 
         if ($validator->fails()) {
-            throw new \Exception($validator->errors()->first());
+            throw new ValidationException($validator);
         }
 
         $transaction->fill($data);
@@ -150,12 +152,12 @@ class DocumentService
         $existingTransactionIds = [];
         foreach ($transactionsData as $transactionData) {
             $transaction = Transaction::updateOrCreate(
-                ['id' => $transactionData['transaction_id']],
+                ['id' => $transactionData['transaction_id'] ?? null],
                 [
                     'document_id' => $documentId,
                     'subject_id' => $transactionData['subject_id'],
                     'desc' => $transactionData['desc'],
-                    'value' => floatval($transactionData['credit']) - floatval($transactionData['debit']),
+                    'value' => floatval($transactionData['value']),
                 ]
             );
             $existingTransactionIds[] = $transaction->id;

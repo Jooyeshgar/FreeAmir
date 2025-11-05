@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Models\Scopes\FiscalYearScope;
-use App\Services\SubjectCreatorService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -29,45 +28,29 @@ class Product extends Model
         'discount_formula',
         'description',
         'company_id',
-        'subject_id',
+        'return_sales_subject_id',
+        'income_subject_id',
+        'cogs_subject_id',
+        'inventory_subject_id',
         'vat',
         'average_cost',
+        'income_subject_id',
+        'cogs_subject_id',
+        'inventory_subject_id',
+        'sales_returns_subject_id',
     ];
 
-    public static function booted(): void
+    protected static function booted(): void
     {
-        static::addGlobalScope(new FiscalYearScope());
+        static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($product) {
             $product->company_id ??= session('active-company-id');
         });
 
-        static::created(function ($product) {
-            $parentGroup = $product->productGroup;
-            $subject = app(SubjectCreatorService::class)->createSubject([
-                'name' => $product->name,
-                'parent_id' => $parentGroup->subject_id ?? 0,
-                'company_id' => session('active-company-id'),
-            ]);
-            $subject = $product->subject()->save($subject);
-
-            $product->update(['subject_id' => $subject->id]);
-        });
-        
-        static::updated(function ($product) {
-            $product->subject()->update([
-                'parent_id' => $product->productGroup->subject_id,
-            ]);
-        });
-
-        static::deleting(function ($product) {
-            // Delete the related subject when the product is deleted
-            if ($product->subject) {
-                $product->subject->delete();
-            }
-        });
     }
 
+    // Relationships
     public function productWebsites(): HasMany
     {
         return $this->hasMany(ProductWebsite::class, 'product_id');
@@ -78,8 +61,23 @@ class Product extends Model
         return $this->belongsTo(ProductGroup::class, 'group');
     }
 
-    public function subject()
+    public function incomeSubject(): BelongsTo
     {
-        return $this->morphOne(Subject::class, 'subjectable');
+        return $this->belongsTo(Subject::class, 'income_subject_id');
+    }
+
+    public function returnSalesSubject(): BelongsTo
+    {
+        return $this->belongsTo(Subject::class, 'return_sales_subject_id');
+    }
+
+    public function cogsSubject(): BelongsTo
+    {
+        return $this->belongsTo(Subject::class, 'cogs_subject_id');
+    }
+
+    public function inventorySubject(): BelongsTo
+    {
+        return $this->belongsTo(Subject::class, 'inventory_subject_id');
     }
 }

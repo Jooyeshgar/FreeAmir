@@ -27,7 +27,7 @@
 
                     @foreach ($products as $product)
                         <tr>
-                            <td class="px-4 py-2">{{ formatCode($product->code) }}</td>
+                            <td class="px-4 py-2">{{ $product->code }}</td>
                             <td class="px-4 py-2">
                                 <a href="{{ route('products.show', $product) }}" class="text-primary">
                                     {{ $product->name }}</a>
@@ -40,11 +40,15 @@
                             <td class="px-4 py-2">
                                 <a href="{{ route('products.edit', $product) }}"
                                     class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                <form action="{{ route('products.destroy', $product) }}" method="POST" class="inline-block">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                </form>
+                                    @if ($product->invoiceItems()->exists())
+                                        <span class="btn btn-sm btn-disabled" title="{{ __('Cannot delete product that is used in invoice items') }}">{{ __('Delete') }}</span>
+                                    @else 
+                                        <form action="{{ route('products.destroy', $product) }}" method="POST" class="inline-block">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                        </form>    
+                                    @endif
                             </td>
                         </tr>
                     @endforeach

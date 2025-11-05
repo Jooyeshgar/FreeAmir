@@ -16,10 +16,12 @@ class SubjectController extends Controller
         
         if ($request->has('parent_id')) {
             $currentParent = Subject::find($request->get('parent_id'));
-            $subjects = $currentParent->children()->with('subjectable')->get();
+            $subjects = $currentParent->children()->with('subjectable');
         } else {
-            $subjects = Subject::whereIsRoot()->with('subjectable')->get();
+            $subjects = Subject::whereIsRoot()->with('subjectable');
         }
+
+        $subjects = $subjects->orderBy('code')->get();
 
         return view('subjects.index', compact('subjects', 'currentParent'));
     }

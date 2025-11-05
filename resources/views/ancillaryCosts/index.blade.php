@@ -13,6 +13,7 @@
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <tr>
+                        <th class="p-2 w-20">{{ __('Document') }}</th>
                         <th class="p-2 w-20">{{ __('Invoice') }}</th>
                         <th class="p-2 w-40">{{ __('Cost Type') }}</th>
                         <th class="p-2 w-20">{{ __('Date') }}</th>
@@ -26,14 +27,16 @@
                         <tr>
                             <td class="p-2">
                                 <a class="link"
-                                    href="{{ route('invoices.show', $ancillaryCost->invoice_id) }}">{{ formatDocumentNumber($ancillaryCost->invoice->number) ?? '' }}</a>
+                                    href="{{ route('documents.edit', $ancillaryCost->document_id) }}">{{ formatDocumentNumber($ancillaryCost->document->number) ?? '' }}</a>
                             </td>
-                            <td class="p-2">{{ $ancillaryCost->description }}</td>
+                            <td class="p-2">
+                                <a class="link" href="{{ route('invoices.show', $ancillaryCost->invoice_id) }}">{{ $ancillaryCost->invoice->number ?? '' }}</a>
+                            </td>
+                            <td class="p-2">{{ $ancillaryCost->type->label() }}</td>
                             <td class="p-2">{{ formatDate($ancillaryCost->date) }}</td>
                             <td class="p-2">{{ formatNumber($ancillaryCost->amount) }}</td>
                             <td class="p-2">
-                                <a href="{{ route('ancillary-costs.edit', $ancillaryCost) }}"
-                                    class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                <a href="{{ route('ancillary-costs.edit', $ancillaryCost) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                 <form action="{{ route('ancillary-costs.destroy', $ancillaryCost) }}" method="POST" class="inline-block">
                                     @csrf
                                     @method('DELETE')

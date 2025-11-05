@@ -47,7 +47,7 @@ class StoreInvoiceRequest extends FormRequest
             $transactions = collect($this->input('transactions'))
                 ->map(function ($t) {
                     return [
-                        'subject_id' => isset($t['subject_id']) ? (int) $t['subject_id'] : null,
+                        'inventory_subject_id' => isset($t['inventory_subject_id']) ? (int) $t['inventory_subject_id'] : null,
                         'vat' => isset($t['vat']) ? convertToFloat($t['vat']) : null,
                         'desc' => $t['desc'] ?? null,
                         'quantity' => isset($t['quantity']) ? convertToFloat($t['quantity']) : null,
@@ -62,22 +62,20 @@ class StoreInvoiceRequest extends FormRequest
     }
 
     /**
-     * Configure the validator instance.
+     * Validate warehouse quantity for "Sell" invoice type.
      */
     public function withValidator($validator)
     {
         $validator->after(function ($validator) {
-            // Only validate warehouse quantity for "sell" invoice type
             if ($this->input('invoice_type') == 'sell') {
                 $transactions = $this->input('transactions', []);
 
                 foreach ($transactions as $index => $transaction) {
-                    if (! isset($transaction['subject_id']) || ! isset($transaction['quantity'])) {
+                    if (! isset($transaction['inventory_subject_id']) || ! isset($transaction['quantity'])) {
                         continue;
                     }
 
-                    // Get the product by subject_id
-                    $product = Product::where('subject_id', $transaction['subject_id'])->first();
+                    $product = Product::where('inventory_subject_id', $transaction['inventory_subject_id'])->first();
 
                     if ($product && $product->quantity < $transaction['quantity']) {
                         $validator->errors()->add(
@@ -99,7 +97,6 @@ class StoreInvoiceRequest extends FormRequest
      */
     public function rules(): array
     {
-        // Get the invoice from route if editing
         $invoice = $this->route('invoice');
         $isEditing = $invoice !== null;
 
@@ -108,7 +105,6 @@ class StoreInvoiceRequest extends FormRequest
             'description' => 'nullable|string',
             'date' => 'required|date',
 
-            // Invoice basics
             'invoice_type' => ['required', Rule::in(array_column(InvoiceType::cases(), 'value'))],
             'customer_id' => 'required|exists:customers,id|integer',
             'invoice_id' => Rule::when($invoice !== null, ['required', 'integer', 'exists:invoices,id']),
@@ -131,12 +127,10 @@ class StoreInvoiceRequest extends FormRequest
                     ->ignore($isEditing ? $invoice->id : null),
             ],
 
-            // Money-ish optional fields
             'subtractions' => 'nullable|numeric|min:0',
 
-            // Transactions array
             'transactions' => 'required|array|min:1',
-            'transactions.*.subject_id' => 'required|integer|exists:subjects,id',
+            'transactions.*.inventory_subject_id' => 'required|integer|exists:subjects,id|distinct',
             'transactions.*.vat' => 'required|numeric|min:0|max:100',
             'transactions.*.desc' => 'nullable|string|max:500',
             'transactions.*.quantity' => 'required|numeric|min:1',
@@ -152,7 +146,6 @@ class StoreInvoiceRequest extends FormRequest
     public function messages(): array
     {
         return [
-            // General fields
             'title.required' => __('The Title field is required.'),
             'title.string' => __('The Title field must be a valid string.'),
             'title.min' => __('The Title must be at least :min characters.'),
@@ -163,7 +156,6 @@ class StoreInvoiceRequest extends FormRequest
             'date.required' => __('The Date field is required.'),
             'date.date' => __('The Date field must be a valid date.'),
 
-            // Basics
             'invoice_type.required' => __('Please select the invoice type.'),
             'invoice_type.in' => __('The selected invoice type is invalid.'),
 
@@ -182,18 +174,17 @@ class StoreInvoiceRequest extends FormRequest
             'invoice_number.integer' => __('The invoice number field must be an integer.'),
             'invoice_number.unique' => __('This invoice number has already been used for this company.'),
 
-            // Money-ish
             'subtractions.numeric' => __('The subtractions must be a number.'),
             'subtractions.min' => __('The subtractions may not be negative.'),
 
-            // Transactions
             'transactions.required' => __('At least one transaction row is required.'),
             'transactions.array' => __('The transaction field must be a valid array.'),
             'transactions.min' => __('At least one transaction row must be provided.'),
 
-            'transactions.*.subject_id.required' => __('The Subject is required for each row.'),
-            'transactions.*.subject_id.integer' => __('The Subject must be an integer.'),
-            'transactions.*.subject_id.exists' => __('The selected Subject does not exist.'),
+            'transactions.*.inventory_subject_id.required' => __('The product is required for each row.'),
+            'transactions.*.inventory_subject_id.integer' => __('The product must be an integer.'),
+            'transactions.*.inventory_subject_id.exists' => __('The selected product does not exist.'),
+            'transactions.*.inventory_subject_id.distinct' => __('The product must be unique for each row.'),
 
             'transactions.*.desc.string' => __('The Row description must be a valid string.'),
             'transactions.*.desc.max' => __('The Row description may not be greater than :max characters.'),
