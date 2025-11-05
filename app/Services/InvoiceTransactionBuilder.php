@@ -80,8 +80,7 @@ class InvoiceTransactionBuilder
         $this->transactions[] = [
             'subject_id' => config('amir.cost_of_goods'),
             'desc' => __('Cost of Goods Sold'),
-            'credit' => $this->totalAmount,
-            'debit' => 0,
+            'value' => $this->totalAmount,
         ];
     }
 
@@ -90,8 +89,7 @@ class InvoiceTransactionBuilder
         $this->transactions[] = [
             'subject_id' => config('amir.product'),
             'desc' => __('Inventory'),
-            'credit' => $this->totalAmount,
-            'debit' => 0,
+            'value' => $this->totalAmount,
         ];
     }
 
@@ -100,8 +98,7 @@ class InvoiceTransactionBuilder
         $this->transactions[] = [
             'subject_id' => config('amir.return_sale'),
             'desc' => __('Return Sale'),
-            'credit' => 0,
-            'debit' => $this->totalAmount,
+            'value' => -$this->totalAmount,
         ];
     }
 
@@ -110,8 +107,7 @@ class InvoiceTransactionBuilder
         $this->transactions[] = [
             'subject_id' => config('amir.income'),
             'desc' => __('Income'),
-            'credit' => $this->totalAmount,
-            'debit' => 0,
+            'value' => $this->totalAmount,
         ];
     }
 
@@ -140,8 +136,7 @@ class InvoiceTransactionBuilder
             $this->transactions[] = [
                 'subject_id' => $product->inventory_subject_id,
                 'desc' => $item['description'] ?? $product->name,
-                'credit' => $this->invoiceType->isSell() ? $itemAmount : 0,
-                'debit' => $this->invoiceType->isSell() ? 0 : $itemAmount,
+                'value' => $this->invoiceType->isSell() ? $itemAmount : -$itemAmount,
             ];
         }
     }
@@ -158,8 +153,7 @@ class InvoiceTransactionBuilder
             $this->transactions[] = [
                 'subject_id' => $discountSubjectId,
                 'desc' => __('Invoice discount'),
-                'credit' => $this->invoiceType->isSell() ? 0 : $this->totalDiscount,
-                'debit' => $this->invoiceType->isSell() ? $this->totalDiscount : 0,
+                'value' => $this->invoiceType->isSell() ? -$this->totalDiscount : $this->totalDiscount,
             ];
         }
     }
@@ -176,8 +170,7 @@ class InvoiceTransactionBuilder
             $this->transactions[] = [
                 'subject_id' => $vatSubjectId,
                 'desc' => __('Invoice VAT/Tax'),
-                'credit' => $this->invoiceType->isSell() ? 0 : $this->totalVat,
-                'debit' => $this->invoiceType->isSell() ? $this->totalVat : 0,
+                'value' => $this->invoiceType->isSell() ? $this->totalVat : -$this->totalVat,
             ];
         }
     }
@@ -197,8 +190,7 @@ class InvoiceTransactionBuilder
         $this->transactions[] = [
             'subject_id' => $subject_id,
             'desc' => __('Customer total'),
-            'credit' => $this->invoiceType->isSell() ? 0 : $customerTotal,
-            'debit' => $this->invoiceType->isSell() ? $customerTotal : 0,
+            'value' => $this->invoiceType->isSell() ? -$customerTotal : $customerTotal,
         ];
     }
 
@@ -216,8 +208,7 @@ class InvoiceTransactionBuilder
             $this->transactions[] = [
                 'subject_id' => $subtractionSubjectId,
                 'desc' => $this->invoiceData['subtraction_desc'] ?? __('Deductions'),
-                'credit' => $this->invoiceType->isSell() ? 0 : $this->subtractions,
-                'debit' => $this->invoiceType->isSell() ? $this->subtractions : 0,
+                'value' => $this->invoiceType->isSell() ? -$this->subtractions : $this->subtractions,
             ];
         }
     }

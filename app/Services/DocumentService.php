@@ -153,12 +153,12 @@ class DocumentService
         $existingTransactionIds = [];
         foreach ($transactionsData as $transactionData) {
             $transaction = Transaction::updateOrCreate(
-                ['id' => $transactionData['transaction_id']?? null],
+                ['id' => $transactionData['transaction_id'] ?? null],
                 [
                     'document_id' => $documentId,
                     'subject_id' => $transactionData['subject_id'],
                     'desc' => $transactionData['desc'],
-                    'value' => floatval($transactionData['credit']) - floatval($transactionData['debit']),
+                    'value' => floatval($transactionData['value']),
                 ]
             );
             $existingTransactionIds[] = $transaction->id;
