@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\InvoiceType;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -26,8 +27,14 @@ class CostOfGoodsService
      */
     public static function updateProductsAverageCost(Invoice $invoice)
     {
+        if ($invoice->invoice_type !== InvoiceType::BUY) {
+            return;
+        }
+
         $ancillaryCosts = $invoice->ancillaryCosts;
-        if(!is_null($ancillaryCosts)) $ancillaryCosts->loadMissing('items');
+        if (! is_null($ancillaryCosts)) {
+            $ancillaryCosts->loadMissing('items');
+        }
 
         foreach ($invoice->items as $invoiceItem) {
             $product = $invoiceItem->product;

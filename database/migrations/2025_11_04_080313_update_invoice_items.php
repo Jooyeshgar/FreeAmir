@@ -12,6 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('invoice_items', function (Blueprint $table) {
+            $table->dropForeign('invoice_items_transaction_id_foreign');
             $table->dropColumn('cost_at_time_of_sale');
             $table->dropColumn('transaction_id');
             $table->decimal('cog_after', 18, 2)->default(0)->after('vat');
@@ -19,6 +20,7 @@ return new class extends Migration
         });
 
         Schema::table('ancillary_cost_items', function (Blueprint $table) {
+            $table->dropForeign('ancillary_cost_items_company_id_foreign');
             $table->dropColumn('company_id');
         });
     }

@@ -57,7 +57,7 @@ class InvoiceService
             $invoiceData['date'] = $date;
 
             $createdInvoice = Invoice::create($invoiceData);
-            // ProductService::syncProductQuantities(collect([]), $items, $createdInvoice->invoice_type);
+
             ProductService::syncProductQuantities(new Collection([]), $items, $createdInvoice->invoice_type);
             self::syncInvoiceItems($createdInvoice, $items);
 
