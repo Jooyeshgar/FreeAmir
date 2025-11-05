@@ -239,7 +239,6 @@ if (document.getElementById('midLineChart')) {
 }
 
 if (document.querySelector(".selfSelectBoxContainer")) {
-    jalaliDatepicker.startWatch({});
     const csrf = document.querySelector('meta[name="csrf_token"]').getAttribute("content");
     let searchInputs = document.querySelectorAll(".searchInput"),
         resultDivs = document.querySelectorAll(".resultDiv"),
@@ -342,7 +341,7 @@ Alpine.store('utils', {
             .map(char => persianNumbers.includes(char) ? englishNumbers[persianNumbers.indexOf(char)] : char)
             .join('');
     },
-    formatNumber(val){
+    formatNumber(val) {
         const s = this.convertToEnglish(String(val ?? ''));
         const trimmed = s.trim();
         const isNeg = trimmed.startsWith('-');
@@ -390,7 +389,7 @@ Alpine.store('utils', {
         const normalized = (intRaw.replace(/[^0-9]/g, '') || '0') + (decRaw !== undefined ? '.' + decRaw.replace(/[^0-9]/g, '') : '');
         return negative ? '-' + normalized : normalized;
     },
-    prepareSubmit(event){
+    prepareSubmit(event) {
         const form = event.target.closest('form');
         if (!form) return;
         form.querySelectorAll('input.locale-number').forEach(inp => {

@@ -26,9 +26,3 @@
         </div>
     </form>
 </x-app-layout>
-
-@pushOnce('scripts')
-    <script type="module">
-        jalaliDatepicker.startWatch({});
-    </script>
-@endPushOnce

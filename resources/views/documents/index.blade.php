@@ -22,7 +22,7 @@
                     </div>
 
                     <div class="col-span-2 md:col-span-1">
-                        <x-text-input data-jdp input_name="date" placeholder="{{ __('date') }}" input_value="{{ request('date') }}" input_class="datePicker" />
+                        <x-date-picker name="date" placeholder="{{ __('date') }}" value="{{ request('date') }}" class="datePicker" />
                     </div>
 
                     <div class="col-span-6 md:col-span-3">
