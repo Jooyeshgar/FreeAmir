@@ -5,13 +5,12 @@ namespace App\Services;
 use App\Enums\InvoiceType;
 use App\Exceptions\InvoiceServiceException;
 use App\Models\AncillaryCost;
-use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
-use App\Models\Transaction;
 use App\Models\User;
 use Exception;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 class InvoiceService
@@ -30,13 +29,15 @@ class InvoiceService
     {
         $invoiceData = self::normalizeInvoiceData($invoiceData);
 
+        $date = $invoiceData['date'] ?? now()->toDateString();
+
         // Build transactions using the transaction builder
         $transactionBuilder = new InvoiceTransactionBuilder($items, $invoiceData);
         $buildResult = $transactionBuilder->build();
         $transactions = $buildResult['transactions'];
 
         $documentData = [
-            'date' => $invoiceData['date'] ?? now()->toDateString(),
+            'date' => $date,
             'title' => $invoiceData['title'] ?? (__('Invoice').' '.($invoiceData['number'] ?? '')),
             'number' => $invoiceData['document_number'] ?? null,
         ];
@@ -44,7 +45,7 @@ class InvoiceService
         $createdDocument = null;
         $createdInvoice = null;
 
-        DB::transaction(function () use ($documentData, $user, $transactions, $invoiceData, $items, $buildResult, &$createdDocument, &$createdInvoice) {
+        DB::transaction(function () use ($documentData, $user, $transactions, $invoiceData, $items, $buildResult, $date, &$createdDocument, &$createdInvoice) {
             $createdDocument = DocumentService::createDocument($user, $documentData, $transactions);
 
             $invoiceData['document_id'] = $createdDocument->id;
@@ -52,10 +53,12 @@ class InvoiceService
             $invoiceData['amount'] = $buildResult['totalAmount'];
             $invoiceData['creator_id'] = $user->id;
             $invoiceData['active'] = 1;
+            $invoiceData['number'] = $createdDocument->number;
+            $invoiceData['date'] = $date;
 
             $createdInvoice = Invoice::create($invoiceData);
-
-            ProductService::syncProductQuantities(collect([]), $items, $createdInvoice->invoice_type);
+            // ProductService::syncProductQuantities(collect([]), $items, $createdInvoice->invoice_type);
+            ProductService::syncProductQuantities(new Collection([]), $items, $createdInvoice->invoice_type);
             self::syncInvoiceItems($createdInvoice, $items);
 
             CostOfGoodsService::updateProductsAverageCost($createdInvoice);
@@ -77,6 +80,8 @@ class InvoiceService
     public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = []): array
     {
         $invoice = Invoice::findOrFail($invoiceId);
+
+        self::checkInvoiceDeleteableOrEditable($invoice);
 
         $invoiceData = self::normalizeInvoiceData($invoiceData);
 
@@ -123,26 +128,39 @@ class InvoiceService
         DB::transaction(function () use ($invoiceId) {
             $invoice = Invoice::find($invoiceId);
 
-            if (! $invoice) {
-                throw new Exception(__('Invoice not found'), 404);
-            }
-
-            if($invoice->ancillaryCosts->isNotEmpty()){
-                throw new Exception(__('Invoice has associated ancillary costs and cannot be deleted'), 400);
-            }
+            self::checkInvoiceDeleteableOrEditable($invoice);
 
             $invoiceItems = $invoice->items;
 
             $invoice->items()->delete();
 
-            ProductService::subProductsQuantities($invoiceItems->get()->toArray(), $invoice->invoice_type);
+            ProductService::subProductsQuantities($invoiceItems->toArray(), $invoice->invoice_type);
 
-            // CostOfGoodsService::updateProductsAverageCost($invoice);
+            CostOfGoodsService::updateProductsAverageCost($invoice);
 
             $invoice->document_id ? DocumentService::deleteDocument($invoice->document_id) : null;
 
             $invoice->delete();
         });
+    }
+
+    private static function checkInvoiceDeleteableOrEditable(Invoice $invoice): void
+    {
+        if (! $invoice) {
+            throw new Exception(__('Invoice not found'), 404);
+        }
+
+        if ($invoice->ancillaryCosts->isNotEmpty()) {
+            throw new Exception(__('Invoice has associated ancillary costs and cannot be deleted/edited'), 400);
+        }
+
+        if (self::hasSubsequentInvoicesForProduct($invoice)) {
+            throw new Exception(__('Cannot delete/edit invoice because there are subsequent invoices for the same invoice products. Please delete those invoices first.'), 400);
+        }
+
+        if (! self::isSellInvoiceAfterLastBuyInvoice($invoice)) {
+            throw new Exception(__('Cannot delete/edit invoice because it affects cost of goods sold calculations. Please review related buy invoices first.'), 400);
+        }
     }
 
     private static function preparingAncillaryCostData(AncillaryCost $ancillaryCost): array
@@ -230,5 +248,48 @@ class InvoiceService
             $itemId[] = $invoiceItem->id;
         }
         $invoice->items()->whereNotIn('id', $itemId)->delete();
+    }
+
+    /**
+     * Determines if there are any subsequent invoices with invoice type BUY or SELL that contain any of the same products as the given invoice.
+     *
+     * @param  Invoice  $invoice  The invoice to check for subsequent related invoices.
+     * @return bool True if a subsequent invoice exists for any of the products in the given invoice; otherwise, false.
+     */
+    private static function hasSubsequentInvoicesForProduct(Invoice $invoice): bool
+    {
+        $subsequentInvoice = Invoice::where('date', '>', $invoice->date)
+            ->whereIn('invoice_type', [InvoiceType::BUY, InvoiceType::SELL])
+            ->whereHas('items', fn ($query) => $query->where('product_id', $invoice->items->pluck('product_id')->toArray()))
+            ->orderByDesc('date')->first();
+
+        return $subsequentInvoice !== null;
+    }
+
+    /**
+     * Determines if the given sell invoice was created after the most recent buy invoice
+     * that contains at least one of the same products as the sell invoice.
+     *
+     * This method checks if the provided invoice is of type SELL. If so, it finds the latest
+     * BUY invoice that includes any of the products present in the sell invoice's items.
+     * It then compares the dates of the sell invoice and the last relevant buy invoice.
+     *
+     * @param  Invoice  $invoice  The invoice to check.
+     * @return bool True if the sell invoice date is after the last relevant buy invoice date, false otherwise.
+     */
+    private static function isSellInvoiceAfterLastBuyInvoice(Invoice $invoice): bool
+    {
+        if ($invoice->invoice_type === InvoiceType::SELL) {
+            $lastBuyInvoice = Invoice::where('invoice_type', InvoiceType::BUY)
+                ->whereHas('items', fn ($query) => $query->where('product_id', $invoice->items->pluck('product_id')->toArray()))
+                ->orderByDesc('date')
+                ->first();
+
+            if ($lastBuyInvoice && $invoice->date > $lastBuyInvoice->date) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
