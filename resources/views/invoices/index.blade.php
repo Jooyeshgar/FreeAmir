@@ -78,14 +78,26 @@
                                 {{ $invoice->permanent ?? false ? __('Permanent') : __('Draft') }}
                             </td>
                             <td class="px-4 py-2">
+                                @php($editDeleteStatus = \App\Services\InvoiceService::getEditDeleteStatus($invoice))
+
                                 <a href="{{ route('invoices.show', $invoice) }}" target="_blank" rel="noopener" class="btn btn-sm btn-info">{{ __('Show') }}</a>
                                 <a href="{{ route('invoices.print', $invoice) }}" target="_blank" rel="noopener" class="btn btn-sm btn-info">{{ __('Print') }}</a>
-                                <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" class="inline-block">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                </form>
+
+                                @if($editDeleteStatus['allowed'])
+                                    <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                    <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" class="inline-block">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                    </form>
+                                @else
+                                    <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
+                                        <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" disabled title="{{ $editDeleteStatus['reason'] }}">{{ __('Edit') }}</button>
+                                    </span>
+                                    <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
+                                        <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled title="{{ $editDeleteStatus['reason'] }}">{{ __('Delete') }}</button>
+                                    </span>
+                                @endif
                             </td>
                         </tr>
                     @endforeach

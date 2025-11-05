@@ -196,17 +196,19 @@ class InvoiceService
         return $data;
     }
 
-    /**
-     * Normalize invoice data (convert booleans, set defaults).
-     */
     private static function normalizeInvoiceData(array $invoiceData): array
     {
         $invoiceData = [
+            'title' => $invoiceData['title'],
+            'date' => $invoiceData['date'],
+            'invoice_type' => $invoiceData['invoice_type'],
+            'customer_id' => $invoiceData['customer_id'],
+            'document_number' => $invoiceData['document_number'],
+            'description' => $invoiceData['description'] ?? null,
             'subtraction' => floatval($invoiceData['subtraction'] ?? 0),
             'permanent' => isset($invoiceData['permanent']) ? (int) $invoiceData['permanent'] : 0,
             'active' => isset($invoiceData['active']) ? (int) $invoiceData['active'] : 1,
-            'invoice_type' => $invoiceData['invoice_type'],
-            'customer_id' => $invoiceData['customer_id'],
+            'invoice_id' => $invoiceData['invoice_id'] ?? null,
         ];
 
         return $invoiceData;
@@ -291,5 +293,21 @@ class InvoiceService
         }
 
         return false;
+    }
+
+    /**
+     * Determine if an invoice can be edited or deleted without throwing, and provide the reason when it cannot.
+     *
+     * @return array{allowed: bool, reason: string|null}
+     */
+    public static function getEditDeleteStatus(Invoice $invoice): array
+    {
+        try {
+            self::checkInvoiceDeleteableOrEditable($invoice);
+
+            return ['allowed' => true, 'reason' => null];
+        } catch (\Throwable $e) {
+            return ['allowed' => false, 'reason' => $e->getMessage()];
+        }
     }
 }
