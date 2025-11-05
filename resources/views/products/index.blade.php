@@ -27,7 +27,7 @@
 
                     @foreach ($products as $product)
                         <tr>
-                            <td class="px-4 py-2">{{ formatCode($product->code) }}</td>
+                            <td class="px-4 py-2">{{ $product->code }}</td>
                             <td class="px-4 py-2">
                                 <a href="{{ route('products.show', $product) }}" class="text-primary">
                                     {{ $product->name }}</a>

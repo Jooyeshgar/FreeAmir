@@ -15,11 +15,11 @@ Schema::create('sales_invoice_items', function (Blueprint $table) {
     ...
     $table->decimal('quantity', 15, 2); // تعداد فروش
     $table->decimal('unit_price', 15, 2); // قیمت فروش
-    $table->decimal('cost_at_time_of_sale', 15, 2); // بهای تمام شده در لحظه فروش
+    $table->decimal('cog_after', 15, 2); // بهای تمام شده در لحظه فروش
     $table->timestamps();
 });
 ```
-*   `cost_at_time_of_sale`: **بسیار مهم**. در زمان ثبت فروش، مقدار فیلد `average_cost` از جدول `products` در این فیلد "عکس‌برداری" (Snapshot) و ذخیره می‌شود.
+*   `cog_after`: **بسیار مهم**. در زمان ثبت فروش، مقدار فیلد `average_cost` از جدول `products` در این فیلد "عکس‌برداری" (Snapshot) و ذخیره می‌شود.
 
 **۲. جدول هزینه‌های جانبی (Ancillary_Costs)**
 برای ثبت هزینه‌هایی مانند حمل که به یک فاکتور خرید مرتبط هستند.
@@ -107,11 +107,11 @@ product->save()
 
 1.  هنگام ذخیره هر قلم در `sales_invoice_items`:
     *   موجودی کالا را بررسی کنید (`product.current_stock >= item.quantity`).
-    *   فیلد `cost_at_time_of_sale` را با مقدار فعلی `product.average_cost` پر کنید.
+    *   فیلد `cog_after` را با مقدار فعلی `product.average_cost` پر کنید.
     *   موجودی کالا را کاهش دهید: `product.current_stock -= item.quantity`.
     *   کالا (`product`) را ذخیره کنید.
 
-**سود هر قلم فروش:** `(item.unit_price - item.cost_at_time_of_sale) * item.quantity`
+**سود هر قلم فروش:** `(item.unit_price - item.cog_after) * item.quantity`
 
 ---
 

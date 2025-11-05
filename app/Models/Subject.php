@@ -66,6 +66,10 @@ class Subject extends Model
         return formatCode($this->code) . ' ' . $this->name;
     }
 
+    public function fullname()
+    {
+        return (!is_null($this->parent) ? $this->parent->fullname() . ' / ' : '') . $this->name;
+    }
     public function ledger()
     {
         return substr($this->code, 0, 3);

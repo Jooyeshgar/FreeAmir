@@ -14,13 +14,13 @@ class InvoiceItem extends Model
     protected $fillable = [
         'invoice_id',
         'product_id',
-        'transaction_id',
         'quantity',
         'unit_price',
         'unit_discount',
-        'cost_at_time_of_sale',
+        'cog_after',
+        'quantity_at',
         'vat',
-        'amount',
+        'amount',   // total amount after discount and after vat
         'description',
     ];
 
@@ -32,10 +32,5 @@ class InvoiceItem extends Model
     public function product()
     {
         return $this->belongsTo(Product::class, 'product_id');
-    }
-
-    public function transaction()
-    {
-        return $this->belongsTo(Transaction::class, 'transaction_id'); // Assuming invoices model is named InvoiceTable
     }
 }

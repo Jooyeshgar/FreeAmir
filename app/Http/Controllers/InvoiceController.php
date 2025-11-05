@@ -63,7 +63,7 @@ class InvoiceController extends Controller
         if (empty(config('amir.cust_subject'))) {
             return redirect()->route('configs.index')->with('error', __('Customer Subject is not configured. Please set it in configurations.'));
         }
-        $products = Product::with('subject')->orderBy('name', 'asc')->get();
+        $products = Product::with('inventorySubject')->orderBy('name', 'asc')->get();
         $productGroups = ProductGroup::all();
         $customers = Customer::all('name', 'id');
         $previousInvoiceNumber = Invoice::orderBy('id', 'desc')->first()->number ?? 0;
@@ -99,13 +99,13 @@ class InvoiceController extends Controller
             'description' => $validated['description'] ?? null,
         ];
 
-        // Fetch all products by subject_id in one query
-        $subjectIds = collect($validated['transactions'])->pluck('subject_id')->unique();
-        $productsBySubjectId = Product::whereIn('subject_id', $subjectIds)->get()->keyBy('subject_id');
+        // Fetch all products by inventory_subject_id in one query
+        $subjectIds = collect($validated['transactions'])->pluck('inventory_subject_id')->unique();
+        $productsBySubjectId = Product::whereIn('inventory_subject_id', $subjectIds)->get()->keyBy('inventory_subject_id');
 
         // Map transactions to invoice items
         $items = collect($validated['transactions'])->map(function ($transaction, $index) use ($productsBySubjectId) {
-            $product = $productsBySubjectId->get($transaction['subject_id']);
+            $product = $productsBySubjectId->get($transaction['inventory_subject_id']);
 
             return [
                 'transaction_index' => $index,
@@ -128,9 +128,21 @@ class InvoiceController extends Controller
 
     public function show(Invoice $invoice)
     {
+        $invoice->load([
+            'customer',
+            'document',
+            'document.transactions',
+            'items.product',
+        ]);
+
+        return view('invoices.show', compact('invoice'));
+    }
+
+    public function print(Invoice $invoice)
+    {
         $invoice->load('customer', 'items.product');
 
-        $pdf = PDF::loadView('invoices.show', compact('invoice'));
+        $pdf = PDF::loadView('invoices.print', compact('invoice'));
 
         return $pdf->stream('invoice-'.($invoice->number ?? $invoice->id).'.pdf');
     }
@@ -145,7 +157,7 @@ class InvoiceController extends Controller
         $invoice->load('customer', 'document.transactions', 'items.product'); // Eager load relationships
 
         $customers = Customer::all();
-        $products = Product::with('subject')->orderBy('name', 'asc')->get();
+        $products = Product::with('inventorySubject')->orderBy('name', 'asc')->get();
         $productGroups = [];
 
         // Prepare transactions from invoice items
@@ -158,7 +170,7 @@ class InvoiceController extends Controller
                 'id' => $index + 1,
                 'transaction_id' => $item->transaction_id,
                 'product_id' => $item->product_id,
-                'subject_id' => $item->product->subject_id,
+                'inventory_subject_id' => $item->product->inventory_subject_id,
                 'subject' => $item->product->name,
                 'desc' => $item->description,
                 'quantity' => $item->quantity,
@@ -202,12 +214,12 @@ class InvoiceController extends Controller
             'invoice_id' => $validated['invoice_id'] ?? null,
             'description' => $validated['description'] ?? null,
         ];
-        // Fetch all products by subject_id in one query
-        $subjectIds = collect($validated['transactions'])->pluck('subject_id')->unique();
-        $productsBySubjectId = Product::whereIn('subject_id', $subjectIds)->get()->keyBy('subject_id');
+        // Fetch all products by inventory_subject_id in one query
+        $subjectIds = collect($validated['transactions'])->pluck('inventory_subject_id')->unique();
+        $productsBySubjectId = Product::whereIn('inventory_subject_id', $subjectIds)->get()->keyBy('inventory_subject_id');
         // Map transactions to invoice items
         $items = collect($validated['transactions'])->map(function ($transaction, $index) use ($productsBySubjectId) {
-            $product = $productsBySubjectId->get($transaction['subject_id']);
+            $product = $productsBySubjectId->get($transaction['inventory_subject_id']);
 
             return [
                 'transaction_index' => $index,
@@ -233,7 +245,7 @@ class InvoiceController extends Controller
         try {
             InvoiceService::deleteInvoice($invoice->id);
 
-            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->value])->with('success', __('Invoice deleted successfully.'));
+            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->value])->with('info', __('Invoice deleted successfully and COG is invalidated'));
         } catch (\Exception $e) {
             return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->value])->with('error', $e->getMessage());
         }
@@ -245,7 +257,7 @@ class InvoiceController extends Controller
             return [
                 'id' => $i + 1,
                 'transaction_id' => $transaction->id,
-                'subject_id' => $transaction->subject_id,
+                'inventory_subject_id' => $transaction->inventory_subject_id,
                 'subject' => $transaction->subject?->name,
                 'code' => $transaction->subject?->code,
                 'desc' => $transaction->desc,
