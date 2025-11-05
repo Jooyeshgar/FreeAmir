@@ -205,7 +205,7 @@
                             <tr class="hover">
                                 <td class="px-4 py-3">
                                     <span class="badge badge-ghost">
-                                        {{ formatDate($item->updated_at) }}
+                                        {{ formatDate($item->invoice->date) }}
                                     </span>
                                 </td>
 
