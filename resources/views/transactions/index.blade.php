@@ -61,6 +61,7 @@
                 <thead>
                     <th class="p-2 w-12">{{ __('Date') }}</th>
                     <th class="p-2 w-16">{{ __('Doc Number') }}</th>
+                    <th class="p-2">{{ __('Subject Code') }}</th>
                     <th class="p-2">{{ __('Subject') }}</th>
                     <th class="p-2">{{ __('Description') }}</th>
                     <th class="p-2 w-24">{{ __('Debit') }}</th>
@@ -77,7 +78,10 @@
                                 </a>
                             </td>
                             <td class="p-2">
-                                {{ $transaction->subject?->code }} - {{ $transaction->subject?->name }}
+                                {{ $transaction->subject?->formattedCode() }}
+                            </td>
+                            <td class="p-2">
+                                {{ $transaction->subject?->name }}
                             </td>
                             <td class="p-2">{{ $transaction->desc }}</td>
                             <td class="p-2 text-red-600">{{ $transaction->debit }}</td>
