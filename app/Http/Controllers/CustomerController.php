@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models;
-use App\Models\Subject;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
@@ -27,7 +26,7 @@ class CustomerController extends Controller
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
+            'name' => 'required|max:100|string|regex:/^[\w\d\s]*$/u',
             'phone' => 'nullable|numeric|regex:/^09\d{9}$/',
             'fax' => 'nullable|numeric',
             'address' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
@@ -97,6 +96,7 @@ class CustomerController extends Controller
     {
         try {
             $customer->delete();
+
             return redirect()->route('customers.index')->with('success', __('Customer deleted successfully.'));
         } catch (\Exception $e) {
             return redirect()->route('customers.index')->with('error', $e->getMessage());
