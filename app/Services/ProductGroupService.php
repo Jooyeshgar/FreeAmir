@@ -6,10 +6,7 @@ use App\Models\ProductGroup;
 
 class ProductGroupService
 {
-    public function __construct(
-        private readonly SubjectCreatorService $subjectCreator,
-    ) {
-    }
+    public function __construct(private readonly SubjectCreatorService $subjectCreator) {}
 
     public function create(array $data): ProductGroup
     {
@@ -56,15 +53,15 @@ class ProductGroupService
             ],
             'sales_returns_subject_id' => [
                 'relation' => 'salesReturnsSubject',
-                'config_key' => 'amir.return_sales',
+                'config_key' => 'amir.sales_returns',
             ],
             'cogs_subject_id' => [
                 'relation' => 'cogsSubject',
-                'config_key' => 'amir.cost_of_goods',
+                'config_key' => 'amir.cost_of_goods_sold',
             ],
             'inventory_subject_id' => [
                 'relation' => 'inventorySubject',
-                'config_key' => 'amir.product',
+                'config_key' => 'amir.inventory',
             ],
         ];
 
@@ -111,7 +108,7 @@ class ProductGroupService
         $dirtyIds = [];
 
         foreach ($updatedIds as $column => $id) {
-            if ($productGroup->$column !== $id) {
+            if ($id !== $productGroup->$column) {
                 $dirtyIds[$column] = $id;
             }
         }

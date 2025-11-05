@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\ConfigTitle;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -34,8 +33,6 @@ class ProductGroup extends Model
         static::creating(function ($model) {
             $model->company_id ??= session('active-company-id');
         });
-
-        // subject lifecycle handled via ProductGroupSubjectService outside the model
     }
 
     public function products()
