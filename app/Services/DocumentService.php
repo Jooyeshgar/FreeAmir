@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class DocumentService
 {
@@ -64,7 +65,7 @@ class DocumentService
         ]);
 
         if ($validator->fails()) {
-            throw new \Exception($validator->errors()->first());
+            throw new ValidationException($validator);
         }
 
         $document->fill($data);
@@ -83,7 +84,9 @@ class DocumentService
         $sum = $document->transactions()->sum('value');
 
         if ($sum !== 0) {
-            throw new \Exception('The sum of transactions must be zero');
+            throw ValidationException::withMessages([
+                'transactions' => ['The sum of transactions must be zero']
+            ]);
         }
 
         $document->approved_at = now();
@@ -107,7 +110,7 @@ class DocumentService
             'updated_at' => 'nullable|date',
         ]);
         if ($validator->fails()) {
-            throw new \Exception($validator->errors()->first());
+            throw new ValidationException($validator);
         }
 
         $transaction = new Transaction;
@@ -134,7 +137,7 @@ class DocumentService
         ]);
 
         if ($validator->fails()) {
-            throw new \Exception($validator->errors()->first());
+            throw new ValidationException($validator);
         }
 
         $transaction->fill($data);
