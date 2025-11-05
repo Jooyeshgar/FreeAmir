@@ -13,11 +13,10 @@ enum ConfigTitle: string
     case BUY_DISCOUNT = 'BUY_DISCOUNT';
     case SELL_VAT = 'SELL_VAT';
     case BUY_VAT = 'BUY_VAT';
-    case PRODUCT = 'PRODUCT';
+    case INVENTORY = 'INVENTORY';
     case SALES_REVENUE = 'SALES_REVENUE';
-    // case INVENTORY = 'INVENTORY';
-    case COST_OF_GOODS = 'COST_OF_GOODS';
-    case RETURN_SALES = 'RETURN_SALES';
+    case COST_OF_GOODS_SOLD = 'COST_OF_GOODS_SOLD';
+    case SALES_RETURNS = 'SALES_RETURNS';
 
     // Get translated label
     public function label(): string
@@ -32,10 +31,9 @@ enum ConfigTitle: string
             self::BUY_DISCOUNT => __('Buy Discount'),
             self::SELL_VAT => __('Sell Vat'),
             self::BUY_VAT => __('Buy Vat'),
-            self::PRODUCT => __('Products'),
-            // self::INVENTORY => __('Inventory'),
-            self::COST_OF_GOODS => __('Cost of Goods Sold'),
-            self::RETURN_SALES => __('Return Sales'),
+            self::INVENTORY => __('Inventory'),
+            self::COST_OF_GOODS_SOLD => __('Cost of Goods Sold'),
+            self::SALES_RETURNS => __('Sales Returns'),
             self::SALES_REVENUE => __('Sales Revenue'),
         };
     }

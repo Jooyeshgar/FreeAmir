@@ -34,6 +34,10 @@ class Product extends Model
         'inventory_subject_id',
         'vat',
         'average_cost',
+        'income_subject_id',
+        'cogs_subject_id',
+        'inventory_subject_id',
+        'sales_returns_subject_id',
     ];
 
     protected static function booted(): void

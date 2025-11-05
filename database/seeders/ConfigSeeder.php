@@ -24,10 +24,9 @@ class ConfigSeeder extends Seeder
             ['type' => 2, 'category' => 1, 'key' => 'buy_discount', 'value' => '98', 'desc' => 'تخفیفات خرید', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'sell_vat', 'value' => '41', 'desc' => 'مالیات فروش', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'buy_vat', 'value' => '40', 'desc' => 'مالیات خرید', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'product', 'value' => '9', 'desc' => 'محصولات', 'company_id' => 1],
-            // ['type' => 3, 'category' => 1, 'key' => 'inventory', 'value' => '103', 'desc' => 'محصولات', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'return_sales', 'value' => '25', 'desc' => 'برگشت از فروش', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'cost_of_goods', 'value' => '102', 'desc' => 'بهای تمام شده کالا', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'inventory', 'value' => '9', 'desc' => 'موجودی کالا', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'sales_returns', 'value' => '43', 'desc' => 'برگشت از فروش', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'cost_of_goods_sold', 'value' => '102', 'desc' => 'بهای تمام شده کالا فروش رقته', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'sales_revenue', 'value' => '104', 'desc' => 'درآمد فروش', 'company_id' => 1],
         ];
 

@@ -69,7 +69,7 @@ class ProductController extends Controller
             }
         }
 
-        return view('products.show', compact('product', 'invoice_items'));
+        return view('products.show', compact('product'));
     }
 
     public function destroy(Product $product)

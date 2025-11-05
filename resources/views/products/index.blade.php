@@ -38,12 +38,17 @@
                             <td class="px-4 py-2">{{ formatNumber($product->vat) }}%</td>
                             <td class="px-4 py-2">{{ $product->productGroup ? $product->productGroup->name : '' }}</td>
                             <td class="px-4 py-2">
-                                <a href="{{ route('products.edit', $product) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                <form action="{{ route('products.destroy', $product) }}" method="POST" class="inline-block">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                </form>
+                                <a href="{{ route('products.edit', $product) }}"
+                                    class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                    @if ($product->invoiceItems()->exists())
+                                        <span class="btn btn-sm btn-disabled" title="{{ __('Cannot delete product that is used in invoice items') }}">{{ __('Delete') }}</span>
+                                    @else 
+                                        <form action="{{ route('products.destroy', $product) }}" method="POST" class="inline-block">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                        </form>    
+                                    @endif
                             </td>
                         </tr>
                     @endforeach

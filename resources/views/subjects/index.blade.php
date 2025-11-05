@@ -21,7 +21,7 @@
 
                     <span class="ml-2 text-lg leading-[3rem] font-semibold grow">{{ $currentParent->name }}</span>
                     <a href="{{ $upUrl }}" class="btn btn-outline">
-                        ← {{ __('Go Up') }}
+                        {{ __('Back') }}
                     </a>
                 @endif
             </div>

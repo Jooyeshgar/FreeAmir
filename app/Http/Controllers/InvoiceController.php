@@ -56,8 +56,8 @@ class InvoiceController extends Controller
      */
     public function create($invoice_type)
     {
-        if (empty(config('amir.product'))) {
-            return redirect()->route('configs.index')->with('error', __('Product Subject is not configured. Please set it in configurations.'));
+        if (empty(config('amir.inventory'))) {
+            return redirect()->route('configs.index')->with('error', __('Inventory Subject is not configured. Please set it in configurations.'));
         }
 
         if (empty(config('amir.cust_subject'))) {

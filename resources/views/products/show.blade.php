@@ -182,10 +182,10 @@
                             $totalSell = 0;
                             $totalBuy = 0;
 
-                            foreach ($invoice_items as $item) {
-                                if ($item->invoice_type->isSell()) {
+                            foreach ($product->invoiceItems as $item) {
+                                if ($item->invoice->invoice_type === \App\Enums\InvoiceType::SELL) {
                                     $totalSell += $item->quantity;
-                                } elseif ($item->invoice_type->isBuy()) {
+                                } elseif ($item->invoice->invoice_type === \App\Enums\InvoiceType::BUY) {
                                     $totalBuy += $item->quantity;
                                 }
                             }
@@ -193,11 +193,11 @@
                             $remaining = $product->quantity - $totalBuy + $totalSell;
                         @endphp
 
-                        @foreach ($invoice_items as $item)
+                        @foreach ($product->invoiceItems as $item)
                             @php
-                                if ($item->invoice_type->isSell()) {
+                                if ($item->invoice->invoice_type === \App\Enums\InvoiceType::SELL) {
                                     $remaining -= $item->quantity;
-                                } elseif ($item->invoice_type->isBuy()) {
+                                } elseif ($item->invoice->invoice_type === \App\Enums\InvoiceType::BUY) {
                                     $remaining += $item->quantity;
                                 }
                             @endphp
@@ -210,7 +210,7 @@
                                 </td>
 
                                 <td class="px-4 py-3 text-center">
-                                    @if ($item->invoice_type->isBuy())
+                                    @if ($item->invoice->invoice_type === \App\Enums\InvoiceType::BUY)
                                         <a href="{{ route('invoices.show', $item->invoice_id) }}"
                                             class="badge badge-success gap-2 hover:badge-success hover:brightness-110 transition-all">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -224,7 +224,7 @@
                                 </td>
 
                                 <td class="px-4 py-3 text-center">
-                                    @if ($item->invoice_type->isSell())
+                                    @if ($item->invoice->invoice_type === \App\Enums\InvoiceType::SELL)
                                         <a href="{{ route('invoices.show', $item->invoice_id) }}"
                                             class="badge badge-info gap-2 hover:badge-info hover:brightness-110 transition-all">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
