@@ -10,22 +10,12 @@ use App\Models\User;
 use App\Services\DocumentService;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Invoice>
- */
 class InvoiceFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
         $date = $this->faker->date();
-        $amount = $this->faker->randomFloat(2, 1000, 10000);
         $user = User::inRandomOrder()->first();
-        $customer = Customer::inRandomOrder()->first();
 
         $document = DocumentService::createDocument(
             $user,
@@ -39,7 +29,7 @@ class InvoiceFactory extends Factory
             'number' => $this->faker->unique()->numerify('#####'),
             'date' => $date,
             'document_id' => $document->id,
-            'customer_id' => $customer->id,
+            'customer_id' => Customer::inRandomOrder()->first()->id,
             'creator_id' => $user->id,
             'company_id' => 1,
             'approver_id' => $this->faker->randomElement([null, $user->id]),
@@ -50,7 +40,7 @@ class InvoiceFactory extends Factory
             'invoice_type' => $this->faker->randomElement(['buy', 'sell']),
             'active' => true,
             'vat' => $this->faker->randomNumber(5),
-            'amount' => $amount,
+            'amount' => $this->faker->randomFloat(2, 1000, 10000),
         ];
     }
 
