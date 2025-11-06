@@ -12,11 +12,9 @@ class ProductWebsiteFactory extends Factory
 
     public function definition(): array
     {
-        $product_id = Product::inRandomOrder()->first()->id;
-
         return [
             'link' => 'https://'.$this->faker->domainWord.'.'.$this->faker->randomElement(['com', 'org', 'net', 'co.uk']),
-            'product_id' => $product_id,
+            'product_id' => $this->faker->randomElement(Product::all()->toArray()),
         ];
     }
 }
