@@ -14,11 +14,9 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     public function run(): void
     {
-
         // Reset cached roles and permissions
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // create permissions
         Permission::create(['name' => 'home.*']);
         Permission::create(['name' => 'subjects.*']);
         Permission::create(['name' => 'documents.*']);
@@ -42,7 +40,6 @@ class RolesAndPermissionsSeeder extends Seeder
         Permission::create(['name' => 'reports.sub-ledger']);
         Permission::create(['name' => 'reports.result']);
 
-        // create roles and assign created permissions
         $role = Role::create(['name' => 'Super-Admin']);
         $role->givePermissionTo(Permission::all());
 
@@ -60,11 +57,10 @@ class RolesAndPermissionsSeeder extends Seeder
             ->orWhere('name', 'LIKE', '%home%')
             ->get());
 
-        // Create admin user
         $admin = User::create([
             'name' => 'admin',
             'email' => 'admin@example.com',
-            'password' => bcrypt('password'), // Replace with a strong password
+            'password' => bcrypt('password'),
         ]);
 
         $admin->companies()->attach(1);
