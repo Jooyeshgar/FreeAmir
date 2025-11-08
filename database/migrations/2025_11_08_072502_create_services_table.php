@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('code', 20);
             $table->string('name', 60);
+            $table->string('sstid')->nullable();
             $table->unsignedBigInteger('group')->nullable();
             $table->unsignedBigInteger('subject_id')->nullable();
             $table->decimal('selling_price', 10, 2);

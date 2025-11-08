@@ -15,6 +15,7 @@ class ServiceGroup extends Model
         'code',
         'name',
         'vat',
+        'sstid',
         'company_id',
         'subject_id',
     ];

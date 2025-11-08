@@ -16,8 +16,9 @@ return new class extends Migration
             $table->string('name', 60);
             $table->decimal('vat')->nullable();
             $table->unsignedBigInteger('subject_id')->nullable();
+            $table->string('sstid')->nullable();
 
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete()->after('name');
+            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreign('subject_id')->references('id')->on('subjects')->onDelete('set null');
 
             $table->timestamps();

@@ -15,6 +15,7 @@ class Service extends Model
         'code',
         'name',
         'group',
+        'sstid',
         'subject_id',
         'selling_price',
         'vat',
