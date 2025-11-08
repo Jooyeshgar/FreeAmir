@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\InvoiceType;
 use App\Models\Customer;
 use App\Models\Product;
+use App\Models\Service;
 
 /**
  * Helper class to build document transactions from invoice data.
@@ -73,7 +74,8 @@ class InvoiceTransactionBuilder
     {
         foreach ($this->items as $item) {
             $product = Product::find($item['product_id']);
-            if (! $product) {
+            $service = Service::find($item['service_id']);
+            if (! $product && ! $service) {
                 continue;
             }
 
@@ -89,8 +91,8 @@ class InvoiceTransactionBuilder
             $this->totalAmount += $itemAmount - $itemDiscount + $itemVat;
 
             $this->transactions[] = [
-                'subject_id' => $product->inventory_subject_id,
-                'desc' => $item['description'] ?? $product->name,
+                'subject_id' => $product->inventory_subject_id ?? $service->subject_id,
+                'desc' => $item['description'] ?? $product->name ?? $service->name,
                 'value' => $this->invoiceType->isSell() ? $itemAmount : -$itemAmount,
             ];
         }

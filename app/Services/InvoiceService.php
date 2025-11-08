@@ -8,6 +8,7 @@ use App\Models\AncillaryCost;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
+use App\Models\Service;
 use App\Models\User;
 use Exception;
 use Illuminate\Database\Eloquent\Collection;
@@ -215,10 +216,15 @@ class InvoiceService
     private static function syncInvoiceItems(Invoice $invoice, array $items): void
     {
         $itemId = [];
+        $product = null;
+        $service = null;
 
         foreach ($items as $item) {
-            $product = Product::findOrFail($item['product_id']);
-
+            if ($item['product_id']) {
+                $product = Product::findOrFail($item['product_id']);
+            } else {
+                $service = Service::findOrFail($item['service_id']);
+            }
             $quantity = $item['quantity'] ?? 1;
             $unitPrice = $item['unit'];
             $unitDiscount = $item['unit_discount'] ?? 0;
@@ -235,10 +241,11 @@ class InvoiceService
                 'id' => $item['id'] ?? null,
             ], [
                 'invoice_id' => $invoice->id,
-                'product_id' => $product->id,
+                'product_id' => $product->id ?? null,
+                'service_id' => $service->id ?? null,
                 'quantity' => $quantity,
                 'cog_after' => $product->average_cost ?? $unitPrice,                                            // must be updated after creating invoice
-                'quantity_at' => ($product->quantity > $quantity) ? $product->quantity - $quantity : 0,         // quantity before this invoice
+                'quantity_at' => $product ? ($product->quantity > $quantity ? $product->quantity - $quantity : 0) : 0,         // quantity before this invoice
                 'unit_price' => $unitPrice,
                 'unit_discount' => $unitDiscount,
                 'vat' => $itemVat,

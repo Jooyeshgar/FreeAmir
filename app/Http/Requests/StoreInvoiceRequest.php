@@ -48,9 +48,10 @@ class StoreInvoiceRequest extends FormRequest
                 ->map(function ($t) {
                     return [
                         'inventory_subject_id' => isset($t['inventory_subject_id']) ? (int) $t['inventory_subject_id'] : null,
+                        'service_subject_id' => isset($t['service_subject_id']) ? (int) $t['service_subject_id'] : null,
                         'vat' => isset($t['vat']) ? convertToFloat($t['vat']) : null,
                         'desc' => $t['desc'] ?? null,
-                        'quantity' => isset($t['quantity']) ? convertToFloat($t['quantity']) : null,
+                        'quantity' => isset($t['quantity']) ? convertToFloat($t['quantity']) : 1,
                         'unit_discount' => isset($t['off']) ? convertToFloat($t['off']) : 0,
                         'unit' => isset($t['unit']) ? convertToFloat($t['unit']) : null,
                         'total' => isset($t['total']) ? convertToFloat($t['total']) : null,
@@ -130,7 +131,8 @@ class StoreInvoiceRequest extends FormRequest
             'subtractions' => 'nullable|numeric|min:0',
 
             'transactions' => 'required|array|min:1',
-            'transactions.*.inventory_subject_id' => 'required|integer|exists:subjects,id|distinct',
+            'transactions.*.inventory_subject_id' => 'nullable|integer|exists:subjects,id|required_without:transactions.*.service_subject_id|distinct',
+            'transactions.*.service_subject_id' => 'nullable|integer|exists:subjects,id|required_without:transactions.*.inventory_subject_id|distinct',
             'transactions.*.vat' => 'required|numeric|min:0|max:100',
             'transactions.*.desc' => 'nullable|string|max:500',
             'transactions.*.quantity' => 'required|numeric|min:1',

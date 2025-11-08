@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Enums\InvoiceType;
-use App\Models\InvoiceItem;
 use App\Models\Product;
 use Exception;
 use Illuminate\Database\Eloquent\Collection;
@@ -59,18 +58,22 @@ class ProductService
         $product->cogsSubject?->delete();
         $product->inventorySubject?->delete();
     }
+
     public static function syncProductQuantities(Collection $oldInvoiceItems, array $invoiceItems, InvoiceType $invoice_type): void
     {
+        if (empty($invoiceItems)) {
+            return;
+        }
+
         $addInvoiceItems = [];
         $deletedInvoiceItems = [];
         $changedIds = [];
-        
+
         foreach ($invoiceItems as $invoiceItem) {
             $oldInvoiceItem = $oldInvoiceItems->where('product_id', $invoiceItem['product_id'])->first();
-            if(is_null($oldInvoiceItem)) {
+            if (is_null($oldInvoiceItem)) {
                 $addInvoiceItems[] = $invoiceItem;
-            }
-            else{
+            } else {
                 $changedIds[] = $oldInvoiceItem->id;
                 self::updateProductQuantities($oldInvoiceItem->toArray(), $invoiceItem, $invoice_type);
             }
@@ -123,7 +126,7 @@ class ProductService
         $product = Product::find($newItem['product_id']);
 
         if (! $product) {
-            throw new Exception(__("Product not found"), 404);
+            throw new Exception(__('Product not found'), 404);
         }
 
         $diff = $newItem['quantity'] - $oldItem['quantity'];
