@@ -17,6 +17,7 @@ enum ConfigTitle: string
     case SALES_REVENUE = 'SALES_REVENUE';
     case COST_OF_GOODS_SOLD = 'COST_OF_GOODS_SOLD';
     case SALES_RETURNS = 'SALES_RETURNS';
+    case SERVICE_REVENUE = 'SERVICE_REVENUE';
 
     // Get translated label
     public function label(): string
@@ -35,6 +36,7 @@ enum ConfigTitle: string
             self::COST_OF_GOODS_SOLD => __('Cost of Goods Sold'),
             self::SALES_RETURNS => __('Sales Returns'),
             self::SALES_REVENUE => __('Sales Revenue'),
+            self::SERVICE_REVENUE => __('Service Revenue'),
         };
     }
 }

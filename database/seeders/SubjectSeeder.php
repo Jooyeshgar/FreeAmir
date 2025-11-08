@@ -101,6 +101,7 @@ class SubjectSeeder extends Seeder
             ['id' => 89, 'code' => '041001', 'name' => 'قیمت تمام شده کالای فروش رفته', 'parent_id' => 88, 'type' => 'both', 'company_id' => 1],
 
             ['id' => 36, 'code' => '050001', 'name' => 'درآمد متفرقه', 'parent_id' => 23, 'type' => 1, 'company_id' => 1],
+            ['id' => 103, 'code' => '050002', 'name' => 'درآمد خدمات', 'parent_id' => 23, 'type' => 1, 'company_id' => 1],
 
             ['id' => 20, 'code' => '060001', 'name' => 'فروش', 'parent_id' => 18, 'type' => 1, 'company_id' => 1],
 

@@ -28,6 +28,7 @@ class ConfigSeeder extends Seeder
             ['type' => 3, 'category' => 1, 'key' => 'sales_returns', 'value' => '43', 'desc' => 'برگشت از فروش', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'cost_of_goods_sold', 'value' => '102', 'desc' => 'بهای تمام شده کالا فروش رقته', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'sales_revenue', 'value' => '104', 'desc' => 'درآمد فروش', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'service_revenue', 'value' => '106', 'desc' => 'درآمد خدمات', 'company_id' => 1],
         ];
 
         Config::insert($configs);
