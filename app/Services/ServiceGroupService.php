@@ -29,9 +29,9 @@ class ServiceGroupService
 
     public function delete(ServiceGroup $serviceGroup): void
     {
-        $this->deleteSubjects($serviceGroup);
-
         $serviceGroup->delete();
+
+        $this->deleteSubjects($serviceGroup);
     }
 
     public function deleteSubjects(ServiceGroup $serviceGroup): void
@@ -44,10 +44,9 @@ class ServiceGroupService
         $companyId = $serviceGroup->company_id ?? session('active-company-id');
 
         $column = 'subject_id';
-        $relation = 'incomeSubject';
-        $configKey = 'amir.sales_revenue';
+        $relation = 'subject';
 
-        $parentId = config($configKey);
+        $parentId = config('amir.service_revenue');
         $subject = $serviceGroup->$relation;
 
         if (! $subject) {
