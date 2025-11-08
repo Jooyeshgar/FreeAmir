@@ -14,7 +14,7 @@ class ProductWebsiteFactory extends Factory
     {
         return [
             'link' => 'https://'.$this->faker->domainWord.'.'.$this->faker->randomElement(['com', 'org', 'net', 'co.uk']),
-            'product_id' => $this->faker->randomElement(Product::all()->toArray()),
+            'product_id' => Product::inRandomOrder()->first()->id,
         ];
     }
 }

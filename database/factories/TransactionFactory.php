@@ -13,9 +13,9 @@ class TransactionFactory extends Factory
     {
         return [
             'value' => $this->faker->randomFloat(2, 100, 1000),
-            'subject_id' => $this->faker->randomElement(Subject::all()->toArray()),
-            'document_id' => $this->faker->randomElement(Document::all()->toArray()),
-            'user_id' => $this->faker->randomElement(User::all()->toArray()),
+            'subject_id' => Subject::inRandomOrder()->first()->id,
+            'document_id' => Document::inRandomOrder()->first()->id,
+            'user_id' => User::inRandomOrder()->first()->id,
             'desc' => $this->faker->paragraph(2),
         ];
     }

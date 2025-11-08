@@ -7,26 +7,16 @@ use App\Models\Document;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Document>
- */
 class DocumentFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
-        $companies = Company::pluck('id')->toArray();
-
         return [
             'number' => Document::max('number') + 1,
             'date' => $this->faker->date(),
-            'creator_id' => $this->faker->randomElement(User::all()->toArray()),
+            'creator_id' => User::inRandomOrder()->first()->id,
             'title' => $this->faker->persianSentence(),
-            'company_id' => $this->faker->randomElement($companies),
+            'company_id' => Company::inRandomOrder()->first()->id,
         ];
     }
 }
