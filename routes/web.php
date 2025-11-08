@@ -17,6 +17,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::resource('transactions', Controllers\TransactionController::class)->only(['index', 'show']);
     Route::resource('products', Controllers\ProductController::class);
     Route::resource('product-groups', Controllers\ProductGroupController::class);
+    Route::resource('services', Controllers\ServiceController::class);
     Route::resource('service-groups', Controllers\ServiceGroupController::class);
     Route::resource('customers', Controllers\CustomerController::class);
     Route::resource('customer-groups', Controllers\CustomerGroupController::class);
