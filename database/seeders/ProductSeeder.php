@@ -14,6 +14,7 @@ class ProductSeeder extends Seeder
         $productCount = 50;
 
         $faker = Faker::create();
+        session(['active-company-id' => 1]);
 
         for ($i = 0; $i < $productCount; $i++) {
             $productService->create(
@@ -23,14 +24,13 @@ class ProductSeeder extends Seeder
                     'name' => $faker->name,
                     'group' => 1,
                     'location' => $faker->streetAddress,
-                    'quantity' => $faker->numberBetween(10, 1000),
+                    'quantity' => $faker->numberBetween(50, 1000),
                     'quantity_warning' => $faker->randomDigitNotNull,
                     'oversell' => $faker->boolean,
                     'purchace_price' => $faker->randomFloat(2, 0, 1000),
                     'selling_price' => $faker->randomFloat(2, 0, 1000),
-                    'description' => $faker->paragraph(2),
+                    'description' => $faker->sentence,
                 ]);
-            // Relation setup can be done here if needed
         }
     }
 }

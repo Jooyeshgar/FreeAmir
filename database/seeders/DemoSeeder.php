@@ -16,7 +16,6 @@ class DemoSeeder extends Seeder
             CustomerSeeder::class,
             ProductSeeder::class,
             InvoiceSeeder::class,
-            HomeSeeder::class,
         ]);
     }
 }

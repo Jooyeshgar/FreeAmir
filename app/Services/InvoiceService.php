@@ -27,8 +27,6 @@ class InvoiceService
      */
     public static function createInvoice(User $user, array $invoiceData, array $items = [])
     {
-        $invoiceData = self::normalizeInvoiceData($invoiceData);
-
         $date = $invoiceData['date'] ?? now()->toDateString();
 
         // Build transactions using the transaction builder
