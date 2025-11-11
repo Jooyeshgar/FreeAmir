@@ -6,6 +6,7 @@ use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Product extends Model
 {
@@ -63,9 +64,9 @@ class Product extends Model
         return $this->belongsTo(Subject::class, 'income_subject_id');
     }
 
-    public function invoiceItems(): HasMany
+    public function invoiceItems(): MorphMany
     {
-        return $this->hasMany(InvoiceItem::class, 'product_id');
+        return $this->morphMany(InvoiceItem::class, 'itemable');
     }
 
     public function salesReturnsSubject(): BelongsTo

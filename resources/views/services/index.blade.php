@@ -25,7 +25,7 @@
 
                     @foreach ($services as $service)
                         <tr>
-                            <td class="px-4 py-2">{{ $service->code }}</td>
+                            <td class="px-4 py-2">{{ formatNumber($service->code) }}</td>
                             <td class="px-4 py-2">
                                 <a href="{{ route('services.show', $service) }}" class="text-primary">
                                     {{ $service->name }}</a>

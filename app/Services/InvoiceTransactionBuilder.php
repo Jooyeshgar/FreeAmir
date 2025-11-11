@@ -73,8 +73,8 @@ class InvoiceTransactionBuilder
     private function buildItemTransactions(): void
     {
         foreach ($this->items as $item) {
-            $product = Product::find($item['product_id']);
-            $service = Service::find($item['service_id']);
+            $product = Product::find($item['itemable_id']);
+            $service = Service::find($item['itemable_id']);
             if (! $product && ! $service) {
                 continue;
             }

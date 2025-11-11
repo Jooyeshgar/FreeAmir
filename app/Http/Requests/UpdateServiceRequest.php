@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Service;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateServiceRequest extends FormRequest
@@ -22,7 +23,7 @@ class UpdateServiceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code' => 'required|exists:services,code',
+            'code' => 'nullable|exists:services,code',
             'name' => 'required|max:20|string|regex:/^[\w\d\s\-\:\.]*$/u',
             'group' => 'required|exists:service_groups,id|integer',
             'selling_price' => [
@@ -43,6 +44,7 @@ class UpdateServiceRequest extends FormRequest
     {
         $validatedData = $this->validated();
 
+        $validatedData['code'] = empty($validatedData['code']) ? Service::max('code') ?? 1 : $validatedData['code'];
         $validatedData['selling_price'] = convertToFloat(empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price']);
         $validatedData['vat'] = convertToFloat(empty($validatedData['vat']) ? 0 : $validatedData['vat']);
         $validatedData['sstid'] = empty($validatedData['sstid']) ? null : $validatedData['sstid'];

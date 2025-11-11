@@ -150,7 +150,7 @@
                     $invoiceTotalPriceAfterDiscount += $totalPriceAfterDiscount;
                     $vatPrice = $invoiceItem->vat ?? 0;
                     $total = $totalPriceAfterDiscount + $vatPrice ?? 0;
-                    $code = $invoiceItem->product->code ?? $invoiceItem->service->code ?? '';
+                    $code = $invoiceItem->itemable->code ?? '';
                 @endphp
                 <tr valign="top">
                     <td class="border center mainlineheight" style="border-right: none;">

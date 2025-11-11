@@ -6,7 +6,7 @@ use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Service extends Model
 {
@@ -43,8 +43,8 @@ class Service extends Model
         return $this->belongsTo(Subject::class, 'subject_id');
     }
 
-    public function invoiceItems(): HasMany
+    public function invoiceItems(): MorphMany
     {
-        return $this->hasMany(InvoiceItem::class, 'service_id');
+        return $this->morphMany(InvoiceItem::class, 'itemable');
     }
 }

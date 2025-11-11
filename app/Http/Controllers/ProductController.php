@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
-use App\Models;
-use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Services\ProductService;
@@ -58,16 +56,6 @@ class ProductController extends Controller
     public function show(Product $product)
     {
         $product->load('productgroup');
-
-        $invoices = [];
-        $invoice_items = InvoiceItem::where('product_id', $product->id)->orderBy('updated_at')->get();
-
-        if ($invoice_items->count() > 0) {
-            foreach ($invoice_items as $invoice_item) {
-                $invoice_item->load('invoice');
-                $invoice_item->invoice_type = $invoice_item->invoice->invoice_type;
-            }
-        }
 
         return view('products.show', compact('product'));
     }

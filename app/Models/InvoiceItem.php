@@ -12,9 +12,9 @@ class InvoiceItem extends Model
     public $timestamps = true;
 
     protected $fillable = [
+        'itemable_id',
+        'itemable_type',
         'invoice_id',
-        'product_id',
-        'service_id',
         'quantity',
         'unit_price',
         'unit_discount',
@@ -30,13 +30,8 @@ class InvoiceItem extends Model
         return $this->belongsTo(Invoice::class, 'invoice_id');
     }
 
-    public function product()
+    public function itemable()
     {
-        return $this->belongsTo(Product::class, 'product_id');
-    }
-
-    public function service()
-    {
-        return $this->belongsTo(Service::class, 'service_id');
+        return $this->morphTo();
     }
 }

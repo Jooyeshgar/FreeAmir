@@ -158,17 +158,14 @@
                                     $vat = $item->vat ?? 0;
                                     $lineBase = $quantity * $unitPrice - $discount;
                                     $lineTotal = $lineBase + $vat;
+                                    $type = $item->itemable_type === 'App\Models\Product' ? 'product' : ($item->itemable_type == 'App\Models\Service' ? 'service' : 'unknown');
                                 @endphp
                                 <tr class="hover">
                                     <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
                                     <td class="px-4 py-3">
-                                        @if ($item->product)
-                                            <a href="{{ route('products.show', $item->product) }}" class="link link-hover link-primary">
-                                                {{ $item->product->name }}
-                                            </a>
-                                        @elseif($item->service)
-                                            <a href="{{ route('services.show', $item->service) }}" class="link link-hover link-primary">
-                                                {{ $item->service->name }}
+                                        @if ($item->itemable)
+                                            <a href="{{ route($type == 'product' ? 'products.show' : 'services.show', $item->itemable) }}" class="link link-hover link-primary">
+                                                {{ $item->itemable->name }}
                                             </a>
                                         @else
                                             <span class="text-gray-500">{{ __('Removed product/service') }}</span>

@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Enums\InvoiceType;
 use App\Models\Product;
+use App\Models\Service;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -47,8 +48,8 @@ class StoreInvoiceRequest extends FormRequest
             $transactions = collect($this->input('transactions'))
                 ->map(function ($t) {
                     return [
-                        'inventory_subject_id' => isset($t['inventory_subject_id']) ? (int) $t['inventory_subject_id'] : null,
-                        'service_subject_id' => isset($t['service_subject_id']) ? (int) $t['service_subject_id'] : null,
+                        'item_id' => explode('-', $t['item_id'])[1] ?? null,
+                        'item_type' => explode('-', $t['item_id'])[0] ?? null,
                         'vat' => isset($t['vat']) ? convertToFloat($t['vat']) : null,
                         'desc' => $t['desc'] ?? null,
                         'quantity' => isset($t['quantity']) ? convertToFloat($t['quantity']) : 1,
@@ -72,11 +73,11 @@ class StoreInvoiceRequest extends FormRequest
                 $transactions = $this->input('transactions', []);
 
                 foreach ($transactions as $index => $transaction) {
-                    if (! isset($transaction['inventory_subject_id']) || ! isset($transaction['quantity'])) {
+                    if (! isset($transaction['item_id']) || ! isset($transaction['quantity']) || $transaction['item_type'] !== 'product') {
                         continue;
                     }
 
-                    $product = Product::where('inventory_subject_id', $transaction['inventory_subject_id'])->first();
+                    $product = Product::where('id', $transaction['item_id'])->first();
 
                     if ($product && $product->quantity < $transaction['quantity']) {
                         $validator->errors()->add(
@@ -131,8 +132,27 @@ class StoreInvoiceRequest extends FormRequest
             'subtractions' => 'nullable|numeric|min:0',
 
             'transactions' => 'required|array|min:1',
-            'transactions.*.inventory_subject_id' => 'nullable|integer|exists:subjects,id|required_without:transactions.*.service_subject_id|distinct',
-            'transactions.*.service_subject_id' => 'nullable|integer|exists:subjects,id|required_without:transactions.*.inventory_subject_id|distinct',
+
+            'transactions.*.item_id' => [
+                'required',
+                'integer',
+                'distinct',
+                function ($attribute, $value, $fail) {
+                    preg_match('/transactions\.(\d+)\.item_id/', $attribute, $matches);
+                    $index = $matches[1] ?? null;
+                    $type = $this->input("transactions.$index.item_type");
+
+                    if ($type === 'product' && ! Product::where('id', $value)->exists()) {
+                        $fail(__('The selected product (item_id) is invalid.'));
+                    }
+
+                    if ($type === 'service' && ! Service::where('id', $value)->exists()) {
+                        $fail(__('The selected service (item_id) is invalid.'));
+                    }
+                },
+            ],
+
+            'transactions.*.item_type' => 'required|string|in:product,service',
             'transactions.*.vat' => 'required|numeric|min:0|max:100',
             'transactions.*.desc' => 'nullable|string|max:500',
             'transactions.*.quantity' => 'required|numeric|min:1',
@@ -183,10 +203,10 @@ class StoreInvoiceRequest extends FormRequest
             'transactions.array' => __('The transaction field must be a valid array.'),
             'transactions.min' => __('At least one transaction row must be provided.'),
 
-            'transactions.*.inventory_subject_id.required' => __('The product is required for each row.'),
-            'transactions.*.inventory_subject_id.integer' => __('The product must be an integer.'),
-            'transactions.*.inventory_subject_id.exists' => __('The selected product does not exist.'),
-            'transactions.*.inventory_subject_id.distinct' => __('The product must be unique for each row.'),
+            'transactions.*.item_id.required' => __('The item id is required for each row.'),
+            'transactions.*.item_id.integer' => __('The item id must be an integer.'),
+            'transactions.*.item_id.exists' => __('The selected item id does not exist.'),
+            'transactions.*.item_id.distinct' => __('The item id must be unique for each row.'),
 
             'transactions.*.desc.string' => __('The Row description must be a valid string.'),
             'transactions.*.desc.max' => __('The Row description may not be greater than :max characters.'),

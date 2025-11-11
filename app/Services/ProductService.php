@@ -61,16 +61,16 @@ class ProductService
 
     public static function syncProductQuantities(Collection $oldInvoiceItems, array $invoiceItems, InvoiceType $invoice_type): void
     {
-        if (empty($invoiceItems)) {
-            return;
-        }
-
         $addInvoiceItems = [];
         $deletedInvoiceItems = [];
         $changedIds = [];
 
         foreach ($invoiceItems as $invoiceItem) {
-            $oldInvoiceItem = $oldInvoiceItems->where('product_id', $invoiceItem['product_id'])->first();
+            if ($invoiceItem['itemable_type'] !== Product::class) {
+                continue;
+            }
+
+            $oldInvoiceItem = $oldInvoiceItems->where('itemable_id', $invoiceItem['itemable_id'])->first();
             if (is_null($oldInvoiceItem)) {
                 $addInvoiceItems[] = $invoiceItem;
             } else {
@@ -88,7 +88,7 @@ class ProductService
     public static function addProductsQuantities(array $invoiceItems, InvoiceType $invoice_type): void
     {
         foreach ($invoiceItems as $invoiceItem) {
-            $product = Product::find($invoiceItem['product_id']);
+            $product = Product::find($invoiceItem['itemable_id']);
             if (! $product) {
                 continue;
             }
@@ -106,7 +106,12 @@ class ProductService
     public static function subProductsQuantities(array $invoiceItems, InvoiceType $invoice_type): void
     {
         foreach ($invoiceItems as $invoiceItem) {
-            $product = Product::find($invoiceItem['product_id']);
+            if ($invoiceItem['itemable_type'] !== Product::class || $invoiceItem['itemable_type'] == 'product') {
+                continue;
+            }
+
+            $product = Product::find($invoiceItem['itemable_id']);
+
             if (! $product) {
                 continue;
             }
@@ -123,7 +128,7 @@ class ProductService
 
     public static function updateProductQuantities(array $oldItem, array $newItem, InvoiceType $invoice_type): void
     {
-        $product = Product::find($newItem['product_id']);
+        $product = Product::find($newItem['itemable_id']);
 
         if (! $product) {
             throw new Exception(__('Product not found'), 404);

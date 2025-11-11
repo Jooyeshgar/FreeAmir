@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('services', function (Blueprint $table) {
             $table->id();
-            $table->string('code', 20);
+            $table->integer('code');
             $table->string('name', 60);
             $table->string('sstid')->nullable();
             $table->unsignedBigInteger('group')->nullable();
@@ -29,6 +29,10 @@ return new class extends Migration
             $table->unique(['company_id', 'code']);
             $table->timestamps();
         });
+
+        Schema::table('products', function (Blueprint $table) {
+            $table->integer('code')->change();
+        });
     }
 
     /**
@@ -37,5 +41,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('services');
+
+        Schema::table('products', function (Blueprint $table) {
+            $table->string('code', 20)->change();
+        });
     }
 };
