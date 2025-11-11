@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class DocumentService
 {
@@ -84,7 +85,7 @@ class DocumentService
 
         if ($sum !== 0) {
             throw ValidationException::withMessages([
-                'transactions' => ['The sum of transactions must be zero']
+                'transactions' => ['The sum of transactions must be zero'],
             ]);
         }
 

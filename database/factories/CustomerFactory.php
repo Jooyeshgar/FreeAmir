@@ -14,10 +14,8 @@ class CustomerFactory extends Factory
     {
         session(['active-company-id' => 1]);
         $bankIds = Bank::pluck('id')->toArray();
-        // $name = $this->faker->name;
 
         return [
-            // 'code' => $this->faker->unique()->numerify('#####'),
             'company_id' => session('active-company-id'),
             'name' => $this->faker->name,
             'phone' => substr($this->faker->phoneNumber, 0, 15),

@@ -17,14 +17,14 @@ class BankAccountFactory extends Factory
             'name' => $this->faker->name,
             'number' => uniqid('BA-'),
             'type' => $this->faker->randomDigit(),
-            'owner' => $this->faker->name(),
+            'owner' => $this->faker->name,
             'bank_id' => $this->faker->randomElement($bankIds),
             'company_id' => $this->faker->randomElement($companyIds),
             'bank_branch' => $this->faker->address,
-            'bank_address' => $this->faker->address,
+            'bank_address' => $this->faker->streetAddress,
             'bank_phone' => substr($this->faker->phoneNumber, 0, 15),
             'bank_web_page' => $this->faker->url,
-            'desc' => $this->faker->persianSentence(),
+            'desc' => $this->faker->paragraph(2),
         ];
     }
 }
