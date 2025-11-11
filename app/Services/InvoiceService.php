@@ -14,6 +14,12 @@ use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
+// InvoiceTransactionBuilder must be reviewed and edited together with this service for selling invoices.
+// update invoice has some bug
+// some bugs in showing invoice items (product/service name) and calculating COGS after invoice item
+// Remove or edit must be checked and edited
+// error in submitting new customer (code)
+
 class InvoiceService
 {
     /**
