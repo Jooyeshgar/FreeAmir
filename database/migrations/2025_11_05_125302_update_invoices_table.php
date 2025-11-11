@@ -19,7 +19,7 @@ return new class extends Migration
             $table->decimal('number', 16, 2)->change();
 
             // Add composite unique constraint on number and company_id
-            $table->unique(['number', 'invoice_type', 'company_id'], 'invoices_number_invoice_type_company_id_unique');
+            $table->unique(['number', 'company_id'], 'invoices_number_company_id_unique');
         });
     }
 
