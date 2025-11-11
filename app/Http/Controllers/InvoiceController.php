@@ -70,14 +70,14 @@ class InvoiceController extends Controller
         $serviceGroups = ServiceGroup::all();
         $productGroups = ProductGroup::all();
         $customers = Customer::all('name', 'id');
-        $previousDocumentNumber = Document::max('number') ?? 0;
+        $previousDocumentNumber = floor(Document::max('number') ?? 0);
         $transactions = old('transactions') ?? $this->preparedTransactions(collect([new Transaction]));
 
         $total = count($transactions);
 
         // Validate and convert invoice_type to enum value
         $invoice_type = in_array($invoice_type, ['buy', 'sell', 'return_buy', 'return_sell']) ? $invoice_type : 'sell';
-        $previousInvoiceNumber = Invoice::where('invoice_type', $invoice_type)->max('number') ?? 0;
+        $previousInvoiceNumber = floor(Invoice::where('invoice_type', $invoice_type)->max('number') ?? 0);
 
         return view('invoices.create', compact('products', 'services', 'productGroups', 'serviceGroups', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type'));
     }
