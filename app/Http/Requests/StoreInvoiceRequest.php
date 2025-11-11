@@ -122,7 +122,7 @@ class StoreInvoiceRequest extends FormRequest
                 'integer',
                 Rule::unique('invoices', 'number')
                     ->where(function ($query) {
-                        return $query->where('company_id', session('active-company-id'));
+                        return $query->where('company_id', session('active-company-id'))->where('invoice_type', $this->input('invoice_type'));
                     })
                     ->ignore($isEditing ? $invoice->id : null),
             ],

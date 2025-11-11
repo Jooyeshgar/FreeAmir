@@ -51,7 +51,6 @@ class InvoiceService
             $invoiceData['amount'] = $buildResult['totalAmount'];
             $invoiceData['creator_id'] = $user->id;
             $invoiceData['active'] = 1;
-            $invoiceData['number'] = $createdDocument->number;
             $invoiceData['date'] = $date;
 
             $createdInvoice = Invoice::create($invoiceData);
@@ -200,6 +199,7 @@ class InvoiceService
             'title' => $invoiceData['title'],
             'date' => $invoiceData['date'],
             'invoice_type' => $invoiceData['invoice_type'],
+            'number' => isset($invoiceData['number']) ? (int) $invoiceData['number'] : null,
             'customer_id' => $invoiceData['customer_id'],
             'document_number' => $invoiceData['document_number'],
             'description' => $invoiceData['description'] ?? null,
