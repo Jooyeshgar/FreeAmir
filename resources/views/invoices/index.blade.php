@@ -61,7 +61,7 @@
                         <tr>
                             <td class="px-4 py-2">
                                 <a href="{{ route('invoices.show', $invoice) }}" class="link link-hover">
-                                    {{ convertToFarsi($invoice->number) }}
+                                    {{ formatDocumentNumber($invoice->number) }}
                                 </a>
                             </td>
                             <td class="px-4 py-2">{{ $invoice->customer->name ?? '' }}</td>

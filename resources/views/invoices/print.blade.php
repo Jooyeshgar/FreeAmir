@@ -10,7 +10,7 @@
     <table width="100%" cellspacing="2" cellpadding="4" style="table-layout:fixed;">
         <tbody>
             <tr>
-                <td class="border right pink">شماره: <span style="color:#BB0000;">{{ convertToFarsi($invoice->number) }}</span></td>
+                <td class="border right pink">شماره: <span style="color:#BB0000;">{{ formatDocumentNumber($invoice->number) }}</span></td>
                 <td rowspan="2" class="none" style="text-align:center;font-weight:bold;font-size:20px; width:80%;">
                     @if ($invoice->invoice_type->value == 'buy')
                         صورتحساب خرید کالا و خدمات
@@ -150,7 +150,7 @@
                     $invoiceTotalPriceAfterDiscount += $totalPriceAfterDiscount;
                     $vatPrice = $invoiceItem->vat ?? 0;
                     $total = $totalPriceAfterDiscount + $vatPrice ?? 0;
-
+                    $code = $invoiceItem->product->code ?? $invoiceItem->service->code ?? '';
                 @endphp
                 <tr valign="top">
                     <td class="border center mainlineheight" style="border-right: none;">
@@ -181,10 +181,7 @@
                         <p align="center">{{ $invoiceItem->description }}</p>
                     </td>
                     <td class="border center mainlineheight" style="border border-right: none;">
-                        @php
-                            $code = substr(strrchr(formatCode($invoiceItem->product->code ?? ''), '/'), 1);
-                        @endphp
-                        <p align="center">{{ $code ?? '' }}</p>
+                        <p align="center">{{ formatCode($code) }}</p>
                     </td>
                     <td class="border center mainlineheight">
                         <p align="center" class="bold">{{ convertToFarsi($index + 1) }}</p>
