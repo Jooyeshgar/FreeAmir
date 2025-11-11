@@ -58,6 +58,10 @@ class InvoiceTransactionBuilder
 
         $this->buildCustomerTransaction();
 
+        $this->buildIncomeRevenueTransaction();
+
+        $this->buildCogsTransaction();
+
         return [
             'transactions' => $this->transactions,
             'totalVat' => $this->totalVat,
@@ -65,6 +69,56 @@ class InvoiceTransactionBuilder
             'totalAmount' => $this->totalAmount,
             'subtractions' => $this->subtractions,
         ];
+    }
+
+    private function buildCogsTransaction(): void
+    {
+        if ($this->invoiceType === InvoiceType::SELL) {
+            foreach ($this->items as $item) {
+                $product = Product::find($item['itemable_id']) ?? null;
+                $averageCost = $product->average_cost ?? 0;
+                $quantity = $item['quantity'] ?? 1;
+                $customerId = $this->invoiceData['customer_id'];
+
+                $subject_id = Customer::find($customerId)->subject->id;
+
+                $this->transactions[] = [
+                    'subject_id' => $subject_id,
+                    'desc' => __('Inventory').' - '.($product->name ?? ''),
+                    'value' => -$averageCost * $quantity,
+                ];
+
+                $this->transactions[] = [
+                    'subject_id' => config('amir.cost_of_goods_sold'),
+                    'desc' => __('Cost of Goods Sold').' - '.($product->name ?? ''),
+                    'value' => $averageCost * $quantity,
+                ];
+            }
+        }
+    }
+
+    private function buildIncomeRevenueTransaction(): void
+    {
+        if ($this->invoiceType === InvoiceType::SELL) {
+            $customerId = $this->invoiceData['customer_id'];
+
+            $salesRevenueId = Customer::find($customerId)->subject->id;
+
+            $cashPayment = floatval($this->invoiceData['cash_payment'] ?? 0);
+            $customerTotal = $this->totalAmount - $this->subtractions - $cashPayment;
+
+            $this->transactions[] = [
+                'subject_id' => $salesRevenueId,
+                'desc' => __('Sales Revenue'),
+                'value' => $customerTotal,
+            ];
+
+            $this->transactions[] = [
+                'subject_id' => config('amir.sales_revenue'),
+                'desc' => __('Sales Revenue'),
+                'value' => -$customerTotal,
+            ];
+        }
     }
 
     /**

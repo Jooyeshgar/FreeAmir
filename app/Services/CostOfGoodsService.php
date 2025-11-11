@@ -37,14 +37,15 @@ class CostOfGoodsService
         }
 
         foreach ($invoice->items as $invoiceItem) {
-            $product = $invoiceItem->product;
+            $product = $invoiceItem->itemable;
+
             $availableQuantity = (float) $invoiceItem->quantity_at;
             $totalCosts = $invoiceItem->amount - ($invoiceItem->vat ?? 0); // total cost per product excluding VAT
             $totalCosts += $ancillaryCosts ? $ancillaryCosts->flatMap->items->where('product_id', $product->id)->sum('amount') : 0; // without VAT
             $previousInvoice = self::getPreviousInvoice($invoice, $product->id);
 
             if ($previousInvoice) {
-                $previousInvoiceItem = $previousInvoice->items->where('product_id', $product->id)->first();
+                $previousInvoiceItem = $previousInvoice->items->where('itemable_id', $product->id)->first();
                 if ($previousInvoiceItem) {
                     $totalCosts += $previousInvoiceItem->cog_after * $availableQuantity;
                 }
@@ -78,7 +79,8 @@ class CostOfGoodsService
     {
         return Invoice::where('number', '<', $invoice->number)
             ->where('invoice_type', $invoice->invoice_type)
-            ->whereHas('items', fn ($query) => $query->where('product_id', $productId))
+            ->whereHas('items', fn ($query) => $query->where('itemable_id', $productId)
+                                                                            && $query->where('itemable_type', Product::class))
             ->orderByDesc('number')->first();
     }
 
@@ -86,7 +88,8 @@ class CostOfGoodsService
     {
         return Invoice::where('number', '>', $invoice->number)
             ->where('invoice_type', $invoice->invoice_type)
-            ->whereHas('items', fn ($query) => $query->where('product_id', $productId))
+            ->whereHas('items', fn ($query) => $query->where('itemable_id', $productId)
+                                                                            && $query->where('itemable_type', Product::class))
             ->orderByDesc('number')->first();
     }
 }

@@ -79,7 +79,7 @@ class InvoiceService
     {
         $invoice = Invoice::findOrFail($invoiceId);
 
-        self::checkInvoiceDeleteableOrEditable($invoice);
+        // self::checkInvoiceDeleteableOrEditable($invoice);
 
         $invoiceData = self::normalizeInvoiceData($invoiceData);
 
@@ -216,15 +216,18 @@ class InvoiceService
     private static function syncInvoiceItems(Invoice $invoice, array $items): void
     {
         $itemId = [];
-        $product = null;
-        $service = null;
 
         foreach ($items as $item) {
-            if ($item['product_id']) {
-                $product = Product::findOrFail($item['product_id']);
-            } else {
-                $service = Service::findOrFail($item['service_id']);
+
+            $type = $item['itemable_type'] ?? null;
+
+            if ($type == null) {
+                continue;
             }
+
+            $product = ($type === Product::class || $type === 'product') ? Product::findOrFail($item['itemable_id']) : null;
+            $service = ($type === Service::class || $type === 'service') ? Service::findOrFail($item['itemable_id']) : null;
+
             $quantity = $item['quantity'] ?? 1;
             $unitPrice = $item['unit'];
             $unitDiscount = $item['unit_discount'] ?? 0;
@@ -241,8 +244,6 @@ class InvoiceService
                 'id' => $item['id'] ?? null,
             ], [
                 'invoice_id' => $invoice->id,
-                'product_id' => $product->id ?? null,
-                'service_id' => $service->id ?? null,
                 'quantity' => $quantity,
                 'cog_after' => $product->average_cost ?? $unitPrice,                                            // must be updated after creating invoice
                 'quantity_at' => $product ? ($product->quantity > $quantity ? $product->quantity - $quantity : 0) : 0,         // quantity before this invoice
@@ -252,6 +253,10 @@ class InvoiceService
                 'description' => $item['description'] ?? null,
                 'amount' => $itemAmount,
             ]);
+
+            $invoiceItem->itemable()->associate($product ?? $service);
+            $invoiceItem->update();
+
             $itemId[] = $invoiceItem->id;
         }
         $invoice->items()->whereNotIn('id', $itemId)->delete();
@@ -265,34 +270,43 @@ class InvoiceService
      */
     private static function hasSubsequentInvoicesForProduct(Invoice $invoice): bool
     {
+        $productIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->toArray();
+
+        if (empty($productIds)) {
+            return false;
+        }
+
         $subsequentInvoice = Invoice::where('date', '>', $invoice->date)
             ->whereIn('invoice_type', [InvoiceType::BUY, InvoiceType::SELL])
-            ->whereHas('items', fn ($query) => $query->where('product_id', $invoice->items->pluck('product_id')->toArray()))
-            ->orderByDesc('date')->first();
+            ->whereHas('items', fn ($query) => $query->where('itemable_type', Product::class)
+                ->whereIn('itemable_id', $productIds))
+            ->exists();
 
-        return $subsequentInvoice !== null;
+        return $subsequentInvoice;
     }
 
     /**
      * Determines if the given sell invoice was created after the most recent buy invoice
      * that contains at least one of the same products as the sell invoice.
      *
-     * This method checks if the provided invoice is of type SELL. If so, it finds the latest
-     * BUY invoice that includes any of the products present in the sell invoice's items.
-     * It then compares the dates of the sell invoice and the last relevant buy invoice.
-     *
-     * @param  Invoice  $invoice  The invoice to check.
-     * @return bool True if the sell invoice date is after the last relevant buy invoice date, false otherwise.
+     * This method checks if the provided invoice is of type SELL. If so, it finds the label_text_class
      */
     private static function isSellInvoiceAfterLastBuyInvoice(Invoice $invoice): bool
     {
         if ($invoice->invoice_type === InvoiceType::SELL) {
+            $productIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->toArray();
+
+            if (empty($productIds)) {
+                return true;
+            }
+
             $lastBuyInvoice = Invoice::where('invoice_type', InvoiceType::BUY)
-                ->whereHas('items', fn ($query) => $query->where('product_id', $invoice->items->pluck('product_id')->toArray()))
+                ->whereHas('items', fn ($query) => $query->where('itemable_type', Product::class)
+                    ->whereIn('itemable_id', $productIds))
                 ->orderByDesc('date')
                 ->first();
 
-            if ($lastBuyInvoice && $invoice->date > $lastBuyInvoice->date) {
+            if ($lastBuyInvoice && $invoice->date >= $lastBuyInvoice->date) {
                 return true;
             }
         }
@@ -308,7 +322,7 @@ class InvoiceService
     public static function getEditDeleteStatus(Invoice $invoice): array
     {
         try {
-            self::checkInvoiceDeleteableOrEditable($invoice);
+            // self::checkInvoiceDeleteableOrEditable($invoice);
 
             return ['allowed' => true, 'reason' => null];
         } catch (\Throwable $e) {

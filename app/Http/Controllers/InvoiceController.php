@@ -103,22 +103,12 @@ class InvoiceController extends Controller
             'description' => $validated['description'] ?? null,
         ];
 
-        // Fetch all products by inventory_subject_id in one query
-        $inventory_subject_ids = collect($validated['transactions'])->pluck('inventory_subject_id')->filter()->unique();
-        $service_subject_ids = collect($validated['transactions'])->pluck('service_subject_id')->filter()->unique();
-
-        $productsBySubjectId = Product::whereIn('inventory_subject_id', $inventory_subject_ids)->get()->keyBy('inventory_subject_id');
-        $servicesBySubjectId = Service::whereIn('subject_id', $service_subject_ids)->get()->keyBy('subject_id');
-
         // Map transactions to invoice items
-        $items = collect($validated['transactions'])->map(function ($transaction, $index) use ($productsBySubjectId, $servicesBySubjectId) {
-            $product = isset($transaction['inventory_subject_id']) ? $productsBySubjectId->get($transaction['inventory_subject_id']) : null;
-            $service = isset($transaction['service_subject_id']) ? $servicesBySubjectId->get($transaction['service_subject_id']) : null;
-
+        $items = collect($validated['transactions'])->map(function ($transaction, $index) {
             return [
                 'transaction_index' => $index,
-                'product_id' => $product?->id,
-                'service_id' => $service?->id,
+                'itemable_id' => $transaction['item_id'],
+                'itemable_type' => $transaction['item_type'],
                 'quantity' => $transaction['quantity'] ?? 1,
                 'description' => $transaction['desc'] ?? null,
                 'unit_discount' => $transaction['unit_discount'] ?? 0,
@@ -141,7 +131,7 @@ class InvoiceController extends Controller
             'customer',
             'document',
             'document.transactions',
-            'items.product',
+            'items',
         ]);
 
         return view('invoices.show', compact('invoice'));
@@ -149,7 +139,7 @@ class InvoiceController extends Controller
 
     public function print(Invoice $invoice)
     {
-        $invoice->load('customer', 'items.product');
+        $invoice->load('customer', 'items');
 
         $pdf = PDF::loadView('invoices.print', compact('invoice'));
 
@@ -163,7 +153,7 @@ class InvoiceController extends Controller
      */
     public function edit(Invoice $invoice)
     {
-        $invoice->load('customer', 'document.transactions', 'items.product', 'items.service'); // Eager load relationships
+        $invoice->load('customer', 'document.transactions', 'items'); // Eager load relationships
 
         $customers = Customer::all();
         $products = Product::with('inventorySubject')->orderBy('name', 'asc')->get();
@@ -181,8 +171,6 @@ class InvoiceController extends Controller
             $transaction = [
                 'id' => $index + 1,
                 'transaction_id' => $item->transaction_id,
-                'product_id' => $item->product_id,
-                'service_id' => $item->service_id,
                 'desc' => $item->description,
                 'quantity' => $item->quantity,
                 'unit' => $item->unit_price,
@@ -191,12 +179,8 @@ class InvoiceController extends Controller
                 'total' => $item->amount,
             ];
 
-            if ($item->product_id) {
-                $transaction['inventory_subject_id'] = $item->product->inventory_subject_id;
-                $transaction['subject'] = $item->product->name;
-            } elseif ($item->service_id) {
-                $transaction['subject'] = $item->service->name;
-            }
+            $transaction['inventory_subject_id'] = $item->itemable->inventory_subject_id ?? $item->itemable->subject_id ?? null;
+            $transaction['subject'] = $item->itemable->name ?? null;
 
             return $transaction;
         });
@@ -237,22 +221,12 @@ class InvoiceController extends Controller
             'description' => $validated['description'] ?? null,
         ];
 
-        // Fetch all products by inventory_subject_id in one query
-        $inventory_subject_ids = collect($validated['transactions'])->pluck('inventory_subject_id')->filter()->unique();
-        $service_subject_ids = collect($validated['transactions'])->pluck('service_subject_id')->filter()->unique();
-
-        $productsBySubjectId = Product::whereIn('inventory_subject_id', $inventory_subject_ids)->get()->keyBy('inventory_subject_id');
-        $servicesBySubjectId = Service::whereIn('subject_id', $service_subject_ids)->get()->keyBy('subject_id');
-
         // Map transactions to invoice items
-        $items = collect($validated['transactions'])->map(function ($transaction, $index) use ($productsBySubjectId, $servicesBySubjectId) {
-            $product = isset($transaction['inventory_subject_id']) ? $productsBySubjectId->get($transaction['inventory_subject_id']) : null;
-            $service = isset($transaction['service_subject_id']) ? $servicesBySubjectId->get($transaction['service_subject_id']) : null;
-
+        $items = collect($validated['transactions'])->map(function ($transaction, $index) {
             return [
                 'transaction_index' => $index,
-                'product_id' => $product?->id,
-                'service_id' => $service?->id,
+                'itemable_id' => $transaction['item_id'],
+                'itemable_type' => $transaction['item_type'],
                 'quantity' => $transaction['quantity'] ?? 1,
                 'description' => $transaction['desc'] ?? null,
                 'unit_discount' => $transaction['unit_discount'] ?? 0,
