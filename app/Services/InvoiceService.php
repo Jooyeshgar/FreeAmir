@@ -14,10 +14,17 @@ use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
-// InvoiceTransactionBuilder must be reviewed and edited together with this service for selling invoices.
-// update invoice has some bug
-// some bugs in showing invoice items (product/service name) and calculating COGS after invoice item
-// Remove or edit must be checked and edited
+// syncProductQuantities method in ProductService must be reviewed as well.
+// create invoice in here must be reviewed
+// Cost of goods sold calculation must be reviewed
+// Product and Service must be created or updated without code
+// When creating invoice and got error for not inputing customer, all transaction removed and it must be refreshed to be ok
+// product/service name in not loaded properly in invoice items when editing invoice (not selected)
+// when selling service, the quantity must be equal to 1 and can not be changed even in editing invoice
+// we have no cogs for service
+// for delete invoice or edit invoice, we must check if there is any subsequent invoice (invoice after the current one) for the same products
+// for sell invoice, we must check if there is any buy invoice before it for the same products and not buy invoice after it
+// document the submiting sell invoice
 // error in submitting new customer (code)
 
 class InvoiceService

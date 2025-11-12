@@ -48,7 +48,7 @@ class InvoiceTransactionBuilder
         $this->totalVat = 0;
         $this->totalAmount = 0;
 
-        $this->buildItemTransactions();
+        $this->buildItemsTransactions();
 
         $this->buildDiscountTransaction();
 
@@ -57,8 +57,6 @@ class InvoiceTransactionBuilder
         $this->buildSubtractionTransaction();
 
         $this->buildCustomerTransaction();
-
-        $this->buildIncomeRevenueTransaction();
 
         $this->buildCogsTransaction();
 
@@ -73,50 +71,21 @@ class InvoiceTransactionBuilder
 
     private function buildCogsTransaction(): void
     {
-        if ($this->invoiceType === InvoiceType::SELL) {
-            foreach ($this->items as $item) {
-                $product = Product::find($item['itemable_id']) ?? null;
-                $averageCost = $product->average_cost ?? 0;
-                $quantity = $item['quantity'] ?? 1;
-                $customerId = $this->invoiceData['customer_id'];
-
-                $subject_id = Customer::find($customerId)->subject->id;
-
-                $this->transactions[] = [
-                    'subject_id' => $subject_id,
-                    'desc' => __('Inventory').' - '.($product->name ?? ''),
-                    'value' => -$averageCost * $quantity,
-                ];
-
-                $this->transactions[] = [
-                    'subject_id' => config('amir.cost_of_goods_sold'),
-                    'desc' => __('Cost of Goods Sold').' - '.($product->name ?? ''),
-                    'value' => $averageCost * $quantity,
-                ];
-            }
+        if ($this->invoiceType === InvoiceType::BUY) {
+            return;
         }
-    }
 
-    private function buildIncomeRevenueTransaction(): void
-    {
-        if ($this->invoiceType === InvoiceType::SELL) {
-            $customerId = $this->invoiceData['customer_id'];
+        foreach ($this->items as $item) {
+            $product = Product::find($item['itemable_id']) ?? null;
+            $averageCost = $product->average_cost ?? 0;
+            $quantity = $item['quantity'] ?? 1;
 
-            $salesRevenueId = Customer::find($customerId)->subject->id;
-
-            $cashPayment = floatval($this->invoiceData['cash_payment'] ?? 0);
-            $customerTotal = $this->totalAmount - $this->subtractions - $cashPayment;
+            $invoiceType = $this->invoiceType === InvoiceType::SELL ? __('Sell ') : __('Buy ');
 
             $this->transactions[] = [
-                'subject_id' => $salesRevenueId,
-                'desc' => __('Sales Revenue'),
-                'value' => $customerTotal,
-            ];
-
-            $this->transactions[] = [
-                'subject_id' => config('amir.sales_revenue'),
-                'desc' => __('Sales Revenue'),
-                'value' => -$customerTotal,
+                'subject_id' => $product->cogs_subject_id,
+                'desc' => $invoiceType.__(' Invoice with number ').$this->invoiceData['number'],
+                'value' => -$averageCost * $quantity,
             ];
         }
     }
@@ -124,7 +93,7 @@ class InvoiceTransactionBuilder
     /**
      * Create a transaction for each invoice item.
      */
-    private function buildItemTransactions(): void
+    private function buildItemsTransactions(): void
     {
         foreach ($this->items as $item) {
             $product = Product::find($item['itemable_id']);
@@ -142,12 +111,26 @@ class InvoiceTransactionBuilder
 
             $this->totalDiscount += $itemDiscount;
             $this->totalVat += $itemVat;
-            $this->totalAmount += $itemAmount - $itemDiscount + $itemVat;
+            $this->totalAmount += $itemAmount - $itemDiscount;
+
+            $invoiceType = $this->invoiceType === InvoiceType::SELL ? __('Sell ') : __('Buy ');
+
+            if ($invoiceType === __('Sell ')) {
+                $subjectId = $product ? $product->income_subject_id : $service->subject_id;
+
+                $this->transactions[] = [
+                    'subject_id' => $subjectId,
+                    'desc' => $invoiceType.__(' Invoice with number ').$this->invoiceData['number'],
+                    'value' => $itemAmount,
+                ];
+            }
 
             $this->transactions[] = [
                 'subject_id' => $product->inventory_subject_id ?? $service->subject_id,
-                'desc' => $item['description'] ?? $product->name ?? $service->name,
-                'value' => $this->invoiceType->isSell() ? $itemAmount : -$itemAmount,
+                'desc' => $invoiceType.__(' Invoice with number ').$this->invoiceData['number'],
+                'value' => $product ? ($this->invoiceType === InvoiceType::SELL ?
+                                    ($product->average_cost * $quantity) : -($unitPrice * $quantity)
+                ) : $quantity * $unitPrice,
             ];
         }
     }
@@ -159,12 +142,14 @@ class InvoiceTransactionBuilder
     {
         if ($this->totalDiscount > 0) {
 
-            $discountSubjectId = $this->invoiceType->isSell() ? config('amir.sell_discount') : config('amir.buy_discount');
+            $discountSubjectId = $this->invoiceType === InvoiceType::SELL ? config('amir.sell_discount') : config('amir.buy_discount');
+
+            $invoiceType = ($this->invoiceType === InvoiceType::SELL) ? __('Sell ') : __('Buy ');
 
             $this->transactions[] = [
                 'subject_id' => $discountSubjectId,
-                'desc' => __('Invoice discount'),
-                'value' => $this->invoiceType->isSell() ? -$this->totalDiscount : $this->totalDiscount,
+                'desc' => $invoiceType.__(' Invoice discount with number ').$this->invoiceData['number'],
+                'value' => $this->invoiceType === InvoiceType::SELL ? -$this->totalDiscount : $this->totalDiscount,
             ];
         }
     }
@@ -178,9 +163,11 @@ class InvoiceTransactionBuilder
 
             $vatSubjectId = $this->invoiceType->isSell() ? config('amir.sell_vat') : config('amir.buy_vat');
 
+            $invoiceType = $this->invoiceType === InvoiceType::SELL ? __('Sell ') : __('Buy ');
+
             $this->transactions[] = [
                 'subject_id' => $vatSubjectId,
-                'desc' => __('Invoice VAT/Tax'),
+                'desc' => $invoiceType.__(' Invoice with number ').$this->invoiceData['number'],
                 'value' => $this->invoiceType->isSell() ? $this->totalVat : -$this->totalVat,
             ];
         }
@@ -195,12 +182,14 @@ class InvoiceTransactionBuilder
 
         $cashPayment = floatval($this->invoiceData['cash_payment'] ?? 0);
 
-        $customerTotal = $this->totalAmount - $this->subtractions - $cashPayment;
+        $customerTotal = $this->totalAmount - $this->subtractions - $cashPayment + $this->totalVat;
+
+        $invoiceType = $this->invoiceType === InvoiceType::SELL ? __('Sell ') : __('Buy ');
 
         $subject_id = Customer::find($customerId)->subject->id;
         $this->transactions[] = [
             'subject_id' => $subject_id,
-            'desc' => __('Customer total'),
+            'desc' => $invoiceType.__(' Invoice with number ').$this->invoiceData['number'],
             'value' => $this->invoiceType->isSell() ? -$customerTotal : $customerTotal,
         ];
     }
@@ -216,9 +205,11 @@ class InvoiceTransactionBuilder
 
             $subtractionSubjectId = $this->invoiceType->isSell() ? config('amir.sell_discount') : config('amir.buy_discount');
 
+            $invoiceType = $this->invoiceType === InvoiceType::SELL ? __('Sell ') : __('Buy ');
+
             $this->transactions[] = [
                 'subject_id' => $subtractionSubjectId,
-                'desc' => $this->invoiceData['subtraction_desc'] ?? __('Deductions'),
+                'desc' => $invoiceType.__(' Invoice subtraction with number ').$this->invoiceData['number'],
                 'value' => $this->invoiceType->isSell() ? -$this->subtractions : $this->subtractions,
             ];
         }

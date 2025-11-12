@@ -25,7 +25,7 @@ class SubjectSeeder extends Seeder
             ['id' => 18, 'code' => '060', 'name' => 'فروش', 'parent_id' => null, 'type' => 1, 'company_id' => 1],
             ['id' => 22, 'code' => '020', 'name' => 'اسناد پرداختنی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 23, 'code' => '050', 'name' => 'درآمدها', 'parent_id' => null, 'type' => 1, 'company_id' => 1],
-            ['id' => 25, 'code' => '061', 'name' => 'برگشت از فروش و نخفیفات', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
+            ['id' => 25, 'code' => '061', 'name' => 'برگشت از فروش و تخفیفات', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 38, 'code' => '018', 'name' => 'سایر حسابهای دریافتنی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 39, 'code' => '023', 'name' => 'سایر حسابهای پرداختنی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 67, 'code' => '014', 'name' => 'اسناد در جریان وصول', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
@@ -90,7 +90,6 @@ class SubjectSeeder extends Seeder
             ['id' => 41, 'code' => '023001', 'name' => 'مالیات بر ارزش افزوده فروش', 'parent_id' => 39, 'type' => 'both', 'company_id' => 1],
             ['id' => 57, 'code' => '023002', 'name' => 'عوارض فروش', 'parent_id' => 39, 'type' => 'both', 'company_id' => 1],
             ['id' => 66, 'code' => '023003', 'name' => 'عیدی و پاداش پرداختنی', 'parent_id' => 39, 'type' => 'both', 'company_id' => 1],
-            ['id' => 104, 'code' => '023004', 'name' => 'ٔدرآمد فروش', 'parent_id' => 39, 'type' => 'both', 'company_id' => 1],
 
             ['id' => 21, 'code' => '030001', 'name' => 'سرمایه', 'parent_id' => 84, 'type' => 'both', 'company_id' => 1],
             ['id' => 85, 'code' => '030002', 'name' => 'اندوخته قانونی', 'parent_id' => 84, 'type' => 'both', 'company_id' => 1],
@@ -102,6 +101,7 @@ class SubjectSeeder extends Seeder
 
             ['id' => 36, 'code' => '050001', 'name' => 'درآمد متفرقه', 'parent_id' => 23, 'type' => 1, 'company_id' => 1],
             ['id' => 103, 'code' => '050002', 'name' => 'درآمد خدمات', 'parent_id' => 23, 'type' => 1, 'company_id' => 1],
+            ['id' => 104, 'code' => '050003', 'name' => 'درآمد فروش', 'parent_id' => 23, 'type' => 'both', 'company_id' => 1],
 
             ['id' => 20, 'code' => '060001', 'name' => 'فروش', 'parent_id' => 18, 'type' => 1, 'company_id' => 1],
 
@@ -114,6 +114,7 @@ class SubjectSeeder extends Seeder
             ['id' => 95, 'code' => '065002', 'name' => 'طرف حساب انتظامی به عهده شرکت', 'parent_id' => 93, 'type' => 'both', 'company_id' => 1],
 
             ['id' => 98, 'code' => '066001', 'name' => 'تخفیفات خرید', 'parent_id' => 97, 'type' => 'both', 'company_id' => 1],
+            ['id' => 99, 'code' => '066002', 'name' => 'تخفیفات فروش', 'parent_id' => 97, 'type' => 'both', 'company_id' => 1],
 
             ['id' => 15, 'code' => '067001', 'name' => 'تراز افتتاحیه', 'parent_id' => 5, 'type' => 'both', 'company_id' => 1],
 
