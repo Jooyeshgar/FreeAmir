@@ -16,6 +16,9 @@ use App\Services\InvoiceService;
 use Illuminate\Http\Request;
 use PDF;
 
+// When creating an invoice, a validation error occurs if the customer is not selected. All transactions are then removed, and the page must be refreshed to fix it.
+// The product/service name in the invoice items is not loaded properly when a validation error occurs during invoice creation (it remains unselected).
+
 class InvoiceController extends Controller
 {
     public function __construct() {}

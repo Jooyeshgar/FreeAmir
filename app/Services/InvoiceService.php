@@ -14,11 +14,6 @@ use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
-// When creating invoice and got error for not inputing customer, all transaction removed and it must be refreshed to be ok
-// product/service name in not loaded properly in invoice items when editing invoice (not selected)
-// when selling service, the quantity must be equal to 1 and can not be changed even in editing invoice
-// document the submiting sell invoice
-
 class InvoiceService
 {
     /**
