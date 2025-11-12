@@ -73,7 +73,7 @@ class StoreProductRequest extends FormRequest
     {
         $validatedData = $this->validated();
 
-        $validatedData['code'] = empty($validatedData['code']) ? Product::max('code') ?? 1 : $validatedData['code'];
+        $validatedData['code'] = empty($validatedData['code']) ? Product::max('code') + 1 : $validatedData['code'];
         $validatedData['oversell'] = $this->has('oversell') ? 1 : 0;
         $validatedData['purchace_price'] = convertToFloat(empty($validatedData['purchace_price']) ? 0 : $validatedData['purchace_price']);
         $validatedData['selling_price'] = convertToFloat(empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price']);

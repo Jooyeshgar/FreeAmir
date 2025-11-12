@@ -45,10 +45,9 @@ class ProductService
 
     public function delete(Product $product): void
     {
-        $this->deleteSubjects($product);
         $product->productWebsites()->delete();
-
         $product->delete();
+        $this->deleteSubjects($product);
     }
 
     public function deleteSubjects(Product $product): void
