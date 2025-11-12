@@ -14,16 +14,10 @@ use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
-// Cost of goods sold calculation must be reviewed
-// Product and Service must be created or updated without code
 // When creating invoice and got error for not inputing customer, all transaction removed and it must be refreshed to be ok
 // product/service name in not loaded properly in invoice items when editing invoice (not selected)
 // when selling service, the quantity must be equal to 1 and can not be changed even in editing invoice
-// we have no cogs for service
-// for delete invoice or edit invoice, we must check if there is any subsequent invoice (invoice after the current one) for the same products
-// for sell invoice, we must check if there is any buy invoice before it for the same products and not buy invoice after it
 // document the submiting sell invoice
-// error in submitting new customer (code)
 
 class InvoiceService
 {
@@ -90,7 +84,7 @@ class InvoiceService
     {
         $invoice = Invoice::findOrFail($invoiceId);
 
-        // self::checkInvoiceDeleteableOrEditable($invoice);
+        self::checkInvoiceDeleteableOrEditable($invoice);
 
         $invoiceData = self::normalizeInvoiceData($invoiceData);
 
@@ -163,11 +157,13 @@ class InvoiceService
             throw new Exception(__('Invoice has associated ancillary costs and cannot be deleted/edited'), 400);
         }
 
-        if (self::hasSubsequentInvoicesForProduct($invoice)) {
+        $productIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->toArray();
+
+        if (self::hasSubsequentInvoicesForProduct($invoice, $productIds)) {
             throw new Exception(__('Cannot delete/edit invoice because there are subsequent invoices for the same invoice products. Please delete those invoices first.'), 400);
         }
 
-        if (! self::isSellInvoiceAfterLastBuyInvoice($invoice)) {
+        if (! self::isLastSellInvoiceForItsItems($invoice, $productIds)) {
             throw new Exception(__('Cannot delete/edit invoice because it affects cost of goods sold calculations. Please review related buy invoices first.'), 400);
         }
     }
@@ -285,10 +281,8 @@ class InvoiceService
      * @param  Invoice  $invoice  The invoice to check for subsequent related invoices.
      * @return bool True if a subsequent invoice exists for any of the products in the given invoice; otherwise, false.
      */
-    private static function hasSubsequentInvoicesForProduct(Invoice $invoice): bool
+    private static function hasSubsequentInvoicesForProduct(Invoice $invoice, array $productIds): bool
     {
-        $productIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->toArray();
-
         if (empty($productIds)) {
             return false;
         }
@@ -308,14 +302,13 @@ class InvoiceService
      *
      * This method checks if the provided invoice is of type SELL. If so, it finds the label_text_class
      */
-    private static function isSellInvoiceAfterLastBuyInvoice(Invoice $invoice): bool
+    private static function isLastSellInvoiceForItsItems(Invoice $invoice, array $productIds): bool
     {
-        if ($invoice->invoice_type === InvoiceType::SELL) {
-            $productIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->toArray();
+        if (empty($productIds)) {
+            return false;
+        }
 
-            if (empty($productIds)) {
-                return true;
-            }
+        if ($invoice->invoice_type === InvoiceType::SELL) {
 
             $lastBuyInvoice = Invoice::where('invoice_type', InvoiceType::BUY)
                 ->whereHas('items', fn ($query) => $query->where('itemable_type', Product::class)
@@ -323,12 +316,12 @@ class InvoiceService
                 ->orderByDesc('date')
                 ->first();
 
-            if ($lastBuyInvoice && $invoice->date >= $lastBuyInvoice->date) {
+            if ($lastBuyInvoice && $invoice->date > $lastBuyInvoice->date) {
                 return true;
             }
         }
 
-        return false;
+        return true;
     }
 
     /**
@@ -339,7 +332,7 @@ class InvoiceService
     public static function getEditDeleteStatus(Invoice $invoice): array
     {
         try {
-            // self::checkInvoiceDeleteableOrEditable($invoice);
+            self::checkInvoiceDeleteableOrEditable($invoice);
 
             return ['allowed' => true, 'reason' => null];
         } catch (\Throwable $e) {
