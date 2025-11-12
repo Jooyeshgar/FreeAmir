@@ -64,26 +64,58 @@ class StoreInvoiceRequest extends FormRequest
     }
 
     /**
-     * Validate warehouse quantity for "Sell" invoice type.
+     * Validate warehouse quantity for "Sell" invoice type and check for duplicate items.
      */
     public function withValidator($validator)
     {
         $validator->after(function ($validator) {
-            if ($this->input('invoice_type') == 'sell') {
-                $transactions = $this->input('transactions', []);
+            $transactions = $this->input('transactions', []);
 
-                foreach ($transactions as $index => $transaction) {
-                    if (! isset($transaction['item_id']) || ! isset($transaction['quantity']) || $transaction['item_type'] !== 'product') {
-                        continue;
+            // Check for duplicate products and services separately
+            $productIds = [];
+            $serviceIds = [];
+
+            foreach ($transactions as $index => $transaction) {
+                if (! isset($transaction['item_id']) || ! isset($transaction['item_type'])) {
+                    continue;
+                }
+
+                $itemId = $transaction['item_id'];
+                $itemType = $transaction['item_type'];
+
+                // Check for duplicate products
+                if ($itemType === 'product') {
+                    if (in_array($itemId, $productIds)) {
+                        $validator->errors()->add(
+                            "transactions.{$index}.item_id",
+                            __('Each product must be unique in the transaction list.')
+                        );
+                    } else {
+                        $productIds[] = $itemId;
                     }
 
-                    $product = Product::where('id', $transaction['item_id'])->first();
+                    // Validate warehouse quantity for "Sell" invoice type
+                    if ($this->input('invoice_type') == 'sell' && isset($transaction['quantity'])) {
+                        $product = Product::find($itemId);
 
-                    if ($product && $product->quantity < $transaction['quantity']) {
+                        if ($product && $product->quantity < $transaction['quantity']) {
+                            $validator->errors()->add(
+                                "transactions.{$index}.quantity",
+                                "{$product->quantity} ".__('item(s) of')." '{$product->name}' ".__('are available.')
+                            );
+                        }
+                    }
+                }
+
+                // Check for duplicate services
+                if ($itemType === 'service') {
+                    if (in_array($itemId, $serviceIds)) {
                         $validator->errors()->add(
-                            "transactions.{$index}.quantity",
-                            "{$product->quantity} ".__('item(s) of')." '{$product->name}' ".__('are available.'),
+                            "transactions.{$index}.item_id",
+                            __('Each service must be unique in the transaction list.')
                         );
+                    } else {
+                        $serviceIds[] = $itemId;
                     }
                 }
             }
@@ -136,18 +168,15 @@ class StoreInvoiceRequest extends FormRequest
             'transactions.*.item_id' => [
                 'required',
                 'integer',
-                'distinct',
                 function ($attribute, $value, $fail) {
                     preg_match('/transactions\.(\d+)\.item_id/', $attribute, $matches);
                     $index = $matches[1] ?? null;
                     $type = $this->input("transactions.$index.item_type");
 
                     if ($type === 'product' && ! Product::where('id', $value)->exists()) {
-                        $fail(__('The selected product (item_id) is invalid.'));
-                    }
-
-                    if ($type === 'service' && ! Service::where('id', $value)->exists()) {
-                        $fail(__('The selected service (item_id) is invalid.'));
+                        $fail(__('The selected product is invalid.'));
+                    } elseif ($type === 'service' && ! Service::where('id', $value)->exists()) {
+                        $fail(__('The selected service is invalid.'));
                     }
                 },
             ],

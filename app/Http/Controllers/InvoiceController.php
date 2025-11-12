@@ -182,6 +182,9 @@ class InvoiceController extends Controller
             $transaction['inventory_subject_id'] = $item->itemable->inventory_subject_id ?? $item->itemable->subject_id ?? null;
             $transaction['subject'] = $item->itemable->name ?? null;
 
+            $transaction['product_id'] = $item->itemable->inventory_subject_id ? $item->itemable->id : null; // For products
+            $transaction['service_id'] = $item->itemable->subject_id ? $item->itemable->id : null; // For services (No inventory_subject_id)
+
             return $transaction;
         });
         $total = $transactions->count();
