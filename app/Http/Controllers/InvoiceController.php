@@ -74,11 +74,17 @@ class InvoiceController extends Controller
         $productGroups = ProductGroup::all();
         $customers = Customer::all('name', 'id');
         $previousDocumentNumber = floor(Document::max('number') ?? 0);
-        $transactions = old('transactions') ?? $this->preparedTransactions(collect([new Transaction]));
+
+        $oldTransactions = old('transactions');
+
+        if ($oldTransactions) {
+            $transactions = self::prepareOldTransactions($oldTransactions);
+        } else {
+            $transactions = $this->preparedNewTransactions(collect([new Transaction]));
+        }
 
         $total = count($transactions);
 
-        // Validate and convert invoice_type to enum value
         $invoice_type = in_array($invoice_type, ['buy', 'sell', 'return_buy', 'return_sell']) ? $invoice_type : 'sell';
         $previousInvoiceNumber = floor(Invoice::where('invoice_type', $invoice_type)->max('number') ?? 0);
 
@@ -260,7 +266,28 @@ class InvoiceController extends Controller
         }
     }
 
-    private function preparedTransactions($transactions)
+    private function prepareOldTransactions($oldTransactions)
+    {
+        return collect($oldTransactions)->map(function ($transaction, $index) {
+            if (! empty($transaction['item_type']) && ! empty($transaction['item_id'])) {
+                if ($transaction['item_type'] === Product::class) {
+                    $model = Product::find($transaction['item_id']);
+                    $transaction['subject'] = $model?->name;
+                    $transaction['product_id'] = $model?->id;
+                } elseif ($transaction['item_type'] === Service::class) {
+                    $model = Service::find($transaction['item_id']);
+                    $transaction['subject'] = $model?->name;
+                    $transaction['service_id'] = $model?->id;
+                    $transaction['quantity'] = 1;
+                }
+            }
+            $transaction['id'] = $index + 1;
+
+            return $transaction;
+        });
+    }
+
+    private function preparedNewTransactions($transactions)
     {
         return $transactions->map(function ($transaction, $i) {
             return [

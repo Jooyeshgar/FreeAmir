@@ -97,8 +97,9 @@
                             }
                         }
                     ">
-                    <input type="text" x-bind:value="selectedType === 'product' ? getProductInventorySubjectId(selectedId) : null" x-bind:name="'transactions[' + index + '][inventory_subject_id]'" hidden>
-                    <input type="text" x-bind:value="selectedType === 'service' ? getServiceSubjectId(selectedId) : null" x-bind:name="'transactions[' + index + '][service_subject_id]'" hidden>
+                    <input type="text" x-bind:value="selectedType === 'product' ? transaction.product_id : null" x-bind:name="'transactions[' + index + '][product_id]'" hidden>
+                    <input type="text" x-bind:value="selectedType === 'service' ? transaction.service_id : null" x-bind:name="'transactions[' + index + '][service_id]'" hidden>
+                    <input type="text" x-bind:value="selectedType === 'service' ? transaction.quantity : null" x-bind:name="'transactions[' + index + '][quantity]'" hidden>
 
                     <div class="relative flex-1 text-center max-w-8 pt-2 pb-2 transaction-count-container">
                         <span class="transaction-count block" x-text="index + 1"></span>
