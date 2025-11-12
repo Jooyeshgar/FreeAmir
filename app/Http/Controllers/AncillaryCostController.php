@@ -86,13 +86,23 @@ class AncillaryCostController extends Controller
             ->with('success', __('Ancillary Cost deleted successfully.'));
     }
 
-    public function getInvoiceProducts($invoice_id)
+    public function getBuyInvoiceProducts($invoice_id)
     {
-        $invoice = Invoice::with('items.product')->findOrFail($invoice_id);
-        $products = collect($invoice->items)->map(function ($item) {
+        $invoice = Invoice::findOrFail($invoice_id);
+
+        if (! $invoice) {
+            return response()->json(['products' => []]);
+        }
+
+        $invoiceItems = $invoice->items()
+            ->where('itemable_type', \App\Models\Product::class)
+            ->with('itemable')
+            ->get();
+
+        $products = collect($invoiceItems)->map(function ($item) {
             return [
-                'id' => $item->product->id,
-                'name' => $item->product->name,
+                'id' => $item->itemable->id,
+                'name' => $item->itemable->name,
                 'quantity' => (int) $item->quantity,
             ];
         })->unique('id')->values();
