@@ -14,8 +14,6 @@ use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
-// syncProductQuantities method in ProductService must be reviewed as well.
-// create invoice in here must be reviewed
 // Cost of goods sold calculation must be reviewed
 // Product and Service must be created or updated without code
 // When creating invoice and got error for not inputing customer, all transaction removed and it must be refreshed to be ok
@@ -238,8 +236,8 @@ class InvoiceService
                 continue;
             }
 
-            $product = ($type === Product::class || $type === 'product') ? Product::findOrFail($item['itemable_id']) : null;
-            $service = ($type === Service::class || $type === 'service') ? Service::findOrFail($item['itemable_id']) : null;
+            $product = $type === 'product' ? Product::findOrFail($item['itemable_id']) : null;
+            $service = $type === 'service' ? Service::findOrFail($item['itemable_id']) : null;
 
             $quantity = $item['quantity'] ?? 1;
             $unitPrice = $item['unit'];
@@ -253,9 +251,10 @@ class InvoiceService
             // Calculate item amount (price - discount, VAT is separate but included in total)
             $itemAmount = $quantity * $unitPrice - $unitDiscount + $itemVat;
 
-            $invoiceItem = InvoiceItem::updateOrCreate([
-                'id' => $item['id'] ?? null,
-            ], [
+            $itemableType = $type === 'product' ? Product::class : Service::class;
+            $itemableId = $item['itemable_id'];
+
+            $invoiceItemData = [
                 'invoice_id' => $invoice->id,
                 'quantity' => $quantity,
                 'cog_after' => $product->average_cost ?? $unitPrice,                                            // must be updated after creating invoice
@@ -265,10 +264,15 @@ class InvoiceService
                 'vat' => $itemVat,
                 'description' => $item['description'] ?? null,
                 'amount' => $itemAmount,
-            ]);
+                'itemable_type' => $itemableType,
+                'itemable_id' => $itemableId,
+            ];
 
-            $invoiceItem->itemable()->associate($product ?? $service);
-            $invoiceItem->update();
+            $invoiceItem = InvoiceItem::updateOrCreate([
+                'invoice_id' => $invoice->id,
+                'itemable_id' => $itemableId,
+                'itemable_type' => $itemableType,
+            ], $invoiceItemData);
 
             $itemId[] = $invoiceItem->id;
         }

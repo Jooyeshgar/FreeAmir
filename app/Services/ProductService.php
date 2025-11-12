@@ -61,15 +61,15 @@ class ProductService
 
     public static function syncProductQuantities(Collection $oldInvoiceItems, array $invoiceItems, InvoiceType $invoice_type): void
     {
+        $invoiceItems = array_filter($invoiceItems, function ($item) {
+            return $item['itemable_type'] == 'product';
+        });
+
         $addInvoiceItems = [];
         $deletedInvoiceItems = [];
         $changedIds = [];
 
         foreach ($invoiceItems as $invoiceItem) {
-            if ($invoiceItem['itemable_type'] !== Product::class) {
-                continue;
-            }
-
             $oldInvoiceItem = $oldInvoiceItems->where('itemable_id', $invoiceItem['itemable_id'])->first();
             if (is_null($oldInvoiceItem)) {
                 $addInvoiceItems[] = $invoiceItem;
