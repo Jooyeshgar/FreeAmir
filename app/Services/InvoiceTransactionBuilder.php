@@ -120,7 +120,7 @@ class InvoiceTransactionBuilder
 
                 $this->transactions[] = [
                     'subject_id' => $subjectId,
-                    'desc' => $invoiceType.__(' Invoice with number ').$this->invoiceData['number'],
+                    'desc' => __('Cost of Goods Sold ').$invoiceType.__(' Invoice with number ').$this->invoiceData['number'],
                     'value' => $itemAmount,
                 ];
             }

@@ -140,7 +140,7 @@
                         <thead class="bg-base-300">
                             <tr>
                                 <th class="px-4 py-3">#</th>
-                                <th class="px-4 py-3 text-left">{{ $invoice->invoice_type->value == 'buy' ? __('Product') : __('Product/Service') }}</th>
+                                <th class="px-4 py-3 text-left">{{ $invoice->invoice_type == App\Enums\InvoiceType::BUY ? __('Product') : __('Product/Service') }}</th>
                                 <th class="px-4 py-3 text-left">{{ __('Description') }}</th>
                                 <th class="px-4 py-3 text-right">{{ __('Quantity') }}</th>
                                 <th class="px-4 py-3 text-right">{{ __('Unit price') }}</th>

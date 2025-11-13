@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateProductRequest extends FormRequest
 {
@@ -23,7 +24,7 @@ class UpdateProductRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code' => 'nullable|unique:products,code',
+            'code' => ['nullable', Rule::unique('products', 'code')->ignore($this->route('product'))],
             'name' => 'required|max:20|string|regex:/^[\w\d\s\-\:\.]*$/u',
             'group' => 'required|exists:product_groups,id|integer',
             'location' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',

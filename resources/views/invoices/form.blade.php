@@ -16,7 +16,7 @@
                 </select>
             </div>
         </div>
-        <input type="hidden" id="invoice_type" name="invoice_type" value="{{ $invoice_type }}">
+        <input type="hidden" id="invoice_type" name="invoice_type" value="{{ $invoice->invoice_type }}">
         <div class="flex w-1/3">
             <x-text-input input_name="title" title="{{ __('Invoice Name') }}" 
                 input_value="{{ old('title') ?? ($invoice->document->title ?? '') }}" 
@@ -58,7 +58,7 @@
             *
         </div>
         <div class="text-sm flex-1 min-w-24 max-w-64 text-center text-gray-500 pt-3">
-            {{ $invoice_type == 'sell' ? __('Product/Service name') : __('Product name') }}
+            {{ $invoice->invoice_type == App\Enums\InvoiceType::SELL ? __('Product/Service name') : __('Product name') }}
         </div>
         <div class="text-sm flex-1 min-w-80 text-center text-gray-500 pt-3">
             {{ __('description') }}
@@ -142,14 +142,14 @@
                             x-bind:name="'transactions[' + index + '][item_id]'"
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
                             <option value="">
-                                {{ $invoice_type == 'sell' ? __('Select Product/Service') : __('Select Product') }}
+                                {{ $invoice->invoice_type == App\Enums\InvoiceType::SELL ? __('Select Product/Service') : __('Select Product') }}
                             </option>
                                 @foreach ($products as $product)
                                     <option value="product-{{ $product->id }}">
                                         {{ $product->name }}
                                     </option>
                                 @endforeach
-                                @if ($invoice_type == 'sell')
+                                @if ($invoice->invoice_type == App\Enums\InvoiceType::SELL)
                                     @foreach ($services as $service)
                                         <option value="service-{{ $service->id }}">
                                             {{ $service->name }}
@@ -260,7 +260,7 @@
 </x-card>
 
 <div class="mt-4 flex gap-2 justify-end">
-    <a href="{{ route('invoices.index', ['invoice_type' => $invoice_type]) }}" type="submit" class="btn btn-default rounded-md"> {{ __('cancel') }}
+    <a href="{{ route('invoices.index', ['invoice_type' => $invoice->invoice_type]) }}" type="submit" class="btn btn-default rounded-md"> {{ __('cancel') }}
     </a>
     <button id="submitForm" type="submit" class="btn text-white btn-primary rounded-md">
         {{ __('save and close form') }} </button>
@@ -278,7 +278,7 @@
                 services: {!! json_encode($services, JSON_UNESCAPED_UNICODE) !!},
                 productGroups: {!! json_encode($productGroups, JSON_UNESCAPED_UNICODE) !!},
                 serviceGroups: {!! json_encode($serviceGroups, JSON_UNESCAPED_UNICODE) !!},
-                invoice_type: {!! json_encode($invoice_type, JSON_UNESCAPED_UNICODE) !!},
+                invoice_type: {!! json_encode($invoice->invoice_type, JSON_UNESCAPED_UNICODE) !!},
                 addTransaction() {
                     const newId = this.transactions.length ? this.transactions[this.transactions
                         .length - 1].id + 1 : 1;

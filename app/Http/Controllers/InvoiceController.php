@@ -130,7 +130,7 @@ class InvoiceController extends Controller
         $result = $service->createInvoice(auth()->user(), $invoiceData, $items);
 
         return redirect()
-            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type->value])
+            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type])
             ->with('success', __('Invoice created successfully.'));
     }
 
@@ -197,7 +197,6 @@ class InvoiceController extends Controller
             return $transaction;
         });
         $total = $transactions->count();
-        $invoice_type = $invoice->invoice_type->value;
 
         return view('invoices.edit', compact(
             'invoice',
@@ -208,7 +207,6 @@ class InvoiceController extends Controller
             'transactions',
             'productGroups',
             'serviceGroups',
-            'invoice_type',
         ));
     }
 
@@ -251,7 +249,7 @@ class InvoiceController extends Controller
         $result = $service->updateInvoice($invoice->id, $invoiceData, $items);
 
         return redirect()
-            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type->value])
+            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type])
             ->with('success', __('Invoice updated successfully.'));
     }
 
@@ -260,9 +258,9 @@ class InvoiceController extends Controller
         try {
             InvoiceService::deleteInvoice($invoice->id);
 
-            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->value])->with('info', __('Invoice deleted successfully and COG is invalidated'));
+            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('info', __('Invoice deleted successfully and COG is invalidated'));
         } catch (\Exception $e) {
-            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->value])->with('error', $e->getMessage());
+            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('error', $e->getMessage());
         }
     }
 
