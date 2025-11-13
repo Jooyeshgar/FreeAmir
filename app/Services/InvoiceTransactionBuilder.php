@@ -84,7 +84,7 @@ class InvoiceTransactionBuilder
 
             $this->transactions[] = [
                 'subject_id' => $product->cogs_subject_id,
-                'desc' => $invoiceType.__(' Invoice with number ').$this->invoiceData['number'],
+                'desc' => __('Cost of Goods Sold ').$invoiceType.__(' Invoice with number ').$this->invoiceData['number'],
                 'value' => -$averageCost * $quantity,
             ];
         }
@@ -120,7 +120,7 @@ class InvoiceTransactionBuilder
 
                 $this->transactions[] = [
                     'subject_id' => $subjectId,
-                    'desc' => __('Cost of Goods Sold ').$invoiceType.__(' Invoice with number ').$this->invoiceData['number'],
+                    'desc' => $invoiceType.__(' Invoice with number ').$this->invoiceData['number'],
                     'value' => $itemAmount,
                 ];
             }

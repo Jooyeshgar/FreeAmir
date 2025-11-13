@@ -44,7 +44,7 @@ class StoreServiceRequest extends FormRequest
     {
         $validatedData = $this->validated();
 
-        $validatedData['code'] = empty($validatedData['code']) ? Service::max('code') ?? 1 : $validatedData['code'];
+        $validatedData['code'] = empty($validatedData['code']) ? Service::max('code') + 1 : $validatedData['code'];
         $validatedData['selling_price'] = convertToFloat(empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price']);
         $validatedData['vat'] = convertToFloat(empty($validatedData['vat']) ? 0 : $validatedData['vat']);
         $validatedData['sstid'] = empty($validatedData['sstid']) ? null : $validatedData['sstid'];

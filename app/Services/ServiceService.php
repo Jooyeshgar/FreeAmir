@@ -31,9 +31,8 @@ class ServiceService
 
     public function delete(Service $service): void
     {
-        $this->deleteSubjects($service);
-
         $service->delete();
+        $this->deleteSubjects($service);
     }
 
     public function deleteSubjects(Service $service): void
