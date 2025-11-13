@@ -159,7 +159,7 @@ class InvoiceService
 
             ProductService::subProductsQuantities($invoiceItems->toArray(), $invoice->invoice_type);
 
-            CostOfGoodsService::updateProductsAverageCost($invoice);
+            CostOfGoodsService::updateAverageCostAfterInvoiceDeletion($invoice);
 
             $invoice->document_id ? DocumentService::deleteDocument($invoice->document_id) : null;
 
@@ -307,8 +307,8 @@ class InvoiceService
             return false;
         }
 
-        $subsequentInvoice = Invoice::where('date', '>', $invoice->date)
-            ->whereIn('invoice_type', [InvoiceType::BUY, InvoiceType::SELL])
+        $subsequentInvoice = Invoice::where('date', '>=', $invoice->date)
+            ->whereIn('invoice_type', [InvoiceType::BUY])
             ->whereHas('items', fn ($query) => $query->where('itemable_type', Product::class)
                 ->whereIn('itemable_id', $productIds))
             ->exists();
