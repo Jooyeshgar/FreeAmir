@@ -9,10 +9,15 @@ use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\ProductGroup;
+use App\Models\Service;
+use App\Models\ServiceGroup;
 use App\Models\Transaction;
 use App\Services\InvoiceService;
 use Illuminate\Http\Request;
 use PDF;
+
+// When creating an invoice, a validation error occurs if the customer is not selected. All transactions are then removed, and the page must be refreshed to fix it.
+// The product/service name in the invoice items is not loaded properly when a validation error occurs during invoice creation (it remains unselected).
 
 class InvoiceController extends Controller
 {
@@ -64,18 +69,26 @@ class InvoiceController extends Controller
             return redirect()->route('configs.index')->with('error', __('Customer Subject is not configured. Please set it in configurations.'));
         }
         $products = Product::with('inventorySubject')->orderBy('name', 'asc')->get();
+        $services = Service::with('subject')->orderBy('name', 'asc')->get();
+        $serviceGroups = ServiceGroup::all();
         $productGroups = ProductGroup::all();
         $customers = Customer::all('name', 'id');
-        $previousDocumentNumber = Document::max('number') ?? 0;
-        $transactions = old('transactions') ?? $this->preparedTransactions(collect([new Transaction]));
+        $previousDocumentNumber = floor(Document::max('number') ?? 0);
+
+        $oldTransactions = old('transactions');
+
+        if ($oldTransactions) {
+            $transactions = self::prepareOldTransactions($oldTransactions);
+        } else {
+            $transactions = $this->preparedNewTransactions(collect([new Transaction]));
+        }
 
         $total = count($transactions);
 
-        // Validate and convert invoice_type to enum value
         $invoice_type = in_array($invoice_type, ['buy', 'sell', 'return_buy', 'return_sell']) ? $invoice_type : 'sell';
-        $previousInvoiceNumber = Invoice::where('invoice_type', $invoice_type)->max('number') ?? 0;
+        $previousInvoiceNumber = floor(Invoice::where('invoice_type', $invoice_type)->max('number') ?? 0);
 
-        return view('invoices.create', compact('products', 'productGroups', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type'));
+        return view('invoices.create', compact('products', 'services', 'productGroups', 'serviceGroups', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type'));
     }
 
     /**
@@ -99,17 +112,12 @@ class InvoiceController extends Controller
             'description' => $validated['description'] ?? null,
         ];
 
-        // Fetch all products by inventory_subject_id in one query
-        $subjectIds = collect($validated['transactions'])->pluck('inventory_subject_id')->unique();
-        $productsBySubjectId = Product::whereIn('inventory_subject_id', $subjectIds)->get()->keyBy('inventory_subject_id');
-
         // Map transactions to invoice items
-        $items = collect($validated['transactions'])->map(function ($transaction, $index) use ($productsBySubjectId) {
-            $product = $productsBySubjectId->get($transaction['inventory_subject_id']);
-
+        $items = collect($validated['transactions'])->map(function ($transaction, $index) {
             return [
                 'transaction_index' => $index,
-                'product_id' => $product?->id,
+                'itemable_id' => $transaction['item_id'],
+                'itemable_type' => $transaction['item_type'],
                 'quantity' => $transaction['quantity'] ?? 1,
                 'description' => $transaction['desc'] ?? null,
                 'unit_discount' => $transaction['unit_discount'] ?? 0,
@@ -122,7 +130,7 @@ class InvoiceController extends Controller
         $result = $service->createInvoice(auth()->user(), $invoiceData, $items);
 
         return redirect()
-            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type->value])
+            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type])
             ->with('success', __('Invoice created successfully.'));
     }
 
@@ -132,7 +140,7 @@ class InvoiceController extends Controller
             'customer',
             'document',
             'document.transactions',
-            'items.product',
+            'items',
         ]);
 
         return view('invoices.show', compact('invoice'));
@@ -140,7 +148,7 @@ class InvoiceController extends Controller
 
     public function print(Invoice $invoice)
     {
-        $invoice->load('customer', 'items.product');
+        $invoice->load('customer', 'items');
 
         $pdf = PDF::loadView('invoices.print', compact('invoice'));
 
@@ -154,11 +162,14 @@ class InvoiceController extends Controller
      */
     public function edit(Invoice $invoice)
     {
-        $invoice->load('customer', 'document.transactions', 'items.product'); // Eager load relationships
+        $invoice->load('customer', 'document.transactions', 'items'); // Eager load relationships
 
-        $customers = Customer::all();
+        $customers = Customer::all('name', 'id');
         $products = Product::with('inventorySubject')->orderBy('name', 'asc')->get();
-        $productGroups = [];
+        $services = Service::with('subject')->orderBy('name', 'asc')->get();
+
+        $productGroups = ProductGroup::all();
+        $serviceGroups = ServiceGroup::all();
 
         // Prepare transactions from invoice items
         $transactions = $invoice->items->map(function ($item, $index) {
@@ -166,12 +177,9 @@ class InvoiceController extends Controller
             $subtotalBeforeVat = $item->amount - $item->vat;
             $vatPercentage = $subtotalBeforeVat > 0 ? ($item->vat / $subtotalBeforeVat) * 100 : 0;
 
-            return [
+            $transaction = [
                 'id' => $index + 1,
                 'transaction_id' => $item->transaction_id,
-                'product_id' => $item->product_id,
-                'inventory_subject_id' => $item->product->inventory_subject_id,
-                'subject' => $item->product->name,
                 'desc' => $item->description,
                 'quantity' => $item->quantity,
                 'unit' => $item->unit_price,
@@ -179,17 +187,28 @@ class InvoiceController extends Controller
                 'vat' => $vatPercentage,
                 'total' => $item->amount,
             ];
+
+            $transaction['inventory_subject_id'] = $item->itemable->inventory_subject_id ?? $item->itemable->subject_id ?? null;
+            $transaction['subject'] = $item->itemable->name ?? null;
+
+            $transaction['product_id'] = $item->itemable->inventory_subject_id ? $item->itemable->id : null; // For products
+            $transaction['service_id'] = $item->itemable->subject_id ? $item->itemable->id : null; // For services (No inventory_subject_id)
+
+            return $transaction;
         });
         $total = $transactions->count();
-        $invoice_type = $invoice->invoice_type->value;
+
+        $invoice_type = $invoice->invoice_type;
 
         return view('invoices.edit', compact(
             'invoice',
             'customers',
             'total',
             'products',
+            'services',
             'transactions',
             'productGroups',
+            'serviceGroups',
             'invoice_type',
         ));
     }
@@ -214,16 +233,13 @@ class InvoiceController extends Controller
             'invoice_id' => $validated['invoice_id'] ?? null,
             'description' => $validated['description'] ?? null,
         ];
-        // Fetch all products by inventory_subject_id in one query
-        $subjectIds = collect($validated['transactions'])->pluck('inventory_subject_id')->unique();
-        $productsBySubjectId = Product::whereIn('inventory_subject_id', $subjectIds)->get()->keyBy('inventory_subject_id');
-        // Map transactions to invoice items
-        $items = collect($validated['transactions'])->map(function ($transaction, $index) use ($productsBySubjectId) {
-            $product = $productsBySubjectId->get($transaction['inventory_subject_id']);
 
+        // Map transactions to invoice items
+        $items = collect($validated['transactions'])->map(function ($transaction, $index) {
             return [
                 'transaction_index' => $index,
-                'product_id' => $product?->id,
+                'itemable_id' => $transaction['item_id'],
+                'itemable_type' => $transaction['item_type'],
                 'quantity' => $transaction['quantity'] ?? 1,
                 'description' => $transaction['desc'] ?? null,
                 'unit_discount' => $transaction['unit_discount'] ?? 0,
@@ -236,7 +252,7 @@ class InvoiceController extends Controller
         $result = $service->updateInvoice($invoice->id, $invoiceData, $items);
 
         return redirect()
-            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type->value])
+            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type])
             ->with('success', __('Invoice updated successfully.'));
     }
 
@@ -245,13 +261,34 @@ class InvoiceController extends Controller
         try {
             InvoiceService::deleteInvoice($invoice->id);
 
-            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->value])->with('info', __('Invoice deleted successfully and COG is invalidated'));
+            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('info', __('Invoice deleted successfully.'));
         } catch (\Exception $e) {
-            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->value])->with('error', $e->getMessage());
+            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('error', $e->getMessage());
         }
     }
 
-    private function preparedTransactions($transactions)
+    private function prepareOldTransactions($oldTransactions)
+    {
+        return collect($oldTransactions)->map(function ($transaction, $index) {
+            if (! empty($transaction['item_type']) && ! empty($transaction['item_id'])) {
+                if ($transaction['item_type'] === Product::class) {
+                    $model = Product::find($transaction['item_id']);
+                    $transaction['subject'] = $model?->name;
+                    $transaction['product_id'] = $model?->id;
+                } elseif ($transaction['item_type'] === Service::class) {
+                    $model = Service::find($transaction['item_id']);
+                    $transaction['subject'] = $model?->name;
+                    $transaction['service_id'] = $model?->id;
+                    $transaction['quantity'] = 1;
+                }
+            }
+            $transaction['id'] = $index + 1;
+
+            return $transaction;
+        });
+    }
+
+    private function preparedNewTransactions($transactions)
     {
         return $transactions->map(function ($transaction, $i) {
             return [

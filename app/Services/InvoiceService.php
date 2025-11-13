@@ -8,6 +8,7 @@ use App\Models\AncillaryCost;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
+use App\Models\Service;
 use App\Models\User;
 use Exception;
 use Illuminate\Database\Eloquent\Collection;
@@ -59,6 +60,8 @@ class InvoiceService
             self::syncInvoiceItems($createdInvoice, $items);
 
             CostOfGoodsService::updateProductsAverageCost($createdInvoice);
+
+            self::syncCOGAfterForInvoiceItems($createdInvoice);
         });
 
         return [
@@ -109,12 +112,35 @@ class InvoiceService
             self::syncInvoiceItems($invoice, $items);
 
             CostOfGoodsService::updateProductsAverageCost($invoice);
+            self::syncCOGAfterForInvoiceItems($invoice);
         });
 
         return [
             'document' => $invoice->document->fresh(),
             'invoice' => $invoice->fresh(),
         ];
+    }
+
+    public static function syncCOGAfterForInvoiceItems(Invoice $invoice)
+    {
+        if ($invoice->invoice_type !== InvoiceType::BUY) {
+            return;
+        }
+
+        $invoiceItems = $invoice->items;
+
+        if ($invoiceItems->isEmpty()) {
+            return;
+        }
+
+        foreach ($invoiceItems as $item) {
+            if (! $item->itemable) {
+                continue;
+            }
+
+            $item->cog_after = $item->itemable->average_cost;
+            $item->update();
+        }
     }
 
     /**
@@ -133,7 +159,7 @@ class InvoiceService
 
             ProductService::subProductsQuantities($invoiceItems->toArray(), $invoice->invoice_type);
 
-            CostOfGoodsService::updateProductsAverageCost($invoice);
+            CostOfGoodsService::updateAverageCostAfterInvoiceDeletion($invoice);
 
             $invoice->document_id ? DocumentService::deleteDocument($invoice->document_id) : null;
 
@@ -151,11 +177,13 @@ class InvoiceService
             throw new Exception(__('Invoice has associated ancillary costs and cannot be deleted/edited'), 400);
         }
 
-        if (self::hasSubsequentInvoicesForProduct($invoice)) {
+        $productIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->toArray();
+
+        if (self::hasSubsequentInvoicesForProduct($invoice, $productIds)) {
             throw new Exception(__('Cannot delete/edit invoice because there are subsequent invoices for the same invoice products. Please delete those invoices first.'), 400);
         }
 
-        if (! self::isSellInvoiceAfterLastBuyInvoice($invoice)) {
+        if (! self::isLastSellInvoiceForItsItems($invoice, $productIds)) {
             throw new Exception(__('Cannot delete/edit invoice because it affects cost of goods sold calculations. Please review related buy invoices first.'), 400);
         }
     }
@@ -217,7 +245,15 @@ class InvoiceService
         $itemId = [];
 
         foreach ($items as $item) {
-            $product = Product::findOrFail($item['product_id']);
+
+            $type = $item['itemable_type'] ?? null;
+
+            if ($type == null) {
+                continue;
+            }
+
+            $product = $type === 'product' ? Product::findOrFail($item['itemable_id']) : null;
+            $service = $type === 'service' ? Service::findOrFail($item['itemable_id']) : null;
 
             $quantity = $item['quantity'] ?? 1;
             $unitPrice = $item['unit'];
@@ -231,20 +267,29 @@ class InvoiceService
             // Calculate item amount (price - discount, VAT is separate but included in total)
             $itemAmount = $quantity * $unitPrice - $unitDiscount + $itemVat;
 
-            $invoiceItem = InvoiceItem::updateOrCreate([
-                'id' => $item['id'] ?? null,
-            ], [
+            $itemableType = $type === 'product' ? Product::class : Service::class;
+            $itemableId = $item['itemable_id'];
+
+            $invoiceItemData = [
                 'invoice_id' => $invoice->id,
-                'product_id' => $product->id,
                 'quantity' => $quantity,
                 'cog_after' => $product->average_cost ?? $unitPrice,                                            // must be updated after creating invoice
-                'quantity_at' => ($product->quantity > $quantity) ? $product->quantity - $quantity : 0,         // quantity before this invoice
+                'quantity_at' => $product ? ($product->quantity > $quantity ? $product->quantity - $quantity : 0) : 0,         // quantity before this invoice
                 'unit_price' => $unitPrice,
                 'unit_discount' => $unitDiscount,
                 'vat' => $itemVat,
                 'description' => $item['description'] ?? null,
                 'amount' => $itemAmount,
-            ]);
+                'itemable_type' => $itemableType,
+                'itemable_id' => $itemableId,
+            ];
+
+            $invoiceItem = InvoiceItem::updateOrCreate([
+                'invoice_id' => $invoice->id,
+                'itemable_id' => $itemableId,
+                'itemable_type' => $itemableType,
+            ], $invoiceItemData);
+
             $itemId[] = $invoiceItem->id;
         }
         $invoice->items()->whereNotIn('id', $itemId)->delete();
@@ -256,32 +301,38 @@ class InvoiceService
      * @param  Invoice  $invoice  The invoice to check for subsequent related invoices.
      * @return bool True if a subsequent invoice exists for any of the products in the given invoice; otherwise, false.
      */
-    private static function hasSubsequentInvoicesForProduct(Invoice $invoice): bool
+    private static function hasSubsequentInvoicesForProduct(Invoice $invoice, array $productIds): bool
     {
-        $subsequentInvoice = Invoice::where('date', '>', $invoice->date)
-            ->whereIn('invoice_type', [InvoiceType::BUY, InvoiceType::SELL])
-            ->whereHas('items', fn ($query) => $query->where('product_id', $invoice->items->pluck('product_id')->toArray()))
-            ->orderByDesc('date')->first();
+        if (empty($productIds)) {
+            return false;
+        }
 
-        return $subsequentInvoice !== null;
+        $subsequentInvoice = Invoice::where('date', '>=', $invoice->date)
+            ->whereIn('invoice_type', [InvoiceType::BUY])
+            ->whereHas('items', fn ($query) => $query->where('itemable_type', Product::class)
+                ->whereIn('itemable_id', $productIds))
+            ->exists();
+
+        return $subsequentInvoice;
     }
 
     /**
      * Determines if the given sell invoice was created after the most recent buy invoice
      * that contains at least one of the same products as the sell invoice.
      *
-     * This method checks if the provided invoice is of type SELL. If so, it finds the latest
-     * BUY invoice that includes any of the products present in the sell invoice's items.
-     * It then compares the dates of the sell invoice and the last relevant buy invoice.
-     *
-     * @param  Invoice  $invoice  The invoice to check.
-     * @return bool True if the sell invoice date is after the last relevant buy invoice date, false otherwise.
+     * This method checks if the provided invoice is of type SELL. If so, it finds the label_text_class
      */
-    private static function isSellInvoiceAfterLastBuyInvoice(Invoice $invoice): bool
+    private static function isLastSellInvoiceForItsItems(Invoice $invoice, array $productIds): bool
     {
+        if (empty($productIds)) {
+            return false;
+        }
+
         if ($invoice->invoice_type === InvoiceType::SELL) {
+
             $lastBuyInvoice = Invoice::where('invoice_type', InvoiceType::BUY)
-                ->whereHas('items', fn ($query) => $query->where('product_id', $invoice->items->pluck('product_id')->toArray()))
+                ->whereHas('items', fn ($query) => $query->where('itemable_type', Product::class)
+                    ->whereIn('itemable_id', $productIds))
                 ->orderByDesc('date')
                 ->first();
 
@@ -290,7 +341,7 @@ class InvoiceService
             }
         }
 
-        return false;
+        return true;
     }
 
     /**

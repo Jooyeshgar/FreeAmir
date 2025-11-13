@@ -10,15 +10,15 @@
     <table width="100%" cellspacing="2" cellpadding="4" style="table-layout:fixed;">
         <tbody>
             <tr>
-                <td class="border right pink">شماره: <span style="color:#BB0000;">{{ convertToFarsi($invoice->number) }}</span></td>
+                <td class="border right pink">شماره: <span style="color:#BB0000;">{{ formatDocumentNumber($invoice->number) }}</span></td>
                 <td rowspan="2" class="none" style="text-align:center;font-weight:bold;font-size:20px; width:80%;">
-                    @if ($invoice->invoice_type->value == 'buy')
+                    @if ($invoice->invoice_type == App\Enums\InvoiceType::BUY)
                         صورتحساب خرید کالا و خدمات
-                    @elseif ($invoice->invoice_type->value == 'sell')
+                    @elseif ($invoice->invoice_type == App\Enums\InvoiceType::SELL)
                         صورتحساب فروش کالا و خدمات
-                    @elseif ($invoice->invoice_type->value == 'return_buy')
+                    @elseif ($invoice->invoice_type == App\Enums\InvoiceType::RETURN_BUY)
                         صورتحساب برگشت از خرید
-                    @elseif ($invoice->invoice_type->value == 'return_sell')
+                    @elseif ($invoice->invoice_type == App\Enums\InvoiceType::RETURN_SELL)
                         صورتحساب برگشت از فروش
                     @endif
                 </td>
@@ -35,7 +35,7 @@
         <tbody>
             <tr>
                 <td colspan="4" class="border center pink mainlineheight">
-                    @if ($invoice->invoice_type->value == 'buy' || $invoice->invoice_type->value == 'return_buy')
+                    @if ($invoice->invoice_type == App\Enums\InvoiceType::BUY || $invoice->invoice_type == App\Enums\InvoiceType::RETURN_BUY)
                         <p align="center" class="bold">مشخصات خریدار</p>
                     @else
                         <p align="center" class="bold">مشخصات فروشنده</p>
@@ -63,7 +63,7 @@
 
             <tr>
                 <td class="pink center border mainlineheight" colspan="4" width="100%">
-                    @if ($invoice->invoice_type->value == 'buy' || $invoice->invoice_type->value == 'return_buy')
+                    @if ($invoice->invoice_type == App\Enums\InvoiceType::BUY || $invoice->invoice_type == App\Enums\InvoiceType::RETURN_BUY)
                         <p align="center" class="bold">مشخصات فروشنده</p>
                     @else
                         <p align="center" class="bold">مشخصات خریدار</p>
@@ -150,7 +150,7 @@
                     $invoiceTotalPriceAfterDiscount += $totalPriceAfterDiscount;
                     $vatPrice = $invoiceItem->vat ?? 0;
                     $total = $totalPriceAfterDiscount + $vatPrice ?? 0;
-
+                    $code = $invoiceItem->itemable->code ?? '';
                 @endphp
                 <tr valign="top">
                     <td class="border center mainlineheight" style="border-right: none;">
@@ -181,10 +181,7 @@
                         <p align="center">{{ $invoiceItem->description }}</p>
                     </td>
                     <td class="border center mainlineheight" style="border border-right: none;">
-                        @php
-                            $code = substr(strrchr(formatCode($invoiceItem->product->code ?? ''), '/'), 1);
-                        @endphp
-                        <p align="center">{{ $code ?? '' }}</p>
+                        <p align="center">{{ formatCode($code) }}</p>
                     </td>
                     <td class="border center mainlineheight">
                         <p align="center" class="bold">{{ convertToFarsi($index + 1) }}</p>

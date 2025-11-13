@@ -11,10 +11,12 @@ class Document extends Model
     use HasFactory;
 
     public $timestamps = true;
+
     protected $casts = [
         'date' => 'date',
-        'approved_at' => 'date'
+        'approved_at' => 'date',
     ];
+
     protected $fillable = [
         'number',
         'date',
@@ -47,5 +49,10 @@ class Document extends Model
     public function getFormattedDateAttribute()
     {
         return formatDate($this->date ?? now());
+    }
+
+    public function invoice()
+    {
+        return $this->hasOne(Invoice::class, 'document_id');
     }
 }

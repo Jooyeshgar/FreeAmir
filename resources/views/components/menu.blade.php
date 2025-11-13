@@ -44,36 +44,10 @@
                             @can('reports.sub-ledger')
                                 <li><a href="{{ route('reports.sub-ledger') }}">{{ __('Sub Ledger') }}</a></li>
                             @endcan
-                            {{-- <li><a href="">{{ __('Profit and loss') }}</a></li> --}}
                         </ul>
                     </details>
                 </li>
             @endcanany
-            <!-- @canany(['products.index', 'product-groups.index'])
-                                                    <li>
-                                                        <details>
-                                                            <summary>{{ __('Warehouse') }}</summary>
-                                                            <ul>
-                                                                @can('products.index')
-                                                                    <li><a href="{{ route('products.index') }}">{{ __('Products') }}</a></li>
-                                                                @endcan
-                                                                @can('product-groups.index')
-                                                                    <li><a href="{{ route('product-groups.index') }}">{{ __('Product Groups') }}</a>
-                                                                @endcan
-                                                                </li>
-                                                            </ul>
-                                                        </details>
-                                                    </li>
-                                                @endcanany -->
-            {{-- <li>
-                <details>
-                    <summary>{{ __('Customers') }}</summary>
-                    <ul>
-                        <li><a href="">{{ __('Debtors') }}</a></li>
-                        <li><a href="">{{ __('Creditors') }}</a></li>
-                    </ul>
-                </details>
-            </li> --}}
         </ul>
     </li>
 @endcanany
@@ -101,6 +75,12 @@
         @endcanany
         @canany(['customer-groups.index', 'customer-groups.create', 'customer-groups.edit'])
             <li><a href="{{ route('customer-groups.index') }}">{{ __('Customer Groups') }} </a></li>
+        @endcanany
+        @canany(['services.index', 'services.create', 'services.edit'])
+            <li><a href="{{ route('services.index') }}">{{ __('Services') }}</a></li>
+        @endcanany
+        @canany(['service-groups.index', 'service-groups.create', 'service-groups.edit'])
+            <li><a href="{{ route('service-groups.index') }}">{{ __('Service Groups') }}</a></li>
         @endcanany
         @canany(['companies.index', 'companies.create', 'companies.edit'])
             <li><a href="{{ route('companies.index') }}">{{ __('Companies') }} </a></li>

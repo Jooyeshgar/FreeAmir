@@ -17,7 +17,8 @@ class InvoiceItemFactory extends Factory
         return [
             'invoice_id' => Invoice::inRandomOrder()->first()->id,
             'description' => $this->faker->paragraph(2),
-            'product_id' => Product::inRandomOrder()->first()->id,
+            'item_id' => Product::inRandomOrder()->first()->id,
+            'item_type' => 'product',
             'transaction_id' => Transaction::factory()->create()->id,
             'quantity' => $quantity,
             'unit_price' => $unit_price,

@@ -1,6 +1,6 @@
 <x-card class="rounded-2xl w-full" class_body="p-4">
     <div class="flex gap-2 items-center justify-start" x-data="{
-        selectedCustomerId: {{ old('customer_id' ?? $invoice->customer_id ?? '') ?: 'null' }},
+        selectedCustomerId: {{ old('customer_id', $invoice->customer_id ?? 'null') }}
     }">
         <div class="flex w-1/4">
             <div class="flex flex-wrap">
@@ -9,14 +9,12 @@
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
                     <option value="">{{ __('Select Customer') }}</option>
                     @foreach ($customers as $customer)
-                        <option value="{{ $customer->id }}" x-bind:selected="selectedCustomerId = {{ $invoice->customer_id }}">
-                            {{ $customer->name }}
-                        </option>
+                        <option value="{{ $customer->id }}">{{ $customer->name }}</option>
                     @endforeach
                 </select>
             </div>
         </div>
-        <input type="hidden" id="invoice_type" name="invoice_type" value="{{ $invoice_type }}">
+        <input type="hidden" id="invoice_type" name="invoice_type" value="{{ $invoice->invoice_type ?? $invoice_type }}">
         <div class="flex w-1/3">
             <x-text-input input_name="title" title="{{ __('Invoice Name') }}" 
                 input_value="{{ old('title') ?? ($invoice->document->title ?? '') }}" 
@@ -58,7 +56,7 @@
             *
         </div>
         <div class="text-sm flex-1 min-w-24 max-w-64 text-center text-gray-500 pt-3">
-            {{ __('Product name') }}
+            {{ $invoice->invoice_type == App\Enums\InvoiceType::SELL || $invoice_type == 'sell' ? __('Product/Service name') : __('Product name') }}
         </div>
         <div class="text-sm flex-1 min-w-80 text-center text-gray-500 pt-3">
             {{ __('description') }}
@@ -83,14 +81,23 @@
         <div id="transactions" x-data="{ activeTab: {{ $total }} }">
             <template x-for="(transaction, index) in transactions" :key="transaction.id">
                 <div :class="{ 'active': activeTab === index }" class="transaction flex gap-2 items-center px-4 pb-3" @click="activeTab = index" x-data="{
-                    selectedId: transaction.product_id || null,
+                    selectedId: transaction.product_id || transaction.service_id || null,
+                    selectedType: transaction.product_id ? 'product' : (transaction.service_id ? 'service' : null),
+                    selectedValue: transaction.product_id ? 'product-' + transaction.product_id : (transaction.service_id ? 'service-' + transaction.service_id : ''),
                     off: 0,
                 }"
                     x-effect="
                         if (selectedId && !transaction.unit) {
-                        transaction.unit = getProductPrice(Number(selectedId));
-                    }">
-                    <input type="text" x-bind:value="getProductInventorySubjectId(selectedId)" x-bind:name="'transactions[' + index + '][inventory_subject_id]'" hidden>
+                            if (selectedType === 'product') {
+                                transaction.unit = getProductPrice(Number(selectedId));
+                            } else if (selectedType === 'service') {
+                                transaction.unit = getServicePrice(Number(selectedId));
+                            }
+                        }
+                    ">
+                    <input type="text" x-bind:value="selectedType === 'product' ? transaction.product_id : null" x-bind:name="'transactions[' + index + '][product_id]'" hidden>
+                    <input type="text" x-bind:value="selectedType === 'service' ? transaction.service_id : null" x-bind:name="'transactions[' + index + '][service_id]'" hidden>
+                    <input type="text" x-bind:value="selectedType === 'service' ? transaction.quantity : null" x-bind:name="'transactions[' + index + '][quantity]'" hidden>
 
                     <div class="relative flex-1 text-center max-w-8 pt-2 pb-2 transaction-count-container">
                         <span class="transaction-count block" x-text="index + 1"></span>
@@ -104,23 +111,49 @@
                     </div>
 
                     <div class="flex-1 min-w-24 max-w-64">
-                        <label class="sr-only">{{ __('Product') }}</label>
-                        <select x-model="selectedId"
+                        <label class="sr-only">{{ __('Product/Service') }}</label>
+                        <select x-model="selectedValue"
                             @change="
-                                transaction.product_id = Number($event.target.value);
-                                transaction.inventory_subject_id = getProductInventorySubjectId(Number($event.target.value));
-                                transaction.unit = getProductPrice(Number($event.target.value));
-                                transaction.vat = getProductVat(Number($event.target.value));
+                                const parts = $event.target.value.split('-');
+                                const type = parts[0];
+                                const id = Number(parts[1]);
+                                selectedType = type;
+                                selectedId = id;
+                                selectedValue = $event.target.value;
+                                    
+                                if (type === 'product') {
+                                    transaction.product_id = id;
+                                    transaction.service_id = null;
+                                    transaction.inventory_subject_id = getProductInventorySubjectId(id);
+                                    transaction.unit = getProductPrice(id);
+                                    transaction.vat = getProductVat(id);
+                                } else if (type === 'service') {
+                                    transaction.service_id = id;
+                                    transaction.product_id = null;
+                                    transaction.inventory_subject_id = null;
+                                    transaction.unit = getServicePrice(id);
+                                    transaction.vat = getServiceVat(id);
+                                    transaction.quantity = 1;
+                                }
                                 transaction.off = 0;
                             "
-                            x-bind:name="'transactions[' + index + '][product_id]'"
+                            x-bind:name="'transactions[' + index + '][item_id]'"
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
-                            <option value="">{{ __('Select Product') }}</option>
-                            @foreach ($products as $product)
-                                <option value="{{ $product->id }}">
-                                    {{ $product->name }}
-                                </option>
-                            @endforeach
+                            <option value="">
+                                {{ $invoice->invoice_type == App\Enums\InvoiceType::SELL || $invoice_type == 'sell' ? __('Select Product/Service') : __('Select Product') }}
+                            </option>
+                                @foreach ($products as $product)
+                                    <option value="product-{{ $product->id }}">
+                                        {{ $product->name }}
+                                    </option>
+                                @endforeach
+                                @if ($invoice->invoice_type == App\Enums\InvoiceType::SELL || $invoice_type == 'sell')
+                                    @foreach ($services as $service)
+                                        <option value="service-{{ $service->id }}">
+                                            {{ $service->name }}
+                                        </option>
+                                    @endforeach
+                                @endif
                         </select>
                     </div>
                     <div class="flex-1 w-[200px]">
@@ -129,7 +162,7 @@
                     </div>
                     <div class="flex-1 min-w-24 max-w-32">
                         <x-text-input placeholder="0" x-model.number="transaction.quantity" x-bind:name="'transactions[' + index + '][quantity]'"
-                            x-bind:disabled="!selectedId" label_text_class="text-gray-500" label_class="w-full" input_class="border-white">
+                            x-bind:disabled="!selectedId || selectedType === 'service'" label_text_class="text-gray-500" label_class="w-full" input_class="border-white">
                         </x-text-input>
                     </div>
                     <div class="flex-1 min-w-24 max-w-32">
@@ -225,7 +258,7 @@
 </x-card>
 
 <div class="mt-4 flex gap-2 justify-end">
-    <a href="{{ route('invoices.index', ['invoice_type' => $invoice_type]) }}" type="submit" class="btn btn-default rounded-md"> {{ __('cancel') }}
+    <a href="{{ route('invoices.index', ['invoice_type' => $invoice->invoice_type ?? $invoice_type]) }}" type="submit" class="btn btn-default rounded-md"> {{ __('cancel') }}
     </a>
     <button id="submitForm" type="submit" class="btn text-white btn-primary rounded-md">
         {{ __('save and close form') }} </button>
@@ -240,8 +273,10 @@
             Alpine.data('transactionForm', () => ({
                 transactions: {!! json_encode($transactions, JSON_UNESCAPED_UNICODE) !!},
                 products: {!! json_encode($products, JSON_UNESCAPED_UNICODE) !!},
+                services: {!! json_encode($services, JSON_UNESCAPED_UNICODE) !!},
                 productGroups: {!! json_encode($productGroups, JSON_UNESCAPED_UNICODE) !!},
-                invoice_type: {!! json_encode($invoice_type, JSON_UNESCAPED_UNICODE) !!},
+                serviceGroups: {!! json_encode($serviceGroups, JSON_UNESCAPED_UNICODE) !!},
+                invoice_type: {!! json_encode($invoice->invoice_type ?? $invoice_type, JSON_UNESCAPED_UNICODE) !!},
                 addTransaction() {
                     const newId = this.transactions.length ? this.transactions[this.transactions
                         .length - 1].id + 1 : 1;
@@ -250,6 +285,8 @@
                         name: '',
                         subject: '',
                         inventory_subject_id: '',
+                        service_id: null,
+                        product_id: null,
                         quantity: 0,
                         unit: 0,
                         total: 0,
@@ -260,7 +297,13 @@
                 getProductPrice(productId) {
                     const product = this.products.find(p => p.id == productId);
                     if (!product) return 0;
+                    console.log(this.invoice_type);
                     return (this.invoice_type == 'sell') ? product.selling_price : product.purchace_price;
+                },
+                getServicePrice(serviceId) {
+                    const service = this.services.find(s => s.id == serviceId);
+                    if (!service) return 0;
+                    return service.selling_price || 0;
                 },
                 getProductVat(productId) {
                     const product = this.products.find(p => p.id == productId);
@@ -271,10 +314,27 @@
                     }
                     return product.vat;
                 },
+                getServiceVat(serviceId) {
+                    const service = this.services.find(s => s.id == serviceId);
+                    const serviceGroup = this.serviceGroups.find(sg => sg.id == service.group);
+                    if (!service) return 0;
+                    if (service.vat !== null && service.vat !== undefined) {
+                        return service.vat;
+                    }
+                    if (serviceGroup && serviceGroup.vat !== null) {
+                        return serviceGroup.vat;
+                    }
+                    return 0;
+                },
                 getProductInventorySubjectId(productId) {
                     const product = this.products.find(p => p.id == productId);
                     if (!product) return null;
                     return product.inventory_subject_id;
+                },
+                getServiceSubjectId(serviceId) {
+                    const service = this.services.find(s => s.id == serviceId);
+                    if (!service) return null;
+                    return service.subject_id;
                 }
             }));
         });

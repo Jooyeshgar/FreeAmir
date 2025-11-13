@@ -35,9 +35,7 @@ function formatDocumentNumber(float $number)
         return formatNumber(intval($number));
     }
 
-    $documentNumber = in_array(App::getLocale(), ['fa', 'fa_IR']) ?
-        convertToFarsi(number_format($number, 2, '/')) :
-            number_format($number, 2, '');
+    $documentNumber = convertToFarsi(number_format($number, 2, '/', ','));
 
     return $documentNumber;
 }
@@ -73,7 +71,7 @@ function formatMinimalDate(?Carbon $date)
     return $date->format('m-d');
 }
 
-function formatCode(string|null $code)
+function formatCode(?string $code)
 {
     if (is_null($code)) {
         return '';

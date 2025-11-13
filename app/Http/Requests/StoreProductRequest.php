@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreProductRequest extends FormRequest
@@ -22,7 +23,7 @@ class StoreProductRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code' => 'required|unique:products,code',
+            'code' => 'nullable|unique:products,code',
             'name' => 'required|max:20|string|regex:/^[\w\d\s\-\:\.]*$/u',
             'group' => 'required|exists:product_groups,id|integer',
             'location' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
@@ -72,6 +73,7 @@ class StoreProductRequest extends FormRequest
     {
         $validatedData = $this->validated();
 
+        $validatedData['code'] = empty($validatedData['code']) ? Product::max('code') + 1 : $validatedData['code'];
         $validatedData['oversell'] = $this->has('oversell') ? 1 : 0;
         $validatedData['purchace_price'] = convertToFloat(empty($validatedData['purchace_price']) ? 0 : $validatedData['purchace_price']);
         $validatedData['selling_price'] = convertToFloat(empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price']);

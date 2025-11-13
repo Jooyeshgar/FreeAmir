@@ -37,7 +37,8 @@ class InvoiceSeeder extends Seeder
 
             $items = [
                 'transaction_index' => 1,
-                'product_id' => Product::inRandomOrder()->first()->id,
+                'item_id' => Product::inRandomOrder()->first()->id,
+                'item_type' => 'product',
                 'quantity' => $itemQuantity,
                 'description' => $faker->sentence,
                 'unit_discount' => 0,

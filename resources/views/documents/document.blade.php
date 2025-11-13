@@ -104,7 +104,10 @@
             <tr>
                 <td colspan="5">
                     <div class="border border-black text-sm rounded-lg p-4">
-                        <p class="mb-2">شرح سند: {{ $document->title }}</p>
+                        <p class="mb-2">شرح سند:
+                            فاکتور {{ $document->invoice->invoice_type->label() }} 
+                            شماره {{ formatNumber($document->invoice->number) }} - آقای/خانم {{ $document->invoice->customer->name }}
+                        </p>
                         <div class="flex justify-between text-sm print:flex-wrap">
                             <p>ایجاد کننده: {{ $document->creator->name }}</p>
                             <p>تایید کننده: {{ $document->approver?->name }}</p>
