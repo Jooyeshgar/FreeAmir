@@ -1,6 +1,6 @@
 <x-card class="rounded-2xl w-full" class_body="p-4">
     <div class="flex gap-2 items-center justify-start" x-data="{
-        selectedCustomerId: {{ old('customer_id' ?? $invoice->customer_id ?? '') ?: 'null' }},
+        selectedCustomerId: {{ old('customer_id', $invoice->customer_id ?? 'null') }}
     }">
         <div class="flex w-1/4">
             <div class="flex flex-wrap">
@@ -9,9 +9,7 @@
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
                     <option value="">{{ __('Select Customer') }}</option>
                     @foreach ($customers as $customer)
-                        <option value="{{ $customer->id }}" x-bind:selected="selectedCustomerId = {{ $invoice->customer_id }}">
-                            {{ $customer->name }}
-                        </option>
+                        <option value="{{ $customer->id }}">{{ $customer->name }}</option>
                     @endforeach
                 </select>
             </div>

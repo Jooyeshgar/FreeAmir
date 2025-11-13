@@ -164,7 +164,7 @@ class InvoiceController extends Controller
     {
         $invoice->load('customer', 'document.transactions', 'items'); // Eager load relationships
 
-        $customers = Customer::all();
+        $customers = Customer::all('name', 'id');
         $products = Product::with('inventorySubject')->orderBy('name', 'asc')->get();
         $services = Service::with('subject')->orderBy('name', 'asc')->get();
 
