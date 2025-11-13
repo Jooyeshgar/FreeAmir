@@ -16,7 +16,7 @@
                 </select>
             </div>
         </div>
-        <input type="hidden" id="invoice_type" name="invoice_type" value="{{ $invoice->invoice_type }}">
+        <input type="hidden" id="invoice_type" name="invoice_type" value="{{ $invoice->invoice_type ?? $invoice_type }}">
         <div class="flex w-1/3">
             <x-text-input input_name="title" title="{{ __('Invoice Name') }}" 
                 input_value="{{ old('title') ?? ($invoice->document->title ?? '') }}" 
