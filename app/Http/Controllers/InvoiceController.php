@@ -198,6 +198,8 @@ class InvoiceController extends Controller
         });
         $total = $transactions->count();
 
+        $invoice_type = $invoice->invoice_type;
+
         return view('invoices.edit', compact(
             'invoice',
             'customers',
@@ -207,6 +209,7 @@ class InvoiceController extends Controller
             'transactions',
             'productGroups',
             'serviceGroups',
+            'invoice_type',
         ));
     }
 
