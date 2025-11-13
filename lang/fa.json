@@ -1,4 +1,5 @@
 {
+    " with number ": " به شماره ",
     "(From amount) - (To amount) : Discount amount": "(از مقدار) - (به مبلغ) : مبلغ تخفیف",
     "Account": "حساب",
     "Account 1": "حساب 1",
@@ -222,7 +223,7 @@
     "Documents Report": "گزارش اسناد",
     "Down Payment": "بیعانه",
     "Draft": "پیش نویس",
-    "Duplicate": "دورامی",
+    "Duplicate": "کپی",
     "Economic code": "کد اقتصادی",
     "Economical Code": "کد اقتصادی",
     "Edit": "ویرایش",

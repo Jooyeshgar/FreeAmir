@@ -60,6 +60,8 @@ class InvoiceService
             self::syncInvoiceItems($createdInvoice, $items);
 
             CostOfGoodsService::updateProductsAverageCost($createdInvoice);
+
+            self::syncCOGAfterForInvoiceItems($createdInvoice);
         });
 
         return [
@@ -110,12 +112,35 @@ class InvoiceService
             self::syncInvoiceItems($invoice, $items);
 
             CostOfGoodsService::updateProductsAverageCost($invoice);
+            self::syncCOGAfterForInvoiceItems($invoice);
         });
 
         return [
             'document' => $invoice->document->fresh(),
             'invoice' => $invoice->fresh(),
         ];
+    }
+
+    public static function syncCOGAfterForInvoiceItems(Invoice $invoice)
+    {
+        if ($invoice->invoice_type !== InvoiceType::BUY) {
+            return;
+        }
+
+        $invoiceItems = $invoice->items;
+
+        if ($invoiceItems->isEmpty()) {
+            return;
+        }
+
+        foreach ($invoiceItems as $item) {
+            if (! $item->itemable) {
+                continue;
+            }
+
+            $item->cog_after = $item->itemable->average_cost;
+            $item->update();
+        }
     }
 
     /**

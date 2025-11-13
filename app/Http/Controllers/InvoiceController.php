@@ -261,7 +261,7 @@ class InvoiceController extends Controller
         try {
             InvoiceService::deleteInvoice($invoice->id);
 
-            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('info', __('Invoice deleted successfully and COG is invalidated'));
+            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('info', __('Invoice deleted successfully.'));
         } catch (\Exception $e) {
             return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('error', $e->getMessage());
         }

@@ -3,12 +3,9 @@
 namespace App\Services;
 
 use App\Enums\AncillaryCostType;
-use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
-use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\User;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -63,7 +60,21 @@ class AncillaryCostService
             self::syncAncillaryCostItems($ancillaryCost, $data['ancillaryCosts'] ?? []);
 
             CostOfGoodsService::updateProductsAverageCost($invoice);
+            self::syncCOGAfterAncillarityCost($invoice);
         });
+    }
+
+    private static function syncCOGAfterAncillarityCost($invoice)
+    {
+        $invoiceItems = $invoice->items;
+        if ($invoiceItems->isEmpty()) {
+            return;
+        }
+
+        foreach ($invoiceItems as $item) {
+            $item->cog_after = $item->itemable->average_cost;
+            $item->update();
+        }
     }
 
     public static function updateAncillaryCost(User $user, AncillaryCost $ancillaryCost, array $data)
@@ -101,6 +112,8 @@ class AncillaryCostService
             self::syncAncillaryCostItems($ancillaryCost, $data['ancillaryCosts'] ?? []);
 
             CostOfGoodsService::updateProductsAverageCost($invoice);
+
+            self::syncCOGAfterAncillarityCost($invoice);
         });
     }
 
@@ -122,6 +135,8 @@ class AncillaryCostService
             $ancillaryCost->delete();
 
             CostOfGoodsService::updateProductsAverageCost($invoice);
+
+            self::syncCOGAfterAncillarityCost($invoice);
         });
     }
 
