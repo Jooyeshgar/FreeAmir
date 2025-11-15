@@ -30,18 +30,29 @@
                                     href="{{ route('documents.edit', $ancillaryCost->document_id) }}">{{ formatDocumentNumber($ancillaryCost->document->number) ?? '' }}</a>
                             </td>
                             <td class="p-2">
-                                <a class="link" href="{{ route('invoices.show', $ancillaryCost->invoice_id) }}">{{ $ancillaryCost->invoice->number ?? '' }}</a>
+                                <a class="link" href="{{ route('invoices.show', $ancillaryCost->invoice_id) }}">{{ formatNumber($ancillaryCost->invoice->number) ?? '' }}</a>
                             </td>
                             <td class="p-2">{{ $ancillaryCost->type->label() }}</td>
                             <td class="p-2">{{ formatDate($ancillaryCost->date) }}</td>
                             <td class="p-2">{{ formatNumber($ancillaryCost->amount) }}</td>
                             <td class="p-2">
-                                <a href="{{ route('ancillary-costs.edit', $ancillaryCost) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                <form action="{{ route('ancillary-costs.destroy', $ancillaryCost) }}" method="POST" class="inline-block">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                </form>
+                                @php($editDeleteStatus = \App\Services\AncillaryCostService::getEditDeleteStatus($ancillaryCost))
+
+                                @if($editDeleteStatus['allowed'])
+                                    <a href="{{ route('ancillary-costs.edit', $ancillaryCost) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                    <form action="{{ route('ancillary-costs.destroy', $ancillaryCost) }}" method="POST" class="inline-block">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                    </form>
+                                @else
+                                    <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
+                                        <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" disabled title="{{ $editDeleteStatus['reason'] }}">{{ __('Edit') }}</button>
+                                    </span>
+                                    <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
+                                        <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled title="{{ $editDeleteStatus['reason'] }}">{{ __('Delete') }}</button>
+                                    </span>
+                                @endif
                             </td>
                         </tr>
                     @endforeach

@@ -6,15 +6,14 @@ use App\Http\Requests\StoreAncillaryCostRequest;
 use App\Models\AncillaryCost;
 use App\Models\Invoice;
 use App\Services\AncillaryCostService;
+use Exception;
 use Illuminate\Http\Request;
 
 class AncillaryCostController extends Controller
 {
     public function index(Request $request)
     {
-        $ancillaryCosts = AncillaryCost::with('invoice')
-            ->orderByDesc('date')
-            ->paginate(12);
+        $ancillaryCosts = AncillaryCost::with('invoice')->orderBy('date')->paginate(12);
 
         $ancillaryCosts->appends($request->query());
 
@@ -23,10 +22,7 @@ class AncillaryCostController extends Controller
 
     public function create()
     {
-        $invoices = Invoice::select('id', 'number')
-            ->where('invoice_type', 'buy')
-            ->orderByDesc('date')
-            ->get();
+        $invoices = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing();
         $ancillaryCost = new AncillaryCost;
         $ancillaryCostItems = old('ancillaryCosts') ?? [];
 
@@ -38,6 +34,11 @@ class AncillaryCostController extends Controller
         $validated = $request->validated();
         $validated['company_id'] = session('active-company-id');
 
+        $validatedInvoicesId = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing()->pluck('id')->toArray();
+        if (! in_array($validated['invoice_id'], $validatedInvoicesId)) {
+            throw new Exception(__('Ancillary Cost cannot be created.'), 400);
+        }
+
         AncillaryCostService::createAncillaryCost(auth()->user(), $validated);
 
         return redirect()
@@ -47,7 +48,7 @@ class AncillaryCostController extends Controller
 
     public function edit(AncillaryCost $ancillaryCost)
     {
-        $invoices = Invoice::select('id', 'number')->where('invoice_type', 'buy')->orderByDesc('date')->get();
+        $invoices = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing();
 
         // Load ancillary cost items for editing
         $ancillaryCostItems = $ancillaryCost->items->map(function ($item) {
@@ -67,10 +68,14 @@ class AncillaryCostController extends Controller
 
     public function update(StoreAncillaryCostRequest $request, AncillaryCost $ancillaryCost)
     {
+        if (AncillaryCostService::getEditDeleteStatus($ancillaryCost)['allowed'] === false) {
+            throw new Exception(__('Ancillary Cost cannot be edited.'), 400);
+        }
+
         $validated = $request->validated();
         $validated['company_id'] = session('active-company-id');
 
-        AncillaryCostService::updateAncillaryCost(auth()->user(), $ancillaryCost, $validated);
+        AncillaryCostService::updateAncillaryCost($ancillaryCost, $validated);
 
         return redirect()
             ->route('ancillary-costs.index')
@@ -79,6 +84,10 @@ class AncillaryCostController extends Controller
 
     public function destroy(AncillaryCost $ancillaryCost)
     {
+        if (AncillaryCostService::getEditDeleteStatus($ancillaryCost)['allowed'] === false) {
+            throw new Exception(__('Ancillary Cost cannot be deleted.'), 400);
+        }
+
         AncillaryCostService::deleteAncillaryCost($ancillaryCost);
 
         return redirect()
