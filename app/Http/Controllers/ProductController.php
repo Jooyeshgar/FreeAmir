@@ -16,7 +16,20 @@ class ProductController extends Controller
 
     public function index()
     {
-        $products = Product::with('productGroup')->paginate(12);
+        $query = Product::orderBy('code');
+
+        if (request()->has('name') && request('name')) {
+            $query->where('name', 'like', '%'.request('name').'%');
+        }
+
+        if (request()->has('group_name') && request('group_name')) {
+            $searchGroupName = request('group_name');
+            $query->whereHas('productGroup', function ($groupName) use ($searchGroupName) {
+                $groupName->where('name', 'like', '%'.$searchGroupName.'%');
+            });
+        }
+
+        $products = $query->paginate(12);
 
         return view('products.index', compact('products'));
     }

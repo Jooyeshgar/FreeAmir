@@ -28,6 +28,9 @@
 
                 <form action="{{ route('invoices.index') }}" method="GET" class="ml-auto">
                     <div class="mt-4 mb-4 grid grid-cols-6 gap-6">
+                        <div class="col-span-2 md:col-span-1" hidden>
+                            <x-input name="invoice_type" value="{{ request('invoice_type') }}" placeholder="{{ __('Invoice Type') }}"/>
+                        </div>
                         <div class="col-span-2 md:col-span-1">
                             <x-input name="number" value="{{ request('number') }}" placeholder="{{ __('Invoice Number') }}" />
                         </div>

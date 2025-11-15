@@ -125,21 +125,6 @@
                     </div>
                 </div>
 
-                <!-- <div class="card bg-base-200 shadow">
-                    <div class="card-body p-4">
-                        <h3 class="card-title text-sm text-gray-500">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                            {{ __('Profit per Unit') }}
-                        </h3>
-                        @php
-                            $profitPerUnit = ($product->selling_price ?? 0) - ($product->average_cost ?? 0);
-                        @endphp
-                        <p class="text-2xl font-bold {{ $profitPerUnit >= 0 ? 'text-success' : 'text-error' }}">
-                            {{ formatNumber($profitPerUnit) }}
-                        </p>
-                    </div>
-                </div> -->
-
                 <div class="card bg-base-200 shadow">
                     <div class="card-body p-4">
                         <h3 class="card-title text-sm text-gray-500">{{ __('Discount Formula') }}</h3>
@@ -182,7 +167,9 @@
                             $totalSell = 0;
                             $totalBuy = 0;
 
-                            foreach ($product->invoiceItems as $item) {
+                            $historyItems = $product->invoiceItems->sortBy('invoice.date');
+
+                            foreach ($historyItems as $item) {
                                 if ($item->invoice->invoice_type === \App\Enums\InvoiceType::SELL) {
                                     $totalSell += $item->quantity;
                                 } elseif ($item->invoice->invoice_type === \App\Enums\InvoiceType::BUY) {
@@ -193,7 +180,7 @@
                             $remaining = $product->quantity - $totalBuy + $totalSell;
                         @endphp
 
-                        @foreach ($product->invoiceItems as $item)
+                        @foreach ($historyItems as $item)
                             @php
                                 if ($item->invoice->invoice_type === \App\Enums\InvoiceType::SELL) {
                                     $remaining -= $item->quantity;

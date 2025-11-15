@@ -30,7 +30,11 @@
                     @foreach ($productGroups as $productGroup)
                         <tr>
                             <td class="px-4 py-2">{{ $productGroup->sstid }}</td>
-                            <td class="px-4 py-2">{{ $productGroup->name }}</td>
+                            <td class="px-4 py-2">
+                                <a href="{{ route('products.index', ['group_name' => $productGroup->name]) }}" class="text-blue-600 hover:underline">
+                                    {{ $productGroup->name }}
+                                </a>
+                            </td>
                             <td class="px-4 py-2">{{ formatNumber($productGroup->vat) }}%</td>
                             <td class="px-4 py-2">{{ formatNumber($productGroup->products->count()) }}</td>
                             <td class="px-4 py-2"><a

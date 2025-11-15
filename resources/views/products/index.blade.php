@@ -10,13 +10,41 @@
             <div class="card-actions">
                 <a href="{{ route('products.create') }}" class="btn btn-primary">{{ __('Create product') }}</a>
             </div>
+
+            <form action="{{ route('products.index') }}" method="GET">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full md:w-2/5">
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-2 flex items-center text-gray-400 text-sm">
+                            <i class="fa-solid fa-box"></i>
+                        </span>
+                        <input type="text" name="name" value="{{ request('name') }}" placeholder="{{ __('Product Name') }}"
+                            class="w-full pl-8 pr-2 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"/>
+                    </div>
+
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-2 flex items-center text-gray-400 text-sm">
+                            <i class="fa-solid fa-layer-group"></i>
+                        </span>
+                        <input type="text" name="group_name" value="{{ request('group_name') }}" placeholder="{{ __('Product Group Name') }}"
+                            class="w-full pl-8 pr-2 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"/>
+                    </div>
+
+                    <div class="flex items-center">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 text-sm rounded-lg shadow transition-all">
+                            <i class="fa-solid fa-magnifying-glass mr-1"></i>
+                            {{ __('Search') }}
+                        </button>
+                    </div>
+                </div>
+            </form>
+
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <tr>
                         <th class="px-4 py-2">{{ __('Code') }}</th>
                         <th class="px-4 py-2">{{ __('Name') }}</th>
                         <th class="px-4 py-2">{{ __('Quantity') }}</th>
-                        <th class="px-4 py-2">{{ __('Buy price') }}</th>
+                        <th class="px-4 py-2">{{ __('Average Cost') }}</th>
                         <th class="px-4 py-2">{{ __('Sell price') }}</th>
                         <th class="px-4 py-2">{{ __('VAT') }}</th>
                         <th class="px-4 py-2">{{ __('Product group') }}</th>
@@ -33,7 +61,7 @@
                                     {{ $product->name }}</a>
                             </td>
                             <td class="px-4 py-2">{{ formatNumber($product->quantity) }}</td>
-                            <td class="px-4 py-2">{{ formatNumber($product->purchace_price) }}</td>
+                            <td class="px-4 py-2">{{ formatNumber($product->average_cost) }}</td>
                             <td class="px-4 py-2">{{ formatNumber($product->selling_price) }}</td>
                             <td class="px-4 py-2">{{ formatNumber($product->vat) }}%</td>
                             <td class="px-4 py-2">{{ $product->productGroup ? $product->productGroup->name : '' }}</td>

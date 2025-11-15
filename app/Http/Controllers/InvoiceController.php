@@ -30,28 +30,35 @@ class InvoiceController extends Controller
      */
     public function index(Request $request)
     {
-        $builder = Invoice::with('customer', 'document')->orderByDesc('id');
+        $builder = Invoice::with(['customer', 'document'])
+            ->orderByDesc('id');
 
-        $invoiceType = $request->get('invoice_type');
-        if ($invoiceType && in_array($invoiceType, ['buy', 'sell', 'return_buy', 'return_sell'])) {
-            $builder = $builder->where('invoice_type', $invoiceType);
-        }
+        $builder->when($request->filled('invoice_type') &&
+            in_array($request->invoice_type, ['buy', 'sell', 'return_buy', 'return_sell']),
+            fn ($invoice) => $invoice->where('invoice_type', $request->invoice_type)
+        );
 
-        // Optional: Filter by search query
-        $searchTerm = $request->get('q');
-        if ($searchTerm) {
-            $builder->where(function ($q) use ($searchTerm) {
-                $q->where('code', 'like', "%{$searchTerm}%")
-                    ->orWhere('description', 'like', "%{$searchTerm}%");
-            })->orWhereHas('customer', function ($q) use ($searchTerm) {
-                $q->where('name', 'like', "%{$searchTerm}%");
-            });
-        }
+        $builder->when($request->filled('number'),
+            fn ($q) => $q->where('number', $request->number)
+        );
 
-        $invoices = $builder->paginate(12);
-        $invoices->appends($request->query());
+        $builder->when($request->filled('date'),
+            fn ($q) => $q->whereDate('date', $request->date)
+        );
 
-        return view('invoices.index', compact('invoices', 'searchTerm'));
+        $builder->when($request->filled('text'),
+            fn ($q) => $q->where(function ($invoice) use ($request) {
+                $invoice->whereHas('items', function ($items) use ($request) {
+                    $items->where('description', 'like', "%{$request->text}%");
+                })->orWhereHas('customer', function ($customer) use ($request) {
+                    $customer->where('name', 'like', "%{$request->text}%");
+                });
+            })
+        );
+
+        $invoices = $builder->paginate(12)->appends($request->query());
+
+        return view('invoices.index', compact('invoices'));
     }
 
     /**

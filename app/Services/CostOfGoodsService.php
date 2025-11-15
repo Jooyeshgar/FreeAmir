@@ -55,27 +55,6 @@ class CostOfGoodsService
         }
     }
 
-    public static function updateAverageCostAfterInvoiceDeletion($invoice): void
-    {
-        $productIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->toArray();
-
-        if (empty($productIds)) {
-            return;
-        }
-
-        $products = Product::whereIn('id', $productIds)->get();
-
-        foreach ($products as $product) {
-            $previousInvoice = self::getPreviousInvoice($invoice, $product->id);
-            if ($previousInvoice) {
-                $previousInvoiceItem = $previousInvoice->items->where('itemable_id', $product->id)->first();
-
-                $product->average_cost = $previousInvoiceItem ? $previousInvoiceItem->cog_after : 0;
-                $product->save();
-            }
-        }
-    }
-
     /**
      * Calculate gross profit for a sale invoice item.
      */
