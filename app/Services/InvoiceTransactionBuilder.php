@@ -162,7 +162,7 @@ class InvoiceTransactionBuilder
 
             $this->transactions[] = [
                 'subject_id' => $discountSubjectId,
-                'desc' => $invoiceType.__(' Invoice discount with number ').$this->invoiceData['number'],
+                'desc' => $invoiceType.__('Invoice discount with number').$this->invoiceData['number'],
                 'value' => $this->invoiceType === InvoiceType::SELL ? -$this->totalDiscount : $this->totalDiscount,
             ];
         }
@@ -223,7 +223,7 @@ class InvoiceTransactionBuilder
 
             $this->transactions[] = [
                 'subject_id' => $subtractionSubjectId,
-                'desc' => $invoiceType.__(' Invoice subtraction with number ').$this->invoiceData['number'],
+                'desc' => $invoiceType.' '.__('Invoice subtraction with number').' '.$this->invoiceData['number'],
                 'value' => $this->invoiceType === InvoiceType::SELL ? -$this->subtractions : $this->subtractions,
             ];
         }

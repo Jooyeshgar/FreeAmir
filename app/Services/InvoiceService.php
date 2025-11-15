@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Enums\InvoiceType;
 use App\Exceptions\InvoiceServiceException;
-use App\Models\AncillaryCost;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -221,39 +220,6 @@ class InvoiceService
         }
     }
 
-    private static function preparingAncillaryCostData(AncillaryCost $ancillaryCost): array
-    {
-        $data = [
-            'vatPrice' => (float) $ancillaryCost->vat,
-            'amount' => (float) $ancillaryCost->amount,
-            'type' => $ancillaryCost->type->value,
-            'vatPercentage' => $ancillaryCost->vat_percentage,
-            'date' => $ancillaryCost->date,
-            'invoice_id' => $ancillaryCost->invoice_id,
-            'company_id' => session('active-company-id'),
-        ];
-
-        $ancillaryCostItems = $ancillaryCost->items->toArray() ?? [];
-        $processedCosts = [];
-        $total = 0;
-        if (! empty($ancillaryCostItems)) {
-            foreach ($ancillaryCostItems as $key => $cost) {
-
-                $amount = convertToFloat($cost['amount'] ?? 0);
-                if ($amount >= 0) {
-                    $processedCosts[] = [
-                        'product_id' => $cost['product_id'] ?? null,
-                        'amount' => $amount,
-                    ];
-                }
-                $total += $amount;
-            }
-        }
-        $data['ancillaryCosts'] = $processedCosts;
-
-        return $data;
-    }
-
     private static function normalizeInvoiceData(array $invoiceData): array
     {
         $invoiceData = [
@@ -334,7 +300,7 @@ class InvoiceService
      * @param  Invoice  $invoice  The invoice to check for subsequent related invoices.
      * @return bool True if a subsequent invoice exists for any of the products in the given invoice; otherwise, false.
      */
-    private static function hasSubsequentInvoicesForProduct(Invoice $invoice, array $productIds): bool
+    public static function hasSubsequentInvoicesForProduct(Invoice $invoice, array $productIds): bool
     {
         $invoicesExcludingCurrent = Invoice::where('number', '!=', $invoice->number);
 
