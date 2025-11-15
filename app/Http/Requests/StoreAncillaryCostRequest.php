@@ -17,6 +17,7 @@ class StoreAncillaryCostRequest extends FormRequest
     {
         $ancillaryCostsInput = $this->input('ancillaryCosts', []);
         $processedCosts = [];
+        $vatPrice = 0;
         $total = 0;
         if (! empty($ancillaryCostsInput)) {
             foreach ($ancillaryCostsInput as $key => $cost) {
