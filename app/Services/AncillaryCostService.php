@@ -38,7 +38,7 @@ class AncillaryCostService
 
         $documentData = [
             'date' => $data['date'] ?? now()->toDateString(),
-            'title' => $type->label().' '.($invoice->number ?? ''),
+            'title' => $type->label().' '.__('Invoice #').($invoice->number ?? ''),
         ];
 
         $transactionBuilder = new AncillaryCostTransactionBuilder($data);
@@ -91,7 +91,7 @@ class AncillaryCostService
 
             $documentData = [
                 'date' => $data['date'],
-                'title' => $type->label().' '.($invoice->number ?? ''),
+                'title' => $type->label().' '.__('Invoice #').($invoice->number ?? ''),
             ];
 
             $transactionBuilder = new AncillaryCostTransactionBuilder($data);
