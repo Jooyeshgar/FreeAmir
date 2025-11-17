@@ -26,22 +26,42 @@
                     @foreach ($ancillaryCosts as $ancillaryCost)
                         <tr>
                             <td class="p-2">
-                                <a class="link"
-                                    href="{{ route('documents.edit', $ancillaryCost->document_id) }}">{{ formatDocumentNumber($ancillaryCost->document->number) ?? '' }}</a>
+                                <a href="{{ route('documents.show', $ancillaryCost->document_id) }}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </a>&nbsp;
+                                <a class="link" href="{{ route('documents.edit', $ancillaryCost->document_id) }}">
+                                    {{ formatDocumentNumber($ancillaryCost->document->number) ?? '' }}</a>
                             </td>
                             <td class="p-2">
-                                <a class="link" href="{{ route('invoices.show', $ancillaryCost->invoice_id) }}">{{ $ancillaryCost->invoice->number ?? '' }}</a>
+                                <a class="link"
+                                    href="{{ route('invoices.show', $ancillaryCost->invoice_id) }}">{{ formatNumber($ancillaryCost->invoice->number) ?? '' }}</a>
                             </td>
                             <td class="p-2">{{ $ancillaryCost->type->label() }}</td>
                             <td class="p-2">{{ formatDate($ancillaryCost->date) }}</td>
                             <td class="p-2">{{ formatNumber($ancillaryCost->amount) }}</td>
                             <td class="p-2">
-                                <a href="{{ route('ancillary-costs.edit', $ancillaryCost) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                <form action="{{ route('ancillary-costs.destroy', $ancillaryCost) }}" method="POST" class="inline-block">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                </form>
+                                @php($editDeleteStatus = \App\Services\AncillaryCostService::getEditDeleteStatus($ancillaryCost))
+
+                                @if ($editDeleteStatus['allowed'])
+                                    <a href="{{ route('ancillary-costs.edit', $ancillaryCost) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                    <form action="{{ route('ancillary-costs.destroy', $ancillaryCost) }}" method="POST" class="inline-block">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                    </form>
+                                @else
+                                    <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
+                                        <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" disabled
+                                            title="{{ $editDeleteStatus['reason'] }}">{{ __('Edit') }}</button>
+                                    </span>
+                                    <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
+                                        <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled
+                                            title="{{ $editDeleteStatus['reason'] }}">{{ __('Delete') }}</button>
+                                    </span>
+                                @endif
                             </td>
                         </tr>
                     @endforeach

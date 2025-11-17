@@ -29,7 +29,7 @@
                 <form action="{{ route('invoices.index') }}" method="GET" class="ml-auto">
                     <div class="mt-4 mb-4 grid grid-cols-6 gap-6">
                         <div class="col-span-2 md:col-span-1" hidden>
-                            <x-input name="invoice_type" value="{{ request('invoice_type') }}" placeholder="{{ __('Invoice Type') }}"/>
+                            <x-input name="invoice_type" value="{{ request('invoice_type') }}" placeholder="{{ __('Invoice Type') }}" />
                         </div>
                         <div class="col-span-2 md:col-span-1">
                             <x-input name="number" value="{{ request('number') }}" placeholder="{{ __('Invoice Number') }}" />
@@ -69,10 +69,13 @@
                             </td>
                             <td class="px-4 py-2">{{ $invoice->customer->name ?? '' }}</td>
                             <td class="px-4 py-2">
-                                @if ($invoice->document)
-                                    <a class="link"
-                                        href="{{ route('documents.show', $invoice->document_id) }}">{{ formatDocumentNumber($invoice->document->number) }}</a>
-                                @endif
+                                <a href="{{ route('documents.show', $invoice->document_id) }}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </a>&nbsp;
+                                <a class="link" href="{{ route('documents.edit', $invoice->document_id) }}">{{ formatDocumentNumber($invoice->document->number) }}</a>
                             </td>
                             <td class="px-4 py-2">{{ isset($invoice->date) ? formatDate($invoice->date) : '' }}</td>
                             <td class="px-4 py-2">{{ isset($invoice->amount) ? formatNumber($invoice->amount - $invoice->subtraction) : '' }}
@@ -86,7 +89,7 @@
                                 <a href="{{ route('invoices.show', $invoice) }}" target="_blank" rel="noopener" class="btn btn-sm btn-info">{{ __('Show') }}</a>
                                 <a href="{{ route('invoices.print', $invoice) }}" target="_blank" rel="noopener" class="btn btn-sm btn-info">{{ __('Print') }}</a>
 
-                                @if($editDeleteStatus['allowed'])
+                                @if ($editDeleteStatus['allowed'])
                                     <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                     <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" class="inline-block">
                                         @csrf
@@ -95,10 +98,12 @@
                                     </form>
                                 @else
                                     <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
-                                        <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" disabled title="{{ $editDeleteStatus['reason'] }}">{{ __('Edit') }}</button>
+                                        <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" disabled
+                                            title="{{ $editDeleteStatus['reason'] }}">{{ __('Edit') }}</button>
                                     </span>
                                     <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
-                                        <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled title="{{ $editDeleteStatus['reason'] }}">{{ __('Delete') }}</button>
+                                        <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled
+                                            title="{{ $editDeleteStatus['reason'] }}">{{ __('Delete') }}</button>
                                     </span>
                                 @endif
                             </td>

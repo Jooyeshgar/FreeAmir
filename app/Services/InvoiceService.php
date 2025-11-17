@@ -36,7 +36,7 @@ class InvoiceService
 
         $documentData = [
             'date' => $date,
-            'title' => $invoiceData['title'] ?? (__('Invoice').' '.($invoiceData['number'] ?? '')),
+            'title' => $invoiceData['title'] ?? (__('Invoice #') . ($invoiceData['number'] ?? '')),
             'number' => $invoiceData['document_number'] ?? null,
         ];
 
@@ -92,7 +92,7 @@ class InvoiceService
 
             $documentData = [
                 'date' => $invoiceData['date'] ?? $invoice->date,
-                'title' => $invoiceData['title'] ?? $invoice->document->title,
+                'title' => $invoiceData['title'] ?? (__('Invoice #') . ($invoiceData['number'] ?? '')),
                 'number' => $invoiceData['document_number'] ?? $invoice->document->number,
             ];
 

@@ -3,9 +3,13 @@
 namespace App\Services;
 
 use App\Enums\AncillaryCostType;
+use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
 use App\Models\Invoice;
+use App\Models\Product;
 use App\Models\User;
+use Exception;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -34,7 +38,7 @@ class AncillaryCostService
 
         $documentData = [
             'date' => $data['date'] ?? now()->toDateString(),
-            'title' => $type->label().' '.($invoice->number ?? ''),
+            'title' => $type->label().' '.__('Invoice #').($invoice->number ?? ''),
         ];
 
         $transactionBuilder = new AncillaryCostTransactionBuilder($data);
@@ -77,7 +81,7 @@ class AncillaryCostService
         }
     }
 
-    public static function updateAncillaryCost(User $user, AncillaryCost $ancillaryCost, array $data)
+    public static function updateAncillaryCost(AncillaryCost $ancillaryCost, array $data)
     {
         self::validateAncillaryCostData($data);
 
@@ -87,7 +91,7 @@ class AncillaryCostService
 
             $documentData = [
                 'date' => $data['date'],
-                'title' => $type->label().' '.($invoice->number ?? ''),
+                'title' => $type->label().' '.__('Invoice #').($invoice->number ?? ''),
             ];
 
             $transactionBuilder = new AncillaryCostTransactionBuilder($data);
@@ -187,5 +191,49 @@ class AncillaryCostService
         if ($validator->fails()) {
             throw new \Illuminate\Validation\ValidationException($validator);
         }
+    }
+
+    /**
+     * Determine if an ancillary cost can be edited or deleted without throwing, and provide the reason when it cannot.
+     *
+     * @return array{allowed: bool, reason: string|null}
+     */
+    public static function getEditDeleteStatus(AncillaryCost $ancillaryCost): array
+    {
+        try {
+            self::checkAncillaryCostDeleteableOrEditable($ancillaryCost);
+
+            return ['allowed' => true, 'reason' => null];
+        } catch (\Throwable $e) {
+            return ['allowed' => false, 'reason' => $e->getMessage()];
+        }
+    }
+
+    private static function checkAncillaryCostDeleteableOrEditable(AncillaryCost $ancillaryCost): void
+    {
+        if (! $ancillaryCost) {
+            throw new Exception(__('Ancillary Cost not found'), 404);
+        }
+
+        $productIds = $ancillaryCost->items->pluck('product_id')->toArray();
+
+        if (empty($productIds)) {
+            return;
+        }
+
+        if (InvoiceService::hasSubsequentInvoicesForProduct($ancillaryCost->invoice, $productIds)) {
+            throw new Exception(__('Ancillary Cost cannot be edited/deleted because there are subsequent buy/sell invoices after the respective invoice date.'), 400);
+        }
+    }
+
+    public static function getAllowedInvoicesForAncillaryCostsCreatingOrEditing(): Collection
+    {
+        $invoices = Invoice::where('invoice_type', InvoiceType::BUY)->orderBy('date')->get();
+
+        return $invoices->reject(function ($invoice) {
+            $productIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->toArray();
+
+            return InvoiceService::hasSubsequentInvoicesForProduct($invoice, $productIds);
+        });
     }
 }
