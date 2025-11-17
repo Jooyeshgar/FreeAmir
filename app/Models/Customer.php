@@ -68,35 +68,6 @@ class Customer extends Model
         'postal_code' => '',
     ];
 
-    protected static function booted()
-    {
-        static::creating(function ($model) {
-            $model->company_id ??= session('active-company-id');
-        });
-
-        static::created(function ($customer) {
-            $parentGroup = $customer->group;
-            $subject = app(SubjectCreatorService::class)->createSubject([
-                'name' => $customer->name,
-                'parent_id' => $parentGroup->subject_id ?? 0,
-                'company_id' => session('active-company-id'),
-            ]);
-            $customer->subject()->save($subject);
-        });
-
-        static::updated(function ($customer) {
-            $customer->subject->update([
-                'parent_id' => $customer->group->subject_id,
-            ]);
-        });
-
-        static::deleted(function ($customer) {
-            if ($customer->subject) {
-                $customer->subject->delete();
-            }
-        });
-    }
-
     public function subject()
     {
         return $this->morphOne(Subject::class, 'subjectable');

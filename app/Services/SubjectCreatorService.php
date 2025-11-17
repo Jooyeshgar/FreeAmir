@@ -179,7 +179,6 @@ class SubjectCreatorService
      */
     private function generateCode(?int $parentId, int $companyId): string
     {
-        // Use explicit company scoping; avoid relying on session-bound global scopes
         if ($parentId) {
             $parent = Subject::withoutGlobalScopes()->where('company_id', $companyId)->find($parentId);
             if (!$parent) {
