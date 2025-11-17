@@ -53,11 +53,21 @@ class CustomerController extends Controller
         ];
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $customers = Models\Customer::with('subject', 'group')->orderBy('id', 'desc')->paginate(12);
+        $groupId = $request->query('group_id');
 
-        return view('customers.index', compact('customers'));
+        $query = Models\Customer::with('subject', 'group')->orderBy('id', 'desc');
+
+        if ($groupId && $groupId !== 'all') {
+            $query->where('group_id', $groupId);
+        }
+
+        $customers = $query->paginate(30)->appends(['group_id' => $groupId]);
+
+        $groups = Models\CustomerGroup::select('id', 'name')->orderBy('name')->get();
+
+        return view('customers.index', compact('customers', 'groups', 'groupId'));
     }
 
     public function create()

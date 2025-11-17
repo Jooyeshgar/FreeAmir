@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Customer;
+use DB;
 
 class CustomerService
 {
@@ -31,9 +32,10 @@ class CustomerService
 
     public function delete(Customer $customer): void
     {
-        $customer->subject?->delete();
-
-        $customer->delete();
+        DB::transaction(function () use ($customer) {
+            $customer->delete();
+            $customer->subject?->delete();
+        });
     }
 
 
