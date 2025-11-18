@@ -24,6 +24,8 @@ class Document extends Model
         'permanent',
         'creator_id',
         'company_id',
+        'documentable_id',
+        'documentable_type',
     ];
 
     public static function booted(): void
@@ -54,5 +56,10 @@ class Document extends Model
     public function invoice()
     {
         return $this->hasOne(Invoice::class, 'document_id');
+    }
+
+    public function documentable()
+    {
+        return $this->morphTo();
     }
 }

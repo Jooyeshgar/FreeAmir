@@ -42,6 +42,7 @@ class DocumentService
         DB::transaction(function () use ($data, $transactions, &$document) {
 
             $document = Document::create($data);
+            self::syncDocumentable($document, $data['documentable'] ?? null);
 
             foreach ($transactions as $transactionData) {
                 DocumentService::createTransaction($document, $transactionData);
@@ -49,6 +50,17 @@ class DocumentService
         });
 
         return $document;
+    }
+
+    /**
+     * Associate a document with a documentable entity.
+     */
+    public static function syncDocumentable(Document $document, $documentable = null): void
+    {
+        $document->documentable()->associate($documentable);
+        if ($document->isDirty(['documentable_id', 'documentable_type'])) {
+            $document->save();
+        }
     }
 
     /**
@@ -69,6 +81,9 @@ class DocumentService
         }
 
         $document->fill($data);
+
+        self::syncDocumentable($document, $data['documentable'] ?? null);
+
         $document->save();
 
         return $document;
