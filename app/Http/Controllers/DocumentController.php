@@ -91,6 +91,10 @@ class DocumentController extends Controller
     {
         $document = Document::find($id);
         if ($document) {
+            if ($document->documentable) {
+                return redirect()->route('documents.index')->with('error', __('Cannot edit this document because it is linked to').' '.__(class_basename($document->documentable_type)).'.');
+            }
+
             $transactions = old('transactions')
                     ? self::prepareTransactions(old('transactions'))
                     : self::prepareTransactions($document->transactions);

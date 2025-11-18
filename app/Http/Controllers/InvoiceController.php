@@ -11,13 +11,9 @@ use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Service;
 use App\Models\ServiceGroup;
-use App\Models\Transaction;
 use App\Services\InvoiceService;
 use Illuminate\Http\Request;
 use PDF;
-
-// When creating an invoice, a validation error occurs if the customer is not selected. All transactions are then removed, and the page must be refreshed to fix it.
-// The product/service name in the invoice items is not loaded properly when a validation error occurs during invoice creation (it remains unselected).
 
 class InvoiceController extends Controller
 {
@@ -82,13 +78,7 @@ class InvoiceController extends Controller
         $customers = Customer::all('name', 'id');
         $previousDocumentNumber = floor(Document::max('number') ?? 0);
 
-        $oldTransactions = old('transactions');
-
-        if ($oldTransactions) {
-            $transactions = self::prepareOldTransactions($oldTransactions);
-        } else {
-            $transactions = $this->preparedNewTransactions(collect([new Transaction]));
-        }
+        $transactions = $this->prepareTransactions();
 
         $total = count($transactions);
 
@@ -179,30 +169,8 @@ class InvoiceController extends Controller
         $serviceGroups = ServiceGroup::all();
 
         // Prepare transactions from invoice items
-        $transactions = $invoice->items->map(function ($item, $index) {
-            // Calculate VAT percentage: (vat_amount / subtotal_before_vat) * 100
-            $subtotalBeforeVat = $item->amount - $item->vat;
-            $vatPercentage = $subtotalBeforeVat > 0 ? ($item->vat / $subtotalBeforeVat) * 100 : 0;
+        $transactions = $this->prepareTransactions($invoice, 'edit');
 
-            $transaction = [
-                'id' => $index + 1,
-                'transaction_id' => $item->transaction_id,
-                'desc' => $item->description,
-                'quantity' => $item->quantity,
-                'unit' => $item->unit_price,
-                'off' => $item->unit_discount,
-                'vat' => $vatPercentage,
-                'total' => $item->amount,
-            ];
-
-            $transaction['inventory_subject_id'] = $item->itemable->inventory_subject_id ?? $item->itemable->subject_id ?? null;
-            $transaction['subject'] = $item->itemable->name ?? null;
-
-            $transaction['product_id'] = $item->itemable->inventory_subject_id ? $item->itemable->id : null; // For products
-            $transaction['service_id'] = $item->itemable->subject_id ? $item->itemable->id : null; // For services (No inventory_subject_id)
-
-            return $transaction;
-        });
         $total = $transactions->count();
 
         $invoice_type = $invoice->invoice_type;
@@ -274,40 +242,72 @@ class InvoiceController extends Controller
         }
     }
 
-    private function prepareOldTransactions($oldTransactions)
+    private function prepareTransactions($source = null, string $mode = 'create')
     {
-        return collect($oldTransactions)->map(function ($transaction, $index) {
-            if (! empty($transaction['item_type']) && ! empty($transaction['item_id'])) {
-                if ($transaction['item_type'] === Product::class) {
-                    $model = Product::find($transaction['item_id']);
-                    $transaction['subject'] = $model?->name;
-                    $transaction['product_id'] = $model?->id;
-                } elseif ($transaction['item_type'] === Service::class) {
-                    $model = Service::find($transaction['item_id']);
-                    $transaction['subject'] = $model?->name;
-                    $transaction['service_id'] = $model?->id;
-                    $transaction['quantity'] = 1;
+
+        if (old('transactions')) {
+            return collect(old('transactions'))->map(function ($transaction, $index) {
+                if (! empty($transaction['item_type']) && ! empty($transaction['item_id'])) {
+
+                    if ($transaction['item_type'] === Product::class) {
+                        $model = Product::find($transaction['item_id']);
+                        $transaction['subject'] = $model?->name;
+                        $transaction['product_id'] = $model?->id;
+                    }
+
+                    if ($transaction['item_type'] === Service::class) {
+                        $model = Service::find($transaction['item_id']);
+                        $transaction['subject'] = $model?->name;
+                        $transaction['service_id'] = $model?->id;
+                        $transaction['quantity'] = $transaction['quantity'] ?? 1;
+                    }
                 }
-            }
-            $transaction['id'] = $index + 1;
 
-            return $transaction;
-        });
-    }
+                $transaction['id'] = $index + 1;
 
-    private function preparedNewTransactions($transactions)
-    {
-        return $transactions->map(function ($transaction, $i) {
-            return [
-                'id' => $i + 1,
-                'transaction_id' => $transaction->id,
-                'inventory_subject_id' => $transaction->inventory_subject_id,
-                'subject' => $transaction->subject?->name,
-                'code' => $transaction->subject?->code,
-                'desc' => $transaction->desc,
-                'credit' => $transaction->credit,
-                'debit' => $transaction->debit,
-            ];
-        });
+                return $transaction;
+            });
+        }
+
+        if ($mode === 'edit' && $source instanceof Invoice) {
+            return $source->items->map(function ($item, $index) {
+                $subtotalBeforeVat = $item->amount - $item->vat;
+                $vatPercentage = $subtotalBeforeVat > 0
+                    ? ($item->vat / $subtotalBeforeVat) * 100
+                    : 0;
+
+                return [
+                    'id' => $index + 1,
+                    'transaction_id' => $item->transaction_id,
+                    'desc' => $item->description,
+                    'quantity' => $item->quantity,
+                    'unit' => $item->unit_price,
+                    'off' => $item->unit_discount,
+                    'vat' => $vatPercentage,
+                    'total' => $item->amount,
+                    'inventory_subject_id' => $item->itemable->inventory_subject_id
+                        ?? $item->itemable->subject_id
+                        ?? null,
+                    'subject' => $item->itemable->name ?? null,
+                    'product_id' => $item->itemable->inventory_subject_id ? $item->itemable->id : null,
+                    'service_id' => $item->itemable->subject_id ? $item->itemable->id : null,
+                ];
+            });
+        }
+
+        return collect([[
+            'id' => 1,
+            'transaction_id' => null,
+            'inventory_subject_id' => null,
+            'subject' => null,
+            'desc' => null,
+            'quantity' => 1,
+            'unit' => null,
+            'off' => null,
+            'vat' => null,
+            'total' => null,
+            'product_id' => null,
+            'service_id' => null,
+        ]]);
     }
 }
