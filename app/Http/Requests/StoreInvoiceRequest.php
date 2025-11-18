@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\InvoiceType;
+use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Service;
 use Illuminate\Foundation\Http\FormRequest;
@@ -70,20 +71,23 @@ class StoreInvoiceRequest extends FormRequest
     {
         $validator->after(function ($validator) {
             $transactions = $this->input('transactions', []);
+            $invoiceType = $this->input('invoice_type');
+            $inputDate = $this->input('date');
+            $invoice = $this->route('invoice');
 
-            // Check for duplicate products and services separately
+            if (! in_array($invoiceType, ['sell', 'buy'])) {
+                return;
+            }
+
+            $itemableConditions = [];
             $productIds = [];
             $serviceIds = [];
 
             foreach ($transactions as $index => $transaction) {
-                if (! isset($transaction['item_id']) || ! isset($transaction['item_type'])) {
-                    continue;
-                }
-
                 $itemId = $transaction['item_id'];
                 $itemType = $transaction['item_type'];
 
-                // Check for duplicate products
+                // Products must be unique in transactions
                 if ($itemType === 'product') {
                     if (in_array($itemId, $productIds)) {
                         $validator->errors()->add(
@@ -93,21 +97,9 @@ class StoreInvoiceRequest extends FormRequest
                     } else {
                         $productIds[] = $itemId;
                     }
-
-                    // Validate warehouse quantity for "Sell" invoice type
-                    if ($this->input('invoice_type') == 'sell' && isset($transaction['quantity'])) {
-                        $product = Product::find($itemId);
-
-                        if ($product && $product->quantity < $transaction['quantity']) {
-                            $validator->errors()->add(
-                                "transactions.{$index}.quantity",
-                                "{$product->quantity} ".__('item(s) of')." '{$product->name}' ".__('are available.')
-                            );
-                        }
-                    }
                 }
 
-                // Check for duplicate services
+                // Services must be unique in transactions
                 if ($itemType === 'service') {
                     if (in_array($itemId, $serviceIds)) {
                         $validator->errors()->add(
@@ -118,7 +110,105 @@ class StoreInvoiceRequest extends FormRequest
                         $serviceIds[] = $itemId;
                     }
                 }
+
+                // Product quantity Check in warehouse
+                if ($transaction['item_type'] === 'product' && isset($transaction['item_id']) && $transaction['quantity']) {
+                    $product = Product::find($transaction['item_id']);
+
+                    if (! $product) {
+                        continue;
+                    }
+
+                    $availableQuantity = $product->quantity;
+
+                    if ($invoice) {
+                        $oldItem = $invoice->items()
+                            ->where('itemable_type', Product::class)
+                            ->where('itemable_id', $transaction['item_id'])
+                            ->first();
+
+                        if ($oldItem) {
+                            if ($invoice->invoice_type === InvoiceType::SELL) {
+                                $availableQuantity += $oldItem->quantity;
+                            } elseif ($invoice->invoice_type === InvoiceType::BUY) {
+                                $availableQuantity -= $oldItem->quantity;
+                            }
+                        }
+                    }
+
+                    if ($transaction['quantity'] >= $availableQuantity) {
+                        $validator->errors()->add(
+                            "transactions.{$index}.quantity",
+                            "{$availableQuantity} ".__('item(s) of')." '{$product->name}' ".__('are available.')
+                        );
+                    }
+
+                    $morphType = $transaction['item_type'] === 'product' ? Product::class : Service::class;
+
+                    if ($morphType !== Product::class) {
+                        continue;
+                    }
+
+                    $itemableConditions[] = [
+                        'itemable_type' => $morphType,
+                        'itemable_id' => $transaction['item_id'],
+                    ];
+
+                }
+
             }
+
+            if (! empty($itemableConditions)) {
+                $query = Invoice::where('invoice_type', InvoiceType::BUY)
+                    ->where('date', '>', $inputDate)
+                    ->whereHas('items', function ($q) use ($itemableConditions) {
+                        $q->where(function ($subQuery) use ($itemableConditions) {
+                            foreach ($itemableConditions as $condition) {
+                                $subQuery->orWhere(function ($innerQuery) use ($condition) {
+                                    $innerQuery->where('itemable_type', $condition['itemable_type'])
+                                        ->where('itemable_id', $condition['itemable_id']);
+                                });
+                            }
+                        });
+                    });
+
+                // Exclude the current invoice if editing
+                if ($invoice) {
+                    $query->where('id', '!=', $invoice->id);
+                }
+
+                $laterInvoices = $query->with(['items' => function ($q) use ($itemableConditions) {
+                    $q->where(function ($subQuery) use ($itemableConditions) {
+                        foreach ($itemableConditions as $condition) {
+                            $subQuery->orWhere(function ($innerQuery) use ($condition) {
+                                $innerQuery->where('itemable_type', $condition['itemable_type'])
+                                    ->where('itemable_id', $condition['itemable_id']);
+                            });
+                        }
+                    });
+                }, 'items.itemable'])->get();
+
+                if ($laterInvoices->isNotEmpty()) {
+                    $conflictingItems = [];
+                    foreach ($laterInvoices as $laterInvoice) {
+                        foreach ($laterInvoice->items as $item) {
+                            $itemName = $item->itemable->name ?? "ID: {$item->itemable_id}";
+                            $conflictingItems[] = __('Item')." '{$itemName}' ".__('in invoice #:number on :date', [
+                                'number' => convertToInt($laterInvoice->number),
+                                'date' => convertToGregorian($laterInvoice->date),
+                            ]);
+                        }
+                    }
+
+                    if (! empty($conflictingItems)) {
+                        $validator->errors()->add(
+                            'date',
+                            __('There are later buy invoices with common items:').' '.implode('; ', array_unique($conflictingItems))
+                        );
+                    }
+                }
+            }
+
         });
 
         return $validator;
