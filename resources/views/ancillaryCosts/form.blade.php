@@ -3,6 +3,22 @@
         <div class="flex gap-2 items-center justify-start">
             <div class="flex w-1/4">
                 <div class="flex flex-wrap w-full">
+                    <span class="flex flex-col flex-wrap text-gray-500 w-full"> {{ __('Customer') }} </span>
+                    <select name="customer_id" id="customer_id" x-model="selectedCustomerId" 
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
+                        <option value="">{{ __('Select Customer') }}</option>
+                        @foreach ($customers as $customer)
+                            <option value="{{ $customer->id }}" {{ (old('customer_id') ?? ($ancillaryCost->customer_id ?? null)) == $customer->id ? 'selected' : '' }}>
+                                {{ $customer->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+        </div>
+
+        <div class="flex gap-2 items-center justify-start">
+            <div class="flex w-1/4">
+                <div class="flex flex-wrap w-full">
                     <span class="flex flex-col flex-wrap text-gray-500 w-full"> {{ __('Invoice') }} </span>
                     <select name="invoice_id" id="invoice_id" x-model="selectedInvoiceId" @change="loadInvoiceProducts($event.target.value)"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
@@ -145,6 +161,7 @@
                 productAmounts: {},
                 selectedInvoiceId: {{ old('invoice_id') ?? ($ancillaryCost->invoice_id ?? 'null') }},
                 selectedCostType: '{{ old('type') ?? ($ancillaryCost->type ?? '') }}',
+                selectedCustomerId: {{ old('customer_id') ?? ($ancillaryCost->customer_id ?? 'null') }},
                 vat: '{{ old('vat') ?? ($ancillaryCost->vat ?? 0) }}',
 
                 init() {

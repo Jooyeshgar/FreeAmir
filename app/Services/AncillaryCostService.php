@@ -53,6 +53,7 @@ class AncillaryCostService
 
             $ancillaryCost = AncillaryCost::create([
                 'invoice_id' => $invoice->id,
+                'customer_id' => $data['customer_id'],
                 'company_id' => $data['company_id'],
                 'date' => $data['date'] ?? now()->toDateString(),
                 'type' => $type,
@@ -60,6 +61,8 @@ class AncillaryCostService
                 'vat' => $data['vatPrice'] ?? 0,
                 'document_id' => $document->id,
             ]);
+
+            DocumentService::syncDocumentable($document, $ancillaryCost);
 
             self::syncAncillaryCostItems($ancillaryCost, $data['ancillaryCosts'] ?? []);
 
@@ -103,11 +106,14 @@ class AncillaryCostService
 
             $ancillaryCost->update([
                 'invoice_id' => $data['invoice_id'],
+                'customer_id' => $data['customer_id'],
                 'date' => $data['date'],
                 'type' => $type,
                 'amount' => $data['amount'],
                 'vat' => $data['vatPrice'] ?? 0,
             ]);
+
+            DocumentService::syncDocumentable($document, $ancillaryCost);
 
             $invoice = $ancillaryCost->invoice; // Invoice::findOrFail($data['invoice_id']);
 

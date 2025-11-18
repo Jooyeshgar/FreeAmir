@@ -36,7 +36,7 @@ class InvoiceService
 
         $documentData = [
             'date' => $date,
-            'title' => $invoiceData['title'] ?? (__('Invoice #') . ($invoiceData['number'] ?? '')),
+            'title' => $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? '')),
             'number' => $invoiceData['document_number'] ?? null,
         ];
 
@@ -54,6 +54,8 @@ class InvoiceService
             $invoiceData['date'] = $date;
 
             $createdInvoice = Invoice::create($invoiceData);
+
+            DocumentService::syncDocumentable($createdDocument, $createdInvoice);
 
             ProductService::syncProductQuantities(new Collection([]), $items, $createdInvoice->invoice_type);
             self::syncInvoiceItems($createdInvoice, $items);
@@ -92,11 +94,11 @@ class InvoiceService
 
             $documentData = [
                 'date' => $invoiceData['date'] ?? $invoice->date,
-                'title' => $invoiceData['title'] ?? (__('Invoice #') . ($invoiceData['number'] ?? '')),
+                'title' => $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? '')),
                 'number' => $invoiceData['document_number'] ?? $invoice->document->number,
             ];
 
-            DocumentService::updateDocument($invoice->document, $documentData);
+            $updatedDocument = DocumentService::updateDocument($invoice->document, $documentData);
             DocumentService::updateDocumentTransactions($invoice->document->id, $transactions);
 
             $invoiceData['vat'] = $buildResult['totalVat'];
@@ -104,6 +106,8 @@ class InvoiceService
             unset($invoiceData['document_number']); // Don't update invoice with document_number
 
             $invoice->update($invoiceData);
+
+            DocumentService::syncDocumentable($updatedDocument, $invoice);
 
             $oldInvoiceItems = $invoice->items;
 

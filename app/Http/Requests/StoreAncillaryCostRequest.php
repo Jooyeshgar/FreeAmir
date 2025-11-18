@@ -42,6 +42,7 @@ class StoreAncillaryCostRequest extends FormRequest
             'vatPercentage' => convertToFloat(($this->input('vat') ?? 0)),
             'date' => convertToGregorian($this->input('date')),
             'invoice_id' => convertToInt($this->input('invoice_id')),
+            'customer_id' => convertToInt($this->input('customer_id')),
             'ancillaryCosts' => $processedCosts,
         ]);
     }
@@ -51,6 +52,7 @@ class StoreAncillaryCostRequest extends FormRequest
         return [
             'amount' => 'required|numeric|min:0',
             'invoice_id' => 'required|integer|exists:invoices,id',
+            'customer_id' => 'required|integer|exists:customers,id',
             'vatPrice' => 'nullable|numeric|min:0',
             'vatPercentage' => 'nullable|numeric|min:0|max:100',
             'date' => 'required|date',
@@ -72,6 +74,9 @@ class StoreAncillaryCostRequest extends FormRequest
             'invoice_id.required' => __('The Invoice field is required.'),
             'invoice_id.integer' => __('The invoice ID field must be an integer.'),
             'invoice_id.exists' => __('The selected invoice ID is invalid.'),
+            'customer_id.required' => __('The Customer field is required.'),
+            'customer_id.integer' => __('The customer ID field must be an integer.'),
+            'customer_id.exists' => __('The selected customer ID is invalid.'),
             'date.required' => __('The Date field is required.'),
             'date.date' => __('The Date field must be a valid date.'),
             'ancillaryCosts.*.product_id.required' => __('Product is required for each ancillary cost.'),

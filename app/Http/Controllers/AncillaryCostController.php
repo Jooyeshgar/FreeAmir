@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreAncillaryCostRequest;
 use App\Models\AncillaryCost;
+use App\Models\Customer;
 use App\Models\Invoice;
 use App\Services\AncillaryCostService;
 use Exception;
@@ -23,10 +24,11 @@ class AncillaryCostController extends Controller
     public function create()
     {
         $invoices = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing();
+        $customers = Customer::all();
         $ancillaryCost = new AncillaryCost;
         $ancillaryCostItems = old('ancillaryCosts') ?? [];
 
-        return view('ancillaryCosts.create', compact('invoices', 'ancillaryCost', 'ancillaryCostItems'));
+        return view('ancillaryCosts.create', compact('invoices', 'customers', 'ancillaryCost', 'ancillaryCostItems'));
     }
 
     public function store(StoreAncillaryCostRequest $request)
@@ -58,12 +60,14 @@ class AncillaryCostController extends Controller
             ];
         })->toArray();
 
+        $customers = Customer::all();
+
         // Calculate VAT percentage: (vat_amount / subtotal_before_vat) * 100
         $subtotalBeforeVat = $ancillaryCost['amount'] - $ancillaryCost['vat'];
         $vatPercentage = $subtotalBeforeVat > 0 ? ($ancillaryCost['vat'] / $subtotalBeforeVat) * 100 : 0;
         $ancillaryCost['vat'] = $vatPercentage;
 
-        return view('ancillaryCosts.edit', compact('ancillaryCost', 'invoices', 'ancillaryCostItems'));
+        return view('ancillaryCosts.edit', compact('ancillaryCost', 'invoices', 'customers', 'ancillaryCostItems'));
     }
 
     public function update(StoreAncillaryCostRequest $request, AncillaryCost $ancillaryCost)
