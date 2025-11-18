@@ -49,6 +49,7 @@
                     <input type="text" x-bind:value="transaction.transaction_id" x-bind:name="'transactions[' + index + '][transaction_id]'" hidden>
                     <input type="text" x-bind:value="selectedCode" x-bind:name="'transactions[' + index + '][code]'" hidden>
                     <input type="text" x-bind:value="selectedId" x-bind:name="'transactions[' + index + '][subject_id]'" hidden>
+                    <input type="text" x-bind:value="selectedName" x-bind:name="'transactions[' + index + '][subject]'" hidden>
 
                     <div class="relative flex-1 text-center max-w-8 pt-2 pb-2 transaction-count-container">
                         <span class="transaction-count block" x-text="index + 1"></span>
