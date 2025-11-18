@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreTransactionRequest;
-use App\Models;
 use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
@@ -46,7 +45,9 @@ class DocumentController extends Controller
     {
         $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->get();
 
-        $transactions = old('transactions') ?? $this->preparedTransactions(collect([new Transaction]));
+        $transactions = old('transactions')
+                    ? self::prepareTransactions(old('transactions'))
+                    : self::prepareTransactions([new Transaction]);
 
         $total = count($transactions);
         $document = new Document;
@@ -88,9 +89,11 @@ class DocumentController extends Controller
 
     public function edit($id)
     {
-        $document = Models\Document::find($id);
+        $document = Document::find($id);
         if ($document) {
-            $transactions = old('transactions') ?? $this->preparedTransactions($document->transactions);
+            $transactions = old('transactions')
+                    ? self::prepareTransactions(old('transactions'))
+                    : self::prepareTransactions($document->transactions);
 
             $total = -1;
             $subjects = Subject::all();
@@ -187,18 +190,28 @@ class DocumentController extends Controller
         ];
     }
 
-    private function preparedTransactions($transactions)
+    /**
+     * Prepares a collection of transaction data for further display.
+     *
+     * @param  array|\Illuminate\Support\Collection  $transactions
+     * @return \Illuminate\Support\Collection
+     */
+    private static function prepareTransactions($transactions)
     {
-        return $transactions->map(function ($transaction, $i) {
+        $transactions = collect($transactions);
+
+        return $transactions->map(function ($t, $i) {
+            $isModel = is_object($t);
+
             return [
                 'id' => $i + 1,
-                'transaction_id' => $transaction->id,
-                'subject_id' => $transaction->subject_id,
-                'subject' => $transaction->subject?->name,
-                'code' => $transaction->subject?->code,
-                'desc' => $transaction->desc,
-                'credit' => $transaction->credit,
-                'debit' => $transaction->debit,
+                'transaction_id' => $isModel ? $t->id : ($t['transaction_id'] ?? null),
+                'subject_id' => $isModel ? $t->subject_id : ($t['subject_id'] ?? ''),
+                'subject' => $isModel ? ($t->subject?->name ?? '') : ($t['subject'] ?? ''),
+                'code' => $isModel ? ($t->subject?->code ?? '') : ($t['code'] ?? ''),
+                'desc' => $isModel ? ($t->desc ?? '') : ($t['desc'] ?? ''),
+                'credit' => $isModel ? ($t->credit ?? 0) : ($t['credit'] ?? 0),
+                'debit' => $isModel ? ($t->debit ?? 0) : ($t['debit'] ?? 0),
             ];
         });
     }
