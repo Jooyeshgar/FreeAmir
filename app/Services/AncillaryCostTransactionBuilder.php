@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Customer;
-use App\Models\Invoice;
 use App\Models\Product;
 
 /**
@@ -75,8 +74,7 @@ class AncillaryCostTransactionBuilder
      */
     private function buildCustomerTransaction(): void
     {
-        $invoice = Invoice::find($this->data['invoice_id']);
-        $customerId = $invoice->customer_id;
+        $customerId = $this->data['customer_id'];
         $subject_id = Customer::find($customerId)->subject->id;
 
         $this->transactions[] = [
