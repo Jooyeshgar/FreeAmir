@@ -36,7 +36,7 @@ class InvoiceService
 
         $documentData = [
             'date' => $date,
-            'title' => $invoiceData['title'] ?? (__('Invoice #') . ($invoiceData['number'] ?? '')),
+            'title' => $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? '')),
             'number' => $invoiceData['document_number'] ?? null,
         ];
 
@@ -54,6 +54,8 @@ class InvoiceService
             $invoiceData['date'] = $date;
 
             $createdInvoice = Invoice::create($invoiceData);
+
+            DocumentService::syncDocumentable($createdDocument, $createdInvoice);
 
             ProductService::syncProductQuantities(new Collection([]), $items, $createdInvoice->invoice_type);
             self::syncInvoiceItems($createdInvoice, $items);
@@ -92,11 +94,11 @@ class InvoiceService
 
             $documentData = [
                 'date' => $invoiceData['date'] ?? $invoice->date,
-                'title' => $invoiceData['title'] ?? (__('Invoice #') . ($invoiceData['number'] ?? '')),
+                'title' => $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? '')),
                 'number' => $invoiceData['document_number'] ?? $invoice->document->number,
             ];
 
-            DocumentService::updateDocument($invoice->document, $documentData);
+            $updatedDocument = DocumentService::updateDocument($invoice->document, $documentData);
             DocumentService::updateDocumentTransactions($invoice->document->id, $transactions);
 
             $invoiceData['vat'] = $buildResult['totalVat'];
@@ -105,10 +107,14 @@ class InvoiceService
 
             $invoice->update($invoiceData);
 
+            DocumentService::syncDocumentable($updatedDocument, $invoice);
+
             $oldInvoiceItems = $invoice->items;
 
             ProductService::syncProductQuantities($oldInvoiceItems, $items, $invoice->invoice_type);
             self::syncInvoiceItems($invoice, $items);
+
+            $invoice->refresh();
 
             CostOfGoodsService::updateProductsAverageCost($invoice);
             self::syncCOGAfterForInvoiceItems($invoice);
@@ -116,7 +122,7 @@ class InvoiceService
 
         return [
             'document' => $invoice->document->fresh(),
-            'invoice' => $invoice->fresh(),
+            'invoice' => $invoice,
         ];
     }
 
@@ -152,7 +158,7 @@ class InvoiceService
 
             self::checkInvoiceDeleteableOrEditable($invoice);
 
-            self::refreshProductCOGAfterBuyInvoiceDeletion($invoice);
+            CostOfGoodsService::refreshProductCOGAfterItemsDeletion($invoice, null);
 
             $invoiceItems = $invoice->items;
 
@@ -164,35 +170,6 @@ class InvoiceService
 
             $invoice->delete();
         });
-    }
-
-    private static function refreshProductCOGAfterBuyInvoiceDeletion(Invoice $invoice): void
-    {
-        if ($invoice->invoice_type !== InvoiceType::BUY) {
-            return;
-        }
-
-        $productIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->toArray();
-
-        if (empty($productIds)) {
-            return;
-        }
-
-        $products = Product::whereIn('id', $productIds)->get();
-
-        foreach ($products as $product) {
-            $lastInvoiceItem = InvoiceItem::whereHas('invoice', function ($query) use ($invoice, $product) {
-                $query->where('invoice_type', InvoiceType::BUY)
-                    ->where('date', '<', $invoice->date)
-                    ->whereHas('items', function ($q) use ($product) {
-                        $q->where('itemable_type', Product::class)
-                            ->where('itemable_id', $product->id);
-                    })->orderByDesc('date');
-            })->first();
-
-            $product->average_cost = $lastInvoiceItem ? $lastInvoiceItem->cog_after : 0;
-            $product->save();
-        }
     }
 
     private static function checkInvoiceDeleteableOrEditable(Invoice $invoice): void
@@ -291,6 +268,9 @@ class InvoiceService
 
             $itemId[] = $invoiceItem->id;
         }
+
+        CostOfGoodsService::refreshProductCOGAfterItemsDeletion($invoice, $itemId);
+
         $invoice->items()->whereNotIn('id', $itemId)->delete();
     }
 
