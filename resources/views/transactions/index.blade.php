@@ -23,6 +23,7 @@
                     </div>
                 </div>
             @endif
+
             <form action="{{ route('transactions.index') }}" method="GET">
                 <div class="grid grid-cols-12 gap-4 items-end">
                     <div class="col-span-12 lg:col-span-3" x-data="{
@@ -66,9 +67,22 @@
                     <th class="p-2">{{ __('Description') }}</th>
                     <th class="p-2 w-24">{{ __('Debit') }}</th>
                     <th class="p-2 w-24">{{ __('Credit') }}</th>
+                    <th class="p-2 w-24">{{ __('Balance') }}</th>
                     <th class="p-2 w-32">{{ __('Action') }}</th>
                 </thead>
                 <tbody>
+                    @if ($openingBalance != 0)
+                        <tr>
+                            <td colspan="4"></td>
+                            <td class="p-2">{{ __('Opening Balance') }}</td>
+                            <td></td>
+                            <td></td>
+                            <td class="p-2 font-semibold {{ $openingBalance >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                {{ formatNumber(abs($openingBalance)) }}
+                            </td>
+                            <td class="p-2"></td>
+                        </tr>
+                    @endif
                     @foreach ($transactions as $transaction)
                         <tr>
                             <td class="p-2">{{ formatDate($transaction->document->date) }}</td>
@@ -86,6 +100,9 @@
                             <td class="p-2">{{ $transaction->desc }}</td>
                             <td class="p-2 text-red-600">{{ $transaction->debit }}</td>
                             <td class="p-2 text-green-600">{{ $transaction->credit }}</td>
+                            <td class="p-2 font-semibold {{ $transaction->balance >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                {{ formatNumber(abs($transaction->balance)) }}
+                            </td>
                             <td class="p-2">
                                 <a href="{{ route('transactions.show', $transaction->id) }}" class="btn btn-sm btn-info">{{ __('View') }}</a>
                             </td>
