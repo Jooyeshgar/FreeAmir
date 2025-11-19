@@ -1,9 +1,12 @@
 import '@majidh1/jalalidatepicker/dist/jalalidatepicker'
+// import Choices from "choices.js";
+// import "choices.js/public/assets/styles/choices.min.css";
 
 import Alpine from 'alpinejs';
 import { Chart, registerables } from 'chart.js';
 
 window.Alpine = Alpine;
+// window.Choices = Choices;
 
 window.Chart = Chart;
 Chart.register(...registerables);

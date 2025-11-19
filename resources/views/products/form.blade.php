@@ -3,8 +3,9 @@
         @php
             $hint = '<a class="link text-blue-500" href="' . route('product-groups.create') . '">اضافه کردن گروه محصول</a>';
         @endphp
-        <x-select title="{{ __('Product group') }}" name="group" id="group" :options="$groups->pluck('name', 'id', 'sstid')"
-            :selected="$product->group ?? null" :hint="$hint" />
+
+        <x-select-search class="pl-8" name="group" id="group" label="{{ __('Product group') }}" :options="$groups->pluck('name', 'id')"
+        :selected="$product->group ?? null" :hint="$hint" />
     </div>
 
     <div class="col-span-2 md:col-span-1">
