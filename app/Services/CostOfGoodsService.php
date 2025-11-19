@@ -56,6 +56,49 @@ class CostOfGoodsService
     }
 
     /**
+     * Refresh product average cost after items are deleted from a buy invoice.
+     *
+     * This method resets the average cost of products to the cost from the previous buy invoice
+     * before the given invoice date. It can handle both full invoice deletion and partial item deletion.
+     *
+     * @param  Invoice  $invoice  The invoice from which items were deleted
+     * @param  array|null  $excludeItemIds  Optional array of item IDs to exclude (keep). If provided, only items NOT in this array will be processed.
+     */
+    public static function refreshProductCOGAfterItemsDeletion(Invoice $invoice, ?array $excludeItemIds = null): void
+    {
+        if ($invoice->invoice_type !== InvoiceType::BUY) {
+            return;
+        }
+
+        // Get items to process based on whether we're excluding certain items
+        $itemsToProcess = $excludeItemIds !== null
+            ? $invoice->items()->whereNotIn('id', $excludeItemIds)->get()
+            : $invoice->items;
+
+        $productIds = $itemsToProcess->where('itemable_type', Product::class)->pluck('itemable_id')->toArray();
+
+        if (empty($productIds)) {
+            return;
+        }
+
+        $products = Product::whereIn('id', $productIds)->get();
+
+        foreach ($products as $product) {
+            $lastInvoiceItem = InvoiceItem::whereHas('invoice', function ($query) use ($invoice, $product) {
+                $query->where('invoice_type', InvoiceType::BUY)
+                    ->where('date', '<', $invoice->date)
+                    ->whereHas('items', function ($q) use ($product) {
+                        $q->where('itemable_type', Product::class)
+                            ->where('itemable_id', $product->id);
+                    })->orderByDesc('date');
+            })->first();
+
+            $product->average_cost = $lastInvoiceItem ? $lastInvoiceItem->cog_after : 0;
+            $product->save();
+        }
+    }
+
+    /**
      * Calculate gross profit for a sale invoice item.
      */
     public static function calculateGrossProfit(InvoiceItem $invoiceItem)
