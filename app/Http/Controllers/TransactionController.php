@@ -37,7 +37,6 @@ class TransactionController extends Controller
             });
         }
 
-        // Document number range filter
         if ($request->filled('start_document_number')) {
             $startDocNum = convertToFloat($request->input('start_document_number'));
             $query->whereHas('document', function ($q) use ($startDocNum) {
@@ -51,7 +50,6 @@ class TransactionController extends Controller
             });
         }
 
-        // General search (description, subject code, subject name, document title)
         if ($request->filled('search')) {
             $search = trim($request->input('search'));
             $query->where(function ($q) use ($search) {
@@ -67,7 +65,11 @@ class TransactionController extends Controller
             });
         }
 
+        $openingBalance = $this->calculateOpeningBalance($request);
+
         $transactions = $query->paginate(20)->appends($request->query());
+
+        $this->addRunningBalance($transactions, $openingBalance);
 
         $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->get();
         
@@ -76,7 +78,58 @@ class TransactionController extends Controller
             $currentSubject = Subject::find($request->integer('subject_id'));
         }
 
-        return view('transactions.index', compact('transactions', 'subjects', 'currentSubject'));
+        return view('transactions.index', compact('transactions', 'subjects', 'currentSubject', 'openingBalance'));
+    }
+
+    /**
+     * Calculate the opening balance before the filtered transactions
+     */
+    private function calculateOpeningBalance(Request $request): float
+    {
+        $query = Transaction::query()
+            ->whereHas('document')
+            ->join('documents', 'transactions.document_id', '=', 'documents.id');
+
+        if ($request->filled('subject_id')) {
+            $query->where('subject_id', $request->integer('subject_id'));
+        }
+
+        $hasFilter = false;
+
+        if ($request->filled('start_date')) {
+            $startDate = convertToGregorian($request->input('start_date'));
+            $query->whereHas('document', function ($q) use ($startDate) {
+                $q->whereDate('date', '<', $startDate);
+            });
+            $hasFilter = true;
+        }
+
+        if ($request->filled('start_document_number')) {
+            $startDocNum = convertToFloat($request->input('start_document_number'));
+            $query->whereHas('document', function ($q) use ($startDocNum) {
+                $q->where('number', '<', $startDocNum);
+            });
+            $hasFilter = true;
+        }
+
+        if (!$hasFilter) {
+            return 0;
+        }
+
+        return (float) $query->sum('transactions.value');
+    }
+
+    /**
+     * Add running balance to each transaction in the collection
+     */
+    private function addRunningBalance($transactions, float $openingBalance): void
+    {
+        $runningBalance = $openingBalance;
+
+        foreach ($transactions as $transaction) {
+            $runningBalance += $transaction->value;
+            $transaction->balance = $runningBalance;
+        }
     }
 
     public function show(Transaction $transaction)
