@@ -136,7 +136,7 @@ class StoreInvoiceRequest extends FormRequest
                         }
                     }
 
-                    if ($transaction['quantity'] >= $availableQuantity) {
+                    if ($transaction['quantity'] > $availableQuantity && $invoiceType === 'sell') {
                         $validator->errors()->add(
                             "transactions.{$index}.quantity",
                             "{$availableQuantity} ".__('item(s) of')." '{$product->name}' ".__('are available.')
