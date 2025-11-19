@@ -77,8 +77,8 @@
                             <td class="p-2">{{ __('Opening Balance') }}</td>
                             <td></td>
                             <td></td>
-                            <td class="p-2 font-semibold {{ $openingBalance >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                {{ formatNumber(abs($openingBalance)) }}
+                            <td class="p-2">
+                                {{ formatNumber(abs($openingBalance)) }} {{ $openingBalance >= 0 ? __('Cre') : __('Deb') }}
                             </td>
                             <td class="p-2"></td>
                         </tr>
@@ -100,8 +100,8 @@
                             <td class="p-2">{{ $transaction->desc }}</td>
                             <td class="p-2 text-red-600">{{ $transaction->debit }}</td>
                             <td class="p-2 text-green-600">{{ $transaction->credit }}</td>
-                            <td class="p-2 font-semibold {{ $transaction->balance >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                {{ formatNumber(abs($transaction->balance)) }}
+                            <td class="p-2 ">
+                                {{ formatNumber(abs($transaction->balance)) }} {{ $transaction->balance >= 0 ? __('Cre') : __('Deb') }}
                             </td>
                             <td class="p-2">
                                 <a href="{{ route('transactions.show', $transaction->id) }}" class="btn btn-sm btn-info">{{ __('View') }}</a>
