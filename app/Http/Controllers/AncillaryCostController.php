@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\InvoiceType;
 use App\Http\Requests\StoreAncillaryCostRequest;
 use App\Models\AncillaryCost;
 use App\Models\Customer;
 use App\Models\Invoice;
+use App\Models\Product;
 use App\Services\AncillaryCostService;
 use Exception;
 use Illuminate\Http\Request;
@@ -23,8 +25,8 @@ class AncillaryCostController extends Controller
 
     public function create()
     {
-        $invoices = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing();
-        $customers = Customer::all();
+        $invoices = (new Invoice)->searchInModel(orderBy: 'date', customQuery: self::allowedInvoicesQuery());
+        $customers = (new Customer)->getSome(columns: ['id', 'name']);
         $ancillaryCost = new AncillaryCost;
         $ancillaryCostItems = old('ancillaryCosts') ?? [];
 
@@ -36,7 +38,8 @@ class AncillaryCostController extends Controller
         $validated = $request->validated();
         $validated['company_id'] = session('active-company-id');
 
-        $validatedInvoicesId = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing()->pluck('id')->toArray();
+        $validatedInvoicesId = (new Invoice)->searchInModel(orderBy: 'date', customQuery: self::allowedInvoicesQuery())->pluck('id')->toArray();
+
         if (! in_array($validated['invoice_id'], $validatedInvoicesId)) {
             throw new Exception(__('Ancillary Cost cannot be created.'), 400);
         }
@@ -50,7 +53,7 @@ class AncillaryCostController extends Controller
 
     public function edit(AncillaryCost $ancillaryCost)
     {
-        $invoices = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing();
+        $invoices = (new Invoice)->searchInModel(orderBy: 'date', customQuery: self::allowedInvoicesQuery())->pluck('id')->toArray();
 
         // Load ancillary cost items for editing
         $ancillaryCostItems = $ancillaryCost->items->map(function ($item) {
@@ -121,5 +124,20 @@ class AncillaryCostController extends Controller
         })->unique('id')->values();
 
         return response()->json(['products' => $products]);
+    }
+
+    private static function allowedInvoicesQuery(): \Closure
+    {
+        return function ($query) {
+            return $query->where('invoice_type', InvoiceType::BUY)
+                ->whereDoesntHave('items', function ($itemQuery) {
+                    $itemQuery->where('itemable_type', Product::class)
+                        ->whereHas('invoice', function ($invoiceQuery) {
+                            $invoiceQuery->whereIn('invoice_type', [InvoiceType::BUY, InvoiceType::SELL])
+                                ->whereColumn('date', '>=', 'invoices.date')
+                                ->whereColumn('number', '!=', 'invoices.number');
+                        });
+                });
+        };
     }
 }

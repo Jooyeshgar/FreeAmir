@@ -8,6 +8,8 @@ use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Services\ProductService;
 
+use function App\Helpers\getSome;
+
 class ProductController extends Controller
 {
     public function __construct(
@@ -36,7 +38,7 @@ class ProductController extends Controller
 
     public function create()
     {
-        $groups = ProductGroup::select('id', 'name')->get();
+        $groups = getSome(ProductGroup::class, columns: ['id', 'name']);
 
         return view('products.create', compact('groups'));
     }
@@ -52,7 +54,7 @@ class ProductController extends Controller
 
     public function edit(Product $product)
     {
-        $groups = ProductGroup::select('id', 'name', 'sstid')->get();
+        $groups = getSome(ProductGroup::class, columns: ['id', 'name']);
 
         return view('products.edit', compact('product', 'groups'));
     }

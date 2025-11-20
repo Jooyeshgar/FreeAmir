@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use App\Models\Scopes\FiscalYearScope;
+use App\Models\Traits\QueryHelper;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Customer extends Model
 {
-    use HasFactory;
+    use HasFactory, QueryHelper;
 
     protected $fillable = [
         'name',

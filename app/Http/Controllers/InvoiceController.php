@@ -71,11 +71,11 @@ class InvoiceController extends Controller
         if (empty(config('amir.cust_subject'))) {
             return redirect()->route('configs.index')->with('error', __('Customer Subject is not configured. Please set it in configurations.'));
         }
-        $products = Product::with('inventorySubject')->orderBy('name', 'asc')->get();
-        $services = Service::with('subject')->orderBy('name', 'asc')->get();
-        $serviceGroups = ServiceGroup::all();
-        $productGroups = ProductGroup::all();
-        $customers = Customer::all('name', 'id');
+        $products = (new Product)->getSome(relations: ['inventorySubject'], columns: ['id', 'name']);
+        $services = (new Service)->getSome(relations: ['subject'], columns: ['id', 'name']);
+        $serviceGroups = (new ServiceGroup)->getSome(columns: ['id', 'name']);
+        $productGroups = (new ProductGroup)->getSome(columns: ['id', 'name']);
+        $customers = (new Customer)->getSome(columns: ['id', 'name']);
         $previousDocumentNumber = floor(Document::max('number') ?? 0);
 
         $transactions = $this->prepareTransactions();
@@ -161,12 +161,13 @@ class InvoiceController extends Controller
     {
         $invoice->load('customer', 'document.transactions', 'items'); // Eager load relationships
 
-        $customers = Customer::all('name', 'id');
-        $products = Product::with('inventorySubject')->orderBy('name', 'asc')->get();
-        $services = Service::with('subject')->orderBy('name', 'asc')->get();
+        $customers = (new Customer)->getSome(columns: ['id', 'name']);
 
-        $productGroups = ProductGroup::all();
-        $serviceGroups = ServiceGroup::all();
+        $products = (new Product)->getSome(relations: ['inventorySubject'], columns: ['id', 'name']);
+        $services = (new Service)->getSome(relations: ['subject'], columns: ['id', 'name']);
+
+        $productGroups = (new ProductGroup)->getSome(columns: ['id', 'name']);
+        $serviceGroups = (new ServiceGroup)->getSome(columns: ['id', 'name']);
 
         // Prepare transactions from invoice items
         $transactions = $this->prepareTransactions($invoice, 'edit');

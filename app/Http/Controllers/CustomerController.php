@@ -72,7 +72,7 @@ class CustomerController extends Controller
 
     public function create()
     {
-        $groups = Models\CustomerGroup::select('id', 'name')->get();
+        $groups = (new Models\CustomerGroup)->getSome(columns: ['id', 'name']);
 
         return view('customers.create', compact('groups'));
     }
@@ -90,7 +90,7 @@ class CustomerController extends Controller
 
     public function edit(Models\Customer $customer)
     {
-        $groups = Models\CustomerGroup::select('id', 'name')->get();
+        $groups = (new Models\CustomerGroup)->getSome(columns: ['id', 'name']);
 
         return view('customers.edit', compact('customer', 'groups'));
     }

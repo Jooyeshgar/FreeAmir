@@ -3,11 +3,14 @@
 namespace App\Models;
 
 use App\Models\Scopes\FiscalYearScope;
+use App\Models\Traits\QueryHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProductGroup extends Model
 {
+    use QueryHelper;
+
     protected $fillable = [
         'code',
         'name',

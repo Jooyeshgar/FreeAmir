@@ -23,7 +23,7 @@ class ServiceController extends Controller
 
     public function create()
     {
-        $groups = ServiceGroup::select('id', 'name')->get();
+        $groups = (new ServiceGroup)->getSome(columns: ['id', 'name']);
 
         return view('services.create', compact('groups'));
     }
@@ -46,7 +46,7 @@ class ServiceController extends Controller
 
     public function edit(Service $service)
     {
-        $groups = ServiceGroup::select('id', 'name')->get();
+        $groups = (new ServiceGroup)->getSome(columns: ['id', 'name']);
 
         return view('services.edit', compact('service', 'groups'));
     }

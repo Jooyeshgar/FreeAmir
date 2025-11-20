@@ -19,7 +19,8 @@ class CustomerGroupController extends Controller
 
     public function create()
     {
-        $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->get();
+        $subjects = (new Subject)->getSome(relations: ['children'], orderBy: 'code', options: ['parent_id' => null]);
+
         return view('customerGroups.create', compact('subjects'));
     }
 
@@ -37,7 +38,8 @@ class CustomerGroupController extends Controller
 
     public function edit(Models\CustomerGroup $customerGroup)
     {
-        $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->get();
+        $subjects = (new Subject)->getSome(relations: ['children'], orderBy: 'code', options: ['parent_id' => null]);
+
         return view('customerGroups.edit', compact('customerGroup', 'subjects'));
     }
 

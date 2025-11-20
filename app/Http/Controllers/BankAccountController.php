@@ -7,9 +7,7 @@ use Illuminate\Http\Request;
 
 class BankAccountController extends Controller
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     public function index()
     {
@@ -20,7 +18,7 @@ class BankAccountController extends Controller
 
     public function create()
     {
-        $banks = Models\Bank::select('id', 'name')->get();
+        $banks = (new Models\Bank)->getSome(columns: ['id', 'name']);
 
         return view('bankAccounts.create', compact('banks'));
     }
@@ -47,7 +45,7 @@ class BankAccountController extends Controller
 
     public function edit(Models\BankAccount $bankAccount)
     {
-        $banks = Models\Bank::select('id', 'name')->get();
+        $banks = (new Models\Bank)->getSome(columns: ['id', 'name']);
 
         return view('bankAccounts.edit', compact('bankAccount', 'banks'));
     }
