@@ -4,9 +4,19 @@
     }">
         <div class="flex w-1/5">
             <div class="flex flex-wrap w-full">
-                <x-search-select-box name="customer_id" :options="$customers->pluck('name', 'id')"
+                <x-search-select-box
+                    :search-url="route('search', ['model' => \App\Models\Customer::class])"
+                    name="customer_id" :options="$customers->pluck('name', 'id')"
+                    label="{{ __('Customer') }}"
+                    :selected="old('customer_id', $invoice->customer_id ?? null)"
+                    placeholder="Select Customer"
+                />
+                
+                <x-search-select-box 
+                    :search-url="route('search', ['model' => \App\Models\Customer::class])"
+                    name="customer_id" :options="$customers->pluck('name', 'id')"
                     label='<span class="text-gray-500 w-1/2">{{ __("Customer") }}</span>'
-                    selected="{{ old('customer_id', $invoice->customer_id ?? 'null') }}" placeholder="Select Customer"/>
+                    selected="{{ old('customer_id', $invoice->customer_id ?? '') }}" placeholder="Select Customer"/>
             </div>
         </div>
         <input type="hidden" id="invoice_type" name="invoice_type" value="{{ $invoice->invoice_type ?? $invoice_type }}">

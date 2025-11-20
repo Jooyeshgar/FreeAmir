@@ -2,10 +2,10 @@
     'label' => null,
     'name' => '',
     'id' => null,
-    'options' => [],       // The "Little" list (e.g., top 10 or recently used)
+    'options' => [],
     'selected' => null,
     'placeholder' => 'Select an option',
-    'searchUrl' => null,   // The URL to hit if local search fails
+    'searchUrl' => null,
     'hint' => null,
     'required' => false,
     'disabled' => false,
@@ -14,7 +14,6 @@
 @php
     $id = $id ?? 'select_' . md5($name . uniqid());
 
-    // 1. Normalize PHP Options into JavaScript-friendly format
     $normalizedOptions = [];
     $formatOption = fn($k, $v, $g = null) => ['value' => (string)$k, 'label' => $v, 'group' => $g];
 
@@ -28,7 +27,6 @@
         }
     }
 
-    // 2. Handle Initial Label
     $initialLabel = null;
     if ($selected !== null && $selected !== '') {
         foreach ($normalizedOptions as $opt) {
@@ -37,8 +35,6 @@
                 break;
             }
         }
-        // If selected value exists but isn't in the "little" local list, 
-        // display the value or handle via extra prop if needed.
         if (!$initialLabel && $searchUrl) $initialLabel = $selected; 
     }
 @endphp
@@ -99,6 +95,7 @@
                     x-ref="searchInput"
                     x-model="search"
                     @input.debounce.400ms="handleSearch()"
+                    @keydown="onKeydown($event)"
                     type="text" 
                     class="input input-sm input-bordered w-full"
                     placeholder="{{ __('Search...') }}"
@@ -135,12 +132,15 @@
                         <li>
                             <a 
                                 @click="select(option)" 
-                                :class="{'active': option.value == selected}"
+                                :class="{'active': option.value == selected, 'bg-primary/10': index === highlightedIndex}"
                                 class="justify-between"
+                                @mouseenter="highlightedIndex = index"
                             >
-                                <span x-text="option.label"></span>
+                                <span x-html="highlightMatch(option.label)"></span>
                                 <span x-show="option.value == selected">
-                                    <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                    <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                    </svg>
                                 </span>
                             </a>
                         </li>
@@ -156,7 +156,6 @@
         </label>
     @endif
 </div>
-
 @once
 <script>
     document.addEventListener('alpine:init', () => {
@@ -165,18 +164,20 @@
             search: '',
             selected: config.selected,
             selectedLabel: config.selectedLabel,
-            initialOptions: config.options, // The "Little" list
+            initialOptions: config.options,
             filteredOptions: [],
             isLoading: false,
             placeholder: config.placeholder,
             emptyText: config.emptyText,
+            highlightedIndex: -1,
+            minSearchLength: 2, // minimum characters for remote search
 
             init() {
-                // Start with the initial "little" list
                 this.filteredOptions = this.initialOptions;
             },
 
             toggle() {
+                if (config.disabled) return;
                 if (this.open) return this.close();
                 this.open = true;
                 this.$nextTick(() => this.$refs.searchInput.focus());
@@ -184,83 +185,137 @@
 
             close() {
                 this.open = false;
-                // Optional: Reset to "little list" when closed
                 setTimeout(() => {
                     this.search = '';
                     this.filteredOptions = this.initialOptions;
+                    this.highlightedIndex = -1;
                 }, 200);
             },
 
             select(option) {
+                if (!option) return;
                 this.selected = option.value;
                 this.selectedLabel = option.label;
                 this.open = false;
             },
 
             handleSearch() {
-                // 1. If search is empty, show the initial "little" list
-                if (this.search === '') {
+                const query = this.search.trim().toLowerCase();
+
+                if (!query) {
                     this.filteredOptions = this.initialOptions;
                     this.isLoading = false;
+                    this.highlightedIndex = 0;
                     return;
                 }
 
-                const q = this.search.toLowerCase();
-
-                // 2. FILTER LOCALLY FIRST
-                // Check if the initial options contain the search term
+                // Filter locally first
                 const localMatches = this.initialOptions.filter(opt => 
-                    opt.label.toLowerCase().includes(q) || 
-                    (opt.group && opt.group.toLowerCase().includes(q))
+                    opt.label.toLowerCase().includes(query) || 
+                    (opt.group && opt.group.toLowerCase().includes(query))
                 );
 
-                // 3. DECIDE: Local Results OR Ajax?
                 if (localMatches.length > 0) {
-                    // We found matches in the "little" list, show them.
                     this.filteredOptions = localMatches;
                     this.isLoading = false;
-                } else {
-                    // No matches locally? Check if we have a URL to ask the server.
-                    if (config.searchUrl) {
-                        this.fetchRemoteOptions();
-                    } else {
-                        this.filteredOptions = [];
-                    }
+                } 
+                // Remote fetch if local matches empty and searchUrl exists
+                else if (config.searchUrl && query.length >= this.minSearchLength) {
+                    this.fetchRemoteOptions(query);
+                } 
+                else {
+                    this.filteredOptions = [];
                 }
+
+                this.highlightedIndex = this.filteredOptions.length ? 0 : -1;
             },
 
-            async fetchRemoteOptions() {
+            async fetchRemoteOptions(query) {
                 this.isLoading = true;
-                // Clear current options while searching to avoid confusion, 
-                // or keep them visible until new data arrives (user preference).
-                // this.filteredOptions = []; 
-
                 try {
                     const url = new URL(config.searchUrl, window.location.origin);
-                    url.searchParams.append('q', this.search);
+                    url.searchParams.append('q', query);
+                    url.searchParams.append('limit', 10); // optional
+                    // You can append other params here if needed
 
-                    const response = await fetch(url, {
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    });
-                    
+                    const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
                     if (!response.ok) throw new Error('Failed to load');
-                    
+
                     const data = await response.json();
 
-                    // Normalize server response
                     this.filteredOptions = data.map(item => ({
-                        value: item.value || item.id,
-                        label: item.label || item.name || item.text,
-                        group: item.group || item.group_name || null
+                        value: item.value ?? item.id,
+                        label: item.label ?? item.name ?? item.text,
+                        group: item.group ?? null
                     }));
+
+                    this.highlightedIndex = this.filteredOptions.length ? 0 : -1;
 
                 } catch (error) {
                     console.error(error);
                     this.filteredOptions = [];
+                    this.highlightedIndex = -1;
                 } finally {
                     this.isLoading = false;
                 }
+            },
+
+            highlightMatch(label) {
+                if (!this.search) return label;
+                const regex = new RegExp(`(${this.escapeRegex(this.search)})`, 'gi');
+                return label.replace(regex, `<span class="bg-yellow-200">$1</span>`);
+            },
+
+            escapeRegex(str) {
+                return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            },
+
+            onKeydown(event) {
+                if (!this.open) return;
+
+                const maxIndex = this.filteredOptions.length - 1;
+
+                switch(event.key) {
+                    case 'ArrowDown':
+                        event.preventDefault();
+                        if (maxIndex < 0) break;
+                        this.highlightedIndex = (this.highlightedIndex + 1) > maxIndex ? 0 : this.highlightedIndex + 1;
+                        this.scrollToHighlighted();
+                        break;
+
+                    case 'ArrowUp':
+                        event.preventDefault();
+                        if (maxIndex < 0) break;
+                        this.highlightedIndex = (this.highlightedIndex - 1) < 0 ? maxIndex : this.highlightedIndex - 1;
+                        this.scrollToHighlighted();
+                        break;
+
+                    case 'Enter':
+                        event.preventDefault();
+                        if (this.highlightedIndex >= 0 && this.filteredOptions[this.highlightedIndex]) {
+                            this.select(this.filteredOptions[this.highlightedIndex]);
+                        }
+                        break;
+
+                    case 'Escape':
+                        this.close();
+                        break;
+                }
+            },
+
+            scrollToHighlighted() {
+                this.$nextTick(() => {
+                    const menu = this.$el.querySelector('ul.menu');
+                    const item = menu?.children[this.highlightedIndex];
+                    if (item) {
+                        const itemTop = item.offsetTop;
+                        const itemBottom = itemTop + item.offsetHeight;
+                        if (itemTop < menu.scrollTop) menu.scrollTop = itemTop;
+                        else if (itemBottom > menu.scrollTop + menu.clientHeight) menu.scrollTop = itemBottom - menu.clientHeight;
+                    }
+                });
             }
+
         }));
     });
 </script>

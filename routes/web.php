@@ -51,4 +51,5 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('', [Controllers\InvoiceController::class, 'index']);
     });
 
+    Route::get('/search', [Controllers\ModelSelectController::class, '__invoke']);
 });

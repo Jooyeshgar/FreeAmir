@@ -4,9 +4,10 @@
             $hint = '<a class="link text-blue-500" href="' . route('product-groups.create') . '">اضافه کردن گروه محصول</a>';
         @endphp
 
-        <x-search-select-box label="{{ __('Product group') }}" name="group" id="group" :options="$groups->pluck('name', 'id', 'sstid')" 
-            placeholder="Select a Product Group" :hint="$hint" :selected="$product->group ?? null"/>
-        
+        <x-search-select-box
+            :search-url="route('search', ['model' => \App\Models\ProductGroup::class])"
+            label="{{ __('Product group') }}" name="group" id="group" :options="$groups->pluck('name', 'id', 'sstid')" placeholder="Select a Product Group"
+            :hint="$hint" :selected="$product->group ?? null"/>
     </div>
 
     <div class="col-span-2 md:col-span-1">
