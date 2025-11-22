@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Models\Scopes\FiscalYearScope;
+use App\Traits\Query;
 use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Subject extends Model
 {
-    use HasFactory;
+    use HasFactory, Query;
 
     protected $fillable = [
         'code',
@@ -25,14 +26,14 @@ class Subject extends Model
 
     public static function booted(): void
     {
-        static::addGlobalScope(new FiscalYearScope());
+        static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($subject) {
             $subject->company_id ??= session('active-company-id');
         });
 
         static::deleting(function ($subject) {
-            if (!is_null($subject->subjectable_type) && !is_null($subject->subjectable_id) && $subject->subjectable()->exists()) {
+            if (! is_null($subject->subjectable_type) && ! is_null($subject->subjectable_id) && $subject->subjectable()->exists()) {
                 throw new Exception(__('Cannot delete subject with relationships'));
             }
 
@@ -63,13 +64,14 @@ class Subject extends Model
 
     public function formattedName()
     {
-        return formatCode($this->code) . ' ' . $this->name;
+        return formatCode($this->code).' '.$this->name;
     }
 
     public function fullname()
     {
-        return (!is_null($this->parent) ? $this->parent->fullname() . ' / ' : '') . $this->name;
+        return (! is_null($this->parent) ? $this->parent->fullname().' / ' : '').$this->name;
     }
+
     public function ledger()
     {
         return substr($this->code, 0, 3);
@@ -98,8 +100,9 @@ class Subject extends Model
      * - Each child level adds 3 digits to the parent code
      * - Maximum children per parent is 999
      *
-     * @param int|null $code Optional specific code number to use (without padding)
+     * @param  int|null  $code  Optional specific code number to use (without padding)
      * @return string The generated code for the subject
+     *
      * @throws \Exception When trying to exceed the maximum of 999 children
      */
     public function generateCode($code = null)
@@ -110,9 +113,10 @@ class Subject extends Model
 
             if ($code !== null) {
                 if ($code > 999) {
-                    throw new Exception("Child code cannot exceed 999");
+                    throw new Exception('Child code cannot exceed 999');
                 }
-                return $parentCode . str_pad($code, 3, '0', STR_PAD_LEFT);
+
+                return $parentCode.str_pad($code, 3, '0', STR_PAD_LEFT);
             }
 
             if ($parentSubject->hasChildren()) {
@@ -120,21 +124,22 @@ class Subject extends Model
                 $lastChildCode = $lastChild->code;
 
                 $childPart = substr($lastChildCode, -3);
-                $nextChildNumber = (int)$childPart + 1;
+                $nextChildNumber = (int) $childPart + 1;
 
                 if ($nextChildNumber > 999) {
-                    throw new Exception("Maximum of 999 children reached for parent " . $parentCode);
+                    throw new Exception('Maximum of 999 children reached for parent '.$parentCode);
                 }
 
-                return $parentCode . str_pad($nextChildNumber, 3, '0', STR_PAD_LEFT);
+                return $parentCode.str_pad($nextChildNumber, 3, '0', STR_PAD_LEFT);
             } else {
-                return $parentCode . '001';
+                return $parentCode.'001';
             }
         } else {
             if ($code !== null) {
                 if ($code > 999) {
-                    throw new Exception("Root code cannot exceed 999");
+                    throw new Exception('Root code cannot exceed 999');
                 }
+
                 return str_pad($code, 3, '0', STR_PAD_LEFT);
             }
 
@@ -142,10 +147,10 @@ class Subject extends Model
             $nextRootNumber = 1;
 
             if ($lastRootSubject) {
-                $nextRootNumber = (int)$lastRootSubject->code + 1;
+                $nextRootNumber = (int) $lastRootSubject->code + 1;
 
                 if ($nextRootNumber > 999) {
-                    throw new Exception("Maximum of 999 root subjects reached");
+                    throw new Exception('Maximum of 999 root subjects reached');
                 }
             }
 
@@ -170,7 +175,7 @@ class Subject extends Model
 
     public function hasParent(): bool
     {
-        return !is_null($this->parent_id);
+        return ! is_null($this->parent_id);
     }
 
     public function isRoot(): bool
@@ -192,7 +197,7 @@ class Subject extends Model
     /**
      * Scope a query to only include root subjects.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWhereIsRoot($query)
