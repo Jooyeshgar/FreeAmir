@@ -43,7 +43,7 @@ class DocumentController extends Controller
 
     public function create()
     {
-        $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->get();
+        $subjects = Subject::Some(orderBy: 'code', options: ['parent_id' => null])->with('children')->get();
 
         $transactions = old('transactions')
                     ? self::prepareTransactions(old('transactions'))
@@ -100,7 +100,9 @@ class DocumentController extends Controller
                     : self::prepareTransactions($document->transactions);
 
             $total = -1;
-            $subjects = Subject::all();
+
+            $subjects = Subject::Some(orderBy: 'code', options: ['parent_id' => null])->with('children')->get();
+
             $previousDocumentNumber = Document::orderBy('id', 'desc')->where('id', '<', $id)->first()->number ?? 0;
 
             return view('documents.edit', compact('previousDocumentNumber', 'document', 'subjects', 'transactions', 'total'));

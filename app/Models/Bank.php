@@ -12,11 +12,15 @@ class Bank extends Model
 
     protected $fillable = [
         'name',
+        'company_id',
     ];
-    
+
     public static function booted(): void
     {
-        static::addGlobalScope(new FiscalYearScope());
-    }
+        static::addGlobalScope(new FiscalYearScope);
 
+        static::creating(function ($bank) {
+            $bank->company_id ??= session('active-company-id');
+        });
+    }
 }
