@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Scopes\FiscalYearScope;
+use App\Traits\Query;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Service extends Model
 {
-    use HasFactory;
+    use HasFactory, Query;
 
     protected $fillable = [
         'code',

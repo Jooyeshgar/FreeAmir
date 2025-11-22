@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\Query;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Company extends Model
 {
-    use HasFactory;
+    use HasFactory, Query;
 
     public $timestamps = false;
 
