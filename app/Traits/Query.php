@@ -37,7 +37,19 @@ trait Query
         }
 
         if ($searchQuery) {
-            $query->where('name', 'like', "%{$searchQuery}%");
+            $searchableFields = $this->searchableFields ?? ['name'];
+
+            if (in_array('code', $this->fillable ?? [])) {
+                $searchableFields[] = 'code';
+            }
+
+            $searchableFields = array_unique($searchableFields);
+
+            $query->where(function ($q) use ($searchQuery, $searchableFields) {
+                foreach ($searchableFields as $field) {
+                    $q->orWhere($field, 'like', "%{$searchQuery}%");
+                }
+            });
         }
 
         foreach ($options as $column => $value) {
@@ -46,5 +58,10 @@ trait Query
 
         return $query->orderBy($orderBy, $direction)
             ->limit($limit);
+    }
+
+    public function getSearchableFields(): array
+    {
+        return $this->searchableFields ?? ['name'];
     }
 }

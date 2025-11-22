@@ -25,6 +25,8 @@ class Service extends Model
         'company_id',
     ];
 
+    protected $searchableFields = ['name', 'code'];
+
     protected static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope);

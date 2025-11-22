@@ -38,6 +38,8 @@ class Invoice extends Model
         'active' => 'boolean',
     ];
 
+    protected $searchableFields = ['number', 'code'];
+
     public static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope);

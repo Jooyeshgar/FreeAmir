@@ -41,6 +41,8 @@ class Product extends Model
         'sales_returns_subject_id',
     ];
 
+    protected $searchableFields = ['name', 'code'];
+
     protected static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope);

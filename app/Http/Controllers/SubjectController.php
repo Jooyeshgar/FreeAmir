@@ -109,36 +109,4 @@ class SubjectController extends Controller
             return redirect()->back()->with('errors', $e->getMessage());
         }
     }
-
-    public function search(Request $request)
-    {
-        $query = $request->input('query');
-        $subjects = Subject::with([
-            'subSubjects' => function ($subQuery) use ($query) {
-                $subQuery->where('code', 'like', '%'.$query.'%')
-                    ->orWhere('name', 'like', '%'.$query.'%');
-            },
-        ])
-            ->where(function ($parentQuery) use ($query) {
-                $parentQuery->where('parent_id', null)
-                    ->where(function ($innerQuery) use ($query) {
-                        $innerQuery->where('code', 'like', '%'.$query.'%')
-                            ->orWhere('name', 'like', '%'.$query.'%');
-                    });
-            })
-            ->orWhereHas('subSubjects', function ($subQuery) use ($query) {
-                $subQuery->where('code', 'like', '%'.$query.'%')
-                    ->orWhere('name', 'like', '%'.$query.'%');
-            })
-            ->get()
-            ->map(function ($subject) use ($query) {
-                if (stripos($subject->name, $query) !== false || stripos($subject->code, $query) !== false) {
-                    $subject->setRelation('subSubjects', $subject->subSubjects()->get());
-                }
-
-                return $subject;
-            });
-
-        return response()->json($subjects);
-    }
 }

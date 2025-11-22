@@ -29,6 +29,8 @@ class ProductGroup extends Model
         'vat' => 0,
     ];
 
+    protected $searchableFields = ['name', 'code'];
+
     public static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope);

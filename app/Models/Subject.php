@@ -24,6 +24,8 @@ class Subject extends Model
         'parent_id' => 0,
     ];
 
+    protected $searchableFields = ['name', 'code'];
+
     public static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope);

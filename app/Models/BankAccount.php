@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Models\Scopes\FiscalYearScope;
+use App\Traits\Query;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BankAccount extends Model
 {
-    use HasFactory;
+    use HasFactory, Query;
     protected $fillable = [
         'name',
         'number',
@@ -22,6 +23,8 @@ class BankAccount extends Model
         'bank_web_page',
         'desc',
     ];
+
+    protected $searchableFields = ['name', 'number', 'owner'];
 
     public static function booted(): void
     {

@@ -16,6 +16,8 @@ class Bank extends Model
         'company_id',
     ];
 
+    protected $searchableFields = ['name'];
+
     public static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope);

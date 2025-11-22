@@ -21,6 +21,8 @@ class ServiceGroup extends Model
         'subject_id',
     ];
 
+    protected $searchableFields = ['name', 'code'];
+
     public static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope);

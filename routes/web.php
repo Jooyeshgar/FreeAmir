@@ -11,7 +11,6 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('/', [Controllers\HomeController::class, 'index'])->name('home');
     Route::post('/home/subject-detail', [Controllers\HomeController::class, 'subjectDetail'])->name('home.subject-detail');
     Route::resource('subjects', Controllers\SubjectController::class);
-    Route::post('subjects/search', [Controllers\SubjectController::class, 'search'])->name('subjects.search');
     Route::resource('documents', Controllers\DocumentController::class);
     Route::get('documents/{document}/duplicate', [Controllers\DocumentController::class, 'duplicate'])->name('documents.duplicate');
     Route::resource('transactions', Controllers\TransactionController::class)->only(['index', 'show']);
@@ -51,4 +50,5 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('', [Controllers\InvoiceController::class, 'index']);
     });
 
+    Route::get('/model-select/search', [Controllers\ModelSelectController::class, '__invoke'])->name('model-select.search');
 });

@@ -48,6 +48,8 @@ class Customer extends Model
         'company_id',
     ];
 
+    protected $searchableFields = ['name', 'phone', 'cell', 'email'];
+
     protected $attributes = [
         'connector' => '',
         'cell' => '',

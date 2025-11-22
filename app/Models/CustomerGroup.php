@@ -20,6 +20,8 @@ class CustomerGroup extends Model
         'company_id',
     ];
 
+    protected $searchableFields = ['name'];
+
     protected static function boot()
     {
         parent::boot();
