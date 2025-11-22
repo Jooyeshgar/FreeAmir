@@ -274,8 +274,6 @@
                 transactions: {!! json_encode($transactions, JSON_UNESCAPED_UNICODE) !!},
                 products: {!! json_encode($products, JSON_UNESCAPED_UNICODE) !!},
                 services: {!! json_encode($services, JSON_UNESCAPED_UNICODE) !!},
-                productGroups: {!! json_encode($productGroups, JSON_UNESCAPED_UNICODE) !!},
-                serviceGroups: {!! json_encode($serviceGroups, JSON_UNESCAPED_UNICODE) !!},
                 invoice_type: {!! json_encode($invoice->invoice_type ?? $invoice_type, JSON_UNESCAPED_UNICODE) !!},
                 addTransaction() {
                     const newId = this.transactions.length ? this.transactions[this.transactions
@@ -307,22 +305,23 @@
                 },
                 getProductVat(productId) {
                     const product = this.products.find(p => p.id == productId);
-                    const productGroup = this.productGroups.find(pg => pg.id == product.group);
-                    if (!product || !productGroup) return 0;
-                    if (product.vat == null) {
-                        return productGroup.vat;
+                    if (!product) return 0;
+                    if (product.vat !== null && product.vat !== undefined) {
+                        return product.vat;
                     }
-                    return product.vat;
+                    if (product.group && product.group.vat !== null) {
+                        return product.group.vat;
+                    }
+                    return 0;
                 },
                 getServiceVat(serviceId) {
                     const service = this.services.find(s => s.id == serviceId);
-                    const serviceGroup = this.serviceGroups.find(sg => sg.id == service.group);
                     if (!service) return 0;
                     if (service.vat !== null && service.vat !== undefined) {
                         return service.vat;
                     }
-                    if (serviceGroup && serviceGroup.vat !== null) {
-                        return serviceGroup.vat;
+                    if (service.group && service.group.vat !== null) {
+                        return service.group.vat;
                     }
                     return 0;
                 },

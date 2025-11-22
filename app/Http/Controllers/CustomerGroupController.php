@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models;
-use App\Models\Subject;
 use Illuminate\Http\Request;
 
 class CustomerGroupController extends Controller
@@ -19,8 +18,7 @@ class CustomerGroupController extends Controller
 
     public function create()
     {
-        $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->get();
-        return view('customerGroups.create', compact('subjects'));
+        return view('customerGroups.create');
     }
 
     public function store(Request $request)
@@ -37,8 +35,7 @@ class CustomerGroupController extends Controller
 
     public function edit(Models\CustomerGroup $customerGroup)
     {
-        $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->get();
-        return view('customerGroups.edit', compact('customerGroup', 'subjects'));
+        return view('customerGroups.edit', compact('customerGroup'));
     }
 
     public function update(Request $request, Models\CustomerGroup $customerGroup)
