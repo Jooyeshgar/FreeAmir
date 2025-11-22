@@ -11,13 +11,13 @@ class ModelSelectController extends Controller
 {
     public function __invoke(Request $request)
     {
-        $modelClass = $request->get('model');
-        $query = $request->get('q', '');
-        $limit = (int) $request->get('limit', 10);
-        $labelField = $request->get('labelField', 'name');
-        $searchFields = $request->get('searchFields', null);
-        $orderBy = $request->get('orderBy', 'name');
-        $direction = $request->get('direction', 'asc');
+        $modelClass = "App\Models\\".$request->get('model');
+        $query = $request->get('q') ?? '';
+        $limit = (int) ($request->get('limit') ?? 10);
+        $labelField = $request->get('labelField') ?? 'name';
+        $searchFields = $request->get('searchFields') ?? null;
+        $orderBy = $request->get('orderBy') ?? 'id';
+        $direction = $request->get('direction') ?? 'asc';
 
         if (! class_exists($modelClass)) {
             return response()->json([]);
