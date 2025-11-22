@@ -3,13 +3,10 @@
 namespace App\Services;
 
 use App\Enums\AncillaryCostType;
-use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
 use App\Models\Invoice;
-use App\Models\Product;
 use App\Models\User;
 use Exception;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -230,16 +227,5 @@ class AncillaryCostService
         if (InvoiceService::hasSubsequentInvoicesForProduct($ancillaryCost->invoice, $productIds)) {
             throw new Exception(__('Ancillary Cost cannot be edited/deleted because there are subsequent buy/sell invoices after the respective invoice date.'), 400);
         }
-    }
-
-    public static function getAllowedInvoicesForAncillaryCostsCreatingOrEditing(): Collection
-    {
-        $invoices = Invoice::where('invoice_type', InvoiceType::BUY)->orderBy('date')->get();
-
-        return $invoices->reject(function ($invoice) {
-            $productIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->toArray();
-
-            return InvoiceService::hasSubsequentInvoicesForProduct($invoice, $productIds);
-        });
     }
 }

@@ -4,10 +4,13 @@ namespace App\Models;
 
 use App\Models\Scopes\FiscalYearScope;
 use App\Services\SubjectCreatorService;
+use App\Traits\Query;
 use Illuminate\Database\Eloquent\Model;
 
 class CustomerGroup extends Model
 {
+    use Query;
+
     public $timestamps = false;
 
     protected $fillable = [

@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\InvoiceType;
 use App\Http\Requests\StoreAncillaryCostRequest;
 use App\Models\AncillaryCost;
 use App\Models\Customer;
 use App\Models\Invoice;
+use App\Models\Product;
 use App\Services\AncillaryCostService;
 use Exception;
 use Illuminate\Http\Request;
@@ -23,8 +25,8 @@ class AncillaryCostController extends Controller
 
     public function create()
     {
-        $invoices = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing();
-        $customers = Customer::all();
+        $invoices = Invoice::SearchInModel(orderBy: 'date', customQuery: self::allowedInvoicesQuery())->get();
+        $customers = Customer::Some()->get(['id', 'name']);
         $ancillaryCost = new AncillaryCost;
         $ancillaryCostItems = old('ancillaryCosts') ?? [];
 
@@ -36,7 +38,8 @@ class AncillaryCostController extends Controller
         $validated = $request->validated();
         $validated['company_id'] = session('active-company-id');
 
-        $validatedInvoicesId = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing()->pluck('id')->toArray();
+        $validatedInvoicesId = Invoice::SearchInModel(orderBy: 'date', customQuery: self::allowedInvoicesQuery())->pluck('id')->toArray();
+
         if (! in_array($validated['invoice_id'], $validatedInvoicesId)) {
             throw new Exception(__('Ancillary Cost cannot be created.'), 400);
         }
@@ -50,7 +53,7 @@ class AncillaryCostController extends Controller
 
     public function edit(AncillaryCost $ancillaryCost)
     {
-        $invoices = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing();
+        $invoices = Invoice::SearchInModel(orderBy: 'date', customQuery: self::allowedInvoicesQuery())->get();
 
         // Load ancillary cost items for editing
         $ancillaryCostItems = $ancillaryCost->items->map(function ($item) {
@@ -60,7 +63,7 @@ class AncillaryCostController extends Controller
             ];
         })->toArray();
 
-        $customers = Customer::all();
+        $customers = Customer::Some()->get(['id', 'name']);
 
         // Calculate VAT percentage: (vat_amount / subtotal_before_vat) * 100
         $subtotalBeforeVat = $ancillaryCost['amount'] - $ancillaryCost['vat'];
@@ -107,10 +110,7 @@ class AncillaryCostController extends Controller
             return response()->json(['products' => []]);
         }
 
-        $invoiceItems = $invoice->items()
-            ->where('itemable_type', \App\Models\Product::class)
-            ->with('itemable')
-            ->get();
+        $invoiceItems = $invoice->items()->where('itemable_type', Product::class)->with('itemable')->get();
 
         $products = collect($invoiceItems)->map(function ($item) {
             return [
@@ -121,5 +121,23 @@ class AncillaryCostController extends Controller
         })->unique('id')->values();
 
         return response()->json(['products' => $products]);
+    }
+
+    private static function allowedInvoicesQuery(): \Closure
+    {
+        return function ($query) {
+            return $query->where('invoice_type', InvoiceType::BUY)
+                ->whereDoesntHave('items', function ($itemQuery) {
+                    $itemQuery->where('itemable_type', Product::class)
+                        ->whereIn('itemable_id', function ($subQuery) {
+                            $subQuery->select('itemable_id')
+                                ->from('invoice_items')
+                                ->join('invoices as inv', 'invoice_items.invoice_id', '=', 'inv.id')
+                                ->whereIn('inv.invoice_type', [InvoiceType::BUY, InvoiceType::SELL])
+                                ->whereColumn('inv.date', '>=', 'invoices.date')
+                                ->whereColumn('inv.number', '!=', 'invoices.number');
+                        });
+                });
+        };
     }
 }

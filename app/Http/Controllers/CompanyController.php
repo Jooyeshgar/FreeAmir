@@ -11,18 +11,17 @@ use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
-
 class CompanyController extends Controller
 {
     public $rules = [
-        'name'            => 'required|max:50|string|regex:/^[\w\d\s]*$/u',
-        'logo'            => 'nullable|image|mimes:jpeg,jpg,png,svg|max:10240',
-        'address'         => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
+        'name' => 'required|max:50|string|regex:/^[\w\d\s]*$/u',
+        'logo' => 'nullable|image|mimes:jpeg,jpg,png,svg|max:10240',
+        'address' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
         'economical_code' => 'nullable|string|max:15',
-        'national_code'   => 'nullable|string|max:12',
-        'postal_code'     => 'nullable|integer',
-        'phone_number'    => 'nullable|numeric|regex:/^09\d{9}$/',
-        'fiscal_year'     => 'required|numeric'
+        'national_code' => 'nullable|string|max:12',
+        'postal_code' => 'nullable|integer',
+        'phone_number' => 'nullable|numeric|regex:/^09\d{9}$/',
+        'fiscal_year' => 'required|numeric',
     ];
 
     public function __construct() {}
@@ -35,7 +34,7 @@ class CompanyController extends Controller
         $companies = Company::paginate(12);
 
         return view('companies.index', [
-            'companies' => $companies
+            'companies' => $companies,
         ]);
     }
 
@@ -44,12 +43,11 @@ class CompanyController extends Controller
      */
     public function create(): View
     {
-        // Get previous fiscal years for the current company
-        $previousYears = Company::all();
+        $previousYears = Company::Some()->get();
 
         return view('companies.create', [
             'company' => null,
-            'previousYears' => $previousYears
+            'previousYears' => $previousYears,
         ]);
     }
 
@@ -61,7 +59,7 @@ class CompanyController extends Controller
         $fiscalYearRules = [
             'source_year_id' => 'required|exists:companies,id',
             'tables_to_copy' => 'array',
-            'tables_to_copy.*' => 'string|in:' . implode(',', array_map(fn($case) => $case->value, FiscalYearSection::cases()))
+            'tables_to_copy.*' => 'string|in:'.implode(',', array_map(fn ($case) => $case->value, FiscalYearSection::cases())),
         ];
 
         $validated = $request->validate(array_merge($this->rules, $fiscalYearRules));
@@ -91,7 +89,7 @@ class CompanyController extends Controller
     public function edit(Company $company): View
     {
         return view('companies.edit', [
-            'company' => $company
+            'company' => $company,
         ]);
     }
 
@@ -133,21 +131,22 @@ class CompanyController extends Controller
     /**
      * Store logo of a company
      */
-    public function storeLogo(UploadedFile $logo, Company $company = null): string
+    public function storeLogo(UploadedFile $logo, ?Company $company = null): string
     {
         $extension = $logo->getClientOriginalExtension();
-        $uniqueName = uniqid() . '.' . $extension;
+        $uniqueName = uniqid().'.'.$extension;
 
         if ($company?->logo) {
-            $oldPath = 'public/' . $company->logo;
+            $oldPath = 'public/'.$company->logo;
             if (Storage::exists($oldPath)) {
                 Storage::delete($oldPath);
             }
         }
 
-        $storagePath = 'public/company_logos/' . $uniqueName;
+        $storagePath = 'public/company_logos/'.$uniqueName;
         Storage::put($storagePath, file_get_contents($logo));
         $path = "company_logos/{$uniqueName}";
+
         return $path;
     }
 
@@ -160,7 +159,7 @@ class CompanyController extends Controller
         session([
             'active-company-id' => $company->id,
             'active-company-name' => $company->name,
-            'active-company-fiscal-year' => $company->fiscal_year
+            'active-company-fiscal-year' => $company->fiscal_year,
         ]);
 
         return redirect()->route('home');

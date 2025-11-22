@@ -13,7 +13,7 @@ class SubjectController extends Controller
     public function index(Request $request)
     {
         $currentParent = null;
-        
+
         if ($request->has('parent_id')) {
             $currentParent = Subject::find($request->get('parent_id'));
             $subjects = $currentParent->children()->with('subjectable');
@@ -51,7 +51,7 @@ class SubjectController extends Controller
             'parent_id' => $validatedData['parent_id'] ?? null,
         ];
 
-        if (!empty($validatedData['code'])) {
+        if (! empty($validatedData['code'])) {
             $data['code'] = str_pad($validatedData['code'], 3, '0', STR_PAD_LEFT);
         }
 
@@ -59,7 +59,7 @@ class SubjectController extends Controller
 
         $redirectUrl = route('subjects.index');
         if ($subject->parent_id) {
-            $redirectUrl .= '?parent_id=' . $subject->parent_id;
+            $redirectUrl .= '?parent_id='.$subject->parent_id;
         }
 
         return redirect($redirectUrl)->with('success', __('Subject with code :code created successfully.', ['code' => $subject->formattedCode()]));
@@ -68,7 +68,7 @@ class SubjectController extends Controller
     public function edit(Subject $subject)
     {
         $parentSubject = $subject->parent;
-        $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->get();
+        $subjects = Subject::Some(orderBy: 'code', options: ['parent_id' => null])->with('children')->get();
 
         return view('subjects.edit', compact('subject', 'parentSubject', 'subjects'));
     }
@@ -87,8 +87,9 @@ class SubjectController extends Controller
 
             $redirectUrl = route('subjects.index');
             if ($updatedSubject->parent_id) {
-                $redirectUrl .= '?parent_id=' . $updatedSubject->parent_id;
+                $redirectUrl .= '?parent_id='.$updatedSubject->parent_id;
             }
+
             return redirect($redirectUrl)->with('success', __('Subject updated successfully.'));
         } catch (\InvalidArgumentException $e) {
             return redirect()->back()
@@ -97,12 +98,12 @@ class SubjectController extends Controller
         }
     }
 
-
     public function destroy(Subject $subject)
     {
 
         try {
             $subject->delete();
+
             return redirect()->back()->with('success', __('Subject deleted successfully.'));
         } catch (\Exception $e) {
             return redirect()->back()->with('errors', $e->getMessage());
@@ -114,29 +115,29 @@ class SubjectController extends Controller
         $query = $request->input('query');
         $subjects = Subject::with([
             'subSubjects' => function ($subQuery) use ($query) {
-                $subQuery->where('code', 'like', '%' . $query . '%')
-                    ->orWhere('name', 'like', '%' . $query . '%');
-            }
+                $subQuery->where('code', 'like', '%'.$query.'%')
+                    ->orWhere('name', 'like', '%'.$query.'%');
+            },
         ])
             ->where(function ($parentQuery) use ($query) {
-                $parentQuery->where('parent_id', null) // Ensure parent subjects
+                $parentQuery->where('parent_id', null)
                     ->where(function ($innerQuery) use ($query) {
-                        $innerQuery->where('code', 'like', '%' . $query . '%')
-                            ->orWhere('name', 'like', '%' . $query . '%');
+                        $innerQuery->where('code', 'like', '%'.$query.'%')
+                            ->orWhere('name', 'like', '%'.$query.'%');
                     });
             })
             ->orWhereHas('subSubjects', function ($subQuery) use ($query) {
-                $subQuery->where('code', 'like', '%' . $query . '%')
-                    ->orWhere('name', 'like', '%' . $query . '%');
+                $subQuery->where('code', 'like', '%'.$query.'%')
+                    ->orWhere('name', 'like', '%'.$query.'%');
             })
             ->get()
             ->map(function ($subject) use ($query) {
                 if (stripos($subject->name, $query) !== false || stripos($subject->code, $query) !== false) {
                     $subject->setRelation('subSubjects', $subject->subSubjects()->get());
                 }
+
                 return $subject;
             });
-
 
         return response()->json($subjects);
     }

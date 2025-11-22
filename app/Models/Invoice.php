@@ -4,10 +4,13 @@ namespace App\Models;
 
 use App\Enums\InvoiceType;
 use App\Models\Scopes\FiscalYearScope;
+use App\Traits\Query;
 use Illuminate\Database\Eloquent\Model;
 
 class Invoice extends Model
 {
+    use Query;
+
     public $timestamps = true;
 
     protected $fillable = [
