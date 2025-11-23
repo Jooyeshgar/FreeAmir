@@ -18,6 +18,7 @@
     'showCode' => false,
     'codeField' => 'code',
 ])
+<!-- Add an option for be all selectable -->
 
 @php
 $normalizedOptions = [];
@@ -43,6 +44,27 @@ $normalizedOptions = [];
                 return ['group' => null, 'code' => null];
             }
 
+            // Handle Subject model specifically
+            if ($model === 'Subject') {
+                $instance = $modelClass::with('parent')->find($modelId);
+                if (!$instance) {
+                    return ['group' => null, 'code' => null];
+                }
+
+                $itemCode = $instance->code ? formatCode($instance->code) : null;
+                
+                $group = null;
+                if ($instance->parent) {
+                    $group = [
+                        'label' => $instance->parent->name,
+                        'code' => $instance->parent->code ? formatCode($instance->parent->code) : null,
+                    ];
+                }
+
+                return ['group' => $group, 'code' => $itemCode];
+            }
+
+            // Handle models that have a subject relationship
             $instance = $modelClass::with('subject.parent')->find($modelId);
             if (!$instance || !$instance->subject) {
                 return ['group' => null, 'code' => null];
@@ -230,7 +252,7 @@ $normalizedOptions = [];
                 <template x-for="(option, index) in filteredOptions" :key="option.value">
                     <div class="contents">
                         {{-- Group Header --}}
-                        <template x-if="option.group && (index === 0 || !filteredOptions[index - 1].group || filteredOptions[index - 1].group.label !== option.group.label)">
+                        <template x-if="option.group && (index === 0 || !filteredOptions[index - 1].group || filteredOptions[index - 1].group.code !== option.group.code)">
                             <li class="menu-title opacity-70 mt-2 first:mt-0">
                                 <span class="flex items-center gap-2">
                                     <span x-text="option.group.label"></span>
@@ -280,8 +302,14 @@ $normalizedOptions = [];
 </div>
 @once
 <script>
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('searchSelect', (config) => ({
+    (function() {
+        const registerComponent = () => {
+            if (typeof Alpine === 'undefined') {
+                console.warn('Alpine not loaded yet, waiting...');
+                return;
+            }
+            
+            Alpine.data('searchSelect', (config) => ({
             open: false,
             search: '',
             selected: config.selected,
@@ -449,7 +477,16 @@ $normalizedOptions = [];
                 });
             }
 
-        }));
-    });
+            }));
+        };
+
+        // Register immediately if Alpine is already loaded
+        if (typeof Alpine !== 'undefined') {
+            registerComponent();
+        } else {
+            // Otherwise wait for alpine:init event
+            document.addEventListener('alpine:init', registerComponent);
+        }
+    })();
 </script>
 @endonce

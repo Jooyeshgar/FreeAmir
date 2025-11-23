@@ -65,8 +65,9 @@
                         <x-text-input x-bind:value="$store.utils.formatCode(selectedCode)" label_text_class="text-gray-500" label_class="w-full"
                             input_class="border-white value codeInput "></x-text-input>
                     </div>
-                    <div>
-                        <x-subject-select-box :subjects="$subjects"></x-subject-select-box>
+                    <div class="flex-1 min-w-80 max-w-80">
+                        <x-select-box name="subject_id" id="subject_id"  model="Subject"
+                            :options="$subjects->pluck('name', 'id')" showCode="true" searchFields="name,code"/>
                     </div>
                     <div class="flex-1 w-[200px]">
                         <x-text-input x-bind:value="transaction.desc" placeholder="{{ __('this document\'s row description') }}"

@@ -48,27 +48,49 @@ class ModelSelectController extends Controller
             });
         }
 
+        // Load relationships for subjects
+        if ($modelClass === 'App\Models\Subject') {
+            $queryBuilder->with('parent');
+        } elseif (method_exists($model, 'subject')) {
+            $queryBuilder->with('subject.parent');
+        }
+
         $results = $queryBuilder->get();
 
         // Format results for select box
         return response()->json($results->map(function ($item) use ($labelField, $modelClass) {
             // Try to get label from specified field, fallback to name, then code
             $label = $item->{$labelField} ?? $item->name ?? $item->code ?? $item->id;
-            $code = formatCode($item->subject->code) ?? null;
 
-            $isItemAGroupItself = str_contains($modelClass, 'Group');
+            // Initialize code and group variables
+            $code = null;
+            $parentCode = null;
+            $parentName = null;
 
-            // If the item is a group itself, get its parent from subjects; otherwise, get its group or related group
-            $itemGroup = $isItemAGroupItself
-                                ? $item->subject->parent ?? null
-                                : $item->group ?? $item->{$modelClass.'Group'} ?? null; // e.g Product has ProductGroup() as relation with its group, so we must call ProductGroup
+            // Handle Subject model specifically
+            if ($modelClass === 'App\Models\Subject') {
+                $code = isset($item->code) ? formatCode($item->code) : null;
+                if ($item->parent) {
+                    $parentName = $item->parent->name;
+                    $parentCode = isset($item->parent->code) ? formatCode($item->parent->code) : null;
+                }
+            } else {
+                // Handle models that have a subject relationship
+                if (isset($item->subject)) {
+                    $code = isset($item->subject->code) ? formatCode($item->subject->code) : null;
 
-            $parentCode = formatCode($itemGroup->code ?? $itemGroup->subject->code ?? null);
-            $parentName = $itemGroup->name ?? $itemGroup->subject->name ?? null;
+                    $isItemAGroupItself = str_contains($modelClass, 'Group');
 
-            // If model has formattedName method, use it
-            if (method_exists($item, 'formattedName')) {
-                $label = $item->formattedName();
+                    // If the item is a group itself, get its parent from subjects; otherwise, get its group or related group
+                    $itemGroup = $isItemAGroupItself
+                                        ? $item->subject->parent ?? null
+                                        : $item->group ?? $item->{$modelClass.'Group'} ?? null;
+
+                    if ($itemGroup) {
+                        $parentCode = isset($itemGroup->code) ? formatCode($itemGroup->code) : (isset($itemGroup->subject->code) ? formatCode($itemGroup->subject->code) : null);
+                        $parentName = $itemGroup->name ?? $itemGroup->subject->name ?? null;
+                    }
+                }
             }
 
             return [
@@ -76,10 +98,10 @@ class ModelSelectController extends Controller
                 'value' => $item->id,
                 'label' => $label,
                 'code' => $code,
-                'group' => [
+                'group' => ($parentName || $parentCode) ? [
                     'label' => $parentName,
                     'code' => $parentCode,
-                ],
+                ] : null,
             ];
         }));
     }
