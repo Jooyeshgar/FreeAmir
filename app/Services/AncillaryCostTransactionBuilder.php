@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Customer;
+use App\Models\Invoice;
 use App\Models\Product;
 
 /**
@@ -17,10 +18,16 @@ class AncillaryCostTransactionBuilder
 
     private array $ancillaryCost;
 
+    private Invoice $invoice;
+
+    private string $invoiceType;
+
     public function __construct(array $data)
     {
         $this->data = $data;
         $this->ancillaryCost = $data['ancillaryCosts'] ?? [];
+        $this->invoice = Invoice::find($this->data['invoice_id']);
+        $this->invoiceType = $this->invoice->invoice_type->label();
     }
 
     /**
@@ -49,7 +56,7 @@ class AncillaryCostTransactionBuilder
 
             $this->transactions[] = [
                 'subject_id' => $product->inventory_subject_id,
-                'desc' => __('Ancillary Cost for :item', ['item' => $product->name]),
+                'desc' => __('Ancillary Cost for :item', ['item' => $product->name]).' '.__('On Invoice').' '.$this->invoiceType.' '.formatNumber($this->invoice->number),
                 'value' => -$item['amount'],
             ];
         }
@@ -63,7 +70,7 @@ class AncillaryCostTransactionBuilder
         if ($this->data['vatPrice'] > 0) {
             $this->transactions[] = [
                 'subject_id' => config('amir.buy_vat'),
-                'desc' => __('Ancillary Cost VAT/Tax'),
+                'desc' => __('VAT Ancillary Cost').' '.__('Invoice').' '.$this->invoiceType.' '.formatNumber($this->invoice->number),
                 'value' => -$this->data['vatPrice'],
             ];
         }
@@ -79,7 +86,7 @@ class AncillaryCostTransactionBuilder
 
         $this->transactions[] = [
             'subject_id' => $subject_id,
-            'desc' => __('Customer total'),
+            'desc' => __('Invoice').' '.$this->invoiceType.' '.__(' with number ').' '.formatNumber($this->invoice->number),
             'value' => $this->data['amount'],
         ];
     }

@@ -90,7 +90,7 @@ class InvoiceTransactionBuilder
 
             $this->transactions[] = [
                 'subject_id' => $product->cogs_subject_id,
-                'desc' => __('Cost of Goods Sold').' '.__('Invoice').' '.$this->invoiceType->label().__(' with number ').$this->invoiceData['number'],
+                'desc' => __('Cost of Goods Sold').' '.__('Invoice').' '.$this->invoiceType->label().__(' with number ').' '.formatNumber($this->invoiceData['number']),
                 'value' => -$averageCost * $quantity,
             ];
         }
@@ -134,7 +134,7 @@ class InvoiceTransactionBuilder
 
                 $this->transactions[] = [
                     'subject_id' => $subjectId,
-                    'desc' => __('Invoice').' '.$invoiceType.__(' with number ').$this->invoiceData['number'].' ('.$quantity.' '.__('Number').')',
+                    'desc' => __('Invoice').' '.$invoiceType.' '.__(' with number ').' '.formatNumber($this->invoiceData['number']).' ('.formatNumber($quantity).' '.__('Number').')',
                     'value' => $itemAmount,
                 ];
             }
@@ -142,7 +142,7 @@ class InvoiceTransactionBuilder
             if ($type === 'product') {
                 $this->transactions[] = [
                     'subject_id' => $product->inventory_subject_id,
-                    'desc' => __('Invoice').' '.$invoiceType.__(' with number ').$this->invoiceData['number'].' ('.$quantity.' '.__('Number').')',
+                    'desc' => __('Invoice').' '.$invoiceType.' '.__(' with number ').' '.formatNumber($this->invoiceData['number']).' ('.formatNumber($quantity).' '.__('Number').')',
                     'value' => $this->invoiceType === InvoiceType::SELL ? ($product->average_cost * $quantity) : -($unitPrice * $quantity),
                 ];
             }
@@ -162,7 +162,7 @@ class InvoiceTransactionBuilder
 
             $this->transactions[] = [
                 'subject_id' => $discountSubjectId,
-                'desc' => $invoiceType.__('Invoice discount with number').$this->invoiceData['number'],
+                'desc' => $invoiceType.' '.__('Invoice discount with number').' '.formatNumber($this->invoiceData['number']),
                 'value' => $this->invoiceType === InvoiceType::SELL ? -$this->totalDiscount : $this->totalDiscount,
             ];
         }
@@ -181,7 +181,7 @@ class InvoiceTransactionBuilder
 
             $this->transactions[] = [
                 'subject_id' => $vatSubjectId,
-                'desc' => __('Invoice').' '.$invoiceType.__(' with number ').$this->invoiceData['number'],
+                'desc' => __('Invoice').' '.$invoiceType.' '.__(' with number ').' '.formatNumber($this->invoiceData['number']),
                 'value' => $this->invoiceType === InvoiceType::SELL ? $this->totalVat : -$this->totalVat,
             ];
         }
@@ -203,7 +203,7 @@ class InvoiceTransactionBuilder
         $subject_id = Customer::find($customerId)->subject->id;
         $this->transactions[] = [
             'subject_id' => $subject_id,
-            'desc' => __('Invoice').' '.$invoiceType.__(' with number ').$this->invoiceData['number'],
+            'desc' => __('Invoice').' '.$invoiceType.' '.__(' with number ').' '.formatNumber($this->invoiceData['number']),
             'value' => $this->invoiceType === InvoiceType::SELL ? -$customerTotal : $customerTotal,
         ];
     }
@@ -223,7 +223,7 @@ class InvoiceTransactionBuilder
 
             $this->transactions[] = [
                 'subject_id' => $subtractionSubjectId,
-                'desc' => $invoiceType.' '.__('Invoice subtraction with number').' '.$this->invoiceData['number'],
+                'desc' => $invoiceType.' '.__('Invoice subtraction with number').' '.formatNumber($this->invoiceData['number']),
                 'value' => $this->invoiceType === InvoiceType::SELL ? -$this->subtractions : $this->subtractions,
             ];
         }
