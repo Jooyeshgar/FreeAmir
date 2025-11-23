@@ -8,7 +8,7 @@
                         $hint = '<a class="link text-blue-500" href="' . route('customer-groups.create') . '">' . __('Create new group') . '</a>';
                     @endphp
                     <x-select-box label="{{ __('Account Plan Group') }}" name="group_id" id="group_id" model="CustomerGroup"
-                        :options="$groups->pluck('name', 'id')" :selected="$customer->group_id ?? null" :hint="$hint" />
+                    :options="$groups->pluck('name', 'id')" showCode="true" searchFields="name,code" :selected="$customer->group->name ?? null" :hint="$hint" />
                 </div>
             </div>
             <div class="grid grid-cols-2 gap-1 ">

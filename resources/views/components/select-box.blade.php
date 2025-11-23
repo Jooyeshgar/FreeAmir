@@ -15,24 +15,113 @@
     'hint' => null,
     'required' => false,
     'disabled' => false,
+    'showCode' => false,
+    'codeField' => 'code',
 ])
 
 @php
-    $id = $id ?? 'select_' . md5($name . uniqid());
+$normalizedOptions = [];
+    // helper: basic formatting for scalar id => label pairs
+    $formatBasic = function ($k, $v, $group = null, $code = null) {
+        return [
+            'value' => (string) $k,
+            'label' => (string) $v,
+            'group' => $group ? ['label' => (string)$group, 'code' => null] : null,
+            'code' => $code,
+        ];
+    };
 
-    $normalizedOptions = [];
-    $formatOption = fn($k, $v, $g = null) => ['value' => (string)$k, 'label' => $v, 'group' => $g];
+    // Helper to extract subject information from model
+    $extractSubjectInfo = function ($modelId) use ($model) {
+        if (!$model || !$modelId) {
+            return ['group' => null, 'code' => null];
+        }
+
+        try {
+            $modelClass = "App\\Models\\{$model}";
+            if (!class_exists($modelClass)) {
+                return ['group' => null, 'code' => null];
+            }
+
+            $instance = $modelClass::with('subject.parent')->find($modelId);
+            if (!$instance || !$instance->subject) {
+                return ['group' => null, 'code' => null];
+            }
+
+            $subject = $instance->subject;
+            $itemCode = $subject->code ? formatCode($subject->code) : null;
+            
+            $group = null;
+            if ($subject->parent) {
+                $group = [
+                    'label' => $subject->parent->name,
+                    'code' => $subject->parent->code ? formatCode($subject->parent->code) : null,
+                ];
+            }
+
+            return ['group' => $group, 'code' => $itemCode];
+        } catch (\Exception $e) {
+            return ['group' => null, 'code' => null];
+        }
+    };
 
     foreach ($options as $key => $value) {
-        if (is_iterable($value)) {
-            foreach ($value as $subKey => $subValue) {
-                $normalizedOptions[] = $formatOption($subKey, $subValue, $key);
-            }
-        } else {
-            $normalizedOptions[] = $formatOption($key, $value);
+        // Structured option detection
+        if (is_array($value) && (array_key_exists('value', $value) || array_key_exists('label', $value))) {
+        $group = null;
+        if (!empty($value['group'])) {
+            if (is_array($value['group'])) {
+                $group = [
+                'label' => $value['group']['label'] ?? $value['group']['name'] ?? null,
+                'code' => $value['group']['code'] ?? null,
+                ];
+            } else {
+                $group = ['label' => (string)$value['group'], 'code' => $value['group_code'] ?? null];
         }
     }
 
+
+    $normalizedOptions[] = [
+            'value' => (string) ($value['value'] ?? $key),
+            'label' => $value['label'] ?? $value['name'] ?? $value['text'] ?? (string) ($value['value'] ?? $key),
+            'group' => $group,
+            'code' => $value['code'] ?? null,
+        ];
+        continue;
+    }
+
+
+    // Group handling
+    if (is_iterable($value)) {
+        foreach ($value as $subKey => $subValue) {
+        if (is_array($subValue) && (array_key_exists('value', $subValue) || array_key_exists('label', $subValue))) {
+            $group = ['label' => (string)$key, 'code' => $subValue['group_code'] ?? null];
+
+
+            $normalizedOptions[] = [
+                'value' => (string) ($subValue['value'] ?? $subKey),
+                'label' => $subValue['label'] ?? $subValue['name'] ?? $subValue['text'] ?? (string) ($subValue['value'] ?? $subKey),
+                'group' => $group,
+                'code' => $subValue['code'] ?? null,
+            ];
+        } else {
+            $normalizedOptions[] = $formatBasic($subKey, $subValue, $key);
+        }
+    }
+    } else {
+        // For simple key-value pairs with a model, extract subject info
+        $subjectInfo = $extractSubjectInfo($key);
+        $option = [
+            'value' => (string) $key,
+            'label' => (string) $value,
+            'group' => $subjectInfo['group'],
+            'code' => $subjectInfo['code'],
+        ];
+        $normalizedOptions[] = $option;
+        }
+    }
+
+    // Selected label resolution
     $initialLabel = null;
     if ($selected !== null && $selected !== '') {
         foreach ($normalizedOptions as $opt) {
@@ -41,10 +130,11 @@
                 break;
             }
         }
-        if (!$initialLabel && $searchUrl) $initialLabel = $selected; 
+        if (!$initialLabel && $searchUrl) {
+            $initialLabel = $selected;
+        }
     }
-    
-    // Convert route name to URL if searchUrl is provided
+
     $searchUrlResolved = $searchUrl ? route($searchUrl) : null;
 @endphp
 
@@ -64,7 +154,9 @@
         direction: '{{ $direction }}',
         searchFields: '{{ $searchFields }}',
         model: '{{ $model }}',
-        disabled: '{{ $disabled }}'
+        disabled: '{{ $disabled }}',
+        showCode: '{{ $showCode ? 'true' : 'false' }}',
+        codeField: '{{ $codeField }}'
     })"
     x-init="init()"
     @click.outside="close()"
@@ -119,13 +211,13 @@
             </div>
 
             {{-- Options List --}}
-            <ul class="menu menu-compact w-full overflow-y-auto flex-1 p-1">
-                
+            <ul class="flex flex-col menu-compact w-full overflow-y-auto overflow-x-auto p-1">
+            
                 {{-- Loading Spinner --}}
                 <li x-show="isLoading" class="pointer-events-none">
                     <a class="flex justify-center gap-2">
                         <span class="loading loading-spinner loading-xs"></span>
-                        <span class="text-xs opacity-50">Searching server...</span>
+                        <span class="text-xs opacity-50">{{ __('Searching') }}</span>
                     </a>
                 </li>
 
@@ -138,9 +230,14 @@
                 <template x-for="(option, index) in filteredOptions" :key="option.value">
                     <div class="contents">
                         {{-- Group Header --}}
-                        <template x-if="option.group && (index === 0 || filteredOptions[index - 1].group !== option.group)">
+                        <template x-if="option.group && (index === 0 || !filteredOptions[index - 1].group || filteredOptions[index - 1].group.label !== option.group.label)">
                             <li class="menu-title opacity-70 mt-2 first:mt-0">
-                                <span x-text="option.group"></span>
+                                <span class="flex items-center gap-2">
+                                    <span x-text="option.group.label"></span>
+                                    <template x-if="option.group && option.group.code">
+                                        <span x-text="option.group.code"></span>
+                                    </template>
+                                </span>                     
                             </li>
                         </template>
 
@@ -149,15 +246,24 @@
                             <a 
                                 @click="select(option)" 
                                 :class="{'active': option.value == selected, 'bg-primary/10': index === highlightedIndex}"
-                                class="justify-between"
+                                class="block overflow-hidden p-1"
                                 @mouseenter="highlightedIndex = index"
                             >
-                                <span x-html="highlightMatch(option.label)"></span>
-                                <span x-show="option.value == selected">
-                                    <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                                    </svg>
-                                </span>
+                                <div class="w-full">
+                                    <!-- Label -->
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span x-html="highlightMatch(option.label)" class="font-medium truncate"></span>
+                                        <span x-show="option.value == selected" class="flex-shrink-0">
+                                            <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                            </svg>
+                                        </span>
+                                        <!-- Code -->
+                                        <template x-if="option.code">
+                                            <span x-text="option.code" class="text-xs opacity-60 font-mono"></span>
+                                        </template>
+                                    </div>
+                                </div>
                             </a>
                         </li>
                     </div>
@@ -186,7 +292,7 @@
             placeholder: config.placeholder,
             emptyText: config.emptyText,
             highlightedIndex: -1,
-            minSearchLength: 2, // minimum characters for remote search
+            minSearchLength: 1, // minimum characters for remote search
 
             init() {
                 this.filteredOptions = this.initialOptions;
@@ -228,7 +334,9 @@
                 // Filter locally first
                 const localMatches = this.initialOptions.filter(opt => 
                     opt.label.toLowerCase().includes(query) || 
-                    (opt.group && opt.group.toLowerCase().includes(query))
+                    (opt.group && opt.group.label && opt.group.label.toLowerCase().includes(query)) ||
+                    (opt.group && opt.group.code && opt.group.code.toLowerCase().includes(query)) ||
+                    (opt.code && opt.code.toLowerCase().includes(query))
                 );
 
                 if (localMatches.length > 0) {
@@ -270,7 +378,8 @@
                     this.filteredOptions = data.map(item => ({
                         value: item.value ?? item.id,
                         label: item.label ?? item.name ?? item.text,
-                        group: item.group ?? null
+                        group: item.group ?? null,
+                        code: item[config.codeField] ?? item.code ?? null
                     }));
 
                     this.highlightedIndex = this.filteredOptions.length ? 0 : -1;
