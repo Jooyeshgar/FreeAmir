@@ -81,10 +81,10 @@
                             <small class="block truncate">{{ $transaction->desc }}</small>
                         </td>
                         <td class="border-x border-black p-2">
-                            {{ $transaction->value < 0 ? formatNumber($transaction->value * -1) : '' }}
+                            {{ $transaction->value < 0 ? formatNumber($transaction->value * -1) : formatNumber(0) }}
                         </td>
                         <td class="border-x border-black p-2">
-                            {{ $transaction->value > 0 ? formatNumber($transaction->value) : '' }}
+                            {{ $transaction->value > 0 ? formatNumber($transaction->value) : formatNumber(0) }}
                         </td>
                     </tr>
                 @endforeach
