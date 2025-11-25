@@ -15,7 +15,11 @@ trait Query
         array $options = []
     ): Builder {
         foreach ($options as $column => $value) {
-            $query->where($column, $value);
+            if (is_array($value)) {
+                $query->whereIn($column, $value);
+            } else {
+                $query->where($column, $value);
+            }
         }
 
         return $query->orderBy($orderBy, $direction)

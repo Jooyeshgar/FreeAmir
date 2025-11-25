@@ -267,7 +267,7 @@
         <div 
             x-show="open" 
             x-transition.opacity.duration.200ms
-            class="absolute z-[100] w-full mt-1 bg-base-100 border border-base-300 rounded-box shadow-xl max-h-60 flex flex-col overflow-hidden"
+            class="absolute z-[100] w-full mt-1 bg-base-100 border border-base-300 rounded-box shadow-xl max-h-96 flex flex-col overflow-hidden"
             style="display: none;"
         >
             {{-- Search Input --}}

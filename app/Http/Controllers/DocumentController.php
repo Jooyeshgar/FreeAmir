@@ -101,7 +101,8 @@ class DocumentController extends Controller
 
             $total = -1;
 
-            $subjects = Subject::Some(orderBy: 'code', options: ['parent_id' => null])->with('children')->get();
+            $subjectsId = $document->transactions->pluck('subject_id')->unique()->toArray();
+            $subjects = Subject::Some(orderBy: 'code', options: ['id' => $subjectsId])->with('children')->get();
 
             $previousDocumentNumber = Document::orderBy('id', 'desc')->where('id', '<', $id)->first()->number ?? 0;
 
