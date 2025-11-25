@@ -45,7 +45,7 @@
                     selectedName: transaction.subject,
                     selectedCode: transaction.code,
                     selectedId: transaction.subject_id,
-                }">
+                }" @subject-selected="selectedId = $event.detail.id; selectedName = $event.detail.name; selectedCode = $event.detail.code; transaction.subject_id = $event.detail.id; transaction.subject = $event.detail.name; transaction.code = $event.detail.code;">
                     <input type="text" x-bind:value="transaction.transaction_id" x-bind:name="'transactions[' + index + '][transaction_id]'" hidden>
                     <input type="text" x-bind:value="selectedCode" x-bind:name="'transactions[' + index + '][code]'" hidden>
                     <input type="text" x-bind:value="selectedId" x-bind:name="'transactions[' + index + '][subject_id]'" hidden>
@@ -62,12 +62,12 @@
                         </button>
                     </div>
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input x-bind:value="$store.utils.formatCode(selectedCode)" label_text_class="text-gray-500" label_class="w-full"
+                        <x-text-input x-bind:value="selectedCode" label_text_class="text-gray-500" label_class="w-full"
                             input_class="border-white value codeInput "></x-text-input>
                     </div>
                     <div class="flex-1 min-w-80 max-w-80">
-                        <x-select-box name="subject_id" id="subject_id"  model="Subject"
-                            :options="$subjects->pluck('name', 'id')" showCode="true" searchFields="name,code"/>
+                        <x-select-box name="subject_id" id="subject_id"  model="Subject" selectableGroups="true"
+                            :options="$subjects->pluck('name', 'id')" showCode="true" searchFields="name,code" x-bind:selected="selectedId"/>
                     </div>
                     <div class="flex-1 w-[200px]">
                         <x-text-input x-bind:value="transaction.desc" placeholder="{{ __('this document\'s row description') }}"
