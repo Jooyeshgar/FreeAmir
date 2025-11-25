@@ -69,8 +69,8 @@ class InvoiceController extends Controller
         if (empty(config('amir.cust_subject'))) {
             return redirect()->route('configs.index')->with('error', __('Customer Subject is not configured. Please set it in configurations.'));
         }
-        $products = Product::Some()->with(['productGroup', 'inventorySubject'])->get(['id', 'name']);
-        $services = Service::Some()->with(['serviceGroup', 'subject'])->get(['id', 'name']);
+        $products = Product::Some()->with(['productGroup', 'inventorySubject'])->get();
+        $services = Service::Some()->with(['serviceGroup', 'subject'])->get();
         $customers = Customer::Some()->get(['id', 'name']);
 
         $previousDocumentNumber = floor(Document::max('number') ?? 0);
@@ -160,8 +160,8 @@ class InvoiceController extends Controller
 
         $customers = Customer::Some()->get(['id', 'name']);
 
-        $products = Product::Some()->with(['productGroup', 'inventorySubject'])->get(['id', 'name']);
-        $services = Service::Some()->with(['serviceGroup', 'subject'])->get(['id', 'name']);
+        $products = Product::Some()->with(['productGroup', 'inventorySubject'])->get();
+        $services = Service::Some()->with(['serviceGroup', 'subject'])->get();
 
         // Prepare transactions from invoice items
         $transactions = $this->prepareTransactions($invoice, 'edit');
