@@ -10,9 +10,9 @@
             @csrf
             @method('PUT')
             <div class="card-body" x-data="{
-                selectedName: '{{ $parentSubject->name }}',
-                selectedCode: '{{ $parentSubject->code }}',
-                selectedId: {{ $parentSubject->id }},
+                selectedName: '{{ $parentSubject->name ?? '' }}',
+                selectedCode: '{{ $parentSubject->code ?? '' }}',
+                selectedId: {{ $parentSubject->id ?? ''}},
             }">
                 <div class="card-title">{{ __('Edit subject') }}</div>
 

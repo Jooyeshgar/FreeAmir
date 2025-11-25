@@ -214,7 +214,7 @@ class DocumentController extends Controller
                 'transaction_id' => $isModel ? $t->id : ($t['transaction_id'] ?? null),
                 'subject_id' => $isModel ? $t->subject_id : ($t['subject_id'] ?? ''),
                 'subject' => $isModel ? ($t->subject?->name ?? '') : ($t['subject'] ?? ''),
-                'code' => $isModel ? ($t->subject?->code ?? '') : ($t['code'] ?? ''),
+                'code' => $isModel ? formatCode($t->subject?->code ?? '') : formatCode($t['code'] ?? ''),
                 'desc' => $isModel ? ($t->desc ?? '') : ($t['desc'] ?? ''),
                 'credit' => $isModel ? ($t->credit ?? 0) : ($t['credit'] ?? 0),
                 'debit' => $isModel ? ($t->debit ?? 0) : ($t['debit'] ?? 0),

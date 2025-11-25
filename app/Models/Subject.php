@@ -24,7 +24,7 @@ class Subject extends Model
         'parent_id' => 0,
     ];
 
-    protected $searchableFields = ['name', 'code'];
+    protected $searchableFields = ['id', 'name', 'code'];
 
     public static function booted(): void
     {
