@@ -29,6 +29,7 @@ class RolesAndPermissionsSeeder extends Seeder
         Permission::create(['name' => 'bank-accounts.*']);
         Permission::create(['name' => 'banks.*']);
         Permission::create(['name' => 'invoices.*']);
+        Permission::create(['name' => 'ancillary-costs.*']);
         Permission::create(['name' => 'management.*']);
         Permission::create(['name' => 'management.users.*']);
         Permission::create(['name' => 'management.permissions.*']);
@@ -54,6 +55,8 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $role = Role::create(['name' => 'Seller']);
         $role->givePermissionTo(Permission::where('name', 'LIKE', '%invoices%')
+            ->orWhere('name', 'LIKE', '%ancillary-costs%')
+            ->orWhere('name', 'LIKE', '%customers%')
             ->orWhere('name', 'LIKE', '%home%')
             ->get());
 

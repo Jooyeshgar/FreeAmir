@@ -23,7 +23,7 @@
         </ul>
     </li>
 @endcanany
-@canany(['reports.journal', 'reports.ledger', 'reports.sub-ledger', 'products.index', 'product-groups.index'])
+@canany(['reports.journal', 'reports.ledger', 'reports.sub-ledger'])
     <li class="dropdown dropdown-hover">
         <div tabindex="2" role="button">{{ __('Reports') }}</div>
         <ul tabindex="2" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">

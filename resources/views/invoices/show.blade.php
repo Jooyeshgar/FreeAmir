@@ -235,14 +235,16 @@
                         </span>
                     @endif
                     
-                    @if ($invoice->document)
-                        <a href="{{ route('documents.show', $invoice->document) }}" class="btn btn-secondary gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9 12h6m2 8H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2z" />
-                            </svg>
-                            {{ formatDocumentNumber($invoice->document->number) }}
-                        </a>
+                    @if ($invoice->document)                        
+                        @can('documents.show')
+                            <a href="{{ route('documents.show', $invoice->document) }}" class="btn btn-secondary gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12h6m2 8H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2z" />
+                                </svg>
+                                {{ formatDocumentNumber($invoice->document->number) }}
+                            </a>
+                        @endcan
                     @endif
                 </div>
             </div>
