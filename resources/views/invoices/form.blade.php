@@ -3,15 +3,10 @@
         selectedCustomerId: {{ old('customer_id', $invoice->customer_id ?? 'null') }}
     }">
         <div class="flex w-1/4">
-            <div class="flex flex-wrap">
+            <div class="flex flex-wrap w-3/4">
                 <span class="flex flex-col flex-wrap text-gray-500 w-full"> {{ __('Customer') }} </span>
-                <select name="customer_id" id="customer_id" x-model="selectedCustomerId"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
-                    <option value="">{{ __('Select Customer') }}</option>
-                    @foreach ($customers as $customer)
-                        <option value="{{ $customer->id }}">{{ $customer->name }}</option>
-                    @endforeach
-                </select>
+                <x-select-box :options="$customers->pluck('name', 'id')" name="customer_id" id="customer_id" model="Customer"
+                    :selected="old('customer_id', $invoice->customer_id ?? null)" placeholder="{{ __('Select Customer') }}"/>
             </div>
         </div>
         <input type="hidden" id="invoice_type" name="invoice_type" value="{{ $invoice->invoice_type ?? $invoice_type }}">
