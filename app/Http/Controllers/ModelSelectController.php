@@ -24,7 +24,7 @@ class ModelSelectController extends Controller
         foreach ($ancestors as $ancestor) {
             $path[] = [
                 'label' => $ancestor->name,
-                'code' => isset($ancestor->code) ? formatCode($ancestor->code) : null,
+                'code' => isset($ancestor->code) ? $ancestor->code : null,
                 'value' => $selectableGroups ? (string) $ancestor->id : null,
             ];
         }
@@ -86,6 +86,62 @@ class ModelSelectController extends Controller
                 $this->addAllDescendants($child, $results);
             }
         }
+    }
+
+    /**
+     * Group items by their common hierarchy path to avoid repetition. Items with same hierarchy codes will be grouped together.
+     *
+     * @param  \Illuminate\Support\Collection  $items  The formatted items collection
+     * @return array Array of grouped items with shared hierarchy
+     */
+    protected function groupByCommonHierarchy($items): array
+    {
+        // Create a hierarchical key for each item based on their hierarchy codes
+        $grouped = [];
+
+        foreach ($items as $item) {
+            // Build a unique key from hierarchy codes
+            $hierarchyKey = $this->buildHierarchyKey($item['hierarchy']);
+
+            if (! isset($grouped[$hierarchyKey])) {
+                $grouped[$hierarchyKey] = [
+                    'hierarchy' => $item['hierarchy'],
+                    'items' => [],
+                ];
+            }
+
+            // Add item to the group (without duplicating hierarchy)
+            $grouped[$hierarchyKey]['items'][] = [
+                'id' => $item['id'],
+                'value' => $item['value'],
+                'label' => $item['label'],
+                'code' => $item['code'],
+                'group' => $item['group'],
+            ];
+        }
+
+        // Convert to array and flatten structure for better usability
+        return array_values($grouped);
+    }
+
+    /**
+     * Build a unique key from hierarchy codes for grouping purposes.
+     *
+     * @param  array  $hierarchy  The hierarchy array
+     * @return string The hierarchy key
+     */
+    protected function buildHierarchyKey(array $hierarchy): string
+    {
+        if (empty($hierarchy)) {
+            return '__no_hierarchy__';
+        }
+
+        // Use codes to build the key, fallback to labels if code is not available
+        $keys = array_map(function ($level) {
+            return $level['code'] ?? $level['label'] ?? '';
+        }, $hierarchy);
+
+        return implode('|', $keys);
     }
 
     public function __invoke(Request $request)
@@ -156,8 +212,8 @@ class ModelSelectController extends Controller
             $results = $expandedResults;
         }
 
-        // Format results for select box
-        return response()->json($results->map(function ($item) use ($labelField, $modelClass, $selectableGroups) {
+        // Format results for select box - map each item with its metadata
+        $formattedResults = $results->map(function ($item) use ($labelField, $modelClass, $selectableGroups) {
             // Try to get label from specified field, fallback to name, then code
             $label = $item->{$labelField} ?? $item->name ?? $item->code ?? $item->id;
 
@@ -170,20 +226,20 @@ class ModelSelectController extends Controller
 
             // Handle Subject model specifically
             if ($modelClass === 'App\Models\Subject') {
-                $code = isset($item->code) ? formatCode($item->code) : null;
+                $code = isset($item->code) ? $item->code : null;
 
                 // Build hierarchy path from root to direct parent
                 $hierarchy = $this->buildHierarchyPath($item, $selectableGroups);
 
                 if ($item->parent) {
                     $parentName = $item->parent->name;
-                    $parentCode = isset($item->parent->code) ? formatCode($item->parent->code) : null;
+                    $parentCode = isset($item->parent->code) ? $item->parent->code : null;
                     $parentValue = $selectableGroups ? (string) $item->parent->id : null;
                 }
             } else {
                 // Handle models that have a subject relationship
                 if (isset($item->subject)) {
-                    $code = isset($item->subject->code) ? formatCode($item->subject->code) : null;
+                    $code = isset($item->subject->code) ? $item->subject->code : null;
 
                     // Build hierarchy path from the subject
                     $hierarchy = $this->buildHierarchyPath($item->subject, $selectableGroups);
@@ -196,7 +252,7 @@ class ModelSelectController extends Controller
                                         : $item->group ?? $item->{$modelClass.'Group'} ?? null;
 
                     if ($itemGroup) {
-                        $parentCode = isset($itemGroup->code) ? formatCode($itemGroup->code) : (isset($itemGroup->subject->code) ? formatCode($itemGroup->subject->code) : null);
+                        $parentCode = isset($itemGroup->code) ? $itemGroup->code : (isset($itemGroup->subject->code) ? $itemGroup->subject->code : null);
                         $parentName = $itemGroup->name ?? $itemGroup->subject->name ?? null;
                         $parentValue = $selectableGroups ? (string) ($itemGroup->id ?? $itemGroup->subject->id ?? null) : null;
                     }
@@ -215,6 +271,11 @@ class ModelSelectController extends Controller
                 ] : null,
                 'hierarchy' => $hierarchy,
             ];
-        }));
+        });
+
+        // Group items by their common hierarchy path
+        $groupedResults = $this->groupByCommonHierarchy($formattedResults);
+
+        return response()->json($groupedResults);
     }
 }

@@ -69,7 +69,7 @@ class InvoiceController extends Controller
         if (empty(config('amir.cust_subject'))) {
             return redirect()->route('configs.index')->with('error', __('Customer Subject is not configured. Please set it in configurations.'));
         }
-        $products = Product::Some()->with(['productGroup', 'inventorySubject'])->get();
+        $products = Product::Some()->with(['productGroup', 'subject'])->get();
         $services = Service::Some()->with(['serviceGroup', 'subject'])->get();
         $customers = Customer::Some()->get(['id', 'name']);
 
@@ -160,7 +160,7 @@ class InvoiceController extends Controller
 
         $customers = Customer::Some()->get(['id', 'name']);
 
-        $products = Product::Some()->with(['productGroup', 'inventorySubject'])->get();
+        $products = Product::Some()->with(['productGroup', 'subject'])->get();
         $services = Service::Some()->with(['serviceGroup', 'subject'])->get();
 
         // Prepare transactions from invoice items

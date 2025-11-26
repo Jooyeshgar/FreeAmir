@@ -88,4 +88,9 @@ class Product extends Model
     {
         return $this->belongsTo(Subject::class, 'inventory_subject_id');
     }
+
+    public function subject(): BelongsTo
+    {
+        return $this->inventorySubject();
+    }
 }

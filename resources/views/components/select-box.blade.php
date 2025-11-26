@@ -47,7 +47,7 @@
             if ($parent) {
                 $path[] = [
                     'label' => $parent->name,
-                    'code' => isset($parent->code) ? formatCode($parent->code) : null,
+                    'code' => isset($parent->code) ? $parent->code : null,
                     'value' => $selectableGroups ? (string)$parent->id : null,
                 ];
                 $current = $parent;
@@ -77,14 +77,14 @@
                     return ['group' => null, 'code' => null, 'hierarchy' => []];
                 }
 
-                $itemCode = isset($instance->code) ? formatCode($instance->code) : null;
+                $itemCode = isset($instance->code) ? $instance->code : null;
                 $hierarchy = $buildHierarchyPath($instance);
                 
                 $group = null;
                 if ($instance->parent) {
                     $group = [
                         'label' => $instance->parent->name,
-                        'code' => isset($instance->parent->code) ? formatCode($instance->parent->code) : null,
+                        'code' => isset($instance->parent->code) ? $instance->parent->code : null,
                         'value' => $selectableGroups ? (string)$instance->parent->id : null,
                     ];
                 }
@@ -99,14 +99,14 @@
             }
 
             $subject = $instance->subject;
-            $itemCode = isset($subject->code) ? formatCode($subject->code) : null;
+            $itemCode = isset($subject->code) ? $subject->code : null;
             $hierarchy = $buildHierarchyPath($subject);
             
             $group = null;
             if ($subject->parent) {
                 $group = [
                     'label' => $subject->parent->name,
-                    'code' => isset($subject->parent->code) ? formatCode($subject->parent->code) : null,
+                    'code' => isset($subject->parent->code) ? $subject->parent->code : null,
                     'value' => $selectableGroups ? (string)$subject->parent->id : null,
                 ];
             }
@@ -140,7 +140,7 @@
                 'value' => (string) ($value['value'] ?? $key),
                 'label' => $value['label'] ?? $value['name'] ?? $value['text'] ?? (string) ($value['value'] ?? $key),
                 'group' => $group,
-                'code' => isset($value['code']) ? formatCode($value['code']) : null,
+                'code' => isset($value['code']) ? $value['code'] : null,
                 'hierarchy' => $value['hierarchy'] ?? [],
             ];
             continue;
@@ -159,7 +159,7 @@
                         'value' => (string) ($subValue['value'] ?? $subKey),
                         'label' => $subValue['label'] ?? $subValue['name'] ?? $subValue['text'] ?? (string) ($subValue['value'] ?? $subKey),
                         'group' => $group,
-                        'code' => isset($subValue['code']) ? formatCode($subValue['code']) : null,
+                        'code' => isset($subValue['code']) ? $subValue['code'] : null,
                         'hierarchy' => $subValue['hierarchy'] ?? [],
                     ];
                 } else {
@@ -205,6 +205,7 @@
             $initialLabel = $selected; // Fallback to showing ID if loading
         }
     }
+
 
     $searchUrlResolved = $searchUrl ? route($searchUrl) : null;
 @endphp
@@ -267,7 +268,7 @@
         <div 
             x-show="open" 
             x-transition.opacity.duration.200ms
-            class="absolute z-[100] w-full mt-1 bg-base-100 border border-base-300 rounded-box shadow-xl max-h-96 flex flex-col overflow-hidden"
+            class="absolute z-[100] w-full mt-1 bg-base-100 border border-base-300 rounded-box shadow-xl max-h-60 flex flex-col overflow-hidden"
             style="display: none;"
         >
             {{-- Search Input --}}
@@ -311,12 +312,12 @@
                                     :class="{'active': headerLevel.value == selected}"
                                     class="flex items-center gap-1 cursor-pointer hover:bg-base-200/50 rounded-md py-1"
                                 >
-                                    {{-- Use Span for padding to keep hover full width --}}
-                                    <span class="flex items-center gap-1 w-full" :style="'padding-inline-start: ' + (levelIdx * 0.75) + 'rem'">
+                                    {{-- Use _level for correct indentation based on actual hierarchy depth --}}
+                                    <span class="flex items-center gap-1 w-full" :style="'padding-inline-start: ' + ((headerLevel._level ?? levelIdx) * 0.75) + 'rem'">
                                         <span class="opacity-50 text-xs font-bold">›</span>
                                         <span x-text="headerLevel.label" class="text-sm font-semibold opacity-80"></span>
-                                        <template x-if="headerLevel.code">
-                                            <span x-text="headerLevel.code" class="text-xs font-mono opacity-60"></span>
+                                        <template x-if="showCode && headerLevel.code">
+                                            <span x-text="$store.utils.formatCode(headerLevel.code)" class="text-xs font-mono opacity-60"></span>
                                         </template>
                                     </span>
                                 </a>
@@ -324,11 +325,11 @@
                                     x-show="!selectableGroups || !headerLevel.value"
                                     class="flex items-center gap-1 py-1 hover:bg-transparent cursor-default"
                                 >
-                                    <span class="flex items-center gap-1 w-full" :style="'padding-inline-start: ' + (levelIdx * 0.75) + 'rem'">
+                                    <span class="flex items-center gap-1 w-full" :style="'padding-inline-start: ' + ((headerLevel._level ?? levelIdx) * 0.75) + 'rem'">
                                         <span class="opacity-50 text-xs font-bold">›</span>
                                         <span x-text="headerLevel.label" class="text-sm font-semibold opacity-80"></span>
-                                        <template x-if="headerLevel.code">
-                                            <span x-text="headerLevel.code" class="text-xs font-mono opacity-60"></span>
+                                        <template x-if="showCode && headerLevel.code">
+                                            <span x-text="$store.utils.formatCode(headerLevel.code)" class="text-xs font-mono opacity-60"></span>
                                         </template>
                                     </span>
                                 </span>
@@ -345,8 +346,8 @@
                                     class="flex items-center gap-1 cursor-pointer font-bold bg-base-200/50"
                                 >
                                     <span x-text="option.group.label"></span>
-                                    <template x-if="option.group && option.group.code">
-                                        <span x-text="option.group.code" class="opacity-50 font-mono text-xs font-normal"></span>
+                                    <template x-if="showCode && option.group && option.group.code">
+                                        <span x-text="$store.utils.formatCode(option.group.code)" class="opacity-50 font-mono text-xs font-normal"></span>
                                     </template>
                                 </a>
                                 <span 
@@ -375,7 +376,7 @@
                                         <div class="flex items-center gap-2 flex-shrink-0">
                                             <!-- Code -->
                                             <template x-if="showCode && option.code">
-                                                <span x-html="highlightMatch(option.code)" class="text-xs opacity-70 font-mono border border-base-content/20 px-1 rounded"></span>
+                                                <span x-html="highlightMatch($store.utils.formatCode(option.code))" class="text-xs opacity-70 font-mono border border-base-content/20 px-1 rounded"></span>
                                             </template>
 
                                             <!-- Checkmark -->
@@ -504,7 +505,33 @@
                     if (!response.ok) return;
 
                     const data = await response.json();
-                    const item = data.find(d => String(d.id) === String(id) || String(d.value) === String(id));
+                    
+                    // Handle grouped response format
+                    let item = null;
+                    
+                    if (Array.isArray(data)) {
+                        // First, try to find in flat format (backward compatibility)
+                        item = data.find(d => String(d.id) === String(id) || String(d.value) === String(id));
+                        
+                        // If not found, search within grouped format
+                        if (!item) {
+                            for (const group of data) {
+                                if (group.hierarchy !== undefined && group.items !== undefined) {
+                                    // Search in the items array
+                                    const foundItem = group.items.find(i => 
+                                        String(i.id) === String(id) || String(i.value) === String(id)
+                                    );
+                                    if (foundItem) {
+                                        item = {
+                                            ...foundItem,
+                                            hierarchy: group.hierarchy
+                                        };
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
                     
                     if (item) {
                         this.selectedLabel = item.label ?? item.name ?? item.text;
@@ -539,48 +566,64 @@
             getHierarchyHeadersToShow(option, index) {
                 if (!option.hierarchy || option.hierarchy.length === 0) return [];
                 
+                // Add level index to each header for proper indentation
+                const addLevelIndex = (headers) => {
+                    return headers.map((header, idx) => ({
+                        ...header,
+                        _level: idx  // Track the actual level in the hierarchy
+                    }));
+                };
+                
                 // Always show full hierarchy for the very first item
-                if (index === 0) return option.hierarchy;
+                if (index === 0) return addLevelIndex(option.hierarchy);
                 
                 const prevOption = this.filteredOptions[index - 1];
                 
                 // If previous item has no hierarchy, we must show full hierarchy
                 if (!prevOption || !prevOption.hierarchy || prevOption.hierarchy.length === 0) {
-                    return option.hierarchy;
+                    return addLevelIndex(option.hierarchy);
                 }
                 
-                // Compare levels
+                // Compare levels and track which ones to show
                 const headersToShow = [];
-                const maxLength = Math.max(option.hierarchy.length, prevOption.hierarchy.length);
                 let diffFound = false;
 
                 for (let i = 0; i < option.hierarchy.length; i++) {
                     const currentLevel = option.hierarchy[i];
                     const prevLevel = prevOption.hierarchy[i];
                     
-                    // If we found a difference earlier, add this level
+                    // If we found a difference earlier, add this level with its actual position
                     if (diffFound) {
-                        headersToShow.push(currentLevel);
+                        headersToShow.push({
+                            ...currentLevel,
+                            _level: i
+                        });
                         continue;
                     }
 
                     // If level doesn't exist in previous, it's new
                     if (!prevLevel) {
-                        headersToShow.push(currentLevel);
+                        headersToShow.push({
+                            ...currentLevel,
+                            _level: i
+                        });
                         diffFound = true; 
                         continue;
                     }
 
-                    // Compare content
-                    const currentKey = (currentLevel.code || '') + currentLevel.label;
-                    const prevKey = (prevLevel.code || '') + prevLevel.label;
+                    // Compare content - use value for more reliable comparison
+                    const currentKey = String(currentLevel.value || '') + (currentLevel.code || '') + currentLevel.label;
+                    const prevKey = String(prevLevel.value || '') + (prevLevel.code || '') + prevLevel.label;
                     
                     if (currentKey !== prevKey) {
-                        headersToShow.push(currentLevel);
+                        headersToShow.push({
+                            ...currentLevel,
+                            _level: i
+                        });
                         diffFound = true;
                     }
                 }
-                
+
                 return headersToShow;
             },
 
@@ -608,6 +651,12 @@
                 this.selected = String(option.value);
                 this.selectedLabel = option.label;
                 
+                // Add to initialOptions if not already present (e.g., from remote search)
+                const exists = this.initialOptions.find(opt => String(opt.value) === String(option.value));
+                if (!exists) {
+                    this.initialOptions.unshift(option);
+                }
+                
                 this.$dispatch('input', this.selected); 
                 this.$dispatch('subject-selected', { 
                     id: this.selected, 
@@ -615,13 +664,41 @@
                     code: option.code 
                 });
                 
-                this.open = false;
+                this.search = '';
+                this.close();
             },
 
             selectGroup(group) {
                 if (!group || !group.value) return;
                 this.selected = String(group.value);
                 this.selectedLabel = group.label;
+                
+                // Check if this group value already exists as an option, group, or hierarchy item
+                const groupValueStr = String(group.value);
+                const exists = this.initialOptions.some(opt => {
+                    // Check if it's already a direct option
+                    if (String(opt.value) === groupValueStr) return true;
+                    
+                    // Check if it exists in this option's group
+                    if (opt.group && String(opt.group.value) === groupValueStr) return true;
+                    
+                    // Check if it exists in this option's hierarchy
+                    if (opt.hierarchy && opt.hierarchy.some(h => String(h.value) === groupValueStr)) return true;
+                    
+                    return false;
+                });
+                
+                // Only add if not found anywhere
+                if (!exists) {
+                    const groupOption = {
+                        value: groupValueStr,
+                        label: group.label,
+                        group: null,
+                        code: group.code,
+                        hierarchy: []
+                    };
+                    this.initialOptions.unshift(groupOption);
+                }
                 
                 this.$dispatch('input', this.selected);
                 this.$dispatch('subject-selected', { 
@@ -630,7 +707,8 @@
                     code: group.code 
                 });
                 
-                this.open = false;
+                this.search = '';
+                this.close();
             },
 
             handleSearch() {
@@ -685,14 +763,37 @@
 
                     const data = await response.json();
 
-                    this.filteredOptions = data.map(item => ({
-                        value: String(item.value ?? item.id),
-                        label: item.label ?? item.name ?? item.text,
-                        group: item.group ?? null,
-                        code: item[config.codeField] ?? item.code ?? null,
-                        hierarchy: item.hierarchy ?? []
-                    }));
+                    // Handle grouped response format
+                    const flattenedOptions = [];
+                    
+                    if (Array.isArray(data)) {
+                        data.forEach(group => {
+                            // Check if this is a grouped response (has 'hierarchy' and 'items' keys)
+                            if (group.hierarchy !== undefined && group.items !== undefined) {
+                                // Add each item from the group with the shared hierarchy
+                                group.items.forEach(item => {
+                                    flattenedOptions.push({
+                                        value: String(item.value ?? item.id),
+                                        label: item.label ?? item.name ?? item.text,
+                                        group: item.group ?? null,
+                                        code: item[config.codeField] ?? item.code ?? null,
+                                        hierarchy: group.hierarchy ?? []
+                                    });
+                                });
+                            } else {
+                                // Handle flat format (backward compatibility)
+                                flattenedOptions.push({
+                                    value: String(group.value ?? group.id),
+                                    label: group.label ?? group.name ?? group.text,
+                                    group: group.group ?? null,
+                                    code: group[config.codeField] ?? group.code ?? null,
+                                    hierarchy: group.hierarchy ?? []
+                                });
+                            }
+                        });
+                    }
 
+                    this.filteredOptions = flattenedOptions;
                     this.highlightedIndex = this.filteredOptions.length ? 0 : -1;
 
                 } catch (error) {

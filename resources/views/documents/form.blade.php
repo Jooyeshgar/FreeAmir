@@ -61,12 +61,12 @@
                             </svg>
                         </button>
                     </div>
-                    <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input x-bind:value="selectedCode" label_text_class="text-gray-500" label_class="w-full"
+                    <div class="flex-1 min-w-24 max-w-36">
+                        <x-text-input x-bind:value="$store.utils.formatCode(selectedCode)" label_text_class="text-gray-500" label_class="w-full"
                             input_class="border-white value codeInput "></x-text-input>
                     </div>
                     <div class="flex-1 min-w-80 max-w-80">
-                        <x-select-box name="subject_id" id="subject_id"  model="Subject" selectableGroups="true"
+                        <x-select-box name="subject_id" id="subject_id"  model="Subject" selectableGroups="true" showGroupsCode="true"
                             :options="$subjects->pluck('name', 'id')" showCode="true" searchFields="name,code" x-bind:selected="selectedId"/>
                     </div>
                     <div class="flex-1 w-[200px]">
