@@ -310,4 +310,133 @@ class InvoiceController extends Controller
             'service_id' => null,
         ]]);
     }
+
+    public function searchCustomer(Request $request)
+    {
+        $results = [];
+
+        if ($request->has('id')) {
+            $id = $request->input('id');
+
+            $customers = Customer::with('group')->where('id', $id)->get(['id', 'name']);
+            if ($customers->isNotEmpty()) {
+                $results[] = [
+                    'id' => 'group_customers',
+                    'headerGroup' => 'customer',
+                    'options' => $this->groupItems($customers, 'group'),
+                ];
+            }
+
+            return response()->json($results);
+        }
+
+        $validated = $request->validate([
+            'q' => 'nullable|string',
+        ]);
+        $q = $validated['q'] ?? '';
+
+        $customers = Customer::with('group')
+            ->where('name', 'like', "%{$q}%")
+            ->limit(10)
+            ->get(['id', 'name']);
+
+        if ($customers->isNotEmpty()) {
+            $results[] = [
+                'id' => 'group_customers',
+                'headerGroup' => 'customer',
+                'options' => $this->groupItems($customers, 'group'),
+            ];
+        }
+
+        return response()->json($results);
+    }
+
+    public function searchProductService(Request $request)
+    {
+        $results = [];
+
+        if ($request->has('id')) {
+            $id = $request->input('id');
+
+            $products = Product::with('productGroup')->where('id', $id)->get();
+            if ($products->isNotEmpty()) {
+                $results[] = [
+                    'id' => 'group_products',
+                    'headerGroup' => 'product',
+                    'options' => $this->groupItems($products, 'productGroup'),
+                ];
+            }
+
+            $services = Service::with('serviceGroup')->where('id', $id)->get();
+            if ($services->isNotEmpty()) {
+                $results[] = [
+                    'id' => 'group_services',
+                    'headerGroup' => 'service',
+                    'options' => $this->groupItems($services, 'serviceGroup'),
+                ];
+            }
+
+            return response()->json($results);
+        }
+
+        $validated = $request->validate([
+            'q' => 'nullable|string',
+        ]);
+        $q = $validated['q'] ?? '';
+
+        $products = Product::with('productGroup')
+            ->where('name', 'like', "%{$q}%")
+            ->limit(10)
+            ->get();
+
+        if ($products->isNotEmpty()) {
+            $results[] = [
+                'id' => 'group_products',
+                'headerGroup' => 'product',
+                'options' => $this->groupItems($products, 'productGroup'),
+            ];
+        }
+
+        $services = Service::with('serviceGroup')
+            ->where('name', 'like', "%{$q}%")
+            ->limit(10)
+            ->get();
+
+        if ($services->isNotEmpty()) {
+            $results[] = [
+                'id' => 'group_services',
+                'headerGroup' => 'service',
+                'options' => $this->groupItems($services, 'serviceGroup'),
+            ];
+        }
+
+        return response()->json($results);
+    }
+
+    private function groupItems($items, $relationName)
+    {
+        $grouped = [];
+
+        foreach ($items as $item) {
+            // Get group or default
+            $group = $item->$relationName ?? (object) ['id' => 0, 'name' => 'General'];
+            $groupId = $group->id;
+
+            if (! isset($grouped[$groupId])) {
+                $grouped[$groupId] = [];
+            }
+
+            $grouped[$groupId][] = [
+                'id' => $item->id,
+                'groupId' => $groupId,
+                'groupName' => $group->name,
+                'text' => $item->name,
+                'type' => $relationName === 'productGroup' ? 'product' : 'service',
+                'raw_data' => $item->toArray(),
+            ];
+        }
+
+        // Return as object so JSON encodes it as a Map/Object
+        return (object) $grouped;
+    }
 }

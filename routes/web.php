@@ -24,6 +24,10 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::resource('companies', Controllers\CompanyController::class);
     Route::resource('bank-accounts', Controllers\BankAccountController::class);
     Route::resource('banks', Controllers\BankController::class);
+
+    Route::get('invoices/search-customer', [Controllers\InvoiceController::class, 'searchCustomer'])->name('invoices.search-customer');
+    Route::get('invoices/search-product-service', [Controllers\InvoiceController::class, 'searchProductService'])->name('invoices.search-product-service');
+
     Route::resource('invoices', Controllers\InvoiceController::class)->except(['index', 'create']);
     Route::get('invoices/{invoice}/print', [Controllers\InvoiceController::class, 'print'])->name('invoices.print');
     Route::resource('ancillary-costs', Controllers\AncillaryCostController::class)->except(['show']);
