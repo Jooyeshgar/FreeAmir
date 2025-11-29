@@ -79,12 +79,26 @@
     </div>
     <div class="h-96 overflow-y-auto">
         <div id="transactions" x-data="{ activeTab: {{ $total }} }">
-            <template x-for="(transaction, index) in transactions" :key="transaction.id">
-                <div :class="{ 'active': activeTab === index }" class="transaction flex gap-2 items-center px-4 pb-3" @click="activeTab = index">
-                    <input type="hidden" x-bind:name="'transactions[' + index + '][product_id]'" x-bind:value="transaction.product_id">
-                    <input type="hidden" x-bind:name="'transactions[' + index + '][service_id]'" x-bind:value="transaction.service_id">
-                    <input type="hidden" x-bind:name="'transactions[' + index + '][item_id]'" x-bind:value="transaction.item_id ? (transaction.item_type + '-' + transaction.item_id) : ''">
+            <template x-for="(transaction, index) in transactions" :key="transaction.id">            
+            <div :class="{ 'active': activeTab === index }" class="transaction flex gap-2 items-center px-4 pb-3" @click="activeTab = index" x-data="{
+                        selectedId: transaction.product_id ?? transaction.service_id ?? null,
+                        selectedType: transaction.product_id ? 'product' : (transaction.service_id ? 'service' : null),
+                        selectedValue: (transaction.product_id ? 'product-' + transaction.product_id : (transaction.service_id ? 'service-' + transaction.service_id : '')),
+                        off: transaction.off || 0,
+                    }"
+                    x-effect="
+                        if (selectedId && !transaction.unit) {
+                            if (selectedType === 'product') {
+                                transaction.unit = getProductPrice(Number(selectedId));
+                            } else if (selectedType === 'service') {
+                                transaction.unit = getServicePrice(Number(selectedId));
+                            }
+                        }
+                    ">
 
+                    <input type="hidden" x-bind:value="selectedType === 'product' ? transaction.product_id : null" x-bind:name="'transactions[' + index + '][product_id]'">
+                    <input type="hidden" x-bind:value="selectedType === 'service' ? transaction.service_id : null" x-bind:name="'transactions[' + index + '][service_id]'">
+                    <input type="hidden" x-bind:value="selectedType + '-' + selectedId" x-bind:name="'transactions[' + index + '][item_id]'">
                     
                     <div class="relative flex-1 text-center max-w-8 pt-2 pb-2 transaction-count-container">
                         <span class="transaction-count block" x-text="index + 1"></span>
@@ -113,16 +127,14 @@
                                 ]
                             ];
                         @endphp
-
-                        <x-select-box url="{{ route('invoices.search-product-service') }}" :options="$options" placeholder="{{ __('Select Option') }}"
-                            x-init="
-                                const parts = $event.target.value.split('-');
-                                const type = parts[0];
-                                const id = Number(parts[1]);
-                                selectedType = type;
-                                selectedId = id;
-                                selectedValue = $event.target.value;
-                            "
+                        <!-- 
+                        1) Bug: Fix selected product/service on editing an invoice. maybe it need to pass selected property to the component
+                            and a converter method for this
+                        2) Feature: Refactore customer select box to new select box component
+                        3) Feature: convert all number inputs to farsi
+                        -->
+                        <x-select-box url="{{ route('invoices.search-product-service') }}" :options="$options"
+                            placeholder="{{ $isSellType ? __('Select Product/Service') : __('Select Product') }}"
 
                             @selected="
                                 const type = $event.detail.type;
@@ -294,7 +306,6 @@
                 getProductPrice(productId) {
                     const product = this.products.find(p => p.id == productId);
                     if (!product) return 0;
-                    console.log(this.invoice_type);
                     return (this.invoice_type == 'sell') ? product.selling_price : product.purchace_price;
                 },
                 getServicePrice(serviceId) {

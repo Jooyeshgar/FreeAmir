@@ -71,11 +71,11 @@ class InvoiceController extends Controller
         if (empty(config('amir.cust_subject'))) {
             return redirect()->route('configs.index')->with('error', __('Customer Subject is not configured. Please set it in configurations.'));
         }
-        $products = Product::with('inventorySubject')->orderBy('name', 'asc')->get();
-        $services = Service::with('subject')->orderBy('name', 'asc')->get();
+        $products = Product::with('inventorySubject', 'productGroup')->orderBy('name', 'asc')->get();
+        $services = Service::with('subject', 'serviceGroup')->orderBy('name', 'asc')->get();
         $serviceGroups = ServiceGroup::all();
         $productGroups = ProductGroup::all();
-        $customers = Customer::all('name', 'id');
+        $customers = Customer::with('group')->orderBy('name', 'asc')->get();
         $previousDocumentNumber = floor(Document::max('number') ?? 0);
 
         $transactions = $this->prepareTransactions();
@@ -161,9 +161,9 @@ class InvoiceController extends Controller
     {
         $invoice->load('customer', 'document.transactions', 'items'); // Eager load relationships
 
-        $customers = Customer::all('name', 'id');
-        $products = Product::with('inventorySubject')->orderBy('name', 'asc')->get();
-        $services = Service::with('subject')->orderBy('name', 'asc')->get();
+        $customers = Customer::with('group')->orderBy('name', 'asc')->get();
+        $products = Product::with(['inventorySubject', 'productGroup'])->orderBy('name', 'asc')->get();
+        $services = Service::with(['subject', 'serviceGroup'])->orderBy('name', 'asc')->get();
 
         $productGroups = ProductGroup::all();
         $serviceGroups = ServiceGroup::all();

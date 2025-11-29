@@ -8,6 +8,15 @@
     'disabled' => false,
 ])
 
+<!-- 
+    1) Bug: When use this component twice in a page, the javascript does not loaded. fix it.
+    2) Feature: Add ability to search by group name and showing the group and its items name. 
+        first of all, when user searched: in local data search the query in group names, if any group matched, show all items under that group as well as matching items.
+        if the group name not matched, then search in item names as usual in local data.
+        if the searched query is not found in local data, then search in server side as usual (first on group names, if match shows all items under that group as matching items and if not search on items names).
+        Note: it would match both product and service groups and items when invoice type is sell.
+-->
+
 @php
     // Prepare initial local options
     $finalLocalOptions = [];
@@ -113,7 +122,7 @@
                    @keydown="onKeydown($event)"
                    type="text"
                    class="input input-sm input-bordered w-full"
-                   placeholder="Type to search...">
+                   placeholder="{{ __('Search') }}">
         </div>
 
         {{-- Options List --}}
@@ -122,7 +131,7 @@
             {{-- Loading State --}}
             <li x-show="isLoading" class="pointer-events-none p-4 text-center">
                 <span class="loading loading-spinner loading-xs text-primary"></span>
-                <span class="text-xs text-gray-500 ml-2">Loading...</span>
+                <span class="text-xs text-gray-500 ml-2">{{ __('Loading') }}</span>
             </li>
 
             {{-- No Results State --}}
