@@ -138,11 +138,13 @@ class TransactionController extends Controller
             return $openingBalance;
         }
 
-        // Sum the values of all transactions before the current page using the cloned query
         $itemsBeforeCurrentPage = ($transactions->currentPage() - 1) * $transactions->perPage();
-        $balance = $openingBalance + (float) $query->take($itemsBeforeCurrentPage)->sum('transactions.value');
 
-        return $balance;
+        $sumBeforePage = $query->offset(0)
+            ->limit($itemsBeforeCurrentPage)
+            ->pluck('transactions.value')->sum();
+
+        return $openingBalance + (float) $sumBeforePage;
     }
 
     /**
