@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Transaction;
 use App\Models\Subject;
+use App\Models\Transaction;
 use Illuminate\Http\Request;
 
 class TransactionController extends Controller
@@ -18,9 +18,10 @@ class TransactionController extends Controller
             ->orderBy('documents.number', 'asc')
             ->select('transactions.*');
 
-        // Subject filter
         if ($request->filled('subject_id')) {
-            $query->where('subject_id', $request->integer('subject_id'));
+            $subject = Subject::findOrFail($request->integer('subject_id'));
+            $subjectIds = $subject->getAllDescendantIds();
+            $query->whereIn('subject_id', $subjectIds);
         }
 
         // Date range filter (convert jalali to gregorian if needed)
@@ -72,7 +73,7 @@ class TransactionController extends Controller
         $this->addRunningBalance($transactions, $openingBalance);
 
         $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->get();
-        
+
         $currentSubject = null;
         if ($request->filled('subject_id')) {
             $currentSubject = Subject::find($request->integer('subject_id'));
@@ -91,7 +92,9 @@ class TransactionController extends Controller
             ->join('documents', 'transactions.document_id', '=', 'documents.id');
 
         if ($request->filled('subject_id')) {
-            $query->where('subject_id', $request->integer('subject_id'));
+            $subject = Subject::findOrFail($request->integer('subject_id'));
+            $subjectIds = $subject->getAllDescendantIds();
+            $query->whereIn('subject_id', $subjectIds);
         }
 
         $hasFilter = false;
@@ -112,7 +115,7 @@ class TransactionController extends Controller
             $hasFilter = true;
         }
 
-        if (!$hasFilter) {
+        if (! $hasFilter) {
             return 0;
         }
 
@@ -135,6 +138,7 @@ class TransactionController extends Controller
     public function show(Transaction $transaction)
     {
         $transaction->load(['document', 'subject', 'user']);
+
         return view('transactions.show', compact('transaction'));
     }
 }
