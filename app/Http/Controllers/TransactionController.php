@@ -68,9 +68,15 @@ class TransactionController extends Controller
 
         $openingBalance = $this->calculateOpeningBalance($request);
 
+        // Clone the query before pagination to calculate balance before current page
+        $clonedQuery = clone $query;
+
         $transactions = $query->paginate(20)->appends($request->query());
 
-        $this->addRunningBalance($transactions, $openingBalance);
+        // Calculate the balance up to the start of current page using the cloned query
+        $balanceBeforePage = $this->calculateBalanceBeforePage($clonedQuery, $transactions, $openingBalance);
+
+        $this->addRunningBalance($transactions, $balanceBeforePage);
 
         $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->get();
 
@@ -120,6 +126,23 @@ class TransactionController extends Controller
         }
 
         return (float) $query->sum('transactions.value');
+    }
+
+    /**
+     * Calculate the balance before the current page (opening balance + all transactions from previous pages)
+     */
+    private function calculateBalanceBeforePage($query, $transactions, float $openingBalance): float
+    {
+        // If we're on page 1 or there are no items, return the opening balance
+        if ($transactions->currentPage() <= 1 || $transactions->isEmpty()) {
+            return $openingBalance;
+        }
+
+        // Sum the values of all transactions before the current page using the cloned query
+        $itemsBeforeCurrentPage = ($transactions->currentPage() - 1) * $transactions->perPage();
+        $balance = $openingBalance + (float) $query->take($itemsBeforeCurrentPage)->sum('transactions.value');
+
+        return $balance;
     }
 
     /**
