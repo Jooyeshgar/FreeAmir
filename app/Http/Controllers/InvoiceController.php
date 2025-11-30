@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\InvoiceType;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Customer;
+use App\Models\CustomerGroup;
 use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\Product;
@@ -313,32 +314,20 @@ class InvoiceController extends Controller
 
     public function searchCustomer(Request $request)
     {
+        $validated = $request->validate([
+            'q' => 'required|string|max:100',
+        ]);
+
+        $q = $validated['q'];
         $results = [];
 
-        if ($request->has('id')) {
-            $id = $request->input('id');
+        $groupMatches = CustomerGroup::where('name', 'like', "%{$q}%")->pluck('id');
 
-            $customers = Customer::with('group')->where('id', $id)->get(['id', 'name']);
-            if ($customers->isNotEmpty()) {
-                $results[] = [
-                    'id' => 'group_customers',
-                    'headerGroup' => 'customer',
-                    'options' => $this->groupItems($customers, 'group'),
-                ];
-            }
-
-            return response()->json($results);
+        if ($groupMatches->isNotEmpty()) {
+            $customers = Customer::with('group')->whereIn('group_id', $groupMatches)->limit(30)->get(['id', 'name', 'group_id']);
+        } else {
+            $customers = Customer::with('group')->where('name', 'like', "%{$q}%")->limit(30)->get(['id', 'name', 'group_id']);
         }
-
-        $validated = $request->validate([
-            'q' => 'nullable|string',
-        ]);
-        $q = $validated['q'] ?? '';
-
-        $customers = Customer::with('group')
-            ->where('name', 'like', "%{$q}%")
-            ->limit(10)
-            ->get(['id', 'name']);
 
         if ($customers->isNotEmpty()) {
             $results[] = [
@@ -353,41 +342,20 @@ class InvoiceController extends Controller
 
     public function searchProductService(Request $request)
     {
+        $validated = $request->validate([
+            'q' => 'required|string|max:100',
+        ]);
+
+        $q = $validated['q'];
         $results = [];
 
-        if ($request->has('id')) {
-            $id = $request->input('id');
+        $productGroupMatches = ProductGroup::where('name', 'like', "%{$q}%")->pluck('id');
 
-            $products = Product::with('productGroup')->where('id', $id)->get();
-            if ($products->isNotEmpty()) {
-                $results[] = [
-                    'id' => 'group_products',
-                    'headerGroup' => 'product',
-                    'options' => $this->groupItems($products, 'productGroup'),
-                ];
-            }
-
-            $services = Service::with('serviceGroup')->where('id', $id)->get();
-            if ($services->isNotEmpty()) {
-                $results[] = [
-                    'id' => 'group_services',
-                    'headerGroup' => 'service',
-                    'options' => $this->groupItems($services, 'serviceGroup'),
-                ];
-            }
-
-            return response()->json($results);
+        if ($productGroupMatches->isNotEmpty()) {
+            $products = Product::with('productGroup')->whereIn('group', $productGroupMatches)->limit(30)->get();
+        } else {
+            $products = Product::with('productGroup')->where('name', 'like', "%{$q}%")->limit(30)->get();
         }
-
-        $validated = $request->validate([
-            'q' => 'nullable|string',
-        ]);
-        $q = $validated['q'] ?? '';
-
-        $products = Product::with('productGroup')
-            ->where('name', 'like', "%{$q}%")
-            ->limit(10)
-            ->get();
 
         if ($products->isNotEmpty()) {
             $results[] = [
@@ -397,10 +365,13 @@ class InvoiceController extends Controller
             ];
         }
 
-        $services = Service::with('serviceGroup')
-            ->where('name', 'like', "%{$q}%")
-            ->limit(10)
-            ->get();
+        $serviceGroupMatches = ServiceGroup::where('name', 'like', "%{$q}%")->pluck('id');
+
+        if ($serviceGroupMatches->isNotEmpty()) {
+            $services = Service::with('serviceGroup')->whereIn('group', $serviceGroupMatches)->limit(30)->get();
+        } else {
+            $services = Service::with('serviceGroup')->where('name', 'like', "%{$q}%")->limit(30)->get();
+        }
 
         if ($services->isNotEmpty()) {
             $results[] = [
