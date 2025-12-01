@@ -1,4 +1,4 @@
-<x-card class="rounded-2xl w-full" class_body="p-4">
+<x-card class="rounded-2xl w-full" class_body="p-0 pt-0 mt-4">
     <div class="flex gap-2 items-center justify-start">
         <div class="flex w-1/4">
 
