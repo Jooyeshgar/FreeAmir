@@ -1,18 +1,25 @@
 <x-card class="rounded-2xl w-full" class_body="p-4">
     <div class="flex gap-2 items-center justify-start">
         <div class="flex w-1/4">
-            <div class="flex flex-wrap">
+
+            @php
+                $initialCustomerId = old('customer_id', $invoice->customer_id ?? null);
+                $initialSelectedValue = $initialCustomerId ? "customer-$initialCustomerId" : null;
+            @endphp
+
+            <div class="flex flex-wrap w-3/4" x-data="{
+                customer_id: '{{ $initialCustomerId }}',
+                selectedValue: '{{ $initialSelectedValue }}',
+            }">
                 <span class="flex flex-col flex-wrap text-gray-500 w-full">{{ __('Customer') }}</span>
 
                 <x-select-box url="{{ route('invoices.search-customer') }}" :options="[['headerGroup' => 'customer', 'options' => $customers]]" x-model="selectedValue"
-                    x-init="selectedId = '{{ $invoice->customer_id ?? '' }}';
-                    selectedType = 'customer';
-                    selectedValue = selectedType + '-' + selectedId;
-                    customer_id = selectedId;" placeholder="{{ __('Select Customer') }}"
-                    @selected=" 
-                        const parts=$event.detail.id.toString().split('-');
-                        customer_id=parts[0];" />
-                <input type="hidden" x-bind:value="customer_id" x-bind:name="'customer_id'">
+                    x-init="if (!selectedValue && customer_id) {
+                        selectedValue = 'customer-' + customer_id;
+                    }" placeholder="{{ __('Select Customer') }}"
+                    @selected="customer_id = $event.detail.id;" class="" />
+
+                <input type="hidden" x-bind:value="customer_id" name="customer_id">
             </div>
         </div>
         <input type="hidden" id="invoice_type" name="invoice_type"
@@ -114,8 +121,7 @@
                             ];
                         @endphp
                         <!--
-                            2) Feature: Refactore customer select box to new select box component: JS does not loaded because we use it twise
-                            3) Feature: convert all number inputs to farsi without auditor
+                            Feature: convert all number inputs to farsi without auditor
                         -->
                         <x-select-box url="{{ route('invoices.search-product-service') }}" :options="$options"
                             x-model="selectedValue" x-init="selectedId = transaction.product_id ?? transaction.service_id ?? null;

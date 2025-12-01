@@ -321,13 +321,18 @@ class InvoiceController extends Controller
         $q = $validated['q'];
         $results = [];
 
+        $returnableFields = ['id', 'name', 'group_id'];
+
         $groupMatches = CustomerGroup::where('name', 'like', "%{$q}%")->pluck('id');
 
+        $searchedInCustomersGroups = collect();
         if ($groupMatches->isNotEmpty()) {
-            $customers = Customer::with('group')->whereIn('group_id', $groupMatches)->limit(30)->get(['id', 'name', 'group_id']);
-        } else {
-            $customers = Customer::with('group')->where('name', 'like', "%{$q}%")->limit(30)->get(['id', 'name', 'group_id']);
+            $searchedInCustomersGroups = Customer::with('group')->whereIn('group_id', $groupMatches)->limit(30)->get($returnableFields);
         }
+
+        $searchedInCustomers = Customer::with('group')->where('name', 'like', "%{$q}%")->limit(30)->get($returnableFields);
+
+        $customers = $searchedInCustomers->merge($searchedInCustomersGroups)->unique('id');
 
         if ($customers->isNotEmpty()) {
             $results[] = [
@@ -349,13 +354,19 @@ class InvoiceController extends Controller
         $q = $validated['q'];
         $results = [];
 
+        $returnableFields = ['id', 'name', 'group'];
+
+        $searchedInProductsGroups = collect();
+
         $productGroupMatches = ProductGroup::where('name', 'like', "%{$q}%")->pluck('id');
 
         if ($productGroupMatches->isNotEmpty()) {
-            $products = Product::with('productGroup')->whereIn('group', $productGroupMatches)->limit(30)->get();
-        } else {
-            $products = Product::with('productGroup')->where('name', 'like', "%{$q}%")->limit(30)->get();
+            $searchedInProductsGroups = Product::with('productGroup')->whereIn('group', $productGroupMatches)->limit(30)->get($returnableFields);
         }
+
+        $searchedInProducts = Product::with('productGroup')->where('name', 'like', "%{$q}%")->limit(30)->get($returnableFields);
+
+        $products = $searchedInProducts->merge($searchedInProductsGroups)->unique('id');
 
         if ($products->isNotEmpty()) {
             $results[] = [
@@ -365,13 +376,16 @@ class InvoiceController extends Controller
             ];
         }
 
+        $searchedInServicesGroups = collect();
         $serviceGroupMatches = ServiceGroup::where('name', 'like', "%{$q}%")->pluck('id');
 
         if ($serviceGroupMatches->isNotEmpty()) {
-            $services = Service::with('serviceGroup')->whereIn('group', $serviceGroupMatches)->limit(30)->get();
-        } else {
-            $services = Service::with('serviceGroup')->where('name', 'like', "%{$q}%")->limit(30)->get();
+            $searchedInServicesGroups = Service::with('serviceGroup')->whereIn('group', $serviceGroupMatches)->limit(30)->get($returnableFields);
         }
+
+        $searchedInServices = Service::with('serviceGroup')->where('name', 'like', "%{$q}%")->limit(30)->get($returnableFields);
+
+        $services = $searchedInServices->merge($searchedInServicesGroups)->unique('id');
 
         if ($services->isNotEmpty()) {
             $results[] = [

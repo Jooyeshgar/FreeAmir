@@ -293,7 +293,7 @@
 
                     clearTimeout(this.searchTimeout);
                     this.searchTimeout = setTimeout(() => {
-                        if (q === '') {
+                        if (q === "") {
                             this.filteredOptions = this.initialOptions;
                             this.isLoading = false;
                             return;
@@ -302,117 +302,106 @@
                         const local = this.searchLocal(q);
                         if (local.found) {
                             this.filteredOptions = local.options;
+                            this.isLoading = false;
                         } else if (this.url) {
                             this.searchRemote(q);
                         } else {
-                            // No local matches and no remote search, show empty
                             this.filteredOptions = [];
+                            this.isLoading = false;
                         }
-
-                        this.isLoading = false;
                     }, 300);
                 },
 
                 searchLocal(query) {
-                    query = query.toLowerCase();
-
-                    let groupMatchBlocks = [];
-                    let itemMatchBlocks = [];
+                    let resultBlocks = [];
 
                     this.initialOptions.forEach(block => {
-                        let groupMatches = {};
-                        let anyGroupMatched = false;
+                        let resultGroups = {};
 
                         for (let gid in block.options) {
                             const items = block.options[gid];
                             if (!items.length) continue;
 
                             const groupName = items[0].groupName.toLowerCase();
-                            const matchesGroup = groupName.includes(query);
+                            const isGroupMatch = groupName.includes(query);
 
-                            if (matchesGroup) {
-                                anyGroupMatched = true;
-
-                                groupMatches[gid] = items.map(i => ({
-                                    ...i,
-                                    groupNameHighlighted: this.highlight(i.groupName, query),
-                                    highlighted: null
-                                }));
+                            // If group matches → include ALL items
+                            let itemMatches = [];
+                            if (!isGroupMatch) {
+                                itemMatches = items.filter(i =>
+                                    i.text.toLowerCase().includes(query)
+                                );
                             }
+
+                            // Skip group if no match in this group
+                            if (!isGroupMatch && itemMatches.length === 0) continue;
+
+                            // Final items assigned based on match type
+                            const finalItems = (isGroupMatch ? items : itemMatches).map(i => ({
+                                ...i,
+                                groupNameHighlighted: isGroupMatch ?
+                                    this.highlight(i.groupName, query) : null,
+                                highlighted: !isGroupMatch ?
+                                    this.highlight(i.text, query) : null
+                            }));
+
+                            resultGroups[gid] = finalItems;
                         }
 
-                        if (anyGroupMatched) {
-                            groupMatchBlocks.push({
+                        if (Object.keys(resultGroups).length > 0) {
+                            resultBlocks.push({
                                 ...block,
-                                options: groupMatches
-                            });
-                        }
-                    });
-
-                    if (groupMatchBlocks.length > 0) {
-                        return {
-                            found: true,
-                            options: groupMatchBlocks
-                        };
-                    }
-
-                    this.initialOptions.forEach(block => {
-                        let newGroups = {};
-
-                        for (let gid in block.options) {
-                            const matchedItems = block.options[gid]
-                                .filter(item => item.text.toLowerCase().includes(query))
-                                .map(item => ({
-                                    ...item,
-                                    highlighted: this.highlight(item.text, query),
-                                    groupNameHighlighted: null
-                                }));
-
-                            if (matchedItems.length > 0) {
-                                newGroups[gid] = matchedItems;
-                            }
-                        }
-
-                        if (Object.keys(newGroups).length > 0) {
-                            itemMatchBlocks.push({
-                                ...block,
-                                options: newGroups
+                                options: resultGroups
                             });
                         }
                     });
 
                     return {
-                        found: itemMatchBlocks.length > 0,
-                        options: itemMatchBlocks
+                        found: resultBlocks.length > 0,
+                        options: resultBlocks
                     };
                 },
 
                 searchRemote(q) {
                     this.isLoading = true;
+
                     fetch(`${this.url}?q=${encodeURIComponent(q)}`)
                         .then(r => r.json())
                         .then(data => {
+                            const query = q.toLowerCase();
+
                             data.forEach(block => {
+                                let newGroups = {};
+
                                 for (let gid in block.options) {
-                                    const groupItems = block.options[gid];
-                                    if (groupItems.length === 0) continue;
+                                    const items = block.options[gid];
+                                    if (!items.length) continue;
 
-                                    const groupName = groupItems[0].groupName.toLowerCase();
-                                    const query = q.toLowerCase();
-
-                                    // Check if group name matches the search query
-                                    // If yes, highlight group name; otherwise highlight item names
+                                    const groupName = items[0].groupName.toLowerCase();
                                     const isGroupMatch = groupName.includes(query);
 
-                                    block.options[gid] = groupItems.map(i => ({
+                                    let itemMatches = [];
+                                    if (!isGroupMatch) {
+                                        itemMatches = items.filter(i =>
+                                            i.text.toLowerCase().includes(query)
+                                        );
+                                    }
+
+                                    if (!isGroupMatch && itemMatches.length === 0) continue;
+
+                                    newGroups[gId] = (isGroupMatch ? items : itemMatches).map(i => ({
                                         ...i,
-                                        groupNameHighlighted: isGroupMatch ? this.highlight(i
-                                            .groupName, q) : null,
-                                        highlighted: isGroupMatch ? null : this.highlight(i.text, q)
+                                        groupNameHighlighted: isGroupMatch ?
+                                            this.highlight(i.groupName, query) : null,
+                                        highlighted: !isGroupMatch ?
+                                            this.highlight(i.text, query) : null
                                     }));
                                 }
+
+                                block.options = newGroups;
                             });
-                            this.filteredOptions = data;
+
+                            this.filteredOptions = data.filter(b => Object.keys(b.options).length);
                             this.isLoading = false;
                         })
                         .catch(() => {
@@ -434,8 +423,6 @@
                     this.open = false;
                     this.search = '';
                     this.filteredOptions = this.initialOptions;
-
-                    console.log('Selected option:', opt);
 
                     this.$dispatch('selected', {
                         id: opt.id,
