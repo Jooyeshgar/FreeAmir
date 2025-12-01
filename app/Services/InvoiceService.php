@@ -178,6 +178,10 @@ class InvoiceService
             throw new Exception(__('Invoice not found'), 404);
         }
 
+        if (auth()->user()?->hasRole('Super-Admin')) {
+            return;
+        }
+
         if ($invoice->ancillaryCosts->isNotEmpty()) {
             throw new Exception(__('Invoice has associated ancillary costs and cannot be deleted/edited'), 400);
         }

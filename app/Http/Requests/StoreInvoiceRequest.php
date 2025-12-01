@@ -188,7 +188,7 @@ class StoreInvoiceRequest extends FormRequest
                     });
                 }, 'items.itemable'])->get();
 
-                if ($laterInvoices->isNotEmpty()) {
+                if ($laterInvoices->isNotEmpty() or auth()->user()?->hasRole('Super-Admin')) {
                     $conflictingItems = [];
                     foreach ($laterInvoices as $laterInvoice) {
                         foreach ($laterInvoice->items as $item) {
