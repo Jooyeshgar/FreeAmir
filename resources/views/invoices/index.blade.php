@@ -71,7 +71,10 @@
                                     {{ formatDocumentNumber($invoice->number) }}
                                 </a>
                             </td>
-                            <td class="px-4 py-2">{{ $invoice->customer->name ?? '' }}</td>
+                            <td class="px-4 py-2">
+                                <span>{{ $invoice->customer->name ?? '' }}</span><br>
+                                <span class="text-xs text-gray-500">{{ $invoice->document->title ?? '' }}</span>
+                            </td>
                             <td class="px-4 py-2">
                                 @can('documents.show')
                                     <a href="{{ route('documents.show', $invoice->document_id) }}">
