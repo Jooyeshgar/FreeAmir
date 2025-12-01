@@ -27,7 +27,6 @@ class ProductSeeder extends Seeder
                     'quantity' => $faker->numberBetween(50, 1000),
                     'quantity_warning' => $faker->randomDigitNotNull,
                     'oversell' => $faker->boolean,
-                    'purchace_price' => $faker->randomFloat(2, 0, 1000),
                     'selling_price' => $faker->randomFloat(2, 0, 1000),
                     'description' => $faker->sentence,
                 ]);
