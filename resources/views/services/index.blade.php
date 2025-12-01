@@ -13,7 +13,7 @@
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <tr>
-                        <th class="px-4 py-2">{{ __('Code') }}</th>
+                        <th class="px-4 py-2">{{ __('Service Code') }}</th>
                         <th class="px-4 py-2">{{ __('Name') }}</th>
                         <th class="px-4 py-2">{{ __('Sell price') }}</th>
                         <th class="px-4 py-2">{{ __('VAT') }}</th>
@@ -36,15 +36,18 @@
                             <td class="px-4 py-2">
                                 <a href="{{ route('services.edit', $service) }}"
                                     class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                    @if ($service->invoiceItems()->exists())
-                                        <span class="btn btn-sm btn-disabled" title="{{ __('Cannot delete service that is used in invoice items') }}">{{ __('Delete') }}</span>
-                                    @else
-                                        <form action="{{ route('services.destroy', $service) }}" method="POST" class="inline-block">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                        </form>    
-                                    @endif
+                                @if ($service->invoiceItems()->exists())
+                                    <span class="btn btn-sm btn-disabled"
+                                        title="{{ __('Cannot delete service that is used in invoice items') }}">{{ __('Delete') }}</span>
+                                @else
+                                    <form action="{{ route('services.destroy', $service) }}" method="POST"
+                                        class="inline-block">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                            class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                    </form>
+                                @endif
                             </td>
                         </tr>
                     @endforeach
@@ -62,7 +65,8 @@
                     {{-- Pagination Elements --}}
                     @foreach ($services->getUrlRange(1, $services->lastPage()) as $page => $url)
                         @if ($page == $services->currentPage())
-                            <a href="{{ $url }}" class="join-item btn btn-square bg-blue-500 text-white">{{ $page }}</a>
+                            <a href="{{ $url }}"
+                                class="join-item btn btn-square bg-blue-500 text-white">{{ $page }}</a>
                         @else
                             <a href="{{ $url }}" class="join-item btn btn-square">{{ $page }}</a>
                         @endif

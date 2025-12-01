@@ -29,16 +29,20 @@
                 <form action="{{ route('invoices.index') }}" method="GET" class="ml-auto">
                     <div class="mt-4 mb-4 grid grid-cols-6 gap-6">
                         <div class="col-span-2 md:col-span-1" hidden>
-                            <x-input name="invoice_type" value="{{ request('invoice_type') }}" placeholder="{{ __('Invoice Type') }}" />
+                            <x-input name="invoice_type" value="{{ request('invoice_type') }}"
+                                placeholder="{{ __('Invoice Type') }}" />
                         </div>
                         <div class="col-span-2 md:col-span-1">
-                            <x-input name="number" value="{{ request('number') }}" placeholder="{{ __('Invoice Number') }}" />
+                            <x-input name="number" value="{{ request('number') }}"
+                                placeholder="{{ __('Invoice Number') }}" />
                         </div>
                         <div class="col-span-2 md:col-span-1">
-                            <x-input name="date" placeholder="{{ __('date') }}" value="{{ request('date') }}"></x-input>
+                            <x-input name="date" placeholder="{{ __('date') }}"
+                                value="{{ request('date') }}"></x-input>
                         </div>
                         <div class="col-span-6 md:col-span-3">
-                            <x-input name="text" value="{{ request('text') }}" placeholder="{{ __('Search by customer name or transaction description') }}" />
+                            <x-input name="text" value="{{ request('text') }}"
+                                placeholder="{{ __('Search by customer name or transaction description') }}" />
                         </div>
                         <div class="col-span-2 md:col-span-1 text-center">
                             <input type="submit" value="{{ __('Search') }}" class="btn-primary btn" />
@@ -50,7 +54,7 @@
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <tr>
-                        <th class="px-4 py-2">{{ __('Code') }}</th>
+                        <th class="px-4 py-2">{{ __('Invoice Number') }}</th>
                         <th class="px-4 py-2">{{ __('Customer') }}</th>
                         <th class="px-4 py-2">{{ __('Document') }}</th>
                         <th class="px-4 py-2">{{ __('Date') }}</th>
@@ -71,20 +75,22 @@
                             <td class="px-4 py-2">
                                 @can('documents.show')
                                     <a href="{{ route('documents.show', $invoice->document_id) }}">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none"
+                                            viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                         </svg>
-                                            {{ formatDocumentNumber($invoice->document->number) ?? '' }}
+                                        {{ formatDocumentNumber($invoice->document->number) ?? '' }}
                                     </a>&nbsp;
                                 @else
                                     <span class="text-gray-500">
-                                        <span>{{ formatDocumentNumber($invoice->document->number)  ?? '' }}</span>
+                                        <span>{{ formatDocumentNumber($invoice->document->number) ?? '' }}</span>
                                     </span>
                                 @endcan
                             </td>
                             <td class="px-4 py-2">{{ isset($invoice->date) ? formatDate($invoice->date) : '' }}</td>
-                            <td class="px-4 py-2">{{ isset($invoice->amount) ? formatNumber($invoice->amount - $invoice->subtraction) : '' }}
+                            <td class="px-4 py-2">
+                                {{ isset($invoice->amount) ? formatNumber($invoice->amount - $invoice->subtraction) : '' }}
                             </td>
                             <td class="px-4 py-2">
                                 {{ $invoice->permanent ?? false ? __('Permanent') : __('Draft') }}
@@ -92,15 +98,20 @@
                             <td class="px-4 py-2">
                                 @php($editDeleteStatus = \App\Services\InvoiceService::getEditDeleteStatus($invoice))
 
-                                <a href="{{ route('invoices.show', $invoice) }}" target="_blank" rel="noopener" class="btn btn-sm btn-info">{{ __('Show') }}</a>
-                                <a href="{{ route('invoices.print', $invoice) }}" target="_blank" rel="noopener" class="btn btn-sm btn-info">{{ __('Print') }}</a>
+                                <a href="{{ route('invoices.show', $invoice) }}" target="_blank" rel="noopener"
+                                    class="btn btn-sm btn-info">{{ __('Show') }}</a>
+                                <a href="{{ route('invoices.print', $invoice) }}" target="_blank" rel="noopener"
+                                    class="btn btn-sm btn-info">{{ __('Print') }}</a>
 
                                 @if ($editDeleteStatus['allowed'])
-                                    <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                    <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" class="inline-block">
+                                    <a href="{{ route('invoices.edit', $invoice) }}"
+                                        class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                    <form action="{{ route('invoices.destroy', $invoice) }}" method="POST"
+                                        class="inline-block">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                        <button type="submit"
+                                            class="btn btn-sm btn-error">{{ __('Delete') }}</button>
                                     </form>
                                 @else
                                     <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
@@ -128,7 +139,8 @@
 
                     @foreach ($invoices->getUrlRange(1, $invoices->lastPage()) as $page => $url)
                         @if ($page == $invoices->currentPage())
-                            <a href="{{ $url }}" class="join-item btn btn-square bg-blue-500 text-white">{{ $page }}</a>
+                            <a href="{{ $url }}"
+                                class="join-item btn btn-square bg-blue-500 text-white">{{ $page }}</a>
                         @else
                             <a href="{{ $url }}" class="join-item btn btn-square">{{ $page }}</a>
                         @endif

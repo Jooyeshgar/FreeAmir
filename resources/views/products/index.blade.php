@@ -17,20 +17,23 @@
                         <span class="absolute inset-y-0 left-2 flex items-center text-gray-400 text-sm">
                             <i class="fa-solid fa-box"></i>
                         </span>
-                        <input type="text" name="name" value="{{ request('name') }}" placeholder="{{ __('Product Name') }}"
-                            class="w-full pl-8 pr-2 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"/>
+                        <input type="text" name="name" value="{{ request('name') }}"
+                            placeholder="{{ __('Product Name') }}"
+                            class="w-full pl-8 pr-2 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
                     </div>
 
                     <div class="relative">
                         <span class="absolute inset-y-0 left-2 flex items-center text-gray-400 text-sm">
                             <i class="fa-solid fa-layer-group"></i>
                         </span>
-                        <input type="text" name="group_name" value="{{ request('group_name') }}" placeholder="{{ __('Product Group Name') }}"
-                            class="w-full pl-8 pr-2 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"/>
+                        <input type="text" name="group_name" value="{{ request('group_name') }}"
+                            placeholder="{{ __('Product Group Name') }}"
+                            class="w-full pl-8 pr-2 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
                     </div>
 
                     <div class="flex items-center">
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 text-sm rounded-lg shadow transition-all">
+                        <button type="submit"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 text-sm rounded-lg shadow transition-all">
                             <i class="fa-solid fa-magnifying-glass mr-1"></i>
                             {{ __('Search') }}
                         </button>
@@ -41,7 +44,7 @@
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <tr>
-                        <th class="px-4 py-2">{{ __('Code') }}</th>
+                        <th class="px-4 py-2">{{ __('Product Code') }}</th>
                         <th class="px-4 py-2">{{ __('Name') }}</th>
                         <th class="px-4 py-2">{{ __('Quantity') }}</th>
                         <th class="px-4 py-2">{{ __('Average Cost') }}</th>
@@ -68,15 +71,18 @@
                             <td class="px-4 py-2">
                                 <a href="{{ route('products.edit', $product) }}"
                                     class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                    @if ($product->invoiceItems()->exists())
-                                        <span class="btn btn-sm btn-disabled" title="{{ __('Cannot delete product that is used in invoice items') }}">{{ __('Delete') }}</span>
-                                    @else 
-                                        <form action="{{ route('products.destroy', $product) }}" method="POST" class="inline-block">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                        </form>    
-                                    @endif
+                                @if ($product->invoiceItems()->exists())
+                                    <span class="btn btn-sm btn-disabled"
+                                        title="{{ __('Cannot delete product that is used in invoice items') }}">{{ __('Delete') }}</span>
+                                @else
+                                    <form action="{{ route('products.destroy', $product) }}" method="POST"
+                                        class="inline-block">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                            class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                    </form>
+                                @endif
                             </td>
                         </tr>
                     @endforeach
@@ -94,7 +100,8 @@
                     {{-- Pagination Elements --}}
                     @foreach ($products->getUrlRange(1, $products->lastPage()) as $page => $url)
                         @if ($page == $products->currentPage())
-                            <a href="{{ $url }}" class="join-item btn btn-square bg-blue-500 text-white">{{ $page }}</a>
+                            <a href="{{ $url }}"
+                                class="join-item btn btn-square bg-blue-500 text-white">{{ $page }}</a>
                         @else
                             <a href="{{ $url }}" class="join-item btn btn-square">{{ $page }}</a>
                         @endif

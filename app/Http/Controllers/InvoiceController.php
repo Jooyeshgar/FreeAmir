@@ -27,7 +27,7 @@ class InvoiceController extends Controller
     public function index(Request $request)
     {
         $builder = Invoice::with(['customer', 'document'])
-            ->orderByDesc('id');
+            ->orderByDesc('date');
 
         $builder->when($request->filled('invoice_type') &&
             in_array($request->invoice_type, ['buy', 'sell', 'return_buy', 'return_sell']),

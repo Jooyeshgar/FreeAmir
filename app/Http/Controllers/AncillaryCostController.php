@@ -14,7 +14,7 @@ class AncillaryCostController extends Controller
 {
     public function index(Request $request)
     {
-        $ancillaryCosts = AncillaryCost::with('invoice')->orderBy('date')->paginate(12);
+        $ancillaryCosts = AncillaryCost::with('invoice')->orderByDesc('date')->paginate(12);
 
         $ancillaryCosts->appends($request->query());
 

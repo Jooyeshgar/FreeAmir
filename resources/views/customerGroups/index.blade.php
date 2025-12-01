@@ -14,7 +14,7 @@
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <tr>
-                        <th class="px-4 py-2">{{ __('Code') }}</th>
+                        <th class="px-4 py-2">{{ __('Subject Code') }}</th>
                         <th class="px-4 py-2">{{ __('Name') }}</th>
                         <th class="px-4 py-2">{{ __('Action') }}</th>
                     </tr>
