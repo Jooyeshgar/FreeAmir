@@ -72,8 +72,11 @@
                                 <a href="{{ route('products.edit', $product) }}"
                                     class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                 @if ($product->invoiceItems()->exists())
-                                    <span class="btn btn-sm btn-disabled"
-                                        title="{{ __('Cannot delete product that is used in invoice items') }}">{{ __('Delete') }}</span>
+                                    <span class="tooltip"
+                                        data-tip="{{ __('Cannot delete product that is used in invoice items') }}">
+                                        <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" disabled
+                                            title="{{ __('Cannot delete product that is used in invoice items') }}">{{ __('Delete') }}</button>
+                                    </span>
                                 @else
                                     <form action="{{ route('products.destroy', $product) }}" method="POST"
                                         class="inline-block">
@@ -88,33 +91,7 @@
                     @endforeach
                 </tbody>
             </table>
-            @if ($products->hasPages())
-                <div class="join">
-                    {{-- Previous Page Link --}}
-                    @if ($products->onFirstPage())
-                        <input class="join-item btn btn-square hidden " type="radio" disabled>
-                    @else
-                        <a href="{{ $products->previousPageUrl() }}" class="join-item btn btn-square">&lsaquo;</a>
-                    @endif
-
-                    {{-- Pagination Elements --}}
-                    @foreach ($products->getUrlRange(1, $products->lastPage()) as $page => $url)
-                        @if ($page == $products->currentPage())
-                            <a href="{{ $url }}"
-                                class="join-item btn btn-square bg-blue-500 text-white">{{ $page }}</a>
-                        @else
-                            <a href="{{ $url }}" class="join-item btn btn-square">{{ $page }}</a>
-                        @endif
-                    @endforeach
-
-                    {{-- Next Page Link --}}
-                    @if ($products->hasMorePages())
-                        <a href="{{ $products->nextPageUrl() }}" class="join-item btn btn-square">&rsaquo;</a>
-                    @else
-                        <input class="join-item btn btn-square hidden" type="radio" disabled>
-                    @endif
-                </div>
-            @endif
+            {!! $products->withQueryString()->links() !!}
         </div>
     </div>
 </x-app-layout>
