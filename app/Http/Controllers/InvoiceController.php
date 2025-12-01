@@ -18,8 +18,6 @@ use PDF;
 
 class InvoiceController extends Controller
 {
-    public function __construct() {}
-
     /**
      * Display a listing of the resource.
      *
@@ -97,33 +95,8 @@ class InvoiceController extends Controller
     public function store(StoreInvoiceRequest $request, InvoiceService $service)
     {
         $validated = $request->validated();
-
-        $invoiceData = [
-            'title' => $validated['title'],
-            'date' => $validated['date'],
-            'invoice_type' => InvoiceType::from($validated['invoice_type']),
-            'customer_id' => $validated['customer_id'],
-            'document_number' => $validated['document_number'],
-            'number' => $validated['invoice_number'],
-            'subtraction' => $validated['subtractions'] ?? 0,
-            'invoice_id' => $validated['invoice_id'] ?? null,
-            'description' => $validated['description'] ?? null,
-        ];
-
-        // Map transactions to invoice items
-        $items = collect($validated['transactions'])->map(function ($transaction, $index) {
-            return [
-                'transaction_index' => $index,
-                'itemable_id' => $transaction['item_id'],
-                'itemable_type' => $transaction['item_type'],
-                'quantity' => $transaction['quantity'] ?? 1,
-                'description' => $transaction['desc'] ?? null,
-                'unit_discount' => $transaction['unit_discount'] ?? 0,
-                'vat' => $transaction['vat'] ?? 0,
-                'unit' => $transaction['unit'] ?? 0,
-                'total' => $transaction['total'] ?? 0,
-            ];
-        })->toArray();
+        $invoiceData = $this->extractInvoiceData($validated);
+        $items = $this->mapTransactionsToItems($validated['transactions']);
 
         $result = $service->createInvoice(auth()->user(), $invoiceData, $items);
 
@@ -197,33 +170,8 @@ class InvoiceController extends Controller
     public function update(StoreInvoiceRequest $request, Invoice $invoice, InvoiceService $service)
     {
         $validated = $request->validated();
-
-        $invoiceData = [
-            'title' => $validated['title'],
-            'date' => $validated['date'],
-            'invoice_type' => InvoiceType::from($validated['invoice_type']),
-            'customer_id' => $validated['customer_id'],
-            'document_number' => $validated['document_number'],
-            'number' => $validated['invoice_number'],
-            'subtraction' => $validated['subtractions'] ?? 0,
-            'invoice_id' => $validated['invoice_id'] ?? null,
-            'description' => $validated['description'] ?? null,
-        ];
-
-        // Map transactions to invoice items
-        $items = collect($validated['transactions'])->map(function ($transaction, $index) {
-            return [
-                'transaction_index' => $index,
-                'itemable_id' => $transaction['item_id'],
-                'itemable_type' => $transaction['item_type'],
-                'quantity' => $transaction['quantity'] ?? 1,
-                'description' => $transaction['desc'] ?? null,
-                'unit_discount' => $transaction['unit_discount'] ?? 0,
-                'vat' => $transaction['vat'] ?? 0,
-                'unit' => $transaction['unit'] ?? 0,
-                'total' => $transaction['total'] ?? 0,
-            ];
-        })->toArray();
+        $invoiceData = $this->extractInvoiceData($validated);
+        $items = $this->mapTransactionsToItems($validated['transactions']);
 
         $result = $service->updateInvoice($invoice->id, $invoiceData, $items);
 
@@ -243,59 +191,96 @@ class InvoiceController extends Controller
         }
     }
 
+    private function extractInvoiceData(array $validated): array
+    {
+        return [
+            'title' => $validated['title'],
+            'date' => $validated['date'],
+            'invoice_type' => InvoiceType::from($validated['invoice_type']),
+            'customer_id' => $validated['customer_id'],
+            'document_number' => $validated['document_number'],
+            'number' => $validated['invoice_number'],
+            'subtraction' => $validated['subtractions'] ?? 0,
+            'invoice_id' => $validated['invoice_id'] ?? null,
+            'description' => $validated['description'] ?? null,
+        ];
+    }
+
+    private function mapTransactionsToItems(array $transactions): array
+    {
+        return collect($transactions)->map(fn ($t, $i) => [
+            'transaction_index' => $i,
+            'itemable_id' => $t['item_id'],
+            'itemable_type' => $t['item_type'],
+            'quantity' => $t['quantity'] ?? 1,
+            'description' => $t['desc'] ?? null,
+            'unit_discount' => $t['unit_discount'] ?? 0,
+            'vat' => $t['vat'] ?? 0,
+            'unit' => $t['unit'] ?? 0,
+            'total' => $t['total'] ?? 0,
+        ])->toArray();
+    }
+
     private function prepareTransactions($source = null, string $mode = 'create')
     {
-
         if (old('transactions')) {
-            return collect(old('transactions'))->map(function ($transaction, $index) {
-                if (! empty($transaction['item_type']) && ! empty($transaction['item_id'])) {
-
-                    if ($transaction['item_type'] === Product::class) {
-                        $model = Product::find($transaction['item_id']);
-                        $transaction['subject'] = $model?->name;
-                        $transaction['product_id'] = $model?->id;
-                    }
-
-                    if ($transaction['item_type'] === Service::class) {
-                        $model = Service::find($transaction['item_id']);
-                        $transaction['subject'] = $model?->name;
-                        $transaction['service_id'] = $model?->id;
-                        $transaction['quantity'] = $transaction['quantity'] ?? 1;
-                    }
-                }
-
-                $transaction['id'] = $index + 1;
-
-                return $transaction;
-            });
+            return $this->prepareFromOldInput();
         }
 
         if ($mode === 'edit' && $source instanceof Invoice) {
-            return $source->items->map(function ($item, $index) {
-                $subtotalBeforeVat = $item->amount - $item->vat;
-                $vatPercentage = $subtotalBeforeVat > 0
-                    ? ($item->vat / $subtotalBeforeVat) * 100
-                    : 0;
-
-                return [
-                    'id' => $index + 1,
-                    'transaction_id' => $item->transaction_id,
-                    'desc' => $item->description,
-                    'quantity' => $item->quantity,
-                    'unit' => $item->unit_price,
-                    'off' => $item->unit_discount,
-                    'vat' => $vatPercentage,
-                    'total' => $item->amount,
-                    'inventory_subject_id' => $item->itemable->inventory_subject_id
-                        ?? $item->itemable->subject_id
-                        ?? null,
-                    'subject' => $item->itemable->name ?? null,
-                    'product_id' => $item->itemable->inventory_subject_id ? $item->itemable->id : null,
-                    'service_id' => $item->itemable->subject_id ? $item->itemable->id : null,
-                ];
-            });
+            return $this->prepareFromInvoice($source);
         }
 
+        return $this->getEmptyTransaction();
+    }
+
+    private function prepareFromOldInput()
+    {
+        return collect(old('transactions'))->map(function ($transaction, $index) {
+            $transaction['id'] = $index + 1;
+
+            if (empty($transaction['item_type']) || empty($transaction['item_id'])) {
+                return $transaction;
+            }
+
+            $isProduct = $transaction['item_type'] === Product::class;
+            $model = $isProduct
+                ? Product::find($transaction['item_id'])
+                : Service::find($transaction['item_id']);
+
+            $transaction['subject'] = $model?->name;
+            $transaction[$isProduct ? 'product_id' : 'service_id'] = $model?->id;
+            $transaction['quantity'] ??= 1;
+
+            return $transaction;
+        });
+    }
+
+    private function prepareFromInvoice(Invoice $invoice)
+    {
+        return $invoice->items->map(function ($item, $index) {
+            $subtotalBeforeVat = $item->amount - $item->vat;
+            $isProduct = isset($item->itemable->inventory_subject_id);
+
+            return [
+                'id' => $index + 1,
+                'transaction_id' => $item->transaction_id,
+                'desc' => $item->description,
+                'quantity' => $item->quantity,
+                'unit' => $item->unit_price,
+                'off' => $item->unit_discount,
+                'vat' => $subtotalBeforeVat > 0 ? ($item->vat / $subtotalBeforeVat) * 100 : 0,
+                'total' => $item->amount,
+                'inventory_subject_id' => $item->itemable->inventory_subject_id ?? $item->itemable->subject_id ?? null,
+                'subject' => $item->itemable->name ?? null,
+                'product_id' => $isProduct ? $item->itemable->id : null,
+                'service_id' => $isProduct ? null : $item->itemable->id,
+            ];
+        });
+    }
+
+    private function getEmptyTransaction()
+    {
         return collect([[
             'id' => 1,
             'transaction_id' => null,
@@ -354,48 +339,39 @@ class InvoiceController extends Controller
         $q = $validated['q'];
         $results = [];
 
-        $returnableFields = ['id', 'name', 'group'];
+        $searches = [
+            ['group' => ProductGroup::class, 'model' => Product::class, 'relation' => 'productGroup', 'id' => 'group_products', 'header' => 'product'],
+            ['group' => ServiceGroup::class, 'model' => Service::class, 'relation' => 'serviceGroup', 'id' => 'group_services', 'header' => 'service'],
+        ];
 
-        $searchedInProductsGroups = collect();
+        foreach ($searches as $search) {
+            $items = $this->searchWithGroup($q, $search['group'], $search['model'], $search['relation']);
 
-        $productGroupMatches = ProductGroup::where('name', 'like', "%{$q}%")->pluck('id');
-
-        if ($productGroupMatches->isNotEmpty()) {
-            $searchedInProductsGroups = Product::with('productGroup')->whereIn('group', $productGroupMatches)->limit(30)->get($returnableFields);
-        }
-
-        $searchedInProducts = Product::with('productGroup')->where('name', 'like', "%{$q}%")->limit(30)->get($returnableFields);
-
-        $products = $searchedInProducts->merge($searchedInProductsGroups)->unique('id');
-
-        if ($products->isNotEmpty()) {
-            $results[] = [
-                'id' => 'group_products',
-                'headerGroup' => 'product',
-                'options' => $this->groupItems($products, 'productGroup'),
-            ];
-        }
-
-        $searchedInServicesGroups = collect();
-        $serviceGroupMatches = ServiceGroup::where('name', 'like', "%{$q}%")->pluck('id');
-
-        if ($serviceGroupMatches->isNotEmpty()) {
-            $searchedInServicesGroups = Service::with('serviceGroup')->whereIn('group', $serviceGroupMatches)->limit(30)->get($returnableFields);
-        }
-
-        $searchedInServices = Service::with('serviceGroup')->where('name', 'like', "%{$q}%")->limit(30)->get($returnableFields);
-
-        $services = $searchedInServices->merge($searchedInServicesGroups)->unique('id');
-
-        if ($services->isNotEmpty()) {
-            $results[] = [
-                'id' => 'group_services',
-                'headerGroup' => 'service',
-                'options' => $this->groupItems($services, 'serviceGroup'),
-            ];
+            if ($items->isNotEmpty()) {
+                $results[] = [
+                    'id' => $search['id'],
+                    'headerGroup' => $search['header'],
+                    'options' => $this->groupItems($items, $search['relation']),
+                ];
+            }
         }
 
         return response()->json($results);
+    }
+
+    private function searchWithGroup(string $q, string $groupModel, string $itemModel, string $relation)
+    {
+        $fields = ['id', 'name', 'group'];
+
+        $groupMatches = $groupModel::where('name', 'like', "%{$q}%")->pluck('id');
+
+        $fromGroups = $groupMatches->isNotEmpty()
+            ? $itemModel::with($relation)->whereIn('group', $groupMatches)->limit(30)->get($fields)
+            : collect();
+
+        $fromName = $itemModel::with($relation)->where('name', 'like', "%{$q}%")->limit(30)->get($fields);
+
+        return $fromName->merge($fromGroups)->unique('id');
     }
 
     private function groupItems($items, $relationName)
