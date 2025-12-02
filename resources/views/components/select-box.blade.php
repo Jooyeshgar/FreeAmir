@@ -1,74 +1,4 @@
-@props([
-    'url' => null,
-    'options' => [],
-    'class' => '',
-    'placeholder' => 'Select an option',
-    'selectableGroups' => false,
-    'disabled' => false,
-])
-
-@php
-    if (!function_exists('groupOptionsByHeader')) {
-        function groupOptionsByHeader($option, $headerGroupOptions)
-        {
-            $groupedOptions = [];
-            // Ensure we have options to iterate
-            $items = $option['options'] ?? [];
-
-            foreach ($items as $opt) {
-                // Handle Eloquent model or Array
-                $optObj = is_array($opt) ? (object) $opt : $opt;
-
-                // Determine Group
-                $property = $headerGroupOptions ? "{$headerGroupOptions}Group" : '';
-
-                // Logic to find the group object
-                if ($property && isset($optObj->$property)) {
-                    $group = $optObj->$property;
-                } elseif (isset($optObj->group)) {
-                    $group = $optObj->group;
-                } else {
-                    $group = (object) ['id' => 0, 'name' => 'General'];
-                }
-
-                if (!isset($groupedOptions[$group->id])) {
-                    $groupedOptions[$group->id] = [];
-                }
-
-                $groupedOptions[$group->id][] = [
-                    'id' => $optObj->id,
-                    'groupId' => $group->id,
-                    'groupName' => $group->name,
-                    'text' => $optObj->name ?? ($optObj->text ?? ''),
-                    'type' => $headerGroupOptions,
-                ];
-            }
-            return (object) $groupedOptions; // Return object to preserve Keys in JS
-        }
-    }
-    // Prepare initial local options
-    $finalLocalOptions = [];
-    foreach ($options as $index => $option) {
-        $headerGroupOptions = $option['headerGroup'] ?? '';
-
-        // Use the existing helper logic within the view or passed data
-        // For simplicity, we assume the Controller structure above matches this local structure logic
-        if (is_array($option)) {
-            $groupedOptions = groupOptionsByHeader($option, $headerGroupOptions);
-        } else {
-            $groupedOptions = [];
-        }
-
-        $finalLocalOptions[] = [
-            'id' => 'local_' . $index,
-            'headerGroup' => $headerGroupOptions,
-            'options' => $groupedOptions,
-        ];
-    }
-
-@endphp
-
-<div class="relative w-full {{ $class }}" {{ $attributes->merge(['class' => 'relative w-full ' . $class]) }}
+<div {{ $attributes->except(['url', 'options', 'placeholder', 'selectableGroups', 'disabled', 'hint', 'hint2', 'class'])->merge(['class' => 'relative w-full ' . $class]) }}
     x-data="searchSelect({
         url: '{{ $url }}',
         options: @js($finalLocalOptions),
@@ -152,6 +82,10 @@
                 </div>
             </template>
         </ul>
+        <div class='label'>
+            <span class="label-text-alt mr-3">{!! $hint !!}</span>
+            <span class="label-text-alt ml-3">{!! $hint2 !!}</span>
+        </div>
     </div>
 </div>
 
@@ -325,7 +259,7 @@
                             const groupName = items[0].groupName.toLowerCase();
                             const isGroupMatch = groupName.includes(query);
 
-                            // If group matches → include ALL items
+                            // If group matches, include ALL items
                             let itemMatches = [];
                             if (!isGroupMatch) {
                                 itemMatches = items.filter(i =>

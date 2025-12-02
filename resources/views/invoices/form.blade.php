@@ -5,18 +5,33 @@
             @php
                 $initialCustomerId = old('customer_id', $invoice->customer_id ?? null);
                 $initialSelectedValue = $initialCustomerId ? "customer-$initialCustomerId" : null;
+                $hint =
+                    '<a class="link text-blue-500 hover:underline" href="' .
+                    route('customers.create') .
+                    '">' .
+                    __('Add Customer') .
+                    '</a>';
             @endphp
 
             <div class="flex flex-wrap w-3/4" x-data="{
                 customer_id: '{{ $initialCustomerId }}',
                 selectedValue: '{{ $initialSelectedValue }}',
             }">
-                <span class="flex flex-col flex-wrap text-gray-500 w-full">{{ __('Customer') }}</span>
+                <span class="flex flex-wrap text-gray-500 w-full">{{ __('Customer') }}
+                    <a href="{{ route('customers.create') }}"
+                        class="btn btn-xs btn-ghost text-blue-500 hover:text-blue-700" title="{{ __('Add Customer') }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M12 14.25c-2.485 0-4.5 1.79-4.5 4s2.015 4 4.5 4 4.5-1.79 4.5-4-2.015-4-4.5-4zm0-2.25a3 3 0 100-6 3 3 0 000 6zm6-1.5h3m-1.5-1.5v3" />
+                        </svg>
+                    </a>
+                </span>
 
                 <x-select-box url="{{ route('invoices.search-customer') }}" :options="[['headerGroup' => 'customer', 'options' => $customers]]" x-model="selectedValue"
                     x-init="if (!selectedValue && customer_id) {
                         selectedValue = 'customer-' + customer_id;
-                    }" placeholder="{{ __('Select Customer') }}"
+                    }" placeholder="{{ __('Select Customer') }}" hint='{!! $hint !!}'
                     @selected="customer_id = $event.detail.id;" class="" />
 
                 <input type="hidden" x-bind:value="customer_id" name="customer_id">
@@ -59,12 +74,39 @@
     </div>
 </x-card>
 <x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-4" x-data="transactionForm">
-    <div class="flex overflow-x-auto overflow-y-hidden gap-2 items-center px-4">
+    <div class="flex flex-wrap overflow-x-auto overflow-y-hidden gap-2 items-center px-4">
         <div class="text-sm flex-1 max-w-8 text-center text-gray-500 pt-3">
             *
         </div>
         <div class="text-sm flex-1 min-w-24 max-w-64 text-center text-gray-500 pt-3">
-            {{ $invoice->invoice_type == App\Enums\InvoiceType::SELL || $invoice_type == 'sell' ? __('Product/Service name') : __('Product name') }}
+            <div
+                class="text-sm flex-1 min-w-24 max-w-64 text-center text-gray-500 pt-3 
+            flex items-center justify-center gap-2">
+                <div class="flex items-center gap-3 ml-1">
+                    {{ __('Product') }}
+                    <a href="{{ route('products.create') }}"
+                        class="flex items-center gap-1 btn btn-xs btn-ghost text-blue-500 hover:text-blue-700"
+                        title="{{ __('Create Product') }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M21 7.5l-9-4.5-9 4.5m18 0l-9 4.5m9-4.5v9l-9 4.5m0-9L3 7.5m9 4.5v9m-9-13.5v9l9 4.5" />
+                        </svg>
+                    </a>
+                    @if (($invoice->invoice_type ?? $invoice_type) === App\Enums\InvoiceType::SELL || ($invoice_type ?? null) === 'sell')
+                        {{ __('Services') }}
+                        <a href="{{ route('services.create') }}"
+                            class="flex items-center gap-1 btn btn-xs btn-ghost text-blue-500 hover:text-blue-700"
+                            title="{{ __('Create Service') }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M15.232 5.232a4 4 0 015.536 5.536l-7.768 7.768a4 4 0 01-5.536-5.536l1.232-1.232" />
+                            </svg>
+                        </a>
+                    @endif
+                </div>
+            </div>
         </div>
         <div class="text-sm flex-1 min-w-80 text-center text-gray-500 pt-3">
             {{ __('description') }}
@@ -119,14 +161,26 @@
                                     'options' => $isSellType ? $services : [],
                                 ],
                             ];
+                            $hint =
+                                '<a class="link text-blue-500" href="' .
+                                route('products.create') .
+                                '">' .
+                                __('Create Product') .
+                                '</a>';
+                            $hint2 = $isSellType
+                                ? '<a class="link text-blue-500" href="' .
+                                    route('services.create') .
+                                    '">' .
+                                    __('Create Service') .
+                                    '</a>'
+                                : '';
                         @endphp
-                        <!--
-                            Feature: convert all number inputs to farsi without auditor
-                        -->
+
                         <x-select-box url="{{ route('invoices.search-product-service') }}" :options="$options"
                             x-model="selectedValue" x-init="selectedValue = initItemSelection(transaction)"
                             placeholder="{{ $isSellType ? __('Select Product/Service') : __('Select Product') }}"
-                            @selected="selectItem(transaction, $event.detail.type, $event.detail.id)" />
+                            @selected="selectItem(transaction, $event.detail.type, $event.detail.id)"
+                            hint='{!! $hint !!}' hint2='{!! $hint2 !!}' />
 
                         <input type="hidden" x-bind:value="transaction.product_id || ''"
                             x-bind:name="'transactions[' + index + '][product_id]'">
