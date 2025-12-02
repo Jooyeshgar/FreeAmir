@@ -323,7 +323,7 @@
 
                                     if (!isGroupMatch && itemMatches.length === 0) continue;
 
-                                    newGroups[gId] = (isGroupMatch ? items : itemMatches).map(i => ({
+                                    newGroups[gid] = (isGroupMatch ? items : itemMatches).map(i => ({
                                         ...i,
                                         groupNameHighlighted: isGroupMatch ?
                                             this.highlight(i.groupName, query) : null,
