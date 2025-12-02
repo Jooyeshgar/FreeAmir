@@ -309,6 +309,7 @@
                 products: {!! json_encode($products, JSON_UNESCAPED_UNICODE) !!},
                 services: {!! json_encode($services, JSON_UNESCAPED_UNICODE) !!},
                 invoice_type: {!! json_encode($invoice->invoice_type ?? $invoice_type, JSON_UNESCAPED_UNICODE) !!},
+                isEditing: {{ $invoice->exists ? 'true' : 'false' }},
                 addTransaction() {
                     const newId = this.transactions.length ? this.transactions[this.transactions
                         .length - 1].id + 1 : 1;
@@ -320,9 +321,9 @@
                         service_id: null,
                         product_id: null,
                         quantity: 1,
-                        unit: 0,
+                        unit: null,
                         total: 0,
-                        vat: 0,
+                        vat: null,
                         desc: ''
                     });
                 },
@@ -370,8 +371,6 @@
                     if (!service) return null;
                     return service.subject_id;
                 },
-
-                // Initialize item selection state for a transaction
                 initItemSelection(transaction) {
                     const id = transaction.product_id ?? transaction.service_id ?? null;
                     const type = transaction.product_id ? 'product' : (transaction.service_id ?
@@ -380,28 +379,25 @@
                     transaction.item_id = id ? `${type}-${id}` : '';
                     return id ? `${type}-${id}` : '';
                 },
-
-                // Handle product/service selection
                 selectItem(transaction, type, id) {
-                    transaction.product_id = type === 'product' ? id : null;
-                    transaction.service_id = type === 'service' ? id : null;
+                    const isProduct = type === 'product';
+                    transaction.product_id = isProduct ? id : null;
+                    transaction.service_id = isProduct ? null : id;
                     transaction.item_type = type;
                     transaction.item_id = `${type}-${id}`;
-                    transaction.quantity = 1;
+                    transaction.inventory_subject_id = isProduct ? this.getProductInventorySubjectId(
+                        id) : null;
 
-                    if (type === 'product') {
-                        transaction.inventory_subject_id = this.getProductInventorySubjectId(id);
-                        transaction.unit = this.getProductPrice(id);
-                        transaction.vat = this.getProductVat(id);
-                    } else if (type === 'service') {
-                        transaction.inventory_subject_id = null;
-                        transaction.unit = this.getServicePrice(id);
-                        transaction.vat = this.getServiceVat(id);
+                    const isEditable = !this.isEditing || transaction.unit == null || transaction.vat ==
+                        null;
+                    if (isEditable) {
+                        transaction.unit = isProduct ? this.getProductPrice(id) : this.getServicePrice(
+                            id);
+                        transaction.vat = isProduct ? this.getProductVat(id) : this.getServiceVat(id);
+                        transaction.quantity = 1;
+                        transaction.off = 0;
                     }
-                    transaction.off = 0;
                 },
-
-                // Calculate transaction total
                 calcTotal(t) {
                     const qty = Number(this.$store.utils.convertToEnglish(t.quantity)) || 0;
                     const unit = Number(this.$store.utils.convertToEnglish(t.unit)) || 0;
