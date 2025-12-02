@@ -25,7 +25,9 @@ class CustomerController extends Controller
                 'max:100',
                 'string',
                 'regex:/^[\w\d\s]*$/u',
-                Rule::unique('customers', 'name')->ignore(optional($customer)->id),
+                Rule::unique('customers', 'name')
+                    ->where('group_id', $request->input('group_id'))
+                    ->ignore(optional($customer)->id),
             ],
             'phone' => [
                 'nullable',
