@@ -404,7 +404,7 @@ class InvoiceController extends Controller
         try {
             $service->changeInvoiceStatus($invoice, $status);
 
-            $message = $status === 'approve' ? 'Invoice approved successfully.' : 'Invoice unapproved successfully.';
+            $message = $status === 'approve' ? __('Invoice approved successfully.') : __('Invoice unapproved successfully.');
 
             return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])
                 ->with('success', __($message));
