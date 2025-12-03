@@ -96,7 +96,7 @@ class InvoiceController extends Controller
         $invoiceData = $this->extractInvoiceData($validated);
         $items = $this->mapTransactionsToItems($validated['transactions']);
 
-        $result = $service->createInvoice(auth()->user(), $invoiceData, $items);
+        $result = $service->createInvoice(auth()->user(), $invoiceData, $items, $request->has('approve'));
 
         return redirect()
             ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type])
@@ -166,7 +166,7 @@ class InvoiceController extends Controller
         $invoiceData = $this->extractInvoiceData($validated);
         $items = $this->mapTransactionsToItems($validated['transactions']);
 
-        $result = $service->updateInvoice($invoice->id, $invoiceData, $items);
+        $result = $service->updateInvoice($invoice->id, $invoiceData, $items, $request->has('approve'));
 
         return redirect()
             ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type])
@@ -392,5 +392,25 @@ class InvoiceController extends Controller
 
         // Return as object so JSON encodes it as a Map/Object
         return (object) $grouped;
+    }
+
+    public function changeStatus(Invoice $invoice, string $status, InvoiceService $service)
+    {
+        if (! in_array($status, ['approve', 'unapprove'])) {
+            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])
+                ->with('error', __('Invalid status action.'));
+        }
+
+        try {
+            $service->changeInvoiceStatus($invoice, $status);
+
+            $message = $status === 'approve' ? 'Invoice approved successfully.' : 'Invoice unapproved successfully.';
+
+            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])
+                ->with('success', __($message));
+        } catch (\Exception $e) {
+            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])
+                ->with('error', $e->getMessage());
+        }
     }
 }

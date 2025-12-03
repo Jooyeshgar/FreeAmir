@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Enums\InvoiceType;
-use App\Exceptions\InvoiceServiceException;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -16,53 +15,53 @@ use Illuminate\Support\Facades\DB;
 class InvoiceService
 {
     /**
-     * Create a document, its transactions, an invoice and invoice items.
-     * The document and transactions are generated automatically from invoice data.
-     *
-     * @param  array  $invoiceData  - Invoice details including customer_id, date, invoice_type, etc.
-     * @param  array  $items  - Invoice items with product_id, quantity, unit_discount, etc.
-     * @return array ['document' => Document, 'invoice' => Invoice]
-     *
-     * @throws InvoiceServiceException
+     * Create a new invoice with optional approval.
+     * When approved, creates an accounting document with transactions,
+     * updates product quantities, and calculates cost of goods.
      */
-    public static function createInvoice(User $user, array $invoiceData, array $items = [])
+    public static function createInvoice(User $user, array $invoiceData, array $items = [], bool $approve = false): array
     {
         $date = $invoiceData['date'] ?? now()->toDateString();
 
-        // Build transactions using the transaction builder
         $transactionBuilder = new InvoiceTransactionBuilder($items, $invoiceData);
         $buildResult = $transactionBuilder->build();
-        $transactions = $buildResult['transactions'];
-
-        $documentData = [
-            'date' => $date,
-            'title' => $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? '')),
-            'number' => $invoiceData['document_number'] ?? null,
-        ];
 
         $createdDocument = null;
         $createdInvoice = null;
 
-        DB::transaction(function () use ($documentData, $user, $transactions, $invoiceData, $items, $buildResult, $date, &$createdDocument, &$createdInvoice) {
-            $createdDocument = DocumentService::createDocument($user, $documentData, $transactions);
-
-            $invoiceData['document_id'] = $createdDocument->id;
+        DB::transaction(function () use ($user, $invoiceData, $items, $buildResult, $date, $approve, &$createdDocument, &$createdInvoice) {
             $invoiceData['vat'] = $buildResult['totalVat'];
             $invoiceData['amount'] = $buildResult['totalAmount'];
             $invoiceData['creator_id'] = $user->id;
             $invoiceData['active'] = 1;
             $invoiceData['date'] = $date;
 
+            if ($approve) {
+                $documentData = [
+                    'date' => $date,
+                    'title' => $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? '')),
+                    'number' => $invoiceData['document_number'] ?? null,
+                ];
+
+                $createdDocument = DocumentService::createDocument($user, $documentData, $buildResult['transactions']);
+                $invoiceData['document_id'] = $createdDocument->id;
+                $invoiceData['status'] = \App\Enums\InvoiceStatus::APPROVED;
+            }
+
+            unset($invoiceData['document_number']);
             $createdInvoice = Invoice::create($invoiceData);
 
-            DocumentService::syncDocumentable($createdDocument, $createdInvoice);
+            if ($approve) {
+                DocumentService::syncDocumentable($createdDocument, $createdInvoice);
+                ProductService::syncProductQuantities(new Collection([]), $items, $createdInvoice->invoice_type);
+            }
 
-            ProductService::syncProductQuantities(new Collection([]), $items, $createdInvoice->invoice_type);
             self::syncInvoiceItems($createdInvoice, $items);
 
-            CostOfGoodsService::updateProductsAverageCost($createdInvoice);
-
-            self::syncCOGAfterForInvoiceItems($createdInvoice);
+            if ($approve) {
+                CostOfGoodsService::updateProductsAverageCost($createdInvoice);
+                self::syncCOGAfterForInvoiceItems($createdInvoice);
+            }
         });
 
         return [
@@ -72,13 +71,11 @@ class InvoiceService
     }
 
     /**
-     * Update an existing invoice and its related document/transactions.
-     *
-     * @return array ['document' => Document, 'invoice' => Invoice]
-     *
-     * @throws InvoiceServiceException
+     * Update an existing invoice with optional approval.
+     * When approved, updates the accounting document and transactions,
+     * syncs product quantities, and recalculates cost of goods.
      */
-    public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = []): array
+    public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = [], bool $approve = false): array
     {
         $invoice = Invoice::findOrFail($invoiceId);
 
@@ -88,40 +85,54 @@ class InvoiceService
 
         $transactionBuilder = new InvoiceTransactionBuilder($items, $invoiceData);
         $buildResult = $transactionBuilder->build();
-        $transactions = $buildResult['transactions'];
 
-        DB::transaction(function () use ($invoice, $invoiceData, $items, $transactions, $buildResult) {
-
-            $documentData = [
-                'date' => $invoiceData['date'] ?? $invoice->date,
-                'title' => $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? '')),
-                'number' => $invoiceData['document_number'] ?? $invoice->document->number,
-            ];
-
-            $updatedDocument = DocumentService::updateDocument($invoice->document, $documentData);
-            DocumentService::updateDocumentTransactions($invoice->document->id, $transactions);
-
+        DB::transaction(function () use ($invoice, $invoiceData, $items, $buildResult, $approve) {
             $invoiceData['vat'] = $buildResult['totalVat'];
             $invoiceData['amount'] = $buildResult['totalAmount'];
-            unset($invoiceData['document_number']); // Don't update invoice with document_number
 
+            if ($approve) {
+                $documentData = [
+                    'date' => $invoiceData['date'] ?? $invoice->date,
+                    'title' => $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? '')),
+                    'number' => $invoiceData['document_number'] ?? $invoice->document->number,
+                ];
+
+                if ($invoice->document) {
+                    $updatedDocument = DocumentService::updateDocument($invoice->document, $documentData);
+                    DocumentService::updateDocumentTransactions($invoice->document->id, $buildResult['transactions']);
+                    $invoiceData['document_id'] = $updatedDocument->id;
+                } else {
+                    $updatedDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
+                    $invoiceData['document_id'] = $updatedDocument->id;
+                }
+
+                $invoiceData['status'] = \App\Enums\InvoiceStatus::APPROVED;
+
+                $oldInvoiceItems = $invoice->items;
+
+            } else {
+                $invoiceData['status'] = $invoice->status ?? \App\Enums\InvoiceStatus::UNAPPROVED;
+            }
+
+            unset($invoiceData['document_number']);
             $invoice->update($invoiceData);
 
-            DocumentService::syncDocumentable($updatedDocument, $invoice);
+            if ($approve) {
+                DocumentService::syncDocumentable($updatedDocument, $invoice);
+                ProductService::syncProductQuantities($oldInvoiceItems, $items, $invoice->invoice_type);
+            }
 
-            $oldInvoiceItems = $invoice->items;
-
-            ProductService::syncProductQuantities($oldInvoiceItems, $items, $invoice->invoice_type);
             self::syncInvoiceItems($invoice, $items);
 
-            $invoice->refresh();
-
-            CostOfGoodsService::updateProductsAverageCost($invoice);
-            self::syncCOGAfterForInvoiceItems($invoice);
+            if ($approve) {
+                $invoice->refresh();
+                CostOfGoodsService::updateProductsAverageCost($invoice);
+                self::syncCOGAfterForInvoiceItems($invoice);
+            }
         });
 
         return [
-            'document' => $invoice->document->fresh(),
+            'document' => $approve ? $invoice->document->fresh() : null,
             'invoice' => $invoice,
         ];
     }
@@ -178,8 +189,8 @@ class InvoiceService
             throw new Exception(__('Invoice not found'), 404);
         }
 
-        if (auth()->user()?->hasRole('Super-Admin')) {
-            return;
+        if ($invoice->status->isApproved()) {
+            throw new Exception(__('Approved invoice cannot be deleted/edited'), 400);
         }
 
         if ($invoice->ancillaryCosts->isNotEmpty()) {
@@ -343,5 +354,82 @@ class InvoiceService
         } catch (\Throwable $e) {
             return ['allowed' => false, 'reason' => $e->getMessage()];
         }
+    }
+
+    public function changeInvoiceStatus(Invoice $invoice, string $status): void
+    {
+        DB::transaction(function () use ($invoice, $status) {
+            switch ($status) {
+                case 'approve':
+                    $invoice->status = \App\Enums\InvoiceStatus::APPROVED;
+                    $document = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
+                    $invoice->document_id = $document->id;
+                    ProductService::addProductsQuantities($invoice->items->toArray(), $invoice->invoice_type); // increase product quantities
+                    CostOfGoodsService::updateProductsAverageCost($invoice); // update COG after for invoice items
+                    self::syncCOGAfterForInvoiceItems($invoice); // update COG after for invoice items
+                    break;
+                case 'unapprove':
+                    $invoice->status = \App\Enums\InvoiceStatus::UNAPPROVED;
+                    DB::transaction(function () use ($invoice) {
+                        $hasDocument = $invoice->document;
+                        if ($hasDocument) {
+                            DocumentService::deleteDocument($invoice->document_id);
+                            $invoice->document_id = null; // delete document
+                        }
+                        ProductService::subProductsQuantities($invoice->items->toArray(), $invoice->invoice_type); // revert product quantities
+                        CostOfGoodsService::refreshProductCOGAfterItemsDeletion($invoice, null); // revert average cost of products
+                        self::syncCOGAfterForInvoiceItems($invoice); // revert COG after for invoice items
+                    });
+                    break;
+                default:
+                    break;
+            }
+
+            $invoice->save();
+        });
+    }
+
+    private static function createDocumentFromInvoiceItems(User $user, Invoice $invoice)
+    {
+        $documentData = [
+            'date' => now()->toDateString(),
+            'title' => $invoice->title ?? (__('Invoice #').($invoice->number ?? '')),
+        ];
+
+        $invoiceData = [
+            'date' => $invoice->date,
+            'invoice_type' => $invoice->invoice_type,
+            'customer_id' => $invoice->customer_id,
+            'number' => $invoice->number,
+            'subtraction' => $invoice->subtraction ?? 0,
+            'invoice_id' => $invoice->id ?? null,
+            'description' => $invoice->description ?? null,
+        ];
+
+        $items = [];
+
+        foreach ($invoice->items as $index => $item) {
+            $subtotalBeforeVat = $item->amount - $item->vat;
+
+            $items[] = [
+                'transaction_index' => $index,
+                'itemable_id' => $item->itemable_id,
+                'itemable_type' => $item->itemable_type === Product::class ? 'product' : 'service',
+                'quantity' => $item->quantity,
+                'unit' => $item->unit_price,
+                'unit_discount' => $item->unit_discount,
+                'vat' => $subtotalBeforeVat > 0 ? ($item->vat / $subtotalBeforeVat) * 100 : 0,
+                'description' => $item->description,
+                'total' => $item->amount,
+            ];
+        }
+
+        $transactionBuilder = new InvoiceTransactionBuilder($items, $invoiceData);
+        $buildResult = $transactionBuilder->build();
+
+        $document = DocumentService::createDocument($user, $documentData, $buildResult['transactions']);
+        DocumentService::syncDocumentable($document, $invoice);
+
+        return $document;
     }
 }

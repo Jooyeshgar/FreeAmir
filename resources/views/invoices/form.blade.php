@@ -63,7 +63,7 @@
             label_text_class="text-gray-500 text-nowrap"></x-text-input>
 
         <x-text-input
-            input_value="{{ old('document_number') ?? formatDocumentNumber($invoice->document->number ?? $previousDocumentNumber + 1) }}"
+            input_value="{{ old('document_number') ?? formatDocumentNumber($invoice->document->number ?? ($previousDocumentNumber ?? 0 + 1)) }}"
             input_name="document_number" title="{{ __('current document number') }}"
             placeholder="{{ __('current document number') }}"
             label_text_class="text-gray-500 text-nowrap"></x-text-input>
@@ -295,7 +295,13 @@
         {{ __('cancel') }}
     </a>
     <button id="submitForm" type="submit" class="btn text-white btn-primary rounded-md">
-        {{ __('save and close form') }} </button>
+        {{ __('save') }} </button>
+
+    @can('invoices.approve')
+        <button id="submitFormAndApprove" type="submit" name="approve" value="1"
+            class="btn text-white btn-primary rounded-md">
+            {{ __('save and approve') }} </button>
+    @endcan
 </div>
 
 @pushOnce('scripts')

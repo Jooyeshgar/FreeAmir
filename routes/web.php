@@ -30,6 +30,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
 
     Route::resource('invoices', Controllers\InvoiceController::class)->except(['index', 'create']);
     Route::get('invoices/{invoice}/print', [Controllers\InvoiceController::class, 'print'])->name('invoices.print');
+    Route::get('invoices/{invoice}/change-status/{status}', [Controllers\InvoiceController::class, 'changeStatus'])->name('invoices.change-status')->middleware('can:invoices.approve');
     Route::resource('ancillary-costs', Controllers\AncillaryCostController::class)->except(['show']);
     Route::get('ancillary-costs/get-products/{invoice_id}', [Controllers\AncillaryCostController::class, 'getBuyInvoiceProducts'])->name('ancillary-costs.get-products');
     Route::group(['prefix' => 'management'], function () {
