@@ -28,7 +28,12 @@
                     @foreach ($serviceGroups as $serviceGroup)
                         <tr>
                             <td class="px-4 py-2">{{ $serviceGroup->sstid }}</td>
-                            <td class="px-4 py-2">{{ $serviceGroup->name }}</td>
+                            <td class="px-4 py-2">
+                                <a href="{{ route('services.index', ['group_name' => $serviceGroup->name]) }}"
+                                    class="text-blue-600 hover:underline">
+                                    {{ $serviceGroup->name }}
+                                </a>
+                            </td>
                             <td class="px-4 py-2">{{ formatNumber($serviceGroup->vat) }}%</td>
                             <td class="px-4 py-2">{{ formatNumber($serviceGroup->services->count()) }}</td>
                             <td class="px-4 py-2"><a
@@ -48,6 +53,7 @@
                     @endforeach
                 </tbody>
             </table>
+            {!! $serviceGroups->links() !!}
         </div>
     </div>
 </x-app-layout>

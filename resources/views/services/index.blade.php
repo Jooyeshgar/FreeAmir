@@ -10,6 +10,37 @@
             <div class="card-actions">
                 <a href="{{ route('services.create') }}" class="btn btn-primary">{{ __('Create service') }}</a>
             </div>
+
+            <form action="{{ route('services.index') }}" method="GET">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full md:w-2/5">
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-2 flex items-center text-gray-400 text-sm">
+                            <i class="fa-solid fa-box"></i>
+                        </span>
+                        <input type="text" name="name" value="{{ request('name') }}"
+                            placeholder="{{ __('Service Name') }}"
+                            class="w-full pl-8 pr-2 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
+                    </div>
+
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-2 flex items-center text-gray-400 text-sm">
+                            <i class="fa-solid fa-layer-group"></i>
+                        </span>
+                        <input type="text" name="group_name" value="{{ request('group_name') }}"
+                            placeholder="{{ __('Service Group Name') }}"
+                            class="w-full pl-8 pr-2 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
+                    </div>
+
+                    <div class="flex items-center">
+                        <button type="submit"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 text-sm rounded-lg shadow transition-all">
+                            <i class="fa-solid fa-magnifying-glass mr-1"></i>
+                            {{ __('Search') }}
+                        </button>
+                    </div>
+                </div>
+            </form>
+
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <tr>
@@ -37,8 +68,11 @@
                                 <a href="{{ route('services.edit', $service) }}"
                                     class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                 @if ($service->invoiceItems()->exists())
-                                    <span class="btn btn-sm btn-disabled"
-                                        title="{{ __('Cannot delete service that is used in invoice items') }}">{{ __('Delete') }}</span>
+                                    <span class="tooltip"
+                                        data-tip="{{ __('Cannot delete service that is used in invoice items') }}">
+                                        <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" disabled
+                                            title="{{ __('Cannot delete service that is used in invoice items') }}">{{ __('Delete') }}</button>
+                                    </span>
                                 @else
                                     <form action="{{ route('services.destroy', $service) }}" method="POST"
                                         class="inline-block">
@@ -53,33 +87,7 @@
                     @endforeach
                 </tbody>
             </table>
-            @if ($services->hasPages())
-                <div class="join">
-                    {{-- Previous Page Link --}}
-                    @if ($services->onFirstPage())
-                        <input class="join-item btn btn-square hidden " type="radio" disabled>
-                    @else
-                        <a href="{{ $services->previousPageUrl() }}" class="join-item btn btn-square">&lsaquo;</a>
-                    @endif
-
-                    {{-- Pagination Elements --}}
-                    @foreach ($services->getUrlRange(1, $services->lastPage()) as $page => $url)
-                        @if ($page == $services->currentPage())
-                            <a href="{{ $url }}"
-                                class="join-item btn btn-square bg-blue-500 text-white">{{ $page }}</a>
-                        @else
-                            <a href="{{ $url }}" class="join-item btn btn-square">{{ $page }}</a>
-                        @endif
-                    @endforeach
-
-                    {{-- Next Page Link --}}
-                    @if ($services->hasMorePages())
-                        <a href="{{ $services->nextPageUrl() }}" class="join-item btn btn-square">&rsaquo;</a>
-                    @else
-                        <input class="join-item btn btn-square hidden" type="radio" disabled>
-                    @endif
-                </div>
-            @endif
+            {!! $services->withQueryString()->links() !!}
         </div>
     </div>
 </x-app-layout>

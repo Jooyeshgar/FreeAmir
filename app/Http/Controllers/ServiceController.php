@@ -16,7 +16,20 @@ class ServiceController extends Controller
 
     public function index()
     {
-        $services = Service::with('serviceGroup')->paginate(12);
+        $query = Service::orderBy('code');
+
+        if (request()->has('name') && request('name')) {
+            $query->where('name', 'like', '%'.request('name').'%');
+        }
+
+        if (request()->has('group_name') && request('group_name')) {
+            $searchGroupName = request('group_name');
+            $query->whereHas('serviceGroup', function ($groupName) use ($searchGroupName) {
+                $groupName->where('name', 'like', '%'.$searchGroupName.'%');
+            });
+        }
+
+        $services = $query->with('serviceGroup')->paginate(12);
 
         return view('services.index', compact('services'));
     }

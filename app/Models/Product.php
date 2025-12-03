@@ -21,7 +21,6 @@ class Product extends Model
         'quantity',
         'quantity_warning',
         'oversell',
-        'purchace_price',
         'selling_price',
         'discount_formula',
         'description',

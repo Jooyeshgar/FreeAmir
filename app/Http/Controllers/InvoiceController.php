@@ -72,8 +72,6 @@ class InvoiceController extends Controller
         }
         $products = Product::with('inventorySubject', 'productGroup')->orderBy('name', 'asc')->get();
         $services = Service::with('subject', 'serviceGroup')->orderBy('name', 'asc')->get();
-        $serviceGroups = ServiceGroup::all();
-        $productGroups = ProductGroup::all();
         $customers = Customer::with('group')->orderBy('name', 'asc')->get();
         $previousDocumentNumber = floor(Document::max('number') ?? 0);
 
@@ -84,7 +82,7 @@ class InvoiceController extends Controller
         $invoice_type = in_array($invoice_type, ['buy', 'sell', 'return_buy', 'return_sell']) ? $invoice_type : 'sell';
         $previousInvoiceNumber = floor(Invoice::where('invoice_type', $invoice_type)->max('number') ?? 0);
 
-        return view('invoices.create', compact('products', 'services', 'productGroups', 'serviceGroups', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type'));
+        return view('invoices.create', compact('products', 'services', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type'));
     }
 
     /**
@@ -139,9 +137,6 @@ class InvoiceController extends Controller
         $products = Product::with(['inventorySubject', 'productGroup'])->orderBy('name', 'asc')->get();
         $services = Service::with(['subject', 'serviceGroup'])->orderBy('name', 'asc')->get();
 
-        $productGroups = ProductGroup::all();
-        $serviceGroups = ServiceGroup::all();
-
         // Prepare transactions from invoice items
         $transactions = $this->prepareTransactions($invoice, 'edit');
 
@@ -156,8 +151,6 @@ class InvoiceController extends Controller
             'products',
             'services',
             'transactions',
-            'productGroups',
-            'serviceGroups',
             'invoice_type',
         ));
     }

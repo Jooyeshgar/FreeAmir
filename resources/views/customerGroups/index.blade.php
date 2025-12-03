@@ -24,7 +24,12 @@
                     @foreach ($customerGroups as $customerGroup)
                         <tr>
                             <td class="px-4 py-2">{{ $customerGroup->subject?->formattedCode() }}</td>
-                            <td class="px-4 py-2">{{ $customerGroup->name }}</td>
+                            <td class="px-4 py-2">
+                                <a href="{{ route('customers.index', ['group_name' => $customerGroup->name]) }}"
+                                    class="text-blue-600 hover:underline">
+                                    {{ $customerGroup->name }}
+                                </a>
+                            </td>
                             <td class="px-4 py-2">
                                 <a href="{{ route('customer-groups.edit', $customerGroup) }}"
                                     class="btn btn-sm btn-info">{{ __('Edit') }}</a>
