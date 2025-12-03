@@ -9,7 +9,6 @@ use App\Models\Product;
 use App\Models\Service;
 use App\Models\User;
 use Exception;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 class InvoiceService
@@ -41,6 +40,8 @@ class InvoiceService
                     'date' => $date,
                     'title' => $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? '')),
                     'number' => $invoiceData['document_number'] ?? null,
+                    'approved_at' => now(),
+                    'approver_id' => $user->id,
                 ];
 
                 $createdDocument = DocumentService::createDocument($user, $documentData, $buildResult['transactions']);
@@ -95,6 +96,8 @@ class InvoiceService
                     'date' => $invoiceData['date'] ?? $invoice->date,
                     'title' => $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? '')),
                     'number' => $invoiceData['document_number'] ?? $invoice->document->number,
+                    'approved_at' => now(),
+                    'approver_id' => auth()->user()->id,
                 ];
 
                 if ($invoice->document) {
@@ -394,6 +397,8 @@ class InvoiceService
         $documentData = [
             'date' => now()->toDateString(),
             'title' => $invoice->title ?? (__('Invoice #').($invoice->number ?? '')),
+            'approved_at' => now(),
+            'approver_id' => $user->id,
         ];
 
         $invoiceData = [

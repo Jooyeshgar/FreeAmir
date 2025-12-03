@@ -70,7 +70,6 @@ class UpdateProductRequest extends FormRequest
         $validatedData = $this->validated();
 
         $validatedData['code'] = empty($validatedData['code']) ? Product::max('code') + 1 : $validatedData['code'];
-        $validatedData['oversell'] = $this->has('oversell') ? 1 : 0;
         $validatedData['selling_price'] = convertToFloat(empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price']);
         $validatedData['quantity_warning'] = convertToFloat(empty($validatedData['quantity_warning']) ? 0 : str_replace(',', '', $validatedData['quantity_warning']));
         $validatedData['quantity'] = convertToFloat(empty($validatedData['quantity']) ? 0 : str_replace(',', '', $validatedData['quantity']));

@@ -136,6 +136,7 @@ class InvoiceController extends Controller
         $customers = Customer::with('group')->orderBy('name', 'asc')->get();
         $products = Product::with(['inventorySubject', 'productGroup'])->orderBy('name', 'asc')->get();
         $services = Service::with(['subject', 'serviceGroup'])->orderBy('name', 'asc')->get();
+        $previousDocumentNumber = floor(Document::max('number') ?? 0);
 
         // Prepare transactions from invoice items
         $transactions = $this->prepareTransactions($invoice, 'edit');
@@ -152,6 +153,7 @@ class InvoiceController extends Controller
             'services',
             'transactions',
             'invoice_type',
+            'previousDocumentNumber'
         ));
     }
 
