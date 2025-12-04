@@ -101,22 +101,42 @@
                                 {{ $invoice->status?->label() ?? '' }}
                             </td>
                             <td class="px-4 py-2">
-                                @php($editDeleteStatus = \App\Services\InvoiceService::getEditDeleteStatus($invoice))
-
                                 <a href="{{ route('invoices.show', $invoice) }}" target="_blank" rel="noopener"
                                     class="btn btn-sm btn-info">{{ __('Show') }}</a>
                                 <a href="{{ route('invoices.print', $invoice) }}" target="_blank" rel="noopener"
                                     class="btn btn-sm btn-info">{{ __('Print') }}</a>
 
                                 @can('invoices.approve')
-                                    @if ($invoice->status?->isApproved())
-                                        <a href="{{ route('invoices.change-status', [$invoice, 'unapprove']) }}"
-                                            class="btn btn-sm btn-warning">{{ __('Unapprove') }}</a>
+                                    @php
+                                        $isApproved = $invoice->status?->isApproved();
+                                        $canChangeStatus = \App\Services\InvoiceService::canChangeInvoiceStatus(
+                                            $invoice,
+                                        );
+                                    @endphp
+
+                                    @if ($canChangeStatus)
+                                        <a href="{{ route('invoices.change-status', [$invoice, $isApproved ? 'unapprove' : 'approve']) }}"
+                                            class="btn btn-sm {{ $isApproved ? 'btn-warning' : 'btn-success' }}">
+                                            {{ __($isApproved ? 'Unapprove' : 'Approve') }}
+                                        </a>
                                     @else
-                                        <a href="{{ route('invoices.change-status', [$invoice, 'approve']) }}"
-                                            class="btn btn-sm btn-success">{{ __('Approve') }}</a>
+                                        @php
+                                            $tooltip = $isApproved
+                                                ? __('Cannot unapprove due to subsequent unapproved invoices')
+                                                : __('Cannot approve due to subsequent unapproved invoices');
+                                            $btnClass = $isApproved ? 'btn-warning' : 'btn-success';
+                                            $label = $isApproved ? __('Unapprove') : __('Approve');
+                                        @endphp
+                                        <span class="tooltip" data-tip="{{ $tooltip }}">
+                                            <button class="btn btn-sm {{ $btnClass }} btn-disabled cursor-not-allowed"
+                                                disabled title="{{ $tooltip }}">{{ $label }}</button>
+                                        </span>
                                     @endif
                                 @endcan
+
+                                @php
+                                    $editDeleteStatus = \App\Services\InvoiceService::getEditDeleteStatus($invoice);
+                                @endphp
 
                                 @if ($editDeleteStatus['allowed'])
                                     @if (!$invoice->status?->isApproved())

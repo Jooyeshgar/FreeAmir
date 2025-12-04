@@ -19,6 +19,7 @@
                         <th class="p-2 w-40">{{ __('Cost Type') }}</th>
                         <th class="p-2 w-20">{{ __('Date') }}</th>
                         <th class="p-2 w-20">{{ __('Amount') }}</th>
+                        <th class="p-2 w-40">{{ __('Status') }}</th>
                         <th class="p-2 w-40">{{ __('Action') }}</th>
                     </tr>
                 </thead>
@@ -28,15 +29,18 @@
                         <tr>
                             <td class="p-2">
                                 @can('documents.show')
-                                    <a href="{{ route('documents.show', $ancillaryCost->document_id) }}">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none"
-                                            viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                    </a>&nbsp;
-                                    <a class="link" href="{{ route('documents.edit', $ancillaryCost->document_id) }}">
-                                        {{ formatDocumentNumber($ancillaryCost->document->number) ?? '' }}</a>
+                                    @if ($ancillaryCost->document_id)
+                                        <a href="{{ route('documents.show', $ancillaryCost->document_id) }}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                        </a>&nbsp;
+                                        <a class="link"
+                                            href="{{ route('documents.edit', $ancillaryCost->document_id) }}">
+                                            {{ formatDocumentNumber($ancillaryCost->document->number) ?? '' }}</a>
+                                    @endif
                                 @else
                                     <span
                                         class="text-gray-500">{{ formatDocumentNumber($ancillaryCost->document->number) ?? '' }}</span>
@@ -50,18 +54,47 @@
                             <td class="p-2">{{ formatDate($ancillaryCost->date) }}</td>
                             <td class="p-2">{{ formatNumber($ancillaryCost->amount) }}</td>
                             <td class="p-2">
+                                {{ $ancillaryCost->status?->label() ?? '' }}
+                            </td>
+                            <td class="p-2">
+
+                                @can('ancillary-costs.approve')
+                                    @if ($ancillaryCost->status?->isApproved())
+                                        <a href="{{ route('ancillary-costs.change-status', [$ancillaryCost, 'unapprove']) }}"
+                                            class="btn btn-sm btn-warning">{{ __('Unapprove') }}</a>
+                                    @else
+                                        <a href="{{ route('ancillary-costs.change-status', [$ancillaryCost, 'approve']) }}"
+                                            class="btn btn-sm btn-success">{{ __('Approve') }}</a>
+                                    @endif
+                                @endcan
+
                                 @php($editDeleteStatus = \App\Services\AncillaryCostService::getEditDeleteStatus($ancillaryCost))
 
                                 @if ($editDeleteStatus['allowed'])
-                                    <a href="{{ route('ancillary-costs.edit', $ancillaryCost) }}"
-                                        class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                    <form action="{{ route('ancillary-costs.destroy', $ancillaryCost) }}"
-                                        method="POST" class="inline-block">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                            class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                    </form>
+                                    @if (!$ancillaryCost->status?->isApproved())
+                                        <a href="{{ route('ancillary-costs.edit', $ancillaryCost) }}"
+                                            class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                        <form action="{{ route('ancillary-costs.destroy', $ancillaryCost) }}"
+                                            method="POST" class="inline-block">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                        </form>
+                                    @else
+                                        <span class="tooltip"
+                                            data-tip="{{ __('Unapprove the ancillary cost first to edit') }}">
+                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
+                                                disabled
+                                                title="{{ __('Unapprove the ancillary cost first to edit') }}">{{ __('Edit') }}</button>
+                                        </span>
+                                        <span class="tooltip"
+                                            data-tip="{{ __('Unapprove the ancillary cost first to delete') }}">
+                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
+                                                disabled
+                                                title="{{ __('Unapprove the ancillary cost first to delete') }}">{{ __('Delete') }}</button>
+                                        </span>
+                                    @endif
                                 @else
                                     <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
                                         <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" disabled
