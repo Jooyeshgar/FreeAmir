@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AncillaryCostType;
+use App\Enums\InvoiceAncillaryCostStatus;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,6 +17,7 @@ class AncillaryCost extends Model
         'vat',
         'date',
         'invoice_id',
+        'status',
         'company_id',
         'document_id',
         'customer_id',
@@ -23,6 +25,7 @@ class AncillaryCost extends Model
 
     protected $casts = [
         'type' => AncillaryCostType::class,
+        'status' => InvoiceAncillaryCostStatus::class,
         'date' => 'date',
         'amount' => 'decimal:2',
         'vat' => 'decimal:2',

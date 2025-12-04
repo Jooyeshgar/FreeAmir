@@ -31,6 +31,7 @@ class RolesAndPermissionsSeeder extends Seeder
         Permission::create(['name' => 'invoices.*']);
         Permission::create(['name' => 'invoices.approve']);
         Permission::create(['name' => 'ancillary-costs.*']);
+        Permission::create(['name' => 'ancillary-costs.approve']);
         Permission::create(['name' => 'management.*']);
         Permission::create(['name' => 'management.users.*']);
         Permission::create(['name' => 'management.permissions.*']);
@@ -60,6 +61,7 @@ class RolesAndPermissionsSeeder extends Seeder
             ->orWhere('name', 'LIKE', '%customers%')
             ->orWhere('name', 'LIKE', '%home%')
             ->where('name', 'NOT LIKE', 'invoices.approve')
+            ->where('name', 'NOT LIKE', 'ancillary-costs.approve')
             ->get());
 
         $admin = User::create([

@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum InvoiceStatus: string
+enum InvoiceAncillaryCostStatus: string
 {
     case PENDING = 'pending';
 
@@ -11,7 +11,7 @@ enum InvoiceStatus: string
     case UNAPPROVED = 'unapproved';
 
     /**
-     * Get translated label for the invoice status.
+     * Get translated label for the invoice/ancillary cost status.
      */
     public function label(): string
     {
