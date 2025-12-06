@@ -41,7 +41,7 @@ class AncillaryCostController extends Controller
             throw new Exception(__('Ancillary Cost cannot be created.'), 400);
         }
 
-        AncillaryCostService::createAncillaryCost(auth()->user(), $validated);
+        AncillaryCostService::createAncillaryCost(auth()->user(), $validated, $request->has('approve'));
 
         return redirect()
             ->route('ancillary-costs.index')
@@ -79,7 +79,7 @@ class AncillaryCostController extends Controller
         $validated = $request->validated();
         $validated['company_id'] = session('active-company-id');
 
-        AncillaryCostService::updateAncillaryCost($ancillaryCost, $validated);
+        AncillaryCostService::updateAncillaryCost($ancillaryCost, $validated, $request->has('approve'));
 
         return redirect()
             ->route('ancillary-costs.index')

@@ -6,6 +6,7 @@ use App\Enums\InvoiceType;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Service;
+use App\Services\InvoiceService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -79,7 +80,6 @@ class StoreInvoiceRequest extends FormRequest
                 return;
             }
 
-            $itemableConditions = [];
             $productIds = [];
             $serviceIds = [];
 
@@ -147,11 +147,20 @@ class StoreInvoiceRequest extends FormRequest
                     if ($morphType !== Product::class) {
                         continue;
                     }
+                }
 
-                    $itemableConditions[] = [
-                        'itemable_type' => $morphType,
-                        'itemable_id' => $transaction['item_id'],
-                    ];
+                if ($this->input('approve') && ! $invoice) {
+                    $invoicesExitance = InvoiceService::isThereAnyApprovedSubsequentInvoicesForProducts(
+                        $inputDate,
+                        $productIds
+                    );
+
+                    if ($invoicesExitance) {
+                        $validator->errors()->add(
+                            'date',
+                            __('Cannot approve this invoice because there are subsequent approved invoices with later dates.')
+                        );
+                    }
 
                 }
 

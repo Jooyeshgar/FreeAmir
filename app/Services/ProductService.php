@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Enums\InvoiceType;
 use App\Models\Product;
 use Exception;
-use Illuminate\Database\Eloquent\Collection;
 
 class ProductService
 {
@@ -56,32 +55,6 @@ class ProductService
         $product->salesReturnsSubject?->delete();
         $product->cogsSubject?->delete();
         $product->inventorySubject?->delete();
-    }
-
-    public static function syncProductQuantities(Collection $oldInvoiceItems, array $invoiceItems, InvoiceType $invoice_type): void
-    {
-        $invoiceItems = array_filter($invoiceItems, function ($item) {
-            return $item['itemable_type'] == 'product';
-        });
-
-        $addInvoiceItems = [];
-        $deletedInvoiceItems = [];
-        $changedIds = [];
-
-        foreach ($invoiceItems as $invoiceItem) {
-            $oldInvoiceItem = $oldInvoiceItems->where('itemable_id', $invoiceItem['itemable_id'])->first();
-            if (is_null($oldInvoiceItem)) {
-                $addInvoiceItems[] = $invoiceItem;
-            } else {
-                $changedIds[] = $oldInvoiceItem->id;
-                self::updateProductQuantities($oldInvoiceItem->toArray(), $invoiceItem, $invoice_type);
-            }
-        }
-
-        $deletedInvoiceItems = $oldInvoiceItems->whereNotIn('id', $changedIds)->toArray();
-
-        self::addProductsQuantities($addInvoiceItems, $invoice_type);
-        self::subProductsQuantities($deletedInvoiceItems, $invoice_type);
     }
 
     public static function addProductsQuantities(array $invoiceItems, InvoiceType $invoice_type): void
