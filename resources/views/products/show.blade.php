@@ -173,7 +173,13 @@
                             $totalSell = 0;
                             $totalBuy = 0;
 
-                            $historyItems = $product->invoiceItems->sortBy('invoice.date');
+                            $historyItems = $product
+                                ->invoiceItems()
+                                ->whereHas('invoice', function ($q) {
+                                    $q->where('status', \App\Enums\InvoiceAncillaryCostStatus::APPROVED);
+                                })
+                                ->get()
+                                ->sortBy('date');
 
                             foreach ($historyItems as $item) {
                                 if ($item->invoice->invoice_type === \App\Enums\InvoiceType::SELL) {

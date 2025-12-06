@@ -156,58 +156,6 @@ class StoreInvoiceRequest extends FormRequest
                 }
 
             }
-
-            if (! empty($itemableConditions)) {
-                $query = Invoice::where('invoice_type', InvoiceType::BUY)
-                    ->where('date', '>', $inputDate)
-                    ->whereHas('items', function ($q) use ($itemableConditions) {
-                        $q->where(function ($subQuery) use ($itemableConditions) {
-                            foreach ($itemableConditions as $condition) {
-                                $subQuery->orWhere(function ($innerQuery) use ($condition) {
-                                    $innerQuery->where('itemable_type', $condition['itemable_type'])
-                                        ->where('itemable_id', $condition['itemable_id']);
-                                });
-                            }
-                        });
-                    });
-
-                // Exclude the current invoice if editing
-                if ($invoice) {
-                    $query->where('id', '!=', $invoice->id);
-                }
-
-                $laterInvoices = $query->with(['items' => function ($q) use ($itemableConditions) {
-                    $q->where(function ($subQuery) use ($itemableConditions) {
-                        foreach ($itemableConditions as $condition) {
-                            $subQuery->orWhere(function ($innerQuery) use ($condition) {
-                                $innerQuery->where('itemable_type', $condition['itemable_type'])
-                                    ->where('itemable_id', $condition['itemable_id']);
-                            });
-                        }
-                    });
-                }, 'items.itemable'])->get();
-
-                if ($laterInvoices->isNotEmpty() or auth()->user()?->hasRole('Super-Admin')) {
-                    $conflictingItems = [];
-                    foreach ($laterInvoices as $laterInvoice) {
-                        foreach ($laterInvoice->items as $item) {
-                            $itemName = $item->itemable->name ?? "ID: {$item->itemable_id}";
-                            $conflictingItems[] = __('Item')." '{$itemName}' ".__('in invoice #:number on :date', [
-                                'number' => convertToInt($laterInvoice->number),
-                                'date' => convertToGregorian($laterInvoice->date),
-                            ]);
-                        }
-                    }
-
-                    if (! empty($conflictingItems)) {
-                        $validator->errors()->add(
-                            'date',
-                            __('There are later buy invoices with common items:').' '.implode('; ', array_unique($conflictingItems))
-                        );
-                    }
-                }
-            }
-
         });
 
         return $validator;

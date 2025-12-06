@@ -43,13 +43,22 @@ class DocumentService
 
             $document = Document::create($data);
             self::syncDocumentable($document, $data['documentable'] ?? null);
-
+            if (! empty($data['approved_at']) && ! empty($data['approver_id'])) {
+                self::setApproveData($document);
+            }
             foreach ($transactions as $transactionData) {
                 DocumentService::createTransaction($document, $transactionData);
             }
         });
 
         return $document;
+    }
+
+    private static function setApproveData(Document $document): void
+    {
+        $document->approved_at = now();
+        $document->approver_id = Auth::id();
+        $document->save();
     }
 
     /**

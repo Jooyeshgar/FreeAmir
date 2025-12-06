@@ -122,4 +122,24 @@ class AncillaryCostController extends Controller
 
         return response()->json(['products' => $products]);
     }
+
+    public function changeStatus(AncillaryCost $ancillaryCost, string $status, AncillaryCostService $service)
+    {
+        if (! in_array($status, ['approve', 'unapprove'])) {
+            return redirect()->route('ancillary-costs.index')
+                ->with('error', __('Invalid status action.'));
+        }
+
+        try {
+            $service->changeAncillaryCostStatus($ancillaryCost, $status);
+
+            $message = $status === 'approve' ? __('Ancillary Cost approved successfully.') : __('Ancillary Cost unapproved successfully.');
+
+            return redirect()->route('ancillary-costs.index')
+                ->with('success', __($message));
+        } catch (Exception $e) {
+            return redirect()->route('ancillary-costs.index')
+                ->with('error', $e->getMessage());
+        }
+    }
 }
