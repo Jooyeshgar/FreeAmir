@@ -34,8 +34,10 @@ class StoreAncillaryCostRequest extends FormRequest
             $vatPrice = $total * ($this->input('vat') ?? 0) / 100;
             $total += $total * ($this->input('vat') ?? 0) / 100;
         }
+        $invoice = \App\Models\Invoice::find($this->input('invoice_id'));
 
         $this->merge([
+            'invoice_date' => $invoice?->date,
             'vatPrice' => convertToFloat($vatPrice),
             'amount' => convertToFloat($total),
             'type' => $this->input('type'),
@@ -55,7 +57,7 @@ class StoreAncillaryCostRequest extends FormRequest
             'customer_id' => 'required|integer|exists:customers,id',
             'vatPrice' => 'nullable|numeric|min:0',
             'vatPercentage' => 'nullable|numeric|min:0|max:100',
-            'date' => 'required|date',
+            'date' => ['required', 'date', 'after_or_equal:invoice_date'],
             'type' => ['required', Rule::in(array_column(AncillaryCostType::cases(), 'value'))],
             'ancillaryCosts' => 'required|array',
             'ancillaryCosts.*.product_id' => 'required|integer|exists:products,id',

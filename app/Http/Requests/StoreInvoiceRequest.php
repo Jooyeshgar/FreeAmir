@@ -6,6 +6,7 @@ use App\Enums\InvoiceType;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Service;
+use App\Services\InvoiceService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -79,7 +80,6 @@ class StoreInvoiceRequest extends FormRequest
                 return;
             }
 
-            $itemableConditions = [];
             $productIds = [];
             $serviceIds = [];
 
@@ -147,67 +147,24 @@ class StoreInvoiceRequest extends FormRequest
                     if ($morphType !== Product::class) {
                         continue;
                     }
-
-                    $itemableConditions[] = [
-                        'itemable_type' => $morphType,
-                        'itemable_id' => $transaction['item_id'],
-                    ];
-
                 }
 
-            }
+                if ($this->input('approve') && ! $invoice) {
+                    $invoicesExitance = InvoiceService::isThereAnyApprovedSubsequentInvoicesForProducts(
+                        $inputDate,
+                        $productIds
+                    );
 
-            if (! empty($itemableConditions)) {
-                $query = Invoice::where('invoice_type', InvoiceType::BUY)
-                    ->where('date', '>', $inputDate)
-                    ->whereHas('items', function ($q) use ($itemableConditions) {
-                        $q->where(function ($subQuery) use ($itemableConditions) {
-                            foreach ($itemableConditions as $condition) {
-                                $subQuery->orWhere(function ($innerQuery) use ($condition) {
-                                    $innerQuery->where('itemable_type', $condition['itemable_type'])
-                                        ->where('itemable_id', $condition['itemable_id']);
-                                });
-                            }
-                        });
-                    });
-
-                // Exclude the current invoice if editing
-                if ($invoice) {
-                    $query->where('id', '!=', $invoice->id);
-                }
-
-                $laterInvoices = $query->with(['items' => function ($q) use ($itemableConditions) {
-                    $q->where(function ($subQuery) use ($itemableConditions) {
-                        foreach ($itemableConditions as $condition) {
-                            $subQuery->orWhere(function ($innerQuery) use ($condition) {
-                                $innerQuery->where('itemable_type', $condition['itemable_type'])
-                                    ->where('itemable_id', $condition['itemable_id']);
-                            });
-                        }
-                    });
-                }, 'items.itemable'])->get();
-
-                if ($laterInvoices->isNotEmpty() or auth()->user()?->hasRole('Super-Admin')) {
-                    $conflictingItems = [];
-                    foreach ($laterInvoices as $laterInvoice) {
-                        foreach ($laterInvoice->items as $item) {
-                            $itemName = $item->itemable->name ?? "ID: {$item->itemable_id}";
-                            $conflictingItems[] = __('Item')." '{$itemName}' ".__('in invoice #:number on :date', [
-                                'number' => convertToInt($laterInvoice->number),
-                                'date' => convertToGregorian($laterInvoice->date),
-                            ]);
-                        }
-                    }
-
-                    if (! empty($conflictingItems)) {
+                    if ($invoicesExitance) {
                         $validator->errors()->add(
                             'date',
-                            __('There are later buy invoices with common items:').' '.implode('; ', array_unique($conflictingItems))
+                            __('Cannot approve this invoice because there are subsequent approved invoices with later dates.')
                         );
                     }
-                }
-            }
 
+                }
+
+            }
         });
 
         return $validator;

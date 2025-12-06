@@ -295,7 +295,13 @@
         {{ __('cancel') }}
     </a>
     <button id="submitForm" type="submit" class="btn text-white btn-primary rounded-md">
-        {{ __('save and close form') }} </button>
+        {{ __('save') }} </button>
+
+    @can('invoices.approve')
+        <button id="submitFormAndApprove" type="submit" name="approve" value="1"
+            class="btn text-white btn-primary rounded-md">
+            {{ __('save and approve') }} </button>
+    @endcan
 </div>
 
 @pushOnce('scripts')

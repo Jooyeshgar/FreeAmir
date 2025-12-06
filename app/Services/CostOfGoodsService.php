@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\InvoiceAncillaryCostStatus;
 use App\Enums\InvoiceType;
+use App\Models\AncillaryCost;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -98,6 +100,84 @@ class CostOfGoodsService
         }
     }
 
+    public static function refreshCOGAfterInvoiceItemsAfterUnapproval(Invoice $invoice)
+    {
+        if ($invoice->invoice_type !== InvoiceType::BUY) {
+            return;
+        }
+
+        foreach ($invoice->items as $invoiceItem) {
+            $product = $invoiceItem->itemable;
+
+            $lastInvoice = self::getPreviousInvoice($invoice, $product->id);
+            if ($lastInvoice) {
+                $lastInvoiceItem = $lastInvoice->items->where('itemable_id', $product->id)->first();
+                if ($lastInvoiceItem) {
+                    $invoiceItem->cog_after = $lastInvoiceItem->cog_after;
+                }
+            } else {
+                $invoiceItem->cog_after = 0;
+            }
+
+            $invoiceItem->save();
+        }
+    }
+
+    public static function refreshAverageCostAfterUnapproval(Invoice $invoice)
+    {
+        if ($invoice->invoice_type !== InvoiceType::BUY) {
+            return;
+        }
+
+        foreach ($invoice->items as $invoiceItem) {
+            $product = $invoiceItem->itemable;
+
+            $lastInvoice = self::getPreviousInvoice($invoice, $product->id);
+            if ($lastInvoice) {
+                $lastInvoiceItem = $lastInvoice->items->where('itemable_id', $product->id)->first();
+                if ($lastInvoiceItem) {
+                    $product->average_cost = $lastInvoiceItem->cog_after;
+                }
+            } else {
+                $product->average_cost = 0;
+            }
+
+            $product->save();
+        }
+    }
+
+    public static function refreshAverageCostAfterUnapprovingAncillaryCost(AncillaryCost $ancillaryCost)
+    {
+        if ($ancillaryCost->invoice === null) {
+            return;
+        }
+
+        $invoice = $ancillaryCost->invoice;
+        if ($invoice->invoice_type !== InvoiceType::BUY) {
+            return;
+        }
+
+        foreach ($invoice->items as $invoiceItem) {
+            $product = $invoiceItem->itemable;
+
+            $availableQuantity = (float) $invoiceItem->quantity_at;
+            $totalCosts = $invoiceItem->amount - ($invoiceItem->vat ?? 0); // total cost per product excluding VAT
+            $totalCosts -= $ancillaryCost->items->where('product_id', $product->id)->sum('amount') ?? 0; // without VAT
+
+            $previousInvoice = self::getPreviousInvoice($invoice, $product->id);
+
+            if ($previousInvoice) {
+                $previousInvoiceItem = $previousInvoice->items->where('itemable_id', $product->id)->first();
+                if ($previousInvoiceItem) {
+                    $totalCosts += $previousInvoiceItem->cog_after * $availableQuantity;
+                }
+            }
+
+            $product->average_cost = $totalCosts / ($availableQuantity + $invoiceItem->quantity);
+            $product->save();
+        }
+    }
+
     /**
      * Calculate gross profit for a sale invoice item.
      */
@@ -121,6 +201,7 @@ class CostOfGoodsService
     private static function getPreviousInvoice(Invoice $invoice, $productId)
     {
         return Invoice::where('number', '<', $invoice->number)
+            ->where('status', InvoiceAncillaryCostStatus::APPROVED)
             ->where('invoice_type', $invoice->invoice_type)
             ->whereHas('items', fn ($query) => $query->where('itemable_id', $productId)
                                                                             && $query->where('itemable_type', Product::class))
@@ -130,6 +211,7 @@ class CostOfGoodsService
     private static function getNextInvoice(Invoice $invoice, $productId)
     {
         return Invoice::where('number', '>', $invoice->number)
+            ->where('status', InvoiceAncillaryCostStatus::APPROVED)
             ->where('invoice_type', $invoice->invoice_type)
             ->whereHas('items', fn ($query) => $query->where('itemable_id', $productId)
                                                                             && $query->where('itemable_type', Product::class))
