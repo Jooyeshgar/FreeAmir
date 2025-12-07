@@ -355,7 +355,7 @@ class InvoiceService
             $invoice->update();
             self::unapproveAncillaryCostsOfInvoice($invoice);
             ProductService::subProductsQuantities($invoice->items->toArray(), $invoice->invoice_type);
-            CostOfGoodsService::refreshCOGAfterInvoiceItemsAfterUnapproval($invoice);
+            // CostOfGoodsService::refreshCOGAfterInvoiceItemsAfterUnapproval($invoice);
             CostOfGoodsService::refreshAverageCostAfterUnapproval($invoice);
         }
     }

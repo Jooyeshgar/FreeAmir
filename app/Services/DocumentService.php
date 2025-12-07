@@ -39,12 +39,12 @@ class DocumentService
         $data['company_id'] = session('active-company-id');
 
         $document = null;
-        DB::transaction(function () use ($data, $transactions, &$document) {
+        DB::transaction(function () use ($data, $transactions, $user, &$document) {
 
             $document = Document::create($data);
             self::syncDocumentable($document, $data['documentable'] ?? null);
             if (! empty($data['approved_at']) && ! empty($data['approver_id'])) {
-                self::setApproveData($document);
+                self::approveDocument($user, $document);
             }
             foreach ($transactions as $transactionData) {
                 DocumentService::createTransaction($document, $transactionData);
@@ -54,10 +54,17 @@ class DocumentService
         return $document;
     }
 
-    private static function setApproveData(Document $document): void
+    private static function approveDocument(User $user, Document $document): void
     {
         $document->approved_at = now();
-        $document->approver_id = Auth::id();
+        $document->approver_id = $user->id;
+        $document->save();
+    }
+
+    private static function unapproveDocument(User $user, Document $document): void
+    {
+        $document->approved_at = null;
+        $document->approver_id = $user->id;
         $document->save();
     }
 

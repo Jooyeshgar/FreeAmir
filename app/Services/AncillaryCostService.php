@@ -30,51 +30,39 @@ class AncillaryCostService
     /**
      * Create an ancillary cost with its items and distribute the amount across the related products.
      */
-    public static function createAncillaryCost(User $user, array $data, bool $approve = false)
+    public static function createAncillaryCost(User $user, array $data, bool $approved = false)
     {
         self::validateAncillaryCostData($data);
 
         $invoice = Invoice::findOrFail($data['invoice_id']);
 
-        if (! $approve) {
-            return self::createAncillaryCostWithoutApproval($data);
-        }
+        $ancillaryCost = self::createAncillaryCostWithoutApproval($data);
 
-        $type = AncillaryCostType::from($data['type']);
+        if ($approved) {
 
-        $documentData = [
-            'date' => $data['date'] ?? now()->toDateString(),
-            'title' => $type->label().' '.__('Invoice #').($invoice->number ?? ''),
-        ];
+            $type = AncillaryCostType::from($data['type']);
 
-        $transactionBuilder = new AncillaryCostTransactionBuilder($data);
-        $transactions = $transactionBuilder->build();
-
-        DB::transaction(function () use ($documentData, $type, $user, $data, $invoice, $transactions) {
-            $document = DocumentService::createDocument(
-                $user,
-                $documentData,
-                $transactions
-            );
-
-            $ancillaryCost = AncillaryCost::create([
-                'invoice_id' => $invoice->id,
-                'customer_id' => $data['customer_id'],
-                'company_id' => $data['company_id'],
+            $documentData = [
                 'date' => $data['date'] ?? now()->toDateString(),
-                'type' => $type,
-                'amount' => $data['amount'],
-                'vat' => $data['vatPrice'] ?? 0,
-                'document_id' => $document->id,
-            ]);
+                'title' => $type->label().' '.__('Invoice #').($invoice->number ?? ''),
+            ];
 
-            DocumentService::syncDocumentable($document, $ancillaryCost);
+            $transactionBuilder = new AncillaryCostTransactionBuilder($data);
+            $transactions = $transactionBuilder->build();
 
-            self::syncAncillaryCostItems($ancillaryCost, $data['ancillaryCosts'] ?? []);
+            DB::transaction(function () use ($documentData, $user, $invoice, $transactions, $ancillaryCost) {
+                $document = DocumentService::createDocument(
+                    $user,
+                    $documentData,
+                    $transactions
+                );
 
-            CostOfGoodsService::updateProductsAverageCost($invoice);
-            self::syncCOGAfterAncillarityCost($invoice);
-        });
+                DocumentService::syncDocumentable($document, $ancillaryCost);
+
+                CostOfGoodsService::updateProductsAverageCost($invoice);
+                self::syncCOGAfterAncillarityCost($invoice);
+            });
+        }
     }
 
     private static function createAncillaryCostWithoutApproval(array $data)
@@ -110,43 +98,37 @@ class AncillaryCostService
         }
     }
 
-    public static function updateAncillaryCost(AncillaryCost $ancillaryCost, array $data, bool $approve = false)
+    public static function updateAncillaryCost(User $user, AncillaryCost $ancillaryCost, array $data, bool $approve = false)
     {
         self::validateAncillaryCostData($data);
+        $ancillaryCost = self::updateAncillaryCostWithoutApproval($ancillaryCost, $data);
 
-        if (! $approve) {
-            return self::updateAncillaryCostWithoutApproval($ancillaryCost, $data);
+        if ($approve) {
+
+            DB::transaction(function () use ($ancillaryCost) {
+
+                $createdDocument = self::createDocumentFromAncillaryCostItems(auth()->user(), $ancillaryCost);
+
+                $ancillaryCost->update([
+                    'document_id' => $createdDocument->id,
+                ]);
+
+                CostOfGoodsService::updateProductsAverageCost($ancillaryCost->invoice);
+                self::syncCOGAfterAncillarityCost($ancillaryCost->invoice);
+            });
         }
+    }
 
+    private static function updateAncillaryCostWithoutApproval(AncillaryCost $ancillaryCost, array $data)
+    {
         DB::transaction(function () use ($ancillaryCost, $data) {
-
             $type = AncillaryCostType::from($data['type']);
-            $createdDocument = self::createDocumentFromAncillaryCostItems(auth()->user(), $ancillaryCost);
 
             $ancillaryCost->update([
                 'invoice_id' => $data['invoice_id'],
                 'customer_id' => $data['customer_id'],
                 'date' => $data['date'],
                 'type' => $type,
-                'amount' => $data['amount'],
-                'vat' => $data['vatPrice'] ?? 0,
-                'document_id' => $createdDocument->id,
-            ]);
-
-            self::syncAncillaryCostItems($ancillaryCost, $data['ancillaryCosts'] ?? []);
-            CostOfGoodsService::updateProductsAverageCost($ancillaryCost->invoice);
-            self::syncCOGAfterAncillarityCost($ancillaryCost->invoice);
-        });
-    }
-
-    private static function updateAncillaryCostWithoutApproval(AncillaryCost $ancillaryCost, array $data)
-    {
-        DB::transaction(function () use ($ancillaryCost, $data) {
-            $ancillaryCost->update([
-                'invoice_id' => $data['invoice_id'],
-                'customer_id' => $data['customer_id'],
-                'date' => $data['date'],
-                'type' => $data['type'],
                 'amount' => $data['amount'],
                 'vat' => $data['vatPrice'] ?? 0,
             ]);
