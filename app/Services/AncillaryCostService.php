@@ -259,7 +259,7 @@ class AncillaryCostService
                 $ancillaryCost->document_id = null;
             }
             $ancillaryCost->update();
-            CostOfGoodsService::refreshAverageCostAfterUnapprovingAncillaryCost($ancillaryCost);
+            CostOfGoodsService::updateProductsAverageCost($ancillaryCost->invoice);
             self::syncCOGAfterAncillarityCost($ancillaryCost->invoice);
         }
     }

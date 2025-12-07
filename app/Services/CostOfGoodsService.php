@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Enums\InvoiceAncillaryCostStatus;
 use App\Enums\InvoiceType;
-use App\Models\AncillaryCost;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -41,10 +40,17 @@ class CostOfGoodsService
         foreach ($invoice->items as $invoiceItem) {
             $product = $invoiceItem->itemable;
 
-            $availableQuantity = (float) $invoiceItem->quantity_at;
-            $totalCosts = $invoiceItem->amount - ($invoiceItem->vat ?? 0); // total cost per product excluding VAT
-            $totalCosts += $ancillaryCosts ? $ancillaryCosts->flatMap->items->where('product_id', $product->id)->sum('amount') : 0; // without VAT
             $previousInvoice = self::getPreviousInvoice($invoice, $product->id);
+
+            $availableQuantity = (float) $invoiceItem->quantity_at;
+
+            if ($invoice->status === InvoiceAncillaryCostStatus::APPROVED) {
+                $totalCosts = $invoiceItem->amount - ($invoiceItem->vat ?? 0); // total cost per product excluding VAT
+            } else {
+                $totalCosts = $previousInvoice->amount ?? 0 - ($previousInvoice->vat ?? 0);
+            }
+
+            $totalCosts += $ancillaryCosts ? $ancillaryCosts->where('status', InvoiceAncillaryCostStatus::APPROVED)->flatMap->items->where('product_id', $product->id)->sum('amount') : 0; // without VAT
 
             if ($previousInvoice) {
                 $previousInvoiceItem = $previousInvoice->items->where('itemable_id', $product->id)->first();
@@ -96,82 +102,6 @@ class CostOfGoodsService
             })->first();
 
             $product->average_cost = $lastInvoiceItem ? $lastInvoiceItem->cog_after : 0;
-            $product->save();
-        }
-    }
-
-    public static function refreshCOGAfterInvoiceItemsAfterUnapproval(Invoice $invoice)
-    {
-        if ($invoice->invoice_type !== InvoiceType::BUY) {
-            return;
-        }
-
-        foreach ($invoice->items as $invoiceItem) {
-            $product = $invoiceItem->itemable;
-
-            $lastInvoice = self::getPreviousInvoice($invoice, $product->id);
-            if ($lastInvoice) {
-                $lastInvoiceItem = $lastInvoice->items->where('itemable_id', $product->id)->first();
-                if ($lastInvoiceItem) {
-                    $invoiceItem->cog_after = $lastInvoiceItem->cog_after;
-                }
-            } else {
-                $invoiceItem->cog_after = 0;
-            }
-
-            $invoiceItem->save();
-        }
-    }
-
-    public static function refreshAverageCostAfterUnapproval(Invoice $invoice)
-    {
-        if ($invoice->invoice_type !== InvoiceType::BUY) {
-            return;
-        }
-
-        foreach ($invoice->items as $invoiceItem) {
-            $product = $invoiceItem->itemable;
-
-            $lastInvoice = self::getPreviousInvoice($invoice, $product->id);
-            if ($lastInvoice) {
-                $lastInvoiceItem = $lastInvoice->items->where('itemable_id', $product->id)->first();
-                if ($lastInvoiceItem) {
-                    $product->average_cost = $lastInvoiceItem->cog_after;
-                }
-            } else {
-                $product->average_cost = 0;
-            }
-
-            $product->save();
-        }
-    }
-
-    public static function refreshAverageCostAfterUnapprovingAncillaryCost(AncillaryCost $ancillaryCost)
-    {
-        if ($ancillaryCost->invoice === null) {
-            return;
-        }
-
-        $invoice = $ancillaryCost->invoice;
-        if ($invoice->invoice_type !== InvoiceType::BUY) {
-            return;
-        }
-
-        foreach ($invoice->items as $invoiceItem) {
-            $product = $invoiceItem->itemable;
-
-            $availableQuantity = (float) $invoiceItem->quantity_at;
-            $totalCosts = $invoiceItem->amount - ($invoiceItem->vat ?? 0); // total cost per product excluding VAT
-
-            $previousInvoice = self::getPreviousInvoice($invoice, $product->id);
-            if ($previousInvoice) {
-                $previousInvoiceItem = $previousInvoice->items->where('itemable_id', $product->id)->first();
-                if ($previousInvoiceItem) {
-                    $totalCosts += $previousInvoiceItem->cog_after * $availableQuantity;
-                }
-            }
-
-            $product->average_cost = $totalCosts / ($availableQuantity + $invoiceItem->quantity);
             $product->save();
         }
     }

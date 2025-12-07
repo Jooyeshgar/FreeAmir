@@ -18,6 +18,14 @@ use PDF;
 
 class InvoiceController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:invoice.view', ['only' => ['index']]);
+        $this->middleware('permission:invoice.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:invoice.edit', ['only' => ['edit', 'update']]);
+        $this->middleware('permission:invoice.delete', ['only' => ['destroy']]);
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -96,7 +104,13 @@ class InvoiceController extends Controller
         $invoiceData = $this->extractInvoiceData($validated);
         $items = $this->mapTransactionsToItems($validated['transactions']);
 
-        $result = $service->createInvoice(auth()->user(), $invoiceData, $items, $request->has('approve'));
+        $approved = false;
+        if ($request->has('approve')) {
+            $approved = true;
+            auth()->user()->can('invoice.approve');
+        }
+
+        $result = $service->createInvoice(auth()->user(), $invoiceData, $items, $approved);
 
         return redirect()
             ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type])
@@ -168,7 +182,15 @@ class InvoiceController extends Controller
         $invoiceData = $this->extractInvoiceData($validated);
         $items = $this->mapTransactionsToItems($validated['transactions']);
 
-        $result = $service->updateInvoice($invoice->id, $invoiceData, $items, $request->has('approve'));
+        InvoiceService::getEditDeleteStatus($invoice);
+
+        $approved = false;
+        if ($request->has('approve')) {
+            $approved = true;
+            auth()->user()->can('invoice.approve');
+        }
+
+        $result = $service->updateInvoice($invoice->id, $invoiceData, $items, $approved);
 
         return redirect()
             ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type])
@@ -178,6 +200,8 @@ class InvoiceController extends Controller
     public function destroy(Invoice $invoice)
     {
         try {
+            InvoiceService::getEditDeleteStatus($invoice);
+
             InvoiceService::deleteInvoice($invoice->id);
 
             return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('info', __('Invoice deleted successfully.'));

@@ -173,15 +173,12 @@
                             $totalSell = 0;
                             $totalBuy = 0;
 
-                            $historyItems = $product
-                                ->invoiceItems()
-                                ->whereHas('invoice', function ($q) {
-                                    $q->where('status', \App\Enums\InvoiceAncillaryCostStatus::APPROVED);
-                                })
-                                ->get()
-                                ->sortBy('date');
+                            $historyItems = $product->invoiceItems()->get()->sortBy('date');
 
                             foreach ($historyItems as $item) {
+                                if (!$item->invoice->status->isApproved()) {
+                                    continue;
+                                }
                                 if ($item->invoice->invoice_type === \App\Enums\InvoiceType::SELL) {
                                     $totalSell += $item->quantity;
                                 } elseif ($item->invoice->invoice_type === \App\Enums\InvoiceType::BUY) {
@@ -201,7 +198,7 @@
                                 }
                             @endphp
 
-                            <tr class="hover">
+                            <tr class="hover {{ !$item->invoice->status->isApproved() ? 'opacity-50' : '' }}">
                                 <td class="px-4 py-3">
                                     <span class="badge badge-ghost">
                                         {{ formatDate($item->invoice->date) }}
@@ -252,10 +249,14 @@
                                 </td>
 
                                 <td class="px-4 py-3 text-center">
-                                    <span
-                                        class="badge {{ $remaining < 0 ? 'badge-error' : ($remaining < $product->quantity_warning ? 'badge-warning' : 'badge-success') }} font-bold">
-                                        {{ formatNumber($remaining) }}
-                                    </span>
+                                    @if ($item->invoice->status->isApproved())
+                                        <span
+                                            class="badge {{ $remaining < 0 ? 'badge-error' : ($remaining < $product->quantity_warning ? 'badge-warning' : 'badge-success') }} font-bold">
+                                            {{ formatNumber($remaining) }}
+                                        </span>
+                                    @else
+                                        <span class="text-gray-400">-</span>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach

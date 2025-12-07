@@ -106,27 +106,6 @@ class DocumentService
     }
 
     /**
-     * Approve a document.
-     *
-     * @return bool
-     */
-    public static function approveDocument(Document $document)
-    {
-        $sum = $document->transactions()->sum('value');
-
-        if ($sum !== 0) {
-            throw ValidationException::withMessages([
-                'transactions' => ['The sum of transactions must be zero'],
-            ]);
-        }
-
-        $document->approved_at = now();
-        $document->save();
-
-        return true;
-    }
-
-    /**
      * Create a new transaction for a document.
      *
      * @return Transaction

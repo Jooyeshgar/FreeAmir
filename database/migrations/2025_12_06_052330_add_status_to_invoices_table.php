@@ -15,6 +15,7 @@ return new class extends Migration
             $table->enum('status', ['pending', 'approved', 'unapproved'])
                 ->default('pending')
                 ->after('invoice_type');
+            $table->dropColumn('active');
         });
     }
 
@@ -24,6 +25,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('invoices', function (Blueprint $table) {
+            $table->boolean('active')->default(0);
             $table->dropColumn('status');
         });
     }
