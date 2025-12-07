@@ -6,7 +6,6 @@ use App\Enums\InvoiceType;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Service;
-use App\Services\InvoiceService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -75,6 +74,7 @@ class StoreInvoiceRequest extends FormRequest
             $invoiceType = $this->input('invoice_type');
             $inputDate = $this->input('date');
             $invoice = $this->route('invoice');
+            $isApproved = $this->input('approve');
 
             if (! in_array($invoiceType, ['sell', 'buy'])) {
                 return;
@@ -112,7 +112,7 @@ class StoreInvoiceRequest extends FormRequest
                 }
 
                 // Product quantity Check in warehouse
-                if ($transaction['item_type'] === 'product' && isset($transaction['item_id']) && $transaction['quantity']) {
+                if ($transaction['item_type'] === 'product' && isset($transaction['item_id']) && $transaction['quantity'] && $isApproved) {
                     $product = Product::find($transaction['item_id']);
 
                     if (! $product) {
@@ -149,16 +149,34 @@ class StoreInvoiceRequest extends FormRequest
                     }
                 }
 
-                if ($this->input('approve') && ! $invoice) {
-                    $invoicesExitance = InvoiceService::isThereAnyApprovedSubsequentInvoicesForProducts(
-                        $inputDate,
-                        $productIds
-                    );
+                if ($this->input('approve')) {
+                    $approvedSubsequentInvoicesForProducts = Invoice::where('status', 'approved')
+                        ->where('date', '>', $inputDate)
+                        ->whereHas('items', function ($query) use ($productIds) {
+                            $query->whereIn('itemable_id', $productIds)
+                                ->where('itemable_type', Product::class);
+                        })
+                        ->exists();
 
-                    if ($invoicesExitance) {
+                    if ($approvedSubsequentInvoicesForProducts) {
                         $validator->errors()->add(
                             'date',
-                            __('Cannot approve this invoice because there are subsequent approved invoices with later dates.')
+                            __('There are approved subsequent invoices for the selected products.')
+                        );
+                    }
+
+                    $unapprovedSubsequentInvoicesForProducts = Invoice::where('status', '!=', 'approved')
+                        ->where('date', '<', $inputDate)
+                        ->whereHas('items', function ($query) use ($productIds) {
+                            $query->whereIn('itemable_id', $productIds)
+                                ->where('itemable_type', Product::class);
+                        })
+                        ->exists();
+
+                    if ($unapprovedSubsequentInvoicesForProducts) {
+                        $validator->errors()->add(
+                            'date',
+                            __('There are unapproved prior invoices for the selected products.')
                         );
                     }
 

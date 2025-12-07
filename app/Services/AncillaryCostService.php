@@ -169,7 +169,9 @@ class AncillaryCostService
         DB::transaction(function () use ($ancillaryCost) {
             $invoice = $ancillaryCost->invoice;
 
-            DocumentService::deleteDocument($ancillaryCost->document_id);
+            if ($ancillaryCost->document) {
+                DocumentService::deleteDocument($ancillaryCost->document_id);
+            }
 
             $ancillaryCost->items()->delete();
             $ancillaryCost->delete();
@@ -329,17 +331,42 @@ class AncillaryCostService
         return $document;
     }
 
-    public static function canChangeAncillaryCostStatus(AncillaryCost $ancillaryCost): bool
+    public static function getChangeStatusValidation(AncillaryCost $ancillaryCost): array
     {
         try {
             self::validateAncillaryCostExistance($ancillaryCost);
-            self::validateAncillaryCostInvoiceApproval($ancillaryCost);
-            self::validateRelatedAncillaryCostStatus($ancillaryCost, checkSubsequent: true);
-            self::validateRelatedAncillaryCostStatus($ancillaryCost, checkSubsequent: false);
+            $productIds = self::getProductIdsFromAncillaryCost($ancillaryCost);
 
-            return true;
-        } catch (Exception $e) {
-            return false;
+            self::validateAncillaryCostInvoiceApproval($ancillaryCost);
+            self::validateRelatedAncillaryCostStatus($ancillaryCost, checkSubsequent: true, productIds: $productIds);
+            self::validateRelatedAncillaryCostStatus($ancillaryCost, checkSubsequent: false, productIds: $productIds);
+            self::validateNoApprovedInvoicesAfterAncillaryCostWithSameProducts($ancillaryCost, $productIds);
+
+            return ['allowed' => true, 'reason' => null];
+        } catch (\Throwable $e) {
+            return ['allowed' => false, 'reason' => $e->getMessage()];
+        }
+    }
+
+    private static function getProductIdsFromAncillaryCost(AncillaryCost $ancillaryCost): array
+    {
+        $productIds = $ancillaryCost->items->pluck('product_id')->toArray();
+
+        if (empty($productIds)) {
+            throw new Exception(__('No products associated with this ancillary cost.'), 400);
+        }
+
+        return $productIds;
+    }
+
+    private static function validateNoApprovedInvoicesAfterAncillaryCostWithSameProducts(AncillaryCost $ancillaryCost, array $productIds): void
+    {
+        $query = Invoice::where('date', '>', $ancillaryCost->date)
+            ->where('status', '=', InvoiceAncillaryCostStatus::APPROVED)
+            ->whereHas('items', fn ($q) => $q->whereIn('itemable_id', $productIds)->where('itemable_type', Product::class));
+
+        if ($query->exists()) {
+            throw new Exception(__('Cannot change ancillary cost status because there are subsequent approved invoices for the same products. Please unapprove those invoices first.'), 400);
         }
     }
 
@@ -359,14 +386,8 @@ class AncillaryCostService
         }
     }
 
-    private static function validateRelatedAncillaryCostStatus(AncillaryCost $ancillaryCost, bool $checkSubsequent): void
+    private static function validateRelatedAncillaryCostStatus(AncillaryCost $ancillaryCost, bool $checkSubsequent, array $productIds): void
     {
-        $productIds = $ancillaryCost->items->pluck('product_id')->toArray();
-
-        if (empty($productIds)) {
-            return;
-        }
-
         $query = AncillaryCost::where('id', '!=', $ancillaryCost->id)
             ->where('date', $checkSubsequent ? '>' : '<', $ancillaryCost->date)
             ->whereHas('items', fn ($q) => $q->whereIn('product_id', $productIds))

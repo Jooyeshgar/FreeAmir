@@ -60,27 +60,25 @@
                                 @can('ancillary-costs.approve')
                                     @php
                                         $isApproved = $ancillaryCost->status?->isApproved();
-                                        $canChangeStatus = \App\Services\AncillaryCostService::canChangeAncillaryCostStatus(
+                                        $changeStatusValidation = \App\Services\AncillaryCostService::getChangeStatusValidation(
                                             $ancillaryCost,
                                         );
                                     @endphp
 
-                                    @if ($canChangeStatus)
+                                    @if ($changeStatusValidation['allowed'])
                                         <a href="{{ route('ancillary-costs.change-status', [$ancillaryCost, $isApproved ? 'unapprove' : 'approve']) }}"
                                             class="btn btn-sm {{ $isApproved ? 'btn-warning' : 'btn-success' }}">
                                             {{ __($isApproved ? 'Unapprove' : 'Approve') }}
                                         </a>
                                     @else
                                         @php
-                                            $tooltip = $isApproved
-                                                ? __('Cannot unapprove due to subsequent approved ancillary costs')
-                                                : __('Cannot approve due to subsequent unapproved ancillary costs');
                                             $btnClass = $isApproved ? 'btn-warning' : 'btn-success';
                                             $label = $isApproved ? __('Unapprove') : __('Approve');
                                         @endphp
-                                        <span class="tooltip" data-tip="{{ $tooltip }}">
+                                        <span class="tooltip" data-tip="{{ $changeStatusValidation['reason'] }}">
                                             <button class="btn btn-sm {{ $btnClass }} btn-disabled cursor-not-allowed"
-                                                disabled title="{{ $tooltip }}">{{ $label }}</button>
+                                                disabled
+                                                title="{{ $changeStatusValidation['reason'] }}">{{ $label }}</button>
                                         </span>
                                     @endif
                                 @endcan
@@ -95,7 +93,7 @@
                                     @if (!$ancillaryCost->status->isApproved())
                                         <a href="{{ route('ancillary-costs.edit', $ancillaryCost) }}"
                                             class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                        <form action="{{ route('ancillary-costs.destroy', $ancillaryCost->invoice) }}"
+                                        <form action="{{ route('ancillary-costs.destroy', $ancillaryCost) }}"
                                             method="POST" class="inline-block">
                                             @csrf
                                             @method('DELETE')

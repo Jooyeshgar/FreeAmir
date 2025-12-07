@@ -353,10 +353,10 @@ class InvoiceService
                 $invoice->document_id = null;
             }
             $invoice->update();
+            self::unapproveAncillaryCostsOfInvoice($invoice);
             ProductService::subProductsQuantities($invoice->items->toArray(), $invoice->invoice_type);
             CostOfGoodsService::refreshCOGAfterInvoiceItemsAfterUnapproval($invoice);
             CostOfGoodsService::refreshAverageCostAfterUnapproval($invoice);
-            self::unapproveAncillaryCostsOfInvoice($invoice);
         }
     }
 
@@ -366,10 +366,12 @@ class InvoiceService
             return;
         }
 
-        $ancillaryCostService = new AncillaryCostService;
+        $AncillaryCostService = new AncillaryCostService;
         foreach ($invoice->ancillaryCosts as $ancillaryCost) {
-            $ancillaryCost->status = InvoiceAncillaryCostStatus::UNAPPROVED;
-            $ancillaryCostService->changeAncillaryCostStatus($ancillaryCost, 'unapprove');
+            if (! $ancillaryCost->status->isApproved()) {
+                continue;
+            }
+            $AncillaryCostService->changeAncillaryCostStatus($ancillaryCost, 'unapprove');
         }
     }
 
@@ -420,21 +422,46 @@ class InvoiceService
             ->all();
     }
 
-    public static function canChangeInvoiceStatus(Invoice $invoice)
+    public static function getChangeStatusValidation(Invoice $invoice): array
     {
         try {
             self::validateInvoiceExistance($invoice);
-            self::validateRelatedInvoicesStatus($invoice, checkSubsequent: true);
-            self::validateRelatedInvoicesStatus($invoice, checkSubsequent: false);
+            $productIds = self::getProductIdsFromInvoice($invoice);
 
-            if ($invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {
-                throw new Exception(__('Invoice has associated approved ancillary costs and cannot be deleted/edited'), 400);
-            }
+            self::validateRelatedInvoicesStatus($invoice, checkSubsequent: true, productIds: $productIds);
+            self::validateRelatedInvoicesStatus($invoice, checkSubsequent: false, productIds: $productIds);
+            self::validateNoApprovedInvoicesWithSameProductsAfterInvoiceDate($invoice, $productIds);
 
-            return true;
-        } catch (Exception $e) {
-            return false;
+            return ['allowed' => true, 'reason' => null];
+        } catch (\Throwable $e) {
+            return ['allowed' => false, 'reason' => $e->getMessage()];
         }
+    }
+
+    private static function validateNoApprovedInvoicesWithSameProductsAfterInvoiceDate(Invoice $invoice, array $productIds): void
+    {
+        $exists = Invoice::where('status', InvoiceAncillaryCostStatus::APPROVED)
+            ->where('date', '>', $invoice->date)
+            ->whereHas('items', function ($query) use ($productIds) {
+                $query->where('itemable_type', Product::class)
+                    ->whereIn('itemable_id', $productIds);
+            })
+            ->exists();
+
+        if ($exists) {
+            throw new Exception(__('Cannot change invoice status because there are subsequent invoices those are approved for the same invoice products. Please unapprove those invoices first.'), 400);
+        }
+    }
+
+    private static function getProductIdsFromInvoice(Invoice $invoice): array
+    {
+        $productIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->toArray();
+
+        if (empty($productIds)) {
+            throw new Exception(__('No products associated with this invoice.'), 400);
+        }
+
+        return $productIds;
     }
 
     /**
@@ -450,14 +477,8 @@ class InvoiceService
     /**
      * Validate that related invoices have the correct status before changing an invoice's status.
      */
-    private static function validateRelatedInvoicesStatus(Invoice $invoice, bool $checkSubsequent = true): void
+    private static function validateRelatedInvoicesStatus(Invoice $invoice, bool $checkSubsequent, array $productIds): void
     {
-        $productIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->toArray();
-
-        if (empty($productIds)) {
-            return;
-        }
-
         $query = Invoice::where('number', '!=', $invoice->number)
             ->where('date', $checkSubsequent ? '>' : '<', $invoice->date)
             ->whereIn('invoice_type', [InvoiceType::BUY, InvoiceType::SELL])
@@ -482,19 +503,6 @@ class InvoiceService
                     ->whereIn('itemable_id', $productIds);
             })->get();
 
-        return $invoices->filter(fn ($inv) => ! self::canChangeInvoiceStatus($inv))->values()->all();
-    }
-
-    public static function isThereAnyApprovedSubsequentInvoicesForProducts($date, array $productIds): bool
-    {
-        $exists = Invoice::where('status', InvoiceAncillaryCostStatus::APPROVED)
-            ->where('date', '>=', $date)
-            ->whereHas('items', function ($query) use ($productIds) {
-                $query->where('itemable_type', Product::class)
-                    ->whereIn('itemable_id', $productIds);
-            })
-            ->exists();
-
-        return $exists;
+        return $invoices->filter(fn ($inv) => ! self::getChangeStatusValidation($inv)['allowed'])->values()->all();
     }
 }

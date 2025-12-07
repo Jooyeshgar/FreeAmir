@@ -109,27 +109,24 @@
                                 @can('invoices.approve')
                                     @php
                                         $isApproved = $invoice->status?->isApproved();
-                                        $canChangeStatus = \App\Services\InvoiceService::canChangeInvoiceStatus(
+                                        $changeStatusValidation = \App\Services\InvoiceService::getChangeStatusValidation(
                                             $invoice,
                                         );
                                     @endphp
 
-                                    @if ($canChangeStatus)
+                                    @if ($changeStatusValidation['allowed'])
                                         <a href="{{ route('invoices.change-status', [$invoice, $isApproved ? 'unapprove' : 'approve']) }}"
                                             class="btn btn-sm {{ $isApproved ? 'btn-warning' : 'btn-success' }}">
                                             {{ __($isApproved ? 'Unapprove' : 'Approve') }}
                                         </a>
                                     @else
                                         @php
-                                            $tooltip = $isApproved
-                                                ? __('Cannot unapprove due to subsequent unapproved invoices')
-                                                : __('Cannot approve due to subsequent unapproved invoices');
                                             $btnClass = $isApproved ? 'btn-warning' : 'btn-success';
                                             $label = $isApproved ? __('Unapprove') : __('Approve');
                                         @endphp
-                                        <span class="tooltip" data-tip="{{ $tooltip }}">
+                                        <span class="tooltip" data-tip="{{ $changeStatusValidation['reason'] }}">
                                             <button class="btn btn-sm {{ $btnClass }} btn-disabled cursor-not-allowed"
-                                                disabled title="{{ $tooltip }}">{{ $label }}</button>
+                                                disabled title="{{ $changeStatusValidation['reason'] }}">{{ $label }}</button>
                                         </span>
                                     @endif
                                 @endcan

@@ -162,10 +162,8 @@ class CostOfGoodsService
 
             $availableQuantity = (float) $invoiceItem->quantity_at;
             $totalCosts = $invoiceItem->amount - ($invoiceItem->vat ?? 0); // total cost per product excluding VAT
-            $totalCosts -= $ancillaryCost->items->where('product_id', $product->id)->sum('amount') ?? 0; // without VAT
 
             $previousInvoice = self::getPreviousInvoice($invoice, $product->id);
-
             if ($previousInvoice) {
                 $previousInvoiceItem = $previousInvoice->items->where('itemable_id', $product->id)->first();
                 if ($previousInvoiceItem) {
