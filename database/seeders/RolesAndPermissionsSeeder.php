@@ -9,69 +9,218 @@ use Spatie\Permission\Models\Role;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        // Reset cached roles and permissions
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        $permissions = [
+            'home.view',
+            'home.subject-detail',
 
-        Permission::create(['name' => 'home.*']);
-        Permission::create(['name' => 'subjects.*']);
-        Permission::create(['name' => 'documents.*']);
-        Permission::create(['name' => 'products.*']);
-        Permission::create(['name' => 'product-groups.*']);
-        Permission::create(['name' => 'customers.*']);
-        Permission::create(['name' => 'customer-groups.*']);
-        Permission::create(['name' => 'companies.*']);
-        Permission::create(['name' => 'change-company.*']);
-        Permission::create(['name' => 'bank-accounts.*']);
-        Permission::create(['name' => 'banks.*']);
-        Permission::create(['name' => 'invoices.*']);
-        Permission::create(['name' => 'invoices.approve']);
-        Permission::create(['name' => 'ancillary-costs.*']);
-        Permission::create(['name' => 'ancillary-costs.approve']);
-        Permission::create(['name' => 'management.*']);
-        Permission::create(['name' => 'management.users.*']);
-        Permission::create(['name' => 'management.permissions.*']);
-        Permission::create(['name' => 'management.roles.*']);
-        Permission::create(['name' => 'management.configs.*']);
-        Permission::create(['name' => 'reports.*']);
-        Permission::create(['name' => 'reports.ledger']);
-        Permission::create(['name' => 'reports.journal']);
-        Permission::create(['name' => 'reports.sub-ledger']);
-        Permission::create(['name' => 'reports.result']);
+            'subjects.index',
+            'subjects.create',
+            'subjects.store',
+            'subjects.show',
+            'subjects.edit',
+            'subjects.update',
+            'subjects.destroy',
+            'subjects.search',
 
-        $role = Role::create(['name' => 'Super-Admin']);
-        $role->givePermissionTo(Permission::all());
+            'documents.index',
+            'documents.create',
+            'documents.store',
+            'documents.show',
+            'documents.edit',
+            'documents.update',
+            'documents.destroy',
+            'documents.duplicate',
 
-        $role = Role::create(['name' => 'Acountant']);
-        $role->givePermissionTo([Permission::where('name', 'NOT LIKE', '%management%')->get(), 'invoices.approve']);
+            'transactions.index',
+            'transactions.show',
 
-        $role = Role::create(['name' => 'Warehousekeeper']);
-        $role->givePermissionTo(Permission::where('name', 'LIKE', '%products%')
-            ->orWhere('name', 'LIKE', '%product-groups%')
-            ->orWhere('name', 'LIKE', '%home%')
-            ->get());
+            'products.index',
+            'products.create',
+            'products.store',
+            'products.show',
+            'products.edit',
+            'products.update',
+            'products.destroy',
 
-        $role = Role::create(['name' => 'Seller']);
-        $role->givePermissionTo(Permission::where('name', 'LIKE', '%invoices%')
-            ->orWhere('name', 'LIKE', '%ancillary-costs%')
-            ->orWhere('name', 'LIKE', '%customers%')
-            ->orWhere('name', 'LIKE', '%home%')
-            ->where('name', 'NOT LIKE', 'invoices.approve')
-            ->where('name', 'NOT LIKE', 'ancillary-costs.approve')
-            ->get());
+            'product-groups.index',
+            'product-groups.create',
+            'product-groups.store',
+            'product-groups.show',
+            'product-groups.edit',
+            'product-groups.update',
+            'product-groups.destroy',
 
-        $admin = User::create([
-            'name' => 'admin',
-            'email' => 'admin@example.com',
-            'password' => bcrypt('password'),
-        ]);
+            'services.index',
+            'services.create',
+            'services.store',
+            'services.show',
+            'services.edit',
+            'services.update',
+            'services.destroy',
 
-        $admin->companies()->attach(1);
+            'service-groups.index',
+            'service-groups.create',
+            'service-groups.store',
+            'service-groups.show',
+            'service-groups.edit',
+            'service-groups.update',
+            'service-groups.destroy',
 
+            'customers.index',
+            'customers.create',
+            'customers.store',
+            'customers.show',
+            'customers.edit',
+            'customers.update',
+            'customers.destroy',
+
+            'customer-groups.index',
+            'customer-groups.create',
+            'customer-groups.store',
+            'customer-groups.show',
+            'customer-groups.edit',
+            'customer-groups.update',
+            'customer-groups.destroy',
+
+            'companies.index',
+            'companies.create',
+            'companies.store',
+            'companies.show',
+            'companies.edit',
+            'companies.update',
+            'companies.destroy',
+            'change-company',
+
+            'bank-accounts.index',
+            'bank-accounts.create',
+            'bank-accounts.store',
+            'bank-accounts.show',
+            'bank-accounts.edit',
+            'bank-accounts.update',
+            'bank-accounts.destroy',
+
+            'banks.index',
+            'banks.create',
+            'banks.store',
+            'banks.show',
+            'banks.edit',
+            'banks.update',
+            'banks.destroy',
+
+            'invoices.index',
+            'invoices.create',
+            'invoices.store',
+            'invoices.show',
+            'invoices.edit',
+            'invoices.update',
+            'invoices.destroy',
+            'invoices.print',
+            'invoices.change-status',
+            'invoices.search-customer',
+            'invoices.search-product-service',
+            'invoices.approve',
+
+            'ancillary-costs.index',
+            'ancillary-costs.create',
+            'ancillary-costs.store',
+            'ancillary-costs.edit',
+            'ancillary-costs.update',
+            'ancillary-costs.destroy',
+            'ancillary-costs.change-status',
+            'ancillary-costs.get-products',
+            'ancillary-costs.approve',
+
+            'management.users.index',
+            'management.users.create',
+            'management.users.store',
+            'management.users.show',
+            'management.users.edit',
+            'management.users.update',
+            'management.users.destroy',
+
+            'management.permissions.index',
+            'management.permissions.create',
+            'management.permissions.store',
+            'management.permissions.edit',
+            'management.permissions.update',
+            'management.permissions.destroy',
+
+            'management.roles.index',
+            'management.roles.create',
+            'management.roles.store',
+            'management.roles.edit',
+            'management.roles.update',
+            'management.roles.destroy',
+
+            'management.configs.index',
+            'management.configs.create',
+            'management.configs.store',
+            'management.configs.show',
+            'management.configs.edit',
+            'management.configs.update',
+            'management.configs.destroy',
+
+            'reports.ledger',
+            'reports.journal',
+            'reports.sub-ledger',
+            'reports.documents',
+            'reports.result',
+        ];
+
+        foreach ($permissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission]);
+        }
+
+        $superAdmin = Role::firstOrCreate(['name' => 'Super-Admin']);
+        $superAdmin->syncPermissions(Permission::all());
+
+        $accountant = Role::firstOrCreate(['name' => 'Accountant']);
+
+        $accountantPermissions = Permission::where('name', 'NOT LIKE', 'management.%')->pluck('name')->toArray();
+
+        $accountant->syncPermissions($accountantPermissions);
+
+        $warehouse = Role::firstOrCreate(['name' => 'Warehousekeeper']);
+
+        $warehousePermissions = Permission::where(function ($q) {
+            $q->where('name', 'LIKE', 'products.%')
+                ->orWhere('name', 'LIKE', 'product-groups.%')
+                ->orWhere('name', 'LIKE', 'home.%');
+        })
+            ->pluck('name')
+            ->toArray();
+
+        $warehouse->syncPermissions($warehousePermissions);
+
+        $seller = Role::firstOrCreate(['name' => 'Seller']);
+
+        $sellerPermissions = Permission::where(function ($q) {
+            $q->where('name', 'LIKE', 'invoices.%')
+                ->orWhere('name', 'LIKE', 'ancillary-costs.%')
+                ->orWhere('name', 'LIKE', 'customers.%')
+                ->orWhere('name', 'LIKE', 'home.%');
+        })
+            ->whereNotIn('name', [
+                'invoices.approve',
+                'ancillary-costs.approve',
+            ])
+            ->pluck('name')
+            ->toArray();
+
+        $seller->syncPermissions($sellerPermissions);
+
+        $admin = User::firstOrCreate(
+            ['email' => 'admin@example.com'],
+            [
+                'name' => 'admin',
+                'password' => bcrypt('password'),
+            ]
+        );
+
+        $admin->companies()->sync([1]);
         $admin->assignRole('Super-Admin');
     }
 }
