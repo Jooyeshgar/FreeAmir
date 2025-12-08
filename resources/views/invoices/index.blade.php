@@ -89,7 +89,7 @@
                                     @endif
                                 @else
                                     <span class="text-gray-500">
-                                        <span>{{ formatDocumentNumber($invoice->document->number) ?? '' }}</span>
+                                        <span>{{ formatDocumentNumber($invoice->document?->number) ?? '' }}</span>
                                     </span>
                                 @endcan
                             </td>
@@ -126,7 +126,8 @@
                                         @endphp
                                         <span class="tooltip" data-tip="{{ $changeStatusValidation['reason'] }}">
                                             <button class="btn btn-sm {{ $btnClass }} btn-disabled cursor-not-allowed"
-                                                disabled title="{{ $changeStatusValidation['reason'] }}">{{ $label }}</button>
+                                                disabled
+                                                title="{{ $changeStatusValidation['reason'] }}">{{ $label }}</button>
                                         </span>
                                     @endif
                                 @endcan
