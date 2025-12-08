@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\InvoiceAncillaryCostStatus;
 use App\Enums\InvoiceType;
 use App\Models\Product;
 use Exception;
@@ -219,5 +220,48 @@ class ProductService
         if (! empty($prepared)) {
             $product->productWebsites()->createMany($prepared);
         }
+    }
+
+    public function unapprovedQuantity(Product $product)
+    {
+        $sum = fn ($type) => $product->invoiceItems()
+            ->whereHas('invoice', fn ($q) => $q->where('invoice_type', $type)
+                ->where('status', '!=', InvoiceAncillaryCostStatus::APPROVED)
+            )
+            ->sum('quantity');
+
+        return $sum(InvoiceType::BUY) - $sum(InvoiceType::SELL);
+    }
+
+    public function lastApprovedBuyInvoiceItemCOG(Product $product)
+    {
+        $item = $product->invoiceItems()
+            ->whereHas('invoice', fn ($q) => $q->where('invoice_type', 'buy')
+                ->where('status', InvoiceAncillaryCostStatus::APPROVED)
+            )
+            ->with('invoice:id,date')
+            ->get()
+            ->sortByDesc(fn ($item) => $item->invoice->date)
+            ->first();
+
+        if (! $item) {
+            return 0;
+        }
+
+        $itemPrice = $item->unit_price ?? 0;
+
+        $ancillaryCostsSum = \App\Models\AncillaryCostItem::whereHas('ancillaryCost', function ($q) use ($item) {
+            $q->where('invoice_id', $item->invoice_id)
+                ->where('status', InvoiceAncillaryCostStatus::APPROVED);
+        })
+            ->where('product_id', $product->id)
+            ->sum('amount');
+
+        return $itemPrice + ($ancillaryCostsSum / $item->quantity);
+    }
+
+    public function salesProfit(Product $product): float
+    {
+        return $this->subjectService->sumSubject($product->incomeSubject->code) - $product->average_cost;
     }
 }

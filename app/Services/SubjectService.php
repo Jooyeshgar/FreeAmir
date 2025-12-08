@@ -6,6 +6,13 @@ use App\Models\Subject;
 
 class SubjectService
 {
+    public static function sumSubject($code): int
+    {
+        $subject = Subject::with(['transactions', 'children.transactions'])->where('code', $code)->first();
+
+        return $subject->transactions->merge($subject->children->flatMap->transactions)->sum('amount');
+    }
+
     /**
      * Create a new Subject with only the required inputs.
      *

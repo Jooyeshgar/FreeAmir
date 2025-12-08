@@ -47,6 +47,7 @@
                         <th class="px-4 py-2">{{ __('Product Code') }}</th>
                         <th class="px-4 py-2">{{ __('Name') }}</th>
                         <th class="px-4 py-2">{{ __('Quantity') }}</th>
+                        <th class="px-4 py-2">{{ __('Unapproved Quantity') }}</th>
                         <th class="px-4 py-2">{{ __('Average Cost') }}</th>
                         <th class="px-4 py-2">{{ __('Sell price') }}</th>
                         <th class="px-4 py-2">{{ __('VAT') }}</th>
@@ -64,6 +65,7 @@
                                     {{ $product->name }}</a>
                             </td>
                             <td class="px-4 py-2">{{ convertToFarsi($product->quantity) }}</td>
+                            <td class="px-4 py-2">{{ formatNumber($product->unapprovedQuantity ?? 0) }}</td>
                             <td class="px-4 py-2">{{ formatNumber($product->average_cost) }}</td>
                             <td class="px-4 py-2">{{ formatNumber($product->selling_price) }}</td>
                             <td class="px-4 py-2">{{ formatNumber($product->vat) }}%</td>
