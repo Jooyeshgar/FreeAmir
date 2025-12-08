@@ -20,10 +20,10 @@ class InvoiceController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:invoice.view', ['only' => ['index']]);
-        $this->middleware('permission:invoice.create', ['only' => ['create', 'store']]);
-        $this->middleware('permission:invoice.edit', ['only' => ['edit', 'update']]);
-        $this->middleware('permission:invoice.delete', ['only' => ['destroy']]);
+        $this->middleware('permission:invoices.view', ['only' => ['index']]);
+        $this->middleware('permission:invoices.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:invoices.edit', ['only' => ['edit', 'update']]);
+        $this->middleware('permission:invoices.delete', ['only' => ['destroy']]);
     }
 
     /**
@@ -107,7 +107,7 @@ class InvoiceController extends Controller
         $approved = false;
         if ($request->has('approve')) {
             $approved = true;
-            auth()->user()->can('invoice.approve');
+            auth()->user()->can('invoices.approve');
         }
 
         $result = $service->createInvoice(auth()->user(), $invoiceData, $items, $approved);
@@ -187,7 +187,7 @@ class InvoiceController extends Controller
         $approved = false;
         if ($request->has('approve')) {
             $approved = true;
-            auth()->user()->can('invoice.approve');
+            auth()->user()->can('invoices.approve');
         }
 
         $result = $service->updateInvoice($invoice->id, $invoiceData, $items, $approved);
