@@ -68,7 +68,7 @@ class ProductController extends Controller
 
     public function show(Product $product)
     {
-        $product->load('productgroup');
+        $product->load('productgroup', 'invoiceItems.invoice');
 
         return view('products.show', compact('product'));
     }

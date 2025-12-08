@@ -13,10 +13,12 @@ return new class extends Migration
     {
         Schema::table('invoices', function (Blueprint $table) {
             $table->enum('status', ['pending', 'approved', 'unapproved'])
-                ->default('pending')
+                ->default('approved')
                 ->after('invoice_type');
             $table->dropColumn('active');
         });
+
+        DB::table('invoices')->update(['status' => 'approved']);
     }
 
     /**

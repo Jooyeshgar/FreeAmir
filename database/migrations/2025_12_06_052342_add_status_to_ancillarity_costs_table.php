@@ -15,6 +15,8 @@ return new class extends Migration
             $table->enum('status', ['pending', 'approved', 'unapproved'])
                 ->default('pending');
         });
+
+        DB::table('ancillary_costs')->update(['status' => 'approved']);
     }
 
     /**
