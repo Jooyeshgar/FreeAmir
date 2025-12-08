@@ -7,7 +7,7 @@ use DB;
 
 class CustomerService
 {
-    public function __construct(private readonly SubjectCreatorService $subjectCreator) {}
+    public function __construct(private readonly SubjectService $subjectService) {}
 
     public function create(array $data): Customer
     {
@@ -38,8 +38,6 @@ class CustomerService
         });
     }
 
-
-
     protected function syncSubject(Customer $customer): void
     {
         $companyId = $customer->company_id ?? session('active-company-id');
@@ -48,7 +46,7 @@ class CustomerService
         $subject = $customer->subject;
 
         if (! $subject) {
-            $subject = $this->subjectCreator->createSubject([
+            $subject = $this->subjectService->createSubject([
                 'name' => $customer->name,
                 'parent_id' => $parentId,
                 'company_id' => $companyId,
@@ -61,7 +59,7 @@ class CustomerService
             }
         } else {
             // Use the dedicated editor to handle name/parent changes and code regeneration
-            $subject = $this->subjectCreator->editSubject($subject, [
+            $subject = $this->subjectService->editSubject($subject, [
                 'name' => $customer->name,
                 'parent_id' => $parentId,
             ]);

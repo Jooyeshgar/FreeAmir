@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\Subject;
 
-class SubjectCreatorService
+class SubjectService
 {
     /**
      * Create a new Subject with only the required inputs.
@@ -16,7 +16,7 @@ class SubjectCreatorService
     public function createSubject(array $data): Subject
     {
         $name = $data['name'] ?? null;
-        if (!$name) {
+        if (! $name) {
             throw new \InvalidArgumentException('The name field is required.');
         }
 
@@ -26,7 +26,7 @@ class SubjectCreatorService
         }
 
         $companyId = $data['company_id'] ?? session('active-company-id');
-        if (!$companyId) {
+        if (! $companyId) {
             throw new \InvalidArgumentException('The company_id is required or must be available in session.');
         }
 
@@ -57,7 +57,7 @@ class SubjectCreatorService
      */
     public function editSubject(Subject $subject, array $data): Subject
     {
-        if (!$subject->exists) {
+        if (! $subject->exists) {
             throw new \InvalidArgumentException(__('Subject does not exist.'));
         }
 
@@ -80,7 +80,7 @@ class SubjectCreatorService
                 $newParent = Subject::withoutGlobalScopes()
                     ->where('company_id', $companyId)
                     ->find($newParentId);
-                if (!$newParent) {
+                if (! $newParent) {
                     throw new \InvalidArgumentException(__('New parent subject not found in the given company.'));
                 }
             }
@@ -98,7 +98,7 @@ class SubjectCreatorService
             $this->updateDescendantCodes($subject);
         } else {
             $allowedFields = array_intersect_key($data, array_flip(['name', 'type']));
-            if (!empty($allowedFields)) {
+            if (! empty($allowedFields)) {
                 $subject->update($allowedFields);
             }
         }
@@ -115,8 +115,8 @@ class SubjectCreatorService
 
         foreach ($children as $child) {
             $childOwnPortion = substr($child->code, -3);
-            $newCode = $subject->code . $childOwnPortion;
-            
+            $newCode = $subject->code.$childOwnPortion;
+
             $child->update(['code' => $newCode]);
 
             if ($child->hasChildren()) {
@@ -132,10 +132,10 @@ class SubjectCreatorService
     {
         // Sanitize the code portion (remove any non-numeric characters)
         $codePortion = preg_replace('/[^0-9]/', '', $codePortion);
-        
+
         if ($parentId) {
             $parent = Subject::withoutGlobalScopes()->where('company_id', $companyId)->find($parentId);
-            if (!$parent) {
+            if (! $parent) {
                 throw new \InvalidArgumentException(__('Parent subject not found in the given company.'));
             }
 
@@ -145,14 +145,14 @@ class SubjectCreatorService
             }
             $codePortion = str_pad($codePortion, 3, '0', STR_PAD_LEFT);
 
-            return $parent->code . $codePortion;
+            return $parent->code.$codePortion;
         }
 
         // Root subject - ensure it's 3 digits
         if (strlen($codePortion) > 3) {
             throw new \InvalidArgumentException('Root subject code cannot exceed 3 digits.');
         }
-        
+
         return str_pad($codePortion, 3, '0', STR_PAD_LEFT);
     }
 
@@ -181,7 +181,7 @@ class SubjectCreatorService
     {
         if ($parentId) {
             $parent = Subject::withoutGlobalScopes()->where('company_id', $companyId)->find($parentId);
-            if (!$parent) {
+            if (! $parent) {
                 throw new \InvalidArgumentException('Parent subject not found in the given company.');
             }
 
@@ -194,14 +194,15 @@ class SubjectCreatorService
 
             if ($lastChild) {
                 $childPart = substr($lastChild->code, -3);
-                $next = (int)$childPart + 1;
+                $next = (int) $childPart + 1;
                 if ($next > 999) {
                     throw new \Exception("Maximum of 999 children reached for parent {$parentCode}");
                 }
-                return $parentCode . str_pad($next, 3, '0', STR_PAD_LEFT);
+
+                return $parentCode.str_pad($next, 3, '0', STR_PAD_LEFT);
             }
 
-            return $parentCode . '001';
+            return $parentCode.'001';
         }
 
         // Root subject generation
@@ -213,7 +214,7 @@ class SubjectCreatorService
 
         $next = 1;
         if ($lastRoot) {
-            $next = (int)$lastRoot->code + 1;
+            $next = (int) $lastRoot->code + 1;
             if ($next > 999) {
                 throw new \Exception('Maximum of 999 root subjects reached');
             }

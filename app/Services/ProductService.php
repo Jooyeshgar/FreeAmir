@@ -8,7 +8,7 @@ use Exception;
 
 class ProductService
 {
-    public function __construct(private readonly SubjectCreatorService $subjectCreator) {}
+    public function __construct(private readonly SubjectService $subjectService) {}
 
     public function create(array $data): Product
     {
@@ -156,7 +156,7 @@ class ProductService
             $targetName = $product->name;
 
             if (! $subject) {
-                $subject = $this->subjectCreator->createSubject([
+                $subject = $this->subjectService->createSubject([
                     'name' => $targetName,
                     'parent_id' => $parentId,
                     'company_id' => $companyId,

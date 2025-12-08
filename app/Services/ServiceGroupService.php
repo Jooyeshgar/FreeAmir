@@ -6,7 +6,7 @@ use App\Models\ServiceGroup;
 
 class ServiceGroupService
 {
-    public function __construct(private readonly SubjectCreatorService $subjectCreator) {}
+    public function __construct(private readonly SubjectService $subjectService) {}
 
     public function create(array $data): ServiceGroup
     {
@@ -50,7 +50,7 @@ class ServiceGroupService
         $subject = $serviceGroup->$relation;
 
         if (! $subject) {
-            $subject = $this->subjectCreator->createSubject([
+            $subject = $this->subjectService->createSubject([
                 'name' => $serviceGroup->name,
                 'parent_id' => $parentId,
                 'company_id' => $companyId,
