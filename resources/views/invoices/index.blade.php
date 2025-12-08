@@ -76,8 +76,8 @@
                                 <span class="text-xs text-gray-500">{{ $invoice->document->title ?? '' }}</span>
                             </td>
                             <td class="px-4 py-2">
-                                @can('documents.show')
-                                    @if ($invoice->document_id)
+                                @if ($invoice->document_id)
+                                    @can('documents.show')
                                         <a href="{{ route('documents.show', $invoice->document_id) }}">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none"
                                                 viewBox="0 0 24 24" stroke="currentColor">
@@ -86,11 +86,13 @@
                                             </svg>
                                             {{ formatDocumentNumber($invoice->document->number) ?? '' }}
                                         </a>&nbsp;
+                                    @else
+                                        <span class="text-gray-500">
+                                            <span>{{ formatDocumentNumber($invoice->document->number) ?? '' }}</span>
+                                        </span>
                                     @endif
                                 @else
-                                    <span class="text-gray-500">
-                                        <span>{{ formatDocumentNumber($invoice->document?->number) ?? '' }}</span>
-                                    </span>
+                                    <span class="text-gray-500"></span>
                                 @endcan
                             </td>
                             <td class="px-4 py-2">{{ isset($invoice->date) ? formatDate($invoice->date) : '' }}</td>
