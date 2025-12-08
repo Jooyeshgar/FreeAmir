@@ -93,6 +93,11 @@ class AncillaryCostController extends Controller
         $validated = $request->validated();
         $validated['company_id'] = session('active-company-id');
 
+        $validatedInvoicesId = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing()->pluck('id')->toArray();
+        if (! in_array($validated['invoice_id'], $validatedInvoicesId)) {
+            throw new Exception(__('Ancillary Cost cannot be created.'), 400);
+        }
+
         $approved = false;
         if ($request->has('approve')) {
             $approved = true;
@@ -150,9 +155,7 @@ class AncillaryCostController extends Controller
                 ->with('error', __('Invalid status action.'));
         }
 
-        if ($status === 'approve') {
-            auth()->user()->can('ancillary-costs.approve');
-        }
+        auth()->user()->can('ancillary-costs.approve');
 
         try {
             $service->changeAncillaryCostStatus($ancillaryCost, $status);

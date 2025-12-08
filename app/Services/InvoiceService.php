@@ -461,12 +461,26 @@ class InvoiceService
      */
     private static function validateRelatedInvoicesStatus(Invoice $invoice, bool $checkSubsequent, array $productIds): void
     {
+        $comparison = function ($q) use ($invoice, $checkSubsequent) {
+            $operator = $checkSubsequent ? '>' : '<';
+
+            $q->where('date', $operator, $invoice->date)
+                ->orWhere(function ($sub) use ($invoice, $operator) {
+                    $sub->where('date', $invoice->date)
+                        ->where('number', $operator, $invoice->number);
+                });
+        };
+
         $query = Invoice::where('number', '!=', $invoice->number)
-            ->where('date', $checkSubsequent ? '>' : '<', $invoice->date)
+            ->where($comparison)
             ->whereIn('invoice_type', [InvoiceType::BUY, InvoiceType::SELL])
             ->whereHas('items', fn ($q) => $q->where('itemable_type', Product::class)
-                ->whereIn('itemable_id', $productIds))
-            ->where('status', $checkSubsequent ? '=' : '!=', InvoiceAncillaryCostStatus::APPROVED);
+                ->whereIn('itemable_id', $productIds)
+            )
+            ->where('status',
+                $checkSubsequent ? InvoiceAncillaryCostStatus::APPROVED
+                                 : '!=', InvoiceAncillaryCostStatus::APPROVED
+            );
 
         if ($query->exists()) {
             $message = $checkSubsequent
@@ -479,6 +493,10 @@ class InvoiceService
 
     public static function notAllowedInvoiceForAncillaryCosts(Invoice $invoice, array $productIds): array
     {
+        if (! $invoice->status->isApproved()) {
+            return [];
+        }
+
         $invoices = Invoice::where('date', '>=', $invoice->date)
             ->whereHas('items', function ($query) use ($productIds) {
                 $query->where('itemable_type', Product::class)

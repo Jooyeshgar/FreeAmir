@@ -56,6 +56,14 @@ class DocumentService
 
     private static function approveDocument(User $user, Document $document): void
     {
+        $sum = $document->transactions()->sum('value');
+
+        if ($sum !== 0) {
+            throw ValidationException::withMessages([
+                'transactions' => ['The sum of transactions must be zero'],
+            ]);
+        }
+
         $document->approved_at = now();
         $document->approver_id = $user->id;
         $document->save();

@@ -427,6 +427,8 @@ class InvoiceController extends Controller
                 ->with('error', __('Invalid status action.'));
         }
 
+        auth()->user()->can('ancillary-costs.approve');
+
         try {
             $service->changeInvoiceStatus($invoice, $status);
 
