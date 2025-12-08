@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\InvoiceAncillaryCostStatus;
 use App\Enums\InvoiceType;
 use App\Exceptions\InvoiceServiceException;
 use App\Models\Invoice;
@@ -10,7 +11,6 @@ use App\Models\Product;
 use App\Models\Service;
 use App\Models\User;
 use Exception;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 class InvoiceService
@@ -25,7 +25,7 @@ class InvoiceService
      *
      * @throws InvoiceServiceException
      */
-    public static function createInvoice(User $user, array $invoiceData, array $items = [])
+    public static function createInvoice(User $user, array $invoiceData, array $items = [], bool $approved = false): array
     {
         $date = $invoiceData['date'] ?? now()->toDateString();
 
@@ -41,34 +41,53 @@ class InvoiceService
         ];
 
         $createdDocument = null;
-        $createdInvoice = null;
+        $createdInvoice = self::createInvoiceWithoutApproval($user, $invoiceData, $items, $buildResult, $date);
 
-        DB::transaction(function () use ($documentData, $user, $transactions, $invoiceData, $items, $buildResult, $date, &$createdDocument, &$createdInvoice) {
-            $createdDocument = DocumentService::createDocument($user, $documentData, $transactions);
+        if ($approved) {
 
-            $invoiceData['document_id'] = $createdDocument->id;
-            $invoiceData['vat'] = $buildResult['totalVat'];
-            $invoiceData['amount'] = $buildResult['totalAmount'];
-            $invoiceData['creator_id'] = $user->id;
-            $invoiceData['active'] = 1;
-            $invoiceData['date'] = $date;
+            DB::transaction(function () use ($documentData, $user, $transactions, $invoiceData, $items, &$createdDocument, &$createdInvoice) {
+                $createdDocument = DocumentService::createDocument($user, $documentData, $transactions);
 
-            $createdInvoice = Invoice::create($invoiceData);
+                $invoiceData['document_id'] = $createdDocument->id;
+                $invoiceData['status'] = InvoiceAncillaryCostStatus::APPROVED;
 
-            DocumentService::syncDocumentable($createdDocument, $createdInvoice);
+                $createdInvoice->update($invoiceData);
 
-            ProductService::syncProductQuantities(new Collection([]), $items, $createdInvoice->invoice_type);
-            self::syncInvoiceItems($createdInvoice, $items);
+                DocumentService::syncDocumentable($createdDocument, $createdInvoice);
 
-            CostOfGoodsService::updateProductsAverageCost($createdInvoice);
+                ProductService::addProductsQuantities($items, $createdInvoice->invoice_type);
+                self::syncInvoiceItems($createdInvoice, $items);
 
-            self::syncCOGAfterForInvoiceItems($createdInvoice);
-        });
+                $createdInvoice->refresh();
+                CostOfGoodsService::updateProductsAverageCost($createdInvoice);
+
+                self::syncCOGAfterForInvoiceItems($createdInvoice);
+            });
+        }
 
         return [
             'document' => $createdDocument,
             'invoice' => $createdInvoice,
         ];
+    }
+
+    private static function createInvoiceWithoutApproval(User $user, array $invoiceData, array $items, array $buildResult, string $date)
+    {
+        $createdInvoice = null;
+
+        DB::transaction(function () use ($user, $invoiceData, $items, $buildResult, $date, &$createdDocument, &$createdInvoice) {
+            $invoiceData['document_id'] = null;
+            $invoiceData['vat'] = $buildResult['totalVat'];
+            $invoiceData['amount'] = $buildResult['totalAmount'];
+            $invoiceData['creator_id'] = $user->id;
+            $invoiceData['date'] = $date;
+
+            $createdInvoice = Invoice::create($invoiceData);
+
+            self::syncInvoiceItems($createdInvoice, $items);
+        });
+
+        return $createdInvoice;
     }
 
     /**
@@ -78,52 +97,63 @@ class InvoiceService
      *
      * @throws InvoiceServiceException
      */
-    public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = []): array
+    public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = [], bool $approved = false): array
     {
         $invoice = Invoice::findOrFail($invoiceId);
-
-        self::checkInvoiceDeleteableOrEditable($invoice);
 
         $invoiceData = self::normalizeInvoiceData($invoiceData);
 
         $transactionBuilder = new InvoiceTransactionBuilder($items, $invoiceData);
         $buildResult = $transactionBuilder->build();
-        $transactions = $buildResult['transactions'];
 
-        DB::transaction(function () use ($invoice, $invoiceData, $items, $transactions, $buildResult) {
+        $createdDocument = null;
+        $invoice = self::updateInvoiceWithoutApproval($invoice, $invoiceData, $items, $buildResult);
 
-            $documentData = [
-                'date' => $invoiceData['date'] ?? $invoice->date,
-                'title' => $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? '')),
-                'number' => $invoiceData['document_number'] ?? $invoice->document->number,
-            ];
+        if ($approved) {
 
-            $updatedDocument = DocumentService::updateDocument($invoice->document, $documentData);
-            DocumentService::updateDocumentTransactions($invoice->document->id, $transactions);
+            DB::transaction(function () use ($invoice, $invoiceData, $items, &$createdDocument) {
 
+                $createdDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
+
+                $invoiceData['status'] = InvoiceAncillaryCostStatus::APPROVED;
+                $invoiceData['document_id'] = $createdDocument->id;
+                unset($invoiceData['document_number']); // Don't update invoice with document_number
+
+                $invoice->update($invoiceData);
+
+                // Remove old quantities
+                ProductService::subProductsQuantities(self::itemsFormatterForSyncingInvoiceItems($invoice), $invoice->invoice_type);
+
+                // Add new quantities
+                ProductService::addProductsQuantities($items, $invoice->invoice_type);
+
+                self::syncInvoiceItems($invoice, $items);
+
+                $invoice->refresh();
+
+                CostOfGoodsService::updateProductsAverageCost($invoice);
+                self::syncCOGAfterForInvoiceItems($invoice);
+            });
+        }
+
+        return [
+            'document' => $createdDocument,
+            'invoice' => $invoice,
+        ];
+    }
+
+    private static function updateInvoiceWithoutApproval(Invoice $invoice, array $invoiceData, array $items, array $buildResult)
+    {
+        DB::transaction(function () use ($invoice, $invoiceData, $items, $buildResult) {
             $invoiceData['vat'] = $buildResult['totalVat'];
             $invoiceData['amount'] = $buildResult['totalAmount'];
-            unset($invoiceData['document_number']); // Don't update invoice with document_number
 
             $invoice->update($invoiceData);
 
-            DocumentService::syncDocumentable($updatedDocument, $invoice);
-
-            $oldInvoiceItems = $invoice->items;
-
-            ProductService::syncProductQuantities($oldInvoiceItems, $items, $invoice->invoice_type);
             self::syncInvoiceItems($invoice, $items);
-
-            $invoice->refresh();
-
-            CostOfGoodsService::updateProductsAverageCost($invoice);
-            self::syncCOGAfterForInvoiceItems($invoice);
         });
 
-        return [
-            'document' => $invoice->document->fresh(),
-            'invoice' => $invoice,
-        ];
+        return $invoice;
     }
 
     public static function syncCOGAfterForInvoiceItems(Invoice $invoice)
@@ -156,8 +186,6 @@ class InvoiceService
         DB::transaction(function () use ($invoiceId) {
             $invoice = Invoice::find($invoiceId);
 
-            self::checkInvoiceDeleteableOrEditable($invoice);
-
             CostOfGoodsService::refreshProductCOGAfterItemsDeletion($invoice, null);
 
             $invoiceItems = $invoice->items;
@@ -174,30 +202,14 @@ class InvoiceService
 
     private static function checkInvoiceDeleteableOrEditable(Invoice $invoice): void
     {
-        if (! $invoice) {
-            throw new Exception(__('Invoice not found'), 404);
+        self::validateInvoiceExistance($invoice);
+
+        if ($invoice->status->isApproved()) {
+            throw new Exception(__('Approved invoices cannot be deleted/edited'), 400);
         }
 
-        if (auth()->user()?->hasRole('Super-Admin')) {
-            return;
-        }
-
-        if ($invoice->ancillaryCosts->isNotEmpty()) {
-            throw new Exception(__('Invoice has associated ancillary costs and cannot be deleted/edited'), 400);
-        }
-
-        $productIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->toArray();
-
-        if (empty($productIds)) {
-            return;
-        }
-
-        if (self::hasSubsequentInvoicesForProduct($invoice, $productIds)) {
-            throw new Exception(__('Cannot delete/edit invoice because there are subsequent invoices for the same invoice products. Please delete those invoices first.'), 400);
-        }
-
-        if (! self::isLastInvoiceForItsItems($invoice, $productIds)) {
-            throw new Exception(__('Cannot delete/edit invoice because it affects cost of goods sold calculations. Please review related buy invoices first.'), 400);
+        if ($invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {
+            throw new Exception(__('Invoice has associated approved ancillary costs and cannot be deleted/edited'), 400);
         }
     }
 
@@ -213,7 +225,6 @@ class InvoiceService
             'description' => $invoiceData['description'] ?? null,
             'subtraction' => floatval($invoiceData['subtraction'] ?? 0),
             'permanent' => isset($invoiceData['permanent']) ? (int) $invoiceData['permanent'] : 0,
-            'active' => isset($invoiceData['active']) ? (int) $invoiceData['active'] : 1,
             'invoice_id' => $invoiceData['invoice_id'] ?? null,
         ];
 
@@ -279,57 +290,6 @@ class InvoiceService
     }
 
     /**
-     * Determines if there are any subsequent invoices with invoice type BUY or SELL that contain any of the same products as the given invoice.
-     *
-     * @param  Invoice  $invoice  The invoice to check for subsequent related invoices.
-     * @return bool True if a subsequent invoice exists for any of the products in the given invoice; otherwise, false.
-     */
-    public static function hasSubsequentInvoicesForProduct(Invoice $invoice, array $productIds): bool
-    {
-        $invoicesExcludingCurrent = Invoice::where('number', '!=', $invoice->number);
-
-        if ($invoicesExcludingCurrent->count() === 0) {
-            return false;
-        }
-
-        $subsequentInvoice = $invoicesExcludingCurrent->where('date', '>=', $invoice->date)
-            ->whereIn('invoice_type', [InvoiceType::BUY, InvoiceType::SELL])
-            ->whereHas('items', fn ($query) => $query->where('itemable_type', Product::class)
-                ->whereIn('itemable_id', $productIds))
-            ->exists();
-
-        return $subsequentInvoice;
-    }
-
-    /**
-     * Determines if the given sell invoice was created after the most recent buy invoice
-     * that contains at least one of the same products as the sell invoice.
-     *
-     * This method checks if the provided invoice is of type SELL or BUY. If so, it finds the last buy invoice for its items.
-     */
-    private static function isLastInvoiceForItsItems(Invoice $invoice, array $productIds): bool
-    {
-        if (! in_array($invoice->invoice_type, [InvoiceType::SELL, InvoiceType::BUY])) {
-            return false;
-        }
-
-        $query = Invoice::where('number', '!=', $invoice->number)
-            ->where('date', '>', $invoice->date)
-            ->whereHas('items', fn ($q) => $q->where('itemable_type', Product::class)
-                ->whereIn('itemable_id', $productIds));
-
-        if ($invoice->invoice_type === InvoiceType::SELL) {
-            $query->where('invoice_type', InvoiceType::BUY);
-        }
-
-        if ($invoice->invoice_type === InvoiceType::BUY) {
-            $query->whereIn('invoice_type', [InvoiceType::BUY, InvoiceType::SELL]);
-        }
-
-        return $query->doesntExist();
-    }
-
-    /**
      * Determine if an invoice can be edited or deleted without throwing, and provide the reason when it cannot.
      *
      * @return array{allowed: bool, reason: string|null}
@@ -343,5 +303,206 @@ class InvoiceService
         } catch (\Throwable $e) {
             return ['allowed' => false, 'reason' => $e->getMessage()];
         }
+    }
+
+    public function changeInvoiceStatus(Invoice $invoice, string $status): void
+    {
+        DB::transaction(function () use ($invoice, $status) {
+            match ($status) {
+                'approve' => $this->toggleInvoiceApproval($invoice, true),
+                'unapprove' => $this->toggleInvoiceApproval($invoice, false),
+                default => null,
+            };
+        });
+
+    }
+
+    private function toggleInvoiceApproval(Invoice $invoice, bool $approve): void
+    {
+        if ($approve) {
+            $invoice->status = InvoiceAncillaryCostStatus::APPROVED;
+            $createdDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
+            $invoice->document_id = $createdDocument->id;
+            $invoice->update();
+            ProductService::addProductsQuantities($invoice->items->toArray(), $invoice->invoice_type);
+            self::syncInvoiceItems($invoice, self::itemsFormatterForSyncingInvoiceItems($invoice));
+            CostOfGoodsService::updateProductsAverageCost($invoice);
+            self::syncCOGAfterForInvoiceItems($invoice);
+        } else {
+            $invoice->status = InvoiceAncillaryCostStatus::UNAPPROVED;
+
+            if ($invoice->document) {
+                DocumentService::deleteDocument($invoice->document_id);
+                $invoice->document_id = null;
+            }
+            $invoice->update();
+            self::unapproveAncillaryCostsOfInvoice($invoice);
+            ProductService::subProductsQuantities($invoice->items->toArray(), $invoice->invoice_type);
+            CostOfGoodsService::updateProductsAverageCost($invoice);
+        }
+    }
+
+    private function unapproveAncillaryCostsOfInvoice(Invoice $invoice): void
+    {
+        if (! $invoice->ancillaryCosts()->exists()) {
+            return;
+        }
+
+        $AncillaryCostService = new AncillaryCostService;
+        foreach ($invoice->ancillaryCosts as $ancillaryCost) {
+            if (! $ancillaryCost->status->isApproved()) {
+                continue;
+            }
+            $AncillaryCostService->changeAncillaryCostStatus($ancillaryCost, 'unapprove');
+        }
+    }
+
+    private static function createDocumentFromInvoiceItems(User $user, Invoice $invoice)
+    {
+        $invoiceData = [
+            'date' => $invoice->date,
+            'invoice_type' => $invoice->invoice_type,
+            'customer_id' => $invoice->customer_id,
+            'number' => $invoice->number,
+            'subtraction' => $invoice->subtraction ?? 0,
+            'invoice_id' => $invoice->id ?? null,
+            'description' => $invoice->description ?? null,
+            'title' => $invoice->title,
+        ];
+
+        $transactionBuilder = new InvoiceTransactionBuilder(self::itemsFormatterForSyncingInvoiceItems($invoice), $invoiceData);
+        $buildResult = $transactionBuilder->build();
+
+        $documentData = [
+            'date' => $invoiceData['date'] ?? now()->toDateString(),
+            'title' => $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? '')),
+            'approved_at' => now(),
+            'approver_id' => $user->id,
+        ];
+
+        $document = DocumentService::createDocument($user, $documentData, $buildResult['transactions']);
+        DocumentService::syncDocumentable($document, $invoice);
+
+        return $document;
+    }
+
+    private static function itemsFormatterForSyncingInvoiceItems(Invoice $invoice): array
+    {
+        return $invoice->items
+            ->map(fn ($t, $i) => [
+                'transaction_index' => $i,
+                'itemable_id' => $t->itemable_id,
+                'itemable_type' => $t->itemable_type === Product::class ? 'product' : 'service',
+                'quantity' => $t->quantity,
+                'description' => $t->description,
+                'unit_discount' => $t->unit_discount,
+                'vat' => ($t->amount - $t->vat) > 0 ? ($t->vat / ($t->amount - $t->vat)) * 100 : 0,
+                'unit' => $t->unit_price,
+                'total' => $t->amount,
+            ])
+            ->values()
+            ->all();
+    }
+
+    public static function getChangeStatusValidation(Invoice $invoice): array
+    {
+        try {
+            self::validateInvoiceExistance($invoice);
+            $productIds = self::getProductIdsFromInvoice($invoice);
+
+            self::validateRelatedInvoicesStatus($invoice, checkSubsequent: true, productIds: $productIds);
+            self::validateRelatedInvoicesStatus($invoice, checkSubsequent: false, productIds: $productIds);
+            self::validateNoApprovedInvoicesWithSameProductsAfterInvoiceDate($invoice, $productIds);
+
+            return ['allowed' => true, 'reason' => null];
+        } catch (\Throwable $e) {
+            return ['allowed' => false, 'reason' => $e->getMessage()];
+        }
+    }
+
+    private static function validateNoApprovedInvoicesWithSameProductsAfterInvoiceDate(Invoice $invoice, array $productIds): void
+    {
+        $exists = Invoice::where('status', InvoiceAncillaryCostStatus::APPROVED)
+            ->where('date', '>', $invoice->date)
+            ->whereHas('items', function ($query) use ($productIds) {
+                $query->where('itemable_type', Product::class)
+                    ->whereIn('itemable_id', $productIds);
+            })
+            ->exists();
+
+        if ($exists) {
+            throw new Exception(__('Cannot change invoice status because there are subsequent invoices those are approved for the same invoice products. Please unapprove those invoices first.'), 400);
+        }
+    }
+
+    private static function getProductIdsFromInvoice(Invoice $invoice): array
+    {
+        $productIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->toArray();
+
+        if (empty($productIds)) {
+            throw new Exception(__('No products associated with this invoice.'), 400);
+        }
+
+        return $productIds;
+    }
+
+    /**
+     * Validate that an invoice exists.
+     */
+    private static function validateInvoiceExistance(?Invoice $invoice): void
+    {
+        if (! $invoice) {
+            throw new Exception(__('Invoice not found'), 404);
+        }
+    }
+
+    /**
+     * Validate that related invoices have the correct status before changing an invoice's status.
+     */
+    private static function validateRelatedInvoicesStatus(Invoice $invoice, bool $checkSubsequent, array $productIds): void
+    {
+        $comparison = function ($q) use ($invoice, $checkSubsequent) {
+            $operator = $checkSubsequent ? '>' : '<';
+
+            $q->where('date', $operator, $invoice->date)
+                ->orWhere(function ($sub) use ($invoice, $operator) {
+                    $sub->where('date', $invoice->date)
+                        ->where('number', $operator, $invoice->number);
+                });
+        };
+
+        $query = Invoice::where('number', '!=', $invoice->number)
+            ->where($comparison)
+            ->whereIn('invoice_type', [InvoiceType::BUY, InvoiceType::SELL])
+            ->whereHas('items', fn ($q) => $q->where('itemable_type', Product::class)
+                ->whereIn('itemable_id', $productIds)
+            )
+            ->where('status',
+                $checkSubsequent ? InvoiceAncillaryCostStatus::APPROVED
+                                 : '!=', InvoiceAncillaryCostStatus::APPROVED
+            );
+
+        if ($query->exists()) {
+            $message = $checkSubsequent
+                ? __('Cannot change invoice status because there are subsequent invoices those are approved for the same invoice products. Please unapprove those invoices first.')
+                : __('Cannot change invoice status because there are previous invoices those are not approved for the same invoice products. Please approve those invoices first.');
+
+            throw new Exception($message, 400);
+        }
+    }
+
+    public static function notAllowedInvoiceForAncillaryCosts(Invoice $invoice, array $productIds): array
+    {
+        if (! $invoice->status->isApproved()) {
+            return [];
+        }
+
+        $invoices = Invoice::where('date', '>=', $invoice->date)
+            ->whereHas('items', function ($query) use ($productIds) {
+                $query->where('itemable_type', Product::class)
+                    ->whereIn('itemable_id', $productIds);
+            })->get();
+
+        return $invoices->filter(fn ($inv) => ! self::getChangeStatusValidation($inv)['allowed'])->values()->all();
     }
 }

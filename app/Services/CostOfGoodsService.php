@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\InvoiceAncillaryCostStatus;
 use App\Enums\InvoiceType;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
@@ -39,10 +40,17 @@ class CostOfGoodsService
         foreach ($invoice->items as $invoiceItem) {
             $product = $invoiceItem->itemable;
 
-            $availableQuantity = (float) $invoiceItem->quantity_at;
-            $totalCosts = $invoiceItem->amount - ($invoiceItem->vat ?? 0); // total cost per product excluding VAT
-            $totalCosts += $ancillaryCosts ? $ancillaryCosts->flatMap->items->where('product_id', $product->id)->sum('amount') : 0; // without VAT
             $previousInvoice = self::getPreviousInvoice($invoice, $product->id);
+
+            $availableQuantity = (float) $invoiceItem->quantity_at;
+
+            if ($invoice->status === InvoiceAncillaryCostStatus::APPROVED) {
+                $totalCosts = $invoiceItem->amount - ($invoiceItem->vat ?? 0); // total cost per product excluding VAT
+            } else {
+                $totalCosts = $previousInvoice->amount ?? 0 - ($previousInvoice->vat ?? 0);
+            }
+
+            $totalCosts += $ancillaryCosts ? $ancillaryCosts->where('status', InvoiceAncillaryCostStatus::APPROVED)->flatMap->items->where('product_id', $product->id)->sum('amount') : 0; // without VAT
 
             if ($previousInvoice) {
                 $previousInvoiceItem = $previousInvoice->items->where('itemable_id', $product->id)->first();
@@ -121,6 +129,7 @@ class CostOfGoodsService
     private static function getPreviousInvoice(Invoice $invoice, $productId)
     {
         return Invoice::where('number', '<', $invoice->number)
+            ->where('status', InvoiceAncillaryCostStatus::APPROVED)
             ->where('invoice_type', $invoice->invoice_type)
             ->whereHas('items', fn ($query) => $query->where('itemable_id', $productId)
                                                                             && $query->where('itemable_type', Product::class))
@@ -130,6 +139,7 @@ class CostOfGoodsService
     private static function getNextInvoice(Invoice $invoice, $productId)
     {
         return Invoice::where('number', '>', $invoice->number)
+            ->where('status', InvoiceAncillaryCostStatus::APPROVED)
             ->where('invoice_type', $invoice->invoice_type)
             ->whereHas('items', fn ($query) => $query->where('itemable_id', $productId)
                                                                             && $query->where('itemable_type', Product::class))

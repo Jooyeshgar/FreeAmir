@@ -77,14 +77,16 @@
                             </td>
                             <td class="px-4 py-2">
                                 @can('documents.show')
-                                    <a href="{{ route('documents.show', $invoice->document_id) }}">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none"
-                                            viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                        {{ formatDocumentNumber($invoice->document->number) ?? '' }}
-                                    </a>&nbsp;
+                                    @if ($invoice->document_id)
+                                        <a href="{{ route('documents.show', $invoice->document_id) }}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                            {{ formatDocumentNumber($invoice->document->number) ?? '' }}
+                                        </a>&nbsp;
+                                    @endif
                                 @else
                                     <span class="text-gray-500">
                                         <span>{{ formatDocumentNumber($invoice->document->number) ?? '' }}</span>
@@ -96,26 +98,68 @@
                                 {{ isset($invoice->amount) ? formatNumber($invoice->amount - $invoice->subtraction) : '' }}
                             </td>
                             <td class="px-4 py-2">
-                                {{ $invoice->permanent ?? false ? __('Permanent') : __('Draft') }}
+                                {{ $invoice->status?->label() ?? '' }}
                             </td>
                             <td class="px-4 py-2">
-                                @php($editDeleteStatus = \App\Services\InvoiceService::getEditDeleteStatus($invoice))
-
                                 <a href="{{ route('invoices.show', $invoice) }}" target="_blank" rel="noopener"
                                     class="btn btn-sm btn-info">{{ __('Show') }}</a>
                                 <a href="{{ route('invoices.print', $invoice) }}" target="_blank" rel="noopener"
                                     class="btn btn-sm btn-info">{{ __('Print') }}</a>
 
+                                @can('invoices.approve')
+                                    @php
+                                        $isApproved = $invoice->status?->isApproved();
+                                        $changeStatusValidation = \App\Services\InvoiceService::getChangeStatusValidation(
+                                            $invoice,
+                                        );
+                                    @endphp
+
+                                    @if ($changeStatusValidation['allowed'])
+                                        <a href="{{ route('invoices.change-status', [$invoice, $isApproved ? 'unapprove' : 'approve']) }}"
+                                            class="btn btn-sm {{ $isApproved ? 'btn-warning' : 'btn-success' }}">
+                                            {{ __($isApproved ? 'Unapprove' : 'Approve') }}
+                                        </a>
+                                    @else
+                                        @php
+                                            $btnClass = $isApproved ? 'btn-warning' : 'btn-success';
+                                            $label = $isApproved ? __('Unapprove') : __('Approve');
+                                        @endphp
+                                        <span class="tooltip" data-tip="{{ $changeStatusValidation['reason'] }}">
+                                            <button class="btn btn-sm {{ $btnClass }} btn-disabled cursor-not-allowed"
+                                                disabled title="{{ $changeStatusValidation['reason'] }}">{{ $label }}</button>
+                                        </span>
+                                    @endif
+                                @endcan
+
+                                @php
+                                    $editDeleteStatus = \App\Services\InvoiceService::getEditDeleteStatus($invoice);
+                                @endphp
+
                                 @if ($editDeleteStatus['allowed'])
-                                    <a href="{{ route('invoices.edit', $invoice) }}"
-                                        class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                    <form action="{{ route('invoices.destroy', $invoice) }}" method="POST"
-                                        class="inline-block">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                            class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                    </form>
+                                    @if (!$invoice->status?->isApproved())
+                                        <a href="{{ route('invoices.edit', $invoice) }}"
+                                            class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                        <form action="{{ route('invoices.destroy', $invoice) }}" method="POST"
+                                            class="inline-block">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                        </form>
+                                    @else
+                                        <span class="tooltip"
+                                            data-tip="{{ __('Unapprove the invoice first to edit') }}">
+                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
+                                                disabled
+                                                title="{{ __('Unapprove the invoice first to edit') }}">{{ __('Edit') }}</button>
+                                        </span>
+                                        <span class="tooltip"
+                                            data-tip="{{ __('Unapprove the invoice first to delete') }}">
+                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
+                                                disabled
+                                                title="{{ __('Unapprove the invoice first to delete') }}">{{ __('Delete') }}</button>
+                                        </span>
+                                    @endif
                                 @else
                                     <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
                                         <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" disabled

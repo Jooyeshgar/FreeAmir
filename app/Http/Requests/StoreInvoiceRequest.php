@@ -74,12 +74,12 @@ class StoreInvoiceRequest extends FormRequest
             $invoiceType = $this->input('invoice_type');
             $inputDate = $this->input('date');
             $invoice = $this->route('invoice');
+            $isApproved = $this->input('approve');
 
             if (! in_array($invoiceType, ['sell', 'buy'])) {
                 return;
             }
 
-            $itemableConditions = [];
             $productIds = [];
             $serviceIds = [];
 
@@ -112,7 +112,7 @@ class StoreInvoiceRequest extends FormRequest
                 }
 
                 // Product quantity Check in warehouse
-                if ($transaction['item_type'] === 'product' && isset($transaction['item_id']) && $transaction['quantity']) {
+                if ($transaction['item_type'] === 'product' && isset($transaction['item_id']) && $transaction['quantity'] && $isApproved) {
                     $product = Product::find($transaction['item_id']);
 
                     if (! $product) {
@@ -147,67 +147,42 @@ class StoreInvoiceRequest extends FormRequest
                     if ($morphType !== Product::class) {
                         continue;
                     }
-
-                    $itemableConditions[] = [
-                        'itemable_type' => $morphType,
-                        'itemable_id' => $transaction['item_id'],
-                    ];
-
                 }
 
-            }
+                if ($this->input('approve')) {
+                    $approvedSubsequentInvoicesForProducts = Invoice::where('status', 'approved')
+                        ->where('date', '>', $inputDate)
+                        ->whereHas('items', function ($query) use ($productIds) {
+                            $query->whereIn('itemable_id', $productIds)
+                                ->where('itemable_type', Product::class);
+                        })
+                        ->exists();
 
-            if (! empty($itemableConditions)) {
-                $query = Invoice::where('invoice_type', InvoiceType::BUY)
-                    ->where('date', '>', $inputDate)
-                    ->whereHas('items', function ($q) use ($itemableConditions) {
-                        $q->where(function ($subQuery) use ($itemableConditions) {
-                            foreach ($itemableConditions as $condition) {
-                                $subQuery->orWhere(function ($innerQuery) use ($condition) {
-                                    $innerQuery->where('itemable_type', $condition['itemable_type'])
-                                        ->where('itemable_id', $condition['itemable_id']);
-                                });
-                            }
-                        });
-                    });
-
-                // Exclude the current invoice if editing
-                if ($invoice) {
-                    $query->where('id', '!=', $invoice->id);
-                }
-
-                $laterInvoices = $query->with(['items' => function ($q) use ($itemableConditions) {
-                    $q->where(function ($subQuery) use ($itemableConditions) {
-                        foreach ($itemableConditions as $condition) {
-                            $subQuery->orWhere(function ($innerQuery) use ($condition) {
-                                $innerQuery->where('itemable_type', $condition['itemable_type'])
-                                    ->where('itemable_id', $condition['itemable_id']);
-                            });
-                        }
-                    });
-                }, 'items.itemable'])->get();
-
-                if ($laterInvoices->isNotEmpty() or auth()->user()?->hasRole('Super-Admin')) {
-                    $conflictingItems = [];
-                    foreach ($laterInvoices as $laterInvoice) {
-                        foreach ($laterInvoice->items as $item) {
-                            $itemName = $item->itemable->name ?? "ID: {$item->itemable_id}";
-                            $conflictingItems[] = __('Item')." '{$itemName}' ".__('in invoice #:number on :date', [
-                                'number' => convertToInt($laterInvoice->number),
-                                'date' => convertToGregorian($laterInvoice->date),
-                            ]);
-                        }
-                    }
-
-                    if (! empty($conflictingItems)) {
+                    if ($approvedSubsequentInvoicesForProducts) {
                         $validator->errors()->add(
                             'date',
-                            __('There are later buy invoices with common items:').' '.implode('; ', array_unique($conflictingItems))
+                            __('There are approved subsequent invoices for the selected products.')
                         );
                     }
-                }
-            }
 
+                    $unapprovedSubsequentInvoicesForProducts = Invoice::where('status', '!=', 'approved')
+                        ->where('date', '<', $inputDate)
+                        ->whereHas('items', function ($query) use ($productIds) {
+                            $query->whereIn('itemable_id', $productIds)
+                                ->where('itemable_type', Product::class);
+                        })
+                        ->exists();
+
+                    if ($unapprovedSubsequentInvoicesForProducts) {
+                        $validator->errors()->add(
+                            'date',
+                            __('There are unapproved prior invoices for the selected products.')
+                        );
+                    }
+
+                }
+
+            }
         });
 
         return $validator;

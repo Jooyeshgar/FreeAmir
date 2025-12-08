@@ -39,17 +39,41 @@ class DocumentService
         $data['company_id'] = session('active-company-id');
 
         $document = null;
-        DB::transaction(function () use ($data, $transactions, &$document) {
+        DB::transaction(function () use ($data, $transactions, $user, &$document) {
 
             $document = Document::create($data);
             self::syncDocumentable($document, $data['documentable'] ?? null);
-
+            if (! empty($data['approved_at']) && ! empty($data['approver_id'])) {
+                self::approveDocument($user, $document);
+            }
             foreach ($transactions as $transactionData) {
                 DocumentService::createTransaction($document, $transactionData);
             }
         });
 
         return $document;
+    }
+
+    private static function approveDocument(User $user, Document $document): void
+    {
+        $sum = $document->transactions()->sum('value');
+
+        if ($sum !== 0) {
+            throw ValidationException::withMessages([
+                'transactions' => ['The sum of transactions must be zero'],
+            ]);
+        }
+
+        $document->approved_at = now();
+        $document->approver_id = $user->id;
+        $document->save();
+    }
+
+    private static function unapproveDocument(User $user, Document $document): void
+    {
+        $document->approved_at = null;
+        $document->approver_id = $user->id;
+        $document->save();
     }
 
     /**
@@ -87,27 +111,6 @@ class DocumentService
         $document->save();
 
         return $document;
-    }
-
-    /**
-     * Approve a document.
-     *
-     * @return bool
-     */
-    public static function approveDocument(Document $document)
-    {
-        $sum = $document->transactions()->sum('value');
-
-        if ($sum !== 0) {
-            throw ValidationException::withMessages([
-                'transactions' => ['The sum of transactions must be zero'],
-            ]);
-        }
-
-        $document->approved_at = now();
-        $document->save();
-
-        return true;
     }
 
     /**
