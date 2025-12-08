@@ -57,6 +57,11 @@ class AncillaryCostService
                     $transactions
                 );
 
+                $ancillaryCost->update([
+                    'document_id' => $document->id,
+                    'status' => InvoiceAncillaryCostStatus::APPROVED,
+                ]);
+
                 DocumentService::syncDocumentable($document, $ancillaryCost);
 
                 CostOfGoodsService::updateProductsAverageCost($invoice);
@@ -111,6 +116,7 @@ class AncillaryCostService
 
                 $ancillaryCost->update([
                     'document_id' => $createdDocument->id,
+                    'status' => InvoiceAncillaryCostStatus::APPROVED,
                 ]);
 
                 CostOfGoodsService::updateProductsAverageCost($ancillaryCost->invoice);

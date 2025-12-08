@@ -32,11 +32,6 @@ class CostOfGoodsService
             return;
         }
 
-        $ancillaryCosts = $invoice->ancillaryCosts;
-        if (! is_null($ancillaryCosts)) {
-            $ancillaryCosts->loadMissing('items');
-        }
-
         foreach ($invoice->items as $invoiceItem) {
             $product = $invoiceItem->itemable;
 
@@ -46,8 +41,14 @@ class CostOfGoodsService
 
             if ($invoice->status === InvoiceAncillaryCostStatus::APPROVED) {
                 $totalCosts = $invoiceItem->amount - ($invoiceItem->vat ?? 0); // total cost per product excluding VAT
+                $ancillaryCosts = $invoice->ancillaryCosts;
             } else {
                 $totalCosts = $previousInvoice->amount ?? 0 - ($previousInvoice->vat ?? 0);
+                $ancillaryCosts = $previousInvoice?->ancillaryCosts; // if previous invoice not exists it should be null
+            }
+
+            if (! is_null($ancillaryCosts)) {
+                $ancillaryCosts->loadMissing('items');
             }
 
             $totalCosts += $ancillaryCosts ? $ancillaryCosts->where('status', InvoiceAncillaryCostStatus::APPROVED)->flatMap->items->where('product_id', $product->id)->sum('amount') : 0; // without VAT

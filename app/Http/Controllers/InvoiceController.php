@@ -430,6 +430,7 @@ class InvoiceController extends Controller
         auth()->user()->can('ancillary-costs.approve');
 
         try {
+            $service->getChangeStatusValidation($invoice);
             $service->changeInvoiceStatus($invoice, $status);
 
             $message = $status === 'approve' ? __('Invoice approved successfully.') : __('Invoice unapproved successfully.');

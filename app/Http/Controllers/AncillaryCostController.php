@@ -158,6 +158,7 @@ class AncillaryCostController extends Controller
         auth()->user()->can('ancillary-costs.approve');
 
         try {
+            $service->getChangeStatusValidation($ancillaryCost);
             $service->changeAncillaryCostStatus($ancillaryCost, $status);
 
             $message = $status === 'approve' ? __('Ancillary Cost approved successfully.') : __('Ancillary Cost unapproved successfully.');

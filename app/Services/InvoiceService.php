@@ -409,6 +409,7 @@ class InvoiceService
         try {
             self::validateInvoiceExistance($invoice);
             $productIds = self::getProductIdsFromInvoice($invoice);
+            self::validateProductsQuantityForStatusChange($invoice, $productIds);
 
             self::validateRelatedInvoicesStatus($invoice, checkSubsequent: true, productIds: $productIds);
             self::validateRelatedInvoicesStatus($invoice, checkSubsequent: false, productIds: $productIds);
@@ -417,6 +418,40 @@ class InvoiceService
             return ['allowed' => true, 'reason' => null];
         } catch (\Throwable $e) {
             return ['allowed' => false, 'reason' => $e->getMessage()];
+        }
+    }
+
+    private static function validateProductsQuantityForStatusChange(Invoice $invoice, array $productIds): void
+    {
+        if ($invoice->invoice_type !== InvoiceType::SELL) {
+            return;
+        }
+
+        $products = Product::whereIn('id', $productIds)->get();
+
+        foreach ($products as $product) {
+            if ($product->oversell) {
+                continue;
+            }
+
+            if ($invoice->status->isApproved()) {
+                continue;
+            }
+
+            $invoiceItem = $invoice->items->firstWhere('itemable_id', $product->id);
+
+            if (! $invoiceItem) {
+                continue;
+            }
+
+            $requiredQuantity = $invoiceItem->quantity;
+            if ($product->quantity < $requiredQuantity) {
+                throw new Exception(__('Insufficient quantity for product ":product". Available: :available, Required: :required.', [
+                    'product' => $product->name,
+                    'available' => $product->quantity,
+                    'required' => $requiredQuantity,
+                ]), 400);
+            }
         }
     }
 
