@@ -457,6 +457,9 @@ class InvoiceService
 
     private static function validateNoApprovedInvoicesWithSameProductsAfterInvoiceDate(Invoice $invoice, array $productIds): void
     {
+        if ($invoice->invoice_type === InvoiceType::SELL) {
+            return;
+        }
         $exists = Invoice::where('status', InvoiceAncillaryCostStatus::APPROVED)
             ->where('date', '>', $invoice->date)
             ->whereHas('items', function ($query) use ($productIds) {
