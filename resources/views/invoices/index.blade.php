@@ -114,11 +114,41 @@
                                         $changeStatusValidation = \App\Services\InvoiceService::getChangeStatusValidation(
                                             $invoice,
                                         );
+                                        $unapprovedInvoicesData = [];
+                                        if (!$isApproved && $invoice->invoice_type === \App\Enums\InvoiceType::BUY) {
+                                            $productIds = $invoice
+                                                ->items()
+                                                ->where('itemable_type', \App\Models\Product::class)
+                                                ->pluck('itemable_id')
+                                                ->toArray();
+
+                                            if (!empty($productIds)) {
+                                                $unapprovedInvoices = \App\Services\InvoiceService::getUnapprovedSellPriorInvoices(
+                                                    $productIds,
+                                                    $invoice->date,
+                                                    $invoice->number,
+                                                    $invoice,
+                                                );
+
+                                                if (!empty($unapprovedInvoices)) {
+                                                    $unapprovedInvoicesData = collect($unapprovedInvoices)
+                                                        ->map(
+                                                            fn($inv) => \App\Enums\InvoiceType::from(
+                                                                $inv['invoice_type'],
+                                                            )->label() .
+                                                                ' : ' .
+                                                                $inv['number'],
+                                                        )
+                                                        ->toArray();
+                                                }
+                                            }
+                                        }
                                     @endphp
 
                                     @if ($changeStatusValidation['allowed'])
                                         <a href="{{ route('invoices.change-status', [$invoice, $isApproved ? 'unapprove' : 'approve']) }}"
-                                            class="btn btn-sm {{ $isApproved ? 'btn-warning' : 'btn-success' }}">
+                                            class="btn btn-sm {{ $isApproved ? 'btn-warning' : 'btn-success' }} invoice-approve-btn"
+                                            data-unapproved-invoices="{{ !empty($unapprovedInvoicesData) ? json_encode($unapprovedInvoicesData) : '' }}">
                                             {{ __($isApproved ? 'Unapprove' : 'Approve') }}
                                         </a>
                                     @else
@@ -205,4 +235,49 @@
             @endif
         </div>
     </div>
+
+    @pushOnce('scripts')
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const approveButtons = document.querySelectorAll('.invoice-approve-btn');
+
+                approveButtons.forEach(button => {
+                    button.addEventListener('click', function(e) {
+                        const href = this.getAttribute('href');
+                        const unapprovedInvoicesJson = this.getAttribute('data-unapproved-invoices');
+
+                        if (!href.includes('/approve')) {
+                            return;
+                        }
+
+                        if (unapprovedInvoicesJson && unapprovedInvoicesJson.trim() !== '') {
+                            e.preventDefault();
+                            try {
+                                const unapprovedInvoices = JSON.parse(unapprovedInvoicesJson);
+
+                                if (unapprovedInvoices.length > 0) {
+                                    let message =
+                                        '{{ __('Note: There are unapproved prior invoices for the selected products that will remain unapproved:') }}\n\n';
+
+                                    unapprovedInvoices.forEach(inv => {
+                                        message += '• ' + inv + '\n';
+                                    });
+
+                                    message += '\n' +
+                                        '{{ __('Do you want to proceed with approval?') }}';
+
+                                    if (confirm(message)) {
+                                        window.location.href = href;
+                                    }
+                                }
+                            } catch (error) {
+                                console.error('Error parsing unapproved invoices:', error);
+                                window.location.href = href;
+                            }
+                        }
+                    });
+                });
+            });
+        </script>
+    @endPushOnce
 </x-app-layout>

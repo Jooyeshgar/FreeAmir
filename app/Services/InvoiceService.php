@@ -537,4 +537,31 @@ class InvoiceService
 
         return $invoices->filter(fn ($inv) => ! self::getChangeStatusValidation($inv)['allowed'])->values()->all();
     }
+
+    public static function getUnapprovedSellPriorInvoices(array $productIds, string $date, int $invoiceNumber, ?Invoice $excludeInvoice = null): array
+    {
+        if (empty($productIds)) {
+            return [];
+        }
+
+        $query = Invoice::where('invoice_type', InvoiceType::SELL)
+            ->where('status', InvoiceAncillaryCostStatus::UNAPPROVED)
+            ->where(function ($q) use ($date, $invoiceNumber) {
+                $q->where('date', '<', $date)
+                    ->orWhere(function ($sub) use ($date, $invoiceNumber) {
+                        $sub->where('date', $date)
+                            ->where('number', '<', $invoiceNumber);
+                    });
+            })
+            ->whereHas('items', function ($query) use ($productIds) {
+                $query->whereIn('itemable_id', $productIds)
+                    ->where('itemable_type', Product::class);
+            });
+
+        if ($excludeInvoice) {
+            $query->where('id', '!=', $excludeInvoice->id);
+        }
+
+        return $query->get(['id', 'invoice_type', 'number'])->toArray();
+    }
 }
