@@ -34,7 +34,8 @@ class InvoiceController extends Controller
     public function index(Request $request)
     {
         $builder = Invoice::with(['customer', 'document'])
-            ->orderByDesc('date');
+            ->orderByDesc('date')
+            ->orderByDesc('number');
 
         $builder->when($request->filled('invoice_type') &&
             in_array($request->invoice_type, ['buy', 'sell', 'return_buy', 'return_sell']),
@@ -59,7 +60,7 @@ class InvoiceController extends Controller
             })
         );
 
-        $invoices = $builder->paginate(12)->appends($request->query());
+        $invoices = $builder->paginate(25)->appends($request->query());
 
         return view('invoices.index', compact('invoices'));
     }
@@ -435,11 +436,9 @@ class InvoiceController extends Controller
 
             $message = $status === 'approve' ? __('Invoice approved successfully.') : __('Invoice unapproved successfully.');
 
-            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])
-                ->with('success', __($message));
+            return redirect()->back()->with('success', __($message));
         } catch (\Exception $e) {
-            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])
-                ->with('error', $e->getMessage());
+            return redirect()->back()->with('error', $e->getMessage());
         }
     }
 }
