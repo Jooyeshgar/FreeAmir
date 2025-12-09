@@ -48,6 +48,13 @@ class InvoiceService
             DB::transaction(function () use ($documentData, $user, $transactions, $invoiceData, $items, &$createdDocument, &$createdInvoice) {
                 $createdDocument = DocumentService::createDocument($user, $documentData, $transactions);
 
+                if (! self::getChangeStatusValidation($createdInvoice)['allowed']) {
+                    return [
+                        'document' => null,
+                        'invoice' => $createdInvoice,
+                    ];
+                }
+
                 $invoiceData['document_id'] = $createdDocument->id;
                 $invoiceData['status'] = InvoiceAncillaryCostStatus::APPROVED;
 
@@ -115,6 +122,13 @@ class InvoiceService
             DB::transaction(function () use ($invoice, $invoiceData, $items, &$createdDocument) {
 
                 $createdDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
+
+                if (! self::getChangeStatusValidation($invoice)['allowed']) {
+                    return [
+                        'document' => null,
+                        'invoice' => $invoice,
+                    ];
+                }
 
                 $invoiceData['status'] = InvoiceAncillaryCostStatus::APPROVED;
                 $invoiceData['document_id'] = $createdDocument->id;
