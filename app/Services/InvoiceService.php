@@ -407,13 +407,13 @@ class InvoiceService
     public static function getChangeStatusValidation(Invoice $invoice): array
     {
         try {
-            self::validateInvoiceExistance($invoice);
+            // self::validateInvoiceExistance($invoice);
             $productIds = self::getProductIdsFromInvoice($invoice);
             self::validateProductsQuantityForStatusChange($invoice, $productIds);
 
-            self::validateRelatedInvoicesStatus($invoice, checkSubsequent: true, productIds: $productIds);
-            self::validateRelatedInvoicesStatus($invoice, checkSubsequent: false, productIds: $productIds);
-            self::validateNoApprovedInvoicesWithSameProductsAfterInvoiceDate($invoice, $productIds);
+            self::validateRelatedInvoicesStatus($invoice, true, $productIds);
+            // self::validateRelatedInvoicesStatus($invoice, checkSubsequent: false, productIds: $productIds);
+            // self::validateNoApprovedInvoicesWithSameProductsAfterInvoiceDate($invoice, $productIds);
 
             return ['allowed' => true, 'reason' => null];
         } catch (\Throwable $e) {
@@ -460,16 +460,16 @@ class InvoiceService
         if ($invoice->invoice_type === InvoiceType::SELL) {
             return;
         }
-        $exists = Invoice::where('status', InvoiceAncillaryCostStatus::APPROVED)
+        $invoices = Invoice::where('status', InvoiceAncillaryCostStatus::APPROVED)
             ->where('date', '>', $invoice->date)
             ->whereHas('items', function ($query) use ($productIds) {
                 $query->where('itemable_type', Product::class)
                     ->whereIn('itemable_id', $productIds);
             })
-            ->exists();
+            ->get('number');
 
-        if ($exists) {
-            throw new Exception(__('Cannot change invoice status because there are subsequent invoices those are approved for the same invoice products. Please unapprove those invoices first.'), 400);
+        if ($invoices->isNotEmpty()) {
+            throw new Exception(__('Cannot change invoice status because there are subsequent approved invoices for the same products: ', implode(', ', $invoices->toArray())), 400);
         }
     }
 
@@ -519,11 +519,11 @@ class InvoiceService
                 $checkSubsequent ? InvoiceAncillaryCostStatus::APPROVED
                                  : '!=', InvoiceAncillaryCostStatus::APPROVED
             );
-
-        if ($query->exists()) {
+        $invoice = $query->pluck('number')->toArray();
+        if (! empty($invoice)) {
             $message = $checkSubsequent
-                ? __('Cannot change invoice status because there are subsequent invoices those are approved for the same invoice products. Please unapprove those invoices first.')
-                : __('Cannot change invoice status because there are previous invoices those are not approved for the same invoice products. Please approve those invoices first.');
+                ? __('Cannot change invoice status because there are subsequent approved invoices for the same products: '.implode(', ', $invoice))
+                : __('Cannot change invoice status because there are previous not approved invoices for the same products: '.implode(', ', $invoice));
 
             throw new Exception($message, 400);
         }
