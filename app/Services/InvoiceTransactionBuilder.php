@@ -64,7 +64,7 @@ class InvoiceTransactionBuilder
             'transactions' => $this->transactions,
             'totalVat' => $this->totalVat,
             'totalDiscount' => $this->totalDiscount,
-            'totalAmount' => $this->totalAmount,
+            'totalAmount' => $this->totalAmount + $this->totalVat - $this->subtractions,
             'subtractions' => $this->subtractions,
         ];
     }

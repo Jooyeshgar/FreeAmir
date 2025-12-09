@@ -81,6 +81,7 @@ class InvoiceService
             $invoiceData['amount'] = $buildResult['totalAmount'];
             $invoiceData['creator_id'] = $user->id;
             $invoiceData['date'] = $date;
+            $invoiceData['title'] = $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? ''));
 
             $createdInvoice = Invoice::create($invoiceData);
 
@@ -147,6 +148,7 @@ class InvoiceService
         DB::transaction(function () use ($invoice, $invoiceData, $items, $buildResult) {
             $invoiceData['vat'] = $buildResult['totalVat'];
             $invoiceData['amount'] = $buildResult['totalAmount'];
+            $invoiceData['title'] = $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? ''));
 
             $invoice->update($invoiceData);
 
@@ -202,8 +204,6 @@ class InvoiceService
 
     private static function checkInvoiceDeleteableOrEditable(Invoice $invoice): void
     {
-        self::validateInvoiceExistance($invoice);
-
         if ($invoice->status->isApproved()) {
             throw new Exception(__('Approved invoices cannot be deleted/edited'), 400);
         }
@@ -407,13 +407,9 @@ class InvoiceService
     public static function getChangeStatusValidation(Invoice $invoice): array
     {
         try {
-            // self::validateInvoiceExistance($invoice);
             $productIds = self::getProductIdsFromInvoice($invoice);
             self::validateProductsQuantityForStatusChange($invoice, $productIds);
-
-            self::validateRelatedInvoicesStatus($invoice, true, $productIds);
-            // self::validateRelatedInvoicesStatus($invoice, checkSubsequent: false, productIds: $productIds);
-            // self::validateNoApprovedInvoicesWithSameProductsAfterInvoiceDate($invoice, $productIds);
+            self::validateRelatedInvoicesStatus($invoice, $productIds);
 
             return ['allowed' => true, 'reason' => null];
         } catch (\Throwable $e) {
@@ -455,24 +451,6 @@ class InvoiceService
         }
     }
 
-    private static function validateNoApprovedInvoicesWithSameProductsAfterInvoiceDate(Invoice $invoice, array $productIds): void
-    {
-        if ($invoice->invoice_type === InvoiceType::SELL) {
-            return;
-        }
-        $invoices = Invoice::where('status', InvoiceAncillaryCostStatus::APPROVED)
-            ->where('date', '>', $invoice->date)
-            ->whereHas('items', function ($query) use ($productIds) {
-                $query->where('itemable_type', Product::class)
-                    ->whereIn('itemable_id', $productIds);
-            })
-            ->get('number');
-
-        if ($invoices->isNotEmpty()) {
-            throw new Exception(__('Cannot change invoice status because there are subsequent approved invoices for the same products: ', implode(', ', $invoices->toArray())), 400);
-        }
-    }
-
     private static function getProductIdsFromInvoice(Invoice $invoice): array
     {
         $productIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->toArray();
@@ -485,46 +463,62 @@ class InvoiceService
     }
 
     /**
-     * Validate that an invoice exists.
+     * Validate that related invoices have the correct status before changing an invoice's status.
      */
-    private static function validateInvoiceExistance(?Invoice $invoice): void
+    private static function validateRelatedInvoicesStatus(Invoice $invoice, array $productIds): void
     {
-        if (! $invoice) {
-            throw new Exception(__('Invoice not found'), 404);
+        // Check for prior unapproved BUY invoices
+        if ($invoice->invoice_type === InvoiceType::BUY) {
+            self::checkRelatedInvoices(
+                $invoice,
+                $productIds,
+                operator: '<',
+                invoiceTypes: [InvoiceType::BUY],
+                status: InvoiceAncillaryCostStatus::APPROVED,
+                shouldBeApproved: false
+            );
         }
+
+        // Check for subsequent approved invoices (BUY or SELL)
+        self::checkRelatedInvoices(
+            $invoice,
+            $productIds,
+            operator: '>',
+            invoiceTypes: [InvoiceType::BUY, InvoiceType::SELL],
+            status: InvoiceAncillaryCostStatus::APPROVED,
+            shouldBeApproved: true
+        );
     }
 
     /**
-     * Validate that related invoices have the correct status before changing an invoice's status.
+     * Check for related invoices that would prevent status change.
      */
-    private static function validateRelatedInvoicesStatus(Invoice $invoice, bool $checkSubsequent, array $productIds): void
-    {
-        $comparison = function ($q) use ($invoice, $checkSubsequent) {
-            $operator = $checkSubsequent ? '>' : '<';
-
-            $q->where('date', $operator, $invoice->date)
-                ->orWhere(function ($sub) use ($invoice, $operator) {
-                    $sub->where('date', $invoice->date)
-                        ->where('number', $operator, $invoice->number);
-                });
-        };
-
+    private static function checkRelatedInvoices(
+        Invoice $invoice,
+        array $productIds,
+        string $operator,
+        array $invoiceTypes,
+        InvoiceAncillaryCostStatus $status,
+        bool $shouldBeApproved
+    ): void {
         $query = Invoice::where('number', '!=', $invoice->number)
-            ->where($comparison)
-            ->whereIn('invoice_type', [InvoiceType::BUY, InvoiceType::SELL])
+            ->where(function ($q) use ($invoice, $operator) {
+                $q->where('date', $operator, $invoice->date)
+                    ->orWhere(function ($sub) use ($invoice, $operator) {
+                        $sub->where('date', $invoice->date)
+                            ->where('number', $operator, $invoice->number);
+                    });
+            })
+            ->whereIn('invoice_type', $invoiceTypes)
             ->whereHas('items', fn ($q) => $q->where('itemable_type', Product::class)
                 ->whereIn('itemable_id', $productIds)
             )
-            ->where('status',
-                $checkSubsequent ? InvoiceAncillaryCostStatus::APPROVED
-                                 : '!=', InvoiceAncillaryCostStatus::APPROVED
-            );
-        $invoice = $query->pluck('number')->toArray();
-        if (! empty($invoice)) {
-            $message = $checkSubsequent
-                ? __('Cannot change invoice status because there are subsequent approved invoices for the same products: '.implode(', ', $invoice))
-                : __('Cannot change invoice status because there are previous not approved invoices for the same products: '.implode(', ', $invoice));
+            ->where('status', $shouldBeApproved ? $status : '!=', $status);
 
+        $invoiceData = $query->get(['invoice_type', 'number']);
+        if ($invoiceData->isNotEmpty()) {
+            $invoiceList = $invoiceData->map(fn ($inv) => $inv->invoice_type->value.': '.$inv->number)->implode(', ');
+            $message = __('Cannot change invoice status because there are subsequent approved invoices for the same products. '.$invoiceList);
             throw new Exception($message, 400);
         }
     }

@@ -41,9 +41,8 @@
             value="{{ $invoice->invoice_type ?? $invoice_type }}">
         <div class="flex w-1/3">
             <x-text-input input_name="title" title="{{ __('Invoice Name') }}"
-                input_value="{{ old('title') ?? ($invoice->document->title ?? '') }}"
-                placeholder="{{ __('Invoice Name') }}" label_text_class="text-gray-500"
-                label_class="w-1/2"></x-text-input>
+                input_value="{{ old('title') ?? ($invoice->title ?? '') }}" placeholder="{{ __('Invoice Name') }}"
+                label_text_class="text-gray-500" label_class="w-1/2"></x-text-input>
         </div>
     </div>
 

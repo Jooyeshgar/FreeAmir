@@ -73,7 +73,7 @@
                             </td>
                             <td class="px-4 py-2">
                                 <span>{{ $invoice->customer->name ?? '' }}</span><br>
-                                <span class="text-xs text-gray-500">{{ $invoice->document->title ?? '' }}</span>
+                                <span class="text-xs text-gray-500">{{ $invoice->title ?? '' }}</span>
                             </td>
                             <td class="px-4 py-2">
                                 @if ($invoice->document_id)

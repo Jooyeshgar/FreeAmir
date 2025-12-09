@@ -28,6 +28,7 @@ class Invoice extends Model
         'active',
         'vat',
         'amount',
+        'title',
     ];
 
     protected $casts = [
