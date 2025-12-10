@@ -55,16 +55,21 @@ class AncillaryCostController extends Controller
             auth()->user()->can('ancillary-costs.approve');
         }
 
-        AncillaryCostService::createAncillaryCost(auth()->user(), $validated, $approved);
+        $result = AncillaryCostService::createAncillaryCost(auth()->user(), $validated, $approved);
+
+        [$msgType, $msg] = $this->ancillaryCostMessage($result, 'created', $approved);
 
         return redirect()
             ->route('ancillary-costs.index')
-            ->with('success', __('Ancillary Cost created successfully.'));
+            ->with($msgType, $msg);
     }
 
     public function edit(AncillaryCost $ancillaryCost)
     {
+        $ancillaryCostInvoice = $ancillaryCost->invoice;
         $invoices = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing();
+
+        $invoices->push($ancillaryCostInvoice)->unique('id');
 
         // Load ancillary cost items for editing
         $ancillaryCostItems = $ancillaryCost->items->map(function ($item) {
@@ -93,7 +98,9 @@ class AncillaryCostController extends Controller
         $validated = $request->validated();
         $validated['company_id'] = session('active-company-id');
 
+        $ancillaryCostInvoiceId = $ancillaryCost->invoice_id;
         $validatedInvoicesId = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing()->pluck('id')->toArray();
+        $validatedInvoicesId[] = $ancillaryCostInvoiceId;
         if (! in_array($validated['invoice_id'], $validatedInvoicesId)) {
             throw new Exception(__('Ancillary Cost cannot be created.'), 400);
         }
@@ -104,11 +111,34 @@ class AncillaryCostController extends Controller
             auth()->user()->can('ancillary-costs.approve');
         }
 
-        AncillaryCostService::updateAncillaryCost(auth()->user(), $ancillaryCost, $validated, $approved);
+        $result = AncillaryCostService::updateAncillaryCost(auth()->user(), $ancillaryCost, $validated, $approved);
+
+        [$msgType, $msg] = $this->ancillaryCostMessage($result, 'updated', $approved);
 
         return redirect()
             ->route('ancillary-costs.index')
-            ->with('success', __('Ancillary Cost updated successfully.'));
+            ->with($msgType, $msg);
+    }
+
+    private function ancillaryCostMessage(array $result, string $action = 'created', bool $approved = false)
+    {
+        if (! $approved) {
+            return [
+                'success',
+                __("Ancillary Cost {$action} successfully."),
+            ];
+        }
+
+        $documentMissing = empty($result['document']);
+
+        return [
+            $documentMissing ? 'warning' : 'success',
+            __("Ancillary Cost {$action} successfully.")
+                .($documentMissing
+                    ? ' '.__('but it could not be approved due to validation constraints.')
+                    : ''
+                ),
+        ];
     }
 
     public function destroy(AncillaryCost $ancillaryCost)
@@ -155,10 +185,13 @@ class AncillaryCostController extends Controller
                 ->with('error', __('Invalid status action.'));
         }
 
+        if (! $service->getChangeStatusValidation($ancillaryCost)['allowed']) {
+            redirect()->back()->with('error', $service->getChangeStatusValidation($ancillaryCost)['reason']);
+        }
+
         auth()->user()->can('ancillary-costs.approve');
 
         try {
-            $service->getChangeStatusValidation($ancillaryCost);
             $service->changeAncillaryCostStatus($ancillaryCost, $status);
 
             $message = $status === 'approve' ? __('Ancillary Cost approved successfully.') : __('Ancillary Cost unapproved successfully.');

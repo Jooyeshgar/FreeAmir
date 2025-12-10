@@ -36,9 +36,17 @@ class AncillaryCostService
 
         $invoice = Invoice::findOrFail($data['invoice_id']);
 
+        $document = null;
         $ancillaryCost = self::createAncillaryCostWithoutApproval($data);
 
         if ($approved) {
+
+            if (! self::getChangeStatusValidation($ancillaryCost)['allowed']) {
+                return [
+                    'document' => null,
+                    'ancillaryCost' => $ancillaryCost,
+                ];
+            }
 
             $type = AncillaryCostType::from($data['type']);
 
@@ -50,7 +58,7 @@ class AncillaryCostService
             $transactionBuilder = new AncillaryCostTransactionBuilder($data);
             $transactions = $transactionBuilder->build();
 
-            DB::transaction(function () use ($documentData, $user, $invoice, $transactions, $ancillaryCost) {
+            DB::transaction(function () use ($documentData, $user, $invoice, $transactions, $ancillaryCost, &$document) {
                 $document = DocumentService::createDocument(
                     $user,
                     $documentData,
@@ -68,6 +76,11 @@ class AncillaryCostService
                 self::syncCOGAfterAncillarityCost($invoice);
             });
         }
+
+        return [
+            'document' => $document,
+            'ancillaryCost' => $ancillaryCost,
+        ];
     }
 
     private static function createAncillaryCostWithoutApproval(array $data)
@@ -106,11 +119,20 @@ class AncillaryCostService
     public static function updateAncillaryCost(User $user, AncillaryCost $ancillaryCost, array $data, bool $approve = false)
     {
         self::validateAncillaryCostData($data);
+
+        $createdDocument = null;
         $ancillaryCost = self::updateAncillaryCostWithoutApproval($ancillaryCost, $data);
 
         if ($approve) {
 
-            DB::transaction(function () use ($ancillaryCost) {
+            if (! self::getChangeStatusValidation($ancillaryCost)['allowed']) {
+                return [
+                    'document' => null,
+                    'ancillaryCost' => $ancillaryCost,
+                ];
+            }
+
+            DB::transaction(function () use ($ancillaryCost, &$createdDocument) {
 
                 $createdDocument = self::createDocumentFromAncillaryCostItems(auth()->user(), $ancillaryCost);
 
@@ -123,6 +145,11 @@ class AncillaryCostService
                 self::syncCOGAfterAncillarityCost($ancillaryCost->invoice);
             });
         }
+
+        return [
+            'document' => $createdDocument,
+            'ancillaryCost' => $ancillaryCost,
+        ];
     }
 
     private static function updateAncillaryCostWithoutApproval(AncillaryCost $ancillaryCost, array $data)
@@ -322,12 +349,10 @@ class AncillaryCostService
     public static function getChangeStatusValidation(AncillaryCost $ancillaryCost): array
     {
         try {
-            self::validateAncillaryCostExistance($ancillaryCost);
             $productIds = self::getProductIdsFromAncillaryCost($ancillaryCost);
 
             self::validateAncillaryCostInvoiceApproval($ancillaryCost);
-            self::validateRelatedAncillaryCostStatus($ancillaryCost, checkSubsequent: true, productIds: $productIds);
-            self::validateRelatedAncillaryCostStatus($ancillaryCost, checkSubsequent: false, productIds: $productIds);
+            self::validateRelatedAncillaryCostStatus($ancillaryCost, $productIds);
             self::validateNoApprovedInvoicesAfterAncillaryCostWithSameProducts($ancillaryCost, $productIds);
 
             return ['allowed' => true, 'reason' => null];
@@ -350,7 +375,7 @@ class AncillaryCostService
     private static function validateNoApprovedInvoicesAfterAncillaryCostWithSameProducts(AncillaryCost $ancillaryCost, array $productIds): void
     {
         $query = Invoice::where('date', '>', $ancillaryCost->date)
-            ->where('status', '=', InvoiceAncillaryCostStatus::APPROVED)
+            ->where('status', InvoiceAncillaryCostStatus::APPROVED)
             ->whereHas('items', fn ($q) => $q->whereIn('itemable_id', $productIds)->where('itemable_type', Product::class));
 
         if ($query->exists()) {
@@ -360,8 +385,6 @@ class AncillaryCostService
 
     private static function checkAncillaryCostDeleteableOrEditable(AncillaryCost $ancillaryCost): void
     {
-        self::validateAncillaryCostExistance($ancillaryCost);
-
         if ($ancillaryCost->status->isApproved()) {
             throw new Exception(__('Approved Ancillary Cost cannot be edited/deleted'), 400);
         }
@@ -374,26 +397,15 @@ class AncillaryCostService
         }
     }
 
-    private static function validateRelatedAncillaryCostStatus(AncillaryCost $ancillaryCost, bool $checkSubsequent, array $productIds): void
+    private static function validateRelatedAncillaryCostStatus(AncillaryCost $ancillaryCost, array $productIds): void
     {
         $query = AncillaryCost::where('id', '!=', $ancillaryCost->id)
-            ->where('date', $checkSubsequent ? '>' : '<', $ancillaryCost->date)
+            ->where('date', '>', $ancillaryCost->date)
             ->whereHas('items', fn ($q) => $q->whereIn('product_id', $productIds))
-            ->where('status', $checkSubsequent ? '=' : '!=', InvoiceAncillaryCostStatus::APPROVED);
+            ->where('status', InvoiceAncillaryCostStatus::APPROVED);
 
         if ($query->exists()) {
-            $message = $checkSubsequent
-                ? __('Cannot change ancillary cost status because there are subsequent ancillary costs those are approved for the same invoice products. Please unapprove those ancillary costs first.')
-                : __('Cannot change ancillary cost status because there are previous ancillary costs those are not approved for the same invoice products. Please approve those ancillary costs first.');
-
-            throw new Exception($message, 400);
-        }
-    }
-
-    private static function validateAncillaryCostExistance(AncillaryCost $ancillaryCost): void
-    {
-        if (! $ancillaryCost) {
-            throw new Exception(__('Ancillary Cost not found'), 404);
+            throw new Exception(__('Cannot change ancillary cost status because there are subsequent ancillary costs those are approved for the same invoice products. Please unapprove those ancillary costs first.'), 400);
         }
     }
 
