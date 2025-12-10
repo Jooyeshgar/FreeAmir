@@ -83,20 +83,10 @@ class ProductController extends Controller
             ->with('invoice')
             ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
             ->orderByDesc('invoices.date')
+            ->orderByDesc('invoices.number')
+            ->orderByDesc('invoices.invoice_type')
             ->select('invoice_items.*')
             ->paginate(10);
-
-        $remainingBeforePage = $this->calculateRemainingBeforePage(
-            $product->invoiceItems()
-                ->with('invoice')
-                ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
-                ->orderByDesc('invoices.date')
-                ->select('invoice_items.*'),
-            $historyItems,
-            $product->quantity
-        );
-
-        $this->addRunningRemaining($historyItems, $remainingBeforePage);
 
         return view('products.show', compact('product', 'historyItems'));
     }
@@ -106,49 +96,5 @@ class ProductController extends Controller
         $this->productService->delete($product);
 
         return redirect()->route('products.index')->with('success', __('Product deleted successfully.'));
-    }
-
-    private function calculateRemainingBeforePage($query, $invoiceItems, int $startingQuantity): int
-    {
-        if ($invoiceItems->currentPage() <= 1 || $invoiceItems->isEmpty()) {
-            return $startingQuantity;
-        }
-
-        $itemsBeforeCurrentPage = ($invoiceItems->currentPage() - 1) * $invoiceItems->perPage();
-
-        $previousItems = $query->offset(0)
-            ->limit($itemsBeforeCurrentPage)
-            ->get();
-
-        $remaining = $startingQuantity;
-
-        foreach ($previousItems as $item) {
-            if ($item->invoice->status->isApproved()) {
-                if ($item->invoice->invoice_type === \App\Enums\InvoiceType::SELL) {
-                    $remaining += $item->quantity;
-                } elseif ($item->invoice->invoice_type === \App\Enums\InvoiceType::BUY) {
-                    $remaining -= $item->quantity;
-                }
-            }
-        }
-
-        return $remaining;
-    }
-
-    private function addRunningRemaining($invoiceItems, int $remainingBeforePage): void
-    {
-        $remaining = $remainingBeforePage;
-
-        foreach ($invoiceItems as $item) {
-            if ($item->invoice->status->isApproved()) {
-                if ($item->invoice->invoice_type === \App\Enums\InvoiceType::SELL) {
-                    $remaining += $item->quantity;
-                } elseif ($item->invoice->invoice_type === \App\Enums\InvoiceType::BUY) {
-                    $remaining -= $item->quantity;
-                }
-            }
-
-            $item->remaining = $remaining;
-        }
     }
 }

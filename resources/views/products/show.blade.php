@@ -186,22 +186,6 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if ($historyItems->currentPage() > 1 && $historyItems->isNotEmpty())
-                            <tr class="bg-base-200 font-semibold">
-                                <td colspan="5" class="px-4 py-3 text-right">
-                                    {{ __('Balance from previous page') }}</td>
-                                <td class="px-4 py-3 text-center">
-                                    @php
-                                        $firstItem = $historyItems->first();
-                                        $balanceFromPrevious = $firstItem->remaining;
-                                    @endphp
-                                    <span
-                                        class="badge {{ $balanceFromPrevious < 0 ? 'badge-error' : ($balanceFromPrevious < $product->quantity_warning ? 'badge-warning' : 'badge-success') }} font-bold">
-                                        {{ formatNumber($balanceFromPrevious) }}
-                                    </span>
-                                </td>
-                            </tr>
-                        @endif
                         @forelse ($historyItems as $item)
                             <tr class="hover {{ !$item->invoice->status->isApproved() ? 'opacity-50' : '' }}">
                                 <td class="px-4 py-3">
@@ -257,7 +241,7 @@
                                     @if ($item->invoice->status->isApproved())
                                         <span
                                             class="badge {{ $item->remaining < 0 ? 'badge-error' : ($item->remaining < $product->quantity_warning ? 'badge-warning' : 'badge-success') }} font-bold">
-                                            {{ formatNumber($item->remaining) }}
+                                            {{ formatNumber($item->quantity_at + $item->quantity) }}
                                         </span>
                                     @else
                                         <span class="text-gray-400">-</span>
@@ -271,6 +255,32 @@
                                 </td>
                             </tr>
                         @endforelse
+                        @if ($historyItems->hasPages())
+                            <tr class="bg-base-300 font-semibold">
+                                <td colspan="5" class="px-4 py-3 text-right">
+                                    {{ __('Balance from next page') }}
+                                <td class="px-4 py-3 text-center">
+                                    @php
+                                        $balanceFromPrevious = 0;
+                                        if (
+                                            $historyItems->currentPage() < $historyItems->lastPage() &&
+                                            $historyItems->isNotEmpty()
+                                        ) {
+                                            $lastItem = $historyItems->last();
+                                            $balanceFromPrevious = $lastItem->quantity;
+                                        }
+                                        if ($historyItems->currentPage() == 1) {
+                                            $balanceFromPrevious = $product->quantity;
+                                        }
+                                    @endphp
+                                    <span
+                                        class="badge {{ $balanceFromPrevious < 0 ? 'badge-error' : ($balanceFromPrevious < $product->quantity_warning ? 'badge-warning' : 'badge-success') }} font-bold">
+                                        {{ formatNumber($balanceFromPrevious) }}
+                                    </span>
+                                </td>
+                                </td>
+                            </tr>
+                        @endif
                     </tbody>
                 </table>
             </div>
