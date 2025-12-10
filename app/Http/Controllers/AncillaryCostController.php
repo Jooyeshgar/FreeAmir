@@ -185,22 +185,16 @@ class AncillaryCostController extends Controller
                 ->with('error', __('Invalid status action.'));
         }
 
+        auth()->user()->can('ancillary-costs.approve');
+
         if (! $service->getChangeStatusValidation($ancillaryCost)['allowed']) {
             redirect()->back()->with('error', $service->getChangeStatusValidation($ancillaryCost)['reason']);
         }
 
-        auth()->user()->can('ancillary-costs.approve');
+        $service->changeAncillaryCostStatus($ancillaryCost, $status);
 
-        try {
-            $service->changeAncillaryCostStatus($ancillaryCost, $status);
+        $message = $status === 'approve' ? __('Ancillary Cost approved successfully.') : __('Ancillary Cost unapproved successfully.');
 
-            $message = $status === 'approve' ? __('Ancillary Cost approved successfully.') : __('Ancillary Cost unapproved successfully.');
-
-            return redirect()->route('ancillary-costs.index')
-                ->with('success', __($message));
-        } catch (Exception $e) {
-            return redirect()->route('ancillary-costs.index')
-                ->with('error', $e->getMessage());
-        }
+        return redirect()->route('ancillary-costs.index')->with('success', __($message));
     }
 }

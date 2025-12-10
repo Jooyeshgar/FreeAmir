@@ -558,7 +558,7 @@ class InvoiceService
         }
 
         $query = Invoice::where('invoice_type', InvoiceType::SELL)
-            ->where('status', InvoiceAncillaryCostStatus::UNAPPROVED)
+            ->where('status', '!=', InvoiceAncillaryCostStatus::APPROVED)
             ->where(function ($q) use ($date, $invoiceNumber) {
                 $q->where('date', '<', $date)
                     ->orWhere(function ($sub) use ($date, $invoiceNumber) {

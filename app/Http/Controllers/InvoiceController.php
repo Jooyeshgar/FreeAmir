@@ -453,20 +453,16 @@ class InvoiceController extends Controller
                 ->with('error', __('Invalid status action.'));
         }
 
+        auth()->user()->can('ancillary-costs.approve');
+
         if (! $service->getChangeStatusValidation($invoice)['allowed']) {
             return redirect()->back()->with('error', $service->getChangeStatusValidation($invoice)['reason']);
         }
 
-        auth()->user()->can('ancillary-costs.approve');
+        $service->changeInvoiceStatus($invoice, $status);
 
-        try {
-            $service->changeInvoiceStatus($invoice, $status);
+        $message = $status === 'approve' ? __('Invoice approved successfully.') : __('Invoice unapproved successfully.');
 
-            $message = $status === 'approve' ? __('Invoice approved successfully.') : __('Invoice unapproved successfully.');
-
-            return redirect()->back()->with('success', __($message));
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage());
-        }
+        return redirect()->back()->with('success', __($message));
     }
 }
