@@ -113,9 +113,11 @@ class InvoiceController extends Controller
 
         $result = $service->createInvoice(auth()->user(), $invoiceData, $items, $approved);
 
+        [$msgType, $msg] = $this->invoiceMessage($result, 'created', $approved);
+
         return redirect()
             ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type])
-            ->with('success', __('Invoice created successfully.'));
+            ->with($msgType, $msg);
     }
 
     public function show(Invoice $invoice)
@@ -193,9 +195,11 @@ class InvoiceController extends Controller
 
         $result = $service->updateInvoice($invoice->id, $invoiceData, $items, $approved);
 
+        [$msgType, $msg] = $this->invoiceMessage($result, 'updated', $approved);
+
         return redirect()
             ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type])
-            ->with('success', __('Invoice updated successfully.'));
+            ->with($msgType, $msg);
     }
 
     public function destroy(Invoice $invoice)
@@ -209,6 +213,27 @@ class InvoiceController extends Controller
         } catch (\Exception $e) {
             return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('error', $e->getMessage());
         }
+    }
+
+    private function invoiceMessage(array $result, string $action = 'created', bool $approved = false)
+    {
+        if (! $approved) {
+            return [
+                'success',
+                __("Invoice {$action} successfully."),
+            ];
+        }
+
+        $documentMissing = empty($result['document']);
+
+        return [
+            $documentMissing ? 'warning' : 'success',
+            __("Invoice {$action} successfully.")
+                .($documentMissing
+                    ? ' '.__('but it could not be approved due to validation constraints.')
+                    : ''
+                ),
+        ];
     }
 
     private function extractInvoiceData(array $validated): array
@@ -428,10 +453,13 @@ class InvoiceController extends Controller
                 ->with('error', __('Invalid status action.'));
         }
 
+        if (! $service->getChangeStatusValidation($invoice)['allowed']) {
+            return redirect()->back()->with('error', $service->getChangeStatusValidation($invoice)['reason']);
+        }
+
         auth()->user()->can('ancillary-costs.approve');
 
         try {
-            $service->getChangeStatusValidation($invoice);
             $service->changeInvoiceStatus($invoice, $status);
 
             $message = $status === 'approve' ? __('Invoice approved successfully.') : __('Invoice unapproved successfully.');

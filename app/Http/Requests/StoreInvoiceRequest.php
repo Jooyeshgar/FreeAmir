@@ -151,37 +151,35 @@ class StoreInvoiceRequest extends FormRequest
                     }
                 }
 
-                if ($this->input('approve')) {
-                    if ($invoiceType === 'sell') {
-                        $approvedSubsequentBuyInvoicesForProducts = Invoice::where('invoice_type', InvoiceType::BUY)
-                            ->where('status', InvoiceAncillaryCostStatus::APPROVED)
-                            ->where('date', '>', $inputDate)
-                            ->orWhere(function ($sub) use ($invoiceNumber, $inputDate) {
-                                $sub->where('invoice_type', InvoiceType::BUY)
-                                    ->where('date', $inputDate)
-                                    ->where('number', '>', $invoiceNumber);
-                            })
-                            ->whereHas('items', function ($query) use ($productIds) {
-                                $query->whereIn('itemable_id', $productIds)
-                                    ->where('itemable_type', Product::class);
-                            });
+                if ($this->input('approve')) { // No approved buy invoice can be dated before approved subsequent buy invoices for the same products
+                    $approvedSubsequentBuyInvoicesForProducts = Invoice::where('invoice_type', InvoiceType::BUY)
+                        ->where('status', InvoiceAncillaryCostStatus::APPROVED)
+                        ->where('date', '>', $inputDate)
+                        ->orWhere(function ($sub) use ($invoiceNumber, $inputDate) {
+                            $sub->where('invoice_type', InvoiceType::BUY)
+                                ->where('date', $inputDate)
+                                ->where('number', '>', $invoiceNumber);
+                        })
+                        ->whereHas('items', function ($query) use ($productIds) {
+                            $query->whereIn('itemable_id', $productIds)
+                                ->where('itemable_type', Product::class);
+                        });
 
-                        $invoiceData = $approvedSubsequentBuyInvoicesForProducts->get(['invoice_type', 'number']);
+                    $invoiceData = $approvedSubsequentBuyInvoicesForProducts->get(['invoice_type', 'number']);
 
-                        if ($invoiceData->isNotEmpty()) {
-                            $invoiceList = $invoiceData
-                                ->map(fn ($inv) => $inv->invoice_type->value.' : '.$inv->number);
+                    if ($invoiceData->isNotEmpty()) {
+                        $invoiceList = $invoiceData
+                            ->map(fn ($inv) => $inv->invoice_type->value.' : '.$inv->number);
 
+                        $validator->errors()->add(
+                            'date',
+                            __('There are approved subsequent buy invoices for the selected products:')
+                        );
+                        foreach ($invoiceList as $invoiceError) {
                             $validator->errors()->add(
                                 'date',
-                                __('There are approved subsequent buy invoices for the selected products:')
+                                $invoiceError
                             );
-                            foreach ($invoiceList as $invoiceError) {
-                                $validator->errors()->add(
-                                    'date',
-                                    $invoiceError
-                                );
-                            }
                         }
                     }
                 }
