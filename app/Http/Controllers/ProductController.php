@@ -81,11 +81,13 @@ class ProductController extends Controller
 
         $historyItems = $product->invoiceItems()
             ->with('invoice')
-            ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
-            ->orderByDesc('invoices.date')
-            ->orderByDesc('invoices.number')
-            ->orderByDesc('invoices.invoice_type')
-            ->select('invoice_items.*')
+            ->tap(function ($q) {
+                foreach (['date', 'invoice_type', 'number'] as $col) {
+                    $q->orderByDesc(
+                        \App\Models\Invoice::select($col)->whereColumn('invoices.id', 'invoice_items.invoice_id')
+                    );
+                }
+            })
             ->paginate(10);
 
         return view('products.show', compact('product', 'historyItems'));
