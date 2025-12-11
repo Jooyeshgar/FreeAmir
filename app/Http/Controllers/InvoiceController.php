@@ -136,6 +136,10 @@ class InvoiceController extends Controller
     {
         $invoice->load('customer', 'items');
 
+        if (! $invoice->status->isApproved()) {
+            return view('invoices.draft', compact('invoice'));
+        }
+
         $pdf = PDF::loadView('invoices.print', compact('invoice'));
 
         return $pdf->stream('invoice-'.($invoice->number ?? $invoice->id).'.pdf');
