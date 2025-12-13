@@ -1,10 +1,5 @@
-body {
-    font-family: 'Arial', sans-serif;
-    direction: rtl;
-    margin: 0;
-}
-
 .invoice-container {
+    background-color: #fff;
     border: 3px double #000;
     padding: 30px;
     margin: 20px auto;
@@ -51,7 +46,8 @@ body {
 }
 
 .info-row {
-    display: flex;
+    display: inline;
+    margin-right: 10px;
     font-size: 15px;
 }
 
@@ -65,24 +61,19 @@ body {
 
 .invoice-items-table th,
 .invoice-items-table td {
+    font-weight: normal;
     border: 1px solid #000;
     padding: 8px 12px;
     text-align: center;
     word-break: break-word;
 }
 
+.smaller-text {
+    font-size: 11px;
+}
+
 
 @media print {
-    @page {
-        size: A4;
-        margin: 5mm 5mm 0 5mm;
-
-    }
-
-    body {
-        background-color: #fff;
-    }
-
     .invoice-container {
         box-shadow: none;
         padding: 20px;
