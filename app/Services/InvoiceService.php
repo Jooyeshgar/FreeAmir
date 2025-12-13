@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\DTO\InvoiceStatusDecision;
 use App\Enums\InvoiceAncillaryCostStatus;
 use App\Enums\InvoiceType;
 use App\Exceptions\InvoiceServiceException;
@@ -11,6 +12,7 @@ use App\Models\Product;
 use App\Models\Service;
 use App\Models\User;
 use Exception;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class InvoiceService
@@ -322,8 +324,8 @@ class InvoiceService
     {
         DB::transaction(function () use ($invoice, $status) {
             match ($status) {
-                'approve' => $this->toggleInvoiceApproval($invoice, true),
-                'unapprove' => $this->toggleInvoiceApproval($invoice, false),
+                'approved' => $this->toggleInvoiceApproval($invoice, true),
+                'unapproved' => $this->toggleInvoiceApproval($invoice, false),
                 default => null,
             };
         });
@@ -417,24 +419,26 @@ class InvoiceService
             ->all();
     }
 
-    public static function getChangeStatusValidation(Invoice $invoice): array
+    public static function getChangeStatusValidation(Invoice $invoice): InvoiceStatusDecision
     {
-        try {
-            $productIds = self::getProductIdsFromInvoice($invoice);
-            self::validateProductsQuantityForStatusChange($invoice, $productIds);
-            self::validateRelatedInvoicesStatus($invoice, $productIds);
 
-            return ['allowed' => true, 'reason' => null];
-        } catch (\Throwable $e) {
-            return ['allowed' => false, 'reason' => $e->getMessage()];
-        }
+        $productIds = self::getProductIdsFromInvoice($invoice);
+
+        $nextStatus = $invoice->status->isApproved()
+            ? InvoiceAncillaryCostStatus::UNAPPROVED
+            : InvoiceAncillaryCostStatus::APPROVED;
+
+        return self::decideInvoiceStatusChange($invoice, $productIds, $nextStatus);
+
     }
 
-    private static function validateProductsQuantityForStatusChange(Invoice $invoice, array $productIds): void
+    private static function validateProductsQuantityForStatusChange(Invoice $invoice, array $productIds): Collection
     {
-        if ($invoice->invoice_type !== InvoiceType::SELL) {
-            return;
-        }
+        $errors = collect();
+
+        // if ($invoice->invoice_type !== InvoiceType::SELL) {
+        //     return $errors;
+        // }
 
         $products = Product::whereIn('id', $productIds)->get();
 
@@ -455,22 +459,25 @@ class InvoiceService
 
             $requiredQuantity = $invoiceItem->quantity;
             if ($product->quantity < $requiredQuantity) {
-                throw new Exception(__('Insufficient quantity for product ":product". Available: :available, Required: :required.', [
-                    'product' => $product->name,
+                $errors->push([
+                    'product' => $product,
                     'available' => $product->quantity,
                     'required' => $requiredQuantity,
-                ]), 400);
+                    'message' => __('Insufficient quantity for product ":product". Available: :available, Required: :required.', [
+                        'product' => $product->name,
+                        'available' => $product->quantity,
+                        'required' => $requiredQuantity,
+                    ]),
+                ]);
             }
         }
+
+        return $errors;
     }
 
     private static function getProductIdsFromInvoice(Invoice $invoice): array
     {
         $productIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->toArray();
-
-        if (empty($productIds)) {
-            throw new Exception(__('No products associated with this invoice.'), 400);
-        }
 
         return $productIds;
     }
@@ -478,62 +485,149 @@ class InvoiceService
     /**
      * Validate that related invoices have the correct status before changing an invoice's status.
      */
-    private static function validateRelatedInvoicesStatus(Invoice $invoice, array $productIds): void
+    private static function enforceInvoiceStatusRules(Invoice $invoice, array $productIds, InvoiceAncillaryCostStatus $nextStatus): Collection
     {
-        // Check for prior unapproved BUY invoices
-        if ($invoice->invoice_type === InvoiceType::BUY) {
-            self::checkRelatedInvoices(
-                $invoice,
-                $productIds,
-                operator: '<',
-                invoiceTypes: [InvoiceType::BUY],
-                status: InvoiceAncillaryCostStatus::APPROVED,
-                shouldBeApproved: false
-            );
+        $conflicts = collect();
+
+        // Check for prior unapproved (BUY or SELL) invoices (soft rule - warning)
+        if ($nextStatus->isApproved()) {
+            $prior = self::findConflictingUnapprovedInvoices($invoice, $productIds);
+
+            if ($prior->isNotEmpty()) {
+                $conflicts->push([
+                    'rule' => 'prior_unapproved_buy',
+                    'invoices' => $prior,
+                ]);
+            }
         }
 
-        // Check for subsequent approved invoices (BUY or SELL)
-        self::checkRelatedInvoices(
-            $invoice,
-            $productIds,
-            operator: '>',
-            invoiceTypes: [InvoiceType::BUY, InvoiceType::SELL],
-            status: InvoiceAncillaryCostStatus::APPROVED,
-            shouldBeApproved: true
-        );
+        // Check for subsequent approved invoices (BUY or SELL) (hard rule - error)
+        $subsequent = self::findConflictingInvoices($invoice, $productIds, $nextStatus);
+
+        if ($subsequent->isNotEmpty()) {
+            $conflicts->push([
+                'rule' => 'subsequent_approved',
+                'invoices' => $subsequent,
+            ]);
+        }
+
+        return $conflicts;
     }
 
     /**
-     * Check for related invoices that would prevent status change.
+     * Validate there are no related invoices that block changing the given invoice's status.
+     *
+     * @param  Invoice  $invoice  The invoice being checked (excluded from search)
+     * @param  array<int>  $productIds  Product IDs to search for in related invoices
+     * @param  array  $invoiceTypes  Invoice types to include in the search (e.g. BUY, SELL)
+     * @param  InvoiceAncillaryCostStatus  $nextStatus  Status value to change to
+     *
+     * @throws Exception If one or more related invoices are found that would prevent the status change
      */
-    private static function checkRelatedInvoices(
-        Invoice $invoice,
-        array $productIds,
-        string $operator,
-        array $invoiceTypes,
-        InvoiceAncillaryCostStatus $status,
-        bool $shouldBeApproved
-    ): void {
-        $query = Invoice::where('number', '!=', $invoice->number)
-            ->where(function ($q) use ($invoice, $operator) {
-                $q->where('date', $operator, $invoice->date)
-                    ->orWhere(function ($sub) use ($invoice, $operator) {
-                        $sub->where('date', $invoice->date)
-                            ->where('number', $operator, $invoice->number);
-                    });
-            })
-            ->whereIn('invoice_type', $invoiceTypes)
-            ->whereHas('items', fn ($q) => $q->where('itemable_type', Product::class)
-                ->whereIn('itemable_id', $productIds)
-            )
-            ->where('status', $shouldBeApproved ? $status : '!=', $status);
-
-        $invoiceData = $query->get(['invoice_type', 'number']);
-        if ($invoiceData->isNotEmpty()) {
-            $invoiceList = $invoiceData->map(fn ($inv) => $inv->invoice_type->value.': '.$inv->number)->implode(', ');
-            $message = __('Cannot change invoice status because there are subsequent approved invoices for the same products. '.$invoiceList);
-            throw new Exception($message, 400);
+    private static function findConflictingInvoices(Invoice $invoice, array $productIds, InvoiceAncillaryCostStatus $nextStatus, ?array $invoiceTypes = []): Collection
+    {
+        if (empty($productIds)) {
+            return collect();
         }
+
+        $query = Invoice::where('number', '!=', $invoice->number)
+            ->where(function ($q) use ($invoice) {
+                $q->where('date', '>', $invoice->date)
+                    ->orWhere(function ($sub) use ($invoice) {
+                        $sub->where('date', $invoice->date)
+                            ->where('number', '>', $invoice->number);
+                    });
+            });
+        if (! empty($invoiceTypes)) {
+            $query->whereIn('invoice_type', $invoiceTypes);
+        }
+        $query->whereHas('items', fn ($q) => $q->where('itemable_type', Product::class)
+            ->whereIn('itemable_id', $productIds)
+        )
+            ->where('status', InvoiceAncillaryCostStatus::APPROVED);
+
+        // Return collection of invoices (no exception here)
+        return $query->get(['id', 'invoice_type', 'number', 'date']);
+    }
+
+    private static function findConflictingUnapprovedInvoices(Invoice $invoice, array $productIds, ?array $invoiceTypes = []): Collection
+    {
+
+        if (empty($productIds)) {
+            return collect();
+        }
+
+        $query = Invoice::where('number', '!=', $invoice->number)
+            ->where(function ($q) use ($invoice) {
+                $q->where('date', '<', $invoice->date)
+                    ->orWhere(function ($sub) use ($invoice) {
+                        $sub->where('date', $invoice->date)
+                            ->where('number', '<', $invoice->number);
+                    });
+            });
+        if (! empty($invoiceTypes)) {
+            $query->whereIn('invoice_type', $invoiceTypes);
+        }
+        $query->whereHas('items', fn ($q) => $q->where('itemable_type', Product::class)
+            ->whereIn('itemable_id', $productIds)
+        )
+            ->where('status', '!=', InvoiceAncillaryCostStatus::APPROVED);
+
+        // Return collection of invoices (no exception here)
+        return $query->get(['id', 'invoice_type', 'number', 'date']);
+    }
+
+    /**
+     * Decide upon the invoice status change by aggregating rules and messages
+     * Returns an InvoiceStatusDecision DTO with messages and conflicts
+     */
+    public static function decideInvoiceStatusChange(Invoice $invoice, array $productIds, $nextStatus): InvoiceStatusDecision
+    {
+        $decision = new InvoiceStatusDecision;
+
+        if ($invoice->invoice_type === InvoiceType::SELL && $nextStatus == InvoiceAncillaryCostStatus::APPROVED) {
+            $quantityErrors = self::validateProductsQuantityForStatusChange($invoice, $productIds);
+            if ($quantityErrors->isNotEmpty()) {
+                foreach ($quantityErrors as $err) {
+                    $decision->addMessage('error', $err['message'], [
+                        'product' => $err['product']->id,
+                        'available' => $err['available'],
+                        'required' => $err['required'],
+                    ]);
+                    $decision->addConflict($err['product']); // TODO - add conflict type (invoice or product)
+                }
+            }
+        }
+
+        $conflictGroups = self::enforceInvoiceStatusRules($invoice, $productIds, $nextStatus);
+
+        foreach ($conflictGroups as $group) {
+            $rule = $group['rule'];
+            $invoices = $group['invoices'];
+
+            $invoiceList = $invoices->map(fn ($inv) => $inv->invoice_type->value.': '.$inv->number)->implode(', ');
+
+            if ($rule === 'subsequent_approved') {
+                $decision->addMessage('error', __('invoices.status_change.blocked_by_subsequent', ['invoices' => $invoiceList]));
+                $invoices->each(fn ($i) => $decision->addConflict($i));
+            }
+
+            if ($rule === 'prior_unapproved_buy') {
+                $decision->addMessage('warning', __('invoices.status_change.prior_unapproved', ['invoices' => $invoiceList]));
+                $invoices->each(fn ($i) => $decision->addConflict($i));
+            }
+        }
+
+        return $decision;
+    }
+
+    public static function getChangeStatusDecision(Invoice $invoice, $nextStatus): InvoiceStatusDecision
+    {
+        $productIds = self::getProductIdsFromInvoice($invoice);
+
+        $nextStatus = $nextStatus instanceof InvoiceAncillaryCostStatus ? $nextStatus : InvoiceAncillaryCostStatus::from($nextStatus);
+
+        return self::decideInvoiceStatusChange($invoice, $productIds, $nextStatus);
     }
 
     public static function notAllowedInvoiceForAncillaryCosts(Invoice $invoice, array $productIds): array

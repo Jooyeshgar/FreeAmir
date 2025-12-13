@@ -111,6 +111,8 @@
     "Cannot change ancillary cost status because there are subsequent approved invoices for the same products. Please unapprove those invoices first.": "Cannot change ancillary cost status because there are subsequent approved invoices for the same products. Please unapprove those invoices first.",
     "Cannot change invoice status because there are previous invoices those are not approved for the same invoice products. Please approve those invoices first.": "Cannot change invoice status because there are previous invoices those are not approved for the same invoice products. Please approve those invoices first.",
     "Cannot change invoice status because there are subsequent invoices those are approved for the same invoice products. Please unapprove those invoices first.": "Cannot change invoice status because there are subsequent invoices those are approved for the same invoice products. Please unapprove those invoices first.",
+    "invoices.status_change.blocked_by_subsequent": "Cannot change invoice status because there are subsequent invoices those are approved for the same invoice products. Please unapprove those invoices first. :invoices",
+    "invoices.status_change.prior_unapproved": "Cannot change invoice status because there are previous invoices those are not approved for the same invoice products. Please approve those invoices first. :invoices",
     "Cannot change status of Ancillary Cost linked to unapproved Invoice": "Cannot change status of Ancillary Cost linked to unapproved Invoice",
     "Cannot delete product that is used in invoice items": "Cannot delete product that is used in invoice items",
     "Cannot delete service that is used in invoice items": "Cannot delete service that is used in invoice items",

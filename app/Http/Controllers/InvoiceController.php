@@ -448,20 +448,27 @@ class InvoiceController extends Controller
 
     public function changeStatus(Invoice $invoice, string $status, InvoiceService $service)
     {
-        if (! in_array($status, ['approve', 'unapprove'])) {
+        if (! in_array($status, ['approved', 'unapproved'])) {
             return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])
                 ->with('error', __('Invalid status action.'));
         }
 
-        auth()->user()->can('ancillary-costs.approve');
+        $decision = $service->getChangeStatusDecision($invoice, $status);
+        if ($decision->hasErrors()) {
+            $error = $decision->messages->first(fn ($m) => $m->type === 'error');
 
-        if (! $service->getChangeStatusValidation($invoice)['allowed']) {
-            return redirect()->back()->with('error', $service->getChangeStatusValidation($invoice)['reason']);
+            return redirect()->back()->with('error', $error?->text ?? __('Invalid invoice status.'));
+        }
+
+        if ($decision->needsConfirmation && ! request()->has('confirm')) {
+            $warning = $decision->messages->first(fn ($m) => $m->type === 'warning');
+
+            return redirect()->back()->with('warning', $warning?->text ?? __('Please confirm your action.'))->with('confirm_invoice_status_change', true)->with('conflicting_invoices', $decision->conflicts->map(fn ($i) => ['id' => $i->id, 'number' => $i->number, 'type' => $i->invoice_type])->values()->all());
         }
 
         $service->changeInvoiceStatus($invoice, $status);
 
-        $message = $status === 'approve' ? __('Invoice approved successfully.') : __('Invoice unapproved successfully.');
+        $message = $status === 'approved' ? __('Invoice approved successfully.') : __('Invoice unapproved successfully.');
 
         return redirect()->back()->with('success', __($message));
     }

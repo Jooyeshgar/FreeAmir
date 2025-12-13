@@ -127,21 +127,21 @@
                                         }
                                     @endphp
 
-                                    @if ($changeStatusValidation['allowed'])
-                                        <a href="{{ route('invoices.change-status', [$invoice, $isApproved ? 'unapprove' : 'approve']) }}"
-                                            class="btn btn-sm {{ $isApproved ? 'btn-warning' : 'btn-success' }} invoice-approve-btn"
-                                            data-unapproved-invoices="{{ !empty($unapprovedInvoicesData) ? json_encode($unapprovedInvoicesData) : '' }}">
-                                            {{ __($isApproved ? 'Unapprove' : 'Approve') }}
-                                        </a>
-                                    @else
+                                    @if ($changeStatusValidation->hasErrors())
                                         @php
                                             $btnClass = $isApproved ? 'btn-warning' : 'btn-success';
                                             $label = $isApproved ? __('Unapprove') : __('Approve');
                                         @endphp
-                                        <span class="tooltip" data-tip="{{ $changeStatusValidation['reason'] }}">
+                                        <span class="tooltip" data-tip="{{ $changeStatusValidation->toText() }}">
                                             <button class="btn btn-sm {{ $btnClass }} btn-disabled cursor-not-allowed" disabled
-                                                title="{{ $changeStatusValidation['reason'] }}">{{ $label }}</button>
+                                                title="{{ $changeStatusValidation->toText() }}">{{ $label }}</button>
                                         </span>
+                                    @else
+                                        <a href="{{ route('invoices.change-status', [$invoice, $isApproved ? 'unapproved' : 'approved']) }}"
+                                            class="btn btn-sm {{ $isApproved ? 'btn-warning' : 'btn-success' }} invoice-approve-btn"
+                                            data-unapproved-invoices="{{ !empty($unapprovedInvoicesData) ? json_encode($unapprovedInvoicesData) : '' }}">
+                                            {{ __($isApproved ? 'Unapproved' : 'Approved') }}
+                                        </a>
                                     @endif
                                 @endcan
 
