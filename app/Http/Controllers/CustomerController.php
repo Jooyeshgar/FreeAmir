@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models;
 use App\Services\CustomerService;
+use App\Services\SubjectService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -121,6 +122,17 @@ class CustomerController extends Controller
 
     public function show(Models\Customer $customer)
     {
-        return view('customers.show', compact('customer'));
+        $customer->load(['group', 'subject']);
+        $subjectBalance = $customer->subject
+            ? SubjectService::sumSubject($customer->subject->id)
+            : 0;
+
+        $orders = Models\Invoice::query()
+            ->where('customer_id', $customer->id)
+            ->orderByDesc('date')
+            ->orderByDesc('id')
+            ->paginate(15);
+
+        return view('customers.show', compact('customer', 'orders', 'subjectBalance'));
     }
 }

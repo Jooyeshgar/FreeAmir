@@ -6,11 +6,25 @@ use App\Models\Subject;
 
 class SubjectService
 {
-    public static function sumSubject($code): int
+    /**
+     * Calculate the total sum of transactions for a subject with children.
+     *
+     * @param  string|int  $code  Subject primary key (int) or subject code (string)
+     * @return int Sum of the `amount` field for the subject and its immediate children
+     */
+    public static function sumSubject(string|int $code): int
     {
-        $subject = Subject::with(['transactions', 'children.transactions'])->where('code', $code)->first();
+        if (is_int($code)) {
+            $subject = Subject::with(['transactions', 'children.transactions'])->find($code);
+        } else {
+            $subject = Subject::with(['transactions', 'children.transactions'])->where('code', $code)->first();
+        }
 
-        return $subject->transactions->merge($subject->children->flatMap->transactions)->sum('amount');
+        if (! $subject) {
+            return 0;
+        }
+
+        return $subject->transactions->merge($subject->children->flatMap->transactions)->sum('value');
     }
 
     /**

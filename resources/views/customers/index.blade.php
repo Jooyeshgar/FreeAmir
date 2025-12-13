@@ -12,8 +12,7 @@
 
                 <form method="GET" action="{{ route('customers.index') }}" class="flex items-center gap-2 ">
                     <label for="group_id" class="sr-only">{{ __('Customer Group') }}</label>
-                    <select name="group_id" id="group_id" class="select select-bordered select-sm"
-                        onchange="this.form.submit()">
+                    <select name="group_id" id="group_id" class="select select-bordered select-sm" onchange="this.form.submit()">
                         <option value="all">{{ __('All Groups') }}</option>
                         @foreach ($groups as $g)
                             <option value="{{ $g->id }}" @selected(isset($groupId) && $groupId !== 'all' && (int) $groupId === $g->id)>{{ $g->name }}
@@ -28,8 +27,8 @@
                     <tr>
                         <th class="px-4 py-2">{{ __('Subject Code') }}</th>
                         <th class="px-4 py-2">{{ __('Name') }}</th>
+                        <th class="px-4 py-2">{{ __('‌Balance') }}</th>
                         <th class="px-4 py-2">{{ __('Phone number') }}</th>
-                        <th class="px-4 py-2">{{ __('Email') }}</th>
                         <th class="px-4 py-2">{{ __('Account Plan Group') }}</th>
                         <th class="px-4 py-2">{{ __('Action') }}</th>
                     </tr>
@@ -39,16 +38,15 @@
                     @foreach ($customers as $customer)
                         <tr>
                             <td class="px-4 py-2">{{ $customer->subject?->formattedCode() }}</td>
+                            <td class="px-4 py-2"><a href="{{ route('customers.show', $customer) }}">{{ $customer->name }}</a></td>
                             <td class="px-4 py-2"><a
-                                    href="{{ route('customers.show', $customer) }}">{{ $customer->name }}</a></td>
+                                    href="{{ route('transactions.index', ['subject_id' => $customer->subject->id]) }}">{{ app\Services\SubjectService::sumSubject($customer->subject->id) }}</a>
+                            </td>
                             <td class="px-4 py-2">{{ $customer->phone }}</td>
-                            <td class="px-4 py-2">{{ $customer->email }}</td>
                             <td class="px-4 py-2">{{ $customer->group ? $customer->group->name : '' }}</td>
                             <td class="px-4 py-2">
-                                <a href="{{ route('customers.edit', $customer) }}"
-                                    class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                <form action="{{ route('customers.destroy', $customer) }}" method="POST"
-                                    class="inline-block">
+                                <a href="{{ route('customers.edit', $customer) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                <form action="{{ route('customers.destroy', $customer) }}" method="POST" class="inline-block">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
