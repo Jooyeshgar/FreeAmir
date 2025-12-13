@@ -5,12 +5,13 @@ body {
 }
 
 .invoice-container {
-    border: 1px solid #000;
+    border: 3px double #000;
     padding: 30px;
     margin: 20px auto;
     max-width: 900px;
     position: relative;
     box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    height: 95%;
 }
 
 .invoice-top-left {
@@ -29,10 +30,9 @@ body {
 .invoice-header {
     text-align: center;
     font-weight: bold;
-    padding: 15px 0;
+    padding: 60px 0;
     margin-bottom: 20px;
     font-size: 20px;
-    border-radius: 5px;
 }
 
 .invoice-info {
@@ -40,8 +40,7 @@ body {
     justify-content: space-between;
     margin-bottom: 25px;
     padding: 15px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
+    border: 1px solid #000;
 }
 
 .info-column {
@@ -72,16 +71,6 @@ body {
     word-break: break-word;
 }
 
-.invoice-totals {
-    display: flex;
-    justify-content: flex-end;
-    font-size: 16px;
-    margin-top: 15px;
-}
-
-.invoice-totals span {
-    margin-left: 10px;
-}
 
 @media print {
     @page {
