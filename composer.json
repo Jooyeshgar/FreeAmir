@@ -19,7 +19,7 @@
     },
     "require-dev": {
         "barryvdh/laravel-debugbar": "^3.13",
-        "barryvdh/laravel-translation-manager": "^0.6.6",
+        "barryvdh/laravel-translation-manager": "*",
         "fakerphp/faker": "^1.9.1",
         "kasraghoreyshi/persian-faker": "^1.04",
         "laravel/envoy": "^2.9",

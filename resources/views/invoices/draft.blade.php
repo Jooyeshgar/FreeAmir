@@ -9,7 +9,7 @@
     </div>
 
     <div class="invoice-header">
-        {{ __('Pre-Invoice') }} {{ $invoice->invoice_type->label() ?? '' }}
+        {{ __('Pre Invoice') }} {{ $invoice->invoice_type->label() ?? '' }}
     </div>
 
     <div class="invoice-info">
@@ -65,11 +65,24 @@
                     <td>{{ formatNumber($lineTotal) }}</td>
                 </tr>
             @endforeach
+            @for (; $index < 6; $index++)
+                @php
+                    $lineTotal = $item->amount - $item->vat;
+                    $totalAmount += $lineTotal;
+                @endphp
+                <tr>
+                    <td>{{ convertToFarsi($index) }}</td>
+                    <td> </td>
+                    <td> </td>
+                    <td> </td>
+                    <td> </td>
+                    <td> </td>
+                </tr>
+            @endfor
+            <tr>
+                <td colspan="5">{{ __('Total') }}: {{ App\Helpers\NumberToWordHelper::convert($totalAmount) }} </td>
+                <td>{{ formatNumber($totalAmount) }}</td>
+            </tr>
         </tbody>
     </table>
-
-    <div class="invoice-totals">
-        <span>{{ __('Total Sum') }}: {{ formatNumber($totalAmount) }}</span>
-    </div>
-
 </div>
