@@ -6,7 +6,7 @@ use App\Models\ProductGroup;
 
 class ProductGroupService
 {
-    public function __construct(private readonly SubjectCreatorService $subjectCreator) {}
+    public function __construct(private readonly SubjectService $subjectService) {}
 
     public function create(array $data): ProductGroup
     {
@@ -73,7 +73,7 @@ class ProductGroupService
             $subject = $productGroup->$relation;
 
             if (! $subject) {
-                $subject = $this->subjectCreator->createSubject([
+                $subject = $this->subjectService->createSubject([
                     'name' => $productGroup->name,
                     'parent_id' => $parentId,
                     'company_id' => $companyId,

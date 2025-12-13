@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Models\Scopes\FiscalYearScope;
-use App\Services\SubjectCreatorService;
+use App\Services\SubjectService;
 use Illuminate\Database\Eloquent\Model;
 
 class CustomerGroup extends Model
@@ -28,7 +28,7 @@ class CustomerGroup extends Model
         });
 
         static::created(function ($customerGroup) {
-            $subject = app(SubjectCreatorService::class)->createSubject([
+            $subject = app(SubjectService::class)->createSubject([
                 'name' => $customerGroup->name,
                 'parent_id' => config('amir.cust_subject'),
                 'company_id' => $customerGroup->company_id,
@@ -48,7 +48,7 @@ class CustomerGroup extends Model
             $subject = Subject::find($customerGroup->subject_id);
 
             if (! $subject) {
-                $subject = app(SubjectCreatorService::class)->createSubject([
+                $subject = app(SubjectService::class)->createSubject([
                     'name' => $customerGroup->name,
                     'parent_id' => config('amir.cust_subject'),
                     'company_id' => $customerGroup->company_id,

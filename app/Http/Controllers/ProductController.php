@@ -31,6 +31,12 @@ class ProductController extends Controller
 
         $products = $query->paginate(12);
 
+        $products->transform(function ($product) {
+            $product->unapprovedQuantity = $this->productService->unapprovedQuantity($product);
+
+            return $product;
+        });
+
         return view('products.index', compact('products'));
     }
 
@@ -68,9 +74,23 @@ class ProductController extends Controller
 
     public function show(Product $product)
     {
-        $product->load('productgroup', 'invoiceItems.invoice');
+        $product->load('productgroup', 'productWebsites');
 
-        return view('products.show', compact('product'));
+        $product->lastCOG = $this->productService->lastApprovedBuyInvoiceItemCOG($product) ?? 0;
+        $product->salesProfit = $this->productService->salesProfit($product) ?? 0;
+
+        $historyItems = $product->invoiceItems()
+            ->with('invoice')
+            ->tap(function ($q) {
+                foreach (['date', 'invoice_type', 'number'] as $col) {
+                    $q->orderByDesc(
+                        \App\Models\Invoice::select($col)->whereColumn('invoices.id', 'invoice_items.invoice_id')
+                    );
+                }
+            })
+            ->paginate(10);
+
+        return view('products.show', compact('product', 'historyItems'));
     }
 
     public function destroy(Product $product)
