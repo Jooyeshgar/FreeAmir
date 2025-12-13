@@ -48,7 +48,7 @@
                             </td>
                             <td class="p-2">
                                 <a class="link"
-                                    href="{{ route('invoices.show', $ancillaryCost->invoice_id) }}">{{ formatNumber($ancillaryCost->invoice->number) ?? '' }}</a>
+                                    href="{{ route('invoices.show', $ancillaryCost->invoice_id) }}">{{ convertToFarsi(intval($ancillaryCost->invoice->number) ?? '') }}</a>
                             </td>
                             <td class="p-2">{{ $ancillaryCost->type->label() }}</td>
                             <td class="p-2">{{ formatDate($ancillaryCost->date) }}</td>

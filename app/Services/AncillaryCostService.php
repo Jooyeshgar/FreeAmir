@@ -52,7 +52,7 @@ class AncillaryCostService
 
             $documentData = [
                 'date' => $data['date'] ?? now()->toDateString(),
-                'title' => $type->label().' '.__('Invoice #').($invoice->number ?? ''),
+                'title' => $type->label().' '.__('Invoice #').(convertToFarsi(intval($invoice->number) ?? '')),
             ];
 
             $transactionBuilder = new AncillaryCostTransactionBuilder($data);
