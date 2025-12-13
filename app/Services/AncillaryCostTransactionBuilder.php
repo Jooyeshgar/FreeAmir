@@ -56,7 +56,7 @@ class AncillaryCostTransactionBuilder
 
             $this->transactions[] = [
                 'subject_id' => $product->inventory_subject_id,
-                'desc' => __('Ancillary Cost for :item', ['item' => $product->name]).' '.__('On Invoice').' '.$this->invoiceType.' '.formatNumber($this->invoice->number),
+                'desc' => __('Ancillary Cost for :item', ['item' => $product->name]).' '.__('On Invoice').' '.$this->invoiceType.' '.convertToFarsi(intval($this->invoice->number)),
                 'value' => -$item['amount'],
             ];
         }
@@ -70,7 +70,7 @@ class AncillaryCostTransactionBuilder
         if ($this->data['vatPrice'] > 0) {
             $this->transactions[] = [
                 'subject_id' => config('amir.buy_vat'),
-                'desc' => __('VAT Ancillary Cost').' '.__('Invoice').' '.$this->invoiceType.' '.formatNumber($this->invoice->number),
+                'desc' => __('VAT Ancillary Cost').' '.__('Invoice').' '.$this->invoiceType.' '.convertToFarsi(intval($this->invoice->number)),
                 'value' => -$this->data['vatPrice'],
             ];
         }
@@ -86,7 +86,7 @@ class AncillaryCostTransactionBuilder
 
         $this->transactions[] = [
             'subject_id' => $subject_id,
-            'desc' => __('Invoice').' '.$this->invoiceType.' '.__(' with number ').' '.formatNumber($this->invoice->number),
+            'desc' => __('Invoice').' '.$this->invoiceType.' '.__(' with number ').' '.convertToFarsi(intval($this->invoice->number)),
             'value' => $this->data['amount'],
         ];
     }

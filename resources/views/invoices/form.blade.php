@@ -50,13 +50,13 @@
         <x-text-input input_value="{{ old('invoice_id') ?? ($invoice->id ?? '') }}" input_name="invoice_id"
             label_text_class="text-gray-500" label_class="w-full hidden"></x-text-input>
         @if (!$invoice->exists)
-            <x-text-input disabled="true" input_value="{{ formatDocumentNumber($previousInvoiceNumber) }}"
+            <x-text-input disabled="true" input_value="{{ convertToFarsi(intval($previousInvoiceNumber)) }}"
                 title="{{ __('Previous Invoice Number') }}" placeholder="{{ __('Previous Invoice Number') }}"
                 label_text_class="text-gray-500 text-nowrap"></x-text-input>
         @endif
 
         <x-text-input
-            input_value="{{ old('invoice_number') ?? formatDocumentNumber($invoice->number ?? $previousInvoiceNumber + 1) }}"
+            input_value="{{ old('invoice_number') ?? convertToFarsi(intval($invoice->number ?? $previousInvoiceNumber + 1)) }}"
             input_name="invoice_number" title="{{ __('Current Invoice Number') }}"
             placeholder="{{ __('Current Invoice Number') }}"
             label_text_class="text-gray-500 text-nowrap"></x-text-input>

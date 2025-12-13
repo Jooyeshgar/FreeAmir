@@ -28,7 +28,7 @@
                             @foreach ($invoices as $invoice)
                                 <option value="{{ $invoice->id }}"
                                     {{ (old('invoice_id') ?? ($ancillaryCost->invoice_id ?? null)) == $invoice->id ? 'selected' : '' }}>
-                                    {{ formatDocumentNumber($invoice->number) }}
+                                    {{ convertToFarsi(intval($invoice->number)) }}
                                 </option>
                             @endforeach
                         </select>

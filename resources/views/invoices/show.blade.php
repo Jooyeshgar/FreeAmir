@@ -2,7 +2,7 @@
     ' ' .
     $invoice->invoice_type->label() .
     ' #' .
-    formatDocumentNumber($invoice->number ?? $invoice->id)">
+    convertToFarsi(intval($invoice->number ?? $invoice->id))">
 
     <div class="card bg-base-100 shadow-xl">
         <div
@@ -10,7 +10,7 @@
             <div>
                 <h2 class="text-2xl font-bold text-gray-800 dark:text-white">
                     {{ __('Invoice') }} {{ $invoice->invoice_type->label() }}
-                    #{{ formatDocumentNumber($invoice->number ?? $invoice->id) }}
+                    #{{ convertToFarsi(intval($invoice->number ?? $invoice->id)) }}
                 </h2>
                 <p class="mt-1 float-end">
                     {{ __('Issued on :date', ['date' => $invoice->date ? formatDate($invoice->date) : __('Unknown')]) }}
