@@ -1,122 +1,15 @@
 <style>
-    body {
-        font-family: 'Arial', sans-serif;
-        direction: rtl;
-        margin: 0;
-    }
-
-    .invoice-container {
-        border: 1px solid #000;
-        padding: 30px;
-        margin: 20px auto;
-        max-width: 900px;
-        position: relative;
-        box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-    }
-
-    .invoice-top-left {
-        position: absolute;
-        top: 20px;
-        left: 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-    }
-
-    .invoice-top-left span {
-        display: block;
-    }
-
-    .invoice-header {
-        text-align: center;
-        font-weight: bold;
-        padding: 15px 0;
-        margin-bottom: 20px;
-        font-size: 20px;
-        border-radius: 5px;
-    }
-
-    .invoice-info {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 25px;
-        padding: 15px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-    }
-
-    .info-column {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        flex: 1;
-    }
-
-    .info-row {
-        display: flex;
-        font-size: 15px;
-    }
-
-    .invoice-items-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-        font-size: 14px;
-        direction: rtl;
-    }
-
-    .invoice-items-table th,
-    .invoice-items-table td {
-        border: 1px solid #000;
-        padding: 8px 12px;
-        text-align: center;
-        word-break: break-word;
-    }
-
-    .invoice-totals {
-        display: flex;
-        justify-content: flex-end;
-        font-size: 16px;
-        margin-top: 15px;
-    }
-
-    .invoice-totals span {
-        margin-left: 10px;
-        font-weight: bold;
-    }
-
-    @media print {
-        @page {
-            size: A4;
-            margin: 5mm 5mm 0 5mm;
-
-        }
-
-        body {
-            background-color: #fff;
-        }
-
-        .invoice-container {
-            box-shadow: none;
-            padding: 20px;
-            margin: 0;
-        }
-
-        .invoice-items-table {
-            font-size: 12px;
-        }
-    }
+    {!! file_get_contents(resource_path('css/invoice_draft.css')) !!}
 </style>
 
 <div class="invoice-container">
-
     <div class="invoice-top-left">
-        <span>{{ __('Number') }}: {{ formatDocumentNumber($invoice->number ?? 0) ?? '' }}</span>
+        <span>{{ __('Invoice Number') }}: {{ formatDocumentNumber($invoice->number ?? 0) ?? '' }}</span>
         <span>{{ __('Date') }}: {{ formatDate($invoice->created_at) }}</span>
     </div>
 
     <div class="invoice-header">
-        {{ __('Draft') }} {{ __('Invoice') }} {{ $invoice->invoice_type->label() ?? '' }}
+        {{ __('Pre-Invoice') }} {{ $invoice->invoice_type->label() ?? '' }}
     </div>
 
     <div class="invoice-info">
@@ -160,26 +53,23 @@
             @endphp
             @foreach ($invoice->items as $item)
                 @php
-                    if ($item->itemable_type != 'App\Models\Product') {
-                        continue;
-                    }
-                    $product = App\Models\Product::find($item->itemable_id);
-                    $totalAmount += $item->amount - $item->vat;
+                    $lineTotal = $item->amount - $item->vat;
+                    $totalAmount += $lineTotal;
                 @endphp
                 <tr>
-                    <td>{{ $index++ }}</td>
-                    <td>{{ $product->name }}</td>
-                    <td>{{ convertToFarsi($item->quantity) }}</td>
-                    <td>{{ convertToFarsi($item->unit_price) }}</td>
-                    <td>{{ convertToFarsi($item->unit_discount) }}</td>
-                    <td>{{ convertToFarsi($item->amount - $item->vat) }}</td>
+                    <td>{{ convertToFarsi($index++) }}</td>
+                    <td>{{ $item->itemable->name }}</td>
+                    <td>{{ formatNumber($item->quantity) }}</td>
+                    <td>{{ formatNumber($item->unit_price) }}</td>
+                    <td>{{ formatNumber($item->unit_discount) }}</td>
+                    <td>{{ formatNumber($lineTotal) }}</td>
                 </tr>
             @endforeach
         </tbody>
     </table>
 
     <div class="invoice-totals">
-        <span>{{ __('Total Sum') }}: {{ convertToFarsi($totalAmount) }}</span>
+        <span>{{ __('Total Sum') }}: {{ formatNumber($totalAmount) }}</span>
     </div>
 
 </div>
