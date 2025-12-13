@@ -125,22 +125,22 @@
                                                 }
                                             }
                                         }
+                                        $statusTitle = $isApproved ? __('Unapprove') : __('Approve');
+                                        $btnClass = $isApproved ? 'btn-warning' : 'btn-success';
+                                        $btnClass .= $changeStatusValidation->hasWarning() ? ' btn-outline ' : '';
+                                        $tooltip = $changeStatusValidation->hasMessage() ? 'data-tip="' . e($changeStatusValidation->toText()) . '"' : '';
                                     @endphp
 
                                     @if ($changeStatusValidation->hasErrors())
-                                        @php
-                                            $btnClass = $isApproved ? 'btn-warning' : 'btn-success';
-                                            $label = $isApproved ? __('Unapprove') : __('Approve');
-                                        @endphp
-                                        <span class="tooltip" data-tip="{{ $changeStatusValidation->toText() }}">
+                                        <span {!! $tooltip !!} class="tooltip">
                                             <button class="btn btn-sm {{ $btnClass }} btn-disabled cursor-not-allowed" disabled
-                                                title="{{ $changeStatusValidation->toText() }}">{{ $label }}</button>
+                                                title="{{ $changeStatusValidation->toText() }}">{{ $statusTitle }}</button>
                                         </span>
                                     @else
-                                        <a href="{{ route('invoices.change-status', [$invoice, $isApproved ? 'unapproved' : 'approved']) }}"
-                                            class="btn btn-sm {{ $isApproved ? 'btn-warning' : 'btn-success' }} invoice-approve-btn"
+                                        <a {!! $tooltip !!} href="{{ route('invoices.change-status', [$invoice, $isApproved ? 'unapproved' : 'approved']) }}"
+                                            class="btn btn-sm {{ $btnClass }} invoice-approve-btn {{ $tooltip ? ' tooltip' : '' }}"
                                             data-unapproved-invoices="{{ !empty($unapprovedInvoicesData) ? json_encode($unapprovedInvoicesData) : '' }}">
-                                            {{ __($isApproved ? 'Unapproved' : 'Approved') }}
+                                            {{ $statusTitle }}
                                         </a>
                                     @endif
                                 @endcan

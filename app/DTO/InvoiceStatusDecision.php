@@ -38,6 +38,16 @@ class InvoiceStatusDecision
         return $this->messages->contains(fn ($m) => $m->type === 'error');
     }
 
+    public function hasWarning(): bool
+    {
+        return $this->messages->contains(fn ($m) => $m->type === 'warning');
+    }
+
+    public function hasMessage(): bool
+    {
+        return $this->messages->isNotEmpty();
+    }
+
     public function toText(): string
     {
         $groups = $this->messages->groupBy('type');

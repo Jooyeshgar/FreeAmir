@@ -324,8 +324,8 @@ class InvoiceService
     {
         DB::transaction(function () use ($invoice, $status) {
             match ($status) {
-                'approved' => $this->toggleInvoiceApproval($invoice, true),
-                'unapproved' => $this->toggleInvoiceApproval($invoice, false),
+                'approve' => $this->toggleInvoiceApproval($invoice, true),
+                'unapprove' => $this->toggleInvoiceApproval($invoice, false),
                 default => null,
             };
         });
