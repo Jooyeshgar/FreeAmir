@@ -47,7 +47,7 @@ class InvoiceService
 
         if ($approved) {
 
-            if (! self::getChangeStatusValidation($createdInvoice)['allowed']) {
+            if (! self::getChangeStatusValidation($createdInvoice)->canProceed) {
                 return [
                     'document' => null,
                     'invoice' => $createdInvoice,
@@ -121,7 +121,7 @@ class InvoiceService
 
         if ($approved) {
 
-            if (! self::getChangeStatusValidation($invoice)['allowed']) {
+            if (! self::getChangeStatusValidation($invoice)->canProceed) {
                 return [
                     'document' => null,
                     'invoice' => $invoice,
@@ -642,7 +642,7 @@ class InvoiceService
                     ->whereIn('itemable_id', $productIds);
             })->get();
 
-        return $invoices->filter(fn ($inv) => ! self::getChangeStatusValidation($inv)['allowed'])->values()->all();
+        return $invoices->filter(fn ($inv) => ! self::getChangeStatusValidation($inv)->canProceed)->values()->all();
     }
 
     public static function getUnapprovedSellPriorInvoices(array $productIds, string $date, int $invoiceNumber, ?Invoice $excludeInvoice = null): array
