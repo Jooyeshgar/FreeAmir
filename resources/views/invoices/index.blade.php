@@ -138,7 +138,7 @@
                                         </span>
                                     @else
                                         <a {!! $tooltip !!} href="{{ route('invoices.change-status', [$invoice, $isApproved ? 'unapproved' : 'approved']) }}"
-                                            class="btn btn-sm {{ $btnClass }} invoice-approve-btn {{ $tooltip ? ' tooltip' : '' }}"
+                                            class="btn btn-sm inline-flex {{ $btnClass }} invoice-approve-btn {{ $tooltip ? ' tooltip' : '' }}"
                                             data-unapproved-invoices="{{ !empty($unapprovedInvoicesData) ? json_encode($unapprovedInvoicesData) : '' }}">
                                             {{ $statusTitle }}
                                         </a>
