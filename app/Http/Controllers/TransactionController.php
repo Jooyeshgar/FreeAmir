@@ -134,17 +134,25 @@ class TransactionController extends Controller
      */
     private function calculateBalanceBeforePage($query, $transactions, float $openingBalance): float
     {
-        if ($transactions->currentPage() <= 1 || $transactions->isEmpty()) {
+        if ($transactions->isEmpty()) {
             return $openingBalance;
         }
 
-        $itemsBeforeCurrentPage = ($transactions->currentPage() - 1) * $transactions->perPage();
+        $currentPage = $transactions->currentPage();
+        $perPage = $transactions->perPage();
+        $total = $transactions->total();
 
-        $sumBeforePage = $query->offset(0)
-            ->limit($itemsBeforeCurrentPage)
+        $itemsAfterCurrentPage = $total - ($currentPage * $perPage);
+
+        if ($itemsAfterCurrentPage <= 0) {
+            return $openingBalance;
+        }
+
+        $sumAfterPage = $query->offset($currentPage * $perPage)
+            ->limit($itemsAfterCurrentPage)
             ->pluck('transactions.value')->sum();
 
-        return $openingBalance + (float) $sumBeforePage;
+        return $openingBalance + (float) $sumAfterPage;
     }
 
     /**
@@ -155,7 +163,7 @@ class TransactionController extends Controller
         $runningBalance = $openingBalance;
 
         foreach ($transactions->reverse() as $transaction) {
-            $runningBalance -= $transaction->value;
+            $runningBalance += $transaction->value;
             $transaction->balance = $runningBalance;
         }
     }

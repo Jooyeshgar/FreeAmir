@@ -31,16 +31,8 @@ class InvoiceService
     {
         $date = $invoiceData['date'] ?? now()->toDateString();
 
-        // Build transactions using the transaction builder
         $transactionBuilder = new InvoiceTransactionBuilder($items, $invoiceData);
         $buildResult = $transactionBuilder->build();
-        $transactions = $buildResult['transactions'];
-
-        $documentData = [
-            'date' => $date,
-            'title' => $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? '')),
-            'number' => $invoiceData['document_number'] ?? null,
-        ];
 
         $createdDocument = null;
         $createdInvoice = self::createInvoiceWithoutApproval($user, $invoiceData, $items, $buildResult, $date);
@@ -53,6 +45,14 @@ class InvoiceService
                     'invoice' => $createdInvoice,
                 ];
             }
+
+            $transactions = $buildResult['transactions'];
+
+            $documentData = [
+                'date' => $date,
+                'title' => $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? '')),
+                'number' => $invoiceData['document_number'] ?? null,
+            ];
 
             DB::transaction(function () use ($documentData, $user, $transactions, $invoiceData, $items, &$createdDocument, &$createdInvoice) {
                 $createdDocument = DocumentService::createDocument($user, $documentData, $transactions);
@@ -91,6 +91,7 @@ class InvoiceService
             $invoiceData['creator_id'] = $user->id;
             $invoiceData['date'] = $date;
             $invoiceData['title'] = $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? ''));
+            $invoiceData['status'] = InvoiceAncillaryCostStatus::PENDING;
 
             $createdInvoice = Invoice::create($invoiceData);
 

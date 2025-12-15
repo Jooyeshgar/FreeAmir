@@ -335,7 +335,7 @@ class AncillaryCostService
         $transactions = (new AncillaryCostTransactionBuilder($ancillaryCostData))->build();
 
         $document = DocumentService::createDocument($user, [
-            'date' => now()->toDateString(),
+            'date' => $ancillaryCostData['date'],
             'title' => $ancillaryCost->title ?? (__('Ancillary Cost #').($ancillaryCost->number ?? '')),
             'approved_at' => now(),
             'approver_id' => $user->id,

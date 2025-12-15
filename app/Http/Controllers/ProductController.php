@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
+use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Services\ProductService;
@@ -84,7 +85,7 @@ class ProductController extends Controller
             ->tap(function ($q) {
                 foreach (['date', 'invoice_type', 'number'] as $col) {
                     $q->orderByDesc(
-                        \App\Models\Invoice::select($col)->whereColumn('invoices.id', 'invoice_items.invoice_id')
+                        Invoice::select($col)->whereColumn('invoices.id', 'invoice_items.invoice_id')
                     );
                 }
             })
