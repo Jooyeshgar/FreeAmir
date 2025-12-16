@@ -5,7 +5,7 @@
             <div>
                 <h2 class="text-2xl font-bold text-gray-800 dark:text-white">
                     {{ __('Invoice') }} {{ $invoice->invoice_type->label() }}
-                    #{{ formatDocumentNumber($invoice->number ?? $invoice->id) }}
+                    #{{ formatDocumentNumber($invoice->number ?? $invoice->id) }} - {{ $invoice->title }}
                 </h2>
                 <p class="mt-1 float-end">
                     {{ __('Issued on :date', ['date' => $invoice->date ? formatDate($invoice->date) : __('Unknown')]) }}
