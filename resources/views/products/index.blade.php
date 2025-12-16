@@ -17,7 +17,8 @@
                         <span class="absolute inset-y-0 left-2 flex items-center text-gray-400 text-sm">
                             <i class="fa-solid fa-box"></i>
                         </span>
-                        <input type="text" name="name" value="{{ request('name') }}" placeholder="{{ __('Product Name') }}"
+                        <input type="text" name="name" value="{{ request('name') }}"
+                            placeholder="{{ __('Product Name') }}"
                             class="w-full pl-8 pr-2 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
                     </div>
 
@@ -25,12 +26,14 @@
                         <span class="absolute inset-y-0 left-2 flex items-center text-gray-400 text-sm">
                             <i class="fa-solid fa-layer-group"></i>
                         </span>
-                        <input type="text" name="group_name" value="{{ request('group_name') }}" placeholder="{{ __('Product Group Name') }}"
+                        <input type="text" name="group_name" value="{{ request('group_name') }}"
+                            placeholder="{{ __('Product Group Name') }}"
                             class="w-full pl-8 pr-2 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
                     </div>
 
                     <div class="flex items-center">
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 text-sm rounded-lg shadow transition-all">
+                        <button type="submit"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 text-sm rounded-lg shadow transition-all">
                             <i class="fa-solid fa-magnifying-glass mr-1"></i>
                             {{ __('Search') }}
                         </button>
@@ -62,7 +65,7 @@
                                 <a href="{{ route('products.show', $product) }}" class="text-primary">
                                     {{ $product->name }}</a>
                             </td>
-                            <td class="px-4 py-2">{{ convertToFarsi($product->quantity) }}</td>
+                            <td class="px-4 py-2">{{ formatNumber($product->quantity) }}</td>
                             <td class="px-4 py-2">{{ formatNumber($product->totalSell ?? 0) }}</td>
                             <td class="px-4 py-2">{{ formatNumber($product->unapprovedQuantity ?? 0) }}</td>
                             <td class="px-4 py-2">{{ formatNumber($product->average_cost) }}</td>
@@ -70,17 +73,21 @@
                             <td class="px-4 py-2">{{ formatNumber($product->vat) }}%</td>
                             <td class="px-4 py-2">{{ $product->productGroup ? $product->productGroup->name : '' }}</td>
                             <td class="px-4 py-2">
-                                <a href="{{ route('products.edit', $product) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                <a href="{{ route('products.edit', $product) }}"
+                                    class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                 @if ($product->invoiceItems()->exists())
-                                    <span class="tooltip" data-tip="{{ __('Cannot delete product that is used in invoice items') }}">
+                                    <span class="tooltip"
+                                        data-tip="{{ __('Cannot delete product that is used in invoice items') }}">
                                         <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" disabled
                                             title="{{ __('Cannot delete product that is used in invoice items') }}">{{ __('Delete') }}</button>
                                     </span>
                                 @else
-                                    <form action="{{ route('products.destroy', $product) }}" method="POST" class="inline-block">
+                                    <form action="{{ route('products.destroy', $product) }}" method="POST"
+                                        class="inline-block">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                        <button type="submit"
+                                            class="btn btn-sm btn-error">{{ __('Delete') }}</button>
                                     </form>
                                 @endif
                             </td>

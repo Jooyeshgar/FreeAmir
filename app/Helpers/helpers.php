@@ -32,10 +32,10 @@ function formatNumber($number)
 function formatDocumentNumber(float $number)
 {
     if (floor($number) == $number) {
-        return formatNumber(intval($number));
+        return convertToFarsi(intval($number));
     }
 
-    $documentNumber = convertToFarsi(number_format($number, 2, '/', ','));
+    $documentNumber = convertToFarsi(number_format($number, 2, '/', ''));
 
     return $documentNumber;
 }
