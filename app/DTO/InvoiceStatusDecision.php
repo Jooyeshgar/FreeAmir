@@ -72,7 +72,7 @@ class InvoiceStatusDecision
 
         if ($this->conflicts->isNotEmpty()) {
             $conflictTexts = $this->conflicts
-                ->map(fn ($inv) => sprintf('%s (%s)', data_get($inv, 'number', 'unknown'), data_get($inv, 'type', 'unknown')))
+                ->map(fn ($c) => sprintf('%s (%s)', data_get($c, 'number', 'unknown'), data_get($c, 'type', 'unknown')))
                 ->join(', ');
             $parts[] = 'Conflicts: '.$conflictTexts;
         }
@@ -80,8 +80,14 @@ class InvoiceStatusDecision
         return collect($parts)->join(' | ');
     }
 
-    public function addConflict($invoice): void
+    public function addConflict($conflict): void
     {
-        $this->conflicts->push($invoice);
+        $conflict->type ??= $conflict instanceof \App\Models\Invoice
+            ? __('Invoice').' '.$conflict->invoice_type->label()
+            : __(class_basename($conflict));
+
+        $conflict->number ??= $conflict->code ?? $conflict->document->number ?? null;
+
+        $this->conflicts->push($conflict);
     }
 }
