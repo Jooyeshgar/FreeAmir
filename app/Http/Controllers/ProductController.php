@@ -34,6 +34,7 @@ class ProductController extends Controller
 
         $products->transform(function ($product) {
             $product->unapprovedQuantity = $this->productService->unapprovedQuantity($product);
+            $product->totalSell = $this->productService->totalSell($product);
 
             return $product;
         });

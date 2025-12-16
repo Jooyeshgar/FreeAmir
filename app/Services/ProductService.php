@@ -233,6 +233,15 @@ class ProductService
         return $sum(InvoiceType::BUY) - $sum(InvoiceType::SELL);
     }
 
+    public function totalSell(Product $product)
+    {
+        return $product->invoiceItems()
+            ->whereHas('invoice', fn ($q) => $q->where('invoice_type', InvoiceType::SELL)
+                ->where('status', InvoiceAncillaryCostStatus::APPROVED)
+            )
+            ->sum('quantity');
+    }
+
     public function lastApprovedBuyInvoiceItemCOG(Product $product)
     {
         $item = $product->invoiceItems()
