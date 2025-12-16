@@ -31,7 +31,7 @@ class StoreTransactionRequest extends FormRequest
             ]);
         } else {
             $this->merge([
-                'number' => convertToFloat($this->input('number')),
+                'number' => convertToFloat($this->input('number')) ?? null,
             ]);
         }
 
@@ -64,7 +64,7 @@ class StoreTransactionRequest extends FormRequest
         return [
             'title' => 'nullable|string|min:3|max:255',
             'number' => [
-                'required',
+                'nullable',
                 'decimal:0,2',
                 Rule::unique('documents', 'number')
                     ->where(function ($query) {
