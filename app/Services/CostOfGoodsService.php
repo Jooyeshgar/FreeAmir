@@ -34,34 +34,98 @@ class CostOfGoodsService
 
         foreach ($invoice->items as $invoiceItem) {
             $product = $invoiceItem->itemable;
-
             $previousInvoice = self::getPreviousInvoice($invoice, $product->id);
 
-            $availableQuantity = (float) $invoiceItem->quantity_at;
+            $inputs = self::resolveCostCalculationInputs($invoice, $invoiceItem, $previousInvoice);
+            if ($inputs === null) {
+                $product->average_cost = 0;
+                $product->save();
 
-            if ($invoice->status === InvoiceAncillaryCostStatus::APPROVED) {
-                $totalCosts = $invoiceItem->amount - ($invoiceItem->vat ?? 0); // total cost per product excluding VAT
-                $ancillaryCosts = $invoice->ancillaryCosts;
-            } else {
-                $totalCosts = $previousInvoice->amount ?? 0 - ($previousInvoice->vat ?? 0);
-                $ancillaryCosts = $previousInvoice?->ancillaryCosts; // if previous invoice not exists it should be null
+                continue;
             }
 
-            if (! is_null($ancillaryCosts)) {
-                $ancillaryCosts->loadMissing('items');
-            }
+            $baseCost = $inputs['baseCost'];
+            $availableQuantity = $inputs['availableQuantity'];
+            $newQuantity = $inputs['newQuantity'];
+            $ancillaryCosts = $inputs['ancillaryCosts'];
 
-            $totalCosts += $ancillaryCosts ? $ancillaryCosts->where('status', InvoiceAncillaryCostStatus::APPROVED)->flatMap->items->where('product_id', $product->id)->sum('amount') : 0; // without VAT
+            $totalCosts = $baseCost;
+            $totalCosts += self::sumApprovedAncillaryCostsForProduct($ancillaryCosts, $product->id);
+            $totalCosts += self::sumPreviousCogContribution($invoice, $previousInvoice, $product->id, $availableQuantity);
 
-            if ($previousInvoice) {
-                $previousInvoiceItem = $previousInvoice->items->where('itemable_id', $product->id)->first();
-                if ($previousInvoiceItem) {
-                    $totalCosts += $previousInvoiceItem->cog_after * $availableQuantity;
-                }
-            }
-            $product->average_cost = $totalCosts / ($availableQuantity + $invoiceItem->quantity);
+            $denominator = $availableQuantity + $newQuantity;
+            $product->average_cost = $denominator > 0 ? ($totalCosts / $denominator) : 0;
             $product->save();
         }
+    }
+
+    /**
+     * @return array{baseCost: float, availableQuantity: float, newQuantity: float, ancillaryCosts: mixed}|null
+     */
+    private static function resolveCostCalculationInputs(Invoice $invoice, InvoiceItem $invoiceItem, ?Invoice $previousInvoice): ?array
+    {
+        // use current invoice item and invoice ancillary costs.
+        if ($invoice->status->isApproved()) {
+            return [
+                'baseCost' => (float) $invoiceItem->amount - (float) ($invoiceItem->vat ?? 0),
+                'availableQuantity' => (float) $invoiceItem->quantity_at,
+                'newQuantity' => (float) $invoiceItem->quantity,
+                'ancillaryCosts' => $invoice->ancillaryCosts,
+            ];
+        }
+
+        // fall back to previous invoice snapshot; if none exists, caller resets avg cost.
+        if (! $previousInvoice) {
+            return null;
+        }
+
+        $previousInvoiceItem = $previousInvoice->items->where('itemable_id', $invoiceItem->itemable_id)->first();
+        if (! $previousInvoiceItem) {
+            return null;
+        }
+
+        return [
+            'baseCost' => (float) $previousInvoiceItem->amount - (float) ($previousInvoiceItem->vat ?? 0),
+            'availableQuantity' => (float) $previousInvoiceItem->quantity_at,
+            'newQuantity' => (float) $previousInvoiceItem->quantity,
+            'ancillaryCosts' => $previousInvoiceItem->ancillaryCosts,
+        ];
+    }
+
+    private static function sumApprovedAncillaryCostsForProduct($ancillaryCosts, int $productId): float
+    {
+        if (is_null($ancillaryCosts)) {
+            return 0.0;
+        }
+
+        $ancillaryCosts->loadMissing('items');
+
+        // without VAT
+        return (float) $ancillaryCosts->where('status', InvoiceAncillaryCostStatus::APPROVED)->flatMap->items->where('product_id', $productId)->sum('amount');
+    }
+
+    private static function sumPreviousCogContribution(Invoice $invoice, ?Invoice $previousInvoice, int $productId, float $availableQuantity): float
+    {
+        if (! $previousInvoice) {
+            return 0.0;
+        }
+
+        // Approved calculation uses the immediate previous invoice item's COG.
+        if ($invoice->status->isApproved()) {
+            $previousInvoiceItem = $previousInvoice->items->where('itemable_id', $productId)->first();
+
+            return $previousInvoiceItem ? (float) $previousInvoiceItem->cog_after * $availableQuantity : 0.0;
+        }
+
+        // Unapproved calculation uses the previous one of previous invoice item's COG.
+        $previousPreviousInvoice = self::getPreviousInvoice($previousInvoice, $productId);
+        if (! $previousPreviousInvoice) {
+            return 0.0;
+        }
+
+        $previousPreviousInvoiceItem = $previousPreviousInvoice->items->where('itemable_id', $productId)->first();
+
+        return $previousPreviousInvoiceItem ? (float) $previousPreviousInvoiceItem->cog_after * $availableQuantity : 0.0;
     }
 
     /**
