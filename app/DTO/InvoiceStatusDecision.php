@@ -12,7 +12,7 @@ class InvoiceStatusDecision
 
     public Collection $messages;
 
-    public Collection $conflicts; // collection of invoices that cause conflicts
+    public Collection $conflicts;
 
     public function __construct()
     {
@@ -70,18 +70,64 @@ class InvoiceStatusDecision
             $parts[] = ucfirst((string) $type).': '.$texts;
         }
 
-        if ($this->conflicts->isNotEmpty()) {
-            $conflictTexts = $this->conflicts
-                ->map(fn ($inv) => sprintf('%s (%s)', data_get($inv, 'number', 'unknown'), data_get($inv, 'type', 'unknown')))
-                ->join(', ');
-            $parts[] = 'Conflicts: '.$conflictTexts;
+        $conflictSummary = $this->conflictSummaryText();
+        if ($conflictSummary !== null) {
+            $parts[] = 'Conflicts: '.$conflictSummary;
         }
 
         return collect($parts)->join(' | ');
     }
 
-    public function addConflict($invoice): void
+    private function conflictSummaryText(): ?string
     {
-        $this->conflicts->push($invoice);
+        $grouped = $this->groupedConflictsByType();
+        if ($grouped->isEmpty()) {
+            return null;
+        }
+
+        $typeTexts = $grouped->map(function (Collection $conflicts, string $type): string {
+            $label = $this->conflictTypeLabel($type);
+            $items = $this->formatConflicts($type, $conflicts)->filter(fn ($v) => $v !== null && $v !== '')->values();
+
+            if ($items->isEmpty()) {
+                return $label;
+            }
+
+            return $label.': '.$items->join(', ');
+        })->values();
+
+        return $typeTexts->join(' | ');
+    }
+
+    private function conflictTypeLabel(string $type): string
+    {
+        return match ($type) {
+            'buy invoice' => 'Buy Invoice',
+            'sell invoice' => 'Sell Invoice',
+            'product' => 'Product',
+            'ancillarycost' => 'Ancillary Cost',
+            default => ucfirst($type),
+        };
+    }
+
+    private function formatConflicts(string $type, Collection $conflicts): Collection
+    {
+        return match ($type) {
+            'buy invoice', 'sell invoice' => $conflicts->map(fn ($inv) => data_get($inv, 'number', 'unknown')),
+            'product' => $conflicts->map(fn ($prod) => sprintf('Code: %s, Name: %s', data_get($prod, 'code', 'unknown'), data_get($prod, 'name', 'unknown'))),
+            'ancillarycost' => $conflicts->map(fn ($cost) => sprintf('Invoice Number: %s, Type: %s', data_get($cost, 'invoice.number', 'unknown'), data_get($cost, 'type.value', 'unknown'))),
+            default => collect(),
+        };
+    }
+
+    private function groupedConflictsByType(): Collection
+    {
+        return $this->conflicts->groupBy(fn ($conflict) => $conflict instanceof \App\Models\Invoice ?
+                $conflict->invoice_type->value.' invoice' : strtolower(class_basename($conflict)));
+    }
+
+    public function addConflict($conflict): void
+    {
+        $this->conflicts->push($conflict);
     }
 }

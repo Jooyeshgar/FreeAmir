@@ -433,49 +433,6 @@ class InvoiceService
 
     }
 
-    private static function validateProductsQuantityForStatusChange(Invoice $invoice, array $productIds): Collection
-    {
-        $errors = collect();
-
-        // if ($invoice->invoice_type !== InvoiceType::SELL) {
-        //     return $errors;
-        // }
-
-        $products = Product::whereIn('id', $productIds)->get();
-
-        foreach ($products as $product) {
-            if ($product->oversell) {
-                continue;
-            }
-
-            if ($invoice->status->isApproved()) {
-                continue;
-            }
-
-            $invoiceItem = $invoice->items->firstWhere('itemable_id', $product->id);
-
-            if (! $invoiceItem) {
-                continue;
-            }
-
-            $requiredQuantity = $invoiceItem->quantity;
-            if ($product->quantity < $requiredQuantity) {
-                $errors->push([
-                    'product' => $product,
-                    'available' => $product->quantity,
-                    'required' => $requiredQuantity,
-                    'message' => __('Insufficient quantity for product ":product". Available: :available, Required: :required.', [
-                        'product' => $product->name,
-                        'available' => $product->quantity,
-                        'required' => $requiredQuantity,
-                    ]),
-                ]);
-            }
-        }
-
-        return $errors;
-    }
-
     private static function getProductIdsFromInvoice(Invoice $invoice): array
     {
         $productIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->toArray();
@@ -586,18 +543,8 @@ class InvoiceService
     {
         $decision = new InvoiceStatusDecision;
 
-        if ($invoice->invoice_type === InvoiceType::SELL && $nextStatus == InvoiceAncillaryCostStatus::APPROVED) {
-            $quantityErrors = self::validateProductsQuantityForStatusChange($invoice, $productIds);
-            if ($quantityErrors->isNotEmpty()) {
-                foreach ($quantityErrors as $err) {
-                    $decision->addMessage('error', $err['message'], [
-                        'product' => $err['product']->id,
-                        'available' => $err['available'],
-                        'required' => $err['required'],
-                    ]);
-                    $decision->addConflict($err['product']); // TODO - add conflict type (invoice or product)
-                }
-            }
+        if ($invoice->invoice_type === InvoiceType::SELL && $nextStatus->isApproved()) {
+            self::checkProductsQuantityForStatusChange($invoice, $productIds, $decision);
         }
 
         $conflictGroups = self::enforceInvoiceStatusRules($invoice, $productIds, $nextStatus);
@@ -617,6 +564,10 @@ class InvoiceService
                 $decision->addMessage('warning', __('invoices.status_change.prior_unapproved', ['invoices' => $invoiceList]));
                 $invoices->each(fn ($i) => $decision->addConflict($i));
             }
+        }
+
+        if ($nextStatus->isApproved()) {
+            self::checkAncillaryCostsForStatusChange($invoice, $decision);
         }
 
         return $decision;
@@ -671,5 +622,165 @@ class InvoiceService
         }
 
         return $query->get(['id', 'invoice_type', 'number'])->toArray();
+    }
+
+    private static function checkProductsQuantityForStatusChange(Invoice $invoice, array $productIds, InvoiceStatusDecision $decision): void
+    {
+        $conflictGroups = self::validateProductsQuantityForStatusChange($invoice, $productIds);
+        $conflictsGroupedByRule = $conflictGroups->groupBy('rule');
+
+        if ($conflictsGroupedByRule->has('oversell_allowed')) {
+            $productNames = $conflictsGroupedByRule->get('oversell_allowed')->map(fn ($c) => $c['product']->name)->values();
+
+            foreach ($productNames as $name) {
+                $decision->addMessage('warning', __('product_oversell_allowed', ['product' => $name]));
+            }
+        }
+
+        if ($conflictsGroupedByRule->has('insufficient_quantity')) {
+            $products = $conflictsGroupedByRule->get('insufficient_quantity')->map(fn ($c) => $c['product'])->values();
+
+            $productNames = $products->map(fn ($p) => $p->name)->values();
+
+            foreach ($productNames as $name) {
+                $decision->addMessage('error', __('insufficient_quantity_for_product', ['product' => $name]));
+            }
+
+            $products->each(fn ($product) => $decision->addConflict($product));
+        }
+    }
+
+    private static function validateProductsQuantityForStatusChange(Invoice $invoice, array $productIds): Collection
+    {
+        $errors = collect();
+
+        $products = Product::whereIn('id', $productIds)->get();
+
+        foreach ($products as $product) {
+            if ($product->oversell) {
+                $errors->push([
+                    'rule' => 'oversell_allowed',
+                    'product' => $product,
+                ]);
+
+                continue;
+            }
+
+            if ($invoice->status->isApproved()) {
+                continue;
+            }
+
+            $invoiceItem = $invoice->items->firstWhere('itemable_id', $product->id);
+
+            if (! $invoiceItem) {
+                continue;
+            }
+
+            $requiredQuantity = $invoiceItem->quantity;
+            if ($product->quantity < $requiredQuantity) {
+                $errors->push([
+                    'rule' => 'insufficient_quantity',
+                    'product' => $product,
+                    'required' => $requiredQuantity,
+                ]);
+            }
+        }
+
+        return $errors;
+    }
+
+    private static function checkAncillaryCostsForStatusChange(Invoice $invoice, InvoiceStatusDecision $decision): void
+    {
+        $conflictsAncillaryCosts = self::enforceAncillaryCostsStatusRules($invoice);
+        foreach ($conflictsAncillaryCosts as $group) {
+            $rule = $group['rule'];
+            $ancillaryCosts = $group['ancillary_costs'];
+
+            $ancillaryCostList = $ancillaryCosts->map(fn ($ac) => 'ID '.$ac->id.' (Invoice ID: '.$ac->invoice_id.', Status: '.$ac->status->value.')')->implode(', ');
+
+            if ($rule === 'subsequent_ancillary_cost_approved') {
+                $decision->addMessage('error', __('invoices.status_change.blocked_by_subsequent_ancillary_cost_approved', ['ancillary_costs' => $ancillaryCostList]));
+                $ancillaryCosts->each(fn ($ac) => $decision->addConflict($ac));
+            }
+
+            if ($rule === 'prior_ancillary_cost_unapproved') {
+                $decision->addMessage('warning', __('invoices.status_change.prior_ancillary_cost_unapproved', ['ancillary_costs' => $ancillaryCostList]));
+                $ancillaryCosts->each(fn ($ac) => $decision->addConflict($ac));
+            }
+        }
+    }
+
+    private static function enforceAncillaryCostsStatusRules(Invoice $invoice): Collection
+    {
+        $errors = collect();
+        $productIds = self::getProductIdsFromInvoice($invoice);
+
+        if ($invoice->ancillaryCosts->isEmpty()) {
+            $ancillaryCosts = self::findConflictingUnapprovedAncillaryCostsForInvoiceWithNoAncillaryCosts($invoice, $productIds);
+            if ($ancillaryCosts->isNotEmpty()) {
+                $errors->push([
+                    'rule' => 'prior_ancillary_cost_unapproved',
+                    'ancillary_costs' => $ancillaryCosts,
+                ]);
+
+                return $errors;
+            }
+        }
+
+        $prior = self::findConflictingUnapprovedAncillaryCosts($invoice, $productIds);
+        if ($prior->isNotEmpty()) {
+            $errors->push([
+                'rule' => 'prior_ancillary_cost_unapproved',
+                'ancillary_costs' => $prior,
+            ]);
+        }
+
+        $subsequent = self::findConflictingApprovedAncillaryCosts($invoice, $productIds);
+        if ($subsequent->isNotEmpty()) {
+            $errors->push([
+                'rule' => 'subsequent_ancillary_cost_approved',
+                'ancillary_costs' => $subsequent,
+            ]);
+        }
+
+        return $errors;
+    }
+
+    private static function findConflictingUnapprovedAncillaryCostsForInvoiceWithNoAncillaryCosts(Invoice $invoice, array $productIds): Collection
+    {
+        return \App\Models\AncillaryCost::where('status', '!=', InvoiceAncillaryCostStatus::APPROVED)
+            ->whereHas('items', function ($q) use ($productIds) {
+                $q->whereIn('product_id', $productIds);
+            })->whereHas('invoice', function ($q) use ($invoice) {
+                $q->where('date', '<', $invoice->date)->orWhere(function ($sub) use ($invoice) {
+                    $sub->where('date', $invoice->date)->where('number', '<', $invoice->number);
+                });
+            })->get();
+    }
+
+    private static function findConflictingUnapprovedAncillaryCosts(Invoice $invoice, array $productIds): Collection
+    {
+        return \App\Models\AncillaryCost::where('status', '!=', InvoiceAncillaryCostStatus::APPROVED)
+            ->whereNotIn('id', $invoice->ancillaryCosts->pluck('id')->toArray())
+            ->whereHas('items', function ($q) use ($productIds) {
+                $q->whereIn('product_id', $productIds);
+            })->whereHas('invoice', function ($q) use ($invoice) {
+                $q->where('date', '<', $invoice->date)->orWhere(function ($sub) use ($invoice) {
+                    $sub->where('date', $invoice->date)->where('number', '<', $invoice->number);
+                });
+            })->get(['id', 'invoice_id', 'status', 'type']);
+    }
+
+    private static function findConflictingApprovedAncillaryCosts(Invoice $invoice, array $productIds): Collection
+    {
+        return \App\Models\AncillaryCost::where('status', InvoiceAncillaryCostStatus::APPROVED)
+            ->whereNotIn('id', $invoice->ancillaryCosts->pluck('id')->toArray())
+            ->whereHas('items', function ($q) use ($productIds) {
+                $q->whereIn('product_id', $productIds);
+            })->whereHas('invoice', function ($q) use ($invoice) {
+                $q->where('date', '>', $invoice->date)->orWhere(function ($sub) use ($invoice) {
+                    $sub->where('date', $invoice->date)->where('number', '>', $invoice->number);
+                });
+            })->get(['id', 'invoice_id', 'status', 'type']);
     }
 }
