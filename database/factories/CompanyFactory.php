@@ -24,7 +24,7 @@ class CompanyFactory extends Factory
     public function configure()
     {
         return $this->afterCreating(function (Company $company) {
-            $user = User::find(1);
+            $user = User::first() ?? User::factory()->create();
             $user->companies()->attach($company->id);
         });
     }

@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Bank;
 use App\Models\Customer;
+use App\Models\CustomerGroup;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class CustomerFactory extends Factory
@@ -12,7 +13,7 @@ class CustomerFactory extends Factory
 
     public function definition()
     {
-        session(['active-company-id' => 1]);
+        // session(['active-company-id' => 1]);
         $bankIds = Bank::pluck('id')->toArray();
 
         return [
@@ -29,7 +30,7 @@ class CustomerFactory extends Factory
             'web_page' => substr($this->faker->url, 0, 50),
             'responsible' => $this->faker->name,
             'connector' => $this->faker->name,
-            'group_id' => 1,
+            'group_id' => $this->faker->randomElement(CustomerGroup::pluck('id')->toArray()),
             'desc' => $this->faker->persianSentence(),
             'balance' => $this->faker->randomFloat(2, 0, 10000),
             'credit' => $this->faker->randomFloat(2, 0, 10000),
