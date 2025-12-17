@@ -217,12 +217,78 @@
             </div>
 
             <div class="card-actions justify-between mt-4">
-                <a href="{{ route('invoices.index') }}" class="btn btn-ghost gap-2">
+                <a href="{{ route('invoices.index', [$invoice->invoice_type]) }}" class="btn btn-ghost gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
                     {{ __('Back') }}
                 </a>
+
+                @php
+                    $isApproved = $invoice->status?->isApproved();
+                    $changeStatusValidation = \App\Services\InvoiceService::getChangeStatusValidation($invoice);
+                    $unapprovedInvoicesData = [];
+                    if (!$isApproved && $invoice->invoice_type === \App\Enums\InvoiceType::BUY) {
+                        $productIds = $invoice->items()->where('itemable_type', \App\Models\Product::class)->pluck('itemable_id')->toArray();
+
+                        if (!empty($productIds)) {
+                            $unapprovedInvoices = \App\Services\InvoiceService::getUnapprovedSellPriorInvoices(
+                                $productIds,
+                                $invoice->date,
+                                $invoice->number,
+                                $invoice,
+                            );
+
+                            if (!empty($unapprovedInvoices)) {
+                                $unapprovedInvoicesData = collect($unapprovedInvoices)
+                                    ->map(fn($inv) => \App\Enums\InvoiceType::from($inv['invoice_type'])->label() . ' : ' .$inv['number'])->toArray();
+                            }
+                        }
+                    }
+                    $statusTitle = $isApproved ? __('Unapprove') : __('Approve');
+                    $btnClass = $isApproved ? 'btn-warning' : 'btn-success';
+                    $btnClass .= $changeStatusValidation->hasWarning() ? ' btn-outline ' : '';
+
+                    $editDeleteStatus = \App\Services\InvoiceService::getEditDeleteStatus($invoice);
+                @endphp
+
+                <div class="flex flex-row gap-2">
+                    
+                    @if ($changeStatusValidation->hasErrors() || $changeStatusValidation->hasWarning())
+                        @php
+                            $isApprovalBlocked = $changeStatusValidation->hasErrors();
+                        @endphp
+
+                        <div class="w-full md:max-w-xl">
+                            <div class="alert {{ $isApprovalBlocked ? 'alert-error' : 'alert-warning' }} shadow-lg">
+                                <div class="flex items-start gap-3">
+                                    @if ($isApprovalBlocked)
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86l-7.1 12.29A2 2 0 005 19h14a2 2 0 001.81-2.85l-7.1-12.29a2 2 0 00-3.42 0z" />
+                                        </svg>
+                                    @else
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 1010 10A10 10 0 0012 2z" />
+                                        </svg>
+                                    @endif
+
+                                    <div class="min-w-0">
+                                        <div class="font-bold text-base leading-6">
+                                            {{ $isApprovalBlocked ? __('Approval is blocked') : __('Approval has warnings') }}
+                                        </div>
+                                        <div class="mt-1 text-sm leading-6 opacity-90 prose prose-sm max-w-none">
+                                            {!! $changeStatusValidation->toDetailText() !!}
+                                        </div>
+                                        <div class="mt-2 text-xs opacity-70">
+                                            {{ $isApprovalBlocked ? __('Fix the issues above to enable approval.') : __('You can approve, but please review the warnings first.') }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+
                 <div class="flex flex-wrap gap-2">
                     <a href="{{ route('invoices.print', $invoice) }}" class="btn btn-outline gap-2" target="_blank" rel="noopener">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -232,38 +298,17 @@
                         {{ __('Print PDF') }}
                     </a>
 
-
                     @can('invoices.approve')
-                        @php
-                            $isApproved = $invoice->status?->isApproved();
-                            $changeStatusValidation = \App\Services\InvoiceService::getChangeStatusValidation($invoice);
-                            $editDeleteStatus = \App\Services\InvoiceService::getEditDeleteStatus($invoice);
-
-                        @endphp
-
-                        @if ($changeStatusValidation->canProceed)
-                            <a href="{{ route('invoices.change-status', [$invoice, $isApproved ? 'unapprove' : 'approve']) }}"
-                                class="btn {{ $isApproved ? 'btn-warning' : 'btn-success' }} gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="{{ $isApproved ? 'M6 18L18 6M6 6l12 12' : 'M5 13l4 4L19 7' }}" />
-                                </svg>
-                                {{ __($isApproved ? 'Unapprove' : 'Approve') }}
-                            </a>
-                        @else
-                            @php
-                                $btnClass = $isApproved ? 'btn-warning' : 'btn-success';
-                                $label = $isApproved ? __('Unapprove') : __('Approve');
-                            @endphp
-                            <span class="tooltip" data-tip="{{ $changeStatusValidation->toText() }}">
-                                <button class="btn {{ $btnClass }} gap-2 btn-disabled cursor-not-allowed" disabled title="{{ $changeStatusValidation->toText() }}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="{{ $isApproved ? 'M6 18L18 6M6 6l12 12' : 'M5 13l4 4L19 7' }}" />
-                                    </svg>
-                                    {{ $label }}
-                                </button>
+                        @if ($changeStatusValidation->hasErrors())
+                            <span class="tooltip">
+                                <button class="btn btn-primary {{ $btnClass }} btn-disabled cursor-not-allowed" disabled
+                                title="{{ $changeStatusValidation->toText() }}">{{ $statusTitle }}</button>
                             </span>
+                        @else
+                            <a href="{{ route('invoices.change-status', [$invoice, $isApproved ? 'unapproved' : 'approved']) }}"
+                                class="btn btn-primary gap-2 {{ $btnClass }}">
+                                {{ $statusTitle }}
+                            </a>
                         @endif
                     @endcan
 

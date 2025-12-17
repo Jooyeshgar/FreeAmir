@@ -48,6 +48,22 @@ class InvoiceStatusDecision
         return $this->messages->isNotEmpty();
     }
 
+    public function toDetailText(): string
+    {
+        $lines = [];
+
+        foreach ($this->messages as $message) {
+            $lines[] = e($message->text).':';
+        }
+
+        $conflictSummary = $this->conflictSummaryText();
+        if ($conflictSummary !== null) {
+            $lines[] = e($conflictSummary);
+        }
+
+        return implode('<br>', $lines);
+    }
+
     public function toText(): string
     {
         $groups = $this->messages->groupBy('type');
