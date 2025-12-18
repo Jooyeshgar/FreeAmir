@@ -48,12 +48,12 @@ class InvoiceStatusDecision
         return $this->messages->isNotEmpty();
     }
 
-    public function toDetailText(): string
+    public function toDetailText(): array
     {
         $lines = [];
 
         foreach ($this->messages as $message) {
-            $lines[] = e($message->text).':';
+            $lines[] = e($message->text).'.';
         }
 
         $conflictSummary = $this->conflictSummaryText();
@@ -61,7 +61,7 @@ class InvoiceStatusDecision
             $lines[] = e($conflictSummary);
         }
 
-        return implode('<br>', $lines);
+        return $lines;
     }
 
     public function toText(): string
@@ -71,12 +71,12 @@ class InvoiceStatusDecision
 
         if ($groups->has('error')) {
             $errors = $groups->get('error')->pluck('text')->join('; ');
-            $parts[] = 'Errors: '.$errors;
+            $parts[] = __('Errors').': '.$errors;
         }
 
         if ($groups->has('warning')) {
             $warnings = $groups->get('warning')->pluck('text')->join('; ');
-            $parts[] = 'Warnings: '.$warnings;
+            $parts[] = __('Warnings').': '.$warnings;
         }
 
         // include any other message types
@@ -88,7 +88,7 @@ class InvoiceStatusDecision
 
         $conflictSummary = $this->conflictSummaryText();
         if ($conflictSummary !== null) {
-            $parts[] = 'Conflicts: '.$conflictSummary;
+            $parts[] = __('Conflicts').': '.$conflictSummary;
         }
 
         return collect($parts)->join(' | ');
@@ -118,20 +118,22 @@ class InvoiceStatusDecision
     private function conflictTypeLabel(string $type): string
     {
         return match ($type) {
-            'buy invoice' => 'Buy Invoice',
-            'sell invoice' => 'Sell Invoice',
-            'product' => 'Product',
-            'ancillarycost' => 'Ancillary Cost',
-            default => ucfirst($type),
+            'buy invoice' => __('Buy Invoices'),
+            'sell invoice' => __('Sell Invoices'),
+            'product' => __('Products'),
+            'ancillarycost' => __('Ancillary Costs'),
+            default => __(ucfirst($type)),
         };
     }
 
     private function formatConflicts(string $type, Collection $conflicts): Collection
     {
         return match ($type) {
-            'buy invoice', 'sell invoice' => $conflicts->map(fn ($inv) => data_get($inv, 'number', 'unknown')),
-            'product' => $conflicts->map(fn ($prod) => sprintf('Code: %s, Name: %s', data_get($prod, 'code', 'unknown'), data_get($prod, 'name', 'unknown'))),
-            'ancillarycost' => $conflicts->map(fn ($cost) => sprintf('Invoice Number: %s, Type: %s', data_get($cost, 'invoice.number', 'unknown'), data_get($cost, 'type.value', 'unknown'))),
+            'buy invoice', 'sell invoice' => $conflicts->map(fn ($inv) => formatDocumentNumber(data_get($inv, 'number', 'unknown'))),
+            'product' => $conflicts->map(fn ($prod) => sprintf('%s: %s, %s: %s', __('Code'), formatDocumentNumber(data_get($prod, 'code', 'unknown')),
+                __('Name'), data_get($prod, 'name', 'unknown'))),
+            'ancillarycost' => $conflicts->map(fn ($cost) => sprintf('%s: %s, %s: %s', __('Invoice Number'), data_get($cost, 'invoice.number', 'unknown'),
+                __('Type'), data_get($cost, 'type.value', 'unknown'))),
             default => collect(),
         };
     }

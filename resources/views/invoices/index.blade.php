@@ -106,40 +106,22 @@
                                     @php
                                         $isApproved = $invoice->status?->isApproved();
                                         $changeStatusValidation = \App\Services\InvoiceService::getChangeStatusValidation($invoice);
-                                        $unapprovedInvoicesData = [];
-                                        if (!$isApproved && $invoice->invoice_type === \App\Enums\InvoiceType::BUY) {
-                                            $productIds = $invoice->items()->where('itemable_type', \App\Models\Product::class)->pluck('itemable_id')->toArray();
-
-                                            if (!empty($productIds)) {
-                                                $unapprovedInvoices = \App\Services\InvoiceService::getUnapprovedSellPriorInvoices(
-                                                    $productIds,
-                                                    $invoice->date,
-                                                    $invoice->number,
-                                                    $invoice,
-                                                );
-
-                                                if (!empty($unapprovedInvoices)) {
-                                                    $unapprovedInvoicesData = collect($unapprovedInvoices)
-                                                        ->map(fn($inv) => \App\Enums\InvoiceType::from($inv['invoice_type'])->label() . ' : ' . $inv['number'])
-                                                        ->toArray();
-                                                }
-                                            }
-                                        }
                                         $statusTitle = $isApproved ? __('Unapprove') : __('Approve');
                                         $btnClass = $isApproved ? 'btn-warning' : 'btn-success';
                                         $btnClass .= $changeStatusValidation->hasWarning() ? ' btn-outline ' : '';
                                         $tooltip = $changeStatusValidation->hasMessage() ? 'data-tip="' . e($changeStatusValidation->toText()) . '"' : '';
+                                        $detailConflicts = $changeStatusValidation->toDetailText();
                                     @endphp
 
                                     @if ($changeStatusValidation->hasErrors())
                                         <span {!! $tooltip !!} class="tooltip">
-                                            <button class="btn btn-sm {{ $btnClass }} btn-disabled cursor-not-allowed" disabled
+                                            <button class="btn btn-sm {{ $btnClass }} btn-disabled cursor-not-allowed"
                                                 title="{{ $changeStatusValidation->toText() }}">{{ $statusTitle }}</button>
                                         </span>
                                     @else
                                         <a {!! $tooltip !!} href="{{ route('invoices.change-status', [$invoice, $isApproved ? 'unapproved' : 'approved']) }}"
                                             class="btn btn-sm inline-flex {{ $btnClass }} invoice-approve-btn {{ $tooltip ? ' tooltip' : '' }}"
-                                            data-unapproved-invoices="{{ !empty($unapprovedInvoicesData) ? json_encode($unapprovedInvoicesData) : '' }}">
+                                            data-unapproved-invoices="{{ !empty($detailConflicts) ? json_encode($detailConflicts) : '' }}">
                                             {{ $statusTitle }}
                                         </a>
                                     @endif
@@ -159,21 +141,21 @@
                                         </form>
                                     @else
                                         <span class="tooltip" data-tip="{{ __('Unapprove the invoice first to edit') }}">
-                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled
+                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
                                                 title="{{ __('Unapprove the invoice first to edit') }}">{{ __('Edit') }}</button>
                                         </span>
                                         <span class="tooltip" data-tip="{{ __('Unapprove the invoice first to delete') }}">
-                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled
+                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
                                                 title="{{ __('Unapprove the invoice first to delete') }}">{{ __('Delete') }}</button>
                                         </span>
                                     @endif
                                 @else
                                     <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
-                                        <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" disabled
+                                        <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed"
                                             title="{{ $editDeleteStatus['reason'] }}">{{ __('Edit') }}</button>
                                     </span>
                                     <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
-                                        <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled
+                                        <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
                                             title="{{ $editDeleteStatus['reason'] }}">{{ __('Delete') }}</button>
                                     </span>
                                 @endif
@@ -217,30 +199,30 @@
                 approveButtons.forEach(button => {
                     button.addEventListener('click', function(e) {
                         const href = this.getAttribute('href');
-                        const unapprovedInvoicesJson = this.getAttribute('data-unapproved-invoices');
+                        const detailConflicts = this.getAttribute('data-unapproved-invoices');
 
                         if (!href.includes('/approve')) {
                             return;
                         }
 
-                        if (unapprovedInvoicesJson && unapprovedInvoicesJson.trim() !== '') {
+                        if (detailConflicts && detailConflicts.trim() !== '') {
                             e.preventDefault();
                             try {
-                                const unapprovedInvoices = JSON.parse(unapprovedInvoicesJson);
+                                const detailConflictsParsed = JSON.parse(detailConflicts);
 
-                                if (unapprovedInvoices.length > 0) {
-                                    let message =
-                                        '{{ __('Note: There are unapproved prior invoices for the selected products that will remain unapproved:') }}\n\n';
+                                if (detailConflictsParsed.length > 0) {
+                                    let message = '';
 
-                                    unapprovedInvoices.forEach(inv => {
-                                        message += '• ' + inv + '\n';
+                                    detailConflictsParsed.forEach(inv => {
+                                        message += inv + '\n';
                                     });
 
-                                    message += '\n' +
-                                        '{{ __('Do you want to proceed with approval?') }}';
+                                    message += '\n' + '{{ __('Do you want to proceed with approval?') }}';
 
                                     if (confirm(message)) {
-                                        window.location.href = href;
+                                        const url = new URL(href, window.location.origin);
+                                        url.searchParams.set('confirm', '1');
+                                        window.location.href = url.toString();
                                     }
                                 }
                             } catch (error) {

@@ -71,6 +71,28 @@
                         <div class="stat-desc text-indigo-400">{{ __('Payable amount') }}</div>
                     </div>
                 </div>
+
+                @php
+                    $isApproved = $invoice->status?->isApproved();
+                    $changeStatusValidation = \App\Services\InvoiceService::getChangeStatusValidation($invoice);
+                    $statusTitle = $isApproved ? __('Unapprove') : __('Approve');
+                    $btnClass = $isApproved ? 'btn-warning' : 'btn-success';
+                    $btnClass .= $changeStatusValidation->hasWarning() ? ' btn-outline ' : '';
+                    $detailConflicts = $changeStatusValidation->toDetailText();
+
+                    $editDeleteStatus = \App\Services\InvoiceService::getEditDeleteStatus($invoice);
+                @endphp
+
+                @if ($changeStatusValidation->hasErrors() || $changeStatusValidation->hasWarning())
+                    <div class="stats bg-gradient-to-br gap-2 shadow col-span-2">
+                        @php
+                            $type = $changeStatusValidation->hasErrors() ? 'error' : 'warning';
+                            $isApprovalBlocked = $changeStatusValidation->hasErrors();
+                        @endphp
+                        <x-show-messages :messages="$changeStatusValidation->toDetailText()" :type="$type"/>
+                    </div>
+                @endif
+
             </div>
 
             @if ($invoice->description)
@@ -224,71 +246,6 @@
                     {{ __('Back') }}
                 </a>
 
-                @php
-                    $isApproved = $invoice->status?->isApproved();
-                    $changeStatusValidation = \App\Services\InvoiceService::getChangeStatusValidation($invoice);
-                    $unapprovedInvoicesData = [];
-                    if (!$isApproved && $invoice->invoice_type === \App\Enums\InvoiceType::BUY) {
-                        $productIds = $invoice->items()->where('itemable_type', \App\Models\Product::class)->pluck('itemable_id')->toArray();
-
-                        if (!empty($productIds)) {
-                            $unapprovedInvoices = \App\Services\InvoiceService::getUnapprovedSellPriorInvoices(
-                                $productIds,
-                                $invoice->date,
-                                $invoice->number,
-                                $invoice,
-                            );
-
-                            if (!empty($unapprovedInvoices)) {
-                                $unapprovedInvoicesData = collect($unapprovedInvoices)
-                                    ->map(fn($inv) => \App\Enums\InvoiceType::from($inv['invoice_type'])->label() . ' : ' .$inv['number'])->toArray();
-                            }
-                        }
-                    }
-                    $statusTitle = $isApproved ? __('Unapprove') : __('Approve');
-                    $btnClass = $isApproved ? 'btn-warning' : 'btn-success';
-                    $btnClass .= $changeStatusValidation->hasWarning() ? ' btn-outline ' : '';
-
-                    $editDeleteStatus = \App\Services\InvoiceService::getEditDeleteStatus($invoice);
-                @endphp
-
-                <div class="flex flex-row gap-2">
-                    
-                    @if ($changeStatusValidation->hasErrors() || $changeStatusValidation->hasWarning())
-                        @php
-                            $isApprovalBlocked = $changeStatusValidation->hasErrors();
-                        @endphp
-
-                        <div class="w-full md:max-w-xl">
-                            <div class="alert {{ $isApprovalBlocked ? 'alert-error' : 'alert-warning' }} shadow-lg">
-                                <div class="flex items-start gap-3">
-                                    @if ($isApprovalBlocked)
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86l-7.1 12.29A2 2 0 005 19h14a2 2 0 001.81-2.85l-7.1-12.29a2 2 0 00-3.42 0z" />
-                                        </svg>
-                                    @else
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 1010 10A10 10 0 0012 2z" />
-                                        </svg>
-                                    @endif
-
-                                    <div class="min-w-0">
-                                        <div class="font-bold text-base leading-6">
-                                            {{ $isApprovalBlocked ? __('Approval is blocked') : __('Approval has warnings') }}
-                                        </div>
-                                        <div class="mt-1 text-sm leading-6 opacity-90 prose prose-sm max-w-none">
-                                            {!! $changeStatusValidation->toDetailText() !!}
-                                        </div>
-                                        <div class="mt-2 text-xs opacity-70">
-                                            {{ $isApprovalBlocked ? __('Fix the issues above to enable approval.') : __('You can approve, but please review the warnings first.') }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    @endif
-                </div>
-
                 <div class="flex flex-wrap gap-2">
                     <a href="{{ route('invoices.print', $invoice) }}" class="btn btn-outline gap-2" target="_blank" rel="noopener">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -301,12 +258,12 @@
                     @can('invoices.approve')
                         @if ($changeStatusValidation->hasErrors())
                             <span class="tooltip">
-                                <button class="btn btn-primary {{ $btnClass }} btn-disabled cursor-not-allowed" disabled
+                                <button class="btn btn-primary {{ $btnClass }} btn-disabled cursor-not-allowed"
                                 title="{{ $changeStatusValidation->toText() }}">{{ $statusTitle }}</button>
                             </span>
                         @else
-                            <a href="{{ route('invoices.change-status', [$invoice, $isApproved ? 'unapproved' : 'approved']) }}"
-                                class="btn btn-primary gap-2 {{ $btnClass }}">
+                            <a href="{{ route('invoices.change-status', [$invoice, $isApproved ? 'unapproved' : 'approved']) }}"  x-data="invoiceApprove()"
+                                class="btn btn-primary gap-2 {{ $btnClass }} invoice-approve-btn" data-unapproved-invoices="{{ !empty($detailConflicts) ? json_encode($detailConflicts) : '' }}">
                                 {{ $statusTitle }}
                             </a>
                         @endif
@@ -322,7 +279,7 @@
                         </a>
                     @else
                         <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
-                            <button class="btn btn-primary gap-2 btn-disabled cursor-not-allowed" disabled title="{{ $editDeleteStatus['reason'] }}">
+                            <button class="btn btn-primary gap-2 btn-disabled cursor-not-allowed" title="{{ $editDeleteStatus['reason'] }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -347,4 +304,49 @@
             </div>
         </div>
     </div>
+
+    @pushOnce('scripts')
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const approveButtons = document.querySelectorAll('.invoice-approve-btn');
+
+                approveButtons.forEach(button => {
+                    button.addEventListener('click', function(e) {
+                        const href = this.getAttribute('href');
+                        const detailConflicts = this.getAttribute('data-unapproved-invoices');
+
+                        if (!href.includes('/approve')) {
+                            return;
+                        }
+
+                        if (detailConflicts && detailConflicts.trim() !== '') {
+                            e.preventDefault();
+                            try {
+                                const detailConflictsParsed = JSON.parse(detailConflicts);
+
+                                if (detailConflictsParsed.length > 0) {
+                                    let message = '';
+
+                                    detailConflictsParsed.forEach(inv => {
+                                        message += inv + '\n';
+                                    });
+
+                                    message += '\n' + '{{ __('Do you want to proceed with approval?') }}';
+
+                                    if (confirm(message)) {
+                                        const url = new URL(href, window.location.origin);
+                                        url.searchParams.set('confirm', '1');
+                                        window.location.href = url.toString();
+                                    }
+                                }
+                            } catch (error) {
+                                console.error('Error parsing unapproved invoices:', error);
+                                window.location.href = href;
+                            }
+                        }
+                    });
+                });
+            });
+        </script>
+    @endPushOnce
 </x-app-layout>
