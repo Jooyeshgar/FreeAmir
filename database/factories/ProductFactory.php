@@ -44,7 +44,8 @@ class ProductFactory extends Factory
     public function withGroup(?ProductGroup $group = null): static
     {
         return $this->state(function () use ($group) {
-            $groupToUse = $group ?? ProductGroup::factory()->create();
+            $companyId = $attributes['company_id'] ?? session('active-company-id');
+            $groupToUse = $group ?? ProductGroup::factory()->create(['company_id' => $companyId]);
 
             return [
                 'group' => $groupToUse->id,

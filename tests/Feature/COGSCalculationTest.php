@@ -29,16 +29,20 @@ class COGSCalculationTest extends TestCase
 
     protected Customer $customer;
 
+    protected int $companyId;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        session(['active-company-id' => Company::factory()->create()->id]);
+        $company = Company::factory()->create();
+        session(['active-company-id' => $company->id]);
+        $this->companyId = $company->id;
 
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
 
-        $this->customer = Customer::factory()->create();
+        $this->customer = Customer::factory()->withGroup()->withSubject()->create();
     }
 
     /* -----------------------------------------------------------------
@@ -48,19 +52,13 @@ class COGSCalculationTest extends TestCase
 
     private function createProduct(array $overrides = []): Product
     {
-        return Product::factory()->create(array_merge([
-            'company_id' => session('active-company-id'),
-            'quantity' => 0,
-            'average_cost' => 0,
+        return Product::factory()->withGroup()->withSubjects()->create(array_merge([
+            'company_id' => $this->companyId,
         ], $overrides));
     }
 
-    private function createInvoice(
-        InvoiceType $type,
-        array $items,
-        bool $approved = true,
-        ?int $number = null
-    ): array {
+    private function createInvoice(InvoiceType $type, array $items, bool $approved = true, ?int $number = null): array
+    {
         $number ??= random_int(1000, 9999);
 
         return InvoiceService::createInvoice(
@@ -115,14 +113,11 @@ class COGSCalculationTest extends TestCase
 
         $product->refresh();
 
-        $this->assertSame(10, $product->quantity);
-        $this->assertEquals(100, round($product->average_cost, 4));
+        $this->assertEquals(10, $product->quantity);
+        $this->assertEqualsWithDelta(100, $product->average_cost, 0.0001);
 
         $item = $invoice->items->first();
-        $this->assertEquals(
-            round($product->average_cost, 4),
-            round($item->cog_after, 4)
-        );
+        $this->assertEqualsWithDelta($product->average_cost, $item->cog_after, 0.0001);
     }
 
     public function test_multiple_purchases_recalculate_moving_average(): void
@@ -136,8 +131,8 @@ class COGSCalculationTest extends TestCase
 
         $expected = ((100 * 10) + (120 * 5)) / 15;
 
-        $this->assertSame(15, $product->quantity);
-        $this->assertEquals(round($expected, 6), round($product->average_cost, 6));
+        $this->assertEquals(15, $product->quantity);
+        $this->assertEqualsWithDelta($expected, $product->average_cost, 0.0001);
     }
 
     public function test_purchase_then_sale_uses_average_for_cogs(): void
@@ -151,14 +146,15 @@ class COGSCalculationTest extends TestCase
         ], true, 2002);
 
         $product->refresh();
-        $this->assertSame(8, $product->quantity);
+        $this->assertEquals(8, $product->quantity);
 
         $item = $sale->items->first();
-        $this->assertEquals(100, round($item->cog_after, 4));
+        $this->assertEqualsWithDelta(100, $item->cog_after, 0.0001);
 
-        $this->assertEquals(
+        $this->assertEqualsWithDelta(
             (250 - 100) * 2,
-            CostOfGoodsService::calculateGrossProfit($item)
+            CostOfGoodsService::calculateGrossProfit($item),
+            0.0001
         );
     }
 
@@ -175,8 +171,8 @@ class COGSCalculationTest extends TestCase
         $this->sell([$this->productItem($product, 8, 400)], true, 3003);
 
         $product->refresh();
-        $this->assertSame(7, $product->quantity);
-        $this->assertEquals(round($avg, 6), round($product->average_cost, 6));
+        $this->assertEquals(7, $product->quantity);
+        $this->assertEqualsWithDelta($avg, $product->average_cost, 0.0001);
     }
 
     public function test_ancillary_cost_updates_average_cost(): void
@@ -188,7 +184,7 @@ class COGSCalculationTest extends TestCase
         AncillaryCostService::createAncillaryCost($this->user, [
             'invoice_id' => $invoice->id,
             'customer_id' => $this->customer->id,
-            'company_id' => session('active-company-id'),
+            'company_id' => $this->companyId,
             'date' => now()->toDateString(),
             'type' => 'transport',
             'amount' => 100,
@@ -199,7 +195,7 @@ class COGSCalculationTest extends TestCase
         ], true);
 
         $product->refresh();
-        $this->assertEquals(110, round($product->average_cost, 4));
+        $this->assertEqualsWithDelta(110, $product->average_cost, 0.0001);
     }
 
     public function test_sale_without_inventory_fails_validation(): void
@@ -239,7 +235,7 @@ class COGSCalculationTest extends TestCase
         ], false, 9101);
 
         $product->refresh();
-        $this->assertSame(0, $product->quantity);
-        $this->assertSame(0.0, (float) $product->average_cost);
+        $this->assertEquals(0, $product->quantity);
+        $this->assertEqualsWithDelta(0.0, $product->average_cost, 0.0001);
     }
 }

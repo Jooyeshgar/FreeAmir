@@ -77,8 +77,10 @@ class CustomerFactory extends Factory
                     'parent_id' => $parentId,
                     'company_id' => $companyId,
                 ])
+                ->for($customer, 'subjectable') // <--- This handles the MorphOne magic
                 ->withAutoCode()
                 ->create();
+
         });
     }
 }
