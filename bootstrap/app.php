@@ -1,16 +1,14 @@
 <?php
 
 use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
-return Application::configure(
-    $_ENV['APP_BASE_PATH'] ?? dirname(__DIR__)
-)
+return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
-        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
-        channels: __DIR__.'/../routes/channels.php',
+        health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->use([
@@ -33,12 +31,6 @@ return Application::configure(
             \App\Http\Middleware\DefaultCompany::class,
         ]);
 
-        $middleware->group('api', [
-            // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-            \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
-            \Illuminate\Routing\Middleware\SubstituteBindings::class,
-        ]);
-
         // Required middleware aliases used across routes/tests.
         $middleware->alias([
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
@@ -46,5 +38,6 @@ return Application::configure(
             'check-permission' => \App\Http\Middleware\CheckPermission::class,
         ]);
     })
-    ->withExceptions()
-    ->create();
+    ->withExceptions(function (Exceptions $exceptions): void {
+        //
+    })->create();

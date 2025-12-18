@@ -26,10 +26,6 @@ class AppServiceProvider extends ServiceProvider
     {
         App::setLocale(config('app.locale', 'fa'));
 
-        RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
-        });
-
         Gate::before(function ($user, $ability) {
             if ($user->hasRole('Super-Admin')) {
                 return true;
