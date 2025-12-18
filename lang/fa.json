@@ -688,7 +688,7 @@
     "User updated successfully!": "کاربر با موفقیت به روز شد!",
     "Username or Email": "نام کاربری یا پست الکترونیک",
     "Users": "کاربران",
-    "VAT": "مالیات (%)",
+    "VAT": "مالیات",
     "VAT Ancillary Cost": "مالیات بر ارزش افزوده هزینه جانبی",
     "VAT may not be greater than :max.": "VAT ممکن است بیشتر از :max نباشد.",
     "VAT must be a number.": "مالیات بر ارزش افزوده باید یک عدد باشد.",

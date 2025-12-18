@@ -54,7 +54,7 @@
                         <th class="px-4 py-2">{{ __('Customer') }}</th>
                         <th class="px-4 py-2">{{ __('Document') }}</th>
                         <th class="px-4 py-2">{{ __('Date') }}</th>
-                        <th class="px-4 py-2">{{ __('Price') }}</th>
+                        <th class="px-4 py-2">{{ __('Price') }} ({{ __(config('amir.currency')) ?? __('Rial') }})</th>
                         <th class="px-4 py-2">{{ __('Status') }}</th>
                         <th class="px-4 py-2">{{ __('Action') }}</th>
                     </tr>
