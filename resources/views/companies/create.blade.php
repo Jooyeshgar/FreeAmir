@@ -73,7 +73,9 @@
                         </label>
                         <input type="file" id="logo" name="logo" class="file-input w-full max-w-xs" accept="image/*" />
                     </div>
-
+                    <div class="col-span-2 md:col-span-1">
+                        <x-input name="currency" id="currency" title="{{ __('Currency') }}" :value="old('currency', $company->currency ?? '')" />
+                    </div>
                     <div class="col-span-2">
                         <div class="col-span-2">
                             <x-textarea name="address" id="address" title="{{ __('Address') }}" :value="old('address', $company->address ?? '')" />

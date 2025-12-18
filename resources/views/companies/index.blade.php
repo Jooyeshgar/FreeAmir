@@ -17,6 +17,7 @@
                         <th class="px-4 py-2">{{ __('Year') }}</th>
                         <th class="px-4 py-2">{{ __('Economical Code') }}</th>
                         <th class="px-4 py-2">{{ __('Address') }}</th>
+                        <th class="px-4 py-2">{{ __('Currency') }}</th>
                         <th class="px-4 py-2">{{ __('Action') }}</th>
                     </tr>
                 </thead>
@@ -27,6 +28,7 @@
                             <td class="px-4 py-2">{{ $company->fiscal_year }}</td>
                             <td class="px-4 py-2">{{ $company->economical_code }}</td>
                             <td class="px-4 py-2">{{ $company->address }}</td>
+                            <td class="px-4 py-2">{{ $company->currency }}</td>
                             <td class="px-4 py-2">
                                 <a href="{{ route('companies.edit', $company) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                 <form action="{{ route('companies.destroy', $company) }}" method="POST" class="inline-block">
