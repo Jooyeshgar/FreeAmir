@@ -70,56 +70,15 @@ class CustomerFactory extends Factory
         return $this->afterCreating(function (Customer $customer) {
             $companyId = $customer->company_id ?? session('active-company-id');
             $parentId = $customer->group?->subject_id ?? null;
-            $code = $this->generateSubjectCode($parentId, $companyId);
 
-            $customer->subject()->create([
-                'name' => $customer->name,
-                'parent_id' => $parentId,
-                'company_id' => $companyId,
-                'code' => $code,
-            ]);
+            Subject::factory()
+                ->state([
+                    'name' => $customer->name,
+                    'parent_id' => $parentId,
+                    'company_id' => $companyId,
+                ])
+                ->withAutoCode()
+                ->create();
         });
-    }
-
-    private function generateSubjectCode(?int $parentId, int $companyId): string
-    {
-        if ($parentId) {
-            $parent = Subject::withoutGlobalScopes()
-                ->where('company_id', $companyId)
-                ->find($parentId);
-
-            if ($parent) {
-                // Get next available code under this parent
-                $lastChild = Subject::withoutGlobalScopes()
-                    ->where('parent_id', $parentId)
-                    ->where('company_id', $companyId)
-                    ->orderBy('code', 'desc')
-                    ->first();
-
-                if ($lastChild) {
-                    $lastPortion = (int) substr($lastChild->code, -3);
-                    $nextPortion = str_pad($lastPortion + 1, 3, '0', STR_PAD_LEFT);
-                } else {
-                    $nextPortion = '001';
-                }
-
-                return $parent->code.$nextPortion;
-            }
-        }
-
-        // Root level - find next available root code
-        $lastRoot = Subject::withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->whereNull('parent_id')
-            ->orderBy('code', 'desc')
-            ->first();
-
-        if ($lastRoot) {
-            $nextCode = (int) $lastRoot->code + 1;
-
-            return str_pad($nextCode, 3, '0', STR_PAD_LEFT);
-        }
-
-        return '001'; // First root subject
     }
 }
