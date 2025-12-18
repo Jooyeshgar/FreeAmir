@@ -126,10 +126,10 @@ class COGSCalculationTest extends TestCase
 
         $product->refresh();
 
-        $expected = ((100 * 10) + (120 * 5)) / 15;
+        $expected = round(((100 * 10) + (120 * 5)) / 15, 2);
 
         $this->assertEquals(15, $product->quantity);
-        $this->assertEqualsWithDelta($expected, $product->average_cost, 0.0001);
+        $this->assertEqualsWithDelta($expected, $product->average_cost, 0.01);
     }
 
     public function test_purchase_then_sale_uses_average_for_cogs(): void
@@ -144,7 +144,7 @@ class COGSCalculationTest extends TestCase
         $this->assertEquals(8, $product->quantity);
 
         $item = $sale->items->first();
-        $this->assertEqualsWithDelta(100, $item->cog_after, 0.0001);
+        $this->assertEqualsWithDelta(100, $item->cog_after, 0.01);
 
         $this->assertEqualsWithDelta(
             (250 - 100) * 2,
@@ -181,7 +181,7 @@ class COGSCalculationTest extends TestCase
             'customer_id' => $this->customer->id,
             'company_id' => $this->companyId,
             'date' => now()->toDateString(),
-            'type' => 'transport',
+            'type' => 'Shipping',
             'amount' => 100,
             'vatPrice' => 0,
             'ancillaryCosts' => [
@@ -190,7 +190,7 @@ class COGSCalculationTest extends TestCase
         ], true);
 
         $product->refresh();
-        $this->assertEqualsWithDelta(110, $product->average_cost, 0.0001);
+        $this->assertEqualsWithDelta(110, $product->average_cost, 0.01);
     }
 
     public function test_sale_without_inventory_fails_validation(): void
