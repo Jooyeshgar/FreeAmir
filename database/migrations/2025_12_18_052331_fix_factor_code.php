@@ -18,6 +18,10 @@ return new class extends Migration
         Schema::table('services', function (Blueprint $table) {
             $table->string('code', 20)->change();
         });
+
+        Schema::table('invoices', function (Blueprint $table) {
+            $table->decimal('subtraction', 10, 2)->default(0)->change();
+        });
     }
 
     /**
