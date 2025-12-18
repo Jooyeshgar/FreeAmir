@@ -107,10 +107,7 @@ class COGSCalculationTest extends TestCase
     {
         $product = $this->createProduct();
 
-        [, $invoice] = $this->buy([
-            $this->productItem($product, 10, 100),
-        ]);
-
+        $invoice = $this->buy([$this->productItem($product, 10, 100)])['invoice'];
         $product->refresh();
 
         $this->assertEquals(10, $product->quantity);
@@ -141,9 +138,7 @@ class COGSCalculationTest extends TestCase
 
         $this->buy([$this->productItem($product, 10, 100)], true, 2001);
 
-        [, $sale] = $this->sell([
-            $this->productItem($product, 2, 250),
-        ], true, 2002);
+        $sale = $this->sell([$this->productItem($product, 2, 250)], true, 2002)['invoice'];
 
         $product->refresh();
         $this->assertEquals(8, $product->quantity);
@@ -179,7 +174,7 @@ class COGSCalculationTest extends TestCase
     {
         $product = $this->createProduct();
 
-        [, $invoice] = $this->buy([$this->productItem($product, 10, 100)], true, 4001);
+        $invoice = $this->buy([$this->productItem($product, 10, 100)], true, 4001)['invoice'];
 
         AncillaryCostService::createAncillaryCost($this->user, [
             'invoice_id' => $invoice->id,
