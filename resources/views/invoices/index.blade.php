@@ -115,10 +115,11 @@
                                     @endphp
 
                                     @if ($changeStatusValidation->hasErrors())
-                                        <span {!! $tooltip !!} class="tooltip">
-                                            <button class="btn btn-sm {{ $btnClass }} btn-disabled cursor-not-allowed"
-                                                title="{{ $changeStatusValidation->toText() }}">{{ $statusTitle }}</button>
-                                        </span>
+                                        <a href="{{ route('invoices.group-action', ['invoice' => $invoice]) . '?conflicts=' . json_encode($changeStatusValidation->conflictsItems) }}">
+                                            <span {!! $tooltip !!} class="tooltip">
+                                                <button class="btn btn-sm {{ $btnClass }} cursor-not-allowed">{{ $statusTitle }}</button>
+                                            </span>
+                                        </a>
                                     @else
                                         <a x-data="{}"
                                             @if ($changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js($changeStatusConfirmText))) { window.location.href = '{{ $changeStatusUrl }}?confirm=1' }" @endif

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\InvoiceType;
 use App\Http\Requests\StoreInvoiceRequest;
+use App\Models\AncillaryCost;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
@@ -479,5 +480,221 @@ class InvoiceController extends Controller
         $message = $status === 'approved' ? __('Invoice approved successfully.') : __('Invoice unapproved successfully.');
 
         return redirect()->back()->with('success', __($message));
+    }
+
+    public function groupAction(Invoice $invoice, $conflicts = null)
+    {
+        $conflicts ??= json_decode(request()->query('conflicts'), true);
+        $formattedConflicts = self::formattedConflicts($conflicts);
+
+        $allConflicts = $this->findAllConflictsRecursively($formattedConflicts);
+
+        $fullFormattedConflicts = self::paginateConflicts($allConflicts, 10, request()->get('page', 1));
+
+        return view('invoices.group-action', compact('invoice', 'fullFormattedConflicts'));
+    }
+
+    /**
+     * Recursively find all conflicts for invoices and ancillary costs
+     */
+    private function findAllConflictsRecursively(array $initialConflicts): array
+    {
+        $allConflicts = [];
+        $processedIds = []; // Track processed items to avoid infinite loops
+
+        foreach ($initialConflicts as $conflict) {
+            if (! isset($conflict['recursive_type'])) {
+                $allConflicts[] = $conflict;
+
+                continue;
+            }
+
+            $model = $conflict['recursive_type'];
+            $modelClass = get_class($model);
+            $modelId = $model->id;
+            $key = $modelClass.':'.$modelId;
+
+            // Skip if already processed
+            if (in_array($key, $processedIds)) {
+                continue;
+            }
+
+            $processedIds[] = $key;
+            $allConflicts[] = $conflict;
+
+            // Find conflicts based on model type
+            if ($model instanceof Invoice) {
+                $nestedConflicts = $this->findInvoiceConflictsRecursively($model, $processedIds);
+                $allConflicts = array_merge($allConflicts, $nestedConflicts);
+            } elseif ($model instanceof AncillaryCost) {
+                $nestedConflicts = $this->findAncillaryCostConflictsRecursively($model, $processedIds);
+                $allConflicts = array_merge($allConflicts, $nestedConflicts);
+            }
+        }
+
+        return $allConflicts;
+    }
+
+    /**
+     * Find all conflicts for an invoice recursively
+     *
+     * @param  Invoice  $invoice  The invoice to check
+     * @param  array  $processedIds  Already processed items to avoid loops
+     * @return array Formatted conflicts
+     */
+    private function findInvoiceConflictsRecursively(Invoice $invoice, array &$processedIds): array
+    {
+        if (! isset($invoice->status)) { // must have better code
+            $invoice = Invoice::findOrFail($invoice->id);
+        }
+        $decision = InvoiceService::getChangeStatusValidation($invoice);
+
+        $formattedConflicts = [];
+
+        // Process all conflicts from the decision
+        foreach ($decision->conflicts as $conflict) {
+            $modelClass = get_class($conflict);
+            $key = $modelClass.':'.$conflict->id;
+
+            // Skip if already processed
+            if (in_array($key, $processedIds)) {
+                continue;
+            }
+
+            $processedIds[] = $key;
+
+            // Format the conflict
+            $formatted = $this->formatSingleConflict($conflict);
+            $formattedConflicts[] = $formatted;
+
+            // Recursively find nested conflicts
+            if ($conflict instanceof Invoice) {
+                $nestedConflicts = $this->findInvoiceConflictsRecursively($conflict, $processedIds);
+                $formattedConflicts = array_merge($formattedConflicts, $nestedConflicts);
+            } elseif ($conflict instanceof AncillaryCost) {
+                $nestedConflicts = $this->findAncillaryCostConflictsRecursively($conflict, $processedIds);
+                $formattedConflicts = array_merge($formattedConflicts, $nestedConflicts);
+            }
+        }
+
+        return $formattedConflicts;
+    }
+
+    /**
+     * Find all conflicts for an ancillary cost recursively
+     *
+     * @param  AncillaryCost  $ancillaryCost  The ancillary cost to check
+     * @param  array  $processedIds  Already processed items to avoid loops
+     * @return array Formatted conflicts
+     */
+    private function findAncillaryCostConflictsRecursively(AncillaryCost $ancillaryCost, array &$processedIds): array
+    {
+        $formattedConflicts = [];
+
+        // Get validation for ancillary cost - note: returns array, not Decision object
+        $validation = \App\Services\AncillaryCostService::getChangeStatusValidation($ancillaryCost);
+
+        // If not allowed, the ancillary cost itself has blocking issues
+        // We need to find what's blocking it by checking its related invoice
+        if (! $validation['allowed'] && $ancillaryCost->invoice) {
+            $invoice = $ancillaryCost->invoice;
+            $key = Invoice::class.':'.$invoice->id;
+
+            if (! in_array($key, $processedIds)) {
+                $processedIds[] = $key;
+
+                $formatted = $this->formatSingleConflict($invoice);
+                $formattedConflicts[] = $formatted;
+
+                // Recursively find conflicts for the invoice
+                $nestedConflicts = $this->findInvoiceConflictsRecursively($invoice, $processedIds);
+                $formattedConflicts = array_merge($formattedConflicts, $nestedConflicts);
+            }
+        }
+
+        return $formattedConflicts;
+    }
+
+    /**
+     * Format a single conflict model into display array
+     *
+     * @param  mixed  $conflict  Invoice, AncillaryCost, or Product model
+     * @return array Formatted conflict data
+     */
+    private function formatSingleConflict($conflict): array
+    {
+        $formatted = [];
+        $formatted['recursive_type'] = $conflict;
+
+        if ($conflict instanceof Invoice) {
+            $invoice = Invoice::findOrFail($conflict['id']);
+            $formatted['recursive_type'] = $invoice;
+            $formatted['type'] = __('Invoice').' '.$invoice->invoice_type->label();
+            $formatted['customer']['name'] = $invoice->customer->name ?? '';
+            $formatted['customer']['id'] = $invoice->customer->id ?? '';
+            $formatted['price'] = isset($invoice->amount, $invoice->subtraction)
+                ? formatNumber($invoice->amount - $invoice->subtraction)
+                : '';
+            $formatted['status'] = $invoice->status->label() ?? '';
+        } elseif ($conflict instanceof AncillaryCost) {
+            $ancillaryCost = AncillaryCost::findOrFail($conflict['id']);
+            $formatted['type'] = __('Ancillary Cost');
+            $formatted['customer']['name'] = $ancillaryCost->customer->name ?? '';
+            $formatted['customer']['id'] = $ancillaryCost->customer->id ?? '';
+            $formatted['price'] = $ancillaryCost->amount ? formatNumber((float) $ancillaryCost->amount) : '';
+            $formatted['status'] = $ancillaryCost->status->label() ?? '';
+        } elseif ($conflict instanceof Product) {
+            $formatted['type'] = __('Product');
+            $formatted['customer'] = '-';
+            $formatted['price'] = isset($conflict->average_cost) ? formatNumber($conflict->average_cost) : '';
+            $formatted['status'] = '-';
+        }
+
+        return $formatted;
+    }
+
+    private static function paginateConflicts($conflicts, $perPage, $page)
+    {
+        $conflictsCollection = collect($conflicts);
+
+        return new \Illuminate\Pagination\LengthAwarePaginator(
+            $conflictsCollection->forPage($page, $perPage),
+            $conflictsCollection->count(),
+            $perPage,
+            $page,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
+    }
+
+    private function formattedConflicts(array $conflicts): array
+    {
+        return array_map(function ($conflict) {
+            $formatted = [];
+
+            if (in_array($conflict['type'], ['buy', 'sell'])) {
+                $invoice = Invoice::findOrFail($conflict['id']);
+                $formatted['recursive_type'] = $invoice;
+                $formatted['type'] = __('Invoice').' '.$invoice->invoice_type->label() ?? '';
+                $formatted['customer']['name'] = $invoice->customer->name ?? '';
+                $formatted['customer']['id'] = $invoice->customer->id ?? '';
+                $formatted['price'] = isset($invoice->amount, $invoice->subtraction) ? formatNumber($invoice->amount - $invoice->subtraction) : '';
+                $formatted['status'] = $invoice->status->label() ?? '';
+            } elseif ($conflict['type'] === 'product') {
+                $product = Product::findOrFail($conflict['id']);
+                $formatted['type'] = 'product';
+                $formatted['customer'] = '-';
+                $formatted['price'] = isset($product->average_cost) ? formatNumber($product->average_cost) : '';
+                $formatted['status'] = '-';
+            } elseif ($conflict['type'] === 'ancillary_cost') {
+                $ancillaryCost = AncillaryCost::findOrFail($conflict['id']);
+                $formatted['recursive_type'] = $ancillaryCost;
+                $formatted['type'] = 'ancillary cost';
+                $formatted['customer'] = $ancillaryCost->customer->name ?? '';
+                $formatted['price'] = $ancillaryCost->amount ? formatNumber((float) $ancillaryCost->amount) : '';
+                $formatted['status'] = $ancillaryCost->status->label() ?? '';
+            }
+
+            return $formatted;
+        }, $conflicts);
     }
 }
