@@ -78,18 +78,16 @@
                     $statusTitle = $isApproved ? __('Unapprove') : __('Approve');
                     $btnClass = $isApproved ? 'btn-warning' : 'btn-success';
                     $btnClass .= $changeStatusValidation->hasWarning() ? ' btn-outline ' : '';
-                    $detailConflicts = $changeStatusValidation->toDetailText();
-
                     $editDeleteStatus = \App\Services\InvoiceService::getEditDeleteStatus($invoice);
                 @endphp
 
                 @if ($changeStatusValidation->hasErrors() || $changeStatusValidation->hasWarning())
-                    <div class="stats bg-gradient-to-br gap-2 shadow col-span-2">
+                    <div class="stats bg-gradient-to-br gap-2 shadow col-span-4">
                         @php
                             $type = $changeStatusValidation->hasErrors() ? 'error' : 'warning';
                             $isApprovalBlocked = $changeStatusValidation->hasErrors();
                         @endphp
-                        <x-show-messages :messages="$changeStatusValidation->toDetailText()" :type="$type"/>
+                        <x-show-messages :message="$changeStatusValidation->toDetailText()" type="alert" />
                     </div>
                 @endif
 
@@ -259,11 +257,11 @@
                         @if ($changeStatusValidation->hasErrors())
                             <span class="tooltip">
                                 <button class="btn btn-primary {{ $btnClass }} btn-disabled cursor-not-allowed"
-                                title="{{ $changeStatusValidation->toText() }}">{{ $statusTitle }}</button>
+                                    title="{{ $changeStatusValidation->toText() }}">{{ $statusTitle }}</button>
                             </span>
                         @else
-                            <a href="{{ route('invoices.change-status', [$invoice, $isApproved ? 'unapproved' : 'approved']) }}"  x-data="invoiceApprove()"
-                                class="btn btn-primary gap-2 {{ $btnClass }} invoice-approve-btn" data-unapproved-invoices="{{ !empty($detailConflicts) ? json_encode($detailConflicts) : '' }}">
+                            <a href="{{ route('invoices.change-status', [$invoice, $isApproved ? 'unapproved' : 'approved']) }}"
+                                class="btn btn-primary gap-2 {{ $btnClass }} invoice-approve-btn">
                                 {{ $statusTitle }}
                             </a>
                         @endif
@@ -304,49 +302,4 @@
             </div>
         </div>
     </div>
-
-    @pushOnce('scripts')
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                const approveButtons = document.querySelectorAll('.invoice-approve-btn');
-
-                approveButtons.forEach(button => {
-                    button.addEventListener('click', function(e) {
-                        const href = this.getAttribute('href');
-                        const detailConflicts = this.getAttribute('data-unapproved-invoices');
-
-                        if (!href.includes('/approve')) {
-                            return;
-                        }
-
-                        if (detailConflicts && detailConflicts.trim() !== '') {
-                            e.preventDefault();
-                            try {
-                                const detailConflictsParsed = JSON.parse(detailConflicts);
-
-                                if (detailConflictsParsed.length > 0) {
-                                    let message = '';
-
-                                    detailConflictsParsed.forEach(inv => {
-                                        message += inv + '\n';
-                                    });
-
-                                    message += '\n' + '{{ __('Do you want to proceed with approval?') }}';
-
-                                    if (confirm(message)) {
-                                        const url = new URL(href, window.location.origin);
-                                        url.searchParams.set('confirm', '1');
-                                        window.location.href = url.toString();
-                                    }
-                                }
-                            } catch (error) {
-                                console.error('Error parsing unapproved invoices:', error);
-                                window.location.href = href;
-                            }
-                        }
-                    });
-                });
-            });
-        </script>
-    @endPushOnce
 </x-app-layout>

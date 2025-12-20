@@ -48,20 +48,24 @@ class InvoiceStatusDecision
         return $this->messages->isNotEmpty();
     }
 
-    public function toDetailText(): array
+    public function toDetailText(): string
     {
         $lines = [];
 
         foreach ($this->messages as $message) {
-            $lines[] = e($message->text).'.';
+            if ($message->type === 'error') {
+                $lines[] = '<span class="text-red-700">'.$message->text.'. </span>';
+            } else {
+                $lines[] = '<span class="text-yellow-600">'.$message->text.'.</span>';
+            }
         }
 
         $conflictSummary = $this->conflictSummaryText();
         if ($conflictSummary !== null) {
-            $lines[] = e($conflictSummary);
+            $lines[] = '<span>'.$conflictSummary.'</span>';
         }
 
-        return $lines;
+        return implode(' ', $lines);
     }
 
     public function toText(): string

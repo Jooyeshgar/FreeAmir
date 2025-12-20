@@ -110,7 +110,8 @@
                                         $btnClass = $isApproved ? 'btn-warning' : 'btn-success';
                                         $btnClass .= $changeStatusValidation->hasWarning() ? ' btn-outline ' : '';
                                         $tooltip = $changeStatusValidation->hasMessage() ? 'data-tip="' . e($changeStatusValidation->toText()) . '"' : '';
-                                        $detailConflicts = $changeStatusValidation->toDetailText();
+                                        $changeStatusUrl = route('invoices.change-status', [$invoice, $isApproved ? 'unapproved' : 'approved']);
+                                        $changeStatusConfirmText = $changeStatusValidation->toText();
                                     @endphp
 
                                     @if ($changeStatusValidation->hasErrors())
@@ -119,9 +120,10 @@
                                                 title="{{ $changeStatusValidation->toText() }}">{{ $statusTitle }}</button>
                                         </span>
                                     @else
-                                        <a {!! $tooltip !!} href="{{ route('invoices.change-status', [$invoice, $isApproved ? 'unapproved' : 'approved']) }}"
-                                            class="btn btn-sm inline-flex {{ $btnClass }} invoice-approve-btn {{ $tooltip ? ' tooltip' : '' }}"
-                                            data-unapproved-invoices="{{ !empty($detailConflicts) ? json_encode($detailConflicts) : '' }}">
+                                        <a x-data="{}"
+                                            @if ($changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js($changeStatusConfirmText))) { window.location.href = '{{ $changeStatusUrl }}?confirm=1' }" @endif
+                                            {!! $tooltip !!} href="{{ $changeStatusUrl }}"
+                                            class="btn btn-sm inline-flex {{ $btnClass }} {{ $tooltip ? ' tooltip' : '' }}">
                                             {{ $statusTitle }}
                                         </a>
                                     @endif
@@ -191,48 +193,4 @@
         </div>
     </div>
 
-    @pushOnce('scripts')
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                const approveButtons = document.querySelectorAll('.invoice-approve-btn');
-
-                approveButtons.forEach(button => {
-                    button.addEventListener('click', function(e) {
-                        const href = this.getAttribute('href');
-                        const detailConflicts = this.getAttribute('data-unapproved-invoices');
-
-                        if (!href.includes('/approve')) {
-                            return;
-                        }
-
-                        if (detailConflicts && detailConflicts.trim() !== '') {
-                            e.preventDefault();
-                            try {
-                                const detailConflictsParsed = JSON.parse(detailConflicts);
-
-                                if (detailConflictsParsed.length > 0) {
-                                    let message = '';
-
-                                    detailConflictsParsed.forEach(inv => {
-                                        message += inv + '\n';
-                                    });
-
-                                    message += '\n' + '{{ __('Do you want to proceed with approval?') }}';
-
-                                    if (confirm(message)) {
-                                        const url = new URL(href, window.location.origin);
-                                        url.searchParams.set('confirm', '1');
-                                        window.location.href = url.toString();
-                                    }
-                                }
-                            } catch (error) {
-                                console.error('Error parsing unapproved invoices:', error);
-                                window.location.href = href;
-                            }
-                        }
-                    });
-                });
-            });
-        </script>
-    @endPushOnce
 </x-app-layout>
