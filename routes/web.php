@@ -67,4 +67,13 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::group(['prefix' => 'invoices', 'as' => 'invoices.index'], function () {
         Route::get('', [Controllers\InvoiceController::class, 'index']);
     });
+
+    Route::group(['prefix' => 'comments', 'as' => 'comments.'], function () {
+        Route::get('{customer}', [Controllers\CommentController::class, 'index'])->name('index');
+        Route::get('create/{customer}', [Controllers\CommentController::class, 'create'])->name('create');
+        Route::get('edit/{comment}', [Controllers\CommentController::class, 'edit'])->name('edit');
+        Route::put('{comment}', [Controllers\CommentController::class, 'update'])->name('update');
+        Route::post('', [Controllers\CommentController::class, 'store'])->name('store');
+        Route::delete('{comment}', [Controllers\CommentController::class, 'destroy'])->name('destroy');
+    });
 });
