@@ -35,6 +35,7 @@ class CustomerService
         DB::transaction(function () use ($customer) {
             $customer->delete();
             $customer->subject?->delete();
+            $customer->comments()->delete();
         });
     }
 

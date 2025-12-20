@@ -77,6 +77,13 @@ class RolesAndPermissionsSeeder extends Seeder
             'customers.update',
             'customers.destroy',
 
+            'customers.comments.index',
+            'customers.comments.create',
+            'customers.comments.store',
+            'customers.comments.edit',
+            'customers.comments.update',
+            'customers.comments.destroy',
+
             'customer-groups.index',
             'customer-groups.create',
             'customer-groups.store',
