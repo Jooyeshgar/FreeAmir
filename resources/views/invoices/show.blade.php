@@ -79,6 +79,8 @@
                     $btnClass = $isApproved ? 'btn-warning' : 'btn-success';
                     $btnClass .= $changeStatusValidation->hasWarning() ? ' btn-outline ' : '';
                     $editDeleteStatus = \App\Services\InvoiceService::getEditDeleteStatus($invoice);
+                    $tooltip = $changeStatusValidation->hasMessage() ? 'data-tip="' . e($changeStatusValidation->toText()) . '"' : '';
+                    $changeStatusUrl = route('invoices.change-status', [$invoice, $isApproved ? 'unapproved' : 'approved']);
                 @endphp
 
                 @if ($changeStatusValidation->hasErrors() || $changeStatusValidation->hasWarning())
@@ -255,13 +257,15 @@
 
                     @can('invoices.approve')
                         @if ($changeStatusValidation->hasErrors())
-                            <span class="tooltip">
-                                <button class="btn btn-primary {{ $btnClass }} btn-disabled cursor-not-allowed"
+                            <span {!! $tooltip !!} class="tooltip">
+                                <button class="btn btn-sm {{ $btnClass }} btn-disabled cursor-not-allowed"
                                     title="{{ $changeStatusValidation->toText() }}">{{ $statusTitle }}</button>
                             </span>
                         @else
-                            <a href="{{ route('invoices.change-status', [$invoice, $isApproved ? 'unapproved' : 'approved']) }}"
-                                class="btn btn-primary gap-2 {{ $btnClass }} invoice-approve-btn">
+                            <a x-data="{}"
+                                @if ($changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js('Did you read the warnings?'))) { window.location.href = '{{ $changeStatusUrl }}?confirm=1' }" @endif
+                                {!! $tooltip !!} href="{{ $changeStatusUrl }}"
+                                class="btn btn-primary gap-2 {{ $btnClass }}">
                                 {{ $statusTitle }}
                             </a>
                         @endif
