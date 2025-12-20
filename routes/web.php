@@ -57,4 +57,5 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('', [Controllers\InvoiceController::class, 'index']);
     });
 
+    Route::get('invoices/group-action/{invoice}', [Controllers\InvoiceController::class, 'groupAction'])->name('invoices.group-action');
 });
