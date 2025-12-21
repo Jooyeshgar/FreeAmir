@@ -3,9 +3,11 @@
 @endphp
 
 <div class="grid grid-cols-2 gap-4">
+    <input type="hidden" name="user_id" value="{{ Auth::id() ?? '' }}">
+    <input type="hidden" name="customer_id" value="{{ $comment->customer_id ?? '' }}">
 
     <div class="col-span-2 md:col-span-1 w-1/3">
-        <x-input disabled="true" title="{{ __('Customer') }}" name="customer" id="customer" :value="old('customer', $customer->name ?? '')" />
+        <x-input disabled="true" title="{{ __('Customer') }}" name="customer" id="customer" :value="old('customer', $comment->customer->name ?? ($customer->name ?? ''))" />
     </div>
 
     <div class="col-span-2 md:col-span-1" x-data="{ rating: {{ $rating }} }">
@@ -28,9 +30,6 @@
                         @click="rating = {{ $starValue }}" :checked="rating === {{ $starValue }}" />
                 @endfor
             </div>
-
-            <span class="px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 text-sm font-semibold"
-                x-text="rating.toFixed(1) + ' / 5'"></span>
         </div>
 
         <p class="text-xs text-gray-400 mt-2">
