@@ -268,7 +268,8 @@
 
             <!-- Total Sum -->
             <div class="flex items-center gap-2 px-4 py-2 bg-white shadow-sm rounded-xl border border-gray-200">
-                <span class="text-sm font-medium text-gray-500">{{ __('Total Sum') }}:</span>
+                <span class="text-sm font-medium text-gray-500">{{ __('Total Sum') }}
+                    ({{ config('amir.currency') ?? __('Rial') }}): </span>
                 <span class="text-lg font-bold text-green-600"
                     x-text="(
                         transactions.reduce((sum, t) => sum + (Number($store.utils.convertToEnglish(t.total)) || 0), 0)
