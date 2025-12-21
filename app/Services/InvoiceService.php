@@ -630,23 +630,21 @@ class InvoiceService
         $conflictsGroupedByRule = $conflictGroups->groupBy('rule');
 
         if ($conflictsGroupedByRule->has('oversell_allowed')) {
-            $productNames = $conflictsGroupedByRule->get('oversell_allowed')->map(fn ($c) => $c['product']->name)->values();
+            $productsList = $conflictsGroupedByRule->get('oversell_allowed');
 
-            foreach ($productNames as $name) {
-                $decision->addMessage('warning', __('product_oversell_allowed', ['product' => $name]));
+            $decision->addMessage('warning', __('product_oversell_allowed'));
+            foreach ($productsList as $product) {
+                $decision->addConflict($product['product']);
             }
         }
 
         if ($conflictsGroupedByRule->has('insufficient_quantity')) {
-            $products = $conflictsGroupedByRule->get('insufficient_quantity')->map(fn ($c) => $c['product'])->values();
+            $productsList = $conflictsGroupedByRule->get('insufficient_quantity');
 
-            $productNames = $products->map(fn ($p) => $p->name)->values();
-
-            foreach ($productNames as $name) {
-                $decision->addMessage('error', __('insufficient_quantity_for_product', ['product' => $name]));
+            $decision->addMessage('error', __('insufficient_quantity_for_product'));
+            foreach ($productsList as $product) {
+                $productsList->each(fn ($product) => $decision->addConflict($product['product']));
             }
-
-            $products->each(fn ($product) => $decision->addConflict($product));
         }
     }
 
@@ -657,15 +655,6 @@ class InvoiceService
         $products = Product::whereIn('id', $productIds)->get();
 
         foreach ($products as $product) {
-            if ($product->oversell) {
-                $errors->push([
-                    'rule' => 'oversell_allowed',
-                    'product' => $product,
-                ]);
-
-                continue;
-            }
-
             if ($invoice->status->isApproved()) {
                 continue;
             }
@@ -678,11 +667,18 @@ class InvoiceService
 
             $requiredQuantity = $invoiceItem->quantity;
             if ($product->quantity < $requiredQuantity) {
-                $errors->push([
-                    'rule' => 'insufficient_quantity',
-                    'product' => $product,
-                    'required' => $requiredQuantity,
-                ]);
+                if ($product->oversell) {
+                    $errors->push([
+                        'rule' => 'oversell_allowed',
+                        'product' => $product,
+                    ]);
+                } else {
+                    $errors->push([
+                        'rule' => 'insufficient_quantity',
+                        'product' => $product,
+                        'required' => $requiredQuantity,
+                    ]);
+                }
             }
         }
 
