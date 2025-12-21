@@ -119,9 +119,8 @@
                                             @csrf
                                             <input type="hidden" name="conflicts" value="{{ json_encode($changeStatusValidation->conflictsItems) }}">
                                             <span {!! $tooltip !!} class="tooltip">
-                                                <button type="submit"
-                                                        class="btn btn-sm {{ $btnClass }} cursor-not-allowed">
-                                                    {{ $statusTitle }}
+                                                <button type="submit" class="btn btn-sm btn-accent">
+                                                    {{ __('Fix Conflict') }}
                                                 </button>
                                             </span>
                                         </form>
@@ -135,38 +134,24 @@
                                     @endif
                                 @endcan
 
-                                @php
-                                    $editDeleteStatus = \App\Services\InvoiceService::getEditDeleteStatus($invoice);
-                                @endphp
-
-                                @if ($editDeleteStatus['allowed'])
-                                    @if (!$invoice->status?->isApproved())
-                                        <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                        <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" class="inline-block">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                        </form>
-                                    @else
-                                        <span class="tooltip" data-tip="{{ __('Unapprove the invoice first to edit') }}">
-                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
-                                                title="{{ __('Unapprove the invoice first to edit') }}">{{ __('Edit') }}</button>
-                                        </span>
-                                        <span class="tooltip" data-tip="{{ __('Unapprove the invoice first to delete') }}">
-                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
-                                                title="{{ __('Unapprove the invoice first to delete') }}">{{ __('Delete') }}</button>
-                                        </span>
-                                    @endif
+                                @if (!$invoice->status?->isApproved())
+                                    <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                    <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" class="inline-block">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                    </form>
                                 @else
-                                    <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
-                                        <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed"
-                                            title="{{ $editDeleteStatus['reason'] }}">{{ __('Edit') }}</button>
-                                    </span>
-                                    <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
+                                    <span class="tooltip" data-tip="{{ __('Unapprove the invoice first to edit') }}">
                                         <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
-                                            title="{{ $editDeleteStatus['reason'] }}">{{ __('Delete') }}</button>
+                                            title="{{ __('Unapprove the invoice first to edit') }}">{{ __('Edit') }}</button>
+                                    </span>
+                                    <span class="tooltip" data-tip="{{ __('Unapprove the invoice first to delete') }}">
+                                        <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
+                                            title="{{ __('Unapprove the invoice first to delete') }}">{{ __('Delete') }}</button>
                                     </span>
                                 @endif
+
                             </td>
                         </tr>
                     @endforeach

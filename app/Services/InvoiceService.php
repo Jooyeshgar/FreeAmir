@@ -216,7 +216,7 @@ class InvoiceService
     }
 
     private static function checkInvoiceDeleteableOrEditable(Invoice $invoice): void
-    {
+    {// TODO: must be removed
         if ($invoice->status->isApproved()) {
             throw new Exception(__('Approved invoices cannot be deleted/edited'), 400);
         }
@@ -304,11 +304,12 @@ class InvoiceService
 
     /**
      * Determine if an invoice can be edited or deleted without throwing, and provide the reason when it cannot.
+     * TODO: must be removed
      *
      * @return array{allowed: bool, reason: string|null}
      */
     public static function getEditDeleteStatus(Invoice $invoice): array
-    {
+    {// TODO: must be removed
         try {
             self::checkInvoiceDeleteableOrEditable($invoice);
 
