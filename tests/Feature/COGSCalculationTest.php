@@ -59,7 +59,7 @@ class COGSCalculationTest extends TestCase
         ], $overrides));
     }
 
-    private function createInvoice(InvoiceType $type, array $items, bool $approved = true, ?int $number = null): array
+    private function createInvoice(InvoiceType $type, array $items, bool $approved = true, ?int $number = null, $date = null): array
     {
         $number ??= random_int(1000, 9999);
 
@@ -67,7 +67,7 @@ class COGSCalculationTest extends TestCase
             $this->user,
             [
                 'title' => $type === InvoiceType::BUY ? 'Buy Invoice' : 'Sell Invoice',
-                'date' => now()->toDateString(),
+                'date' => $date ?? now()->toDateString(),
                 'invoice_type' => $type,
                 'customer_id' => $this->customer->id,
                 'document_number' => $number,
@@ -78,9 +78,9 @@ class COGSCalculationTest extends TestCase
         );
     }
 
-    private function buy(array $items, bool $approved = true, ?int $number = null): array
+    private function buy(array $items, bool $approved = true, ?int $number = null, $date = null): array
     {
-        return $this->createInvoice(InvoiceType::BUY, $items, $approved, $number);
+        return $this->createInvoice(InvoiceType::BUY, $items, $approved, $number, $date);
     }
 
     private function sell(array $items, bool $approved = true, ?int $number = null): array
@@ -112,6 +112,16 @@ class COGSCalculationTest extends TestCase
     {
         $svc = new \App\Services\InvoiceService;
         $svc->changeInvoiceStatus($invoice, 'unapproved');
+        $invoice->refresh();
+    }
+
+    /**
+     * approve an invoice (set status to unapproved and run related logic).
+     */
+    protected function approveInvoice(Invoice $invoice): void
+    {
+        $svc = new \App\Services\InvoiceService;
+        $svc->changeInvoiceStatus($invoice, 'approved');
         $invoice->refresh();
     }
 
@@ -452,19 +462,28 @@ class COGSCalculationTest extends TestCase
         $product = $this->createProduct();
 
         $inv1 = $this->buy([$this->productItem($product, 10, 100)], true, random_int(20000, 20999))['invoice'];
-        $inv2 = $this->buy([$this->productItem($product, 10, 120)], true, random_int(21000, 21999))['invoice'];
-        $inv3 = $this->buy([$this->productItem($product, 10, 140)], true, random_int(22000, 22999))['invoice'];
+        $inv2 = $this->buy([$this->productItem($product, 10, 120)], true, random_int(21000, 21999), now()->addDays(1))['invoice'];
+        $inv3 = $this->buy([$this->productItem($product, 10, 140)], true, random_int(22000, 22999), now()->addDays(3))['invoice'];
 
         $product->refresh();
         $this->assertEquals(30, $product->quantity);
         $this->assertEqualsWithDelta(120, $product->average_cost, 0.01);
 
         // Un-approve the middle invoice and expect recalculation for subsequent transactions
+        $this->unapproveInvoice($inv3);
         $this->unapproveInvoice($inv2);
-
         $product->refresh();
-        $this->assertEquals(20, $product->quantity);
-        $this->assertEqualsWithDelta(120, $product->average_cost, 0.01);
+
+        $this->assertEquals(10, $product->quantity);
+        $this->assertEqualsWithDelta(100, $product->average_cost, 0.01);
+
+        $inv4 = $this->buy([$this->productItem($product, 10, 180)], true, random_int(21000, 21999), now()->addDays(2))['invoice'];
+
+        $this->approveInvoice($inv3);
+        $product->refresh();
+
+        $this->assertEquals(30, $product->quantity);
+        $this->assertEqualsWithDelta(140, $product->average_cost, 0.01);
     }
 
     public function test_editing_invoice_with_ancillary_costs_maintains_cost_allocation(): void

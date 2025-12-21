@@ -86,15 +86,29 @@ class CostOfGoodsService
 
         return [
             'baseCost' => (float) $previousInvoiceItem->amount - (float) ($previousInvoiceItem->vat ?? 0),
-            'availableQuantity' => (float) $previousInvoiceItem->quantity_at,
+            'availableQuantity' => (float) self::sumQuantityApprovedPreviousInvoices($invoice, $invoiceItem),
             'newQuantity' => (float) $previousInvoiceItem->quantity,
             'ancillaryCosts' => $previousInvoiceItem->ancillaryCosts,
         ];
     }
 
+    private static function sumQuantityApprovedPreviousInvoices(Invoice $invoice, InvoiceItem $invoiceItem): float
+    {
+        return InvoiceItem::query()
+            ->where('itemable_id', $invoiceItem->itemable_id)
+            ->where('itemable_type', Product::class)
+            ->whereHas('invoice', function ($query) use ($invoice) {
+                $query->where('status', InvoiceAncillaryCostStatus::APPROVED)
+                    ->where(fn ($q) => $q->where('date', '<', $invoice->date)
+                        ->orWhere(fn ($q2) => $q2->where('date', $invoice->date)
+                            ->where('number', '<', $invoice->number)));
+            })
+            ->sum('quantity_at');
+    }
+
     private static function sumApprovedAncillaryCostsForProduct($ancillaryCosts, int $productId): float
     {
-        if (is_null($ancillaryCosts)) {
+        if ($ancillaryCosts === null || $ancillaryCosts->isEmpty()) {
             return 0.0;
         }
 
