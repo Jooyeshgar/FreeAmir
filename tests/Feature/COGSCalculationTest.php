@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Enums\InvoiceType;
+use App\Models\AncillaryCost;
 use App\Models\Company;
 use App\Models\Customer;
+use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\AncillaryCostService;
@@ -96,6 +98,66 @@ class COGSCalculationTest extends TestCase
             'unit_discount' => 0,
             'vat' => 0,
         ];
+    }
+
+    /* -----------------------------------------------------------------
+     | Helpers for status/CRUD operations (to be moved to parent)
+     | -----------------------------------------------------------------
+     */
+
+    /**
+     * Un-approve an invoice (set status to unapproved and run related logic).
+     */
+    protected function unapproveInvoice(Invoice $invoice): void
+    {
+        $svc = new \App\Services\InvoiceService;
+        $svc->changeInvoiceStatus($invoice, 'unapproved');
+        $invoice->refresh();
+    }
+
+    /**
+     * Un-approve a given ancillary cost record.
+     */
+    protected function unapproveAncillaryCost(AncillaryCost $ancillaryCost): void
+    {
+        $svc = new AncillaryCostService;
+        $svc->changeAncillaryCostStatus($ancillaryCost, 'unapprove');
+        $ancillaryCost->refresh();
+    }
+
+    /**
+     * Update an invoice using the InvoiceService helper.
+     * Returns ['document' => Document|null, 'invoice' => Invoice]
+     */
+    protected function updateInvoice(Invoice $invoice, array $data, array $items = [], bool $approved = false): array
+    {
+        return InvoiceService::updateInvoice($invoice->id, $data, $items, $approved);
+    }
+
+    /**
+     * Edit an invoice by supplying new items and optionally approving it.
+     * Returns ['document' => Document|null, 'invoice' => Invoice]
+     */
+    protected function editInvoice(Invoice $invoice, array $newItems, bool $approved = true): array
+    {
+        $data = [
+            'title' => $invoice->title,
+            'date' => $invoice->date,
+            'invoice_type' => $invoice->invoice_type,
+            'customer_id' => $invoice->customer_id,
+            'document_number' => $invoice->document_number,
+            'number' => $invoice->number,
+        ];
+
+        return $this->updateInvoice($invoice, $data, $newItems, $approved);
+    }
+
+    /**
+     * Delete an invoice and its related document/transactions.
+     */
+    protected function deleteInvoice(Invoice $invoice): void
+    {
+        InvoiceService::deleteInvoice($invoice->id);
     }
 
     /* -----------------------------------------------------------------
@@ -232,5 +294,207 @@ class COGSCalculationTest extends TestCase
         $product->refresh();
         $this->assertEquals(0, $product->quantity);
         $this->assertEqualsWithDelta(0.0, $product->average_cost, 0.0001);
+    }
+
+    public function test_unapproving_buy_invoice_reverses_inventory_and_recalculates_average_cost(): void
+    {
+        $product = $this->createProduct();
+
+        $inv1 = $this->buy([$this->productItem($product, 10, 100)], true, random_int(6000, 6999))['invoice'];
+        $inv2 = $this->buy([$this->productItem($product, 10, 120)], true, random_int(7000, 7999))['invoice'];
+
+        $product->refresh();
+        $this->assertEquals(20, $product->quantity);
+        $this->assertEqualsWithDelta(110, $product->average_cost, 0.01);
+
+        // Un-approve second invoice and expect a rollback to the previous state
+        $this->unapproveInvoice($inv2);
+        $product->refresh();
+
+        $this->assertEquals(10, $product->quantity);
+        $this->assertEqualsWithDelta(100, $product->average_cost, 0.01);
+    }
+
+    public function test_unapproving_sell_invoice_restores_inventory_and_average_cost(): void
+    {
+        $product = $this->createProduct();
+
+        $this->buy([$this->productItem($product, 20, 100)], true, random_int(8000, 8999));
+        $sale = $this->sell([$this->productItem($product, 8, 200)], true, random_int(9000, 9999))['invoice'];
+
+        $product->refresh();
+        $this->assertEquals(12, $product->quantity);
+        $this->assertEqualsWithDelta(100, $product->average_cost, 0.01);
+
+        // Un-approve the sale and expect inventory to be restored
+        $this->unapproveInvoice($sale);
+        $product->refresh();
+
+        $this->assertEquals(20, $product->quantity);
+        $this->assertEqualsWithDelta(100, $product->average_cost, 0.01);
+    }
+
+    public function test_unapproving_ancillary_cost_reverses_average_cost_adjustment(): void
+    {
+        $product = $this->createProduct();
+
+        $invoice = $this->buy([$this->productItem($product, 10, 100)], true, random_int(10000, 10999))['invoice'];
+
+        $result = AncillaryCostService::createAncillaryCost($this->user, [
+            'invoice_id' => $invoice->id,
+            'customer_id' => $this->customer->id,
+            'company_id' => $this->companyId,
+            'date' => now()->toDateString(),
+            'type' => 'Shipping',
+            'amount' => 50,
+            'vatPrice' => 0,
+            'ancillaryCosts' => [
+                ['product_id' => $product->id, 'amount' => 50],
+            ],
+        ], true);
+
+        $ancillary = $result['ancillaryCost'];
+
+        $product->refresh();
+        $this->assertEqualsWithDelta(105, $product->average_cost, 0.01);
+
+        // Un-approve ancillary cost and expect average to revert
+        $this->unapproveAncillaryCost($ancillary);
+        $product->refresh();
+
+        $this->assertEqualsWithDelta(100, $product->average_cost, 0.01);
+        $this->assertEquals(10, $product->quantity);
+    }
+
+    public function test_editing_buy_invoice_quantity_recalculates_moving_average(): void
+    {
+        $product = $this->createProduct();
+
+        // Increase quantity from 10 to 15 at same unit price
+        $invoice = $this->buy([$this->productItem($product, 10, 100)], true, random_int(11000, 11999))['invoice'];
+        $this->editInvoice($invoice, [$this->productItem($product, 15, 100)], true);
+
+        $product->refresh();
+        $this->assertEquals(15, $product->quantity);
+        $this->assertEqualsWithDelta(100, $product->average_cost, 0.01);
+
+        // Alternative: change price of second invoice and expect new average
+        $product2 = $this->createProduct();
+        $inv1 = $this->buy([$this->productItem($product2, 10, 100)], true, random_int(12000, 12999))['invoice'];
+        $inv2 = $this->buy([$this->productItem($product2, 10, 120)], true, random_int(13000, 13999))['invoice'];
+
+        $product2->refresh();
+        $this->assertEqualsWithDelta(110, $product2->average_cost, 0.01);
+
+        // Edit second invoice's price to 140
+        $this->editInvoice($inv2, [$this->productItem($product2, 10, 140)], true);
+        $product2->refresh();
+
+        $this->assertEquals(20, $product2->quantity);
+        // Expected average: ((100*10) + (140*10)) / 20 = 120
+        $this->assertEqualsWithDelta(120, $product2->average_cost, 0.01);
+    }
+
+    public function test_editing_sell_invoice_maintains_cogs_integrity(): void
+    {
+        $product = $this->createProduct();
+
+        $this->buy([$this->productItem($product, 20, 100)], true, random_int(14000, 14999));
+        $sale = $this->sell([$this->productItem($product, 10, 200)], true, random_int(15000, 15999))['invoice'];
+
+        $product->refresh();
+        $this->assertEquals(10, $product->quantity);
+
+        // Edit sale: reduce quantity to 5
+        $this->editInvoice($sale, [$this->productItem($product, 5, 200)], true);
+        $product->refresh();
+
+        $this->assertEquals(15, $product->quantity);
+
+        $updatedSale = Invoice::find($sale->id);
+        $item = $updatedSale->items->first();
+        $this->assertEqualsWithDelta(100, $item->cog_after, 0.01);
+    }
+
+    public function test_buy_sell_rebuy_maintains_accurate_moving_average(): void
+    {
+        $product = $this->createProduct();
+
+        $this->buy([$this->productItem($product, 10, 100)], true, random_int(16000, 16999));
+        $sale1 = $this->sell([$this->productItem($product, 5, 200)], true, random_int(17000, 17999))['invoice'];
+
+        $product->refresh();
+        $this->assertEquals(5, $product->quantity);
+        $this->assertEqualsWithDelta(100, $product->average_cost, 0.01);
+
+        $this->buy([$this->productItem($product, 10, 140)], true, random_int(18000, 18999));
+
+        // Expected avg after rebuy: ((100*5) + (140*10)) / 15
+        $expectedAvg = round(((100 * 5) + (140 * 10)) / 15, 2);
+
+        $product->refresh();
+        $this->assertEquals(15, $product->quantity);
+        $this->assertEqualsWithDelta($expectedAvg, $product->average_cost, 0.01);
+
+        $sale2 = $this->sell([$this->productItem($product, 7, 250)], true, random_int(19000, 19999))['invoice'];
+        $product->refresh();
+        $this->assertEquals(8, $product->quantity);
+
+        $firstSaleItem = $sale1->items->first();
+        $secondSaleItem = $sale2->items->first();
+
+        $this->assertEqualsWithDelta(100, $firstSaleItem->cog_after, 0.01);
+        $this->assertEqualsWithDelta($expectedAvg, $secondSaleItem->cog_after, 0.01);
+    }
+
+    public function test_unapproving_middle_transaction_recalculates_subsequent_averages(): void
+    {
+        $product = $this->createProduct();
+
+        $inv1 = $this->buy([$this->productItem($product, 10, 100)], true, random_int(20000, 20999))['invoice'];
+        $inv2 = $this->buy([$this->productItem($product, 10, 120)], true, random_int(21000, 21999))['invoice'];
+        $inv3 = $this->buy([$this->productItem($product, 10, 140)], true, random_int(22000, 22999))['invoice'];
+
+        $product->refresh();
+        $this->assertEquals(30, $product->quantity);
+        $this->assertEqualsWithDelta(120, $product->average_cost, 0.01);
+
+        // Un-approve the middle invoice and expect recalculation for subsequent transactions
+        $this->unapproveInvoice($inv2);
+
+        $product->refresh();
+        $this->assertEquals(20, $product->quantity);
+        $this->assertEqualsWithDelta(120, $product->average_cost, 0.01);
+    }
+
+    public function test_editing_invoice_with_ancillary_costs_maintains_cost_allocation(): void
+    {
+        $product = $this->createProduct();
+
+        $invoice = $this->buy([$this->productItem($product, 10, 100)], true, random_int(23000, 23999))['invoice'];
+
+        $result = AncillaryCostService::createAncillaryCost($this->user, [
+            'invoice_id' => $invoice->id,
+            'customer_id' => $this->customer->id,
+            'company_id' => $this->companyId,
+            'date' => now()->toDateString(),
+            'type' => 'Shipping',
+            'amount' => 100,
+            'vatPrice' => 0,
+            'ancillaryCosts' => [
+                ['product_id' => $product->id, 'amount' => 100],
+            ],
+        ], true);
+
+        $product->refresh();
+        $this->assertEqualsWithDelta(110, $product->average_cost, 0.01);
+
+        // Edit invoice to increase quantity to 20 — ancillary cost should be distributed proportionally
+        $this->editInvoice($invoice, [$this->productItem($product, 20, 100)], true);
+
+        $product->refresh();
+        $this->assertEquals(20, $product->quantity);
+        // Expected avg = (100*20 + 100 ancillary) / 20 = 105
+        $this->assertEqualsWithDelta(105, $product->average_cost, 0.01);
     }
 }
