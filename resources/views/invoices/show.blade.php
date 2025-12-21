@@ -71,6 +71,28 @@
                         <div class="stat-desc text-indigo-400">{{ __('Payable amount') }}</div>
                     </div>
                 </div>
+
+                @php
+                    $isApproved = $invoice->status?->isApproved();
+                    $changeStatusValidation = \App\Services\InvoiceService::getChangeStatusValidation($invoice);
+                    $statusTitle = $isApproved ? __('Unapprove') : __('Approve');
+                    $btnClass = $isApproved ? 'btn-warning' : 'btn-success';
+                    $btnClass .= $changeStatusValidation->hasWarning() ? ' btn-outline ' : '';
+                    $editDeleteStatus = \App\Services\InvoiceService::getEditDeleteStatus($invoice);
+                    $tooltip = $changeStatusValidation->hasMessage() ? 'data-tip="' . e($changeStatusValidation->toText()) . '"' : '';
+                    $changeStatusUrl = route('invoices.change-status', [$invoice, $isApproved ? 'unapproved' : 'approved']);
+                @endphp
+
+                @if ($changeStatusValidation->hasErrors() || $changeStatusValidation->hasWarning())
+                    <div class="stats bg-gradient-to-br gap-2 shadow col-span-4">
+                        @php
+                            $type = $changeStatusValidation->hasErrors() ? 'error' : 'warning';
+                            $isApprovalBlocked = $changeStatusValidation->hasErrors();
+                        @endphp
+                        <x-show-messages :message="$changeStatusValidation->toDetailText()" type="alert" />
+                    </div>
+                @endif
+
             </div>
 
             @if ($invoice->description)
@@ -217,12 +239,13 @@
             </div>
 
             <div class="card-actions justify-between mt-4">
-                <a href="{{ route('invoices.index') }}" class="btn btn-ghost gap-2">
+                <a href="{{ route('invoices.index', [$invoice->invoice_type]) }}" class="btn btn-ghost gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
                     {{ __('Back') }}
                 </a>
+
                 <div class="flex flex-wrap gap-2">
                     <a href="{{ route('invoices.print', $invoice) }}" class="btn btn-outline gap-2" target="_blank" rel="noopener">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -232,38 +255,19 @@
                         {{ __('Print PDF') }}
                     </a>
 
-
                     @can('invoices.approve')
-                        @php
-                            $isApproved = $invoice->status?->isApproved();
-                            $changeStatusValidation = \App\Services\InvoiceService::getChangeStatusValidation($invoice);
-                            $editDeleteStatus = \App\Services\InvoiceService::getEditDeleteStatus($invoice);
-
-                        @endphp
-
-                        @if ($changeStatusValidation->canProceed)
-                            <a href="{{ route('invoices.change-status', [$invoice, $isApproved ? 'unapprove' : 'approve']) }}"
-                                class="btn {{ $isApproved ? 'btn-warning' : 'btn-success' }} gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="{{ $isApproved ? 'M6 18L18 6M6 6l12 12' : 'M5 13l4 4L19 7' }}" />
-                                </svg>
-                                {{ __($isApproved ? 'Unapprove' : 'Approve') }}
-                            </a>
-                        @else
-                            @php
-                                $btnClass = $isApproved ? 'btn-warning' : 'btn-success';
-                                $label = $isApproved ? __('Unapprove') : __('Approve');
-                            @endphp
-                            <span class="tooltip" data-tip="{{ $changeStatusValidation->toText() }}">
-                                <button class="btn {{ $btnClass }} gap-2 btn-disabled cursor-not-allowed" disabled title="{{ $changeStatusValidation->toText() }}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="{{ $isApproved ? 'M6 18L18 6M6 6l12 12' : 'M5 13l4 4L19 7' }}" />
-                                    </svg>
-                                    {{ $label }}
-                                </button>
+                        @if ($changeStatusValidation->hasErrors())
+                            <span {!! $tooltip !!} class="tooltip">
+                                <button class="btn btn-sm {{ $btnClass }} btn-disabled cursor-not-allowed"
+                                    title="{{ $changeStatusValidation->toText() }}">{{ $statusTitle }}</button>
                             </span>
+                        @else
+                            <a x-data="{}"
+                                @if ($changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js('Did you read the warnings?'))) { window.location.href = '{{ $changeStatusUrl }}?confirm=1' }" @endif
+                                {!! $tooltip !!} href="{{ $changeStatusUrl }}"
+                                class="btn btn-primary gap-2 {{ $btnClass }}">
+                                {{ $statusTitle }}
+                            </a>
                         @endif
                     @endcan
 
@@ -277,7 +281,7 @@
                         </a>
                     @else
                         <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
-                            <button class="btn btn-primary gap-2 btn-disabled cursor-not-allowed" disabled title="{{ $editDeleteStatus['reason'] }}">
+                            <button class="btn btn-primary gap-2 btn-disabled cursor-not-allowed" title="{{ $editDeleteStatus['reason'] }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
