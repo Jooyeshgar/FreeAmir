@@ -77,7 +77,7 @@
                 <tr>
                     <td colspan="5" style="text-align: right;">{{ __('Total Sum') }}:
                         {{ App\Helpers\NumberToWordHelper::convert($totalAmount) }}
-                        {{ __(config('amir.currency')) ?? __('Rial') }}
+                        {{ config('amir.currency') ?? __('Rial') }}
                     </td>
                     <td>{{ formatNumber($totalAmount) }}</td>
                 </tr>

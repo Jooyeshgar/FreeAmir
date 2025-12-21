@@ -46,9 +46,9 @@
                     <tr>
                         <th class="px-4 py-2">{{ __('Service Code') }}</th>
                         <th class="px-4 py-2">{{ __('Name') }}</th>
-                        <th class="px-4 py-2">{{ __('Sell price') }} ({{ __(config('amir.currency')) ?? __('Rial') }})
+                        <th class="px-4 py-2">{{ __('Sell price') }} ({{ config('amir.currency') ?? __('Rial') }})
                         </th>
-                        <th class="px-4 py-2">{{ __('VAT') }} ({{ __(config('amir.currency')) ?? __('Rial') }})
+                        <th class="px-4 py-2">{{ __('VAT') }} ({{ config('amir.currency') ?? __('Rial') }})
                         </th>
                         <th class="px-4 py-2">{{ __('Service group') }}</th>
                         <th class="px-4 py-2">{{ __('Action') }}</th>

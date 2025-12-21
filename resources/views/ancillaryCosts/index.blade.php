@@ -18,7 +18,7 @@
                         <th class="p-2 w-20">{{ __('Invoice Number') }}</th>
                         <th class="p-2 w-40">{{ __('Cost Type') }}</th>
                         <th class="p-2 w-20">{{ __('Date') }}</th>
-                        <th class="p-2 w-20">{{ __('Amount') }} ({{ __(config('amir.currency')) ?? __('Rial') }})</th>
+                        <th class="p-2 w-20">{{ __('Amount') }} ({{ config('amir.currency') ?? __('Rial') }})</th>
                         <th class="p-2 w-40">{{ __('Status') }}</th>
                         <th class="p-2 w-40">{{ __('Action') }}</th>
                     </tr>

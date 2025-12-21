@@ -133,13 +133,13 @@
         <div class="flex flex-row justify-end">
             <div class="flex justify-end px-4 gap-4 py-3">
                 <div class="flex items-center gap-2 px-4 py-2 bg-white shadow-sm rounded-xl border border-gray-200">
-                    <span class="text-sm font-medium text-gray-500">{{ __('Total') }} ({{ __(config('amir.currency')) ?? __('Rial') }}):</span>
+                    <span class="text-sm font-medium text-gray-500">{{ __('Total') }} ({{ config('amir.currency') ?? __('Rial') }}):</span>
                     <span class="text-lg font-bold text-green-600" x-text="calculateTotal().toLocaleString('fa-IR')">
                         0
                     </span>
                 </div>
                 <div class="flex items-center gap-2 px-4 py-2 bg-white shadow-sm rounded-xl border border-gray-200">
-                    <span class="text-sm font-medium text-gray-500">{{ __('Total with VAT') }} ({{ __(config('amir.currency')) ?? __('Rial') }}):</span>
+                    <span class="text-sm font-medium text-gray-500">{{ __('Total with VAT') }} ({{ config('amir.currency') ?? __('Rial') }}):</span>
                     <span class="text-lg font-bold text-green-600"
                         x-text="calculateTotalWithVat(Number(vat)).toLocaleString('fa-IR')">
                         0

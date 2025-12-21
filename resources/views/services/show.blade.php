@@ -31,7 +31,7 @@
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div class="card bg-base-200 shadow">
                     <div class="card-body p-4">
-                        <h3 class="card-title text-sm text-gray-500">{{ __('Selling Price') }} ({{ __(config('amir.currency')) ?? __('Rial') }})</h3>
+                        <h3 class="card-title text-sm text-gray-500">{{ __('Selling Price') }} ({{ config('amir.currency') ?? __('Rial') }})</h3>
                         <p class="text-2xl font-bold text-secondary">
                             {{ isset($service->selling_price) ? formatNumber($service->selling_price) : '0' }}
                         </p>

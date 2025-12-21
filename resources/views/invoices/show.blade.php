@@ -42,7 +42,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="stats shadow bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60">
                     <div class="stat">
-                        <div class="stat-title text-blue-500">{{ __('Subtotal') }} ({{ __(config('amir.currency')) ??__('Rial') }})</div>
+                        <div class="stat-title text-blue-500">{{ __('Subtotal') }} ({{ config('amir.currency') ??__('Rial') }})</div>
                         <div class="stat-value text-blue-600 text-3xl">{{ formatNumber($subTotal) }}</div>
                         <div class="stat-desc text-blue-400">{{ __('Before discounts and tax') }}</div>
                     </div>
@@ -50,7 +50,7 @@
 
                 <div class="stats shadow bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200/60">
                     <div class="stat">
-                        <div class="stat-title text-amber-500">{{ __('Discounts') }} ({{ __(config('amir.currency')) ??__('Rial') }})</div>
+                        <div class="stat-title text-amber-500">{{ __('Discounts') }} ({{ config('amir.currency') ??__('Rial') }})</div>
                         <div class="stat-value text-amber-600 text-3xl">{{ formatNumber($discountTotal) }}</div>
                         <div class="stat-desc text-amber-400">{{ __('Total deductions') }}</div>
                     </div>
@@ -58,7 +58,7 @@
 
                 <div class="stats shadow bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/60">
                     <div class="stat">
-                        <div class="stat-title text-emerald-500">{{ __('VAT') }} ({{ __(config('amir.currency')) ??__('Rial') }})</div>
+                        <div class="stat-title text-emerald-500">{{ __('VAT') }} ({{ config('amir.currency') ??__('Rial') }})</div>
                         <div class="stat-value text-emerald-600 text-3xl">{{ formatNumber($vatTotal) }}</div>
                         <div class="stat-desc text-emerald-400">{{ __('Collected tax') }}</div>
                     </div>
@@ -66,7 +66,7 @@
 
                 <div class="stats shadow bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/60">
                     <div class="stat">
-                        <div class="stat-title text-indigo-500">{{ __('Grand total') }} ({{ __(config('amir.currency')) ??__('Rial') }})</div>
+                        <div class="stat-title text-indigo-500">{{ __('Grand total') }} ({{ config('amir.currency') ??__('Rial') }})</div>
                         <div class="stat-value text-indigo-600 text-3xl">{{ formatNumber($grandTotal) }}</div>
                         <div class="stat-desc text-indigo-400">{{ __('Payable amount') }}</div>
                     </div>
