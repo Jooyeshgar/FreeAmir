@@ -122,6 +122,8 @@ class InvoiceController extends Controller
 
     public function show(Invoice $invoice)
     {
+        $changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
+
         $invoice->load([
             'customer',
             'document',
@@ -133,7 +135,7 @@ class InvoiceController extends Controller
             'ancillaryCosts.items',
         ]);
 
-        return view('invoices.show', compact('invoice'));
+        return view('invoices.show', compact('invoice', 'changeStatusValidation'));
     }
 
     public function print(Invoice $invoice)
@@ -193,7 +195,9 @@ class InvoiceController extends Controller
         $invoiceData = $this->extractInvoiceData($validated);
         $items = $this->mapTransactionsToItems($validated['transactions']);
 
-        InvoiceService::getEditDeleteStatus($invoice);
+        if ($invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {
+            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('error', __('Invoice has associated approved ancillary costs and cannot be edited.'));
+        }
 
         $approved = false;
         if ($request->has('approve')) {
@@ -212,15 +216,13 @@ class InvoiceController extends Controller
 
     public function destroy(Invoice $invoice)
     {
-        try {
-            InvoiceService::getEditDeleteStatus($invoice);
-
-            InvoiceService::deleteInvoice($invoice->id);
-
-            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('info', __('Invoice deleted successfully.'));
-        } catch (\Exception $e) {
-            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('error', $e->getMessage());
+        if ($invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {
+            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('error', __('Invoice has associated approved ancillary costs and cannot be deleted.'));
         }
+
+        InvoiceService::deleteInvoice($invoice->id);
+
+        return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('info', __('Invoice deleted successfully.'));
     }
 
     private function invoiceMessage(array $result, string $action = 'created', bool $approved = false)
