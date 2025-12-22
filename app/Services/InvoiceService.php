@@ -199,7 +199,7 @@ class InvoiceService
     public static function deleteInvoice(int $invoiceId): void
     {
         DB::transaction(function () use ($invoiceId) {
-            $invoice = Invoice::find($invoiceId);
+            $invoice = Invoice::findOrFail($invoiceId);
 
             CostOfGoodsService::refreshProductCOGAfterItemsDeletion($invoice, null);
 
@@ -213,17 +213,6 @@ class InvoiceService
 
             $invoice->delete();
         });
-    }
-
-    private static function checkInvoiceDeleteableOrEditable(Invoice $invoice): void
-    {// TODO: must be removed
-        if ($invoice->status->isApproved()) {
-            throw new Exception(__('Approved invoices cannot be deleted/edited'), 400);
-        }
-
-        if ($invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {
-            throw new Exception(__('Invoice has associated approved ancillary costs and cannot be deleted/edited'), 400);
-        }
     }
 
     private static function normalizeInvoiceData(array $invoiceData): array
@@ -300,23 +289,6 @@ class InvoiceService
         CostOfGoodsService::refreshProductCOGAfterItemsDeletion($invoice, $itemId);
 
         $invoice->items()->whereNotIn('id', $itemId)->delete();
-    }
-
-    /**
-     * Determine if an invoice can be edited or deleted without throwing, and provide the reason when it cannot.
-     * TODO: must be removed
-     *
-     * @return array{allowed: bool, reason: string|null}
-     */
-    public static function getEditDeleteStatus(Invoice $invoice): array
-    {// TODO: must be removed
-        try {
-            self::checkInvoiceDeleteableOrEditable($invoice);
-
-            return ['allowed' => true, 'reason' => null];
-        } catch (\Throwable $e) {
-            return ['allowed' => false, 'reason' => $e->getMessage()];
-        }
     }
 
     public function changeInvoiceStatus(Invoice $invoice, string $status): void
