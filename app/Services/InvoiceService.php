@@ -118,7 +118,7 @@ class InvoiceService
         $buildResult = $transactionBuilder->build();
 
         $createdDocument = null;
-        $invoice = self::updateInvoiceWithoutApproval($invoice, $invoiceData, $items, $buildResult, $approved);
+        $invoice = self::updateInvoiceWithoutApproval($invoice, $invoiceData, $items, $buildResult);
 
         if ($approved) {
 
@@ -137,9 +137,6 @@ class InvoiceService
                 unset($invoiceData['document_number']); // Don't update invoice with document_number
 
                 $invoice->update($invoiceData);
-
-                // Remove old quantities
-                // ProductService::subProductsQuantities(self::itemsFormatterForSyncingInvoiceItems($invoice), $invoice->invoice_type);
 
                 // Add new quantities
                 ProductService::addProductsQuantities($items, $invoice->invoice_type);
@@ -161,17 +158,14 @@ class InvoiceService
 
     private static function updateInvoiceWithoutApproval(Invoice $invoice, array $invoiceData, array $items, array $buildResult, bool $approved = false)
     {
-        DB::transaction(function () use ($invoice, $invoiceData, $items, $buildResult, $approved) {
+        DB::transaction(function () use ($invoice, $invoiceData, $items, $buildResult) {
             $invoiceData['vat'] = $buildResult['totalVat'];
             $invoiceData['amount'] = $buildResult['totalAmount'];
             $invoiceData['title'] = $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? ''));
 
             $invoice->update($invoiceData);
 
-            // Avoid syncing items twice. For approved invoices done this later
-            if (! $approved) {
-                self::syncInvoiceItems($invoice, $items);
-            }
+            self::syncInvoiceItems($invoice, $items);
         });
 
         return $invoice;

@@ -86,7 +86,7 @@ class CostOfGoodsService
 
         return [
             'baseCost' => (float) $previousInvoiceItem->amount - (float) ($previousInvoiceItem->vat ?? 0),
-            'availableQuantity' => (float) self::sumQuantityApprovedPreviousInvoices($previousInvoice, $previousInvoiceItem),
+            'availableQuantity' => $previousInvoiceItem->quantity_at,
             'newQuantity' => (float) $previousInvoiceItem->quantity,
             'ancillaryCosts' => $previousInvoiceItem->ancillaryCosts,
         ];
