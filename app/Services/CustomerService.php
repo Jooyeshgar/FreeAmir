@@ -41,7 +41,7 @@ class CustomerService
     protected function syncSubject(Customer $customer): void
     {
         $companyId = $customer->company_id ?? session('active-company-id');
-        $parentId = $customer->group?->subject_id ?? 0;
+        $parentId = $customer->group?->subject_id ?? null;
 
         $subject = $customer->subject;
 

@@ -56,12 +56,17 @@
                     <tbody style="border-bottom: solid 1px">
                         @foreach ($transactions as $transaction)
                             <tr>
-                                <td class="border p-2" style="text-align: center">{{ formatNumber($transaction->document->number) }}</td>
-                                <td class="border p-2" style="text-align: center">{{ formatDate($transaction->document->date) }}</td>
-                                <td class="border p-2" style="text-align: center">{{ formatCode($transaction->subject->code) }}</td>
+                                <td class="border p-2" style="text-align: center">
+                                    {{ formatDocumentNumber($transaction->document->number) }}</td>
+                                <td class="border p-2" style="text-align: center">
+                                    {{ formatDate($transaction->document->date) }}</td>
+                                <td class="border p-2" style="text-align: center">
+                                    {{ formatCode($transaction->subject->code) }}</td>
                                 <td class="border p-2">{{ $transaction->subject->name }}</td>
-                                <td class="border p-2">{{ formatNumber($transaction->value < 0 ? -1 * $transaction->value : 0) }}</td>
-                                <td class="border p-2">{{ formatNumber($transaction->value > 0 ? $transaction->value : 0) }}</td>
+                                <td class="border p-2">
+                                    {{ formatNumber($transaction->value < 0 ? -1 * $transaction->value : 0) }}</td>
+                                <td class="border p-2">
+                                    {{ formatNumber($transaction->value > 0 ? $transaction->value : 0) }}</td>
                             </tr>
                         @endforeach
                     </tbody>

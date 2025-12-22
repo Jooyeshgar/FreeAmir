@@ -10,7 +10,8 @@
     <table width="100%" cellspacing="2" cellpadding="4" style="table-layout:fixed;">
         <tbody>
             <tr>
-                <td class="border right pink">شماره: <span style="color:#BB0000;">{{ formatDocumentNumber($invoice->number) }}</span></td>
+                <td class="border right pink">شماره: <span
+                        style="color:#BB0000;">{{ formatDocumentNumber($invoice->number) }}</span></td>
                 <td rowspan="2" class="none" style="text-align:center;font-weight:bold;font-size:20px; width:80%;">
                     @if ($invoice->invoice_type == App\Enums\InvoiceType::BUY)
                         صورتحساب خرید کالا و خدمات
@@ -72,12 +73,16 @@
             </tr>
             <tr class="right">
                 <td class="right none lheight" width="33%" style="border-left:1px solid #000;">
-                    شماره ملی: {{ isset($invoice->customer->personal_code) ? convertToFarsi($invoice->customer->personal_code) : '' }}<br />
-                    شماره تلفن: <bdo dir="ltr">{{ isset($invoice->customer->phone) ? convertToFarsi($invoice->customer->phone) : '' }}</bdo>
+                    شماره ملی:
+                    {{ isset($invoice->customer->personal_code) ? convertToFarsi($invoice->customer->personal_code) : '' }}<br />
+                    شماره تلفن: <bdo
+                        dir="ltr">{{ isset($invoice->customer->phone) ? convertToFarsi($invoice->customer->phone) : '' }}</bdo>
                 </td>
                 <td class="right none lheight" width="33%">
-                    شماره اقتصادی: {{ isset($invoice->customer->ecnmcs_code) ? convertToFarsi($invoice->customer->ecnmcs_code) : '' }}<br />
-                    کد پستی ۱۰ رقمی: {{ isset($invoice->customer->postal_code) ? convertToFarsi($invoice->customer->postal_code) : '' }}
+                    شماره اقتصادی:
+                    {{ isset($invoice->customer->ecnmcs_code) ? convertToFarsi($invoice->customer->ecnmcs_code) : '' }}<br />
+                    کد پستی ۱۰ رقمی:
+                    {{ isset($invoice->customer->postal_code) ? convertToFarsi($invoice->customer->postal_code) : '' }}
                 </td>
                 <td class="right none lheight" width="33%">
                     {{ $invoice->customer->name }}<br />
@@ -175,7 +180,7 @@
                         <p align="center"> </p>
                     </td>
                     <td class="border center mainlineheight" style="border-right: none;">
-                        <p align="center">{{ convertToFarsi((int) $itemQuantity) }}</p>
+                        <p align="center">{{ formatNumber((int) $itemQuantity) }}</p>
                     </td>
                     <td class="border center mainlineheight" style="border-right: none;">
                         <p align="center">{{ $invoiceItem->description }}</p>

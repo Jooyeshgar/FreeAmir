@@ -15,6 +15,28 @@ class InvoiceTransactionBuilder
 {
     private array $transactions = [];
 
+    /**
+     * Invoice items used to build transactions.
+     *
+     * Each item is an associative array with these keys:
+     *
+     * - `itemable_type` (string|null) : Type of the itemable. Expected values: `'product'`, `'service'` or null.
+     * - `itemable_id` (int)          : The id of the product or service in the database. Required when `itemable_type` is set.
+     * - `quantity` (int|float)       : Quantity of the item. Optional, defaults to `1` when omitted.
+     * - `unit` (int|float)           : Unit price for the item (required for amount calculations).
+     * - `unit_discount` (int|float)  : Discount amount applied to this item line (optional, default `0`). Note: this is treated as an absolute amount for the line.
+     * - `vat` (int|float)           : VAT percentage (e.g. `9` for 9%). Optional, treated as `0` when omitted.
+     *
+     * Example:
+     * ```php
+     * [
+     *   ['itemable_type' => 'product', 'itemable_id' => 123, 'quantity' => 2, 'unit' => 15000, 'unit_discount' => 1000, 'vat' => 9],
+     *   ['itemable_type' => 'service', 'itemable_id' => 5, 'quantity' => 1, 'unit' => 30000],
+     * ]
+     * ```
+     *
+     * @var array<int, array<string, mixed>>
+     */
     private array $items;
 
     private array $invoiceData;

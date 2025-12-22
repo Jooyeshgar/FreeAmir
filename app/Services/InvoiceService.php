@@ -138,9 +138,6 @@ class InvoiceService
 
                 $invoice->update($invoiceData);
 
-                // Remove old quantities
-                ProductService::subProductsQuantities(self::itemsFormatterForSyncingInvoiceItems($invoice), $invoice->invoice_type);
-
                 // Add new quantities
                 ProductService::addProductsQuantities($items, $invoice->invoice_type);
 
@@ -159,7 +156,7 @@ class InvoiceService
         ];
     }
 
-    private static function updateInvoiceWithoutApproval(Invoice $invoice, array $invoiceData, array $items, array $buildResult)
+    private static function updateInvoiceWithoutApproval(Invoice $invoice, array $invoiceData, array $items, array $buildResult, bool $approved = false)
     {
         DB::transaction(function () use ($invoice, $invoiceData, $items, $buildResult) {
             $invoiceData['vat'] = $buildResult['totalVat'];

@@ -16,6 +16,6 @@
     $allTransactions = $allTransactions->groupBy('ledgerSign')->flatten();
     $allTransactions = $allTransactions->values(); // Reset keys
 @endphp
-<x-report-layout :title="__('Document') . ' #' . formatNumber($document->number)">
+<x-report-layout :title="__('Document') . ' #' . formatDocumentNumber($document->number)">
     @include('documents.document')
 </x-report-layout>

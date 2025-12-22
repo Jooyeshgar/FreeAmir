@@ -79,7 +79,7 @@ class ProductService
     public static function subProductsQuantities(array $invoiceItems, InvoiceType $invoice_type): void
     {
         foreach ($invoiceItems as $invoiceItem) {
-            if ($invoiceItem['itemable_type'] !== Product::class || $invoiceItem['itemable_type'] == 'product') {
+            if ($invoiceItem['itemable_type'] !== Product::class && $invoiceItem['itemable_type'] !== 'product') {
                 continue;
             }
 
