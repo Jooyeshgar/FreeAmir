@@ -83,9 +83,9 @@ class COGSCalculationTest extends TestCase
         return $this->createInvoice(InvoiceType::BUY, $items, $approved, $number, $date);
     }
 
-    private function sell(array $items, bool $approved = true, ?int $number = null): array
+    private function sell(array $items, bool $approved = true, ?int $number = null, $date = null): array
     {
-        return $this->createInvoice(InvoiceType::SELL, $items, $approved, $number);
+        return $this->createInvoice(InvoiceType::SELL, $items, $approved, $number, $date);
     }
 
     private function productItem(Product $product, int $qty, float $unit): array
@@ -123,6 +123,16 @@ class COGSCalculationTest extends TestCase
         $svc = new \App\Services\InvoiceService;
         $svc->changeInvoiceStatus($invoice, 'approved');
         $invoice->refresh();
+    }
+
+    /**
+     * Un-approve a given ancillary cost record.
+     */
+    protected function approveAncillaryCost(AncillaryCost $ancillaryCost): void
+    {
+        $svc = new AncillaryCostService;
+        $svc->changeAncillaryCostStatus($ancillaryCost, 'approved');
+        $ancillaryCost->refresh();
     }
 
     /**
@@ -382,6 +392,7 @@ class COGSCalculationTest extends TestCase
 
         // Increase quantity from 10 to 15 at same unit price
         $invoice = $this->buy([$this->productItem($product, 10, 100)], true, random_int(11000, 11999))['invoice'];
+        $this->unapproveInvoice($invoice);
         $this->editInvoice($invoice, [$this->productItem($product, 15, 100)], true);
 
         $product->refresh();
@@ -395,6 +406,7 @@ class COGSCalculationTest extends TestCase
 
         $product2->refresh();
         $this->assertEqualsWithDelta(110, $product2->average_cost, 0.01);
+        $this->unapproveInvoice($inv2);
 
         // Edit second invoice's price to 140
         $this->editInvoice($inv2, [$this->productItem($product2, 10, 140)], true);
@@ -414,6 +426,7 @@ class COGSCalculationTest extends TestCase
 
         $product->refresh();
         $this->assertEquals(10, $product->quantity);
+        $this->unapproveInvoice($sale);
 
         // Edit sale: reduce quantity to 5
         $this->editInvoice($sale, [$this->productItem($product, 5, 200)], true);
@@ -463,7 +476,7 @@ class COGSCalculationTest extends TestCase
 
         $inv1 = $this->buy([$this->productItem($product, 10, 100)], true, random_int(20000, 20999))['invoice'];
         $inv2 = $this->buy([$this->productItem($product, 10, 120)], true, random_int(21000, 21999), now()->addDays(1))['invoice'];
-        $inv3 = $this->buy([$this->productItem($product, 10, 140)], true, random_int(22000, 22999), now()->addDays(3))['invoice'];
+        $inv3 = $this->buy([$this->productItem($product, 10, 140)], true, random_int(22000, 22999), now()->addDays(5))['invoice'];
 
         $product->refresh();
         $this->assertEquals(30, $product->quantity);
@@ -477,13 +490,41 @@ class COGSCalculationTest extends TestCase
         $this->assertEquals(10, $product->quantity);
         $this->assertEqualsWithDelta(100, $product->average_cost, 0.01);
 
-        $inv4 = $this->buy([$this->productItem($product, 10, 180)], true, random_int(21000, 21999), now()->addDays(2))['invoice'];
+        $inv4 = $this->buy([$this->productItem($product, 10, 400)], true, random_int(25000, 25999), now()->addDays(2))['invoice'];
+        $this->unapproveInvoice($inv4);
+        $this->sell([$this->productItem($product, 5, 200)], true, random_int(23000, 23999), now()->addDays(2))['invoice'];
+        $this->approveInvoice($inv4);
+
+        $product->refresh();
+        $this->assertEquals(15, $product->quantity);
+        $this->assertEqualsWithDelta(300, $product->average_cost, 0.01);
+
+        $inv5 = $this->buy([$this->productItem($product, 10, 450)], true, random_int(26000, 26999), now()->addDays(3))['invoice'];
+        $this->unapproveInvoice($inv5);
+        $this->sell([$this->productItem($product, 5, 300)], true, random_int(24000, 24999), now()->addDays(3))['invoice'];
+        $this->approveInvoice($inv5);
+
+        $product->refresh();
+        $this->assertEquals(20, $product->quantity);
+        $this->assertEqualsWithDelta(375, $product->average_cost, 0.01);
+
+        $this->buy([$this->productItem($product, 10, 600)], true, random_int(27000, 27999), now()->addDays(4))['invoice'];
+        $this->sell([$this->productItem($product, 5, 650)], true, random_int(28000, 28999), now()->addDays(4))['invoice'];
+        $inv6 = $this->sell([$this->productItem($product, 5, 750)], false, random_int(27000, 27999), now()->addDays(5))['invoice'];
+
+        $product->refresh();
+        $this->assertEquals(25, $product->quantity);
+        $this->assertEqualsWithDelta(450, $product->average_cost, 0.01);
+
+        $this->editInvoice($inv3, [$this->productItem($product, 5, 210)], false);
+        $inv3->refresh();
 
         $this->approveInvoice($inv3);
+        $this->approveInvoice($inv6);
         $product->refresh();
 
-        $this->assertEquals(30, $product->quantity);
-        $this->assertEqualsWithDelta(140, $product->average_cost, 0.01);
+        $this->assertEquals(25, $product->quantity);
+        $this->assertEqualsWithDelta(410, $product->average_cost, 0.01);
     }
 
     public function test_editing_invoice_with_ancillary_costs_maintains_cost_allocation(): void
@@ -507,9 +548,11 @@ class COGSCalculationTest extends TestCase
 
         $product->refresh();
         $this->assertEqualsWithDelta(110, $product->average_cost, 0.01);
+        $this->unapproveInvoice($invoice);
 
         // Edit invoice to increase quantity to 20 — ancillary cost should be distributed proportionally
         $this->editInvoice($invoice, [$this->productItem($product, 20, 100)], true);
+        $this->approveAncillaryCost($result['ancillaryCost']);
 
         $product->refresh();
         $this->assertEquals(20, $product->quantity);

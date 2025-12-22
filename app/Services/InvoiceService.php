@@ -139,7 +139,7 @@ class InvoiceService
                 $invoice->update($invoiceData);
 
                 // Remove old quantities
-                ProductService::subProductsQuantities(self::itemsFormatterForSyncingInvoiceItems($invoice), $invoice->invoice_type);
+                // ProductService::subProductsQuantities(self::itemsFormatterForSyncingInvoiceItems($invoice), $invoice->invoice_type);
 
                 // Add new quantities
                 ProductService::addProductsQuantities($items, $invoice->invoice_type);

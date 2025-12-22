@@ -68,7 +68,7 @@ class CostOfGoodsService
         if ($invoice->status->isApproved()) {
             return [
                 'baseCost' => (float) $invoiceItem->amount - (float) ($invoiceItem->vat ?? 0),
-                'availableQuantity' => (float) $invoiceItem->quantity_at,
+                'availableQuantity' => (float) self::sumQuantityApprovedPreviousInvoices($invoice, $invoiceItem),
                 'newQuantity' => (float) $invoiceItem->quantity,
                 'ancillaryCosts' => $invoice->ancillaryCosts,
             ];
@@ -86,7 +86,7 @@ class CostOfGoodsService
 
         return [
             'baseCost' => (float) $previousInvoiceItem->amount - (float) ($previousInvoiceItem->vat ?? 0),
-            'availableQuantity' => (float) self::sumQuantityApprovedPreviousInvoices($invoice, $invoiceItem),
+            'availableQuantity' => (float) self::sumQuantityApprovedPreviousInvoices($previousInvoice, $previousInvoiceItem),
             'newQuantity' => (float) $previousInvoiceItem->quantity,
             'ancillaryCosts' => $previousInvoiceItem->ancillaryCosts,
         ];
@@ -94,16 +94,31 @@ class CostOfGoodsService
 
     private static function sumQuantityApprovedPreviousInvoices(Invoice $invoice, InvoiceItem $invoiceItem): float
     {
-        return InvoiceItem::query()
-            ->where('itemable_id', $invoiceItem->itemable_id)
-            ->where('itemable_type', Product::class)
-            ->whereHas('invoice', function ($query) use ($invoice) {
-                $query->where('status', InvoiceAncillaryCostStatus::APPROVED)
-                    ->where(fn ($q) => $q->where('date', '<', $invoice->date)
-                        ->orWhere(fn ($q2) => $q2->where('date', $invoice->date)
-                            ->where('number', '<', $invoice->number)));
-            })
-            ->sum('quantity_at');
+        $buildQuery = function (InvoiceType $invoiceType) use ($invoice, $invoiceItem) {
+            return Invoice::where('invoice_type', $invoiceType)
+                ->where('status', InvoiceAncillaryCostStatus::APPROVED)
+                ->where(function ($q) use ($invoice) {
+                    $q->where('date', '<', $invoice->date)
+                        ->orWhere(function ($q2) use ($invoice) {
+                            $q2->where('date', $invoice->date)
+                                ->where('number', '<', $invoice->number);
+                        });
+                })
+                ->whereHas('items', function ($query) use ($invoiceItem) {
+                    $query->where('itemable_id', $invoiceItem->itemable_id)
+                        ->where('itemable_type', Product::class);
+                })
+                ->with('items')
+                ->get()
+                ->flatMap->items
+                ->where('itemable_id', $invoiceItem->itemable_id)
+                ->sum('quantity');
+        };
+
+        $totalBoughtQuantity = (float) $buildQuery(InvoiceType::BUY);
+        $totalSoldQuantity = (float) $buildQuery(InvoiceType::SELL);
+
+        return $totalBoughtQuantity - $totalSoldQuantity;
     }
 
     private static function sumApprovedAncillaryCostsForProduct($ancillaryCosts, int $productId): float
@@ -128,7 +143,7 @@ class CostOfGoodsService
         if ($invoice->status->isApproved()) {
             $previousInvoiceItem = $previousInvoice->items->where('itemable_id', $productId)->first();
 
-            return $previousInvoiceItem ? (float) $previousInvoiceItem->cog_after * $availableQuantity : 0.0;
+            return $previousInvoiceItem ? (float) $previousInvoiceItem->itemable->average_cost * $availableQuantity : 0.0;
         }
 
         // Unapproved calculation uses the previous one of previous invoice item's COG.
