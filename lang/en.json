@@ -804,5 +804,10 @@
     "unapproved": "unapproved",
     "your specific date": "your specific date",
     "zero": "zero",
-    "‌Balance": "Balance"
+    "‌Balance": "Balance",
+    "Show All Invoices": "Show All Invoices",
+    "Show All Ancillary Conflicts": "Show All Ancillary Conflicts",
+    "Show All Product Conflicts": "Show All Product Conflicts",
+    "Back to All Conflicts": "Back to All Conflicts",
+    "No conflicts found": "No conflicts found"
 }

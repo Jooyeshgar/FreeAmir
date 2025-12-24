@@ -288,11 +288,10 @@
 
                     @can('invoices.approve')
                         @if ($changeStatusValidation->hasErrors())
-                            <span data-tip="{{ $changeStatusValidation->toText() ?? '' }}" class="tooltip">
-                                <button
-                                    class="btn btn-sm {{ $invoice->status->isApproved() ? 'btn-warning' : 'btn-success' }} {{ $changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }} btn-disabled cursor-not-allowed"
-                                    title="{{ $changeStatusValidation->toText() ?? '' }}">{{ $invoice->status->isApproved() ? __('Unapprove') : __('Approve') }}</button>
-                            </span>
+                            <a data-tip="{{ $changeStatusValidation->toText() }}" href="{{ route('invoices.conflicts', $invoice) }}"
+                                class="btn btn-accent inline-flex tooltip">
+                                {{ __('Fix Conflict') }}
+                            </a>
                         @else
                             <a x-data="{}"
                                 @if ($changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js('Did you read the warnings?'))) { window.location.href = '{{ route('invoices.change-status', [$invoice, $invoice->status->isApproved() ? 'unapproved' : 'approved']) }}?confirm=1' }" @endif
@@ -314,7 +313,7 @@
                         </a>
                     @else
                         <span class="tooltip" data-tip="{{ __('Editing is not allowed for approved invoices.') }}">
-                            <button class="btn btn-primary gap-2 btn-disabled cursor-not-allowed" title="{{ $editDeleteStatus['reason'] }}">
+                            <button class="btn btn-primary gap-2 btn-disabled cursor-not-allowed">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />

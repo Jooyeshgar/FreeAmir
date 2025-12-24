@@ -804,5 +804,10 @@
     "unapproved": "تایید نشده",
     "your specific date": "تاریخ مورد نظر شما",
     "zero": "صفر",
-    "‌Balance": "تعادل"
+    "‌Balance": "تعادل",
+    "Show All Invoices": "نمایش همه فاکتورها",
+    "Show All Ancillary Conflicts": "نمایش همه هزینه‌های جانبی متعارض",
+    "Show All Product Conflicts": "نمایش همه محصولات متعارض",
+    "Back to All Conflicts": "بازگشت به همه تعارض‌ها",
+    "No conflicts found": "هیچ تعارضی یافت نشد"
 }

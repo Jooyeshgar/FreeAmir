@@ -60,7 +60,13 @@ class InvoiceController extends Controller
             })
         );
 
-        $invoices = $builder->paginate(25)->appends($request->query());
+        $invoices = $builder->paginate(25);
+
+        $invoices->transform(function ($invoice) {
+            $invoice->changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
+
+            return $invoice;
+        });
 
         return view('invoices.index', compact('invoices'));
     }
@@ -483,47 +489,35 @@ class InvoiceController extends Controller
         return redirect()->back()->with('success', __($message));
     }
 
-    public function conflicts(Invoice $invoice, \App\Services\GroupActionService $groupActionService, Request $request)
+    public function conflicts(Request $request, Invoice $invoice, \App\Services\GroupActionService $groupActionService)
     {
-        $request->validate([
-            'conflicts' => ['required', 'json'],
-        ]);
+        [$invoicesConflicts, $ancillaryConflicts, $productsConflicts] = $groupActionService->findAllConflictsRecursively($invoice, true);
+        $conflicts = [$invoicesConflicts, $ancillaryConflicts, $productsConflicts];
 
-        $conflicts = json_decode($request->input('conflicts'), true);
-
-        $formattedConflicts = $groupActionService->formatConflicts($conflicts);
-        $allConflicts = $groupActionService->findAllConflictsRecursively($formattedConflicts);
-
-        $allConflicts = collect($allConflicts)->sortByDesc('date')->values()->all();
-
-        $fullFormattedConflicts = self::paginateConflicts($allConflicts, 10, $request->get('page', 1));
-
-        return view('invoices.group-action', compact('invoice', 'fullFormattedConflicts'));
+        return view('invoices.conflicts.group-action', compact('invoice', 'conflicts', 'invoicesConflicts', 'ancillaryConflicts', 'productsConflicts'));
     }
 
-    private static function paginateConflicts($conflicts, $perPage, $page)
+    public function showConflictsByType(Request $request, Invoice $invoice, string $type, \App\Services\GroupActionService $groupActionService)
     {
-        $conflictsCollection = collect($conflicts);
+        [$invoicesConflicts, $ancillaryConflicts, $productsConflicts] = $groupActionService->findAllConflictsRecursively($invoice, true);
 
-        return new \Illuminate\Pagination\LengthAwarePaginator(
-            $conflictsCollection->forPage($page, $perPage),
-            $conflictsCollection->count(),
-            $perPage,
-            $page,
-            ['path' => request()->url(), 'query' => request()->query()]
-        );
+        $conflicts = match ($type) {
+            'invoices' => $invoicesConflicts,
+            'ancillary' => $ancillaryConflicts,
+            'products' => $productsConflicts,
+            default => abort(404),
+        };
+
+        return view('invoices.conflicts.conflicts-by-type', compact('invoice', 'conflicts', 'type'));
     }
 
     public function groupAction(Invoice $invoice, Request $request, \App\Services\GroupActionService $groupActionService, InvoiceService $invoiceService)
     {
-        $request->validate([
-            'conflicts' => ['required', 'json'],
-        ]);
-
+        // change this function and groupActionService->groupAction logic
         $paginatedDecodedConflicts = json_decode($request->input('conflicts'), true);
         $conflicts = $paginatedDecodedConflicts['data'];
 
-        $groupActionService->runGroupAction($conflicts);
+        $groupActionService->groupAction($conflicts);
 
         $invoiceService->changeInvoiceStatus($invoice, 'approved');
 
