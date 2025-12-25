@@ -26,6 +26,8 @@
                     </a>
                 @endif
 
+                <a href="{{ route('invoices-and-ancillary-costs') }}" class="btn btn-primary">{{ __('Group Actions') }}</a>
+
                 <form action="{{ route('invoices.index') }}" method="GET" class="ml-auto">
                     <div class="mt-4 mb-4 grid grid-cols-6 gap-6">
                         <div class="col-span-2 md:col-span-1" hidden>
