@@ -53,6 +53,7 @@
     "Amount must be at least :min.": "Amount must be at least :min.",
     "Amount per unit": "Amount per unit",
     "An error occurred, Try again.": "An error occurred, Try again.",
+    "Ancillary Cost": "Ancillary Cost",
     "Ancillary Cost #": "Ancillary Cost #",
     "Ancillary Cost List": "Ancillary Cost List",
     "Ancillary Cost VAT\/Tax": "Ancillary Cost VAT\/Tax",
@@ -156,6 +157,7 @@
     "Config created successfully.": "Config created successfully.",
     "Config updated successfully.": "Config updated successfully.",
     "Configs": "Configs",
+    "Confirm": "Confirm",
     "Confirm Password": "Confirm Password",
     "Confirm your password": "Confirm your password",
     "Conflicts": "Conflicts",
@@ -300,6 +302,7 @@
     "Financial Affairs": "Financial Affairs",
     "Financial Information": "Financial Information",
     "Fiscal year": "Fiscal year",
+    "Fix Conflict": "Fix Conflict",
     "For example:": "For example:",
     "Forgot Password": "Forgot Password",
     "General Journal Report": "General Journal Report",
@@ -718,6 +721,7 @@
     "chapter title": "chapter title",
     "choose subject": "choose subject",
     "company": "company",
+    "conflict_notice": "Modifying this invoice impacts cost calculations. All subsequent related invoices must be deactivated and their accounting entries removed. Document numbers may change, and printed documents may no longer be valid.",
     "connector": "connector",
     "contents between dates": "contents between dates",
     "contents between document numbers": "contents between document numbers",
@@ -798,5 +802,10 @@
     "unapproved": "unapproved",
     "your specific date": "your specific date",
     "zero": "zero",
-    "‌Balance": "Balance"
+    "‌Balance": "Balance",
+    "Show All Invoices": "Show All Invoices",
+    "Show All Ancillary Conflicts": "Show All Ancillary Conflicts",
+    "Show All Product Conflicts": "Show All Product Conflicts",
+    "Back to All Conflicts": "Back to All Conflicts",
+    "No conflicts found": "No conflicts found"
 }

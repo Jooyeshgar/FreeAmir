@@ -53,6 +53,7 @@
     "Amount must be at least :min.": "مبلغ باید حداقل :min باشد.",
     "Amount per unit": "مبلغ هر واحد",
     "An error occurred, Try again.": "خطایی رخ داد ، دوباره امتحان کنید.",
+    "Ancillary Cost": "هزینه جانبی",
     "Ancillary Cost #": "هزینه جانبی #",
     "Ancillary Cost List": "هزینه های جانبی",
     "Ancillary Cost VAT\/Tax": "هزینه های جانبی مالیات بر ارزش افزوده \/ مالیات",
@@ -156,6 +157,7 @@
     "Config created successfully.": "پیکربندی با موفقیت ایجاد شده است.",
     "Config updated successfully.": "پیکربندی با موفقیت به روز شد.",
     "Configs": "تنظیمات",
+    "Confirm": "تأیید",
     "Confirm Password": "تأیید رمز عبور",
     "Confirm your password": "رمز عبور خود را تأیید کنید",
     "Conflicts": "تعارضات",
@@ -300,6 +302,7 @@
     "Financial Affairs": "امور مالی",
     "Financial Information": "اطلاعات مالی",
     "Fiscal year": "سال مالی",
+    "Fix Conflict": "رفع تعارض",
     "For example:": "به عنوان مثال:",
     "Forgot Password": "فراموشی رمز عبور",
     "General Journal Report": "گزارش کل",
@@ -718,6 +721,7 @@
     "chapter title": "عنوان سرفصل",
     "choose subject": "انتخاب سرفصل",
     "company": "شرکت",
+    "conflict_notice": "تغییر این فاکتور بر محاسبات بهای تمام‌شده تأثیر می‌گذارد. تمامی فاکتورهای مرتبط بعدی باید غیرفعال شده و اسناد حسابداری مربوط به آن‌ها حذف شود. شماره اسناد ممکن است تغییر کند و اسناد چاپ‌شده ممکن است دیگر معتبر نباشند.",
     "connector": "اتصال دهنده",
     "contents between dates": "نمایش محتوا بین تاریخ های",
     "contents between document numbers": "نمایش محتوا بین شماره سندهای",
@@ -798,5 +802,10 @@
     "unapproved": "تایید نشده",
     "your specific date": "تاریخ مورد نظر شما",
     "zero": "صفر",
-    "‌Balance": "تعادل"
+    "‌Balance": "تعادل",
+    "Show All Invoices": "نمایش همه فاکتورها",
+    "Show All Ancillary Conflicts": "نمایش همه هزینه‌های جانبی متعارض",
+    "Show All Product Conflicts": "نمایش همه محصولات متعارض",
+    "Back to All Conflicts": "بازگشت به همه تعارض‌ها",
+    "No conflicts found": "هیچ تعارضی یافت نشد"
 }

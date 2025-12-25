@@ -29,6 +29,9 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('invoices/search-product-service', [Controllers\InvoiceController::class, 'searchProductService'])->name('invoices.search-product-service');
 
     Route::resource('invoices', Controllers\InvoiceController::class)->except(['index', 'create']);
+    Route::get('invoices/{invoice}/conflicts', [Controllers\InvoiceController::class, 'conflicts'])->name('invoices.conflicts');
+    Route::get('invoices/{invoice}/conflicts/{type}', [Controllers\InvoiceController::class, 'showConflictsByType'])->name('invoices.conflicts.type');
+    Route::get('invoices/{invoice}/groupAction', [Controllers\InvoiceController::class, 'groupAction'])->name('invoices.groupAction');
     Route::get('invoices/{invoice}/print', [Controllers\InvoiceController::class, 'print'])->name('invoices.print');
     Route::get('invoices/{invoice}/change-status/{status}', [Controllers\InvoiceController::class, 'changeStatus'])->name('invoices.change-status')->middleware('can:invoices.approve');
     Route::resource('ancillary-costs', Controllers\AncillaryCostController::class)->except(['show']);
@@ -56,5 +59,4 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::group(['prefix' => 'invoices', 'as' => 'invoices.index'], function () {
         Route::get('', [Controllers\InvoiceController::class, 'index']);
     });
-
 });

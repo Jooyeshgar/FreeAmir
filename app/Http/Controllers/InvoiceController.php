@@ -60,7 +60,13 @@ class InvoiceController extends Controller
             })
         );
 
-        $invoices = $builder->paginate(25)->appends($request->query());
+        $invoices = $builder->paginate(25);
+
+        $invoices->transform(function ($invoice) {
+            $invoice->changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
+
+            return $invoice;
+        });
 
         return view('invoices.index', compact('invoices'));
     }
@@ -122,6 +128,8 @@ class InvoiceController extends Controller
 
     public function show(Invoice $invoice)
     {
+        $changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
+
         $invoice->load([
             'customer',
             'document',
@@ -129,7 +137,7 @@ class InvoiceController extends Controller
             'items',
         ]);
 
-        return view('invoices.show', compact('invoice'));
+        return view('invoices.show', compact('invoice', 'changeStatusValidation'));
     }
 
     public function print(Invoice $invoice)
@@ -189,7 +197,9 @@ class InvoiceController extends Controller
         $invoiceData = $this->extractInvoiceData($validated);
         $items = $this->mapTransactionsToItems($validated['transactions']);
 
-        InvoiceService::getEditDeleteStatus($invoice);
+        if ($invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {
+            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('error', __('Invoice has associated approved ancillary costs and cannot be edited.'));
+        }
 
         $approved = false;
         if ($request->has('approve')) {
@@ -208,15 +218,13 @@ class InvoiceController extends Controller
 
     public function destroy(Invoice $invoice)
     {
-        try {
-            InvoiceService::getEditDeleteStatus($invoice);
-
-            InvoiceService::deleteInvoice($invoice->id);
-
-            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('info', __('Invoice deleted successfully.'));
-        } catch (\Exception $e) {
-            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('error', $e->getMessage());
+        if ($invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {
+            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('error', __('Invoice has associated approved ancillary costs and cannot be deleted.'));
         }
+
+        InvoiceService::deleteInvoice($invoice->id);
+
+        return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('info', __('Invoice deleted successfully.'));
     }
 
     private function invoiceMessage(array $result, string $action = 'created', bool $approved = false)
@@ -475,5 +483,40 @@ class InvoiceController extends Controller
         $message = $status === 'approved' ? __('Invoice approved successfully.') : __('Invoice unapproved successfully.');
 
         return redirect()->back()->with('success', __($message));
+    }
+
+    public function conflicts(Request $request, Invoice $invoice, \App\Services\GroupActionService $groupActionService)
+    {
+        [$invoicesConflicts, $ancillaryConflicts, $productsConflicts] = $groupActionService->findAllConflictsRecursively($invoice, true);
+        $conflicts = [$invoicesConflicts, $ancillaryConflicts, $productsConflicts];
+
+        return view('invoices.conflicts.group-action', compact('invoice', 'conflicts', 'invoicesConflicts', 'ancillaryConflicts', 'productsConflicts'));
+    }
+
+    public function showConflictsByType(Request $request, Invoice $invoice, string $type, \App\Services\GroupActionService $groupActionService)
+    {
+        [$invoicesConflicts, $ancillaryConflicts, $productsConflicts] = $groupActionService->findAllConflictsRecursively($invoice, true);
+
+        $conflicts = match ($type) {
+            'invoices' => $invoicesConflicts,
+            'ancillary' => $ancillaryConflicts,
+            'products' => $productsConflicts,
+            default => abort(404),
+        };
+
+        return view('invoices.conflicts.conflicts-by-type', compact('invoice', 'conflicts', 'type'));
+    }
+
+    public function groupAction(Invoice $invoice, Request $request, \App\Services\GroupActionService $groupActionService, InvoiceService $invoiceService)
+    {
+        // change this function and groupActionService->groupAction logic
+        $paginatedDecodedConflicts = json_decode($request->input('conflicts'), true);
+        $conflicts = $paginatedDecodedConflicts['data'];
+
+        $groupActionService->groupAction($conflicts);
+
+        $invoiceService->changeInvoiceStatus($invoice, 'approved');
+
+        return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type]);
     }
 }
