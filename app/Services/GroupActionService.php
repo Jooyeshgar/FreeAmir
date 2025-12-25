@@ -9,41 +9,39 @@ use Illuminate\Database\Eloquent\Model;
 
 class GroupActionService
 {
-    // public function groupAction(array $conflicts): void
-    // {
-    //     $invoiceService = new InvoiceService;
-    //     $ancillaryCostService = new AncillaryCostService;
+    public function groupAction(Invoice $invoice, InvoiceService $invoiceService, AncillaryCostService $ancillaryCostService): void
+    {
+        [$invoicesConflicts, $ancillaryConflicts, $productsConflicts] = $this->findAllConflictsRecursively($invoice);
 
-    //     $invoices = collect();
-    //     $ancillaryCosts = collect();
+        $oversellConflicts = $productsConflicts->every(fn ($product) => $product->oversell === true);
 
-    //     foreach ($conflicts as $conflict) {
-    //         if (str_contains($conflict['type'], __('Invoice'))) {
-    //             $invoices->push(Invoice::findOrFail($conflict['item']['id']));
-    //         } elseif ($conflict['type'] === __('Ancillary Cost')) {
-    //             $ancillaryCosts->push(AncillaryCost::findOrFail($conflict['item']['id']));
-    //         }
-    //     }
+        if ($invoice->invoice_type === \App\Enums\InvoiceType::SELL && ! $oversellConflicts) {
+            return;
+        }
 
-    //     $invoices = $invoices->sortBy('date')->sortBy('type')->sortBy('number');
-    //     $ancillaryCosts = $ancillaryCosts->sortBy('date')->sortBy('invoice.number');
+        $conflictsToResolve = array_merge($invoicesConflicts, $ancillaryConflicts);
+        $sortedConflictsToResolve = collect($conflictsToResolve)->sortByDesc(fn ($conflict) => $conflict->date)->values()->all();
 
-    //     // first unapprove invoices and ancillary costs
-    //     foreach ($invoices as $invoice) {
-    //         $invoiceService->changeInvoiceStatus($invoice, 'unapproved');
-    //     }
-    //     foreach ($ancillaryCosts as $ancillaryCost) {
-    //         $ancillaryCostService->changeAncillaryCostStatus($ancillaryCost, 'unapproved');
-    //     }
+        foreach ($sortedConflictsToResolve as $conflict) {
+            if ($conflict instanceof Invoice) {
+                $decision = $invoiceService->getChangeStatusValidation($conflict);
 
-    //     // approve invoices and ancillary costs
-    //     foreach ($invoices as $invoice) {
-    //         $invoiceService->changeInvoiceStatus($invoice, 'approved');
-    //     }
-    //     foreach ($ancillaryCosts as $ancillaryCost) {
-    //         $ancillaryCostService->changeAncillaryCostStatus($ancillaryCost, 'approved');
-    //     }
-    // }
+                if (! $decision->hasErrors()) {
+                    $invoiceService->changeInvoiceStatus($conflict, 'unapproved');
+                    $conflict->status = \App\Enums\InvoiceAncillaryCostStatus::APPROVED_INACTIVE;
+                    $conflict->save();
+                }
+            } elseif ($conflict instanceof AncillaryCost) {
+                $validation = $ancillaryCostService->getChangeStatusValidation($conflict);
+
+                if (! $validation['allowed']) {
+                    $ancillaryCostService->changeAncillaryCostStatus($conflict, 'unapproved');
+                    $conflict->status = \App\Enums\InvoiceAncillaryCostStatus::APPROVED_INACTIVE;
+                    $conflict->save();
+                }
+            }
+        }
+    }
 
     /**
      * Recursively find all conflicts for invoices and ancillary costs

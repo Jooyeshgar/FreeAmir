@@ -14,7 +14,11 @@
             @foreach ($conflicts as $conflict)
                 <tr>
                     <td class="px-2 py-2">{{ convertToFarsi($loop->iteration) }}</td>
-                    <td class="px-4 py-2">{{ $conflict->name }}</td>
+                    <td class="px-4 py-2">
+                        <a class="text-primary link link-hover {{ $conflict->oversell ? 'text-red-600' : '' }}"
+                            title="{{ $conflict->oversell ? __('Oversell not allowed') : '' }}"
+                            href="{{ route('products.show', $conflict) }}">{{ $conflict->name }}</a>
+                    </td>
                     <td class="px-4 py-2">{{ formatNumber($conflict->average_cost ?? 0) }}</td>
                 </tr>
             @endforeach
