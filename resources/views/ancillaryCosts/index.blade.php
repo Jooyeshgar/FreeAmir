@@ -10,6 +10,26 @@
             <div class="card-actions">
                 <a href="{{ route('ancillary-costs.create') }}" class="btn btn-primary">{{ __('Create Ancillary Cost') }}</a>
             </div>
+
+            <dl class="grid grid-cols-4 gap-3">
+                @foreach (\App\Enums\InvoiceAncillaryCostStatus::cases() as $status)
+                    <div class="bg-base-100 p-3 rounded-md border">
+                        <dd class="text-sm font-semibold">
+                            @if ($ancillaryCosts->where('status', $status)->count() == 0 || request('status') == $status->value)
+                                <span class="text-gray-500">{{ $status->label() }} :
+                                    {{ convertToFarsi($ancillaryCosts->where('status', $status)->count()) }}</span>
+                            @else
+                                <a class="link link-hover"
+                                    href="{{ route('ancillary-costs.index', ['status' => $status]) }}">
+                                    {{ $status->label() }} :
+                                    {{ convertToFarsi($ancillaryCosts->where('status', $status)->count()) }}
+                                </a>
+                            @endif
+                        </dd>
+                    </div>
+                @endforeach
+            </dl>
+
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <tr>
@@ -116,6 +136,13 @@
                     @endforeach
                 </tbody>
             </table>
+
+            @if (request('status') !== null)
+                <div class="px-4 py-2 text-left">
+                    <a class="btn btn-primary" href="{{ route('ancillary-costs.index') }}">{{ __('Back') }}</a>
+                </div>
+            @endif
+
             @if ($ancillaryCosts->hasPages())
                 <div class="join">
                     {{-- Previous Page Link --}}

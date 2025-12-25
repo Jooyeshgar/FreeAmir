@@ -60,6 +60,11 @@ class InvoiceController extends Controller
             })
         );
 
+        $builder->when($request->filled('status') &&
+            in_array($request->status, ['approved', 'unapproved', 'pending', 'approved_inactive']),
+            fn ($invoice) => $invoice->where('status', $request->status)
+        );
+
         $invoices = $builder->paginate(25);
 
         $invoices->transform(function ($invoice) {
@@ -492,12 +497,16 @@ class InvoiceController extends Controller
     public function conflicts(Request $request, Invoice $invoice, \App\Services\GroupActionService $groupActionService)
     {
         [$invoicesConflicts, $ancillaryConflicts, $productsConflicts] = $groupActionService->findAllConflictsRecursively($invoice, true);
-        $conflicts = [$invoicesConflicts, $ancillaryConflicts, $productsConflicts];
+        $conflicts = [
+            'invoices' => $invoicesConflicts,
+            'ancillaryCosts' => $ancillaryConflicts,
+            'products' => $productsConflicts,
+        ];
 
-        return view('invoices.conflicts.group-action', compact('invoice', 'conflicts', 'invoicesConflicts', 'ancillaryConflicts', 'productsConflicts'));
+        return view('invoices.conflicts.group', compact('invoice', 'conflicts'));
     }
 
-    public function showConflictsByType(Request $request, Invoice $invoice, string $type, \App\Services\GroupActionService $groupActionService)
+    public function showMoreConflictsByType(Request $request, Invoice $invoice, string $type, \App\Services\GroupActionService $groupActionService)
     {
         [$invoicesConflicts, $ancillaryConflicts, $productsConflicts] = $groupActionService->findAllConflictsRecursively($invoice, true);
 
@@ -508,19 +517,19 @@ class InvoiceController extends Controller
             default => abort(404),
         };
 
-        return view('invoices.conflicts.conflicts-by-type', compact('invoice', 'conflicts', 'type'));
+        return view('invoices.conflicts.more', compact('invoice', 'conflicts', 'type'));
     }
 
     public function groupAction(Invoice $invoice, Request $request, \App\Services\GroupActionService $groupActionService, InvoiceService $invoiceService)
     {
         // change this function and groupActionService->groupAction logic
-        $paginatedDecodedConflicts = json_decode($request->input('conflicts'), true);
-        $conflicts = $paginatedDecodedConflicts['data'];
+        // $paginatedDecodedConflicts = json_decode($request->input('conflicts'), true);
+        // $conflicts = $paginatedDecodedConflicts['data'];
 
-        $groupActionService->groupAction($conflicts);
+        // $groupActionService->groupAction($conflicts);
 
-        $invoiceService->changeInvoiceStatus($invoice, 'approved');
+        // $invoiceService->changeInvoiceStatus($invoice, 'approved');
 
-        return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type]);
+        // return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type]);
     }
 }

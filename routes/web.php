@@ -30,7 +30,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
 
     Route::resource('invoices', Controllers\InvoiceController::class)->except(['index', 'create']);
     Route::get('invoices/{invoice}/conflicts', [Controllers\InvoiceController::class, 'conflicts'])->name('invoices.conflicts');
-    Route::get('invoices/{invoice}/conflicts/{type}', [Controllers\InvoiceController::class, 'showConflictsByType'])->name('invoices.conflicts.type');
+    Route::get('invoices/{invoice}/conflicts/{type}', [Controllers\InvoiceController::class, 'showMoreConflictsByType'])->name('invoices.conflicts.more');
     Route::get('invoices/{invoice}/groupAction', [Controllers\InvoiceController::class, 'groupAction'])->name('invoices.groupAction');
     Route::get('invoices/{invoice}/print', [Controllers\InvoiceController::class, 'print'])->name('invoices.print');
     Route::get('invoices/{invoice}/change-status/{status}', [Controllers\InvoiceController::class, 'changeStatus'])->name('invoices.change-status')->middleware('can:invoices.approve');
