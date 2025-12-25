@@ -37,6 +37,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::resource('ancillary-costs', Controllers\AncillaryCostController::class);
     Route::get('ancillary-costs/{ancillary_cost}/change-status/{status}', [Controllers\AncillaryCostController::class, 'changeStatus'])->name('ancillary-costs.change-status')->middleware('can:ancillary-costs.approve');
     Route::get('ancillary-costs/get-products/{invoice_id}', [Controllers\AncillaryCostController::class, 'getBuyInvoiceProducts'])->name('ancillary-costs.get-products');
+    Route::get('invoices-and-ancillary-costs', [Controllers\InvoiceController::class, 'invoicesAndAncillaryCosts'])->name('invoices-and-ancillary-costs');
     Route::group(['prefix' => 'management'], function () {
         Route::resource('users', Controllers\Management\UserController::class);
         Route::resource('permissions', Controllers\Management\PermissionController::class)->except(['show']);

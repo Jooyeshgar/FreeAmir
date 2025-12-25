@@ -494,6 +494,27 @@ class InvoiceController extends Controller
         return redirect()->back()->with('success', __($message));
     }
 
+    public function invoicesAndAncillaryCosts(Request $request)
+    {
+        $status = $request->query('status');
+
+        $query = Invoice::with('ancillaryCosts')->orderByDesc('date')->orderByDesc('number');
+
+        $query->when($status &&
+        in_array($status, ['approved', 'unapproved', 'pending', 'approved_inactive']),
+            fn ($invoice) => $invoice->where('status', $status));
+
+        $invoices = $query->paginate(5);
+
+        $allInvoicesCount = Invoice::count();
+
+        foreach (\App\Enums\InvoiceAncillaryCostStatus::cases() as $statusEnum) {
+            $invoicesCountByStatus[$statusEnum->value] = Invoice::where('status', $statusEnum->value)->count();
+        }
+
+        return view('invoices.invoicesAndAncillaryCosts', compact('invoices', 'status', 'allInvoicesCount', 'invoicesCountByStatus'));
+    }
+
     public function conflicts(Invoice $invoice, \App\Services\GroupActionService $groupActionService)
     {
         [$invoicesConflicts, $ancillaryConflicts, $productsConflicts] = $groupActionService->findAllConflictsRecursively($invoice, true);
