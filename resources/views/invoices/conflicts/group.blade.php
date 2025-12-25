@@ -40,13 +40,13 @@
                 @endif
             @endforeach
 
-            <div class="px-4 py-2 text-left">
-                <form action="{{ route('invoices.groupAction', $invoice) }}" method="POST" class="inline">
-                    @csrf
-                    <input type="hidden" name="conflicts" value="{{ json_encode($conflicts) }}">
-                    <button type="submit" class="btn btn-primary">{{ __('Confirm') }}</button>
-                </form>
-            </div>
+            @if ($allowedToResolve)
+                <div class="px-4 py-2 text-left">
+                    <a href="{{ route('invoices.groupAction', $invoice) }}" class="btn btn-primary">
+                        {{ __('Confirm') }}
+                    </a>
+                </div>
+            @endif
         </div>
     </div>
 </x-app-layout>

@@ -494,7 +494,7 @@ class InvoiceController extends Controller
         return redirect()->back()->with('success', __($message));
     }
 
-    public function conflicts(Request $request, Invoice $invoice, \App\Services\GroupActionService $groupActionService)
+    public function conflicts(Invoice $invoice, \App\Services\GroupActionService $groupActionService)
     {
         [$invoicesConflicts, $ancillaryConflicts, $productsConflicts] = $groupActionService->findAllConflictsRecursively($invoice, true);
         $conflicts = [
@@ -503,10 +503,12 @@ class InvoiceController extends Controller
             'products' => $productsConflicts,
         ];
 
-        return view('invoices.conflicts.group', compact('invoice', 'conflicts'));
+        $allowedToResolve = $conflicts['products']->every(fn ($product) => $product->oversell === true);
+
+        return view('invoices.conflicts.group', compact('invoice', 'conflicts', 'allowedToResolve'));
     }
 
-    public function showMoreConflictsByType(Request $request, Invoice $invoice, string $type, \App\Services\GroupActionService $groupActionService)
+    public function showMoreConflictsByType(Invoice $invoice, string $type, \App\Services\GroupActionService $groupActionService)
     {
         [$invoicesConflicts, $ancillaryConflicts, $productsConflicts] = $groupActionService->findAllConflictsRecursively($invoice, true);
 
@@ -520,16 +522,10 @@ class InvoiceController extends Controller
         return view('invoices.conflicts.more', compact('invoice', 'conflicts', 'type'));
     }
 
-    public function groupAction(Invoice $invoice, Request $request, \App\Services\GroupActionService $groupActionService, InvoiceService $invoiceService)
+    public function groupAction(Invoice $invoice, \App\Services\GroupActionService $groupActionService)
     {
-        // change this function and groupActionService->groupAction logic
-        // $paginatedDecodedConflicts = json_decode($request->input('conflicts'), true);
-        // $conflicts = $paginatedDecodedConflicts['data'];
+        $groupActionService->groupAction($invoice, app(InvoiceService::class), app(\App\Services\AncillaryCostService::class));
 
-        // $groupActionService->groupAction($conflicts);
-
-        // $invoiceService->changeInvoiceStatus($invoice, 'approved');
-
-        // return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type]);
+        return redirect()->route('invoices.show', $invoice);
     }
 }
