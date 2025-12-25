@@ -10,23 +10,14 @@
         <div class="card-body">
             <x-show-messages type="warning" message="{{ __('conflict_notice') }}" />
 
-            @include('invoices.conflicts.invoice-section', ['invoice' => $invoice])
+            @include('invoices.conflicts.header', ['invoice' => $invoice])
 
-            @foreach ($conflicts as $conflict)
+            @foreach ($conflicts as $type => $conflict)
                 @if ($conflict->isEmpty())
                     @continue
                 @endif
 
-                @php
-                    $type =
-                        $conflict === $invoicesConflicts
-                            ? 'invoices'
-                            : ($conflict === $ancillaryConflicts
-                                ? 'ancillaryCosts'
-                                : 'products');
-                @endphp
-
-                @include('invoices.conflicts.conflicts-table', [
+                @include('invoices.conflicts.table', [
                     'conflicts' => $conflict,
                     'invoice' => $invoice,
                     'type' => $type,
@@ -36,9 +27,12 @@
                     <div class="px-4 py-2 text-center">
                         <tr>
                             <td colspan="8" class="text-center py-4">
-                                <a href="{{ route('invoices.conflicts.type', ['invoice' => $invoice, 'type' => $type]) }}"
+                                <a href="{{ route('invoices.conflicts.more', [
+                                    'invoice' => $invoice,
+                                    'type' => $type,
+                                ]) }}"
                                     class="btn btn-sm btn-primary">
-                                    {{ __('Show All Invoices') }}
+                                    {{ __('Show All ' . ucfirst($type)) }}
                                 </a>
                             </td>
                         </tr>

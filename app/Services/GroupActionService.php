@@ -121,9 +121,9 @@ class GroupActionService
     private function paginateGroupedConflicts(array $grouped): array
     {
         return [
-            $this->paginateConflictItems(collect($grouped[Invoice::class])->sortByDesc('date'), 1),
-            $this->paginateConflictItems(collect($grouped[AncillaryCost::class])->sortByDesc('date'), 10),
-            $this->paginateConflictItems(collect($grouped[Product::class]), 10),
+            $this->paginateConflictItems(collect($grouped[Invoice::class])->sortByDesc('date'), 5),
+            $this->paginateConflictItems(collect($grouped[AncillaryCost::class])->sortByDesc('date'), 5),
+            $this->paginateConflictItems(collect($grouped[Product::class]), 5),
         ];
     }
 
