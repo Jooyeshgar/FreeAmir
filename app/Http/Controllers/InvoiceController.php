@@ -502,11 +502,33 @@ class InvoiceController extends Controller
 
         $ancillaryCosts = AncillaryCost::where('status', \App\Enums\InvoiceAncillaryCostStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('id')->get();
 
+        // TODO: Need to be optimized with less queries and write better logic
+        // TODO: Translation needed
+
+        $blockedAncillaryCostsMap = [];
         foreach ($ancillaryCosts as $ancillaryCost) {
+            $validation = \App\Services\AncillaryCostService::getChangeStatusValidation($ancillaryCost);
+            if (! ($validation['allowed'] ?? false)) {
+                $blockedAncillaryCostsMap[$ancillaryCost->id] = $validation['message'] ?? $validation['reason'] ?? __('Not allowed to resolve this ancillary cost.');
+            }
             $invoices->push($ancillaryCost->invoice);
         }
 
-        return view('invoices.inactive', compact('invoices'));
+        $invoices->getCollection()->transform(function ($invoice) use ($blockedAncillaryCostsMap) {
+            $blockedReasons = $invoice->ancillaryCosts
+                ->filter(fn ($ac) => isset($blockedAncillaryCostsMap[$ac->id]))
+                ->map(fn ($ac) => $blockedAncillaryCostsMap[$ac->id])
+                ->unique();
+
+            $invoice->allowedAncillaryCostsToResolve = $blockedReasons->isEmpty();
+            $invoice->allowedAncillaryCostsToResolveReason = $blockedReasons->implode("\n") ?: null;
+
+            return $invoice;
+        });
+
+        $canApproveAllInactiveInvoices = $invoices->every(fn ($invoice) => $invoice->allowedAncillaryCostsToResolve);
+
+        return view('invoices.inactive', compact('invoices', 'canApproveAllInactiveInvoices'));
     }
 
     public function approveInactiveInvoices(\App\Services\GroupActionService $groupActionService)

@@ -11,7 +11,10 @@ class GroupActionService
 {
     public function approveInactiveInvoices(InvoiceService $invoiceService, AncillaryCostService $ancillaryCostService): void
     {
-        $invoices = Invoice::where('status', \App\Enums\InvoiceAncillaryCostStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('number')->get();
+        $invoices = Invoice::where('status', \App\Enums\InvoiceAncillaryCostStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('number')
+            ->orWhereHas('ancillaryCosts', function ($query) {
+                $query->where('status', \App\Enums\InvoiceAncillaryCostStatus::APPROVED_INACTIVE);
+            })->get();
 
         foreach ($invoices as $invoice) {
             $decision = $invoiceService->getChangeStatusValidation($invoice);
