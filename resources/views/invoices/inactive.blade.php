@@ -34,7 +34,10 @@
                             </tr>
                             @foreach ($invoice->ancillaryCosts as $ancillaryCost)
                                 <tr class="bg-gray-50">
-                                    <td>{{ $ancillaryCost->type->label() }}</td>
+                                    <td class="{{ isset($invoice->allowedAncillaryCostsToResolve) && !$invoice->allowedAncillaryCostsToResolve ? 'text-red-600' : '' }}"
+                                        title="{{ !empty($invoice->allowedAncillaryCostsToResolveReason) ? $invoice->allowedAncillaryCostsToResolveReason : '' }}">
+                                        {{ $ancillaryCost->type->label() }}
+                                    </td>
                                     <td>
                                         <a href="{{ route('invoices.show', $ancillaryCost->invoice) }}"
                                             class="text-primary link link-hover">
@@ -54,10 +57,19 @@
                     </tbody>
                 </table>
 
+                {{-- TODO: No need to show the Invoice of ancillary costs those their status are not approved inactive --}}
+
                 <div class="flex justify-end mt-4 gap-3">
-                    <a href="{{ route('invoices.inactive.approve') }}" class="btn btn-primary btn-sm gap-2">
-                        <span id="toggle-text">{{ __('Approve All') }}</span>
-                    </a>
+                    @if ($canApproveAllInactiveInvoices)
+                        <a href="{{ route('invoices.inactive.approve') }}" class="btn btn-primary btn-sm gap-2">
+                            <span id="toggle-text">{{ __('Approve All') }}</span>
+                        </a>
+                    @else
+                        <button type="button" class="btn btn-primary btn-sm gap-2 btn-disabled" disabled
+                            title="{{ __('To approve all, first resolve all blocked ancillary costs.') }}">
+                            <span id="toggle-text">{{ __('Approve All') }}</span>
+                        </button>
+                    @endif
                 </div>
 
                 @if ($invoices->hasPages())
