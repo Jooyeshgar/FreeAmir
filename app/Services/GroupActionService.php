@@ -9,11 +9,31 @@ use Illuminate\Database\Eloquent\Model;
 
 class GroupActionService
 {
+    public function approveInactiveInvoices(InvoiceService $invoiceService, AncillaryCostService $ancillaryCostService): void
+    {
+        $invoices = Invoice::where('status', \App\Enums\InvoiceAncillaryCostStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('number')->get();
+
+        foreach ($invoices as $invoice) {
+            $decision = $invoiceService->getChangeStatusValidation($invoice);
+
+            if (! $decision->hasErrors()) {
+                $invoiceService->changeInvoiceStatus($invoice, 'approved');
+            }
+
+            foreach ($invoice->ancillaryCosts as $ancillaryCost) {
+                $validation = $ancillaryCostService->getChangeStatusValidation($ancillaryCost);
+                if ($validation['allowed']) {
+                    $ancillaryCostService->changeAncillaryCostStatus($ancillaryCost, 'approve');
+                }
+            }
+        }
+    }
+
     public function groupAction(Invoice $invoice, InvoiceService $invoiceService, AncillaryCostService $ancillaryCostService): void
     {
         [$invoicesConflicts, $ancillaryConflicts, $productsConflicts] = $this->findAllConflictsRecursively($invoice);
 
-        $oversellConflicts = $productsConflicts->every(fn ($product) => $product->oversell === true);
+        $oversellConflicts = collect($productsConflicts)->every(fn ($product) => $product->oversell === 1);
 
         if ($invoice->invoice_type === \App\Enums\InvoiceType::SELL && ! $oversellConflicts) {
             return;
@@ -35,7 +55,7 @@ class GroupActionService
                 $validation = $ancillaryCostService->getChangeStatusValidation($conflict);
 
                 if (! $validation['allowed']) {
-                    $ancillaryCostService->changeAncillaryCostStatus($conflict, 'unapproved');
+                    $ancillaryCostService->changeAncillaryCostStatus($conflict, 'unapprove');
                     $conflict->status = \App\Enums\InvoiceAncillaryCostStatus::APPROVED_INACTIVE;
                     $conflict->save();
                 }
@@ -66,11 +86,10 @@ class GroupActionService
     /**
      * Recursively find conflicts for any model (Invoice, AncillaryCost, or Product)
      */
-    private function findConflictsRecursively(Model $model, array &$allConflicts, array &$processedIds = []): void
+    private function findConflictsRecursively(Model|\Illuminate\Support\Collection $model, array &$allConflicts, array &$processedIds = []): void
     {
         $key = get_class($model).':'.$model->id;
 
-        // Skip if already processed
         if (in_array($key, $processedIds)) {
             return;
         }
@@ -78,7 +97,6 @@ class GroupActionService
         $processedIds[] = $key;
         $allConflicts[] = $model;
 
-        // Get conflicts based on model type and recursively process them
         if ($model instanceof Invoice) {
             if (! isset($model->status)) {
                 $model = Invoice::findOrFail($model->id);
@@ -91,6 +109,15 @@ class GroupActionService
                     $this->findConflictsRecursively($formatted, $allConflicts, $processedIds);
                 }
             }
+
+            foreach ($model->ancillaryCosts as $ancillaryCost) {
+                $validation = AncillaryCostService::getChangeStatusValidation($ancillaryCost);
+
+                if (! $validation['allowed']) {
+                    $this->findConflictsRecursively($ancillaryCost, $allConflicts, $processedIds);
+                }
+            }
+
         } elseif ($model instanceof AncillaryCost) {
             $validation = AncillaryCostService::getChangeStatusValidation($model);
 
@@ -144,10 +171,10 @@ class GroupActionService
             return $this->resolveModel($conflict);
         }
 
-        return $this->resolveDescriptor($conflict);
+        return $this->resolveArray($conflict);
     }
 
-    private function resolveDescriptor(array $conflict): ?Model
+    private function resolveArray(array $conflict): ?Model
     {
         $type = $conflict['type'] ?? null;
         $id = $conflict['id'] ?? null;

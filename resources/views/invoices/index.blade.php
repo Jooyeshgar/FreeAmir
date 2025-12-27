@@ -26,7 +26,7 @@
                     </a>
                 @endif
 
-                <a href="{{ route('invoices-and-ancillary-costs') }}" class="btn btn-primary">{{ __('Group Actions') }}</a>
+                <a href="{{ route('invoices.inactive') }}" class="btn btn-primary">{{ __('Approve Inactive') }}</a>
 
                 <form action="{{ route('invoices.index') }}" method="GET" class="ml-auto">
                     <div class="mt-4 mb-4 grid grid-cols-6 gap-6">
