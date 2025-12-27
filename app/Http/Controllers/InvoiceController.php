@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\InvoiceType;
 use App\Http\Requests\StoreInvoiceRequest;
+use App\Models\AncillaryCost;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
@@ -24,6 +25,7 @@ class InvoiceController extends Controller
         $this->middleware('permission:invoices.create', ['only' => ['create', 'store']]);
         $this->middleware('permission:invoices.edit', ['only' => ['edit', 'update']]);
         $this->middleware('permission:invoices.delete', ['only' => ['destroy']]);
+        $this->middleware('permission:invoices.approve', ['only' => ['changeStatus', 'inactiveInvoices', 'approveInactiveInvoices', 'conflicts', 'showMoreConflictsByType', 'groupAction']]);
     }
 
     /**
@@ -494,25 +496,24 @@ class InvoiceController extends Controller
         return redirect()->back()->with('success', __($message));
     }
 
-    public function invoicesAndAncillaryCosts(Request $request)
+    public function inactiveInvoices()
     {
-        $status = $request->query('status');
+        $invoices = Invoice::where('status', \App\Enums\InvoiceAncillaryCostStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('number')->paginate(10);
 
-        $query = Invoice::with('ancillaryCosts')->orderByDesc('date')->orderByDesc('number');
+        $ancillaryCosts = AncillaryCost::where('status', \App\Enums\InvoiceAncillaryCostStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('id')->get();
 
-        $query->when($status &&
-        in_array($status, ['approved', 'unapproved', 'pending', 'approved_inactive']),
-            fn ($invoice) => $invoice->where('status', $status));
-
-        $invoices = $query->paginate(5);
-
-        $allInvoicesCount = Invoice::count();
-
-        foreach (\App\Enums\InvoiceAncillaryCostStatus::cases() as $statusEnum) {
-            $invoicesCountByStatus[$statusEnum->value] = Invoice::where('status', $statusEnum->value)->count();
+        foreach ($ancillaryCosts as $ancillaryCost) {
+            $invoices->push($ancillaryCost->invoice);
         }
 
-        return view('invoices.invoicesAndAncillaryCosts', compact('invoices', 'status', 'allInvoicesCount', 'invoicesCountByStatus'));
+        return view('invoices.inactive', compact('invoices'));
+    }
+
+    public function approveInactiveInvoices(\App\Services\GroupActionService $groupActionService)
+    {
+        $groupActionService->approveInactiveInvoices(app(InvoiceService::class), app(\App\Services\AncillaryCostService::class));
+
+        return redirect()->route('invoices.index', ['invoice_type' => InvoiceType::BUY])->with('success', __('Inactive invoices approved successfully.'));
     }
 
     public function conflicts(Invoice $invoice, \App\Services\GroupActionService $groupActionService)
@@ -524,7 +525,7 @@ class InvoiceController extends Controller
             'products' => $productsConflicts,
         ];
 
-        $allowedToResolve = $conflicts['products']->every(fn ($product) => $product->oversell === true);
+        $allowedToResolve = $conflicts['products']->every(fn ($product) => $product->oversell === 1);
 
         return view('invoices.conflicts.group', compact('invoice', 'conflicts', 'allowedToResolve'));
     }
