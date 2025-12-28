@@ -322,37 +322,44 @@ class InvoiceService
     {
         DB::transaction(function () use ($invoice, $status) {
             match ($status) {
-                'approved' => $this->toggleInvoiceApproval($invoice, true),
-                'unapproved' => $this->toggleInvoiceApproval($invoice, false),
+                'approved' => $this->approveInvoice($invoice),
+                'unapproved' => $this->unapproveInvoice($invoice),
                 default => null,
             };
         });
 
     }
 
-    private function toggleInvoiceApproval(Invoice $invoice, bool $approve): void
+    /**
+     * Approve the given invoice: create document, update quantities and COG.
+     */
+    private function approveInvoice(Invoice $invoice): void
     {
-        if ($approve) {
-            $invoice->status = InvoiceAncillaryCostStatus::APPROVED;
-            $createdDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
-            $invoice->document_id = $createdDocument->id;
-            $invoice->update();
-            ProductService::addProductsQuantities($invoice->items->toArray(), $invoice->invoice_type);
-            self::syncInvoiceItems($invoice, self::itemsFormatterForSyncingInvoiceItems($invoice));
-            CostOfGoodsService::updateProductsAverageCost($invoice);
-            self::syncCOGAfterForInvoiceItems($invoice);
-        } else {
-            $invoice->status = InvoiceAncillaryCostStatus::UNAPPROVED;
+        $invoice->status = InvoiceAncillaryCostStatus::APPROVED;
+        $createdDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
+        $invoice->document_id = $createdDocument->id;
+        $invoice->update();
+        ProductService::addProductsQuantities($invoice->items->toArray(), $invoice->invoice_type);
+        self::syncInvoiceItems($invoice, self::itemsFormatterForSyncingInvoiceItems($invoice));
+        CostOfGoodsService::updateProductsAverageCost($invoice);
+        self::syncCOGAfterForInvoiceItems($invoice);
+    }
 
-            if ($invoice->document) {
-                DocumentService::deleteDocument($invoice->document_id);
-                $invoice->document_id = null;
-            }
-            $invoice->update();
-            self::unapproveAncillaryCostsOfInvoice($invoice);
-            ProductService::subProductsQuantities($invoice->items->toArray(), $invoice->invoice_type);
-            CostOfGoodsService::updateProductsAverageCost($invoice);
+    /**
+     * Unapprove the given invoice: delete document, revert quantities and COG, and unapprove ancillary costs.
+     */
+    private function unapproveInvoice(Invoice $invoice): void
+    {
+        $invoice->status = InvoiceAncillaryCostStatus::UNAPPROVED;
+
+        if ($invoice->document) {
+            DocumentService::deleteDocument($invoice->document_id);
+            $invoice->document_id = null;
         }
+        $invoice->update();
+        self::unapproveAncillaryCostsOfInvoice($invoice);
+        ProductService::subProductsQuantities($invoice->items->toArray(), $invoice->invoice_type);
+        CostOfGoodsService::updateProductsAverageCost($invoice);
     }
 
     private function unapproveAncillaryCostsOfInvoice(Invoice $invoice): void

@@ -34,7 +34,11 @@ class ProductController extends Controller
 
         $products->transform(function ($product) {
             $product->unapprovedQuantity = $this->productService->unapprovedQuantity($product);
-            $product->totalSell = $this->productService->totalSell($product);
+            $product->totalSellCount = $this->productService->totalSellCount($product);
+            if (auth()->user()->can('reports.journal')) {
+                $product->totalSell = $this->productService->totalSell($product);
+                $product->salesProfit = $product->totalSell + $this->productService->totalCOGS($product);
+            }
 
             return $product;
         });
@@ -79,7 +83,7 @@ class ProductController extends Controller
         $product->load('productgroup', 'productWebsites');
 
         $product->lastCOG = $this->productService->lastApprovedBuyInvoiceItemCOG($product) ?? 0;
-        $product->salesProfit = $this->productService->salesProfit($product) ?? 0;
+        $product->salesProfit = $this->productService->totalSell($product) + $this->productService->totalCOGS($product);
 
         $historyItems = $product->invoiceItems()
             ->with('invoice')

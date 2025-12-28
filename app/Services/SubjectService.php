@@ -12,9 +12,11 @@ class SubjectService
      * @param  string|int  $code  Subject primary key (int) or subject code (string)
      * @return int Sum of the `amount` field for the subject and its immediate children
      */
-    public static function sumSubject(string|int $code): int
+    public static function sumSubject(string|int|Subject $code): int
     {
-        if (is_int($code)) {
+        if ($code instanceof Subject) {
+            $subject = $code->load(['transactions', 'children.transactions']);
+        } elseif (is_int($code)) {
             $subject = Subject::with(['transactions', 'children.transactions'])->find($code);
         } else {
             $subject = Subject::with(['transactions', 'children.transactions'])->where('code', $code)->first();

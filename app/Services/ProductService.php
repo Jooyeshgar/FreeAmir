@@ -61,6 +61,9 @@ class ProductService
     public static function addProductsQuantities(array $invoiceItems, InvoiceType $invoice_type): void
     {
         foreach ($invoiceItems as $invoiceItem) {
+            if ($invoiceItem['itemable_type'] !== Product::class) {
+                continue;
+            }
             $product = Product::find($invoiceItem['itemable_id']);
             if (! $product) {
                 continue;
@@ -71,7 +74,6 @@ class ProductService
             } elseif ($invoice_type === InvoiceType::SELL) {
                 $product->quantity -= $invoiceItem['quantity'];
             }
-
             $product->save();
         }
     }
@@ -79,7 +81,7 @@ class ProductService
     public static function subProductsQuantities(array $invoiceItems, InvoiceType $invoice_type): void
     {
         foreach ($invoiceItems as $invoiceItem) {
-            if ($invoiceItem['itemable_type'] !== Product::class && $invoiceItem['itemable_type'] !== 'product') {
+            if ($invoiceItem['itemable_type'] !== Product::class) {
                 continue;
             }
 
@@ -233,7 +235,7 @@ class ProductService
         return $sum(InvoiceType::BUY) - $sum(InvoiceType::SELL);
     }
 
-    public function totalSell(Product $product)
+    public function totalSellCount(Product $product)
     {
         return $product->invoiceItems()
             ->whereHas('invoice', fn ($q) => $q->where('invoice_type', InvoiceType::SELL)
@@ -269,8 +271,13 @@ class ProductService
         return $itemPrice + ($ancillaryCostsSum / $item->quantity);
     }
 
-    public function salesProfit(Product $product): float
+    public function totalCOGS(Product $product): float
     {
-        return $this->subjectService->sumSubject($product->incomeSubject->code) - $product->average_cost;
+        return $this->subjectService->sumSubject($product->cogsSubject);
+    }
+
+    public function totalSell(Product $product): float
+    {
+        return $this->subjectService->sumSubject($product->incomeSubject);
     }
 }
