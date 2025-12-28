@@ -170,7 +170,9 @@
                             <th class="px-4 py-3">{{ __('Date') }}</th>
                             <th class="px-4 py-3 text-center">{{ __('Buy') }}</th>
                             <th class="px-4 py-3 text-center">{{ __('Sell') }}</th>
-                            <th class="px-4 py-3 text-center">{{ __('Unit Price') }}</th>
+                            <th class="px-4 py-3 text-center">{{ __('Buy Unit Price') }}</th>
+                            <th class="px-4 py-3 text-center">{{ __('Ancillary Cost') }}</th>
+                            <th class="px-4 py-3 text-center">{{ __('Sell Unit Price') }}</th>
                             <th class="px-4 py-3 text-center">{{ __('OFF') }}</th>
                             <th class="px-4 py-3 text-center">{{ __('Remaining') }}</th>
                         </tr>
@@ -211,8 +213,35 @@
                                         <span class="text-gray-400">-</span>
                                     @endif
                                 </td>
-
-                                <td class="px-4 py-3 text-center font-semibold">{{ formatNumber($item->unit_price) }}
+                                <td class="px-4 py-3 text-center font-semibold">
+                                    @if ($item->invoice->invoice_type === \App\Enums\InvoiceType::BUY)
+                                        {{ formatNumber($item->unit_price) }}
+                                    @else
+                                        <span class="text-gray-400">-</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    @php
+                                        $ancillaryCost = 0;
+                                        if ($item->invoice->invoice_type === \App\Enums\InvoiceType::BUY) {
+                                            $ancillaryCost =
+                                                $item->invoice->ancillaryCosts->sum(function ($ac) {
+                                                    return $ac->items->sum('amount');
+                                                }) / $item->quantity;
+                                        }
+                                    @endphp
+                                    @if ($ancillaryCost > 0)
+                                        {{ formatNumber($ancillaryCost) }}
+                                    @else
+                                        <span class="text-gray-400">-</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-center font-semibold">
+                                    @if ($item->invoice->invoice_type === \App\Enums\InvoiceType::SELL)
+                                        {{ formatNumber($item->unit_price) }}
+                                    @else
+                                        <span class="text-gray-400">-</span>
+                                    @endif
                                 </td>
                                 <td class="px-4 py-3 text-center">
                                     @if ($item->unit_discount > 0)
@@ -235,14 +264,14 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="text-center py-8 text-gray-500">
+                                <td colspan="8" class="text-center py-8 text-gray-500">
                                     {{ __('No transactions found') }}
                                 </td>
                             </tr>
                         @endforelse
                         @if ($historyItems->hasPages())
                             <tr class="bg-base-300 font-semibold">
-                                <td colspan="5" class="px-4 py-3 text-right">
+                                <td colspan="7" class="px-4 py-3 text-right">
                                     {{ __('Balance from previous page') }}
                                 <td class="px-4 py-3 text-center">
                                     @php

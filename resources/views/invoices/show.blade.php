@@ -37,12 +37,14 @@
                 $discountTotal = $items->reduce(fn($carry, $item) => $carry + ($item->unit_discount ?? 0), 0);
                 $vatTotal = $items->reduce(fn($carry, $item) => $carry + ($item->vat ?? 0), 0);
                 $grandTotal = ($invoice->amount ?? 0) - ($invoice->subtraction ?? 0);
+
+                $ancillaryCosts = $invoice->ancillaryCosts ?? collect();
             @endphp
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="stats shadow bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60">
                     <div class="stat">
-                        <div class="stat-title text-blue-500">{{ __('Subtotal') }} ({{ config('amir.currency') ??__('Rial') }})</div>
+                        <div class="stat-title text-blue-500">{{ __('Subtotal') }} ({{ config('amir.currency') ?? __('Rial') }})</div>
                         <div class="stat-value text-blue-600 text-3xl">{{ formatNumber($subTotal) }}</div>
                         <div class="stat-desc text-blue-400">{{ __('Before discounts and tax') }}</div>
                     </div>
@@ -50,7 +52,7 @@
 
                 <div class="stats shadow bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200/60">
                     <div class="stat">
-                        <div class="stat-title text-amber-500">{{ __('Discounts') }} ({{ config('amir.currency') ??__('Rial') }})</div>
+                        <div class="stat-title text-amber-500">{{ __('Discounts') }} ({{ config('amir.currency') ?? __('Rial') }})</div>
                         <div class="stat-value text-amber-600 text-3xl">{{ formatNumber($discountTotal) }}</div>
                         <div class="stat-desc text-amber-400">{{ __('Total deductions') }}</div>
                     </div>
@@ -58,7 +60,7 @@
 
                 <div class="stats shadow bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/60">
                     <div class="stat">
-                        <div class="stat-title text-emerald-500">{{ __('VAT') }} ({{ config('amir.currency') ??__('Rial') }})</div>
+                        <div class="stat-title text-emerald-500">{{ __('VAT') }} ({{ config('amir.currency') ?? __('Rial') }})</div>
                         <div class="stat-value text-emerald-600 text-3xl">{{ formatNumber($vatTotal) }}</div>
                         <div class="stat-desc text-emerald-400">{{ __('Collected tax') }}</div>
                     </div>
@@ -66,7 +68,7 @@
 
                 <div class="stats shadow bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/60">
                     <div class="stat">
-                        <div class="stat-title text-indigo-500">{{ __('Grand total') }} ({{ config('amir.currency') ??__('Rial') }})</div>
+                        <div class="stat-title text-indigo-500">{{ __('Grand total') }} ({{ config('amir.currency') ?? __('Rial') }})</div>
                         <div class="stat-value text-indigo-600 text-3xl">{{ formatNumber($grandTotal) }}</div>
                         <div class="stat-desc text-indigo-400">{{ __('Payable amount') }}</div>
                     </div>
@@ -94,7 +96,6 @@
                 @endif
 
             </div>
-
             @if ($invoice->description)
                 <div>
                     <div class="divider text-lg font-semibold">{{ __('Notes') }}</div>
@@ -238,6 +239,65 @@
                 </div>
             </div>
 
+            <div>
+                <div class="divider text-lg font-semibold">{{ __('Ancillary Costs') }}</div>
+
+                @if ($ancillaryCosts->isNotEmpty())
+                    <div class="overflow-x-auto shadow-lg rounded-lg mt-4">
+                        <table class="table table-zebra w-full">
+                            <thead class="bg-base-300">
+                                <tr>
+                                    <th class="px-4 py-3">#</th>
+                                    <th class="px-4 py-3">{{ __('Doc Number') }}</th>
+                                    <th class="px-4 py-3">{{ __('Cost Type') }}</th>
+                                    <th class="px-4 py-3">{{ __('Date') }}</th>
+                                    <th class="px-4 py-3">{{ __('Status') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ __('Amount') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ __('VAT') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ __('Total') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($ancillaryCosts as $index => $ancillaryCost)
+                                    @php
+                                        $docNumber = $ancillaryCost->document?->number;
+                                        $docId = $ancillaryCost->document_id;
+                                        $amount = (float) ($ancillaryCost->amount ?? 0);
+                                        $vat = (float) ($ancillaryCost->vat ?? 0);
+                                    @endphp
+                                    <tr class="hover">
+                                        <td class="px-4 py-3">{{ $index + 1 }}</td>
+                                        <td class="px-4 py-3">
+                                            @if ($docId)
+                                                @can('documents.show')
+                                                    <a class="link" href="{{ route('documents.show', $docId) }}">{{ formatDocumentNumber($docNumber ?? $docId) }}</a>
+                                                @else
+                                                    <span class="text-gray-500">{{ formatDocumentNumber($docNumber ?? $docId) }}</span>
+                                                @endcan
+                                            @else
+                                                <span class="text-gray-500">—</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-4 py-3">{{ $ancillaryCost->type?->label() ?? '—' }}</td>
+                                        <td class="px-4 py-3">{{ $ancillaryCost->date ? formatDate($ancillaryCost->date) : '—' }}</td>
+                                        <td class="px-4 py-3">{{ $ancillaryCost->status?->label() ?? '—' }}</td>
+                                        <td class="px-4 py-3 text-right">{{ formatNumber($amount) }}</td>
+                                        <td class="px-4 py-3 text-right">{{ formatNumber($vat) }}</td>
+                                        <td class="px-4 py-3 text-right">{{ formatNumber($amount + $vat) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <div class="alert bg-base-200 shadow-sm">
+                        <div>
+                            <span>{{ __('No ancillary costs are attached to this invoice.') }}</span>
+                        </div>
+                    </div>
+                @endif
+            </div>
+
             <div class="card-actions justify-between mt-4">
                 <a href="{{ route('invoices.index', [$invoice->invoice_type]) }}" class="btn btn-ghost gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -264,8 +324,7 @@
                         @else
                             <a x-data="{}"
                                 @if ($changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js('Did you read the warnings?'))) { window.location.href = '{{ $changeStatusUrl }}?confirm=1' }" @endif
-                                {!! $tooltip !!} href="{{ $changeStatusUrl }}"
-                                class="btn btn-primary gap-2 {{ $btnClass }}">
+                                {!! $tooltip !!} href="{{ $changeStatusUrl }}" class="btn btn-primary gap-2 {{ $btnClass }}">
                                 {{ $statusTitle }}
                             </a>
                         @endif

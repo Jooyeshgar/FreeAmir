@@ -127,6 +127,10 @@ class InvoiceController extends Controller
             'document',
             'document.transactions',
             'items',
+            'ancillaryCosts',
+            'ancillaryCosts.customer',
+            'ancillaryCosts.document',
+            'ancillaryCosts.items',
         ]);
 
         return view('invoices.show', compact('invoice'));
