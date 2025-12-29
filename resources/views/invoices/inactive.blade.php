@@ -57,16 +57,10 @@
                 {{-- TODO: No need to show the Invoice of ancillary costs those their status are not approved inactive --}}
 
                 <div class="flex justify-end mt-4 gap-3">
-                    @if ($canApproveAllInactiveInvoices)
-                        <a href="{{ route('invoices.inactive.approve') }}" class="btn btn-primary btn-sm gap-2">
-                            <span id="toggle-text">{{ __('Approve All') }}</span>
-                        </a>
-                    @else
-                        <button type="button" class="btn btn-primary btn-sm gap-2 btn-disabled" disabled
-                            title="{{ __('To approve all, first resolve all blocked ancillary costs.') }}">
-                            <span id="toggle-text">{{ __('Approve All') }}</span>
-                        </button>
-                    @endif
+                    <a href="{{ route('invoices.inactive.approve') }}" class="btn btn-primary btn-sm gap-2">
+                        <span id="toggle-text">{{ __('Approve All') }}</span>
+                    </a>
+
                 </div>
 
                 @if ($invoices->hasPages())

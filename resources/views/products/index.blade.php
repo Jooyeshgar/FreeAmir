@@ -77,7 +77,7 @@
                             @can('reports.journal')
                                 <td class="px-4 py-2">{{ formatNumber($product->salesProfit) }}</td>
                                 <td class="px-4 py-2">
-                                    {{ formatNumber(round(($product->salesProfit / $product->totalSell) * 100, 2)) }}%</td>
+                                    {{ $product->totalSell != 0 ? formatNumber(round(($product->salesProfit / $product->totalSell) * 100, 2)) : 0 }}%</td>
                                 <td class="px-4 py-2">{{ formatNumber($product->totalSell) }}</td>
                             @endcan
                             <td class="px-4 py-2">{{ $product->productGroup ? $product->productGroup->name : '' }}</td>

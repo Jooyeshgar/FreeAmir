@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Http\Requests\StoreInvoiceRequest;
-use App\Models\AncillaryCost;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
@@ -15,14 +14,18 @@ use App\Models\ProductGroup;
 use App\Models\Service;
 use App\Models\ServiceGroup;
 use App\Services\AncillaryCostService;
+use App\Services\GroupActionService;
 use App\Services\InvoiceService;
 use Illuminate\Http\Request;
 use PDF;
 
 class InvoiceController extends Controller
 {
-    public function __construct()
-    {
+    public function __construct(
+        private readonly InvoiceService $invoiceService,
+        private readonly AncillaryCostService $ancillaryCostService,
+        private readonly GroupActionService $groupActionService
+    ) {
         $this->middleware('permission:invoices.view', ['only' => ['index']]);
         $this->middleware('permission:invoices.create', ['only' => ['create', 'store']]);
         $this->middleware('permission:invoices.edit', ['only' => ['edit', 'update']]);
@@ -122,7 +125,7 @@ class InvoiceController extends Controller
      *
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function store(StoreInvoiceRequest $request, InvoiceService $service)
+    public function store(StoreInvoiceRequest $request)
     {
         $validated = $request->validated();
         $invoiceData = $this->extractInvoiceData($validated);
@@ -134,7 +137,7 @@ class InvoiceController extends Controller
             auth()->user()->can('invoices.approve');
         }
 
-        $result = $service->createInvoice(auth()->user(), $invoiceData, $items, $approved);
+        $result = $this->invoiceService->createInvoice(auth()->user(), $invoiceData, $items, $approved);
 
         [$msgType, $msg] = $this->invoiceMessage($result, 'created', $approved);
 
@@ -212,7 +215,7 @@ class InvoiceController extends Controller
      *
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function update(StoreInvoiceRequest $request, Invoice $invoice, InvoiceService $service)
+    public function update(StoreInvoiceRequest $request, Invoice $invoice)
     {
         $validated = $request->validated();
         $invoiceData = $this->extractInvoiceData($validated);
@@ -228,7 +231,7 @@ class InvoiceController extends Controller
             auth()->user()->can('invoices.approve');
         }
 
-        $result = $service->updateInvoice($invoice->id, $invoiceData, $items, $approved);
+        $result = $this->invoiceService->updateInvoice($invoice->id, $invoiceData, $items, $approved);
 
         [$msgType, $msg] = $this->invoiceMessage($result, 'updated', $approved);
 
@@ -479,14 +482,14 @@ class InvoiceController extends Controller
         return (object) $grouped;
     }
 
-    public function changeStatus(Invoice $invoice, string $status, InvoiceService $service)
+    public function changeStatus(Invoice $invoice, string $status)
     {
         if (! in_array($status, ['approved', 'unapproved'])) {
             return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])
                 ->with('error', __('Invalid status action.'));
         }
 
-        $decision = $service->getChangeStatusDecision($invoice, $status);
+        $decision = $this->invoiceService->getChangeStatusDecision($invoice, $status);
         if ($decision->hasErrors()) {
             $error = $decision->messages->first(fn ($m) => $m->type === 'error');
 
@@ -499,7 +502,7 @@ class InvoiceController extends Controller
             return redirect()->back()->with('warning', $warning?->text ?? __('Please confirm your action.'))->with('confirm_invoice_status_change', true)->with('conflicting_invoices', $decision->conflicts->map(fn ($i) => ['id' => $i->id, 'number' => $i->number, 'type' => $i->invoice_type])->values()->all());
         }
 
-        $service->changeInvoiceStatus($invoice, $status);
+        $this->invoiceService->changeInvoiceStatus($invoice, $status);
 
         $message = $status === 'approved' ? __('Invoice approved successfully.') : __('Invoice unapproved successfully.');
 
@@ -508,49 +511,29 @@ class InvoiceController extends Controller
 
     public function inactiveInvoices()
     {
-        $invoices = Invoice::where('status', InvoiceStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('number')->paginate(10);
+        $invoices = Invoice::where('status', InvoiceStatus::APPROVED_INACTIVE)
+            ->with(['ancillaryCosts' => function ($query) {
+                $query->where('status', InvoiceStatus::APPROVED_INACTIVE);
+            }])
+            ->orderBy('date')
+            ->orderBy('number')
+            ->paginate(30);
 
-        $ancillaryCosts = AncillaryCost::where('status', InvoiceStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('id')->get();
+        $this->validateInvoicesAncillaryCosts($invoices->getCollection());
 
-        // TODO: Need to be optimized with less queries and write better logic
-        // TODO: Translation needed
-
-        $blockedAncillaryCostsMap = [];
-        foreach ($ancillaryCosts as $ancillaryCost) {
-            $validation = AncillaryCostService::getChangeStatusValidation($ancillaryCost);
-            if (! ($validation['allowed'] ?? false)) {
-                $blockedAncillaryCostsMap[$ancillaryCost->id] = $validation['message'] ?? $validation['reason'] ?? __('Not allowed to resolve this ancillary cost.');
-            }
-            $invoices->push($ancillaryCost->invoice);
-        }
-
-        $invoices->getCollection()->transform(function ($invoice) use ($blockedAncillaryCostsMap) {
-            $blockedReasons = $invoice->ancillaryCosts
-                ->filter(fn ($ac) => isset($blockedAncillaryCostsMap[$ac->id]))
-                ->map(fn ($ac) => $blockedAncillaryCostsMap[$ac->id])
-                ->unique();
-
-            $invoice->allowedAncillaryCostsToResolve = $blockedReasons->isEmpty();
-            $invoice->allowedAncillaryCostsToResolveReason = $blockedReasons->implode("\n") ?: null;
-
-            return $invoice;
-        });
-
-        $canApproveAllInactiveInvoices = $invoices->every(fn ($invoice) => $invoice->allowedAncillaryCostsToResolve);
-
-        return view('invoices.inactive', compact('invoices', 'canApproveAllInactiveInvoices'));
+        return view('invoices.inactive', compact('invoices'));
     }
 
-    public function approveInactiveInvoices(\App\Services\GroupActionService $groupActionService)
+    public function approveInactiveInvoices()
     {
-        $groupActionService->approveInactiveInvoices(app(InvoiceService::class), app(\App\Services\AncillaryCostService::class));
+        $this->groupActionService->approveInactiveInvoices($this->invoiceService, $this->ancillaryCostService);
 
         return redirect()->route('invoices.index', ['invoice_type' => InvoiceType::BUY])->with('success', __('Inactive invoices approved successfully.'));
     }
 
-    public function conflicts(Invoice $invoice, \App\Services\GroupActionService $groupActionService)
+    public function conflicts(Invoice $invoice)
     {
-        [$invoicesConflicts, $ancillaryConflicts, $productsConflicts] = $groupActionService->findAllConflictsRecursively($invoice, true);
+        [$invoicesConflicts, $ancillaryConflicts, $productsConflicts] = $this->groupActionService->findAllConflictsRecursively($invoice, true);
         $conflicts = [
             'invoices' => $invoicesConflicts,
             'ancillaryCosts' => $ancillaryConflicts,
@@ -562,9 +545,9 @@ class InvoiceController extends Controller
         return view('invoices.conflicts.group', compact('invoice', 'conflicts', 'allowedToResolve'));
     }
 
-    public function showMoreConflictsByType(Invoice $invoice, string $type, \App\Services\GroupActionService $groupActionService)
+    public function showMoreConflictsByType(Invoice $invoice, string $type)
     {
-        [$invoicesConflicts, $ancillaryConflicts, $productsConflicts] = $groupActionService->findAllConflictsRecursively($invoice, true);
+        [$invoicesConflicts, $ancillaryConflicts, $productsConflicts] = $this->groupActionService->findAllConflictsRecursively($invoice, true);
 
         $conflicts = match ($type) {
             'invoices' => $invoicesConflicts,
@@ -576,10 +559,41 @@ class InvoiceController extends Controller
         return view('invoices.conflicts.more', compact('invoice', 'conflicts', 'type'));
     }
 
-    public function groupAction(Invoice $invoice, \App\Services\GroupActionService $groupActionService)
+    public function groupAction(Invoice $invoice)
     {
-        $groupActionService->groupAction($invoice, app(InvoiceService::class), app(\App\Services\AncillaryCostService::class));
+        $this->groupActionService->groupAction($invoice, $this->invoiceService, $this->ancillaryCostService);
 
         return redirect()->route('invoices.show', $invoice);
+    }
+
+    private function validateInvoicesAncillaryCosts($invoices)
+    {
+        $allAncillaryCosts = $invoices->pluck('ancillaryCosts')->flatten();
+        $blockedMap = $this->getBlockedAncillaryCostsMap($allAncillaryCosts);
+
+        $invoices->transform(function ($invoice) use ($blockedMap) {
+            $blockedReasons = $invoice->ancillaryCosts
+                ->filter(fn ($ac) => isset($blockedMap[$ac->id]))
+                ->map(fn ($ac) => $blockedMap[$ac->id])
+                ->unique();
+
+            $invoice->allowedAncillaryCostsToResolve = $blockedReasons->isEmpty();
+            $invoice->allowedAncillaryCostsToResolveReason = $blockedReasons->implode("\n") ?: null;
+
+            return $invoice;
+        });
+    }
+
+    private function getBlockedAncillaryCostsMap($ancillaryCosts): array
+    {
+        $map = [];
+        foreach ($ancillaryCosts as $ancillaryCost) {
+            $validation = AncillaryCostService::getChangeStatusValidation($ancillaryCost);
+            if (! ($validation['allowed'] ?? false)) {
+                $map[$ancillaryCost->id] = $validation['message'] ?? $validation['reason'] ?? __('Not allowed to resolve this ancillary cost.');
+            }
+        }
+
+        return $map;
     }
 }
