@@ -14,7 +14,7 @@ class AncillaryCostController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:ancillary-costs.view', ['only' => ['index']]);
+        $this->middleware('permission:ancillary-costs.view', ['only' => ['index', 'show']]);
         $this->middleware('permission:ancillary-costs.create', ['only' => ['create', 'store']]);
         $this->middleware('permission:ancillary-costs.edit', ['only' => ['edit', 'update']]);
         $this->middleware('permission:ancillary-costs.delete', ['only' => ['destroy']]);
@@ -27,6 +27,21 @@ class AncillaryCostController extends Controller
         $ancillaryCosts->appends($request->query());
 
         return view('ancillaryCosts.index', compact('ancillaryCosts'));
+    }
+
+    public function show(AncillaryCost $ancillaryCost)
+    {
+        $ancillaryCost->load([
+            'invoice',
+            'document',
+            'customer',
+            'items.product',
+        ]);
+
+        $editDeleteStatus = AncillaryCostService::getEditDeleteStatus($ancillaryCost);
+        $changeStatusValidation = AncillaryCostService::getChangeStatusValidation($ancillaryCost);
+
+        return view('ancillaryCosts.show', compact('ancillaryCost', 'editDeleteStatus', 'changeStatusValidation'));
     }
 
     public function create()

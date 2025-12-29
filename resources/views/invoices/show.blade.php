@@ -268,15 +268,9 @@
                                     <tr class="hover">
                                         <td class="px-4 py-3">{{ $index + 1 }}</td>
                                         <td class="px-4 py-3">
-                                            @if ($docId)
-                                                @can('documents.show')
-                                                    <a class="link" href="{{ route('documents.show', $docId) }}">{{ formatDocumentNumber($docNumber ?? $docId) }}</a>
-                                                @else
-                                                    <span class="text-gray-500">{{ formatDocumentNumber($docNumber ?? $docId) }}</span>
-                                                @endcan
-                                            @else
-                                                <span class="text-gray-500">—</span>
-                                            @endif
+                                            <a class="link" href="{{ route('ancillary-costs.show', $ancillaryCost) }}">
+                                                {{ formatDocumentNumber($docNumber ?? ($docId ?? $ancillaryCost->id)) }}
+                                            </a>
                                         </td>
                                         <td class="px-4 py-3">{{ $ancillaryCost->type?->label() ?? '—' }}</td>
                                         <td class="px-4 py-3">{{ $ancillaryCost->date ? formatDate($ancillaryCost->date) : '—' }}</td>
