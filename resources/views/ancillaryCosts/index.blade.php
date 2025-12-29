@@ -19,8 +19,7 @@
                                 <span class="text-gray-500">{{ $status->label() }} :
                                     {{ convertToFarsi($ancillaryCosts->where('status', $status)->count()) }}</span>
                             @else
-                                <a class="link link-hover"
-                                    href="{{ route('ancillary-costs.index', ['status' => $status]) }}">
+                                <a class="link link-hover" href="{{ route('ancillary-costs.index', ['status' => $status]) }}">
                                     {{ $status->label() }} :
                                     {{ convertToFarsi($ancillaryCosts->where('status', $status)->count()) }}
                                 </a>
@@ -143,32 +142,8 @@
                 </div>
             @endif
 
-            @if ($ancillaryCosts->hasPages())
-                <div class="join">
-                    {{-- Previous Page Link --}}
-                    @if ($ancillaryCosts->onFirstPage())
-                        <input class="join-item btn btn-square hidden " type="radio" disabled>
-                    @else
-                        <a href="{{ $ancillaryCosts->previousPageUrl() }}" class="join-item btn btn-square">&lsaquo;</a>
-                    @endif
+            {{ $ancillaryCosts->withQueryString()->links() }}
 
-                    {{-- Pagination Elements --}}
-                    @foreach ($ancillaryCosts->getUrlRange(1, $ancillaryCosts->lastPage()) as $page => $url)
-                        @if ($page == $ancillaryCosts->currentPage())
-                            <a href="{{ $url }}" class="join-item btn btn-square bg-blue-500 text-white">{{ $page }}</a>
-                        @else
-                            <a href="{{ $url }}" class="join-item btn btn-square">{{ $page }}</a>
-                        @endif
-                    @endforeach
-
-                    {{-- Next Page Link --}}
-                    @if ($ancillaryCosts->hasMorePages())
-                        <a href="{{ $ancillaryCosts->nextPageUrl() }}" class="join-item btn btn-square">&rsaquo;</a>
-                    @else
-                        <input class="join-item btn btn-square hidden" type="radio" disabled>
-                    @endif
-                </div>
-            @endif
         </div>
     </div>
 </x-app-layout>

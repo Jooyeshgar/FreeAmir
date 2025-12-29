@@ -43,7 +43,13 @@ class GroupActionService
         }
 
         $conflictsToResolve = array_merge($invoicesConflicts, $ancillaryConflicts);
-        $sortedConflictsToResolve = collect($conflictsToResolve)->sortByDesc(fn ($conflict) => $conflict->date)->values()->all();
+        $sortedConflictsToResolve = collect($conflictsToResolve)->sortByDesc(function ($conflict) {
+            $date = $conflict->date instanceof \Carbon\Carbon ? $conflict->date->format('Y-m-d') : $conflict->date;
+            // Process AncillaryCost before Invoice if dates are equal (for unapproving)
+            $priority = $conflict instanceof AncillaryCost ? '2' : '1';
+
+            return $date.$priority;
+        })->values()->all();
 
         foreach ($sortedConflictsToResolve as $conflict) {
             if ($conflict instanceof Invoice) {
@@ -53,11 +59,14 @@ class GroupActionService
                     $invoiceService->changeInvoiceStatus($conflict, 'unapproved');
                     $conflict->status = \App\Enums\InvoiceAncillaryCostStatus::APPROVED_INACTIVE;
                     $conflict->save();
+                    dump('Invoice ID '.$conflict->id.' unapproved');
+                } else {
+                    dd($decision);
                 }
             } elseif ($conflict instanceof AncillaryCost) {
                 $validation = $ancillaryCostService->getChangeStatusValidation($conflict);
 
-                if (! $validation['allowed']) {
+                if ($validation['allowed']) {
                     $ancillaryCostService->changeAncillaryCostStatus($conflict, 'unapprove');
                     $conflict->status = \App\Enums\InvoiceAncillaryCostStatus::APPROVED_INACTIVE;
                     $conflict->save();
@@ -114,6 +123,10 @@ class GroupActionService
             }
 
             foreach ($model->ancillaryCosts as $ancillaryCost) {
+                if (! $ancillaryCost->status->isApproved()) {
+                    continue;
+                }
+
                 $validation = AncillaryCostService::getChangeStatusValidation($ancillaryCost);
 
                 if (! $validation['allowed']) {

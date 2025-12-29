@@ -24,8 +24,7 @@
                                     </a>
                                 </td>
                                 <td>
-                                    <a href="{{ route('customers.show', $invoice->customer) }}"
-                                        class="text-primary link link-hover">
+                                    <a href="{{ route('customers.show', $invoice->customer) }}" class="text-primary link link-hover">
                                         {{ $invoice->customer->name }}
                                     </a>
                                 </td>
@@ -39,13 +38,11 @@
                                         {{ $ancillaryCost->type->label() }}
                                     </td>
                                     <td>
-                                        <a href="{{ route('invoices.show', $ancillaryCost->invoice) }}"
-                                            class="text-primary link link-hover">
+                                        <a href="{{ route('invoices.show', $ancillaryCost->invoice) }}" class="text-primary link link-hover">
                                             {{ formatDocumentNumber($ancillaryCost->invoice->number) }}</a>
                                     </td>
                                     <td>
-                                        <a href="{{ route('customers.show', $ancillaryCost->customer) }}"
-                                            class="text-primary link link-hover">
+                                        <a href="{{ route('customers.show', $ancillaryCost->customer) }}" class="text-primary link link-hover">
                                             {{ $ancillaryCost->customer->name ?? '' }}
                                         </a>
                                     </td>

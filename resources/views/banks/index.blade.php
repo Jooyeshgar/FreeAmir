@@ -23,10 +23,8 @@
                             <tr>
                                 <td class="px-4 py-2">{{ $bank->name }}</td>
                                 <td class="px-4 py-2">
-                                    <a href="{{ route('banks.edit', $bank) }}"
-                                        class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                    <form action="{{ route('banks.destroy', $bank) }}" method="POST"
-                                        class="inline-block">
+                                    <a href="{{ route('banks.edit', $bank) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                    <form action="{{ route('banks.destroy', $bank) }}" method="POST" class="inline-block">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
@@ -37,33 +35,8 @@
                     </tbody>
                 </table>
 
-                @if ($banks->hasPages())
-                    <div class="join">
-                        {{-- Previous Page Link --}}
-                        @if ($banks->onFirstPage())
-                            <input class="join-item btn btn-square" type="radio" disabled>
-                        @else
-                            <a href="{{ $banks->previousPageUrl() }}" class="join-item btn btn-square">&lsaquo;</a>
-                        @endif
+                {{ $banks->links() }}
 
-                        {{-- Pagination Elements --}}
-                        @foreach ($banks->links() as $link)
-                            @if (is_string($link))
-                                <input class="join-item btn btn-square" type="radio" disabled>
-                            @else
-                                <a href="{{ $link['url'] }}"
-                                    class="join-item btn btn-square">{{ $link['label'] }}</a>
-                            @endif
-                        @endforeach
-
-                        {{-- Next Page Link --}}
-                        @if ($banks->hasMorePages())
-                            <a href="{{ $banks->nextPageUrl() }}" class="join-item btn btn-square">&rsaquo;</a>
-                        @else
-                            <input class="join-item btn btn-square" type="radio" disabled>
-                        @endif
-                    </div>
-                @endif
             </div>
         </div>
 </x-app-layout>

@@ -172,29 +172,8 @@
                 </div>
             @endif
 
-            @if ($invoices->hasPages())
-                <div class="join">
-                    @if ($invoices->onFirstPage())
-                        <input class="join-item btn btn-square hidden " type="radio" disabled>
-                    @else
-                        <a href="{{ $invoices->previousPageUrl() }}" class="join-item btn btn-square">&lsaquo;</a>
-                    @endif
+            {{ $invoices->withQueryString()->links() }}
 
-                    @foreach ($invoices->getUrlRange(1, $invoices->lastPage()) as $page => $url)
-                        @if ($page == $invoices->currentPage())
-                            <a href="{{ $url }}" class="join-item btn btn-square bg-blue-500 text-white">{{ $page }}</a>
-                        @else
-                            <a href="{{ $url }}" class="join-item btn btn-square">{{ $page }}</a>
-                        @endif
-                    @endforeach
-
-                    @if ($invoices->hasMorePages())
-                        <a href="{{ $invoices->nextPageUrl() }}" class="join-item btn btn-square">&rsaquo;</a>
-                    @else
-                        <input class="join-item btn btn-square hidden" type="radio" disabled>
-                    @endif
-                </div>
-            @endif
         </div>
     </div>
 

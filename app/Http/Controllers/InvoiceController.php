@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\InvoiceAncillaryCostStatus;
 use App\Enums\InvoiceType;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\AncillaryCost;
@@ -13,6 +14,7 @@ use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Service;
 use App\Models\ServiceGroup;
+use App\Services\AncillaryCostService;
 use App\Services\InvoiceService;
 use Illuminate\Http\Request;
 use PDF;
@@ -506,16 +508,16 @@ class InvoiceController extends Controller
 
     public function inactiveInvoices()
     {
-        $invoices = Invoice::where('status', \App\Enums\InvoiceAncillaryCostStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('number')->paginate(10);
+        $invoices = Invoice::where('status', InvoiceAncillaryCostStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('number')->paginate(10);
 
-        $ancillaryCosts = AncillaryCost::where('status', \App\Enums\InvoiceAncillaryCostStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('id')->get();
+        $ancillaryCosts = AncillaryCost::where('status', InvoiceAncillaryCostStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('id')->get();
 
         // TODO: Need to be optimized with less queries and write better logic
         // TODO: Translation needed
 
         $blockedAncillaryCostsMap = [];
         foreach ($ancillaryCosts as $ancillaryCost) {
-            $validation = \App\Services\AncillaryCostService::getChangeStatusValidation($ancillaryCost);
+            $validation = AncillaryCostService::getChangeStatusValidation($ancillaryCost);
             if (! ($validation['allowed'] ?? false)) {
                 $blockedAncillaryCostsMap[$ancillaryCost->id] = $validation['message'] ?? $validation['reason'] ?? __('Not allowed to resolve this ancillary cost.');
             }

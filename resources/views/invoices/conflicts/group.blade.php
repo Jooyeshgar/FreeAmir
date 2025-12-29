@@ -32,7 +32,7 @@
                                     'type' => $type,
                                 ]) }}"
                                     class="btn btn-sm btn-primary">
-                                    {{ __('Show All ' . ucfirst($type)) }}
+                                    {{ __('Show All ' . ucfirst($type)) }} ({{ $conflict->total() }})
                                 </a>
                             </td>
                         </tr>
