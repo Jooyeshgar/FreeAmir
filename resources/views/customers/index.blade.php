@@ -40,7 +40,7 @@
                             <td class="px-4 py-2">{{ $customer->subject?->formattedCode() }}</td>
                             <td class="px-4 py-2"><a href="{{ route('customers.show', $customer) }}">{{ $customer->name }}</a></td>
                             <td class="px-4 py-2"><a
-                                    href="{{ route('transactions.index', ['subject_id' => $customer->subject->id]) }}">{{ app\Services\SubjectService::sumSubject($customer->subject->id) }}</a>
+                                    href="{{ route('transactions.index', ['subject_id' => $customer->subject->id]) }}">{{ app\Services\SubjectService::sumSubject($customer->subject) }}</a>
                             </td>
                             <td class="px-4 py-2">{{ $customer->phone }}</td>
                             <td class="px-4 py-2">{{ $customer->group ? $customer->group->name : '' }}</td>
