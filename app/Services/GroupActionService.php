@@ -2,34 +2,53 @@
 
 namespace App\Services;
 
+use App\Enums\InvoiceStatus;
 use App\Models\AncillaryCost;
 use App\Models\Invoice;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class GroupActionService
 {
     public function approveInactiveInvoices(InvoiceService $invoiceService, AncillaryCostService $ancillaryCostService): void
     {
-        $invoices = Invoice::where('status', \App\Enums\InvoiceStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('number')
+        $invoices = Invoice::where('status', InvoiceStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('number')
             ->orWhereHas('ancillaryCosts', function ($query) {
-                $query->where('status', \App\Enums\InvoiceStatus::APPROVED_INACTIVE);
+                $query->where('status', InvoiceStatus::APPROVED_INACTIVE);
             })->get();
 
-        foreach ($invoices as $invoice) {
-            $decision = $invoiceService->getChangeStatusValidation($invoice);
+        DB::transaction(function () use ($invoices, $invoiceService, $ancillaryCostService) {
+            foreach ($invoices as $invoice) {
+                $decision = $invoiceService->getChangeStatusValidation($invoice);
 
-            if (! $decision->hasErrors()) {
+                if ($decision->hasErrors()) {
+                    $conflicts = collect($decision->conflictsItems)
+                        ->map(fn ($conflict) => $this->formatConflictForMessage($conflict))
+                        ->implode(', ');
+
+                    throw ValidationException::withMessages([
+                        'invoice' => [__('Invoice #').$invoice->number.' '.__('cannot be approved because it has conflicts with').': '.$conflicts],
+                    ]);
+                }
+
                 $invoiceService->changeInvoiceStatus($invoice, 'approved');
-            }
 
-            foreach ($invoice->ancillaryCosts as $ancillaryCost) {
-                $validation = $ancillaryCostService->getChangeStatusValidation($ancillaryCost);
-                if ($validation['allowed']) {
+                foreach ($invoice->ancillaryCosts as $ancillaryCost) {
+                    $validation = $ancillaryCostService->getChangeStatusValidation($ancillaryCost);
+
+                    if (! $validation['allowed']) {
+                        $reason = $validation['reason'] ?? __('unknown reason');
+                        throw ValidationException::withMessages([
+                            'ancillary_cost' => [__('Invoice #').$invoice->number.': '.__('Ancillary Cost').' #'.$ancillaryCost->id.' '.__('cannot be approved due to').': '.$reason],
+                        ]);
+                    }
+
                     $ancillaryCostService->changeAncillaryCostStatus($ancillaryCost, 'approve');
                 }
             }
-        }
+        });
     }
 
     public function groupAction(Invoice $invoice, InvoiceService $invoiceService, AncillaryCostService $ancillaryCostService): void
@@ -211,5 +230,24 @@ class GroupActionService
     private function resolveModel(Model $model): Model
     {
         return $model->exists ? $model::findOrFail($model->id) : $model;
+    }
+
+    private function formatConflictForMessage(mixed $conflict): string
+    {
+        if ($conflict instanceof Invoice) {
+            return __('Invoice #').$conflict->number;
+        }
+
+        if ($conflict instanceof AncillaryCost) {
+            return __('Ancillary Cost').' #'.$conflict->id;
+        }
+
+        if (is_array($conflict) && isset($conflict['id'])) {
+            $type = $conflict['type'] ?? __('Unknown');
+
+            return ucfirst($type).' #'.$conflict['id'];
+        }
+
+        return __('Unknown conflict');
     }
 }

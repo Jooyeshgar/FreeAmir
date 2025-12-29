@@ -394,7 +394,8 @@ class AncillaryCostService
             ->whereHas('items', fn ($q) => $q->whereIn('itemable_id', $productIds)->where('itemable_type', Product::class));
 
         if ($query->exists()) {
-            throw new Exception(__('Cannot change ancillary cost status because there are subsequent approved invoices for the same products. Please unapprove those invoices first.'), 400);
+            $invoiceNumbers = $query->pluck('number')->map(fn ($number) => '#'.formatDocumentNumber($number))->implode(', ');
+            throw new Exception(__('Cannot change ancillary cost status because there are subsequent approved invoices for the same products: :invoices. Please unapprove those invoices first.', ['invoices' => $invoiceNumbers]), 400);
         }
     }
 
