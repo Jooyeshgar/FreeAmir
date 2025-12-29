@@ -54,193 +54,28 @@
         </div>
 
         <div class="card-body">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div class="stats shadow bg-gradient-to-br from-success/10 to-success/5 border border-success/20">
-                    <div class="stat">
-                        <div class="stat-title text-success">{{ __('Quantity') }}</div>
-                        <div class="stat-value text-success">
-                            {{ isset($product->quantity) ? formatNumber($product->quantity) : '0' }}</div>
-                        <div class="stat-desc">{{ __('In Stock') }}</div>
-                    </div>
-                </div>
-
-                <div class="stats shadow bg-gradient-to-br from-warning/10 to-warning/5 border border-warning/20">
-                    <div class="stat">
-                        <div class="stat-title text-warning">{{ __('Quantity warning') }}</div>
-                        <div class="stat-value text-warning text-2xl">
-                            {{ isset($product->quantity_warning) ? formatNumber($product->quantity_warning) : '0' }}
-                        </div>
-                        <div class="stat-desc">{{ __('Alert Level') }}</div>
-                    </div>
-                </div>
-
-                <div class="stats shadow bg-gradient-to-br from-error/10 to-error/5 border border-error/20">
-                    <div class="stat">
-                        <div class="stat-title text-error">{{ __('Oversell') }}</div>
-                        <div class="stat-value text-error text-2xl">
-                            {{ isset($product->oversell) ? formatNumber($product->oversell) : '0' }}</div>
-                        <div class="stat-desc">{{ __('Allowed') }}</div>
-                    </div>
-                </div>
-
-                <div class="stats shadow bg-gradient-to-br from-info/10 to-info/5 border border-info/20">
-                    <div class="stat">
-                        <div class="stat-title text-info">{{ __('VAT') }}</div>
-                        <div class="stat-value text-info text-2xl">
-                            {{ isset($product->vat) ? formatNumber($product->vat) : '0' }}%</div>
-                        <div class="stat-desc">{{ __('Tax Rate') }}</div>
-                    </div>
-                </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
+                <x-stat-card :title="__('Quantity')" :value="formatNumber($product->quantity ?? 0)" :description="__('In Stock')" type="success" icon="quantity" />
+                <x-stat-card :title="__('Quantity warning')" :value="formatNumber($product->quantity_warning ?? 0)" :description="__('Alert Level')" type="warning" icon="warning" />
+                <x-stat-card :title="__('Oversell')" :value="formatNumber($product->oversell ?? 0)" :description="__('Allowed')" type="error" icon="oversell" />
+                <x-stat-card :title="__('VAT')" :value="formatNumber($product->vat ?? 0) . '%'" :description="__('Tax Rate')" type="info" icon="vat" />
             </div>
 
             <div class="divider text-lg font-semibold">{{ __('Pricing Information') }}</div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-                <div class="card bg-base-200 shadow">
-                    <div class="card-body p-4">
-                        <h3 class="card-title text-sm text-gray-500">{{ __('Selling Price') }}
-                            ({{ config('amir.currency') ?? __('Rial') }})</h3>
-                        <p class="text-2xl font-bold text-secondary">
-                            {{ isset($product->selling_price) ? formatNumber($product->selling_price) : '0' }}
-                        </p>
-                    </div>
-                </div>
-
-                <div class="card bg-base-200 shadow">
-                    <div class="card-body p-4">
-                        <h3 class="card-title text-sm text-gray-500">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            {{ __('Average Cost') }} ({{ config('amir.currency') ?? __('Rial') }})
-                        </h3>
-                        <p class="text-2xl font-bold text-accent" title="{{ __('Weighted moving average cost') }}">
-                            {{ isset($product->average_cost) ? formatNumber($product->average_cost) : '0' }}
-                        </p>
-                    </div>
-                </div>
-
-                <div class="card bg-base-200 shadow">
-                    <div class="card-body p-4">
-                        <h3 class="card-title text-sm text-gray-500">
-                            {{ __('Last Cost Of Goods') }} ({{ config('amir.currency') ?? __('Rial') }})
-                        </h3>
-                        <p class="text-2xl font-bold text-sky-500">
-                            {{ isset($product->lastCOG) ? formatNumber($product->lastCOG) : '0' }}
-                        </p>
-                    </div>
-                </div>
-
-                <div class="card bg-base-200 shadow">
-                    <div class="card-body p-4">
-                        <h3 class="card-title text-sm text-gray-500">
-                            {{ __('Sales profit') }} ({{ config('amir.currency') ?? __('Rial') }})
-                        </h3>
-                        <p class="text-2xl font-bold text-green-700">
-                            {{ isset($product->salesProfit) ? formatNumber($product->salesProfit) : '0' }}
-                        </p>
-                    </div>
-                </div>
-
-                <div class="card bg-base-200 shadow">
-                    <div class="card-body p-4">
-                        <h3 class="card-title text-sm text-gray-500">{{ __('Discount Formula') }}</h3>
-                        <p class="text-xl font-semibold">
-                            {{ $product->discount_formula ?? __('None') }}
-                        </p>
-                    </div>
-                </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-3">
+                <x-stat-card :title="__('Selling Price')" :value="formatNumber($product->selling_price ?? 0)" type="info" />
+                <x-stat-card :title="__('Average Cost')" :value="formatNumber($product->average_cost ?? 0)" type="info" />
+                <x-stat-card :title="__('Last Cost Of Goods')" :value="formatNumber($product->lastCOG ?? 0)" type="info" />
+                <x-stat-card :title="__('Sales profit')" :value="formatNumber($product->salesProfit ?? 0)" type="success" />
+                <x-stat-card :title="__('Discount Formula')" :value="$product->discount_formula ?? __('None')" type="info" />
             </div>
             @can('reports.ledger')
                 <div class="divider text-lg font-semibold">{{ __('Account Subjects') }}</div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    <div
-                        class="card bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-green-200 dark:border-green-700">
-                        <div class="card-body p-5">
-                            <div class="flex items-center gap-2 mb-3">
-                                <div class="bg-green-500 p-2 rounded-lg">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                </div>
-                                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Income Subject') }}</h3>
-                            </div>
-                            <a href="{{ route('transactions.index', ['subject_id' => $product->incomeSubject->id]) }}"
-                                class="btn btn-sm btn-success gap-2 w-full hover:brightness-110 transition-all">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                                <span class="text-lg font-bold">{{ formatNumber(\App\Services\SubjectService::sumSubject($product->incomeSubject)) }}</span>
-                                <span class="text-xs">{{ config('amir.currency') ?? __('Rial') }}</span>
-                            </a>
-                        </div>
-                    </div>
-                    <div
-                        class="card bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-red-200 dark:border-red-700">
-                        <div class="card-body p-5">
-                            <div class="flex items-center gap-2 mb-3">
-                                <div class="bg-red-500 p-2 rounded-lg">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                                    </svg>
-                                </div>
-                                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('COGS Subject') }}</h3>
-                            </div>
-                            <a href="{{ route('transactions.index', ['subject_id' => $product->cogsSubject->id]) }}"
-                                class="btn btn-sm btn-error gap-2 w-full hover:brightness-110 transition-all">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                                <span class="text-lg font-bold">{{ formatNumber(\App\Services\SubjectService::sumSubject($product->cogsSubject)) }}</span>
-                                <span class="text-xs">{{ config('amir.currency') ?? __('Rial') }}</span>
-                            </a>
-                        </div>
-                    </div>
-                    <div
-                        class="card bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-blue-200 dark:border-blue-700">
-                        <div class="card-body p-5">
-                            <div class="flex items-center gap-2 mb-3">
-                                <div class="bg-blue-500 p-2 rounded-lg">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                    </svg>
-                                </div>
-                                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Inventory Subject') }}</h3>
-                            </div>
-
-                            <a href="{{ route('transactions.index', ['subject_id' => $product->inventorySubject->id]) }}"
-                                class="btn btn-sm btn-info gap-2 w-full hover:brightness-110 transition-all">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                                <span class="text-lg font-bold">{{ formatNumber(\App\Services\SubjectService::sumSubject($product->inventorySubject)) }}</span>
-                                <span class="text-xs">{{ config('amir.currency') ?? __('Rial') }}</span>
-                            </a>
-                        </div>
-                    </div>
-                    <div
-                        class="card bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-orange-200 dark:border-orange-700">
-                        <div class="card-body p-5">
-                            <div class="flex items-center gap-2 mb-3">
-                                <div class="bg-orange-500 p-2 rounded-lg">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" />
-                                    </svg>
-                                </div>
-                                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Sales Returns Subject') }}</h3>
-                            </div>
-                            <a href="{{ route('transactions.index', ['subject_id' => $product->salesReturnsSubject->id]) }}"
-                                class="btn btn-sm btn-warning gap-2 w-full hover:brightness-110 transition-all">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                                <span class="text-lg font-bold">{{ formatNumber(\App\Services\SubjectService::sumSubject($product->salesReturnsSubject)) }}</span>
-                                <span class="text-xs">{{ config('amir.currency') ?? __('Rial') }}</span>
-                            </a>
-                        </div>
-                    </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-3">
+                    <x-stat-card-link :title="__('Income Subject')" :value="formatNumber(\App\Services\SubjectService::sumSubject($product->incomeSubject))" :link="route('transactions.index', ['subject_id' => $product->incomeSubject->id])" :currency="config('amir.currency') ?? __('Rial')" type="success" icon="income" />
+                    <x-stat-card-link :title="__('COGS Subject')" :value="formatNumber(\App\Services\SubjectService::sumSubject($product->cogsSubject))" :link="route('transactions.index', ['subject_id' => $product->cogsSubject->id])" :currency="config('amir.currency') ?? __('Rial')" type="error" icon="cogs" />
+                    <x-stat-card-link :title="__('Inventory Subject')" :value="formatNumber(\App\Services\SubjectService::sumSubject($product->inventorySubject))" :link="route('transactions.index', ['subject_id' => $product->inventorySubject->id])" :currency="config('amir.currency') ?? __('Rial')" type="info" icon="inventory" />
+                    <x-stat-card-link :title="__('Sales Returns Subject')" :value="formatNumber(\App\Services\SubjectService::sumSubject($product->salesReturnsSubject))" :link="route('transactions.index', ['subject_id' => $product->salesReturnsSubject->id])" :currency="config('amir.currency') ?? __('Rial')" type="warning" icon="returns" />
                 </div>
             @endcan
             @if (isset($product->description) && $product->description)
