@@ -50,17 +50,17 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                @foreach (\App\Enums\InvoiceAncillaryCostStatus::cases() as $status)
+                @foreach (\App\Enums\InvoiceStatus::cases() as $status)
                     @php
                         $count = $statusCounts->get($status->value, 0);
                         $isActive = request('status') == $status->value;
                         $url = route('invoices.index', array_merge(request()->except('page'), ['status' => $status->value]));
 
                         $type = match ($status) {
-                            \App\Enums\InvoiceAncillaryCostStatus::APPROVED => 'success',
-                            \App\Enums\InvoiceAncillaryCostStatus::UNAPPROVED => 'warning',
-                            \App\Enums\InvoiceAncillaryCostStatus::PENDING => 'info',
-                            \App\Enums\InvoiceAncillaryCostStatus::APPROVED_INACTIVE => 'error',
+                            \App\Enums\InvoiceStatus::APPROVED => 'success',
+                            \App\Enums\InvoiceStatus::UNAPPROVED => 'warning',
+                            \App\Enums\InvoiceStatus::PENDING => 'info',
+                            \App\Enums\InvoiceStatus::APPROVED_INACTIVE => 'error',
                         };
                     @endphp
 

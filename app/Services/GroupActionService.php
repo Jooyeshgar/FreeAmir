@@ -11,9 +11,9 @@ class GroupActionService
 {
     public function approveInactiveInvoices(InvoiceService $invoiceService, AncillaryCostService $ancillaryCostService): void
     {
-        $invoices = Invoice::where('status', \App\Enums\InvoiceAncillaryCostStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('number')
+        $invoices = Invoice::where('status', \App\Enums\InvoiceStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('number')
             ->orWhereHas('ancillaryCosts', function ($query) {
-                $query->where('status', \App\Enums\InvoiceAncillaryCostStatus::APPROVED_INACTIVE);
+                $query->where('status', \App\Enums\InvoiceStatus::APPROVED_INACTIVE);
             })->get();
 
         foreach ($invoices as $invoice) {
@@ -57,7 +57,7 @@ class GroupActionService
 
                 if (! $decision->hasErrors()) {
                     $invoiceService->changeInvoiceStatus($conflict, 'unapproved');
-                    $conflict->status = \App\Enums\InvoiceAncillaryCostStatus::APPROVED_INACTIVE;
+                    $conflict->status = \App\Enums\InvoiceStatus::APPROVED_INACTIVE;
                     $conflict->save();
                     dump('Invoice ID '.$conflict->id.' unapproved');
                 } else {
@@ -68,7 +68,7 @@ class GroupActionService
 
                 if ($validation['allowed']) {
                     $ancillaryCostService->changeAncillaryCostStatus($conflict, 'unapprove');
-                    $conflict->status = \App\Enums\InvoiceAncillaryCostStatus::APPROVED_INACTIVE;
+                    $conflict->status = \App\Enums\InvoiceStatus::APPROVED_INACTIVE;
                     $conflict->save();
                 }
             }

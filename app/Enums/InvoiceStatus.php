@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum InvoiceAncillaryCostStatus: string
+enum InvoiceStatus: string
 {
     case PENDING = 'pending';
 

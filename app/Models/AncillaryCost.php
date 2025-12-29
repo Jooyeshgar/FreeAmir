@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AncillaryCostType;
-use App\Enums\InvoiceAncillaryCostStatus;
+use App\Enums\InvoiceStatus;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,7 +26,7 @@ class AncillaryCost extends Model
 
     protected $casts = [
         'type' => AncillaryCostType::class,
-        'status' => InvoiceAncillaryCostStatus::class,
+        'status' => InvoiceStatus::class,
         'date' => 'date',
         'number' => 'integer',
         'amount' => 'decimal:2',

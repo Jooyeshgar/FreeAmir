@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\DTO\InvoiceStatusDecision;
-use App\Enums\InvoiceAncillaryCostStatus;
+use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Exceptions\InvoiceServiceException;
 use App\Models\Invoice;
@@ -58,7 +58,7 @@ class InvoiceService
                 $createdDocument = DocumentService::createDocument($user, $documentData, $transactions);
 
                 $invoiceData['document_id'] = $createdDocument->id;
-                $invoiceData['status'] = InvoiceAncillaryCostStatus::APPROVED;
+                $invoiceData['status'] = InvoiceStatus::APPROVED;
 
                 $createdInvoice->update($invoiceData);
 
@@ -91,7 +91,7 @@ class InvoiceService
             $invoiceData['creator_id'] = $user->id;
             $invoiceData['date'] = $date;
             $invoiceData['title'] = $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? ''));
-            $invoiceData['status'] = InvoiceAncillaryCostStatus::PENDING;
+            $invoiceData['status'] = InvoiceStatus::PENDING;
 
             $createdInvoice = Invoice::create($invoiceData);
 
@@ -132,7 +132,7 @@ class InvoiceService
             DB::transaction(function () use ($invoice, $invoiceData, $items, &$createdDocument) {
                 $createdDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
 
-                $invoiceData['status'] = InvoiceAncillaryCostStatus::APPROVED;
+                $invoiceData['status'] = InvoiceStatus::APPROVED;
                 $invoiceData['document_id'] = $createdDocument->id;
                 unset($invoiceData['document_number']); // Don't update invoice with document_number
 
@@ -308,7 +308,7 @@ class InvoiceService
      */
     private function approveInvoice(Invoice $invoice): void
     {
-        $invoice->status = InvoiceAncillaryCostStatus::APPROVED;
+        $invoice->status = InvoiceStatus::APPROVED;
         $createdDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
         $invoice->document_id = $createdDocument->id;
         $invoice->update();
@@ -323,7 +323,7 @@ class InvoiceService
      */
     private function unapproveInvoice(Invoice $invoice): void
     {
-        $invoice->status = InvoiceAncillaryCostStatus::UNAPPROVED;
+        $invoice->status = InvoiceStatus::UNAPPROVED;
 
         if ($invoice->document) {
             DocumentService::deleteDocument($invoice->document_id);
@@ -403,8 +403,8 @@ class InvoiceService
         $productIds = self::getProductIdsFromInvoice($invoice);
 
         $nextStatus = $invoice->status->isApproved()
-            ? InvoiceAncillaryCostStatus::UNAPPROVED
-            : InvoiceAncillaryCostStatus::APPROVED;
+            ? InvoiceStatus::UNAPPROVED
+            : InvoiceStatus::APPROVED;
 
         return self::decideInvoiceStatusChange($invoice, $productIds, $nextStatus);
 
@@ -420,7 +420,7 @@ class InvoiceService
     /**
      * Validate that related invoices have the correct status before changing an invoice's status.
      */
-    private static function enforceInvoiceStatusRules(Invoice $invoice, array $productIds, InvoiceAncillaryCostStatus $nextStatus): Collection
+    private static function enforceInvoiceStatusRules(Invoice $invoice, array $productIds, InvoiceStatus $nextStatus): Collection
     {
         $conflicts = collect();
 
@@ -455,11 +455,11 @@ class InvoiceService
      * @param  Invoice  $invoice  The invoice being checked (excluded from search)
      * @param  array<int>  $productIds  Product IDs to search for in related invoices
      * @param  array  $invoiceTypes  Invoice types to include in the search (e.g. BUY, SELL)
-     * @param  InvoiceAncillaryCostStatus  $nextStatus  Status value to change to
+     * @param  InvoiceStatus  $nextStatus  Status value to change to
      *
      * @throws Exception If one or more related invoices are found that would prevent the status change
      */
-    private static function findConflictingInvoices(Invoice $invoice, array $productIds, InvoiceAncillaryCostStatus $nextStatus, ?array $invoiceTypes = []): Collection
+    private static function findConflictingInvoices(Invoice $invoice, array $productIds, InvoiceStatus $nextStatus, ?array $invoiceTypes = []): Collection
     {
         if (empty($productIds)) {
             return collect();
@@ -479,7 +479,7 @@ class InvoiceService
         $query->whereHas('items', fn ($q) => $q->where('itemable_type', Product::class)
             ->whereIn('itemable_id', $productIds)
         )
-            ->where('status', InvoiceAncillaryCostStatus::APPROVED);
+            ->where('status', InvoiceStatus::APPROVED);
 
         // Return collection of invoices (no exception here)
         return $query->get(['id', 'invoice_type', 'number', 'date']);
@@ -506,7 +506,7 @@ class InvoiceService
         $query->whereHas('items', fn ($q) => $q->where('itemable_type', Product::class)
             ->whereIn('itemable_id', $productIds)
         )
-            ->where('status', '!=', InvoiceAncillaryCostStatus::APPROVED);
+            ->where('status', '!=', InvoiceStatus::APPROVED);
 
         // Return collection of invoices (no exception here)
         return $query->get(['id', 'invoice_type', 'number', 'date']);
@@ -554,7 +554,7 @@ class InvoiceService
     {
         $productIds = self::getProductIdsFromInvoice($invoice);
 
-        $nextStatus = $nextStatus instanceof InvoiceAncillaryCostStatus ? $nextStatus : InvoiceAncillaryCostStatus::from($nextStatus);
+        $nextStatus = $nextStatus instanceof InvoiceStatus ? $nextStatus : InvoiceStatus::from($nextStatus);
 
         return self::decideInvoiceStatusChange($invoice, $productIds, $nextStatus);
     }
@@ -581,7 +581,7 @@ class InvoiceService
         }
 
         $query = Invoice::where('invoice_type', InvoiceType::SELL)
-            ->where('status', '!=', InvoiceAncillaryCostStatus::APPROVED)
+            ->where('status', '!=', InvoiceStatus::APPROVED)
             ->where(function ($q) use ($date, $invoiceNumber) {
                 $q->where('date', '<', $date)
                     ->orWhere(function ($sub) use ($date, $invoiceNumber) {
@@ -721,7 +721,7 @@ class InvoiceService
 
     private static function findConflictingUnapprovedAncillaryCostsForInvoiceWithNoAncillaryCosts(Invoice $invoice, array $productIds): Collection
     {
-        return \App\Models\AncillaryCost::where('status', '!=', InvoiceAncillaryCostStatus::APPROVED)
+        return \App\Models\AncillaryCost::where('status', '!=', InvoiceStatus::APPROVED)
             ->whereHas('items', function ($q) use ($productIds) {
                 $q->whereIn('product_id', $productIds);
             })->whereHas('invoice', function ($q) use ($invoice) {
@@ -733,7 +733,7 @@ class InvoiceService
 
     private static function findConflictingUnapprovedAncillaryCosts(Invoice $invoice, array $productIds): Collection
     {
-        return \App\Models\AncillaryCost::where('status', '!=', InvoiceAncillaryCostStatus::APPROVED)
+        return \App\Models\AncillaryCost::where('status', '!=', InvoiceStatus::APPROVED)
             ->whereNotIn('id', $invoice->ancillaryCosts->pluck('id')->toArray())
             ->whereHas('items', function ($q) use ($productIds) {
                 $q->whereIn('product_id', $productIds);
@@ -746,7 +746,7 @@ class InvoiceService
 
     private static function findConflictingApprovedAncillaryCosts(Invoice $invoice, array $productIds): Collection
     {
-        return \App\Models\AncillaryCost::where('status', InvoiceAncillaryCostStatus::APPROVED)
+        return \App\Models\AncillaryCost::where('status', InvoiceStatus::APPROVED)
             ->whereNotIn('id', $invoice->ancillaryCosts->pluck('id')->toArray())
             ->whereHas('items', function ($q) use ($productIds) {
                 $q->whereIn('product_id', $productIds);

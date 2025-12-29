@@ -12,7 +12,7 @@
             </div>
 
             <dl class="grid grid-cols-4 gap-3">
-                @foreach (\App\Enums\InvoiceAncillaryCostStatus::cases() as $status)
+                @foreach (\App\Enums\InvoiceStatus::cases() as $status)
                     <div class="bg-base-100 p-3 rounded-md border">
                         <dd class="text-sm font-semibold">
                             @if ($ancillaryCosts->where('status', $status)->count() == 0 || request('status') == $status->value)

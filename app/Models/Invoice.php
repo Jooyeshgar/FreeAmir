@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Enums\InvoiceAncillaryCostStatus;
+use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Model;
@@ -33,7 +33,7 @@ class Invoice extends Model
 
     protected $casts = [
         'invoice_type' => InvoiceType::class,
-        'status' => InvoiceAncillaryCostStatus::class,
+        'status' => InvoiceStatus::class,
         'date' => 'date',
         'ship_date' => 'date',
         'active' => 'boolean',

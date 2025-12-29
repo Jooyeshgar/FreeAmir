@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\InvoiceAncillaryCostStatus;
+use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\AncillaryCost;
@@ -508,9 +508,9 @@ class InvoiceController extends Controller
 
     public function inactiveInvoices()
     {
-        $invoices = Invoice::where('status', InvoiceAncillaryCostStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('number')->paginate(10);
+        $invoices = Invoice::where('status', InvoiceStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('number')->paginate(10);
 
-        $ancillaryCosts = AncillaryCost::where('status', InvoiceAncillaryCostStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('id')->get();
+        $ancillaryCosts = AncillaryCost::where('status', InvoiceStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('id')->get();
 
         // TODO: Need to be optimized with less queries and write better logic
         // TODO: Translation needed

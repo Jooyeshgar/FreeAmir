@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Enums\InvoiceAncillaryCostStatus;
+use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
 use App\Models\Company;
@@ -145,24 +145,24 @@ class InvoiceGroupActionTest extends TestCase
 
         $groupActionService->groupAction($buyInv2, app(InvoiceService::class), app(AncillaryCostService::class));
 
-        $this->assertEquals(InvoiceAncillaryCostStatus::APPROVED, $buyInv2->status);
-        $this->assertEquals(InvoiceAncillaryCostStatus::APPROVED_INACTIVE, $buyInv3->refresh()->status);
-        $this->assertEquals(InvoiceAncillaryCostStatus::APPROVED_INACTIVE, $buyInv4->refresh()->status);
-        $this->assertEquals(InvoiceAncillaryCostStatus::APPROVED_INACTIVE, $sellInv1->refresh()->status);
-        $this->assertEquals(InvoiceAncillaryCostStatus::APPROVED_INACTIVE, $sellInv2->refresh()->status);
+        $this->assertEquals(InvoiceStatus::APPROVED, $buyInv2->status);
+        $this->assertEquals(InvoiceStatus::APPROVED_INACTIVE, $buyInv3->refresh()->status);
+        $this->assertEquals(InvoiceStatus::APPROVED_INACTIVE, $buyInv4->refresh()->status);
+        $this->assertEquals(InvoiceStatus::APPROVED_INACTIVE, $sellInv1->refresh()->status);
+        $this->assertEquals(InvoiceStatus::APPROVED_INACTIVE, $sellInv2->refresh()->status);
 
         $this->unapproveInvoice($buyInv2);
-        $this->assertEquals(InvoiceAncillaryCostStatus::UNAPPROVED, $buyInv2->refresh()->status);
+        $this->assertEquals(InvoiceStatus::UNAPPROVED, $buyInv2->refresh()->status);
 
         $this->editInvoice($buyInv2, [$this->productItem($product, 15, 100)], true);
-        $this->assertEquals(InvoiceAncillaryCostStatus::APPROVED, $buyInv2->refresh()->status);
+        $this->assertEquals(InvoiceStatus::APPROVED, $buyInv2->refresh()->status);
 
         $groupActionService->approveInactiveInvoices(app(InvoiceService::class), app(AncillaryCostService::class));
 
-        $this->assertEquals(InvoiceAncillaryCostStatus::APPROVED, $buyInv3->refresh()->status);
-        $this->assertEquals(InvoiceAncillaryCostStatus::APPROVED, $buyInv4->refresh()->status);
-        $this->assertEquals(InvoiceAncillaryCostStatus::APPROVED, $sellInv1->refresh()->status);
-        $this->assertEquals(InvoiceAncillaryCostStatus::APPROVED, $sellInv2->refresh()->status);
+        $this->assertEquals(InvoiceStatus::APPROVED, $buyInv3->refresh()->status);
+        $this->assertEquals(InvoiceStatus::APPROVED, $buyInv4->refresh()->status);
+        $this->assertEquals(InvoiceStatus::APPROVED, $sellInv1->refresh()->status);
+        $this->assertEquals(InvoiceStatus::APPROVED, $sellInv2->refresh()->status);
     }
 
     protected function createAncillaryCost(Product $product, Invoice $invoice, float $amount, bool $approved = true, $date = null): AncillaryCost

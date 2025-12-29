@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Enums\AncillaryCostType;
-use App\Enums\InvoiceAncillaryCostStatus;
+use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
 use App\Models\Invoice;
@@ -67,7 +67,7 @@ class AncillaryCostService
 
                 $ancillaryCost->update([
                     'document_id' => $document->id,
-                    'status' => InvoiceAncillaryCostStatus::APPROVED,
+                    'status' => InvoiceStatus::APPROVED,
                 ]);
 
                 DocumentService::syncDocumentable($document, $ancillaryCost);
@@ -153,7 +153,7 @@ class AncillaryCostService
 
                 $ancillaryCost->update([
                     'document_id' => $createdDocument->id,
-                    'status' => InvoiceAncillaryCostStatus::APPROVED,
+                    'status' => InvoiceStatus::APPROVED,
                 ]);
 
                 CostOfGoodsService::updateProductsAverageCost($ancillaryCost->invoice);
@@ -291,7 +291,7 @@ class AncillaryCostService
     private function toggleInvoiceApproval(AncillaryCost $ancillaryCost, bool $approve): void
     {
         if ($approve) {
-            $ancillaryCost->status = InvoiceAncillaryCostStatus::APPROVED;
+            $ancillaryCost->status = InvoiceStatus::APPROVED;
 
             $createdDocument = self::createDocumentFromAncillaryCostItems(auth()->user(), $ancillaryCost);
             $ancillaryCost->document_id = $createdDocument->id;
@@ -300,7 +300,7 @@ class AncillaryCostService
             CostOfGoodsService::updateProductsAverageCost($ancillaryCost->invoice);
             self::syncCOGAfterAncillarityCost($ancillaryCost->invoice);
         } else {
-            $ancillaryCost->status = InvoiceAncillaryCostStatus::UNAPPROVED;
+            $ancillaryCost->status = InvoiceStatus::UNAPPROVED;
 
             if ($ancillaryCost->document) {
                 DocumentService::deleteDocument($ancillaryCost->document_id);
@@ -390,7 +390,7 @@ class AncillaryCostService
     private static function validateNoApprovedInvoicesAfterAncillaryCostWithSameProducts(AncillaryCost $ancillaryCost, array $productIds): void
     {
         $query = Invoice::where('date', '>', $ancillaryCost->date)
-            ->where('status', InvoiceAncillaryCostStatus::APPROVED)
+            ->where('status', InvoiceStatus::APPROVED)
             ->whereHas('items', fn ($q) => $q->whereIn('itemable_id', $productIds)->where('itemable_type', Product::class));
 
         if ($query->exists()) {
@@ -417,7 +417,7 @@ class AncillaryCostService
         $query = AncillaryCost::where('id', '!=', $ancillaryCost->id)
             ->where('date', '>', $ancillaryCost->date)
             ->whereHas('items', fn ($q) => $q->whereIn('product_id', $productIds))
-            ->where('status', InvoiceAncillaryCostStatus::APPROVED);
+            ->where('status', InvoiceStatus::APPROVED);
 
         if ($query->exists()) {
             throw new Exception(__('Cannot change ancillary cost status because there are subsequent ancillary costs those are approved for the same invoice products. Please unapprove those ancillary costs first.'), 400);
