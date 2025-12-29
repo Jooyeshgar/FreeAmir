@@ -258,7 +258,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($ancillaryCosts as $index => $ancillaryCost)
+                                @foreach ($ancillaryCosts as $ancillaryCost)
                                     @php
                                         $docNumber = $ancillaryCost->document?->number;
                                         $docId = $ancillaryCost->document_id;
@@ -266,10 +266,14 @@
                                         $vat = (float) ($ancillaryCost->vat ?? 0);
                                     @endphp
                                     <tr class="hover">
-                                        <td class="px-4 py-3">{{ $index + 1 }}</td>
                                         <td class="px-4 py-3">
                                             <a class="link" href="{{ route('ancillary-costs.show', $ancillaryCost) }}">
-                                                {{ formatDocumentNumber($docNumber ?? ($docId ?? $ancillaryCost->id)) }}
+                                                {{ formatDocumentNumber($ancillaryCost->number ?? $ancillaryCost->id) }}
+                                            </a>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <a class="link" href="{{ route('ancillary-costs.show', $ancillaryCost) }}">
+                                                {{ formatDocumentNumber($docNumber ?? ($docId ?? ($ancillaryCost->number ?? $ancillaryCost->id))) }}
                                             </a>
                                         </td>
                                         <td class="px-4 py-3">{{ $ancillaryCost->type?->label() ?? '—' }}</td>

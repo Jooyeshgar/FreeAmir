@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class AncillaryCost extends Model
 {
     protected $fillable = [
+        'number',
         'type',
         'amount',
         'vat',
@@ -27,6 +28,7 @@ class AncillaryCost extends Model
         'type' => AncillaryCostType::class,
         'status' => InvoiceAncillaryCostStatus::class,
         'date' => 'date',
+        'number' => 'integer',
         'amount' => 'decimal:2',
         'vat' => 'decimal:2',
     ];

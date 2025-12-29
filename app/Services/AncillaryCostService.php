@@ -87,7 +87,10 @@ class AncillaryCostService
     {
         $ancillaryCost = null;
         DB::transaction(function () use ($data, &$ancillaryCost) {
+            $nextNumber = self::nextAncillaryCostNumberForUpdate();
+
             $ancillaryCost = AncillaryCost::create([
+                'number' => $nextNumber,
                 'invoice_id' => $data['invoice_id'],
                 'customer_id' => $data['customer_id'],
                 'company_id' => $data['company_id'],
@@ -101,6 +104,18 @@ class AncillaryCostService
         });
 
         return $ancillaryCost;
+    }
+
+    private static function nextAncillaryCostNumberForUpdate(): int
+    {
+        $last = AncillaryCost::withoutGlobalScopes()
+            ->whereNotNull('number')
+            ->select('number')
+            ->orderByDesc('number')
+            ->lockForUpdate()
+            ->first();
+
+        return ((int) ($last?->number ?? 0)) + 1;
     }
 
     private static function syncCOGAfterAncillarityCost($invoice)

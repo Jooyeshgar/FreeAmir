@@ -8,42 +8,40 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="card-actions">
-                <a href="{{ route('ancillary-costs.create') }}"
-                    class="btn btn-primary">{{ __('Create Ancillary Cost') }}</a>
+                <a href="{{ route('ancillary-costs.create') }}" class="btn btn-primary">{{ __('Create Ancillary Cost') }}</a>
             </div>
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <tr>
-                        <th class="p-2 w-20">{{ __('Doc Number') }}</th>
-                        <th class="p-2 w-20">{{ __('Invoice Number') }}</th>
-                        <th class="p-2 w-40">{{ __('Cost Type') }}</th>
-                        <th class="p-2 w-20">{{ __('Date') }}</th>
-                        <th class="p-2 w-20">{{ __('Amount') }} ({{ config('amir.currency') ?? __('Rial') }})</th>
-                        <th class="p-2 w-40">{{ __('Status') }}</th>
-                        <th class="p-2 w-40">{{ __('Action') }}</th>
+                        <th class="p-2">{{ __('Number') }}</th>
+                        <th class="p-2">{{ __('Doc Number') }}</th>
+                        <th class="p-2">{{ __('Invoice Number') }}</th>
+                        <th class="p-2">{{ __('Cost Type') }}</th>
+                        <th class="p-2">{{ __('Date') }}</th>
+                        <th class="p-2">{{ __('Amount') }} ({{ config('amir.currency') ?? __('Rial') }})</th>
+                        <th class="p-2">{{ __('Status') }}</th>
+                        <th class="p-2">{{ __('Action') }}</th>
                     </tr>
                 </thead>
                 <tbody>
 
                     @foreach ($ancillaryCosts as $ancillaryCost)
                         <tr>
+                            <td class="p-2">{{ $ancillaryCost->number }}</td>
                             <td class="p-2">
                                 @can('documents.show')
                                     @if ($ancillaryCost->document_id)
                                         <a href="{{ route('documents.show', $ancillaryCost->document_id) }}">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none"
-                                                viewBox="0 0 24 24" stroke="currentColor">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                             </svg>
                                         </a>&nbsp;
-                                        <a class="link"
-                                            href="{{ route('documents.edit', $ancillaryCost->document_id) }}">
+                                        <a class="link" href="{{ route('documents.edit', $ancillaryCost->document_id) }}">
                                             {{ formatDocumentNumber($ancillaryCost->document->number) ?? '' }}</a>
                                     @endif
                                 @else
-                                    <span
-                                        class="text-gray-500">{{ formatDocumentNumber($ancillaryCost->document->number) ?? '' }}</span>
+                                    <span class="text-gray-500">{{ formatDocumentNumber($ancillaryCost->document->number) ?? '' }}</span>
                                 @endcan
                             </td>
                             <td class="p-2">
@@ -57,12 +55,12 @@
                                 {{ $ancillaryCost->status?->label() ?? '' }}
                             </td>
                             <td class="p-2">
+                                <a href="{{ route('ancillary-costs.show', $ancillaryCost) }}" class="btn btn-sm btn-info">{{ __('Show') }}</a>
+
                                 @can('ancillary-costs.approve')
                                     @php
                                         $isApproved = $ancillaryCost->status?->isApproved();
-                                        $changeStatusValidation = \App\Services\AncillaryCostService::getChangeStatusValidation(
-                                            $ancillaryCost,
-                                        );
+                                        $changeStatusValidation = \App\Services\AncillaryCostService::getChangeStatusValidation($ancillaryCost);
                                     @endphp
 
                                     @if ($changeStatusValidation['allowed'])
@@ -76,41 +74,30 @@
                                             $label = $isApproved ? __('Unapprove') : __('Approve');
                                         @endphp
                                         <span class="tooltip" data-tip="{{ $changeStatusValidation['reason'] }}">
-                                            <button class="btn btn-sm {{ $btnClass }} btn-disabled cursor-not-allowed"
-                                                disabled
+                                            <button class="btn btn-sm {{ $btnClass }} btn-disabled cursor-not-allowed" disabled
                                                 title="{{ $changeStatusValidation['reason'] }}">{{ $label }}</button>
                                         </span>
                                     @endif
                                 @endcan
 
                                 @php
-                                    $editDeleteStatus = \App\Services\AncillaryCostService::getEditDeleteStatus(
-                                        $ancillaryCost,
-                                    );
+                                    $editDeleteStatus = \App\Services\AncillaryCostService::getEditDeleteStatus($ancillaryCost);
                                 @endphp
-
                                 @if ($editDeleteStatus['allowed'])
                                     @if (!$ancillaryCost->status->isApproved())
-                                        <a href="{{ route('ancillary-costs.edit', $ancillaryCost) }}"
-                                            class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                        <form action="{{ route('ancillary-costs.destroy', $ancillaryCost) }}"
-                                            method="POST" class="inline-block">
+                                        <a href="{{ route('ancillary-costs.edit', $ancillaryCost) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                        <form action="{{ route('ancillary-costs.destroy', $ancillaryCost) }}" method="POST" class="inline-block">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit"
-                                                class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
                                         </form>
                                     @else
-                                        <span class="tooltip"
-                                            data-tip="{{ __('Unapprove the ancillary cost first to edit') }}">
-                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
-                                                disabled
+                                        <span class="tooltip" data-tip="{{ __('Unapprove the ancillary cost first to edit') }}">
+                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled
                                                 title="{{ __('Unapprove the ancillary cost first to edit') }}">{{ __('Edit') }}</button>
                                         </span>
-                                        <span class="tooltip"
-                                            data-tip="{{ __('Unapprove the ancillary cost first to delete') }}">
-                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
-                                                disabled
+                                        <span class="tooltip" data-tip="{{ __('Unapprove the ancillary cost first to delete') }}">
+                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled
                                                 title="{{ __('Unapprove the ancillary cost first to delete') }}">{{ __('Delete') }}</button>
                                         </span>
                                     @endif
@@ -135,15 +122,13 @@
                     @if ($ancillaryCosts->onFirstPage())
                         <input class="join-item btn btn-square hidden " type="radio" disabled>
                     @else
-                        <a href="{{ $ancillaryCosts->previousPageUrl() }}"
-                            class="join-item btn btn-square">&lsaquo;</a>
+                        <a href="{{ $ancillaryCosts->previousPageUrl() }}" class="join-item btn btn-square">&lsaquo;</a>
                     @endif
 
                     {{-- Pagination Elements --}}
                     @foreach ($ancillaryCosts->getUrlRange(1, $ancillaryCosts->lastPage()) as $page => $url)
                         @if ($page == $ancillaryCosts->currentPage())
-                            <a href="{{ $url }}"
-                                class="join-item btn btn-square bg-blue-500 text-white">{{ $page }}</a>
+                            <a href="{{ $url }}" class="join-item btn btn-square bg-blue-500 text-white">{{ $page }}</a>
                         @else
                             <a href="{{ $url }}" class="join-item btn btn-square">{{ $page }}</a>
                         @endif

@@ -4,13 +4,13 @@
     /** @var array{allowed: bool, reason?: string|null} $changeStatusValidation */
 @endphp
 
-<x-app-layout :title="__('Ancillary Cost') . ' #' . formatDocumentNumber($ancillaryCost->id)">
+<x-app-layout :title="__('Ancillary Cost') . ' #' . formatDocumentNumber($ancillaryCost->number ?? $ancillaryCost->id)">
 
     <div class="card bg-base-100 shadow-xl">
         <div class="card-header bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 px-6 py-4 rounded-t-2xl border-b-2 border-primary/20">
             <div>
                 <h2 class="text-2xl font-bold text-gray-800 dark:text-white">
-                    {{ __('Ancillary Cost') }} #{{ formatDocumentNumber($ancillaryCost->id) }}
+                    {{ __('Ancillary Cost') }} #{{ formatDocumentNumber($ancillaryCost->number ?? $ancillaryCost->id) }}
                     @if ($ancillaryCost->type)
                         - {{ $ancillaryCost->type->label() }}
                     @endif
