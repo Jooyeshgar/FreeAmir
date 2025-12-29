@@ -49,21 +49,26 @@
                 </form>
             </div>
 
-            <dl class="grid grid-cols-4 gap-3">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 @foreach (\App\Enums\InvoiceAncillaryCostStatus::cases() as $status)
-                    <div class="bg-base-100 p-3 rounded-md border">
-                        <dd class="text-sm font-semibold">
-                            @if ($invoices->where('status', $status)->count() == 0 || request('status') == $status->value)
-                                <span class="text-gray-500">{{ $status->label() }} : {{ convertToFarsi($invoices->where('status', $status)->count()) }}</span>
-                            @else
-                                <a class="link link-hover" href="{{ route('invoices.index', ['invoice_type' => request('invoice_type'), 'status' => $status]) }}">
-                                    {{ $status->label() }} : {{ convertToFarsi($invoices->where('status', $status)->count()) }}
-                                </a>
-                            @endif
-                        </dd>
-                    </div>
+                    @php
+                        $count = $statusCounts->get($status->value, 0);
+                        $isActive = request('status') == $status->value;
+                        $url = route('invoices.index', array_merge(request()->except('page'), ['status' => $status->value]));
+
+                        $type = match ($status) {
+                            \App\Enums\InvoiceAncillaryCostStatus::APPROVED => 'success',
+                            \App\Enums\InvoiceAncillaryCostStatus::UNAPPROVED => 'warning',
+                            \App\Enums\InvoiceAncillaryCostStatus::PENDING => 'info',
+                            \App\Enums\InvoiceAncillaryCostStatus::APPROVED_INACTIVE => 'error',
+                        };
+                    @endphp
+
+                    <a href="{{ $url }}" class="block transition-transform hover:scale-105 {{ $isActive ? 'ring-2 ring-primary rounded-xl' : '' }}">
+                        <x-stat-card :title="$status->label()" :value="convertToFarsi($count)" :type="$type" />
+                    </a>
                 @endforeach
-            </dl>
+            </div>
 
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
@@ -127,9 +132,10 @@
                                             {{ __('Fix Conflict') }}
                                         </a>
                                     @else
-                                        <a x-data="{}" 
+                                        <a x-data="{}"
                                             @if ($invoice->changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js($invoice->changeStatusValidation->toText()))) { window.location.href = '{{ route('invoices.change-status', [$invoice, $invoice->status->isApproved() ? 'unapproved' : 'approved']) }}?confirm=1' }" @endif
-                                            data-tip="{{ $invoice->changeStatusValidation->toText() }}" href="{{ route('invoices.change-status', [$invoice, $invoice->status->isApproved() ? 'unapproved' : 'approved']) }}"
+                                            data-tip="{{ $invoice->changeStatusValidation->toText() }}"
+                                            href="{{ route('invoices.change-status', [$invoice, $invoice->status->isApproved() ? 'unapproved' : 'approved']) }}"
                                             class="btn btn-sm inline-flex tooltip {{ $invoice->status->isApproved() ? 'btn-warning' : 'btn-success' }} {{ $invoice->changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
                                             {{ $invoice->status->isApproved() ? __('Unapprove') : __('Approve') }}
                                         </a>

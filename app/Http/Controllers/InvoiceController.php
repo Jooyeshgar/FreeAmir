@@ -62,6 +62,8 @@ class InvoiceController extends Controller
             })
         );
 
+        $statsBuilder = $builder->clone();
+
         $builder->when($request->filled('status') &&
             in_array($request->status, ['approved', 'unapproved', 'pending', 'approved_inactive']),
             fn ($invoice) => $invoice->where('status', $request->status)
@@ -69,13 +71,19 @@ class InvoiceController extends Controller
 
         $invoices = $builder->paginate(25);
 
+        $statusCounts = $statsBuilder->reorder()
+            ->toBase()
+            ->select('status', \Illuminate\Support\Facades\DB::raw('count(*) as total'))
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
         $invoices->transform(function ($invoice) {
             $invoice->changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
 
             return $invoice;
         });
 
-        return view('invoices.index', compact('invoices'));
+        return view('invoices.index', compact('invoices', 'statusCounts'));
     }
 
     /**

@@ -43,7 +43,7 @@
             @if ($allowedToResolve)
                 <div class="px-4 py-2 text-left">
                     <a href="{{ route('invoices.groupAction', $invoice) }}" class="btn btn-primary">
-                        {{ __('Confirm') }}
+                        {{ __('Delete All Documents') }}
                     </a>
                 </div>
             @endif
