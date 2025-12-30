@@ -1,12 +1,12 @@
-@props(['datas'])
+@props(['datas', 'id'])
 
-<canvas id="incomeChart" class="bg-white rounded-[16px]"></canvas>
+<canvas id="{{ $id }}" class="bg-white rounded-[16px]"></canvas>
 
-@pushOnce('footer')
+@push('footer')
     <script>
         var incomeChart = null;
         window.addEventListener("DOMContentLoaded", () => {
-            const ctx = document.getElementById('incomeChart').getContext('2d');
+            const ctx = document.getElementById('{{ $id }}').getContext('2d');
 
             const data = {
                 labels: {!! json_encode(array_keys($datas)) !!},
@@ -71,4 +71,4 @@
             });
         });
     </script>
-@endPushOnce
+@endPush
