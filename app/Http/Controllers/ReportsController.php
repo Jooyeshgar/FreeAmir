@@ -2,39 +2,74 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
-use App\Models\Document; // Import Document model
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
-use Symfony\Component\HttpFoundation\StreamedResponse; // Import StreamedResponse
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportsController extends Controller
 {
-    public function __construct() {}
+    public function __construct()
+    {
+        $this->middleware('permission:reports.ledger', ['only' => ['ledger']]);
+        $this->middleware('permission:reports.journal', ['only' => ['journal']]);
+        $this->middleware('permission:reports.sub-ledger', ['only' => ['subLedger']]);
+        $this->middleware('permission:reports.trial-balance', ['only' => ['trialBalance']]);
+        $this->middleware('permission:reports.documents', ['only' => ['documents']]);
+        $this->middleware('permission:reports.result', ['only' => ['result']]);
+    }
 
     public function ledger()
     {
         $subjects = Subject::orderBy('code', 'asc')->whereIsRoot()->get();
+
         return view('reports.ledger', compact('subjects'));
     }
 
     public function journal()
     {
         $subjects = [];
+
         return view('reports.journal', compact('subjects'));
     }
 
     public function subLedger()
     {
         $subjects = Subject::orderBy('code', 'asc')->get();
+
         return view('reports.subLedger', compact('subjects'));
     }
 
     public function documents()
     {
         return view('reports.documents');
+    }
+
+    public function trialBalance(Request $request)
+    {
+        $currentParent = null;
+
+        if ($request->has('parent_id')) {
+            $currentParent = Subject::find($request->get('parent_id'));
+            $subjects = $currentParent->children()->with('subjectable');
+        } else {
+            $subjects = Subject::whereIsRoot()->with('subjectable');
+        }
+
+        $subjects = $subjects->orderBy('code')->get();
+
+        $subjects = $subjects->map(function (Subject $subject) {
+            $subject->credit = \App\Services\SubjectService::sumSubject($subject, false, false);
+            $subject->debit = \App\Services\SubjectService::sumSubject($subject, false, true);
+            $subject->balance = $subject->credit + $subject->debit;
+
+            return $subject;
+        });
+
+        return view('reports.trialBalance', compact('subjects', 'currentParent'));
     }
 
     public function result(Request $request)
@@ -58,7 +93,7 @@ class ReportsController extends Controller
         Validator::make($request->all(), $rules)->after(function ($validator) use ($request) {
             // Optional consistency checks
             if ($request->filled('start_document_number') && $request->filled('end_document_number')) {
-                if ((int)$request->start_document_number > (int)$request->end_document_number) {
+                if ((int) $request->start_document_number > (int) $request->end_document_number) {
                     $validator->errors()->add('start_document_number', __('Start document number cannot be greater than end document number.'));
                 }
             }
@@ -96,7 +131,7 @@ class ReportsController extends Controller
             }
 
             if ($request->search) {
-                $documents->where('title', 'like', '%' . $request->search . '%');
+                $documents->where('title', 'like', '%'.$request->search.'%');
             }
 
             $documents->orderBy('date', 'asc')->orderBy('number', 'asc');
@@ -105,7 +140,6 @@ class ReportsController extends Controller
 
             return view('reports.documentReport', compact('documents'));
         }
-
 
         $transactions = Transaction::query();
         $subject = null;
@@ -122,7 +156,7 @@ class ReportsController extends Controller
 
         if ($request->search) {
             $transactions = $transactions->whereHas('document', function ($q) use ($request) {
-                $q->where('title', 'like', '%' . $request->search . '%');
+                $q->where('title', 'like', '%'.$request->search.'%');
             });
         }
 
@@ -166,7 +200,8 @@ class ReportsController extends Controller
             ->get();
 
         if ($request->input('action') === 'export_csv') {
-            $filename = $request->report_for . "_report_" . date('YmdHis') . ".csv";
+            $filename = $request->report_for.'_report_'.date('YmdHis').'.csv';
+
             return $this->streamCsvResponse($transactions, $filename);
         }
 
@@ -175,28 +210,25 @@ class ReportsController extends Controller
         if ($request->report_for == 'Journal') {
             return view('reports.journalReport', compact('transactionsChunk', 'subject'));
         }
+
         return view('reports.ledgerReport', compact('transactionsChunk', 'subject'));
     }
 
     /**
      * Generates and streams a CSV response for a collection of transactions.
-     *
-     * @param Collection $transactions
-     * @param string $filename
-     * @return StreamedResponse
      */
     private function streamCsvResponse(Collection $transactions, string $filename): StreamedResponse
     {
         $headers = [
             'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ];
 
         $callback = function () use ($transactions) {
             $file = fopen('php://output', 'w');
 
             // Add BOM for UTF-8 Excel compatibility
-            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
 
             fputcsv($file, [
                 __('Date'),

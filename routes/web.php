@@ -44,6 +44,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('ledger', [Controllers\ReportsController::class, 'ledger'])->name('ledger');
         Route::get('journal', [Controllers\ReportsController::class, 'journal'])->name('journal');
         Route::get('sub-ledger', [Controllers\ReportsController::class, 'subLedger'])->name('sub-ledger');
+        Route::get('trial-balance', [Controllers\ReportsController::class, 'trialBalance'])->name('trial-balance');
         Route::get('documents', [Controllers\ReportsController::class, 'documents'])->name('documents');
         Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
     });
