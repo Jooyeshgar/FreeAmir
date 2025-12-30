@@ -5,13 +5,14 @@
 
             <div class="flex flex-wrap gap-2 mt-2">
                 @if ($customer->group)
-                    <span class="badge badge-lg badge-success gap-2">
+                    <a href="{{ route('customer-groups.show', ['customer_group' => $customer->group->id]) }}"
+                        class="badge badge-lg badge-primary gap-2 hover:badge-primary hover:brightness-110 transition-all">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                         </svg>
                         {{ $customer->group->name }}
-                    </span>
+                    </a>
                 @endif
 
                 @if ($customer->subject)
@@ -67,7 +68,8 @@
                 <div class="card bg-base-200 shadow">
                     <div class="card-body p-4">
                         <h3 class="card-title text-sm text-gray-500">{{ __('Account Plan Group') }}</h3>
-                        <p class="text-xl font-semibold">{{ $customer->group->name ?? '-' }}</p>
+                        <p><a class="text-xl font-semibold" href="{{ route('customer-groups.show', ['customer_group' => $customer->group->id]) }}">
+                            {{ $customer->group->name ?? '-' }}</a></p>
                     </div>
                 </div>
 
