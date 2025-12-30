@@ -53,163 +53,242 @@ class GroupActionService
 
     public function groupAction(Invoice $invoice, InvoiceService $invoiceService, AncillaryCostService $ancillaryCostService): void
     {
-        [$invoicesConflicts, $ancillaryConflicts, $productsConflicts] = $this->findAllConflictsRecursively($invoice);
+        // Find all conflicting invoices recursively (only invoices, not products or ancillary costs)
+        $conflictingInvoices = $this->findConflictingInvoicesForInactivation($invoice);
 
-        $oversellConflicts = collect($productsConflicts)->every(fn ($product) => $product->oversell === 1);
+        // Sort by date DESC, then number DESC (latest first for unapproving)
+        $sortedInvoices = collect($conflictingInvoices)->sortByDesc(function ($inv) {
+            $date = $inv->date instanceof \Carbon\Carbon ? $inv->date->format('Y-m-d') : $inv->date;
 
-        if ($invoice->invoice_type === \App\Enums\InvoiceType::SELL && ! $oversellConflicts) {
-            return;
-        }
-
-        $conflictsToResolve = array_merge($invoicesConflicts, $ancillaryConflicts);
-        $sortedConflictsToResolve = collect($conflictsToResolve)->sortByDesc(function ($conflict) {
-            $date = $conflict->date instanceof \Carbon\Carbon ? $conflict->date->format('Y-m-d') : $conflict->date;
-            // Process AncillaryCost before Invoice if dates are equal (for unapproving)
-            $priority = $conflict instanceof AncillaryCost ? '2' : '1';
-
-            return $date.$priority;
+            return $date.str_pad((string) $inv->number, 10, '0', STR_PAD_LEFT);
         })->values()->all();
 
-        foreach ($sortedConflictsToResolve as $conflict) {
-            if ($conflict instanceof Invoice) {
-                $decision = $invoiceService->getChangeStatusValidation($conflict);
+        DB::transaction(function () use ($sortedInvoices, $invoiceService, $ancillaryCostService) {
+            foreach ($sortedInvoices as $conflictInvoice) {
+                // First, unapprove all ancillary costs for this invoice
+                foreach ($conflictInvoice->ancillaryCosts as $ancillaryCost) {
+                    if ($ancillaryCost->status->isApproved()) {
+                        $validation = $ancillaryCostService->getChangeStatusValidation($ancillaryCost);
 
-                if (! $decision->hasErrors()) {
-                    $invoiceService->changeInvoiceStatus($conflict, 'unapproved');
-                    $conflict->status = \App\Enums\InvoiceStatus::APPROVED_INACTIVE;
-                    $conflict->save();
-                    dump('Invoice ID '.$conflict->id.' unapproved');
-                } else {
-                    dd($decision);
-                }
-            } elseif ($conflict instanceof AncillaryCost) {
-                $validation = $ancillaryCostService->getChangeStatusValidation($conflict);
+                        if (! $validation['allowed']) {
+                            $reason = $validation['reason'] ?? __('unknown reason');
+                            throw ValidationException::withMessages([
+                                'ancillary_cost' => [__('Cannot unapprove Ancillary Cost #').$ancillaryCost->id.' '.__('of Invoice #').$conflictInvoice->number.' '.__('because of').': '.$reason],
+                            ]);
+                        }
 
-                if ($validation['allowed']) {
-                    $ancillaryCostService->changeAncillaryCostStatus($conflict, 'unapprove');
-                    $conflict->status = \App\Enums\InvoiceStatus::APPROVED_INACTIVE;
-                    $conflict->save();
+                        $ancillaryCostService->changeAncillaryCostStatus($ancillaryCost, 'unapprove');
+                        $ancillaryCost->status = InvoiceStatus::APPROVED_INACTIVE;
+                        $ancillaryCost->save();
+                    }
                 }
+
+                // Then unapprove the invoice itself
+                $invoiceService->changeInvoiceStatus($conflictInvoice, 'unapproved');
+                $conflictInvoice->status = InvoiceStatus::APPROVED_INACTIVE;
+                $conflictInvoice->save();
             }
-        }
+        });
     }
 
     /**
-     * Recursively find all conflicts for invoices and ancillary costs
+     * Find all conflicting invoices, their ancillary costs, and referenced products
+     *
+     * Returns an array with three elements:
+     * - Invoice conflicts (excluding the original invoice)
+     * - AncillaryCost conflicts (from conflicting invoices)
+     * - Product conflicts (products referenced in conflicts)
      */
     public function findAllConflictsRecursively(Invoice $invoice, bool $paginate = false): array
     {
-        $allConflicts = [];
+        // Find all conflicting invoices recursively
+        $conflictingInvoices = $this->findConflictingInvoices($invoice);
 
-        $this->findConflictsRecursively($invoice, $allConflicts);
+        // Exclude the original invoice from results
+        $conflictingInvoices = array_filter($conflictingInvoices, fn ($inv) => $inv->id !== $invoice->id);
 
-        $grouped = $this->groupConflictsByType($allConflicts);
-
-        $grouped[Invoice::class] = array_filter($grouped[Invoice::class], fn ($inv) => $inv->id !== $invoice->id);
+        // Find ancillary costs and products from conflicting invoices
+        $conflictingAncillaryCosts = $this->findConflictingAncillaryCostsFromInvoices($conflictingInvoices);
+        $conflictingProducts = $this->findConflictingProductsFromInvoices($conflictingInvoices);
 
         if ($paginate) {
-            return $this->paginateGroupedConflicts($grouped);
+            return [
+                $this->paginateConflictItems(collect($conflictingInvoices)->sortByDesc('date'), 5),
+                $this->paginateConflictItems(collect($conflictingAncillaryCosts)->sortByDesc('date'), 5),
+                $this->paginateConflictItems(collect($conflictingProducts), 5),
+            ];
         }
 
-        return [$grouped[Invoice::class], $grouped[AncillaryCost::class], $grouped[Product::class]];
+        return [$conflictingInvoices, $conflictingAncillaryCosts, $conflictingProducts];
     }
 
     /**
-     * Recursively find conflicts for any model (Invoice, AncillaryCost, or Product)
+     * Find all invoices that need to be inactivated before the given invoice can be modified.
+     * This method recursively follows the chain of invoice conflicts.
+     *
+     * For inactivation, we only care about invoice dependencies, not products or ancillary costs.
      */
-    private function findConflictsRecursively(Model|\Illuminate\Support\Collection $model, array &$allConflicts, array &$processedIds = []): void
+    private function findConflictingInvoicesForInactivation(Invoice $invoice, array &$processedIds = []): array
     {
-        $key = get_class($model).':'.$model->id;
-
+        $key = 'Invoice:'.$invoice->id;
+        // Avoid infinite loops
         if (in_array($key, $processedIds)) {
-            return;
+            return [];
         }
 
         $processedIds[] = $key;
-        $allConflicts[] = $model;
+        $conflicts = [$invoice];
 
-        if ($model instanceof Invoice) {
-            if (! isset($model->status)) {
-                $model = Invoice::findOrFail($model->id);
+        // // Ensure the invoice is fully loaded
+        // if (! isset($invoice->status)) {
+        //     $invoice = Invoice::findOrFail($invoice->id);
+        // }
+
+        // Get product IDs from this invoice
+        $productIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->toArray();
+
+        if (empty($productIds)) {
+            return $conflicts;
+        }
+
+        // Find subsequent approved invoices that reference the same products
+        $subsequentInvoices = Invoice::where('id', '!=', $invoice->id)
+            ->where(function ($q) use ($invoice) {
+                $q->where('date', '>', $invoice->date)
+                    ->orWhere(function ($sub) use ($invoice) {
+                        $sub->where('date', $invoice->date)
+                            ->where('number', '>', $invoice->number);
+                    });
+            })
+            ->where('status', InvoiceStatus::APPROVED)
+            ->whereHas('items', fn ($q) => $q->where('itemable_type', Product::class)
+                ->whereIn('itemable_id', $productIds)
+            )
+            ->get();
+
+        // Recursively find conflicts for each subsequent invoice
+        foreach ($subsequentInvoices as $subsequentInvoice) {
+            $nestedConflicts = $this->findConflictingInvoicesForInactivation($subsequentInvoice, $processedIds);
+            $conflicts = array_merge($conflicts, $nestedConflicts);
+        }
+
+        return $conflicts;
+    }
+
+    /**
+     * Recursively find all invoices that conflict with the given invoice
+     *
+     * An invoice conflicts if it cannot change status (approve/unapprove) due to other invoices.
+     * This method follows the chain of conflicts to find all dependent invoices.
+     *
+     * @deprecated Use findConflictingInvoicesForInactivation for inactivation operations
+     */
+    private function findConflictingInvoices(Invoice $invoice, array &$processedIds = []): array
+    {
+        $key = 'Invoice:'.$invoice->id;
+
+        // Avoid infinite loops by tracking processed invoices
+        if (in_array($key, $processedIds)) {
+            return [];
+        }
+
+        $processedIds[] = $key;
+        $conflicts = [$invoice];
+
+        // Ensure the invoice has status loaded
+        if (! isset($invoice->status)) {
+            $invoice = Invoice::findOrFail($invoice->id);
+        }
+
+        // Get validation decision which contains conflicting invoices
+        $decision = InvoiceService::getChangeStatusValidation($invoice);
+
+        // Recursively find conflicts from each conflicting item
+        foreach ($decision->conflictsItems as $conflictItem) {
+            $conflictModel = $this->resolveConflictToModel($conflictItem);
+
+            if ($conflictModel instanceof Invoice) {
+                $nestedConflicts = $this->findConflictingInvoices($conflictModel, $processedIds);
+                $conflicts = array_merge($conflicts, $nestedConflicts);
             }
-            $decision = InvoiceService::getChangeStatusValidation($model);
+        }
 
-            foreach ($decision->conflictsItems as $conflict) {
-                $formatted = $this->formatConflict($conflict);
-                if ($formatted) {
-                    $this->findConflictsRecursively($formatted, $allConflicts, $processedIds);
-                }
-            }
+        return $conflicts;
+    }
 
-            foreach ($model->ancillaryCosts as $ancillaryCost) {
+    /**
+     * Find ancillary costs that belong to conflicting invoices and have conflicts themselves
+     *
+     * Ancillary costs are only conflicts if:
+     * 1. They belong to a conflicting invoice
+     * 2. They are approved
+     * 3. They cannot change status (have their own validation issues)
+     */
+    private function findConflictingAncillaryCostsFromInvoices(array $invoices): array
+    {
+        $conflictingAncillaryCosts = [];
+
+        foreach ($invoices as $invoice) {
+            foreach ($invoice->ancillaryCosts as $ancillaryCost) {
+                // Only consider approved ancillary costs
                 if (! $ancillaryCost->status->isApproved()) {
                     continue;
                 }
 
+                // Check if this ancillary cost has validation conflicts
                 $validation = AncillaryCostService::getChangeStatusValidation($ancillaryCost);
 
                 if (! $validation['allowed']) {
-                    $this->findConflictsRecursively($ancillaryCost, $allConflicts, $processedIds);
+                    $conflictingAncillaryCosts[] = $ancillaryCost;
                 }
             }
+        }
 
-        } elseif ($model instanceof AncillaryCost) {
-            $validation = AncillaryCostService::getChangeStatusValidation($model);
+        return $conflictingAncillaryCosts;
+    }
 
-            if (! $validation['allowed'] && $model->invoice) {
-                $this->findConflictsRecursively($model->invoice, $allConflicts, $processedIds);
+    /**
+     * Extract products referenced in validation conflicts from invoices
+     *
+     * Products appear in conflicts for inventory/stock validation issues
+     */
+    private function findConflictingProductsFromInvoices(array $invoices): array
+    {
+        $products = [];
+        $productIds = [];
+
+        foreach ($invoices as $invoice) {
+            $decision = InvoiceService::getChangeStatusValidation($invoice);
+
+            foreach ($decision->conflictsItems as $conflictItem) {
+                $model = $this->resolveConflictToModel($conflictItem);
+
+                if ($model instanceof Product && ! in_array($model->id, $productIds)) {
+                    $products[] = $model;
+                    $productIds[] = $model->id;
+                }
             }
         }
+
+        return $products;
     }
 
     /**
-     * Group conflicts by their model class
+     * Resolve a conflict item (array or Model) to its actual Model instance
      */
-    private function groupConflictsByType(array $conflicts): array
-    {
-        return collect($conflicts)->groupBy(fn ($conflict) => get_class($conflict))
-            ->map(fn ($items) => $items->values()->all())->toArray() + [
-                Invoice::class => [],
-                AncillaryCost::class => [],
-                Product::class => [],
-            ];
-    }
-
-    /**
-     * Paginate grouped conflicts
-     */
-    private function paginateGroupedConflicts(array $grouped): array
-    {
-        return [
-            $this->paginateConflictItems(collect($grouped[Invoice::class])->sortByDesc('date'), 5),
-            $this->paginateConflictItems(collect($grouped[AncillaryCost::class])->sortByDesc('date'), 5),
-            $this->paginateConflictItems(collect($grouped[Product::class]), 5),
-        ];
-    }
-
-    private function paginateConflictItems(\Illuminate\Support\Collection $conflictItems, int $perPage): \Illuminate\Pagination\LengthAwarePaginator
-    {
-        $page = \Illuminate\Pagination\Paginator::resolveCurrentPage();
-
-        return new \Illuminate\Pagination\LengthAwarePaginator(
-            $conflictItems->forPage($page, $perPage),
-            $conflictItems->count(),
-            $perPage,
-            $page,
-            ['path' => request()->url(), 'query' => request()->query()]
-        );
-    }
-
-    private function formatConflict(array|Model $conflict): ?Model
+    private function resolveConflictToModel(array|Model $conflict): ?Model
     {
         if ($conflict instanceof Model) {
-            return $this->resolveModel($conflict);
+            return $this->ensureModelLoaded($conflict);
         }
 
-        return $this->resolveArray($conflict);
+        return $this->resolveConflictArrayToModel($conflict);
     }
 
-    private function resolveArray(array $conflict): ?Model
+    /**
+     * Convert conflict array structure to Model instance
+     */
+    private function resolveConflictArrayToModel(array $conflict): ?Model
     {
         $type = $conflict['type'] ?? null;
         $id = $conflict['id'] ?? null;
@@ -224,14 +303,36 @@ class GroupActionService
             default => Product::class,
         };
 
-        return $this->resolveModel($modelClass::findOrFail($id));
+        return $modelClass::findOrFail($id);
     }
 
-    private function resolveModel(Model $model): Model
+    /**
+     * Ensure model is fully loaded from database (not just a reference)
+     */
+    private function ensureModelLoaded(Model $model): Model
     {
         return $model->exists ? $model::findOrFail($model->id) : $model;
     }
 
+    /**
+     * Paginate a collection of conflict items for display
+     */
+    private function paginateConflictItems(\Illuminate\Support\Collection $conflictItems, int $perPage): \Illuminate\Pagination\LengthAwarePaginator
+    {
+        $page = \Illuminate\Pagination\Paginator::resolveCurrentPage();
+
+        return new \Illuminate\Pagination\LengthAwarePaginator(
+            $conflictItems->forPage($page, $perPage),
+            $conflictItems->count(),
+            $perPage,
+            $page,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
+    }
+
+    /**
+     * Format a conflict model for display in error messages
+     */
     private function formatConflictForMessage(mixed $conflict): string
     {
         if ($conflict instanceof Invoice) {
@@ -245,7 +346,14 @@ class GroupActionService
         if (is_array($conflict) && isset($conflict['id'])) {
             $type = $conflict['type'] ?? __('Unknown');
 
-            return ucfirst($type).' #'.$conflict['id'];
+            // Convert enum to string if needed
+            if ($type instanceof \BackedEnum) {
+                $type = $type->value;
+            } elseif ($type instanceof \UnitEnum) {
+                $type = $type->name;
+            }
+
+            return ucfirst((string) $type).' #'.$conflict['id'];
         }
 
         return __('Unknown conflict');
