@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Enums\InvoiceAncillaryCostStatus;
+use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
@@ -96,7 +96,7 @@ class CostOfGoodsService
     {
         $buildQuery = function (InvoiceType $invoiceType) use ($invoice, $invoiceItem) {
             return Invoice::where('invoice_type', $invoiceType)
-                ->where('status', InvoiceAncillaryCostStatus::APPROVED)
+                ->where('status', InvoiceStatus::APPROVED)
                 ->where(function ($q) use ($invoice) {
                     $q->where('date', '<', $invoice->date)
                         ->orWhere(function ($q2) use ($invoice) {
@@ -130,7 +130,7 @@ class CostOfGoodsService
         $ancillaryCosts->loadMissing('items');
 
         // without VAT
-        return (float) $ancillaryCosts->where('status', InvoiceAncillaryCostStatus::APPROVED)->flatMap->items->where('product_id', $productId)->sum('amount');
+        return (float) $ancillaryCosts->where('status', InvoiceStatus::APPROVED)->flatMap->items->where('product_id', $productId)->sum('amount');
     }
 
     private static function sumPreviousCogContribution(Invoice $invoice, ?Invoice $previousInvoice, int $productId, float $availableQuantity): float
@@ -223,7 +223,7 @@ class CostOfGoodsService
     private static function getPreviousInvoice(Invoice $invoice, $productId)
     {
         return Invoice::where('number', '<', $invoice->number)
-            ->where('status', InvoiceAncillaryCostStatus::APPROVED)
+            ->where('status', InvoiceStatus::APPROVED)
             ->where('invoice_type', $invoice->invoice_type)
             ->whereHas('items', fn ($query) => $query->where('itemable_id', $productId)
                                                                             && $query->where('itemable_type', Product::class))
@@ -233,7 +233,7 @@ class CostOfGoodsService
     private static function getNextInvoice(Invoice $invoice, $productId)
     {
         return Invoice::where('number', '>', $invoice->number)
-            ->where('status', InvoiceAncillaryCostStatus::APPROVED)
+            ->where('status', InvoiceStatus::APPROVED)
             ->where('invoice_type', $invoice->invoice_type)
             ->whereHas('items', fn ($query) => $query->where('itemable_id', $productId)
                                                                             && $query->where('itemable_type', Product::class))

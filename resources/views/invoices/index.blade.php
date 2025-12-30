@@ -26,6 +26,8 @@
                     </a>
                 @endif
 
+                <a href="{{ route('invoices.inactive') }}" class="btn btn-primary">{{ __('Approve Inactive') }}</a>
+
                 <form action="{{ route('invoices.index') }}" method="GET" class="ml-auto">
                     <div class="mt-4 mb-4 grid grid-cols-6 gap-6">
                         <div class="col-span-2 md:col-span-1" hidden>
@@ -45,6 +47,27 @@
                         </div>
                     </div>
                 </form>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                @foreach (\App\Enums\InvoiceStatus::cases() as $status)
+                    @php
+                        $count = $statusCounts->get($status->value, 0);
+                        $isActive = request('status') == $status->value;
+                        $url = route('invoices.index', array_merge(request()->except('page'), ['status' => $status->value]));
+
+                        $type = match ($status) {
+                            \App\Enums\InvoiceStatus::APPROVED => 'success',
+                            \App\Enums\InvoiceStatus::UNAPPROVED => 'warning',
+                            \App\Enums\InvoiceStatus::PENDING => 'info',
+                            \App\Enums\InvoiceStatus::APPROVED_INACTIVE => 'error',
+                        };
+                    @endphp
+
+                    <a href="{{ $url }}" class="block transition-transform hover:scale-105 {{ $isActive ? 'ring-2 ring-primary rounded-xl' : '' }}">
+                        <x-stat-card :title="$status->label()" :value="convertToFarsi($count)" :type="$type" />
+                    </a>
+                @endforeach
             </div>
 
             <table class="table w-full mt-4 overflow-auto">
@@ -103,93 +126,54 @@
                                 <a href="{{ route('invoices.print', $invoice) }}" target="_blank" rel="noopener" class="btn btn-sm btn-info">{{ __('Print') }}</a>
 
                                 @can('invoices.approve')
-                                    @php
-                                        $isApproved = $invoice->status?->isApproved();
-                                        $changeStatusValidation = \App\Services\InvoiceService::getChangeStatusValidation($invoice);
-                                        $statusTitle = $isApproved ? __('Unapprove') : __('Approve');
-                                        $btnClass = $isApproved ? 'btn-warning' : 'btn-success';
-                                        $btnClass .= $changeStatusValidation->hasWarning() ? ' btn-outline ' : '';
-                                        $tooltip = $changeStatusValidation->hasMessage() ? 'data-tip="' . e($changeStatusValidation->toText()) . '"' : '';
-                                        $changeStatusUrl = route('invoices.change-status', [$invoice, $isApproved ? 'unapproved' : 'approved']);
-                                        $changeStatusConfirmText = $changeStatusValidation->toText();
-                                    @endphp
-
-                                    @if ($changeStatusValidation->hasErrors())
-                                        <span {!! $tooltip !!} class="tooltip">
-                                            <button class="btn btn-sm {{ $btnClass }} btn-disabled cursor-not-allowed"
-                                                title="{{ $changeStatusValidation->toText() }}">{{ $statusTitle }}</button>
-                                        </span>
+                                    @if ($invoice->changeStatusValidation->hasErrors())
+                                        <a data-tip="{{ $invoice->changeStatusValidation->toText() }}" href="{{ route('invoices.conflicts', $invoice) }}"
+                                            class="btn btn-sm btn-accent inline-flex tooltip">
+                                            {{ __('Fix Conflict') }}
+                                        </a>
                                     @else
                                         <a x-data="{}"
-                                            @if ($changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js($changeStatusConfirmText))) { window.location.href = '{{ $changeStatusUrl }}?confirm=1' }" @endif
-                                            {!! $tooltip !!} href="{{ $changeStatusUrl }}"
-                                            class="btn btn-sm inline-flex {{ $btnClass }} {{ $tooltip ? ' tooltip' : '' }}">
-                                            {{ $statusTitle }}
+                                            @if ($invoice->changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js($invoice->changeStatusValidation->toText()))) { window.location.href = '{{ route('invoices.change-status', [$invoice, $invoice->status->isApproved() ? 'unapproved' : 'approved']) }}?confirm=1' }" @endif
+                                            data-tip="{{ $invoice->changeStatusValidation->toText() }}"
+                                            href="{{ route('invoices.change-status', [$invoice, $invoice->status->isApproved() ? 'unapproved' : 'approved']) }}"
+                                            class="btn btn-sm inline-flex tooltip {{ $invoice->status->isApproved() ? 'btn-warning' : 'btn-success' }} {{ $invoice->changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
+                                            {{ $invoice->status->isApproved() ? __('Unapprove') : __('Approve') }}
                                         </a>
                                     @endif
                                 @endcan
 
-                                @php
-                                    $editDeleteStatus = \App\Services\InvoiceService::getEditDeleteStatus($invoice);
-                                @endphp
-
-                                @if ($editDeleteStatus['allowed'])
-                                    @if (!$invoice->status?->isApproved())
-                                        <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                        <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" class="inline-block">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                        </form>
-                                    @else
-                                        <span class="tooltip" data-tip="{{ __('Unapprove the invoice first to edit') }}">
-                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
-                                                title="{{ __('Unapprove the invoice first to edit') }}">{{ __('Edit') }}</button>
-                                        </span>
-                                        <span class="tooltip" data-tip="{{ __('Unapprove the invoice first to delete') }}">
-                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
-                                                title="{{ __('Unapprove the invoice first to delete') }}">{{ __('Delete') }}</button>
-                                        </span>
-                                    @endif
+                                @if (!$invoice->status->isApproved())
+                                    <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                    <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" class="inline-block">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                    </form>
                                 @else
-                                    <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
-                                        <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed"
-                                            title="{{ $editDeleteStatus['reason'] }}">{{ __('Edit') }}</button>
-                                    </span>
-                                    <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
+                                    <span class="tooltip" data-tip="{{ __('Unapprove the invoice first to edit') }}">
                                         <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
-                                            title="{{ $editDeleteStatus['reason'] }}">{{ __('Delete') }}</button>
+                                            title="{{ __('Unapprove the invoice first to edit') }}">{{ __('Edit') }}</button>
+                                    </span>
+                                    <span class="tooltip" data-tip="{{ __('Unapprove the invoice first to delete') }}">
+                                        <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
+                                            title="{{ __('Unapprove the invoice first to delete') }}">{{ __('Delete') }}</button>
                                     </span>
                                 @endif
+
                             </td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
 
-            @if ($invoices->hasPages())
-                <div class="join">
-                    @if ($invoices->onFirstPage())
-                        <input class="join-item btn btn-square hidden " type="radio" disabled>
-                    @else
-                        <a href="{{ $invoices->previousPageUrl() }}" class="join-item btn btn-square">&lsaquo;</a>
-                    @endif
-
-                    @foreach ($invoices->getUrlRange(1, $invoices->lastPage()) as $page => $url)
-                        @if ($page == $invoices->currentPage())
-                            <a href="{{ $url }}" class="join-item btn btn-square bg-blue-500 text-white">{{ $page }}</a>
-                        @else
-                            <a href="{{ $url }}" class="join-item btn btn-square">{{ $page }}</a>
-                        @endif
-                    @endforeach
-
-                    @if ($invoices->hasMorePages())
-                        <a href="{{ $invoices->nextPageUrl() }}" class="join-item btn btn-square">&rsaquo;</a>
-                    @else
-                        <input class="join-item btn btn-square hidden" type="radio" disabled>
-                    @endif
+            @if (request('status') !== null)
+                <div class="px-4 py-2 text-left">
+                    <a class="btn btn-primary" href="{{ route('invoices.index', parameters: ['invoice_type' => request('invoice_type')]) }}">{{ __('Back') }}</a>
                 </div>
             @endif
+
+            {{ $invoices->withQueryString()->links() }}
+
         </div>
     </div>
 

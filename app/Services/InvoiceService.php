@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\DTO\InvoiceStatusDecision;
-use App\Enums\InvoiceAncillaryCostStatus;
+use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Exceptions\InvoiceServiceException;
 use App\Models\Invoice;
@@ -58,7 +58,7 @@ class InvoiceService
                 $createdDocument = DocumentService::createDocument($user, $documentData, $transactions);
 
                 $invoiceData['document_id'] = $createdDocument->id;
-                $invoiceData['status'] = InvoiceAncillaryCostStatus::APPROVED;
+                $invoiceData['status'] = InvoiceStatus::APPROVED;
 
                 $createdInvoice->update($invoiceData);
 
@@ -91,7 +91,7 @@ class InvoiceService
             $invoiceData['creator_id'] = $user->id;
             $invoiceData['date'] = $date;
             $invoiceData['title'] = $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? ''));
-            $invoiceData['status'] = InvoiceAncillaryCostStatus::PENDING;
+            $invoiceData['status'] = InvoiceStatus::PENDING;
 
             $createdInvoice = Invoice::create($invoiceData);
 
@@ -132,7 +132,7 @@ class InvoiceService
             DB::transaction(function () use ($invoice, $invoiceData, $items, &$createdDocument) {
                 $createdDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
 
-                $invoiceData['status'] = InvoiceAncillaryCostStatus::APPROVED;
+                $invoiceData['status'] = InvoiceStatus::APPROVED;
                 $invoiceData['document_id'] = $createdDocument->id;
                 unset($invoiceData['document_number']); // Don't update invoice with document_number
 
@@ -199,7 +199,7 @@ class InvoiceService
     public static function deleteInvoice(int $invoiceId): void
     {
         DB::transaction(function () use ($invoiceId) {
-            $invoice = Invoice::find($invoiceId);
+            $invoice = Invoice::findOrFail($invoiceId);
 
             CostOfGoodsService::refreshProductCOGAfterItemsDeletion($invoice, null);
 
@@ -213,17 +213,6 @@ class InvoiceService
 
             $invoice->delete();
         });
-    }
-
-    private static function checkInvoiceDeleteableOrEditable(Invoice $invoice): void
-    {
-        if ($invoice->status->isApproved()) {
-            throw new Exception(__('Approved invoices cannot be deleted/edited'), 400);
-        }
-
-        if ($invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {
-            throw new Exception(__('Invoice has associated approved ancillary costs and cannot be deleted/edited'), 400);
-        }
     }
 
     private static function normalizeInvoiceData(array $invoiceData): array
@@ -302,22 +291,6 @@ class InvoiceService
         $invoice->items()->whereNotIn('id', $itemId)->delete();
     }
 
-    /**
-     * Determine if an invoice can be edited or deleted without throwing, and provide the reason when it cannot.
-     *
-     * @return array{allowed: bool, reason: string|null}
-     */
-    public static function getEditDeleteStatus(Invoice $invoice): array
-    {
-        try {
-            self::checkInvoiceDeleteableOrEditable($invoice);
-
-            return ['allowed' => true, 'reason' => null];
-        } catch (\Throwable $e) {
-            return ['allowed' => false, 'reason' => $e->getMessage()];
-        }
-    }
-
     public function changeInvoiceStatus(Invoice $invoice, string $status): void
     {
         DB::transaction(function () use ($invoice, $status) {
@@ -335,7 +308,7 @@ class InvoiceService
      */
     private function approveInvoice(Invoice $invoice): void
     {
-        $invoice->status = InvoiceAncillaryCostStatus::APPROVED;
+        $invoice->status = InvoiceStatus::APPROVED;
         $createdDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
         $invoice->document_id = $createdDocument->id;
         $invoice->update();
@@ -350,7 +323,7 @@ class InvoiceService
      */
     private function unapproveInvoice(Invoice $invoice): void
     {
-        $invoice->status = InvoiceAncillaryCostStatus::UNAPPROVED;
+        $invoice->status = InvoiceStatus::UNAPPROVED;
 
         if ($invoice->document) {
             DocumentService::deleteDocument($invoice->document_id);
@@ -430,8 +403,8 @@ class InvoiceService
         $productIds = self::getProductIdsFromInvoice($invoice);
 
         $nextStatus = $invoice->status->isApproved()
-            ? InvoiceAncillaryCostStatus::UNAPPROVED
-            : InvoiceAncillaryCostStatus::APPROVED;
+            ? InvoiceStatus::UNAPPROVED
+            : InvoiceStatus::APPROVED;
 
         return self::decideInvoiceStatusChange($invoice, $productIds, $nextStatus);
 
@@ -447,7 +420,7 @@ class InvoiceService
     /**
      * Validate that related invoices have the correct status before changing an invoice's status.
      */
-    private static function enforceInvoiceStatusRules(Invoice $invoice, array $productIds, InvoiceAncillaryCostStatus $nextStatus): Collection
+    private static function enforceInvoiceStatusRules(Invoice $invoice, array $productIds, InvoiceStatus $nextStatus): Collection
     {
         $conflicts = collect();
 
@@ -482,11 +455,11 @@ class InvoiceService
      * @param  Invoice  $invoice  The invoice being checked (excluded from search)
      * @param  array<int>  $productIds  Product IDs to search for in related invoices
      * @param  array  $invoiceTypes  Invoice types to include in the search (e.g. BUY, SELL)
-     * @param  InvoiceAncillaryCostStatus  $nextStatus  Status value to change to
+     * @param  InvoiceStatus  $nextStatus  Status value to change to
      *
      * @throws Exception If one or more related invoices are found that would prevent the status change
      */
-    private static function findConflictingInvoices(Invoice $invoice, array $productIds, InvoiceAncillaryCostStatus $nextStatus, ?array $invoiceTypes = []): Collection
+    private static function findConflictingInvoices(Invoice $invoice, array $productIds, InvoiceStatus $nextStatus, ?array $invoiceTypes = []): Collection
     {
         if (empty($productIds)) {
             return collect();
@@ -506,7 +479,7 @@ class InvoiceService
         $query->whereHas('items', fn ($q) => $q->where('itemable_type', Product::class)
             ->whereIn('itemable_id', $productIds)
         )
-            ->where('status', InvoiceAncillaryCostStatus::APPROVED);
+            ->where('status', InvoiceStatus::APPROVED);
 
         // Return collection of invoices (no exception here)
         return $query->get(['id', 'invoice_type', 'number', 'date']);
@@ -533,7 +506,7 @@ class InvoiceService
         $query->whereHas('items', fn ($q) => $q->where('itemable_type', Product::class)
             ->whereIn('itemable_id', $productIds)
         )
-            ->where('status', '!=', InvoiceAncillaryCostStatus::APPROVED);
+            ->where('status', '!=', InvoiceStatus::APPROVED);
 
         // Return collection of invoices (no exception here)
         return $query->get(['id', 'invoice_type', 'number', 'date']);
@@ -581,7 +554,7 @@ class InvoiceService
     {
         $productIds = self::getProductIdsFromInvoice($invoice);
 
-        $nextStatus = $nextStatus instanceof InvoiceAncillaryCostStatus ? $nextStatus : InvoiceAncillaryCostStatus::from($nextStatus);
+        $nextStatus = $nextStatus instanceof InvoiceStatus ? $nextStatus : InvoiceStatus::from($nextStatus);
 
         return self::decideInvoiceStatusChange($invoice, $productIds, $nextStatus);
     }
@@ -608,7 +581,7 @@ class InvoiceService
         }
 
         $query = Invoice::where('invoice_type', InvoiceType::SELL)
-            ->where('status', '!=', InvoiceAncillaryCostStatus::APPROVED)
+            ->where('status', '!=', InvoiceStatus::APPROVED)
             ->where(function ($q) use ($date, $invoiceNumber) {
                 $q->where('date', '<', $date)
                     ->orWhere(function ($sub) use ($date, $invoiceNumber) {
@@ -748,7 +721,7 @@ class InvoiceService
 
     private static function findConflictingUnapprovedAncillaryCostsForInvoiceWithNoAncillaryCosts(Invoice $invoice, array $productIds): Collection
     {
-        return \App\Models\AncillaryCost::where('status', '!=', InvoiceAncillaryCostStatus::APPROVED)
+        return \App\Models\AncillaryCost::where('status', '!=', InvoiceStatus::APPROVED)
             ->whereHas('items', function ($q) use ($productIds) {
                 $q->whereIn('product_id', $productIds);
             })->whereHas('invoice', function ($q) use ($invoice) {
@@ -760,7 +733,7 @@ class InvoiceService
 
     private static function findConflictingUnapprovedAncillaryCosts(Invoice $invoice, array $productIds): Collection
     {
-        return \App\Models\AncillaryCost::where('status', '!=', InvoiceAncillaryCostStatus::APPROVED)
+        return \App\Models\AncillaryCost::where('status', '!=', InvoiceStatus::APPROVED)
             ->whereNotIn('id', $invoice->ancillaryCosts->pluck('id')->toArray())
             ->whereHas('items', function ($q) use ($productIds) {
                 $q->whereIn('product_id', $productIds);
@@ -773,7 +746,7 @@ class InvoiceService
 
     private static function findConflictingApprovedAncillaryCosts(Invoice $invoice, array $productIds): Collection
     {
-        return \App\Models\AncillaryCost::where('status', InvoiceAncillaryCostStatus::APPROVED)
+        return \App\Models\AncillaryCost::where('status', InvoiceStatus::APPROVED)
             ->whereNotIn('id', $invoice->ancillaryCosts->pluck('id')->toArray())
             ->whereHas('items', function ($q) use ($productIds) {
                 $q->whereIn('product_id', $productIds);
@@ -782,5 +755,133 @@ class InvoiceService
                     $sub->where('date', $invoice->date)->where('number', '>', $invoice->number);
                 });
             })->get(['id', 'invoice_id', 'status', 'type']);
+    }
+
+    // ================================
+    // Form Data Transformation Methods
+    // ================================
+
+    /**
+     * Extract invoice data from validated form input
+     */
+    public static function extractInvoiceData(array $validated): array
+    {
+        return [
+            'title' => $validated['title'],
+            'date' => $validated['date'],
+            'invoice_type' => InvoiceType::from($validated['invoice_type']),
+            'customer_id' => $validated['customer_id'],
+            'document_number' => $validated['document_number'],
+            'number' => $validated['invoice_number'],
+            'subtraction' => $validated['subtractions'] ?? 0,
+            'invoice_id' => $validated['invoice_id'] ?? null,
+            'description' => $validated['description'] ?? null,
+        ];
+    }
+
+    /**
+     * Map form transactions to invoice items array
+     */
+    public static function mapTransactionsToItems(array $transactions): array
+    {
+        return collect($transactions)->map(fn ($t, $i) => [
+            'transaction_index' => $i,
+            'itemable_id' => $t['item_id'],
+            'itemable_type' => $t['item_type'],
+            'quantity' => $t['quantity'] ?? 1,
+            'description' => $t['desc'] ?? null,
+            'unit_discount' => $t['unit_discount'] ?? 0,
+            'vat' => $t['vat'] ?? 0,
+            'unit' => $t['unit'] ?? 0,
+            'total' => $t['total'] ?? 0,
+        ])->toArray();
+    }
+
+    /**
+     * Prepare transactions for view (create/edit form)
+     */
+    public static function prepareTransactions(?Invoice $source = null, string $mode = 'create'): \Illuminate\Support\Collection
+    {
+        if (old('transactions')) {
+            return self::prepareFromOldInput();
+        }
+
+        if ($mode === 'edit' && $source instanceof Invoice) {
+            return self::prepareFromInvoice($source);
+        }
+
+        return self::getEmptyTransaction();
+    }
+
+    /**
+     * Restore transactions from old form input
+     */
+    private static function prepareFromOldInput(): \Illuminate\Support\Collection
+    {
+        return collect(old('transactions'))->map(function ($transaction, $index) {
+            $transaction['id'] = $index + 1;
+
+            if (empty($transaction['item_type']) || empty($transaction['item_id'])) {
+                return $transaction;
+            }
+
+            $isProduct = $transaction['item_type'] === Product::class;
+            $model = $isProduct
+                ? Product::find($transaction['item_id'])
+                : Service::find($transaction['item_id']);
+
+            $transaction['subject'] = $model?->name;
+            $transaction[$isProduct ? 'product_id' : 'service_id'] = $model?->id;
+            $transaction['quantity'] ??= 1;
+
+            return $transaction;
+        });
+    }
+
+    /**
+     * Prepare transactions from existing invoice for edit form
+     */
+    private static function prepareFromInvoice(Invoice $invoice): \Illuminate\Support\Collection
+    {
+        return $invoice->items->map(function ($item, $index) {
+            $subtotalBeforeVat = $item->amount - $item->vat;
+            $isProduct = isset($item->itemable->inventory_subject_id);
+
+            return [
+                'id' => $index + 1,
+                'transaction_id' => $item->transaction_id,
+                'desc' => $item->description,
+                'quantity' => $item->quantity,
+                'unit' => $item->unit_price,
+                'off' => $item->unit_discount,
+                'vat' => $subtotalBeforeVat > 0 ? ($item->vat / $subtotalBeforeVat) * 100 : 0,
+                'total' => $item->amount,
+                'inventory_subject_id' => $item->itemable->inventory_subject_id ?? $item->itemable->subject_id ?? null,
+                'subject' => $item->itemable->name ?? null,
+                'product_id' => $isProduct ? $item->itemable->id : null,
+                'service_id' => $isProduct ? null : $item->itemable->id,
+            ];
+        });
+    }
+
+    /**
+     * Get empty transaction structure for new invoice form
+     */
+    public static function getEmptyTransaction(): \Illuminate\Support\Collection
+    {
+        return collect([[
+            'id' => 1,
+            'transaction_id' => null,
+            'inventory_subject_id' => null,
+            'subject' => null,
+            'desc' => null,
+            'quantity' => 1,
+            'unit' => null,
+            'off' => null,
+            'vat' => null,
+            'total' => null,
+            'product_id' => null,
+            'service_id' => null,
+        ]]);
     }
 }

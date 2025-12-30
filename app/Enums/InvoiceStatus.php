@@ -2,13 +2,15 @@
 
 namespace App\Enums;
 
-enum InvoiceAncillaryCostStatus: string
+enum InvoiceStatus: string
 {
     case PENDING = 'pending';
 
     case APPROVED = 'approved';
 
     case UNAPPROVED = 'unapproved';
+
+    case APPROVED_INACTIVE = 'approved_inactive';
 
     /**
      * Get translated label for the invoice/ancillary cost status.
@@ -19,7 +21,13 @@ enum InvoiceAncillaryCostStatus: string
             self::PENDING => __('pending'),
             self::APPROVED => __('approved'),
             self::UNAPPROVED => __('unapproved'),
+            self::APPROVED_INACTIVE => __('approved inactive'),
         };
+    }
+
+    public function isApprovedInactive(): bool
+    {
+        return $this === self::APPROVED_INACTIVE;
     }
 
     public function isPending(): bool

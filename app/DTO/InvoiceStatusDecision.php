@@ -12,7 +12,9 @@ class InvoiceStatusDecision
 
     public Collection $messages;
 
-    public Collection $conflicts;
+    public Collection $conflicts; // collection of invoices that cause conflicts
+
+    public array $conflictsItems = [];
 
     public function __construct()
     {
@@ -151,5 +153,14 @@ class InvoiceStatusDecision
     public function addConflict($conflict): void
     {
         $this->conflicts->push($conflict);
+        $this->addConflictItem($conflict);
+    }
+
+    private function addConflictItem($conflict): void
+    {
+        $this->conflictsItems[] = [
+            'id' => $conflict->id,
+            'type' => $conflict->invoice_type ?? strtolower(class_basename($conflict)),
+        ];
     }
 }

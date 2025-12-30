@@ -53,7 +53,8 @@
                 <div class="stats shadow bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200/60">
                     <div class="stat">
                         <div class="stat-title text-amber-500">{{ __('Discounts') }} ({{ config('amir.currency') ?? __('Rial') }})</div>
-                        <div class="stat-value text-amber-600 text-3xl">{{ formatNumber($discountTotal) }}</div>
+                        <div class="stat-value text-amber-600 text-3xl">
+                            {{ formatNumber($invoice->items->reduce(fn($carry, $item) => $carry + ($item->unit_discount ?? 0), 0)) }}</div>
                         <div class="stat-desc text-amber-400">{{ __('Total deductions') }}</div>
                     </div>
                 </div>
@@ -61,7 +62,8 @@
                 <div class="stats shadow bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/60">
                     <div class="stat">
                         <div class="stat-title text-emerald-500">{{ __('VAT') }} ({{ config('amir.currency') ?? __('Rial') }})</div>
-                        <div class="stat-value text-emerald-600 text-3xl">{{ formatNumber($vatTotal) }}</div>
+                        <div class="stat-value text-emerald-600 text-3xl">{{ formatNumber($invoice->items->reduce(fn($carry, $item) => $carry + ($item->vat ?? 0), 0)) }}
+                        </div>
                         <div class="stat-desc text-emerald-400">{{ __('Collected tax') }}</div>
                     </div>
                 </div>
@@ -69,28 +71,13 @@
                 <div class="stats shadow bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/60">
                     <div class="stat">
                         <div class="stat-title text-indigo-500">{{ __('Grand total') }} ({{ config('amir.currency') ?? __('Rial') }})</div>
-                        <div class="stat-value text-indigo-600 text-3xl">{{ formatNumber($grandTotal) }}</div>
+                        <div class="stat-value text-indigo-600 text-3xl">{{ formatNumber(($invoice->amount ?? 0) - ($invoice->subtraction ?? 0)) }}</div>
                         <div class="stat-desc text-indigo-400">{{ __('Payable amount') }}</div>
                     </div>
                 </div>
 
-                @php
-                    $isApproved = $invoice->status?->isApproved();
-                    $changeStatusValidation = \App\Services\InvoiceService::getChangeStatusValidation($invoice);
-                    $statusTitle = $isApproved ? __('Unapprove') : __('Approve');
-                    $btnClass = $isApproved ? 'btn-warning' : 'btn-success';
-                    $btnClass .= $changeStatusValidation->hasWarning() ? ' btn-outline ' : '';
-                    $editDeleteStatus = \App\Services\InvoiceService::getEditDeleteStatus($invoice);
-                    $tooltip = $changeStatusValidation->hasMessage() ? 'data-tip="' . e($changeStatusValidation->toText()) . '"' : '';
-                    $changeStatusUrl = route('invoices.change-status', [$invoice, $isApproved ? 'unapproved' : 'approved']);
-                @endphp
-
                 @if ($changeStatusValidation->hasErrors() || $changeStatusValidation->hasWarning())
                     <div class="stats bg-gradient-to-br gap-2 shadow col-span-4">
-                        @php
-                            $type = $changeStatusValidation->hasErrors() ? 'error' : 'warning';
-                            $isApprovalBlocked = $changeStatusValidation->hasErrors();
-                        @endphp
                         <x-show-messages :message="$changeStatusValidation->toDetailText()" type="alert" />
                     </div>
                 @endif
@@ -186,27 +173,12 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse ($items as $index => $item)
-                                @php
-                                    $quantity = $item->quantity ?? 0;
-                                    $unitPrice = $item->unit_price ?? 0;
-                                    $discount = $item->unit_discount ?? 0;
-                                    $vat = $item->vat ?? 0;
-                                    $lineBase = $quantity * $unitPrice - $discount;
-                                    $lineTotal = $lineBase + $vat;
-                                    $type =
-                                        $item->itemable_type === 'App\Models\Product'
-                                            ? 'product'
-                                            : ($item->itemable_type == 'App\Models\Service'
-                                                ? 'service'
-                                                : 'unknown');
-                                @endphp
+                            @forelse ($invoice->items as $index => $item)
                                 <tr class="hover">
                                     <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
                                     <td class="px-4 py-3">
                                         @if ($item->itemable)
-                                            <a href="{{ route($type == 'product' ? 'products.show' : 'services.show', $item->itemable) }}"
-                                                class="link link-hover link-primary">
+                                            <a href="{{ route('products.show' ?? 'services.show', $item->itemable) }}" class="link link-hover link-primary">
                                                 {{ $item->itemable->name }}
                                             </a>
                                         @else
@@ -214,11 +186,12 @@
                                         @endif
                                     </td>
                                     <td class="px-4 py-3">{{ $item->description }}</td>
-                                    <td class="px-4 py-3 text-right">{{ formatNumber($quantity) }}</td>
-                                    <td class="px-4 py-3 text-right">{{ formatNumber($unitPrice) }}</td>
-                                    <td class="px-4 py-3 text-right">{{ formatNumber($discount) }}</td>
-                                    <td class="px-4 py-3 text-right">{{ formatNumber($vat) }}</td>
-                                    <td class="px-4 py-3 text-right">{{ formatNumber($lineTotal) }}</td>
+                                    <td class="px-4 py-3 text-right">{{ formatNumber($item->quantity ?? 0) }}</td>
+                                    <td class="px-4 py-3 text-right">{{ formatNumber($item->unit_price ?? 0) }}</td>
+                                    <td class="px-4 py-3 text-right">{{ formatNumber($item->unit_discount ?? 0) }}</td>
+                                    <td class="px-4 py-3 text-right">{{ formatNumber($item->vat ?? 0) }}</td>
+                                    <td class="px-4 py-3 text-right">
+                                        {{ formatNumber(($item->quantity ?? 0) * ($item->unit_price ?? 0) - ($item->unit_discount ?? 0) + ($item->vat ?? 0)) }}</td>
                                 </tr>
                             @empty
                                 <tr>
@@ -231,7 +204,7 @@
                         <tfoot class="bg-base-300">
                             <tr>
                                 <td colspan="8" class="px-4 py-3 text-right text-sm text-gray-600">
-                                    {{ __('Total items: :count', ['count' => convertToFarsi($items->count())]) }}
+                                    {{ __('Total items: :count', ['count' => convertToFarsi($invoice->items->count())]) }}
                                 </td>
                             </tr>
                         </tfoot>
@@ -315,20 +288,22 @@
 
                     @can('invoices.approve')
                         @if ($changeStatusValidation->hasErrors())
-                            <span {!! $tooltip !!} class="tooltip">
-                                <button class="btn btn-sm {{ $btnClass }} btn-disabled cursor-not-allowed"
-                                    title="{{ $changeStatusValidation->toText() }}">{{ $statusTitle }}</button>
-                            </span>
+                            <a data-tip="{{ $changeStatusValidation->toText() }}" href="{{ route('invoices.conflicts', $invoice) }}"
+                                class="btn btn-accent inline-flex tooltip">
+                                {{ __('Fix Conflict') }}
+                            </a>
                         @else
                             <a x-data="{}"
-                                @if ($changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js('Did you read the warnings?'))) { window.location.href = '{{ $changeStatusUrl }}?confirm=1' }" @endif
-                                {!! $tooltip !!} href="{{ $changeStatusUrl }}" class="btn btn-primary gap-2 {{ $btnClass }}">
-                                {{ $statusTitle }}
+                                @if ($changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js('Did you read the warnings?'))) { window.location.href = '{{ route('invoices.change-status', [$invoice, $invoice->status->isApproved() ? 'unapproved' : 'approved']) }}?confirm=1' }" @endif
+                                data-tip="{{ $changeStatusValidation->toText() ?? '' }}"
+                                href="{{ route('invoices.change-status', [$invoice, $invoice->status->isApproved() ? 'unapproved' : 'approved']) }}"
+                                class="btn btn-primary gap-2 {{ $invoice->status->isApproved() ? 'btn-warning' : 'btn-success' }} {{ $changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
+                                {{ $invoice->status->isApproved() ? __('Unapprove') : __('Approve') }}
                             </a>
                         @endif
                     @endcan
 
-                    @if ($editDeleteStatus['allowed'])
+                    @if (!$invoice->status->isApproved())
                         <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-primary gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -337,8 +312,8 @@
                             {{ __('Edit invoice') }}
                         </a>
                     @else
-                        <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
-                            <button class="btn btn-primary gap-2 btn-disabled cursor-not-allowed" title="{{ $editDeleteStatus['reason'] }}">
+                        <span class="tooltip" data-tip="{{ __('Editing is not allowed for approved invoices.') }}">
+                            <button class="btn btn-primary gap-2 btn-disabled cursor-not-allowed">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />

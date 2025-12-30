@@ -10,6 +10,25 @@
             <div class="card-actions">
                 <a href="{{ route('ancillary-costs.create') }}" class="btn btn-primary">{{ __('Create Ancillary Cost') }}</a>
             </div>
+
+            <dl class="grid grid-cols-4 gap-3">
+                @foreach (\App\Enums\InvoiceStatus::cases() as $status)
+                    <div class="bg-base-100 p-3 rounded-md border">
+                        <dd class="text-sm font-semibold">
+                            @if ($ancillaryCosts->where('status', $status)->count() == 0 || request('status') == $status->value)
+                                <span class="text-gray-500">{{ $status->label() }} :
+                                    {{ convertToFarsi($ancillaryCosts->where('status', $status)->count()) }}</span>
+                            @else
+                                <a class="link link-hover" href="{{ route('ancillary-costs.index', ['status' => $status]) }}">
+                                    {{ $status->label() }} :
+                                    {{ convertToFarsi($ancillaryCosts->where('status', $status)->count()) }}
+                                </a>
+                            @endif
+                        </dd>
+                    </div>
+                @endforeach
+            </dl>
+
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <tr>
@@ -116,32 +135,15 @@
                     @endforeach
                 </tbody>
             </table>
-            @if ($ancillaryCosts->hasPages())
-                <div class="join">
-                    {{-- Previous Page Link --}}
-                    @if ($ancillaryCosts->onFirstPage())
-                        <input class="join-item btn btn-square hidden " type="radio" disabled>
-                    @else
-                        <a href="{{ $ancillaryCosts->previousPageUrl() }}" class="join-item btn btn-square">&lsaquo;</a>
-                    @endif
 
-                    {{-- Pagination Elements --}}
-                    @foreach ($ancillaryCosts->getUrlRange(1, $ancillaryCosts->lastPage()) as $page => $url)
-                        @if ($page == $ancillaryCosts->currentPage())
-                            <a href="{{ $url }}" class="join-item btn btn-square bg-blue-500 text-white">{{ $page }}</a>
-                        @else
-                            <a href="{{ $url }}" class="join-item btn btn-square">{{ $page }}</a>
-                        @endif
-                    @endforeach
-
-                    {{-- Next Page Link --}}
-                    @if ($ancillaryCosts->hasMorePages())
-                        <a href="{{ $ancillaryCosts->nextPageUrl() }}" class="join-item btn btn-square">&rsaquo;</a>
-                    @else
-                        <input class="join-item btn btn-square hidden" type="radio" disabled>
-                    @endif
+            @if (request('status') !== null)
+                <div class="px-4 py-2 text-left">
+                    <a class="btn btn-primary" href="{{ route('ancillary-costs.index') }}">{{ __('Back') }}</a>
                 </div>
             @endif
+
+            {{ $ancillaryCosts->withQueryString()->links() }}
+
         </div>
     </div>
 </x-app-layout>

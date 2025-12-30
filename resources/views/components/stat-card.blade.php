@@ -1,4 +1,4 @@
-@props(['title', 'value', 'description' => '', 'type' => 'info', 'icon' => null])
+@props(['title', 'value' => null, 'description' => '', 'type' => 'info', 'icon' => null])
 
 @php
     $colors = [
@@ -36,7 +36,11 @@
         <span class="text-gray-500 font-medium text-sm mb-1">{{ $title }}</span>
 
         <div class="font-bold text-gray-800 text-xl p-1 leading-none">
-            {{ $value }}
+            @if ($value !== null)
+                {{ $value }}
+            @else
+                {{ $slot }}
+            @endif
         </div>
 
         @if ($description)
