@@ -41,6 +41,15 @@ class ServiceGroupController extends Controller
         return redirect()->route('service-groups.index')->with('success', __('Service group created successfully.'));
     }
 
+    public function show(ServiceGroup $serviceGroup)
+    {
+        $serviceGroup->debit = \App\Services\SubjectService::sumSubject($serviceGroup->subject, false, true);
+        $serviceGroup->credit = \App\Services\SubjectService::sumSubject($serviceGroup->subject, false, false);
+        $serviceGroup->balance = $serviceGroup->debit + $serviceGroup->credit;
+
+        return view('serviceGroups.show', compact('serviceGroup'));
+    }
+
     public function edit(ServiceGroup $serviceGroup)
     {
         return view('serviceGroups.edit', compact('serviceGroup'));

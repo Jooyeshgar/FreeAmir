@@ -4,7 +4,7 @@
             <h2 class="text-2xl font-bold text-gray-800 dark:text-white">{{ $product->name }}</h2>
             <div class="flex flex-wrap gap-2 mt-2">
                 @if ($product->productgroup)
-                    <a href="{{ route('products.index', ['product_group_id' => $product->productgroup->id]) }}"
+                    <a href="{{ route('product-groups.show', $product->productgroup) }}"
                         class="badge badge-lg badge-primary gap-2 hover:badge-primary hover:brightness-110 transition-all">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
