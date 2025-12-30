@@ -110,7 +110,7 @@ class InvoiceController extends Controller
         $customers = Customer::with('group')->orderBy('name', 'asc')->get();
         $previousDocumentNumber = floor(Document::max('number') ?? 0);
 
-        $transactions = $this->prepareTransactions();
+        $transactions = InvoiceService::prepareTransactions();
 
         $total = count($transactions);
 
@@ -128,8 +128,8 @@ class InvoiceController extends Controller
     public function store(StoreInvoiceRequest $request)
     {
         $validated = $request->validated();
-        $invoiceData = $this->extractInvoiceData($validated);
-        $items = $this->mapTransactionsToItems($validated['transactions']);
+        $invoiceData = InvoiceService::extractInvoiceData($validated);
+        $items = InvoiceService::mapTransactionsToItems($validated['transactions']);
 
         $approved = false;
         if ($request->has('approve')) {
@@ -192,7 +192,7 @@ class InvoiceController extends Controller
         $previousDocumentNumber = floor(Document::max('number') ?? 0);
 
         // Prepare transactions from invoice items
-        $transactions = $this->prepareTransactions($invoice, 'edit');
+        $transactions = InvoiceService::prepareTransactions($invoice, 'edit');
 
         $total = $transactions->count();
 
@@ -218,8 +218,8 @@ class InvoiceController extends Controller
     public function update(StoreInvoiceRequest $request, Invoice $invoice)
     {
         $validated = $request->validated();
-        $invoiceData = $this->extractInvoiceData($validated);
-        $items = $this->mapTransactionsToItems($validated['transactions']);
+        $invoiceData = InvoiceService::extractInvoiceData($validated);
+        $items = InvoiceService::mapTransactionsToItems($validated['transactions']);
 
         if ($invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {
             return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('error', __('Invoice has associated approved ancillary costs and cannot be edited.'));
@@ -270,112 +270,6 @@ class InvoiceController extends Controller
                     : ''
                 ),
         ];
-    }
-
-    private function extractInvoiceData(array $validated): array
-    {
-        return [
-            'title' => $validated['title'],
-            'date' => $validated['date'],
-            'invoice_type' => InvoiceType::from($validated['invoice_type']),
-            'customer_id' => $validated['customer_id'],
-            'document_number' => $validated['document_number'],
-            'number' => $validated['invoice_number'],
-            'subtraction' => $validated['subtractions'] ?? 0,
-            'invoice_id' => $validated['invoice_id'] ?? null,
-            'description' => $validated['description'] ?? null,
-        ];
-    }
-
-    private function mapTransactionsToItems(array $transactions): array
-    {
-        return collect($transactions)->map(fn ($t, $i) => [
-            'transaction_index' => $i,
-            'itemable_id' => $t['item_id'],
-            'itemable_type' => $t['item_type'],
-            'quantity' => $t['quantity'] ?? 1,
-            'description' => $t['desc'] ?? null,
-            'unit_discount' => $t['unit_discount'] ?? 0,
-            'vat' => $t['vat'] ?? 0,
-            'unit' => $t['unit'] ?? 0,
-            'total' => $t['total'] ?? 0,
-        ])->toArray();
-    }
-
-    private function prepareTransactions($source = null, string $mode = 'create')
-    {
-        if (old('transactions')) {
-            return $this->prepareFromOldInput();
-        }
-
-        if ($mode === 'edit' && $source instanceof Invoice) {
-            return $this->prepareFromInvoice($source);
-        }
-
-        return $this->getEmptyTransaction();
-    }
-
-    private function prepareFromOldInput()
-    {
-        return collect(old('transactions'))->map(function ($transaction, $index) {
-            $transaction['id'] = $index + 1;
-
-            if (empty($transaction['item_type']) || empty($transaction['item_id'])) {
-                return $transaction;
-            }
-
-            $isProduct = $transaction['item_type'] === Product::class;
-            $model = $isProduct
-                ? Product::find($transaction['item_id'])
-                : Service::find($transaction['item_id']);
-
-            $transaction['subject'] = $model?->name;
-            $transaction[$isProduct ? 'product_id' : 'service_id'] = $model?->id;
-            $transaction['quantity'] ??= 1;
-
-            return $transaction;
-        });
-    }
-
-    private function prepareFromInvoice(Invoice $invoice)
-    {
-        return $invoice->items->map(function ($item, $index) {
-            $subtotalBeforeVat = $item->amount - $item->vat;
-            $isProduct = isset($item->itemable->inventory_subject_id);
-
-            return [
-                'id' => $index + 1,
-                'transaction_id' => $item->transaction_id,
-                'desc' => $item->description,
-                'quantity' => $item->quantity,
-                'unit' => $item->unit_price,
-                'off' => $item->unit_discount,
-                'vat' => $subtotalBeforeVat > 0 ? ($item->vat / $subtotalBeforeVat) * 100 : 0,
-                'total' => $item->amount,
-                'inventory_subject_id' => $item->itemable->inventory_subject_id ?? $item->itemable->subject_id ?? null,
-                'subject' => $item->itemable->name ?? null,
-                'product_id' => $isProduct ? $item->itemable->id : null,
-                'service_id' => $isProduct ? null : $item->itemable->id,
-            ];
-        });
-    }
-
-    private function getEmptyTransaction()
-    {
-        return collect([[
-            'id' => 1,
-            'transaction_id' => null,
-            'inventory_subject_id' => null,
-            'subject' => null,
-            'desc' => null,
-            'quantity' => 1,
-            'unit' => null,
-            'off' => null,
-            'vat' => null,
-            'total' => null,
-            'product_id' => null,
-            'service_id' => null,
-        ]]);
     }
 
     public function searchCustomer(Request $request)
@@ -526,7 +420,7 @@ class InvoiceController extends Controller
 
     public function approveInactiveInvoices()
     {
-        $this->groupActionService->approveInactiveInvoices($this->invoiceService, $this->ancillaryCostService);
+        $this->groupActionService->approveInactiveInvoices();
 
         return redirect()->route('invoices.index', ['invoice_type' => InvoiceType::BUY])->with('success', __('Inactive invoices approved successfully.'));
     }
@@ -561,7 +455,7 @@ class InvoiceController extends Controller
 
     public function groupAction(Invoice $invoice)
     {
-        $this->groupActionService->groupAction($invoice, $this->invoiceService, $this->ancillaryCostService);
+        $this->groupActionService->inactivateDependentInvoices($invoice);
 
         return redirect()->route('invoices.show', $invoice);
     }

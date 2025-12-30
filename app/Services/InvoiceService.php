@@ -756,4 +756,132 @@ class InvoiceService
                 });
             })->get(['id', 'invoice_id', 'status', 'type']);
     }
+
+    // ================================
+    // Form Data Transformation Methods
+    // ================================
+
+    /**
+     * Extract invoice data from validated form input
+     */
+    public static function extractInvoiceData(array $validated): array
+    {
+        return [
+            'title' => $validated['title'],
+            'date' => $validated['date'],
+            'invoice_type' => InvoiceType::from($validated['invoice_type']),
+            'customer_id' => $validated['customer_id'],
+            'document_number' => $validated['document_number'],
+            'number' => $validated['invoice_number'],
+            'subtraction' => $validated['subtractions'] ?? 0,
+            'invoice_id' => $validated['invoice_id'] ?? null,
+            'description' => $validated['description'] ?? null,
+        ];
+    }
+
+    /**
+     * Map form transactions to invoice items array
+     */
+    public static function mapTransactionsToItems(array $transactions): array
+    {
+        return collect($transactions)->map(fn ($t, $i) => [
+            'transaction_index' => $i,
+            'itemable_id' => $t['item_id'],
+            'itemable_type' => $t['item_type'],
+            'quantity' => $t['quantity'] ?? 1,
+            'description' => $t['desc'] ?? null,
+            'unit_discount' => $t['unit_discount'] ?? 0,
+            'vat' => $t['vat'] ?? 0,
+            'unit' => $t['unit'] ?? 0,
+            'total' => $t['total'] ?? 0,
+        ])->toArray();
+    }
+
+    /**
+     * Prepare transactions for view (create/edit form)
+     */
+    public static function prepareTransactions(?Invoice $source = null, string $mode = 'create'): \Illuminate\Support\Collection
+    {
+        if (old('transactions')) {
+            return self::prepareFromOldInput();
+        }
+
+        if ($mode === 'edit' && $source instanceof Invoice) {
+            return self::prepareFromInvoice($source);
+        }
+
+        return self::getEmptyTransaction();
+    }
+
+    /**
+     * Restore transactions from old form input
+     */
+    private static function prepareFromOldInput(): \Illuminate\Support\Collection
+    {
+        return collect(old('transactions'))->map(function ($transaction, $index) {
+            $transaction['id'] = $index + 1;
+
+            if (empty($transaction['item_type']) || empty($transaction['item_id'])) {
+                return $transaction;
+            }
+
+            $isProduct = $transaction['item_type'] === Product::class;
+            $model = $isProduct
+                ? Product::find($transaction['item_id'])
+                : Service::find($transaction['item_id']);
+
+            $transaction['subject'] = $model?->name;
+            $transaction[$isProduct ? 'product_id' : 'service_id'] = $model?->id;
+            $transaction['quantity'] ??= 1;
+
+            return $transaction;
+        });
+    }
+
+    /**
+     * Prepare transactions from existing invoice for edit form
+     */
+    private static function prepareFromInvoice(Invoice $invoice): \Illuminate\Support\Collection
+    {
+        return $invoice->items->map(function ($item, $index) {
+            $subtotalBeforeVat = $item->amount - $item->vat;
+            $isProduct = isset($item->itemable->inventory_subject_id);
+
+            return [
+                'id' => $index + 1,
+                'transaction_id' => $item->transaction_id,
+                'desc' => $item->description,
+                'quantity' => $item->quantity,
+                'unit' => $item->unit_price,
+                'off' => $item->unit_discount,
+                'vat' => $subtotalBeforeVat > 0 ? ($item->vat / $subtotalBeforeVat) * 100 : 0,
+                'total' => $item->amount,
+                'inventory_subject_id' => $item->itemable->inventory_subject_id ?? $item->itemable->subject_id ?? null,
+                'subject' => $item->itemable->name ?? null,
+                'product_id' => $isProduct ? $item->itemable->id : null,
+                'service_id' => $isProduct ? null : $item->itemable->id,
+            ];
+        });
+    }
+
+    /**
+     * Get empty transaction structure for new invoice form
+     */
+    public static function getEmptyTransaction(): \Illuminate\Support\Collection
+    {
+        return collect([[
+            'id' => 1,
+            'transaction_id' => null,
+            'inventory_subject_id' => null,
+            'subject' => null,
+            'desc' => null,
+            'quantity' => 1,
+            'unit' => null,
+            'off' => null,
+            'vat' => null,
+            'total' => null,
+            'product_id' => null,
+            'service_id' => null,
+        ]]);
+    }
 }

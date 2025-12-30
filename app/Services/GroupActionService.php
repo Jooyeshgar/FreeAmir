@@ -12,16 +12,21 @@ use Illuminate\Validation\ValidationException;
 
 class GroupActionService
 {
-    public function approveInactiveInvoices(InvoiceService $invoiceService, AncillaryCostService $ancillaryCostService): void
+    public function __construct(
+        private readonly InvoiceService $invoiceService,
+        private readonly AncillaryCostService $ancillaryCostService
+    ) {}
+
+    public function approveInactiveInvoices(): void
     {
         $invoices = Invoice::where('status', InvoiceStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('number')
             ->orWhereHas('ancillaryCosts', function ($query) {
                 $query->where('status', InvoiceStatus::APPROVED_INACTIVE);
             })->get();
 
-        DB::transaction(function () use ($invoices, $invoiceService, $ancillaryCostService) {
+        DB::transaction(function () use ($invoices) {
             foreach ($invoices as $invoice) {
-                $decision = $invoiceService->getChangeStatusValidation($invoice);
+                $decision = $this->invoiceService->getChangeStatusValidation($invoice);
 
                 if ($decision->hasErrors()) {
                     $conflicts = collect($decision->conflictsItems)
@@ -33,10 +38,10 @@ class GroupActionService
                     ]);
                 }
 
-                $invoiceService->changeInvoiceStatus($invoice, 'approved');
+                $this->invoiceService->changeInvoiceStatus($invoice, 'approved');
 
                 foreach ($invoice->ancillaryCosts as $ancillaryCost) {
-                    $validation = $ancillaryCostService->getChangeStatusValidation($ancillaryCost);
+                    $validation = $this->ancillaryCostService->getChangeStatusValidation($ancillaryCost);
 
                     if (! $validation['allowed']) {
                         $reason = $validation['reason'] ?? __('unknown reason');
@@ -45,16 +50,16 @@ class GroupActionService
                         ]);
                     }
 
-                    $ancillaryCostService->changeAncillaryCostStatus($ancillaryCost, 'approve');
+                    $this->ancillaryCostService->changeAncillaryCostStatus($ancillaryCost, 'approve');
                 }
             }
         });
     }
 
-    public function groupAction(Invoice $invoice, InvoiceService $invoiceService, AncillaryCostService $ancillaryCostService): void
+    public function inactivateDependentInvoices(Invoice $invoice): void
     {
         // Find all conflicting invoices recursively (only invoices, not products or ancillary costs)
-        $conflictingInvoices = $this->findConflictingInvoicesForInactivation($invoice);
+        $conflictingInvoices = $this->getConflictingInvoices($invoice);
 
         // Sort by date DESC, then number DESC (latest first for unapproving)
         $sortedInvoices = collect($conflictingInvoices)->sortByDesc(function ($inv) {
@@ -63,12 +68,12 @@ class GroupActionService
             return $date.str_pad((string) $inv->number, 10, '0', STR_PAD_LEFT);
         })->values()->all();
 
-        DB::transaction(function () use ($sortedInvoices, $invoiceService, $ancillaryCostService) {
+        DB::transaction(function () use ($sortedInvoices) {
             foreach ($sortedInvoices as $conflictInvoice) {
                 // First, unapprove all ancillary costs for this invoice
                 foreach ($conflictInvoice->ancillaryCosts as $ancillaryCost) {
                     if ($ancillaryCost->status->isApproved()) {
-                        $validation = $ancillaryCostService->getChangeStatusValidation($ancillaryCost);
+                        $validation = $this->ancillaryCostService->getChangeStatusValidation($ancillaryCost);
 
                         if (! $validation['allowed']) {
                             $reason = $validation['reason'] ?? __('unknown reason');
@@ -77,14 +82,14 @@ class GroupActionService
                             ]);
                         }
 
-                        $ancillaryCostService->changeAncillaryCostStatus($ancillaryCost, 'unapprove');
+                        $this->ancillaryCostService->changeAncillaryCostStatus($ancillaryCost, 'unapprove');
                         $ancillaryCost->status = InvoiceStatus::APPROVED_INACTIVE;
                         $ancillaryCost->save();
                     }
                 }
 
                 // Then unapprove the invoice itself
-                $invoiceService->changeInvoiceStatus($conflictInvoice, 'unapproved');
+                $this->invoiceService->changeInvoiceStatus($conflictInvoice, 'unapproved');
                 $conflictInvoice->status = InvoiceStatus::APPROVED_INACTIVE;
                 $conflictInvoice->save();
             }
@@ -123,12 +128,12 @@ class GroupActionService
     }
 
     /**
-     * Find all invoices that need to be inactivated before the given invoice can be modified.
+     * Get all invoices that need to be inactivated before the given invoice can be modified.
      * This method recursively follows the chain of invoice conflicts.
      *
      * For inactivation, we only care about invoice dependencies, not products or ancillary costs.
      */
-    private function findConflictingInvoicesForInactivation(Invoice $invoice, array &$processedIds = []): array
+    private function getConflictingInvoices(Invoice $invoice, array &$processedIds = []): array
     {
         $key = 'Invoice:'.$invoice->id;
         // Avoid infinite loops
@@ -168,7 +173,7 @@ class GroupActionService
 
         // Recursively find conflicts for each subsequent invoice
         foreach ($subsequentInvoices as $subsequentInvoice) {
-            $nestedConflicts = $this->findConflictingInvoicesForInactivation($subsequentInvoice, $processedIds);
+            $nestedConflicts = $this->getConflictingInvoices($subsequentInvoice, $processedIds);
             $conflicts = array_merge($conflicts, $nestedConflicts);
         }
 
@@ -181,7 +186,7 @@ class GroupActionService
      * An invoice conflicts if it cannot change status (approve/unapprove) due to other invoices.
      * This method follows the chain of conflicts to find all dependent invoices.
      *
-     * @deprecated Use findConflictingInvoicesForInactivation for inactivation operations
+     * @deprecated Use getConflictingInvoices for inactivation operations
      */
     private function findConflictingInvoices(Invoice $invoice, array &$processedIds = []): array
     {
