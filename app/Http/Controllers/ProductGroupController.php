@@ -46,6 +46,28 @@ class ProductGroupController extends Controller
         return view('productGroups.edit', compact('productGroup'));
     }
 
+    public function show(Models\ProductGroup $productGroup)
+    {
+        $relatedSubjects = [
+            'incomeSubject',
+            'salesReturnsSubject',
+            'cogsSubject',
+            'inventorySubject',
+        ];
+
+        $productGroup->debit = 0;
+        $productGroup->credit = 0;
+
+        foreach ($relatedSubjects as $subjectField) {
+            $productGroup->debit += \App\Services\SubjectService::sumSubject($productGroup->$subjectField()->first(), false, true);
+            $productGroup->credit += \App\Services\SubjectService::sumSubject($productGroup->$subjectField()->first(), false, false);
+        }
+
+        $productGroup->balance = $productGroup->debit + $productGroup->credit;
+
+        return view('productGroups.show', compact('productGroup'));
+    }
+
     public function update(Request $request, Models\ProductGroup $productGroup)
     {
         $validatedData = $request->validate([

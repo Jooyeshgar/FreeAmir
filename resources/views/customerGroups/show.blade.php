@@ -32,10 +32,13 @@
             </div>
         </div>
 
-        <div class="card-body">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-3">
-                <x-stat-card :title="__('Subject Balance')" :value="formatNumber($customerGroup->balance ?? 0)" type="info" />
-                <x-stat-card :title="__('Credit')" :value="formatNumber($customerGroup->credit ?? 0)" type="info" />
+        @can('reports.ledger')
+            <div class="card-body">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-3">
+                    <x-stat-card :title="__('Subject Balance')" :value="formatNumber($customerGroup->balance ?? 0)" type="info" />
+                    <x-stat-card :title="__('Credit')" :value="formatNumber($customerGroup->credit ?? 0)" type="info" />
+                </div>
             </div>
-        </div>
+        @endcan
+
 </x-app-layout>
