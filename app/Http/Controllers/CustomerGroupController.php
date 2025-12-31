@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models;
 use App\Models\Subject;
+use App\Services\SubjectService;
 use Illuminate\Http\Request;
 
 class CustomerGroupController extends Controller
@@ -20,6 +21,7 @@ class CustomerGroupController extends Controller
     public function create()
     {
         $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->get();
+
         return view('customerGroups.create', compact('subjects'));
     }
 
@@ -35,9 +37,19 @@ class CustomerGroupController extends Controller
         return redirect()->route('customer-groups.index')->with('success', __('Customer group created successfully.'));
     }
 
+    public function show(Models\CustomerGroup $customerGroup)
+    {
+        $customerGroup->debit = SubjectService::sumSubject($customerGroup->subject, false, true);
+        $customerGroup->credit = SubjectService::sumSubject($customerGroup->subject, false, false);
+        $customerGroup->balance = $customerGroup->debit + $customerGroup->credit;
+
+        return view('customerGroups.show', compact('customerGroup'));
+    }
+
     public function edit(Models\CustomerGroup $customerGroup)
     {
         $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->get();
+
         return view('customerGroups.edit', compact('customerGroup', 'subjects'));
     }
 

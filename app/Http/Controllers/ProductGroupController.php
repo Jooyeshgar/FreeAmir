@@ -46,6 +46,11 @@ class ProductGroupController extends Controller
         return view('productGroups.edit', compact('productGroup'));
     }
 
+    public function show(Models\ProductGroup $productGroup)
+    {
+        return view('productGroups.show', compact('productGroup'));
+    }
+
     public function update(Request $request, Models\ProductGroup $productGroup)
     {
         $validatedData = $request->validate([

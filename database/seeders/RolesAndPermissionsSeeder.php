@@ -166,6 +166,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'reports.ledger',
             'reports.journal',
             'reports.sub-ledger',
+            'reports.trial-balance',
             'reports.documents',
             'reports.result',
         ];

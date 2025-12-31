@@ -44,6 +44,9 @@
                             @can('reports.sub-ledger')
                                 <li><a href="{{ route('reports.sub-ledger') }}">{{ __('Sub Ledger') }}</a></li>
                             @endcan
+                            @can('reports.trial-balance')
+                                <li><a href="{{ route('reports.trial-balance') }}">{{ __('Trial Balance') }}</a></li>
+                            @endcan
                         </ul>
                     </details>
                 </li>
