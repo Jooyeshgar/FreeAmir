@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\InvoiceStatus;
+use App\Enums\InvoiceType;
 use App\Models\CustomerGroup;
 use App\Models\Document;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
+use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Subject;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 
 class HomeController extends Controller
@@ -37,6 +40,9 @@ class HomeController extends Controller
         $latestInvoices = Invoice::latest()->limit(10)->get();
 
         $monthlyIncome = $this->getMonthlyIncome();
+        $monthlySellAmount = $this->getMonthlySell();
+        $monthlyWarehouse = $this->getMonthlyWarehouse();
+        $popularProductsAndServices = $this->popularProductsAndServices();
 
         return view('home', compact(
             'customerCount',
@@ -47,10 +53,12 @@ class HomeController extends Controller
             'cashBooks',
             'banks',
             'bankBalances',
-            'monthlyIncome'
+            'monthlyIncome',
+            'popularProductsAndServices',
+            'monthlySellAmount',
+            'monthlyWarehouse'
         ));
     }
-
 
     public function subjectDetail(Request $request)
     {
@@ -63,41 +71,39 @@ class HomeController extends Controller
         $subjectId = $data['cash_book'];
         $duration = intval($data['duration']);
 
-        $lastTransaction = Transaction::where('subject_id', $subjectId)
-            ->orderBy('created_at', 'desc')
+        $lastTransaction = Transaction::query()
+            ->join('documents', 'documents.id', '=', 'transactions.document_id')
+            ->where('transactions.subject_id', $subjectId)
+            ->orderByDesc('documents.date')
+            ->select('transactions.*')
+            ->with('document')
             ->first();
 
-        $endDate = $lastTransaction->document->date ?? now();
+        $endDate = $lastTransaction?->document?->date ?? now();
 
         $startDate = (clone $endDate)->subMonths($duration * 3);
 
-        $initialBalance = Transaction::where('subject_id', $subjectId)
-            ->where('created_at', '<', $startDate)
-            ->with('document')
-            ->whereHas('document', function ($query) use ($startDate) {
-                $query->where('date', '<', $startDate);
-            })
-            ->sum('value');
+        $initialBalance = (int) Transaction::query()
+            ->join('documents', 'documents.id', '=', 'transactions.document_id')
+            ->where('transactions.subject_id', $subjectId)
+            ->where('documents.date', '<', $startDate)
+            ->sum('transactions.value');
 
-        $transactions = Transaction::where('subject_id', $subjectId)
-            ->with('document')
-            ->whereHas('document', function ($query) use ($startDate, $endDate) {
-                $query->whereBetween('date', [$startDate, $endDate]);
-            })->get();
-
-        $dailyTransactions = $transactions
-            ->mapToGroups(function ($transaction) {
-                return [optional($transaction->document)->date->toDateString() => $transaction->value];
-            })
-            ->mapWithKeys(function ($values, $date) {
-                return [$date => array_sum($values->toArray())];
-            });
+        $dailyTransactions = Transaction::query()
+            ->join('documents', 'documents.id', '=', 'transactions.document_id')
+            ->where('transactions.subject_id', $subjectId)
+            ->whereBetween('documents.date', [$startDate, $endDate])
+            ->selectRaw('DATE(documents.date) as date, SUM(transactions.value) as total')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->pluck('total', 'date')
+            ->map(fn ($v) => (int) $v);
         $dailyBalances = [];
         $runningBalance = -1 * $initialBalance;
 
         foreach ($dailyTransactions as $date => $dailyChange) {
             $runningBalance -= $dailyChange;
-            $dailyBalances[$date] = $runningBalance;
+            $dailyBalances[(string) $date] = $runningBalance;
         }
 
         return response()->json([
@@ -109,31 +115,108 @@ class HomeController extends Controller
         ]);
     }
 
-    public function getMonthlyIncome()
+    public function getMonthlyIncome(): array
     {
-        $currentJalaliYear = (int) jdate('Y', tr_num: 'en');
+        $subjectIds = Product::query()
+            ->whereNotNull('income_subject_id')
+            ->distinct()
+            ->pluck('income_subject_id')
+            ->all();
 
-        $startDate = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian($currentJalaliYear, '01', '01', '/'));
+        return $this->monthlyStats($subjectIds);
+    }
 
-        $endDate = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian($currentJalaliYear + 1, '01', '01', '/'))->subDay();
+    public function getMonthlySell(): array
+    {
+        $subjectIds = Product::query()
+            ->whereNotNull('inventory_subject_id')
+            ->distinct()
+            ->pluck('inventory_subject_id')
+            ->all();
 
-        $incomeSubjects = Subject::where('parent_id', config('amir.income'))->get();
+        return $this->monthlyStats($subjectIds);
+    }
 
-        $transactions = Transaction::where('value', '>', 0)
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->whereIn('subject_id', $incomeSubjects->pluck('id')->toArray())
-            ->get();
+    public function getMonthlyWarehouse(): array
+    {
+        $subjectIds = Product::query()
+            ->whereNotNull('inventory_subject_id')
+            ->distinct()
+            ->pluck('inventory_subject_id')
+            ->all();
 
-        $monthlyIncome = array_fill(1, 12, 0);
+        return $this->monthlyStats($subjectIds, countOnly: true);
+    }
 
-        foreach ($transactions as $transaction) {
-            $jalaliMonth = (int) jdate('m', strtotime($transaction->created_at), tr_num: 'en');
+    public function popularProductsAndServices()
+    {
+        return InvoiceItem::whereHas('invoice', fn ($q) => $q->where('invoice_type', InvoiceType::SELL)
+            ->where('status', InvoiceStatus::APPROVED)
+        )
+            ->with('itemable')
+            ->selectRaw('itemable_type, itemable_id, SUM(quantity) as total_quantity')
+            ->groupBy('itemable_type', 'itemable_id')
+            ->orderByDesc('total_quantity')
+            ->limit(10)
+            ->get()
+            ->map(fn ($item) => [
+                'id' => $item->itemable_id,
+                'name' => $item->itemable->name ?? 'نامشخص',
+                'code' => $item->itemable->code ?? '-',
+                'quantity' => (int) $item->total_quantity,
+                'type' => $item->itemable_type === Product::class ? 'products' : 'services',
+            ]);
+    }
 
-            $monthlyIncome[$jalaliMonth] += $transaction->value;
+    private function monthlyStats(array $subjectIds, bool $countOnly = false): array
+    {
+        [$startDate, $endDate] = $this->currentJalaliYearRange();
+
+        if (empty($subjectIds)) {
+            return $this->mapMonths([]);
         }
 
-        $result = [];
-        $jalaliMonthNames = [
+        $select = $countOnly
+            ? 'COUNT(*) as total'
+            : 'SUM(transactions.value) as total';
+
+        $dailyTotals = Transaction::query()
+            ->join('documents', 'documents.id', '=', 'transactions.document_id')
+            ->where('transactions.value', '>', 0)
+            ->whereIn('transactions.subject_id', $subjectIds)
+            ->whereBetween('documents.date', [$startDate, $endDate])
+            ->selectRaw("DATE(documents.date) as date, {$select}")
+            ->groupBy('date')
+            ->pluck('total', 'date');
+
+        $byJalaliMonth = [];
+        foreach ($dailyTotals as $date => $total) {
+            $carbon = Carbon::parse((string) $date);
+            $jalaliMonth = (int) jdate('n', $carbon->timestamp, tr_num: 'en');
+            $byJalaliMonth[$jalaliMonth] = ($byJalaliMonth[$jalaliMonth] ?? 0) + (int) $total;
+        }
+
+        return $this->mapMonths($byJalaliMonth);
+    }
+
+    private function currentJalaliYearRange(): array
+    {
+        $year = (int) jdate('Y', tr_num: 'en');
+
+        $start = Carbon::parse(
+            jalali_to_gregorian($year, '01', '01', '/')
+        )->startOfDay();
+
+        $end = Carbon::parse(
+            jalali_to_gregorian($year + 1, '01', '01', '/')
+        )->subDay()->endOfDay();
+
+        return [$start, $end];
+    }
+
+    private function mapMonths(array $data): array
+    {
+        $months = [
             1 => 'فروردین',
             2 => 'اردیبهشت',
             3 => 'خرداد',
@@ -145,11 +228,13 @@ class HomeController extends Controller
             9 => 'آذر',
             10 => 'دی',
             11 => 'بهمن',
-            12 => 'اسفند'
+            12 => 'اسفند',
         ];
 
-        foreach ($monthlyIncome as $month => $income) {
-            $result[$jalaliMonthNames[$month]] = $income;
+        $result = [];
+
+        foreach ($months as $number => $name) {
+            $result[$name] = (int) ($data[$number] ?? 0);
         }
 
         return $result;

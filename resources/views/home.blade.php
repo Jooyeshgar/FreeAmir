@@ -14,7 +14,7 @@
         </div>
 
         <section class="flex gap-4 max-[850px]:flex-wrap">
-            <div class="w-1/3 max-[850px]:w-full bg-[#E9ECEF] rounded-[16px] shadow-[0px_43px_27px_0px_#00000012] relative">
+            <div class="w-1/3 max-[850px]:w-full bg-[#E9ECEF] rounded-[16px] relative">
                 <div class="flex justify-between items-center max-[850px]:flex-col max-[850px]:mt-4">
                     <div>
                         <h2 class="text-[#495057] ms-3">
@@ -23,15 +23,18 @@
                         </h2>
                     </div>
 
-                    <div class="flex bg-[#DEE2E6] rounded-[16px] m-1 overflow-hidden" x-data="cashBookSelectHandler()" x-init="initializeCashBook()">
-                        <select x-model="selectedCashBook" x-on:change="handleCashBookChange" class="select bg-[#DEE2E6] text-[#495057] w-[140px] max-w-xs">
+                    <div class="flex bg-[#DEE2E6] rounded-[16px] m-1 overflow-hidden" x-data="cashBookSelectHandler()"
+                        x-init="initializeCashBook()">
+                        <select x-model="selectedCashBook" x-on:change="handleCashBookChange"
+                            class="select bg-[#DEE2E6] text-[#495057] w-[140px] max-w-xs">
                             @foreach ($cashBooks as $item)
                                 <option {{ $loop->first ? 'selected' : '' }} value="{{ $item->id }}">
                                     {{ $item->name }}</option>
                             @endforeach
                         </select>
 
-                        <select x-model="selectedDuration" x-on:change="handleCashBookChange" class="select bg-[#DEE2E6] text-[#495057] w-[120px] max-w-xs">
+                        <select x-model="selectedDuration" x-on:change="handleCashBookChange"
+                            class="select bg-[#DEE2E6] text-[#495057] w-[120px] max-w-xs">
                             <option value="1">{{ '۳ ' . __('Month') }}</option>
                             <option value="2">{{ '۶ ' . __('Month') }}</option>
                             <option value="3">{{ '۹ ' . __('Month') }}</option>
@@ -48,7 +51,7 @@
             </div>
 
             @can('documents.show')
-                <div class="gaugeChartContainer w-1/3 max-[850px]:w-full relative bg-[#E9ECEF] rounded-[16px] shadow-[0px_43px_27px_0px_#00000012]">
+                <div class="gaugeChartContainer w-1/3 max-[850px]:w-full relative bg-[#E9ECEF] rounded-[16px]">
                     <div class="flex justify-between items-center h-[62px]">
                         <h2 class="text-[#495057] ms-3">
                             {{ __('Income') }}
@@ -56,19 +59,31 @@
                     </div>
 
                     <div class="p-2">
-                        <x-charts.income-chart :datas="$monthlyIncome" />
+                        <x-charts.income-chart id="monthlyIncomeChart" :datas="$monthlyIncome" />
 
+                    </div>
+                </div>
+            @else
+                <div class="gaugeChartContainer w-1/3 max-[850px]:w-full relative bg-[#E9ECEF] rounded-[16px]">
+                    <div class="flex justify-between items-center h-[62px]">
+                        <h2 class="text-[#495057] ms-3">
+                            {{ __('Sell') }}
+                        </h2>
+                    </div>
+
+                    <div class="p-2">
+                        <x-charts.sell-chart id="monthlySellAmountChart" :datas="$monthlySellAmount" />
                     </div>
                 </div>
             @endcan
 
-            <div class="w-1/3 max-[850px]:w-full bg-[#E9ECEF] rounded-[16px] shadow-[0px_43px_27px_0px_#00000012] relative">
+            <div class="w-1/3 max-[850px]:w-full bg-[#E9ECEF] rounded-[16px] relative">
                 <div class="flex justify-between items-center h-[62px]">
                     <h2 class="text-[#495057] ms-3">
                         {{ __('Quick Access') }}
                     </h2>
                 </div>
-                
+
                 <div class="flex flex-wrap text-[#212529] mt-4 max-[850px]:mb-4">
                     @can('customers.index')
                         <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
@@ -85,11 +100,11 @@
                             </a>
                         </div>
                     @endcan
-                    
+
                     @can('management.configs.index')
                         <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
                             <a href="{{ url('management/configs') }}">
-                                {{ __('Management') }}
+                                {{ __('Configs') }}
                             </a>
                         </div>
                     @endcan
@@ -112,7 +127,7 @@
 
                     @can('invoices.create')
                         <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
-                            <a href="{{ route('invoices.create', ['invoice_type'=> 'buy']) }}">
+                            <a href="{{ route('invoices.create', ['invoice_type' => 'buy']) }}">
                                 {{ __('Invoice Issuance') }}
                             </a>
                         </div>
@@ -125,21 +140,13 @@
                             </a>
                         </div>
                     @endcan
-
-                    @can('invoices.create')
-                        <div class="w-1/2 text-center mb-4 transition-all hover:text-[#6f7c88] max-[850px]:text-xs">
-                            <a href="{{ route('invoices.create', ['invoice_type'=> 'buy'])  }}?type=retail">
-                                {{ __('Retail Invoice') }}
-                            </a>
-                        </div>
-                    @endcan
                 </div>
             </div>
         </section>
 
         @can('documents.show')
             <section class="relative z-[3] flex max-[1200px]:flex-wrap gap-4 mt-4 mb-16">
-                <div class="w-1/2 max-[1200px]:w-full bg-[#E9ECEF] rounded-[16px] shadow-[0px_43px_27px_0px_#00000012]">
+                <div class="w-1/2 max-[1200px]:w-full bg-[#E9ECEF] rounded-[16px]">
                     <div class="flex justify-between items-center">
                         <div>
                             <h2 class="text-[#495057] ms-3">
@@ -186,7 +193,7 @@
                     </div>
                 </div>
 
-                <div class="w-1/2 max-[1200px]:w-full bg-[#E9ECEF] rounded-[16px] shadow-[0px_43px_27px_0px_#00000012]">
+                <div class="w-1/2 max-[1200px]:w-full bg-[#E9ECEF] rounded-[16px]">
                     <div class="flex justify-between items-center max-[850px]:flex-col max-[850px]:mt-4">
                         <div>
                             <h2 class="text-[#495057] ms-3">
@@ -194,15 +201,18 @@
                             </h2>
                         </div>
 
-                        <div class="flex bg-[#DEE2E6] rounded-[16px] m-1 overflow-hidden" x-data="bankSelectHandler()" x-init="initializeBank()">
-                            <select class="select bg-[#DEE2E6] text-[#495057] w-full max-w-xs" x-model="selectedBank" @change="handleBankChange">
+                        <div class="flex bg-[#DEE2E6] rounded-[16px] m-1 overflow-hidden" x-data="bankSelectHandler()"
+                            x-init="initializeBank()">
+                            <select class="select bg-[#DEE2E6] text-[#495057] w-full max-w-xs" x-model="selectedBank"
+                                @change="handleBankChange">
                                 @foreach ($banks as $item)
                                     <option {{ $loop->first ? 'selected' : '' }} value="{{ $item->id }}">
                                         {{ $item->name }}</option>
                                 @endforeach
                             </select>
 
-                            <select x-model="selectedDuration" @change="handleBankChange" class="select bg-[#DEE2E6] text-[#495057] w-[120px] max-w-xs">
+                            <select x-model="selectedDuration" @change="handleBankChange"
+                                class="select bg-[#DEE2E6] text-[#495057] w-[120px] max-w-xs">
                                 <option value="1">{{ '۳ ' . __('Month') }}</option>
                                 <option value="2">{{ '۶ ' . __('Month') }}</option>
                                 <option value="3">{{ '۹ ' . __('Month') }}</option>
@@ -218,6 +228,59 @@
                     </div>
                 </div>
             </section>
+        @else
+            @canany(['products.index', 'services.index'])
+                <section class="relative z-[3] flex max-[1200px]:flex-wrap gap-4 mt-4 mb-2">
+                    <div class="w-1/2 max-[1200px]:w-full bg-[#E9ECEF] rounded-[16px]">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h2 class="text-[#495057] ms-3">{{ __('Most popular products and services') }}</h2>
+                            </div>
+                            <div class="flex rounded-[16px] m-1 overflow-hidden">
+                                <a href="{{ route('products.index') }}"
+                                    class="flex ml-4 items-center justify-center bg-[#DEE2E6] text-[#242424] rounded-[16px] w-[72px] h-[56px]">
+                                    {{ __('Products') }}</a>
+                                <a href="{{ route('services.index') }}"
+                                    class="flex items-center justify-center bg-[#DEE2E6] text-[#242424] rounded-[16px] w-[72px] h-[56px]">
+                                    {{ __('Services') }}</a>
+                            </div>
+                        </div>
+                        <div class="text-[#495057] mt-4">
+                            <div class="flex justify-between mx-4 border-b-2 border-b-[#CED4DA] pb-3 mb-4">
+                                <p>{{ __('Product/Service name') }}</p>
+                                <p>{{ __('Quantity') }}</p>
+                            </div>
+                            <div class="flex justify-between mx-4 text-[13px]">
+                                <div>
+                                    @foreach ($popularProductsAndServices as $popularProductAndService)
+                                        <p class="mb-4">
+                                            <a
+                                                href="{{ route($popularProductAndService['type'] . '.show', $popularProductAndService['id']) }}">
+                                                {{ $popularProductAndService['name'] }}</a>
+                                        </p>
+                                    @endforeach
+                                </div>
+                                <div>
+                                    @foreach ($popularProductsAndServices as $popularProductAndService)
+                                        <p class="mb-4">
+                                            {{ convertToFarsi(number_format($popularProductAndService['quantity'])) }}
+                                        </p>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="w-1/2 max-[1200px]:w-full bg-[#E9ECEF] rounded-[16px]">
+                        <div class="flex justify-between items-center h-[62px]">
+                            <h2 class="text-[#495057] ms-3">{{ __('Warehouse') }}</h2>
+                        </div>
+                        <div class="p-2">
+                            <x-charts.warehouse-chart :datas="$monthlyWarehouse" />
+                        </div>
+                    </div>
+                </section>
+            @endcanany
         @endcan
     </main>
 
