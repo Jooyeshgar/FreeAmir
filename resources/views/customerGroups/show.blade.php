@@ -36,7 +36,9 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-3">
                 <x-stat-card :title="__('Customers Count')" :value="formatNumber($customerGroup->customers->count()) ?? '-'" type="base" icon="services" />
                 @can('reports.ledger')
-                    <x-stat-card-link :title="__('Subject Balance')" :value="formatNumber($customerGroup->balance ?? 0)" :link="route('transactions.index', ['subject_id' => $customerGroup->subject->id])" :currency="config('amir.currency') ?? __('Rial')" type="success"
+                    <x-stat-card-link :title="__('Subject Balance')" :value="formatNumber(
+                        \App\Services\SubjectService::sumSubject($customerGroup->subject, true, false) ?? 0,
+                    )" :link="route('transactions.index', ['subject_id' => $customerGroup->subject->id])" :currency="config('amir.currency') ?? __('Rial')" type="success"
                         icon="info" />
                 </div>
             @endcan

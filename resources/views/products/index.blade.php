@@ -80,7 +80,9 @@
                                     {{ $product->totalSell != 0 ? formatNumber(round(($product->salesProfit / $product->totalSell) * 100, 2)) : 0 }}%</td>
                                 <td class="px-4 py-2">{{ formatNumber($product->totalSell) }}</td>
                             @endcan
-                            <td class="px-4 py-2">{{ $product->productGroup ? $product->productGroup->name : '' }}</td>
+                            <td class="px-4 py-2">
+                                <a href="{{ route('product-groups.show', $product->productGroup) }}">{{ $product->productGroup->name }}</a>
+                            </td>
                             <td class="px-4 py-2">
                                 <a href="{{ route('products.edit', $product) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                 @if ($product->invoiceItems()->exists())

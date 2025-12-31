@@ -30,7 +30,7 @@
                 <x-stat-card :title="__('Services Count')" :value="formatNumber($serviceGroup->services->count()) ?? '-'" type="base" icon="services" />
 
                 @can('reports.ledger')
-                    <x-stat-card-link :title="__('Subject Balance')" :value="formatNumber($serviceGroup->balance ?? 0)" :link="route('transactions.index', ['subject_id' => $serviceGroup->subject->id])" :currency="config('amir.currency') ?? __('Rial')" type="success"
+                    <x-stat-card-link :title="__('Subject Balance')" :value="formatNumber(\App\Services\SubjectService::sumSubject($serviceGroup->subject) ?? 0)" :link="route('transactions.index', ['subject_id' => $serviceGroup->subject->id])" :currency="config('amir.currency') ?? __('Rial')" type="success"
                         icon="income" />
                 @endcan
             </div>

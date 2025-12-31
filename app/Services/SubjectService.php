@@ -12,7 +12,7 @@ class SubjectService
     public static function sumSubject(string|int|Subject $code, bool $both = true, bool $debit = false): int
     {
         if ($code instanceof Subject) {
-            $subject = $code->load(['transactions']);
+            $subject = $code->loadMissing(['transactions']);
         } elseif (is_int($code)) {
             $subject = Subject::with(['transactions'])->find($code);
         } else {
@@ -22,6 +22,8 @@ class SubjectService
         if (! $subject) {
             return 0;
         }
+
+        self::eagerLoadDescendants($subject);
 
         return self::sumSubjectRecursively($subject, $both, $debit);
     }
@@ -40,14 +42,27 @@ class SubjectService
             $sum = $subject->transactions->where('value', '>', 0)->sum('value');
         }
 
-        $children = $subject->children()->get();
+        $children = $subject->children()->with('transactions')->get();
         /** @var Subject $child */
         foreach ($children as $child) {
-            $child->load('transactions');
             $sum += self::sumSubjectRecursively($child, $both, $debit);
         }
 
         return $sum;
+    }
+
+    /**
+     * Recursively eager-load all descendants with their transactions.
+     */
+    private static function eagerLoadDescendants(Subject $subject): void
+    {
+        $subject->loadMissing(['children' => function ($query) {
+            $query->with('transactions');
+        }]);
+
+        foreach ($subject->children as $child) {
+            self::eagerLoadDescendants($child);
+        }
     }
 
     /**
