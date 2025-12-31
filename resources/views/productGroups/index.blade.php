@@ -52,6 +52,8 @@
                                     href="{{ route('transactions.index', ['subject_id' => $productGroup->cogsSubject]) }}">{{ $productGroup->cogsSubject?->name }}</a>
                             </td>
                             <td class="px-4 py-2">
+                                <a href="{{ route('product-groups.show', $productGroup) }}"
+                                    class="btn btn-sm btn-info">{{ __('View') }}</a>
                                 <a href="{{ route('product-groups.edit', $productGroup) }}"
                                     class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                 <form action="{{ route('product-groups.destroy', $productGroup) }}" method="POST"

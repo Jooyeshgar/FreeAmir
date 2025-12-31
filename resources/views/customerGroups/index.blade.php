@@ -23,7 +23,10 @@
 
                     @foreach ($customerGroups as $customerGroup)
                         <tr>
-                            <td class="px-4 py-2">{{ $customerGroup->subject?->formattedCode() }}</td>
+                            <td class="px-4 py-2">
+                                <a
+                                    href="{{ route('transactions.index', ['subject_id' => $customerGroup->subject->id]) }}">{{ $customerGroup->subject?->formattedCode() }}</a>
+                            </td>
                             <td class="px-4 py-2">
                                 <a href="{{ route('customers.index', ['group_name' => $customerGroup->name]) }}"
                                     class="text-blue-600 hover:underline">
@@ -31,6 +34,8 @@
                                 </a>
                             </td>
                             <td class="px-4 py-2">
+                                <a href="{{ route('customer-groups.show', $customerGroup) }}"
+                                    class="btn btn-sm btn-info">{{ __('View') }}</a>
                                 <a href="{{ route('customer-groups.edit', $customerGroup) }}"
                                     class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                 <form action="{{ route('customer-groups.destroy', $customerGroup) }}" method="POST"

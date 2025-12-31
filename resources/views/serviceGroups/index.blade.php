@@ -40,6 +40,8 @@
                                     href="{{ route('transactions.index', ['subject_id' => $serviceGroup->subject]) }}">{{ $serviceGroup->subject?->name }}</a>
                             </td>
                             <td class="px-4 py-2">
+                                <a href="{{ route('service-groups.show', $serviceGroup) }}"
+                                    class="btn btn-sm btn-info">{{ __('View') }}</a>
                                 <a href="{{ route('service-groups.edit', $serviceGroup) }}"
                                     class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                 <form action="{{ route('service-groups.destroy', $serviceGroup) }}" method="POST"

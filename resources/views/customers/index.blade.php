@@ -43,7 +43,10 @@
                                     href="{{ route('transactions.index', ['subject_id' => $customer->subject->id]) }}">{{ app\Services\SubjectService::sumSubject($customer->subject) }}</a>
                             </td>
                             <td class="px-4 py-2">{{ $customer->phone }}</td>
-                            <td class="px-4 py-2">{{ $customer->group ? $customer->group->name : '' }}</td>
+                            <td class="px-4 py-2">
+                                <a href="{{ route('customer-groups.show', $customer->group) }}">
+                                    {{ $customer->group ? $customer->group->name : '' }}</a>
+                            </td>
                             <td class="px-4 py-2">
                                 <a href="{{ route('customers.edit', $customer) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                 <form action="{{ route('customers.destroy', $customer) }}" method="POST" class="inline-block">

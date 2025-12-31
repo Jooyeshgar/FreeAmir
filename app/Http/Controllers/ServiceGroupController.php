@@ -28,6 +28,11 @@ class ServiceGroupController extends Controller
         return view('serviceGroups.create');
     }
 
+    public function show(ServiceGroup $serviceGroup)
+    {
+        return view('serviceGroups.show', compact('serviceGroup'));
+    }
+
     public function store(Request $request)
     {
         $validatedData = $request->validate([

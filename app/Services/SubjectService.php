@@ -7,26 +7,62 @@ use App\Models\Subject;
 class SubjectService
 {
     /**
-     * Calculate the total sum of transactions for a subject with children.
-     *
-     * @param  string|int  $code  Subject primary key (int) or subject code (string)
-     * @return int Sum of the `amount` field for the subject and its immediate children
+     * Calculate the total sum of transactions for a subject with all its descendants recursively.
      */
-    public static function sumSubject(string|int|Subject $code): int
+    public static function sumSubject(string|int|Subject $code, bool $both = true, bool $debit = false): int
     {
         if ($code instanceof Subject) {
-            $subject = $code->load(['transactions', 'children.transactions']);
+            $subject = $code->loadMissing(['transactions']);
         } elseif (is_int($code)) {
-            $subject = Subject::with(['transactions', 'children.transactions'])->find($code);
+            $subject = Subject::with(['transactions'])->find($code);
         } else {
-            $subject = Subject::with(['transactions', 'children.transactions'])->where('code', $code)->first();
+            $subject = Subject::with(['transactions'])->where('code', $code)->first();
         }
 
         if (! $subject) {
             return 0;
         }
 
-        return $subject->transactions->merge($subject->children->flatMap->transactions)->sum('value');
+        self::eagerLoadDescendants($subject);
+
+        return self::sumSubjectRecursively($subject, $both, $debit);
+    }
+
+    /**
+     * Recursively sum transactions for a subject and all its descendants
+     */
+    private static function sumSubjectRecursively(Subject $subject, bool $both, bool $debit): int
+    {
+        $sum = 0;
+        if ($both) {
+            $sum = $subject->transactions->sum('value');
+        } elseif ($debit) {
+            $sum = $subject->transactions->where('value', '<', 0)->sum('value');
+        } else {
+            $sum = $subject->transactions->where('value', '>', 0)->sum('value');
+        }
+
+        $children = $subject->children()->with('transactions')->get();
+        /** @var Subject $child */
+        foreach ($children as $child) {
+            $sum += self::sumSubjectRecursively($child, $both, $debit);
+        }
+
+        return $sum;
+    }
+
+    /**
+     * Recursively eager-load all descendants with their transactions.
+     */
+    private static function eagerLoadDescendants(Subject $subject): void
+    {
+        $subject->loadMissing(['children' => function ($query) {
+            $query->with('transactions');
+        }]);
+
+        foreach ($subject->children as $child) {
+            self::eagerLoadDescendants($child);
+        }
     }
 
     /**

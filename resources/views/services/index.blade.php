@@ -65,7 +65,9 @@
                             </td>
                             <td class="px-4 py-2">{{ formatNumber($service->selling_price) }}</td>
                             <td class="px-4 py-2">{{ formatNumber($service->vat) }}%</td>
-                            <td class="px-4 py-2">{{ $service->serviceGroup ? $service->serviceGroup->name : '' }}</td>
+                            <td class="px-4 py-2">
+                                <a href="{{ route('service-groups.show', $service->serviceGroup) }}">{{ $service->serviceGroup ? $service->serviceGroup->name : '' }}</a>
+                            </td>
                             <td class="px-4 py-2">
                                 <a href="{{ route('services.edit', $service) }}"
                                     class="btn btn-sm btn-info">{{ __('Edit') }}</a>
