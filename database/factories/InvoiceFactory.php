@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\Customer;
 use App\Models\Document;
@@ -25,7 +26,7 @@ class InvoiceFactory extends Factory
             'customer_id' => Customer::inRandomOrder()->first()->id,
             'creator_id' => User::inRandomOrder()->first()->id,
             'subtraction' => 0,
-            'status' => $this->faker->randomElement([\App\Enums\InvoiceStatus::APPROVED, \App\Enums\InvoiceStatus::UNAPPROVED]),
+            'status' => $this->faker->randomElement([InvoiceStatus::APPROVED, InvoiceStatus::UNAPPROVED]),
             'vat' => 0,
             'description' => $this->faker->paragraph(),
             'amount' => 0,
@@ -50,7 +51,7 @@ class InvoiceFactory extends Factory
 
             if ($invoice->status->isApproved()) {
                 $document = Document::factory()->create([
-                    'number' => Document::max('number') + 1,
+                    'number' => (Document::max('number') ?? 0) + 1,
                     'company_id' => session('active-company-id'),
                     'date' => $invoice->date,
                     'title' => "Invoice Document #{$invoice->number}",
