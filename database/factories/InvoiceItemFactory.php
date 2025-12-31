@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Models\Product;
-use App\Models\Transaction;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class InvoiceItemFactory extends Factory
@@ -15,9 +14,8 @@ class InvoiceItemFactory extends Factory
 
         return [
             'description' => $this->faker->paragraph(2),
-            'item_id' => Product::inRandomOrder()->first()->id,
-            'item_type' => 'product',
-            'transaction_id' => Transaction::factory(),
+            'itemable_id' => Product::inRandomOrder()->first()->id,
+            'itemable_type' => Product::class,
             'quantity' => $quantity,
             'unit_price' => $unit_price,
             'unit_discount' => 0,
