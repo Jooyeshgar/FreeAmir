@@ -14,11 +14,10 @@ class CustomerFactory extends Factory
 
     public function definition()
     {
-        // session(['active-company-id' => 1]);
         $bankIds = Bank::pluck('id')->toArray();
 
         return [
-            'company_id' => session('active-company-id'),
+            'company_id' => session('active-company-id') ?? 1,
             'name' => $this->faker->name,
             'phone' => substr($this->faker->phoneNumber, 0, 15),
             'cell' => substr($this->faker->phoneNumber, 0, 15),

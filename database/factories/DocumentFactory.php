@@ -16,7 +16,7 @@ class DocumentFactory extends Factory
             'date' => $this->faker->date(),
             'creator_id' => User::inRandomOrder()->first()->id,
             'title' => $this->faker->persianSentence(),
-            'company_id' => Company::inRandomOrder()->first()->id,
+            'company_id' => Company::inRandomOrder()->first()->id ?? 1,
         ];
     }
 }
