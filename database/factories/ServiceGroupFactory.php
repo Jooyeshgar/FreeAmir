@@ -11,31 +11,28 @@ class ServiceGroupFactory extends Factory
     public function definition(): array
     {
         return [
-            'code' => $this->faker->unique()->numerify('SG-###'),
             'name' => $this->faker->name,
             'vat' => 0,
             'sstid' => $this->faker->optional()->word,
             'company_id' => 1,
-            'subject_id' => null,
         ];
     }
 
     public function withSubject(): static
     {
-        return $this->afterCreating(function (ServiceGroup $serviceGroup) {
-            $subjectDetail = [
-                'name' => $serviceGroup->name,
-                'parent_id' => config('amir.services_revenue'),
-            ];
+        return $this->afterCreating(function (ServiceGroup $group) {
+            $companyId = $group->company_id;
+            $parent = Subject::withoutGlobalScopes()->find(config('amir.sales_revenue'));
 
             $subject = Subject::factory()
-                ->state(array_merge($subjectDetail, [
-                    'company_id' => $serviceGroup->company_id,
-                ]))
-                ->withAutoCode()
+                ->state([
+                    'name' => $group->name,
+                    'company_id' => $companyId,
+                ])
+                ->withParent($parent)
                 ->create();
 
-            $serviceGroup->updateQuietly(['subject_id' => $subject->id]);
+            $group->updateQuietly(['subject_id' => $subject->id]);
         });
     }
 }

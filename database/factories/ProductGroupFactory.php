@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Models\ProductGroup;
+use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -25,40 +27,33 @@ class ProductGroupFactory extends Factory
 
     public function withSubjects(): static
     {
-        return $this->afterCreating(function (\App\Models\ProductGroup $productGroup) {
-            $subjects = [
-                'income_subject_id' => [
-                    'name' => $productGroup->name,
-                    'parent_id' => config('amir.sales_revenue'),
-                ],
-                'sales_returns_subject_id' => [
-                    'name' => $productGroup->name,
-                    'parent_id' => config('amir.sales_returns'),
-                ],
-                'cogs_subject_id' => [
-                    'name' => $productGroup->name,
-                    'parent_id' => config('amir.cost_of_goods_sold'),
-                ],
-                'inventory_subject_id' => [
-                    'name' => $productGroup->name,
-                    'parent_id' => config('amir.inventory'),
-                ],
+        return $this->afterCreating(function (ProductGroup $group) {
+            $companyId = $group->company_id;
+
+            $map = [
+                'income_subject_id' => config('amir.sales_revenue'),
+                'sales_returns_subject_id' => config('amir.sales_returns'),
+                'cogs_subject_id' => config('amir.cost_of_goods_sold'),
+                'inventory_subject_id' => config('amir.inventory'),
             ];
 
-            $subjectIds = [];
+            $updates = [];
 
-            foreach ($subjects as $field => $attributes) {
-                $subject = \App\Models\Subject::factory()
-                    ->state(array_merge($attributes, [
-                        'company_id' => $productGroup->company_id,
-                    ]))
-                    ->withAutoCode()
+            foreach ($map as $column => $parentId) {
+                $parent = Subject::withoutGlobalScopes()->find($parentId);
+
+                $subject = Subject::factory()
+                    ->state([
+                        'name' => $group->name,
+                        'company_id' => $companyId,
+                    ])
+                    ->withParent($parent)
                     ->create();
 
-                $subjectIds[$field] = $subject->id;
+                $updates[$column] = $subject->id;
             }
 
-            $productGroup->updateQuietly($subjectIds);
+            $group->updateQuietly($updates);
         });
     }
 }

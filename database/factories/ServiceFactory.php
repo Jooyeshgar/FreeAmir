@@ -38,17 +38,17 @@ class ServiceFactory extends Factory
         });
     }
 
-    public function withSubjects(): static
+    public function withSubject(): static
     {
         return $this->afterCreating(function (Service $service) {
+            $group = ServiceGroup::withoutGlobalScopes()->find($service->group);
+
             $subject = Subject::factory()
-                ->state([
+                ->withParent(Subject::withoutGlobalScopes()->find($group->subject_id))
+                ->create([
                     'name' => $service->name,
-                    'parent_id' => $service->serviceGroup?->subject_id,
-                    'company_id' => $service->company_id ?? $service->serviceGroup?->company_id,
-                ])
-                ->withAutoCode()
-                ->create();
+                    'company_id' => $service->company_id,
+                ]);
 
             $service->saveQuietly(['subject_id' => $subject->id]);
         });

@@ -2,34 +2,18 @@
 
 namespace Database\Seeders;
 
-use App\Services\ProductService;
-use Faker\Factory as Faker;
+use App\Models\Product;
+use App\Models\ProductGroup;
 use Illuminate\Database\Seeder;
 
 class ProductSeeder extends Seeder
 {
-    public function run()
+    public function run(): void
     {
-        $productService = app(ProductService::class);
-        $productCount = 50;
+        $groups = ProductGroup::withoutGlobalScopes()->get();
 
-        $faker = Faker::create();
-        session(['active-company-id' => 1]);
-
-        for ($i = 0; $i < $productCount; $i++) {
-            $productService->create(
-                [
-                    'code' => $faker->unique()->numerify('###'),
-                    'company_id' => 1,
-                    'name' => $faker->name,
-                    'group' => 1,
-                    'location' => $faker->streetAddress,
-                    'quantity' => $faker->numberBetween(50, 1000),
-                    'quantity_warning' => $faker->randomDigitNotNull,
-                    'oversell' => $faker->boolean,
-                    'selling_price' => $faker->randomFloat(2, 0, 1000),
-                    'description' => $faker->sentence,
-                ]);
+        foreach ($groups as $group) {
+            Product::factory()->count(10)->withGroup($group)->withSubjects()->create();
         }
     }
 }

@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Product;
 use App\Models\ProductGroup;
+use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class ProductFactory extends Factory
@@ -30,38 +31,17 @@ class ProductFactory extends Factory
         ];
     }
 
-    /**
-     * Attach one or more websites after creating the product.
-     * Usage: Product::factory()->withWebsites(2)->create();
-     */
-    public function withWebsites(int $count = 1)
+    public function withGroup(ProductGroup $group): static
     {
-        return $this->afterCreating(function (Product $product) use ($count) {
-            \App\Models\ProductWebsite::factory()->count($count)->create(['product_id' => $product->id]);
-        });
+        return $this->state([
+            'group' => $group->id,
+        ]);
     }
 
-    public function withGroup(?ProductGroup $group = null): static
-    {
-        return $this->state(function () use ($group) {
-            $companyId = $attributes['company_id'] ?? session('active-company-id');
-            $groupToUse = $group ?? ProductGroup::factory()->create(['company_id' => $companyId]);
-
-            return [
-                'group' => $groupToUse->id,
-            ];
-        });
-    }
-
-    /**
-     * Create accounting subjects for this product (income, sales returns, cogs, inventory).
-     * Subjects will have their parent set from the product group when available.
-     */
     public function withSubjects(): static
     {
         return $this->afterCreating(function (Product $product) {
-            $group = $product->productGroup;
-            $companyId = $product->company_id ?? $group?->company_id ?? session('active-company-id');
+            $group = ProductGroup::withoutGlobalScopes()->find($product->group);
 
             $subjectColumns = [
                 'income_subject_id',
@@ -71,14 +51,15 @@ class ProductFactory extends Factory
             ];
 
             foreach ($subjectColumns as $column) {
-                $subject = \App\Models\Subject::factory()
-                    ->state([
+                $parentId = $group->{$column};
+
+                $subject = Subject::factory()
+                    ->withParent(Subject::withoutGlobalScopes()->find($parentId))
+                    ->create([
                         'name' => $product->name,
-                        'parent_id' => $group?->{$column},
-                        'company_id' => $companyId,
-                    ])
-                    ->withAutoCode()
-                    ->create();
+                        'company_id' => $product->company_id,
+                    ]);
+
                 $product->{$column} = $subject->id;
             }
             $product->saveQuietly();
