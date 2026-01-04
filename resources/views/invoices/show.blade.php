@@ -31,21 +31,11 @@
         <div class="card-body space-y-8">
             <x-show-message-bags />
 
-            @php
-                $items = $invoice->items ?? collect();
-                $subTotal = $items->reduce(fn($carry, $item) => $carry + ($item->quantity ?? 0) * ($item->unit_price ?? 0), 0);
-                $discountTotal = $items->reduce(fn($carry, $item) => $carry + ($item->unit_discount ?? 0), 0);
-                $vatTotal = $items->reduce(fn($carry, $item) => $carry + ($item->vat ?? 0), 0);
-                $grandTotal = ($invoice->amount ?? 0) - ($invoice->subtraction ?? 0);
-
-                $ancillaryCosts = $invoice->ancillaryCosts ?? collect();
-            @endphp
-
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="stats shadow bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60">
                     <div class="stat">
                         <div class="stat-title text-blue-500">{{ __('Subtotal') }} ({{ config('amir.currency') ?? __('Rial') }})</div>
-                        <div class="stat-value text-blue-600 text-3xl">{{ formatNumber($subTotal) }}</div>
+                        <div class="stat-value text-blue-600 text-3xl">{{ formatNumber($invoice->items->reduce(fn($carry, $item) => $carry + ($item->quantity ?? 0) * ($item->unit_price ?? 0), 0)) }}</div>
                         <div class="stat-desc text-blue-400">{{ __('Before discounts and tax') }}</div>
                     </div>
                 </div>
@@ -215,7 +205,7 @@
             <div>
                 <div class="divider text-lg font-semibold">{{ __('Ancillary Costs') }}</div>
 
-                @if ($ancillaryCosts->isNotEmpty())
+                @if ($invoice->ancillaryCosts->isNotEmpty())
                     <div class="overflow-x-auto shadow-lg rounded-lg mt-4">
                         <table class="table table-zebra w-full">
                             <thead class="bg-base-300">
@@ -231,7 +221,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($ancillaryCosts as $ancillaryCost)
+                                @foreach ($invoice->ancillaryCosts as $ancillaryCost)
                                     @php
                                         $docNumber = $ancillaryCost->document?->number;
                                         $docId = $ancillaryCost->document_id;

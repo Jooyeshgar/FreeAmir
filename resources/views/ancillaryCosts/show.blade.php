@@ -33,35 +33,25 @@
         <div class="card-body space-y-8">
             <x-show-message-bags />
 
-            @php
-                $amount = (float) ($ancillaryCost->amount ?? 0);
-                $vat = (float) ($ancillaryCost->vat ?? 0);
-                $total = $amount + $vat;
-
-                $items = $ancillaryCost->items ?? collect();
-                $docNumber = $ancillaryCost->document?->number;
-                $docId = $ancillaryCost->document_id;
-            @endphp
-
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="stats shadow bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60">
                     <div class="stat">
                         <div class="stat-title text-blue-500">{{ __('Amount') }} ({{ config('amir.currency') ?? __('Rial') }})</div>
-                        <div class="stat-value text-blue-600 text-3xl">{{ formatNumber($amount) }}</div>
+                        <div class="stat-value text-blue-600 text-3xl">{{ formatNumber((float) ($ancillaryCost->amount ?? 0)) }}</div>
                     </div>
                 </div>
 
                 <div class="stats shadow bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/60">
                     <div class="stat">
                         <div class="stat-title text-emerald-500">{{ __('VAT') }} ({{ config('amir.currency') ?? __('Rial') }})</div>
-                        <div class="stat-value text-emerald-600 text-3xl">{{ formatNumber($vat) }}</div>
+                        <div class="stat-value text-emerald-600 text-3xl">{{ formatNumber((float) ($ancillaryCost->vat ?? 0)) }}</div>
                     </div>
                 </div>
 
                 <div class="stats shadow bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/60">
                     <div class="stat">
                         <div class="stat-title text-indigo-500">{{ __('Total') }} ({{ config('amir.currency') ?? __('Rial') }})</div>
-                        <div class="stat-value text-indigo-600 text-3xl">{{ formatNumber($total) }}</div>
+                        <div class="stat-value text-indigo-600 text-3xl">{{ formatNumber((float) (($ancillaryCost->amount ?? 0) + ($ancillaryCost->vat ?? 0))) }}</div>
                     </div>
                 </div>
 
@@ -77,20 +67,14 @@
                 </div>
 
                 @can('ancillary-costs.approve')
-                    @php
-                        $isApproved = $ancillaryCost->status?->isApproved();
-                        $btnClass = $isApproved ? 'btn-warning' : 'btn-success';
-                        $label = __($isApproved ? 'Unapprove' : 'Approve');
-                    @endphp
-
                     @if (!empty($changeStatusValidation) && ($changeStatusValidation['allowed'] ?? false))
                         <div class="stats shadow bg-base-100 border border-base-300 col-span-1 md:col-span-2 lg:col-span-4">
                             <div class="stat">
                                 <div class="stat-title">{{ __('Status') }}</div>
                                 <div class="stat-value">
-                                    <a href="{{ route('ancillary-costs.change-status', [$ancillaryCost, $isApproved ? 'unapprove' : 'approve']) }}"
-                                        class="btn {{ $btnClass }}">
-                                        {{ $label }}
+                                    <a href="{{ route('ancillary-costs.change-status', [$ancillaryCost, $ancillaryCost->status?->isApproved() ? 'unapprove' : 'approve']) }}"
+                                        class="btn {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }}">
+                                        {{ __($ancillaryCost->status?->isApproved() ? 'Unapprove' : 'Approve') }}
                                     </a>
                                 </div>
                             </div>
@@ -101,8 +85,8 @@
                                 <div class="stat-title">{{ __('Status') }}</div>
                                 <div class="stat-value">
                                     <span class="tooltip" data-tip="{{ $changeStatusValidation['reason'] ?? '' }}">
-                                        <button class="btn {{ $btnClass }} btn-disabled cursor-not-allowed" disabled>
-                                            {{ $label }}
+                                        <button class="btn {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }} btn-disabled cursor-not-allowed" disabled>
+                                            {{ __($ancillaryCost->status?->isApproved() ? 'Unapprove' : 'Approve') }}
                                         </button>
                                     </span>
                                 </div>
@@ -164,14 +148,14 @@
 
             <div>
                 <div class="divider text-lg font-semibold">{{ __('Document') }}</div>
-                @if ($docId)
+                @if ($ancillaryCost->document_id)
                     <div class="alert bg-base-200 shadow-sm">
                         <div class="flex flex-wrap gap-2 items-center">
                             <span>{{ __('Doc Number') }}:</span>
                             @can('documents.show')
-                                <a class="link link-hover link-primary" href="{{ route('documents.show', $docId) }}">{{ formatDocumentNumber($docNumber ?? $docId) }}</a>
+                                <a class="link link-hover link-primary" href="{{ route('documents.show', $ancillaryCost->document_id) }}">{{ formatDocumentNumber($ancillaryCost->document?->number ?? $ancillaryCost->document_id) }}</a>
                             @else
-                                <span class="text-gray-500">{{ formatDocumentNumber($docNumber ?? $docId) }}</span>
+                                <span class="text-gray-500">{{ formatDocumentNumber($ancillaryCost->document?->number ?? $ancillaryCost->document_id) }}</span>
                             @endcan
                         </div>
                     </div>
@@ -187,7 +171,7 @@
             <div>
                 <div class="divider text-lg font-semibold">{{ __('Items') }}</div>
 
-                @if ($items->isNotEmpty())
+                @if ($ancillaryCost->items->isNotEmpty())
                     <div class="overflow-x-auto shadow-lg rounded-lg">
                         <table class="table table-zebra w-full">
                             <thead class="bg-base-300">
@@ -198,7 +182,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($items as $index => $item)
+                                @foreach ($ancillaryCost->items as $index => $item)
                                     <tr class="hover">
                                         <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
                                         <td class="px-4 py-3">
@@ -231,11 +215,7 @@
                 </a>
 
                 <div class="flex flex-wrap gap-2">
-                    @php
-                        $isEditable = !$ancillaryCost->status?->isApproved();
-                    @endphp
-
-                    @if (!empty($editDeleteStatus) && ($editDeleteStatus['allowed'] ?? false) && $isEditable)
+                    @if (!empty($editDeleteStatus) && ($editDeleteStatus['allowed'] ?? false) && !$ancillaryCost->status?->isApproved())
                         @can('ancillary-costs.edit')
                             <a href="{{ route('ancillary-costs.edit', $ancillaryCost) }}" class="btn btn-primary gap-2">
                                 {{ __('Edit') }}

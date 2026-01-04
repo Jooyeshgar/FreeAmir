@@ -20,8 +20,8 @@
             placeholder="{{ __('current document number') }}"
             label_text_class="text-gray-500 text-nowrap"></x-text-input>
         <x-text-input data-jdp title="{{ __('date') }}" input_name="date" placeholder="{{ __('date') }}"
-            input_value="{{ old('date') ?? $document->FormattedDate }}" label_text_class="text-gray-500 text-nowrap"
-            input_class="datePicker"></x-text-input>
+            input_value="{{ old('date') ?? convertToJalali($document->date ?? now()) }}"
+            label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
     </div>
 </x-card>
 <x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-4" x-data="transactionForm">
