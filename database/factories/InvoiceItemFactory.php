@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Product;
+use App\Models\Service;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class InvoiceItemFactory extends Factory
@@ -12,10 +13,16 @@ class InvoiceItemFactory extends Factory
         $quantity = $this->faker->randomFloat(1, 1, 10);
         $unit_price = $this->faker->randomFloat(2, 100, 1000);
 
+        $product = Product::withoutGlobalScopes()->inRandomOrder()->first();
+        $service = Service::withoutGlobalScopes()->inRandomOrder()->first();
+
+        $itemableType = $this->faker->randomElement([Product::class, Service::class]);
+        $itemableId = $itemableType === Product::class ? $product->id : $service->id;
+
         return [
             'description' => $this->faker->paragraph(2),
-            'itemable_id' => Product::inRandomOrder()->first()->id,
-            'itemable_type' => Product::class,
+            'itemable_id' => $itemableId,
+            'itemable_type' => $itemableType,
             'quantity' => $quantity,
             'unit_price' => $unit_price,
             'unit_discount' => 0,

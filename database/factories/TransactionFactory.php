@@ -13,8 +13,8 @@ class TransactionFactory extends Factory
     {
         return [
             'value' => $this->faker->randomFloat(2, 100, 1000),
-            'subject_id' => Subject::inRandomOrder()->first()->id,
-            'document_id' => Document::inRandomOrder()->first()->id,
+            'subject_id' => Subject::withoutGlobalScopes()->inRandomOrder()->first()->id,
+            'document_id' => Document::withoutGlobalScopes()->inRandomOrder()->first()->id,
             'user_id' => User::inRandomOrder()->first()->id,
             'desc' => $this->faker->paragraph(2),
         ];

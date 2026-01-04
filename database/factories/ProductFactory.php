@@ -14,7 +14,7 @@ class ProductFactory extends Factory
     public function definition(): array
     {
         return [
-            'code' => 'P-'.$this->faker->unique()->numerify('#####'),
+            'code' => $this->faker->unique()->numerify('#####'),
             'name' => $this->faker->words(3, true),
             'sstid' => $this->faker->optional()->word,
             'group' => null,

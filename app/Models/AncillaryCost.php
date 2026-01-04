@@ -5,12 +5,15 @@ namespace App\Models;
 use App\Enums\AncillaryCostType;
 use App\Enums\InvoiceStatus;
 use App\Models\Scopes\FiscalYearScope;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AncillaryCost extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'number',
         'type',

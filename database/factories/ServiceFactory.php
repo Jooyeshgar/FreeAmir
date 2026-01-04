@@ -13,7 +13,7 @@ class ServiceFactory extends Factory
     public function definition(): array
     {
         return [
-            'code' => 'S-'.$this->faker->unique()->numerify('#####'),
+            'code' => $this->faker->unique()->numerify('#####'),
             'name' => $this->faker->words(3, true),
             'sstid' => $this->faker->optional()->word,
             'group' => null,
@@ -21,7 +21,6 @@ class ServiceFactory extends Factory
             'description' => $this->faker->sentence,
             'company_id' => Company::inRandomOrder()->first()->id,
             'vat' => 0,
-            'subject_id' => null,
         ];
     }
 
