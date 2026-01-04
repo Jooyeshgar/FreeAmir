@@ -15,7 +15,7 @@ class AncillaryCostItemFactory extends Factory
             'ancillary_cost_id' => AncillaryCost::inRandomOrder()->first()->id,
             'product_id' => Product::inRandomOrder()->first()->id,
             'type' => $this->faker->randomElement(AncillaryCostType::cases()),
-            'amount' => $this->faker->randomFloat(2, 100, 1000),
+            'amount' => $this->faker->randomFloat(0, 100000, 1000000),
         ];
     }
 }

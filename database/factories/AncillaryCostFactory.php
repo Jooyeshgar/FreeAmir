@@ -13,6 +13,7 @@ use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Subject;
 use App\Models\Transaction;
+use App\Services\AncillaryCostService;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class AncillaryCostFactory extends Factory
@@ -21,15 +22,17 @@ class AncillaryCostFactory extends Factory
 
     public function definition(): array
     {
+        $invoice = Invoice::withoutGlobalScopes()->where('invoice_type', InvoiceType::BUY)->inRandomOrder()->first();
+
         return [
             'number' => $this->faker->unique()->numerify('#####'),
             'type' => $this->faker->randomElement(AncillaryCostType::cases()),
-            'date' => now()->subDays($this->faker->numberBetween(0, 160)),
+            'date' => $invoice->date,
             'company_id' => session('active-company-id') ?? 1,
             'customer_id' => Customer::withoutGlobalScopes()->inRandomOrder()->first()->id,
             'status' => $this->faker->randomElement([InvoiceStatus::APPROVED, InvoiceStatus::UNAPPROVED]),
             'vat' => 0,
-            'invoice_id' => Invoice::withoutGlobalScopes()->where('invoice_type', InvoiceType::BUY)->inRandomOrder()->first()->id,
+            'invoice_id' => $invoice->id,
             'amount' => 0,
         ];
     }
@@ -52,6 +55,14 @@ class AncillaryCostFactory extends Factory
             $ancillaryCost->update(['amount' => $amount]);
 
             if ($ancillaryCost->status->isApproved()) {
+                $allow = AncillaryCostService::getChangeStatusValidation($ancillaryCost);
+
+                if ($allow['allowed'] !== true) {
+                    $ancillaryCost->update(['status' => InvoiceStatus::UNAPPROVED]);
+
+                    return;
+                }
+
                 $document = Document::factory()->create([
                     'number' => (Document::withoutGlobalScopes()->max('number') ?? 0) + 1,
                     'company_id' => session('active-company-id'),

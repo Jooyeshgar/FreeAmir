@@ -10,8 +10,8 @@ class InvoiceItemFactory extends Factory
 {
     public function definition(): array
     {
-        $quantity = $this->faker->randomFloat(1, 1, 10);
-        $unit_price = $this->faker->randomFloat(2, 100000, 1000000);
+        $quantity = $this->faker->randomFloat(0, 1, 10);
+        $unit_price = $this->faker->randomFloat(0, 100000, 1000000);
 
         $product = Product::withoutGlobalScopes()->inRandomOrder()->first();
         $service = Service::withoutGlobalScopes()->inRandomOrder()->first();

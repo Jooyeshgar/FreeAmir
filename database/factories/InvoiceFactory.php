@@ -15,6 +15,7 @@ use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\CostOfGoodsService;
+use App\Services\InvoiceService;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class InvoiceFactory extends Factory
@@ -71,13 +72,22 @@ class InvoiceFactory extends Factory
                     'invoice_id' => $invoice->id,
                     'customer_id' => $invoice->customer_id,
                     'status' => $invoice->status,
+                    'date' => $invoice->date,
                 ]);
             }
 
-            $amount = $items->sum('amount') + $invoice->ancillaryCosts->sum('amount');
+            $amount = $items->sum('amount');
             $invoice->update(['amount' => $amount]);
 
             if ($invoice->status->isApproved()) {
+                $decision = InvoiceService::getChangeStatusDecision($invoice, InvoiceStatus::APPROVED);
+
+                if ($decision->hasErrors()) {
+                    $invoice->update(['status' => InvoiceStatus::UNAPPROVED]);
+
+                    return;
+                }
+
                 $document = Document::factory()->create([
                     'number' => (Document::withoutGlobalScopes()->max('number') ?? 0) + 1,
                     'company_id' => $invoice->company_id,
@@ -89,7 +99,6 @@ class InvoiceFactory extends Factory
                 $invoice->update(['document_id' => $document->id]);
 
                 foreach ($invoice->items as $item) {
-                    // item transaction
                     $product = null;
                     $service = null;
 
@@ -102,13 +111,13 @@ class InvoiceFactory extends Factory
                     if ($product) {
                         if ($invoice->invoice_type === InvoiceType::SELL) {
                             $product->quantity = $product->quantity - $item->quantity < 0 ? 0 : $product->quantity - $item->quantity;
-                            $product->save();
+                            $product->update();
                         } else {
                             $product->quantity = $product->quantity + $item->quantity;
-                            $product->save();
-                            $item->save(['quantity_at' => $product->quantity]);
+                            $product->update();
+                            $item->update(['quantity_at' => $product->quantity]);
                             CostOfGoodsService::updateProductsAverageCost($invoice);
-                            $item->save(['cog_after' => $product->average_cost]);
+                            $item->update(['cog_after' => $product->average_cost]);
 
                             foreach ($invoice->ancillaryCosts as $cost) {
                                 if ($cost->status->isApproved()) {
@@ -121,6 +130,12 @@ class InvoiceFactory extends Factory
                             }
                         }
                     }
+                }
+
+                // item transaction
+                foreach ($invoice->items as $item) {
+                    $product = $item->itemable_type === Product::class ? Product::withoutGlobalScopes()->find($item->itemable_id) : null;
+                    $service = $item->itemable_type === Service::class ? Service::withoutGlobalScopes()->find($item->itemable_id) : null;
 
                     if ($invoice->invoice_type === InvoiceType::SELL) {
                         Transaction::factory()->create([
@@ -140,15 +155,6 @@ class InvoiceFactory extends Factory
                         ]);
                     }
 
-                    // cogs transaction
-                    if ($item->itemable_type === Product::class && $invoice->invoice_type === InvoiceType::BUY) {
-                        Transaction::factory()->create([
-                            'document_id' => $invoice->document->id,
-                            'subject_id' => $product->cogs_subject_id,
-                            'desc' => __('Cost of Goods Sold').' '.__('Invoice').' '.$invoice->invoice_type->label().' '.__(' with number ').' '.formatNumber($invoice->number),
-                            'value' => -$product->average_cost * $item->quantity,
-                        ]);
-                    }
                 }
 
                 // customer transaction
