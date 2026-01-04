@@ -222,12 +222,6 @@
                             </thead>
                             <tbody>
                                 @foreach ($invoice->ancillaryCosts as $ancillaryCost)
-                                    @php
-                                        $docNumber = $ancillaryCost->document?->number;
-                                        $docId = $ancillaryCost->document_id;
-                                        $amount = (float) ($ancillaryCost->amount ?? 0);
-                                        $vat = (float) ($ancillaryCost->vat ?? 0);
-                                    @endphp
                                     <tr class="hover">
                                         <td class="px-4 py-3">
                                             <a class="link" href="{{ route('ancillary-costs.show', $ancillaryCost) }}">
@@ -236,15 +230,15 @@
                                         </td>
                                         <td class="px-4 py-3">
                                             <a class="link" href="{{ route('ancillary-costs.show', $ancillaryCost) }}">
-                                                {{ formatDocumentNumber($docNumber ?? ($docId ?? ($ancillaryCost->number ?? $ancillaryCost->id))) }}
+                                                {{ formatDocumentNumber($ancillaryCost->document?->number ?? ($ancillaryCost->document_id ?? ($ancillaryCost->number ?? $ancillaryCost->id))) }}
                                             </a>
                                         </td>
                                         <td class="px-4 py-3">{{ $ancillaryCost->type?->label() ?? '—' }}</td>
                                         <td class="px-4 py-3">{{ $ancillaryCost->date ? formatDate($ancillaryCost->date) : '—' }}</td>
                                         <td class="px-4 py-3">{{ $ancillaryCost->status?->label() ?? '—' }}</td>
-                                        <td class="px-4 py-3 text-right">{{ formatNumber($amount) }}</td>
-                                        <td class="px-4 py-3 text-right">{{ formatNumber($vat) }}</td>
-                                        <td class="px-4 py-3 text-right">{{ formatNumber($amount + $vat) }}</td>
+                                        <td class="px-4 py-3 text-right">{{ formatNumber((float) ($ancillaryCost->amount ?? 0)) }}</td>
+                                        <td class="px-4 py-3 text-right">{{ formatNumber((float) ($ancillaryCost->vat ?? 0)) }}</td>
+                                        <td class="px-4 py-3 text-right">{{ formatNumber((float) ($ancillaryCost->amount ?? 0) + (float) ($ancillaryCost->vat ?? 0)) }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
