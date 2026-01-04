@@ -14,6 +14,7 @@ use App\Models\Service;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\CostOfGoodsService;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class InvoiceFactory extends Factory
@@ -98,12 +99,35 @@ class InvoiceFactory extends Factory
                         $service = Service::withoutGlobalScopes()->find($item->itemable_id);
                     }
 
+                    if ($product) {
+                        if ($invoice->invoice_type === InvoiceType::SELL) {
+                            $product->quantity = $product->quantity - $item->quantity < 0 ? 0 : $product->quantity - $item->quantity;
+                            $product->save();
+                        } else {
+                            $product->quantity = $product->quantity + $item->quantity;
+                            $product->save();
+                            $item->save(['quantity_at' => $product->quantity]);
+                            CostOfGoodsService::updateProductsAverageCost($invoice);
+                            $item->save(['cog_after' => $product->average_cost]);
+
+                            foreach ($invoice->ancillaryCosts as $cost) {
+                                if ($cost->status->isApproved()) {
+                                    CostOfGoodsService::updateProductsAverageCost($invoice);
+                                    foreach ($invoice->items as $item) {
+                                        $item->cog_after = $product->average_cost;
+                                        $item->update();
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     if ($invoice->invoice_type === InvoiceType::SELL) {
                         Transaction::factory()->create([
                             'document_id' => $invoice->document->id,
-                            'subject_id' => $product?->inventory_subject_id ?? $service->subject_id,
+                            'subject_id' => $product->income_subject_id ?? $service->subject_id,
                             'desc' => __('Invoice').' '.$invoice->invoice_type->label().' '.__(' with number ').' '.formatNumber($invoice->number).' ('.formatNumber($item->quantity).' '.__('Number').')',
-                            'value' => $item->amount,
+                            'value' => $item->unit_price * $item->quantity,
                         ]);
                     }
 
