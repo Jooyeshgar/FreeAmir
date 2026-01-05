@@ -3,13 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models;
+use App\Services\SubjectService;
 use Illuminate\Http\Request;
 
 class BankAccountController extends Controller
 {
-    public function __construct()
-    {
-    }
+    public function __construct(private readonly SubjectService $subjectService) {}
 
     public function index()
     {
@@ -40,7 +39,14 @@ class BankAccountController extends Controller
             'desc' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
         ]);
 
-        Models\BankAccount::create($validatedData);
+        $bankAccount = Models\BankAccount::create($validatedData);
+
+        $bankSubject = $this->subjectService->createSubject([
+            'name' => $bankAccount->name.' - '.$bankAccount->bank->name,
+            'parent_id' => config('amir.bank'),
+        ]);
+
+        $bankAccount->subject()->save($bankSubject);
 
         return redirect()->route('bank-accounts.index')->with('success', __('Bank Account created successfully.'));
     }
@@ -69,12 +75,17 @@ class BankAccountController extends Controller
 
         $bankAccount->update($validatedData);
 
+        $bankAccount->subject->update([
+            'name' => $validatedData['name'].' - '.$bankAccount->bank->name,
+        ]);
+
         return redirect()->route('bank-accounts.index')->with('success', __('Bank Account updated successfully.'));
     }
 
     public function destroy(Models\BankAccount $bankAccount)
     {
         $bankAccount->delete();
+        $bankAccount->subject->delete();
 
         return redirect()->route('bank-accounts.index')->with('success', __('Bank Account deleted successfully.'));
     }
