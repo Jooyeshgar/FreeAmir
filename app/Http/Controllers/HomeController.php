@@ -135,7 +135,8 @@ class HomeController extends Controller
     {
         return InvoiceItem::whereHas('invoice', fn ($q) => $q->where('invoice_type', InvoiceType::SELL)
             ->where('status', InvoiceStatus::APPROVED)
-        )->selectRaw('itemable_type, itemable_id, SUM(quantity) as total_quantity')
+        )->with('itemable')
+            ->selectRaw('itemable_type, itemable_id, SUM(quantity) as total_quantity')
             ->groupBy('itemable_type', 'itemable_id')
             ->orderByDesc('total_quantity')
             ->limit(10)
