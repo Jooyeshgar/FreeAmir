@@ -37,7 +37,7 @@
                 <div class="stats shadow bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60">
                     <div class="stat">
                         <div class="stat-title text-blue-500">{{ __('Amount') }} ({{ config('amir.currency') ?? __('Rial') }})</div>
-                        <div class="stat-value text-blue-600 text-3xl">{{ formatNumber((float) ($ancillaryCost->amount ?? 0)) }}</div>
+                        <div class="stat-value text-blue-600 text-3xl">{{ formatNumber((float) ($ancillaryCost->amount ?? 0) - ($ancillaryCost->vat ?? 0)) }}</div>
                     </div>
                 </div>
 
@@ -51,7 +51,7 @@
                 <div class="stats shadow bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/60">
                     <div class="stat">
                         <div class="stat-title text-indigo-500">{{ __('Total') }} ({{ config('amir.currency') ?? __('Rial') }})</div>
-                        <div class="stat-value text-indigo-600 text-3xl">{{ formatNumber((float) (($ancillaryCost->amount ?? 0) + ($ancillaryCost->vat ?? 0))) }}</div>
+                        <div class="stat-value text-indigo-600 text-3xl">{{ formatNumber((float) (($ancillaryCost->amount ?? 0))) }}</div>
                     </div>
                 </div>
 

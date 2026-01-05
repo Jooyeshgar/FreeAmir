@@ -77,32 +77,20 @@
                                 <a href="{{ route('ancillary-costs.show', $ancillaryCost) }}" class="btn btn-sm btn-info">{{ __('Show') }}</a>
 
                                 @can('ancillary-costs.approve')
-                                    @php
-                                        $isApproved = $ancillaryCost->status?->isApproved();
-                                        $changeStatusValidation = \App\Services\AncillaryCostService::getChangeStatusValidation($ancillaryCost);
-                                    @endphp
-
-                                    @if ($changeStatusValidation['allowed'])
-                                        <a href="{{ route('ancillary-costs.change-status', [$ancillaryCost, $isApproved ? 'unapprove' : 'approve']) }}"
-                                            class="btn btn-sm {{ $isApproved ? 'btn-warning' : 'btn-success' }}">
-                                            {{ __($isApproved ? 'Unapprove' : 'Approve') }}
+                                    @if ($ancillaryCost->changeStatusValidation['allowed'])
+                                        <a href="{{ route('ancillary-costs.change-status', [$ancillaryCost, $ancillaryCost->status?->isApproved() ? 'unapprove' : 'approve']) }}"
+                                            class="btn btn-sm {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }}">
+                                            {{ __($ancillaryCost->status?->isApproved() ? 'Unapprove' : 'Approve') }}
                                         </a>
                                     @else
-                                        @php
-                                            $btnClass = $isApproved ? 'btn-warning' : 'btn-success';
-                                            $label = $isApproved ? __('Unapprove') : __('Approve');
-                                        @endphp
-                                        <span class="tooltip" data-tip="{{ $changeStatusValidation['reason'] }}">
-                                            <button class="btn btn-sm {{ $btnClass }} btn-disabled cursor-not-allowed" disabled
-                                                title="{{ $changeStatusValidation['reason'] }}">{{ $label }}</button>
+                                        <span class="tooltip" data-tip="{{ $ancillaryCost->changeStatusValidation['reason'] }}">
+                                            <button class="btn btn-sm {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }} btn-disabled cursor-not-allowed" disabled
+                                                title="{{ $ancillaryCost->changeStatusValidation['reason'] }}">{{ $ancillaryCost->status?->isApproved() ? __('Unapprove') : __('Approve') }}</button>
                                         </span>
                                     @endif
                                 @endcan
-
-                                @php
-                                    $editDeleteStatus = \App\Services\AncillaryCostService::getEditDeleteStatus($ancillaryCost);
-                                @endphp
-                                @if ($editDeleteStatus['allowed'])
+                                
+                                @if ($ancillaryCost->editDeleteStatus['allowed'])
                                     @if (!$ancillaryCost->status->isApproved())
                                         <a href="{{ route('ancillary-costs.edit', $ancillaryCost) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                         <form action="{{ route('ancillary-costs.destroy', $ancillaryCost) }}" method="POST" class="inline-block">
@@ -121,13 +109,13 @@
                                         </span>
                                     @endif
                                 @else
-                                    <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
+                                    <span class="tooltip" data-tip="{{ $ancillaryCost->editDeleteStatus['reason'] }}">
                                         <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" disabled
-                                            title="{{ $editDeleteStatus['reason'] }}">{{ __('Edit') }}</button>
+                                            title="{{ $ancillaryCost->editDeleteStatus['reason'] }}">{{ __('Edit') }}</button>
                                     </span>
-                                    <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] }}">
+                                    <span class="tooltip" data-tip="{{ $ancillaryCost->editDeleteStatus['reason'] }}">
                                         <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled
-                                            title="{{ $editDeleteStatus['reason'] }}">{{ __('Delete') }}</button>
+                                            title="{{ $ancillaryCost->editDeleteStatus['reason'] }}">{{ __('Delete') }}</button>
                                     </span>
                                 @endif
                             </td>

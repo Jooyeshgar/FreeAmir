@@ -24,6 +24,13 @@ class AncillaryCostController extends Controller
     {
         $ancillaryCosts = AncillaryCost::with('invoice')->orderByDesc('date')->paginate(12);
 
+        $ancillaryCosts->transform(function ($ancillaryCost) {
+            $ancillaryCost->changeStatusValidation = AncillaryCostService::getChangeStatusValidation($ancillaryCost);
+            $ancillaryCost->editDeleteStatus = AncillaryCostService::getEditDeleteStatus($ancillaryCost);
+
+            return $ancillaryCost;
+        });
+
         $ancillaryCosts->appends($request->query());
 
         return view('ancillaryCosts.index', compact('ancillaryCosts'));

@@ -236,9 +236,9 @@
                                         <td class="px-4 py-3">{{ $ancillaryCost->type?->label() ?? '—' }}</td>
                                         <td class="px-4 py-3">{{ $ancillaryCost->date ? formatDate($ancillaryCost->date) : '—' }}</td>
                                         <td class="px-4 py-3">{{ $ancillaryCost->status?->label() ?? '—' }}</td>
-                                        <td class="px-4 py-3 text-right">{{ formatNumber((float) ($ancillaryCost->amount ?? 0)) }}</td>
+                                        <td class="px-4 py-3 text-right">{{ formatNumber((float) ($ancillaryCost->amount ?? 0) - (float) ($ancillaryCost->vat ?? 0)) }}</td>
                                         <td class="px-4 py-3 text-right">{{ formatNumber((float) ($ancillaryCost->vat ?? 0)) }}</td>
-                                        <td class="px-4 py-3 text-right">{{ formatNumber((float) ($ancillaryCost->amount ?? 0) + (float) ($ancillaryCost->vat ?? 0)) }}</td>
+                                        <td class="px-4 py-3 text-right">{{ formatNumber((float) ($ancillaryCost->amount ?? 0)) }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
