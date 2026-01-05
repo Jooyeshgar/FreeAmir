@@ -28,20 +28,22 @@ class HomeController extends Controller
         $productCount = ProductGroup::withCount('products')->get()->sum('products_count');
 
         $cashBooks = Subject::where('parent_id', config('amir.cash_book'))->get();
-        $banks = Subject::where('parent_id', config('amir.bank'))->get();
+        $bankAccounts = Subject::where('parent_id', config('amir.bank'))->get();
 
-        // Calculate bank balances
-        $bankBalances = [];
-        foreach ($banks as $bank) {
-            $balance = Transaction::where('subject_id', $bank->id)->sum('value');
-            $bankBalances[$bank->id] = $balance;
+        $bankAccountBalances = [];
+        foreach ($bankAccounts as $bankAccount) {
+            $balance = Transaction::where('subject_id', $bankAccount->id)->sum('value');
+            $bankAccountBalances[$bankAccount->id] = $balance;
         }
+
+        arsort($bankAccountBalances);
+        $topTenBankAccountBalances = array_slice($bankAccountBalances, 0, 10, true);
 
         $latestInvoices = Invoice::latest()->limit(10)->get();
 
-        $monthlyIncome = $this->getMonthlyIncome();
-        $monthlySellAmount = $this->getMonthlySell();
-        $monthlyWarehouse = $this->getMonthlyWarehouse();
+        $monthlyIncome = $this->getProductsStats('income_subject_id');
+        $monthlySellAmount = $this->getProductsStats('inventory_subject_id');
+        $monthlyWarehouse = $this->getProductsStats('inventory_subject_id');
         $popularProductsAndServices = $this->popularProductsAndServices();
 
         return view('home', compact(
@@ -51,8 +53,8 @@ class HomeController extends Controller
             'productCount',
             'latestInvoices',
             'cashBooks',
-            'banks',
-            'bankBalances',
+            'bankAccounts',
+            'topTenBankAccountBalances',
             'monthlyIncome',
             'popularProductsAndServices',
             'monthlySellAmount',
@@ -70,10 +72,12 @@ class HomeController extends Controller
         );
         $subjectId = $data['cash_book'];
         $duration = intval($data['duration']);
+        $banks = Subject::where('parent_id', config('amir.bank'))->pluck('id')->all();
 
         $lastTransaction = Transaction::query()
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
             ->where('transactions.subject_id', $subjectId)
+            ->orWhereIn('transactions.subject_id', $banks)
             ->orderByDesc('documents.date')
             ->select('transactions.*')
             ->with('document')
@@ -86,25 +90,30 @@ class HomeController extends Controller
         $initialBalance = (int) Transaction::query()
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
             ->where('transactions.subject_id', $subjectId)
+            ->orWhereIn('transactions.subject_id', $banks)
             ->where('documents.date', '<', $startDate)
             ->sum('transactions.value');
 
         $dailyTransactions = Transaction::query()
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
             ->where('transactions.subject_id', $subjectId)
+            ->orWhereIn('transactions.subject_id', $banks)
             ->whereBetween('documents.date', [$startDate, $endDate])
             ->selectRaw('DATE(documents.date) as date, SUM(transactions.value) as total')
             ->groupBy('date')
             ->orderBy('date')
             ->pluck('total', 'date')
             ->map(fn ($v) => (int) $v);
-        $dailyBalances = [];
+
+        $dailyBalances = [formatDate($startDate) => 0];
         $runningBalance = -1 * $initialBalance;
 
         foreach ($dailyTransactions as $date => $dailyChange) {
             $runningBalance -= $dailyChange;
             $dailyBalances[(string) $date] = $runningBalance;
         }
+
+        $dailyBalances[formatDate($endDate)] = $runningBalance;
 
         return response()->json([
             'labels' => array_keys($dailyBalances),
@@ -115,46 +124,18 @@ class HomeController extends Controller
         ]);
     }
 
-    public function getMonthlyIncome(): array
+    private function getProductsStats($columnName): array
     {
-        $subjectIds = Product::query()
-            ->whereNotNull('income_subject_id')
-            ->distinct()
-            ->pluck('income_subject_id')
-            ->all();
+        $subjectIds = Product::pluck($columnName)->all();
 
         return $this->monthlyStats($subjectIds);
     }
 
-    public function getMonthlySell(): array
-    {
-        $subjectIds = Product::query()
-            ->whereNotNull('inventory_subject_id')
-            ->distinct()
-            ->pluck('inventory_subject_id')
-            ->all();
-
-        return $this->monthlyStats($subjectIds);
-    }
-
-    public function getMonthlyWarehouse(): array
-    {
-        $subjectIds = Product::query()
-            ->whereNotNull('inventory_subject_id')
-            ->distinct()
-            ->pluck('inventory_subject_id')
-            ->all();
-
-        return $this->monthlyStats($subjectIds, countOnly: true);
-    }
-
-    public function popularProductsAndServices()
+    private function popularProductsAndServices()
     {
         return InvoiceItem::whereHas('invoice', fn ($q) => $q->where('invoice_type', InvoiceType::SELL)
             ->where('status', InvoiceStatus::APPROVED)
-        )
-            ->with('itemable')
-            ->selectRaw('itemable_type, itemable_id, SUM(quantity) as total_quantity')
+        )->selectRaw('itemable_type, itemable_id, SUM(quantity) as total_quantity')
             ->groupBy('itemable_type', 'itemable_id')
             ->orderByDesc('total_quantity')
             ->limit(10)
@@ -203,13 +184,9 @@ class HomeController extends Controller
     {
         $year = (int) jdate('Y', tr_num: 'en');
 
-        $start = Carbon::parse(
-            jalali_to_gregorian($year, '01', '01', '/')
-        )->startOfDay();
+        $start = Carbon::parse(jalali_to_gregorian($year, '01', '01', '/'))->startOfDay();
 
-        $end = Carbon::parse(
-            jalali_to_gregorian($year + 1, '01', '01', '/')
-        )->subDay()->endOfDay();
+        $end = Carbon::parse(jalali_to_gregorian($year + 1, '01', '01', '/'))->subDay()->endOfDay();
 
         return [$start, $end];
     }

@@ -9,7 +9,7 @@ Route::get('/logout', [Controllers\Auth\LoginController::class, 'logout'])->name
 
 Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('/', [Controllers\HomeController::class, 'index'])->name('home');
-    Route::post('/home/subject-detail', [Controllers\HomeController::class, 'subjectDetail'])->name('home.subject-detail');
+    Route::get('/home/subject-detail', [Controllers\HomeController::class, 'subjectDetail'])->name('home.subject-detail');
     Route::resource('subjects', Controllers\SubjectController::class);
     Route::post('subjects/search', [Controllers\SubjectController::class, 'search'])->name('subjects.search');
     Route::resource('documents', Controllers\DocumentController::class);
