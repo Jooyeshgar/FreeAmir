@@ -76,8 +76,10 @@ class HomeController extends Controller
 
         $lastTransaction = Transaction::query()
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
-            ->where('transactions.subject_id', $subjectId)
-            ->orWhereIn('transactions.subject_id', $banks)
+            ->where(function ($q) use ($subjectId, $banks) {
+                $q->where('transactions.subject_id', $subjectId)
+                    ->orWhereIn('transactions.subject_id', $banks);
+            })
             ->orderByDesc('documents.date')
             ->select('transactions.*')
             ->with('document')
@@ -89,15 +91,19 @@ class HomeController extends Controller
 
         $initialBalance = (int) Transaction::query()
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
-            ->where('transactions.subject_id', $subjectId)
-            ->orWhereIn('transactions.subject_id', $banks)
+            ->where(function ($q) use ($subjectId, $banks) {
+                $q->where('transactions.subject_id', $subjectId)
+                    ->orWhereIn('transactions.subject_id', $banks);
+            })
             ->where('documents.date', '<', $startDate)
             ->sum('transactions.value');
 
         $dailyTransactions = Transaction::query()
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
-            ->where('transactions.subject_id', $subjectId)
-            ->orWhereIn('transactions.subject_id', $banks)
+            ->where(function ($q) use ($subjectId, $banks) {
+                $q->where('transactions.subject_id', $subjectId)
+                    ->orWhereIn('transactions.subject_id', $banks);
+            })
             ->whereBetween('documents.date', [$startDate, $endDate])
             ->selectRaw('DATE(documents.date) as date, SUM(transactions.value) as total')
             ->groupBy('date')
