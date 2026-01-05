@@ -43,7 +43,7 @@ class HomeController extends Controller
 
         $monthlyIncome = $this->getProductsStats('income_subject_id');
         $monthlySellAmount = $this->getProductsStats('inventory_subject_id');
-        $monthlyWarehouse = $this->getProductsStats('inventory_subject_id');
+        $monthlyWarehouse = $this->getProductsStats('inventory_subject_id', true);
         $popularProductsAndServices = $this->popularProductsAndServices();
 
         return view('home', compact(
@@ -124,11 +124,11 @@ class HomeController extends Controller
         ]);
     }
 
-    private function getProductsStats($columnName): array
+    private function getProductsStats($columnName, bool $countOnly = false): array
     {
         $subjectIds = Product::pluck($columnName)->all();
 
-        return $this->monthlyStats($subjectIds);
+        return $this->monthlyStats($subjectIds, $countOnly);
     }
 
     private function popularProductsAndServices()
