@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class BankAccount extends Model
 {
     use HasFactory;
+
     protected $fillable = [
         'name',
         'number',
@@ -25,13 +26,18 @@ class BankAccount extends Model
 
     public static function booted(): void
     {
-        static::addGlobalScope(new FiscalYearScope());
+        static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($bankAccount) {
-            if (!isset($bankAccount->company_id)) {
+            if (! isset($bankAccount->company_id)) {
                 $bankAccount->company_id = session('active-company-id');
             }
         });
+    }
+
+    public function subject()
+    {
+        return $this->morphOne(Subject::class, 'subjectable');
     }
 
     public function bank(): BelongsTo

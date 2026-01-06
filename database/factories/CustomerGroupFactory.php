@@ -22,25 +22,27 @@ class CustomerGroupFactory extends Factory
         return [
             'name' => $this->faker->name,
             'description' => $this->faker->text,
+            'company_id' => 1,
         ];
     }
 
     public function withSubject(): static
     {
-        return $this->afterCreating(function (CustomerGroup $customerGroup) {
-            $companyId = $customerGroup->company_id ?? session('active-company-id');
-            $parentId = $customerGroup->group?->subject_id ?? null;
+        return $this->afterCreating(function (CustomerGroup $group) {
+            $parent = Subject::withoutGlobalScopes()
+                ->where('id', config('amir.cust_subject'))
+                ->where('company_id', $group->company_id)
+                ->first();
 
-            Subject::factory()
-                ->state([
-                    'name' => $customerGroup->name,
-                    'parent_id' => $parentId,
-                    'company_id' => $companyId,
-                ])
-                ->for($customerGroup, 'subjectable') // <--- This handles the MorphOne magic
-                ->withAutoCode()
-                ->create();
+            $subject = Subject::factory()
+                ->withParent($parent)
+                ->create([
+                    'name' => $group->name,
+                    'company_id' => $group->company_id,
+                ]);
 
+            $group->subject_id = $subject->id;
+            $group->saveQuietly();
         });
     }
 }

@@ -14,7 +14,14 @@ class CustomerFactory extends Factory
 
     public function definition()
     {
-        $bankIds = Bank::pluck('id')->toArray();
+        $bankIds = Bank::withoutGlobalScopes()->pluck('id')->toArray();
+
+        $companyId = session('active-company-id') ?? 1;
+        $group = CustomerGroup::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->whereNotNull('subject_id')
+            ->inRandomOrder()
+            ->first();
 
         return [
             'company_id' => session('active-company-id') ?? 1,
@@ -30,7 +37,7 @@ class CustomerFactory extends Factory
             'web_page' => substr($this->faker->url, 0, 50),
             'responsible' => $this->faker->name,
             'connector' => $this->faker->name,
-            'group_id' => $this->faker->randomElement(CustomerGroup::pluck('id')->toArray()),
+            'group_id' => $group->id,
             'desc' => $this->faker->persianSentence(),
             'balance' => $this->faker->randomFloat(2, 0, 10000),
             'credit' => $this->faker->randomFloat(2, 0, 10000),
@@ -53,33 +60,25 @@ class CustomerFactory extends Factory
         ];
     }
 
-    public function withGroup(?CustomerGroup $group = null): static
+    public function withGroup(CustomerGroup $group): static
     {
-        return $this->state(function () use ($group) {
-            $groupToUse = $group ?? CustomerGroup::factory()->create();
-
-            return [
-                'group_id' => $groupToUse->id,
-            ];
-        });
+        return $this->state([
+            'group_id' => $group->id,
+        ]);
     }
 
     public function withSubject(): static
     {
         return $this->afterCreating(function (Customer $customer) {
-            $companyId = $customer->company_id ?? session('active-company-id');
-            $parentId = $customer->group?->subject_id ?? null;
+            $group = CustomerGroup::withoutGlobalScopes()->find($customer->group_id);
 
             Subject::factory()
-                ->state([
+                ->withParent(Subject::withoutGlobalScopes()->find($group->subject_id))
+                ->for($customer, 'subjectable')
+                ->create([
                     'name' => $customer->name,
-                    'parent_id' => $parentId,
-                    'company_id' => $companyId,
-                ])
-                ->for($customer, 'subjectable') // <--- This handles the MorphOne magic
-                ->withAutoCode()
-                ->create();
-
+                    'company_id' => $customer->company_id,
+                ]);
         });
     }
 }

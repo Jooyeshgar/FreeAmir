@@ -3,12 +3,14 @@
 namespace App\Models;
 
 use App\Enums\AncillaryCostType;
-use App\Models\Scopes\FiscalYearScope;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AncillaryCostItem extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'ancillary_cost_id',
         'product_id',

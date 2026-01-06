@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Bank;
 use App\Models\Company;
+use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class BankAccountFactory extends Factory
@@ -26,5 +27,28 @@ class BankAccountFactory extends Factory
             'bank_web_page' => $this->faker->url,
             'desc' => $this->faker->paragraph(2),
         ];
+    }
+
+    public function withBank(Bank $bank)
+    {
+        return $this->state([
+            'bank_id' => $bank->id,
+        ]);
+    }
+
+    public function withSubject(): static
+    {
+        return $this->afterCreating(function ($bankAccount) {
+            $bank = Bank::withoutGlobalScopes()->find($bankAccount->bank_id);
+            $parentSubject = Subject::withoutGlobalScopes()->find(config('amir.bank') ?? 1);
+
+            Subject::factory()
+                ->withParent($parentSubject)
+                ->for($bankAccount, 'subjectable')
+                ->create([
+                    'name' => $bankAccount->name.' - '.$bank->name,
+                    'company_id' => $bankAccount->company_id,
+                ]);
+        });
     }
 }

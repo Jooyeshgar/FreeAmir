@@ -200,16 +200,12 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $sellerPermissions = Permission::where(function ($q) {
             $q->where('name', 'LIKE', 'invoices.%')
+                ->Where('name', 'NOT LIKE', 'invoices.approve')
                 ->orWhere('name', 'LIKE', 'ancillary-costs.%')
+                ->Where('name', 'NOT LIKE', 'ancillary-costs.approve')
                 ->orWhere('name', 'LIKE', 'customers.%')
                 ->orWhere('name', 'LIKE', 'home.%');
-        })
-            ->whereNotIn('name', [
-                'invoices.approve',
-                'ancillary-costs.approve',
-            ])
-            ->pluck('name')
-            ->toArray();
+        })->pluck('name')->toArray();
 
         $seller->syncPermissions($sellerPermissions);
 

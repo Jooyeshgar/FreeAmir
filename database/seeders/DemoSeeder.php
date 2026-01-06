@@ -15,6 +15,7 @@ class DemoSeeder extends Seeder
             BankAccountSeeder::class,
             CustomerSeeder::class,
             ProductSeeder::class,
+            ServiceSeeder::class,
             InvoiceSeeder::class,
         ]);
     }

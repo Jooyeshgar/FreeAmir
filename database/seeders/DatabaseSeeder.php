@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             BankSeeder::class,
             CustomerGroupSeeder::class,
             ProductGroupSeeder::class,
+            ServiceGroupSeeder::class,
             RolesAndPermissionsSeeder::class,
         ]);
     }
