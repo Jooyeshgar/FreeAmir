@@ -36,7 +36,7 @@ class ServiceController extends Controller
 
     public function create()
     {
-        $groups = ServiceGroup::select('id', 'name')->get();
+        $groups = ServiceGroup::select('id', 'name')->limit(20)->get();
 
         return view('services.create', compact('groups'));
     }
@@ -59,7 +59,9 @@ class ServiceController extends Controller
 
     public function edit(Service $service)
     {
-        $groups = ServiceGroup::select('id', 'name')->get();
+        $serviceGroupIdsForSelect = ServiceGroup::select('id', 'name')->limit(20)->pluck('id');
+        $oldGroup = $service->serviceGroup;
+        $groups = ServiceGroup::whereIn('id', $serviceGroupIdsForSelect->push($oldGroup->id)->unique())->get();
 
         return view('services.edit', compact('service', 'groups'));
     }
@@ -78,5 +80,38 @@ class ServiceController extends Controller
         $this->serviceService->delete($service);
 
         return redirect()->route('services.index')->with('success', __('Service deleted successfully.'));
+    }
+
+    public function searchServiceGroup()
+    {
+        $validated = request()->validate([
+            'q' => 'required|string|max:50',
+        ]);
+
+        $q = $validated['q'];
+        $serviceGroups = ServiceGroup::where('name', 'like', "%{$q}%")->select('id', 'name')->limit(20)->get();
+
+        if ($serviceGroups->isEmpty()) {
+            return response()->json([]);
+        }
+
+        $grouped = [
+            0 => $serviceGroups->map(fn ($sg) => [
+                'id' => $sg->id,
+                'groupId' => 0,
+                'groupName' => 'General',
+                'text' => $sg->name,
+                'type' => 'service group',
+                'raw_data' => $sg->toArray(),
+            ])->values()->all(),
+        ];
+
+        return response()->json([
+            [
+                'id' => 'group_service_groups',
+                'headerGroup' => 'service group',
+                'options' => (object) $grouped,
+            ],
+        ]);
     }
 }

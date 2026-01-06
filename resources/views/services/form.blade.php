@@ -1,10 +1,20 @@
 <div class="grid grid-cols-2 gap-6">
     <div class="col-span-2 md:col-span-1">
         @php
-            $hint = '<a class="link text-blue-500" href="' . route('product-groups.create') . '">اضافه کردن گروه خدمات  </a>';
+            $initialGroupId = old('group', $service->group ?? null);
+            $initialSelectedValue = $initialGroupId ? "group-$initialGroupId" : null;
+            $hint =
+                '<a class="link text-blue-500" href="' . route('service-groups.create') . '">اضافه کردن گروه خدمات</a>';
         @endphp
-        <x-select title="{{ __('Service group') }}" name="group" id="group" :options="$groups->pluck('name', 'id')"
-            :selected="$service->group ?? null" :hint="$hint" />
+        <div class="flex flex-wrap" x-data="{ group_id: '{{ $initialGroupId }}', selectedValue: '{{ $initialSelectedValue }}' }">
+            <span class="flex flex-wrap text-gray-500 w-full">{{ __('Service group') }}</span>
+
+            <x-select-box url="{{ route('services.search-service-group') }}" :options="[['headerGroup' => 'group', 'options' => $groups]]" x-model="selectedValue"
+                x-init="if (!selectedValue && group_id) { selectedValue = 'group-' + group_id; }" placeholder="{{ __('Select Service group') }}" hint='{!! $hint !!}'
+                @selected="group_id = $event.detail.id;" />
+
+            <input type="hidden" x-bind:value="group_id" name="group">
+        </div>
     </div>
 
     <div class="col-span-2 md:col-span-1">

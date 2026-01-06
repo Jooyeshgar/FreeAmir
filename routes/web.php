@@ -15,13 +15,16 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::resource('documents', Controllers\DocumentController::class);
     Route::get('documents/{document}/duplicate', [Controllers\DocumentController::class, 'duplicate'])->name('documents.duplicate');
     Route::resource('transactions', Controllers\TransactionController::class)->only(['index', 'show']);
+    Route::get('products/search-product-group', [Controllers\ProductController::class, 'searchProductGroup'])->name('products.search-product-group');
     Route::resource('products', Controllers\ProductController::class);
     Route::resource('product-groups', Controllers\ProductGroupController::class);
+    Route::get('services/search-service-group', [Controllers\ServiceController::class, 'searchServiceGroup'])->name('services.search-service-group');
     Route::resource('services', Controllers\ServiceController::class);
     Route::resource('service-groups', Controllers\ServiceGroupController::class);
     Route::resource('customers', Controllers\CustomerController::class);
     Route::resource('customer-groups', Controllers\CustomerGroupController::class);
     Route::resource('companies', Controllers\CompanyController::class);
+    Route::get('bank-accounts/search-bank', [Controllers\BankAccountController::class, 'searchBank'])->name('bank-accounts.search-bank');
     Route::resource('bank-accounts', Controllers\BankAccountController::class);
     Route::resource('banks', Controllers\BankController::class);
 
@@ -36,6 +39,8 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('invoices/{invoice}/groupAction', [Controllers\InvoiceController::class, 'groupAction'])->name('invoices.groupAction');
     Route::get('invoices/{invoice}/print', [Controllers\InvoiceController::class, 'print'])->name('invoices.print');
     Route::get('invoices/{invoice}/change-status/{status}', [Controllers\InvoiceController::class, 'changeStatus'])->name('invoices.change-status')->middleware('can:invoices.approve');
+    Route::get('ancillary-costs/search-customer', [Controllers\AncillaryCostController::class, 'searchCustomer'])->name('ancillary-costs.search-customer');
+    Route::get('ancillary-costs/search-invoice', [Controllers\AncillaryCostController::class, 'searchInvoice'])->name('ancillary-costs.search-invoice');
     Route::resource('ancillary-costs', Controllers\AncillaryCostController::class);
     Route::get('ancillary-costs/{ancillary_cost}/change-status/{status}', [Controllers\AncillaryCostController::class, 'changeStatus'])->name('ancillary-costs.change-status')->middleware('can:ancillary-costs.approve');
     Route::get('ancillary-costs/get-products/{invoice_id}', [Controllers\AncillaryCostController::class, 'getBuyInvoiceProducts'])->name('ancillary-costs.get-products');

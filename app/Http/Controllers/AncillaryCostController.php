@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreAncillaryCostRequest;
 use App\Models\AncillaryCost;
 use App\Models\Customer;
+use App\Models\CustomerGroup;
 use App\Models\Invoice;
 use App\Services\AncillaryCostService;
 use Exception;
@@ -53,8 +54,18 @@ class AncillaryCostController extends Controller
 
     public function create()
     {
-        $invoices = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing();
-        $customers = Customer::all();
+        $invoices = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing()->take(20)
+            ->map(function ($invoice) { // Format invoices for select box
+                return [
+                    'id' => $invoice->id,
+                    'groupId' => 0,
+                    'groupName' => 'General',
+                    'text' => $invoice->number,
+                    'type' => 'invoice',
+                ];
+            })->all();
+
+        $customers = Customer::with('group')->orderBy('name', 'asc')->limit(20)->get();
         $ancillaryCost = new AncillaryCost;
         $ancillaryCostItems = old('ancillaryCosts') ?? [];
 
@@ -88,10 +99,22 @@ class AncillaryCostController extends Controller
 
     public function edit(AncillaryCost $ancillaryCost)
     {
-        $ancillaryCostInvoice = $ancillaryCost->invoice;
-        $invoices = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing();
-
-        $invoices->push($ancillaryCostInvoice)->unique('id');
+        $invoices = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing()->take(20)
+            ->map(function ($invoice) { // Format invoices for select box
+                return [
+                    'id' => $invoice->id,
+                    'groupId' => 0,
+                    'groupName' => 'General',
+                    'text' => $invoice->number,
+                    'type' => 'invoice',
+                ];
+            })->push([ // Include current invoice
+                'id' => $ancillaryCost->invoice->id,
+                'groupId' => 0,
+                'groupName' => 'General',
+                'text' => $ancillaryCost->invoice->number,
+                'type' => 'invoice',
+            ])->unique('id')->values()->all();
 
         // Load ancillary cost items for editing
         $ancillaryCostItems = $ancillaryCost->items->map(function ($item) {
@@ -101,7 +124,9 @@ class AncillaryCostController extends Controller
             ];
         })->toArray();
 
-        $customers = Customer::all();
+        $customerIdsForSelect = Customer::orderBy('name', 'asc')->limit(20)->pluck('id');
+        $customers = Customer::with('group')->whereIn('id', $customerIdsForSelect->push($ancillaryCost->customer_id)->unique())
+            ->orderBy('name', 'asc')->get();
 
         // Calculate VAT percentage: (vat_amount / subtotal_before_vat) * 100
         $subtotalBeforeVat = $ancillaryCost['amount'] - $ancillaryCost['vat'];
@@ -218,5 +243,80 @@ class AncillaryCostController extends Controller
         $message = $status === 'approve' ? __('Ancillary Cost approved successfully.') : __('Ancillary Cost unapproved successfully.');
 
         return redirect()->route('ancillary-costs.index')->with('success', __($message));
+    }
+
+    public function searchCustomer(Request $request)
+    {
+        $validated = $request->validate([
+            'q' => 'required|string|max:100',
+        ]);
+
+        $q = $validated['q'];
+        $results = [];
+
+        $returnableFields = ['id', 'name', 'group_id'];
+
+        $groupMatches = CustomerGroup::where('name', 'like', "%{$q}%")->pluck('id');
+
+        $searchedInCustomersGroups = collect();
+        if ($groupMatches->isNotEmpty()) {
+            $searchedInCustomersGroups = Customer::with('group')->whereIn('group_id', $groupMatches)->limit(30)->get($returnableFields);
+        }
+
+        $searchedInCustomers = Customer::with('group')->where('name', 'like', "%{$q}%")->limit(30)->get($returnableFields);
+
+        $customers = $searchedInCustomers->merge($searchedInCustomersGroups)->unique('id');
+
+        $options = (object) [
+            0 => $customers->map(fn ($customer) => [
+                'id' => $customer->id,
+                'groupId' => 0,
+                'groupName' => 'General',
+                'text' => $customer->name,
+                'type' => 'customer',
+            ])->all(),
+        ];
+
+        if ($customers->isNotEmpty()) {
+            $results[] = [
+                'id' => 'group_customers',
+                'headerGroup' => 'customer',
+                'options' => $options,
+            ];
+        }
+
+        return response()->json($results);
+    }
+
+    public function searchInvoice(Request $request)
+    {
+        $validated = $request->validate([
+            'q' => 'required|string|max:100',
+        ]);
+
+        $q = $validated['q'];
+        $invoices = Invoice::where('number', 'like', "%{$q}%")->select('id', 'number', 'date')->limit(20)->get();
+
+        if ($invoices->isEmpty()) {
+            return response()->json([]);
+        }
+
+        $options = (object) [
+            0 => $invoices->map(fn ($invoice) => [
+                'id' => $invoice->id,
+                'groupId' => 0,
+                'groupName' => 'General',
+                'text' => $invoice->number,
+                'type' => 'invoice',
+            ])->all(),
+        ];
+
+        return response()->json([
+            [
+                'id' => 'group_invoices',
+                'headerGroup' => 'invoice',
+                'options' => $options,
+            ],
+        ]);
     }
 }

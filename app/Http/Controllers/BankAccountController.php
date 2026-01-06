@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models;
+use App\Models\Bank;
 use App\Services\SubjectService;
 use Illuminate\Http\Request;
 
@@ -19,7 +20,7 @@ class BankAccountController extends Controller
 
     public function create()
     {
-        $banks = Models\Bank::select('id', 'name')->get();
+        $banks = Models\Bank::select('id', 'name')->limit(20)->get();
 
         return view('bankAccounts.create', compact('banks'));
     }
@@ -53,7 +54,9 @@ class BankAccountController extends Controller
 
     public function edit(Models\BankAccount $bankAccount)
     {
-        $banks = Models\Bank::select('id', 'name')->get();
+        $bankIdsForSelect = Models\Bank::select('id', 'name')->limit(20)->pluck('id');
+        $oldBank = $bankAccount->bank;
+        $banks = Models\Bank::whereIn('id', $bankIdsForSelect->push($oldBank->id)->unique())->get();
 
         return view('bankAccounts.edit', compact('bankAccount', 'banks'));
     }
@@ -88,5 +91,37 @@ class BankAccountController extends Controller
         $bankAccount->subject->delete();
 
         return redirect()->route('bank-accounts.index')->with('success', __('Bank Account deleted successfully.'));
+    }
+
+    public function searchBank(Request $request)
+    {
+        $validated = $request->validate([
+            'q' => 'required|string|max:100',
+        ]);
+
+        $q = $validated['q'];
+        $banks = Bank::where('name', 'like', "%{$q}%")->select('id', 'name')->limit(20)->get();
+
+        if ($banks->isEmpty()) {
+            return response()->json([]);
+        }
+
+        $options = (object) [
+            0 => $banks->map(fn (Bank $bank) => [
+                'id' => $bank->id,
+                'groupId' => 0,
+                'groupName' => 'General',
+                'text' => $bank->name,
+                'type' => 'bank',
+            ])->all(),
+        ];
+
+        return response()->json([
+            [
+                'id' => 'group_banks',
+                'headerGroup' => 'bank',
+                'options' => $options,
+            ],
+        ]);
     }
 }
