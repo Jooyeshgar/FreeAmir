@@ -31,10 +31,16 @@ class HomeController extends Controller
 
         $bankAccounts = Subject::where('parent_id', config('amir.bank'))->get();
 
-        $bankAccountBalances = [];
+        $bankAccountBalances = Transaction::query()
+            ->whereIn('subject_id', $bankAccounts->pluck('id'))
+            ->selectRaw('subject_id, SUM(value) as balance')
+            ->groupBy('subject_id')
+            ->pluck('balance', 'subject_id')
+            ->map(fn ($v) => (int) $v)
+            ->toArray();
+
         foreach ($bankAccounts as $bankAccount) {
-            $balance = Transaction::where('subject_id', $bankAccount->id)->sum('value');
-            $bankAccountBalances[$bankAccount->id] = $balance;
+            $bankAccountBalances[$bankAccount->id] = $bankAccountBalances[$bankAccount->id] ?? 0;
         }
 
         arsort($bankAccountBalances);
@@ -123,11 +129,11 @@ class HomeController extends Controller
             ->pluck('total', 'date')
             ->map(fn ($v) => (int) $v);
 
-        $dailyBalances = [formatDate($startDate) => abs($initialBalance)];
-        $runningBalance = abs($initialBalance);
+        $dailyBalances = [formatDate($startDate) => $initialBalance];
+        $runningBalance = $initialBalance;
 
         foreach ($dailyTransactions as $date => $dailyChange) {
-            $runningBalance -= $dailyChange;
+            $runningBalance += $dailyChange;
             $dailyBalances[(string) $date] = $runningBalance;
         }
 
@@ -166,7 +172,7 @@ class HomeController extends Controller
             'cash_book' => $this->cashBookBalance($data, $duration),
             'bank' => $this->bankBalance($duration),
             'both' => $this->bothBalance($data, $duration),
-            default => ucfirst($data['type']),
+            default => response()->json([]),
         };
     }
 
