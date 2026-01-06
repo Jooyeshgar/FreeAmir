@@ -27,7 +27,8 @@ class HomeController extends Controller
         $documentCount = Document::count();
         $productCount = ProductGroup::withCount('products')->get()->sum('products_count');
 
-        $cashBooks = Subject::where('parent_id', config('amir.cash_book'))->get();
+        $cashTypes = ['both', 'bank', 'cash_book'];
+
         $bankAccounts = Subject::where('parent_id', config('amir.bank'))->get();
 
         $bankAccountBalances = [];
@@ -52,7 +53,7 @@ class HomeController extends Controller
             'documentCount',
             'productCount',
             'latestInvoices',
-            'cashBooks',
+            'cashTypes',
             'bankAccounts',
             'topTenBankAccountBalances',
             'monthlyIncome',
@@ -62,48 +63,55 @@ class HomeController extends Controller
         ));
     }
 
-    public function subjectDetail(Request $request)
+    private function cashBookBalance(array $data, int $duration)
     {
-        $data = $request->validate(
-            [
-                'cash_book' => 'required|exists:subjects,id',
-                'duration' => 'required|integer|in:1,2,3,4',
-            ]
-        );
-        $subjectId = $data['cash_book'];
-        $duration = intval($data['duration']);
-        $banks = Subject::where('parent_id', config('amir.bank'))->pluck('id')->all();
+        $cashBookSubjectIds = Subject::where('parent_id', $data['cash_book'])->pluck('id')->all();
 
-        $lastTransaction = Transaction::query()
-            ->join('documents', 'documents.id', '=', 'transactions.document_id')
-            ->where(function ($q) use ($subjectId, $banks) {
-                $q->where('transactions.subject_id', $subjectId)
-                    ->orWhereIn('transactions.subject_id', $banks);
-            })
-            ->orderByDesc('documents.date')
-            ->select('transactions.*')
+        return $this->balanceForSubjectIds($cashBookSubjectIds, $duration);
+    }
+
+    private function bankBalance(int $duration)
+    {
+        $bankAccountSubjectIds = Subject::where('parent_id', config('amir.bank'))->pluck('id')->all();
+
+        return $this->balanceForSubjectIds($bankAccountSubjectIds, $duration);
+    }
+
+    private function bothBalance(array $data, int $duration)
+    {
+        $bankAccountSubjectIds = Subject::where('parent_id', config('amir.bank'))->pluck('id')->all();
+        $cashBookSubjectIds = Subject::where('parent_id', config('amir.cash_book'))->pluck('id')->all();
+
+        $subjectIds = array_values(array_unique(array_merge($bankAccountSubjectIds, $cashBookSubjectIds)));
+
+        return $this->balanceForSubjectIds($subjectIds, $duration);
+    }
+
+    private function balanceForSubjectIds(array $subjectIds, int $duration)
+    {
+        $transactionQuery = Transaction::query()->whereIn('subject_id', $subjectIds);
+
+        $lastTransaction = (clone $transactionQuery)
             ->with('document')
+            ->orderByDesc(
+                Document::query()
+                    ->select('date')
+                    ->whereColumn('documents.id', 'transactions.document_id')
+                    ->limit(1)
+            )
             ->first();
 
-        $endDate = $lastTransaction?->document?->date ?? now();
+        $endDate = $lastTransaction->document->date ?? now();
+        $endDate = $endDate instanceof Carbon ? $endDate : Carbon::parse((string) $endDate);
 
         $startDate = (clone $endDate)->subMonths($duration * 3);
 
-        $initialBalance = (int) Transaction::query()
-            ->join('documents', 'documents.id', '=', 'transactions.document_id')
-            ->where(function ($q) use ($subjectId, $banks) {
-                $q->where('transactions.subject_id', $subjectId)
-                    ->orWhereIn('transactions.subject_id', $banks);
-            })
-            ->where('documents.date', '<', $startDate)
-            ->sum('transactions.value');
+        $initialBalance = (int) (clone $transactionQuery)
+            ->whereHas('document', fn ($q) => $q->where('date', '<', $startDate))
+            ->sum('value');
 
-        $dailyTransactions = Transaction::query()
+        $dailyTransactions = (clone $transactionQuery)
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
-            ->where(function ($q) use ($subjectId, $banks) {
-                $q->where('transactions.subject_id', $subjectId)
-                    ->orWhereIn('transactions.subject_id', $banks);
-            })
             ->whereBetween('documents.date', [$startDate, $endDate])
             ->selectRaw('DATE(documents.date) as date, SUM(transactions.value) as total')
             ->groupBy('date')
@@ -112,7 +120,7 @@ class HomeController extends Controller
             ->map(fn ($v) => (int) $v);
 
         $dailyBalances = [formatDate($startDate) => 0];
-        $runningBalance = -1 * $initialBalance;
+        $runningBalance = abs($initialBalance);
 
         foreach ($dailyTransactions as $date => $dailyChange) {
             $runningBalance -= $dailyChange;
@@ -121,13 +129,55 @@ class HomeController extends Controller
 
         $dailyBalances[formatDate($endDate)] = $runningBalance;
 
+        return $this->lineChartFormattedResponse($initialBalance, $dailyBalances, $startDate, $endDate);
+    }
+
+    private function lineChartFormattedResponse($initialBalance, $dailyBalances, $startDate, $endDate)
+    {
+        $sum = end($dailyBalances);
+        if ($sum === false) {
+            $sum = $initialBalance;
+        }
+
         return response()->json([
             'labels' => array_keys($dailyBalances),
             'datas' => array_values($dailyBalances),
-            'sum' => end($dailyBalances) ?: $initialBalance,
+            'sum' => $sum,
             'start_date' => jdate('Y/m/d', $startDate->timestamp, tr_num: 'en'),
             'end_date' => jdate('Y/m/d', $endDate->timestamp, tr_num: 'en'),
         ]);
+    }
+
+    public function CashAndBanksBalances(Request $request)
+    {
+        $data = $request->validate(
+            [
+                'duration' => 'required|integer|in:1,2,3,4',
+                'type' => 'required|in:cash_book,bank,both',
+            ]
+        );
+        $duration = intval($data['duration']);
+
+        return match ($data['type']) {
+            'cash_book' => $this->cashBookBalance($data, $duration),
+            'bank' => $this->bankBalance($duration),
+            'both' => $this->bothBalance($data, $duration),
+            default => __(ucfirst($data['type'])),
+        };
+    }
+
+    public function bankAccount(Request $request)
+    {
+        $data = $request->validate(
+            [
+                'cash_book' => 'required|integer|exists:subjects,id',
+                'duration' => 'required|integer|in:1,2,3,4',
+            ]
+        );
+
+        $cashBookSubjectIds = Subject::where('parent_id', $data['cash_book'])->pluck('id')->all();
+
+        return $this->balanceForSubjectIds($cashBookSubjectIds, intval($data['duration']));
     }
 
     private function getProductsStats($columnName, bool $countOnly = false): array

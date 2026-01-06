@@ -18,7 +18,7 @@
     }
 @endphp
 
-<canvas id="cashBalanceLineChart" class="bg-white rounded-[16px]"></canvas>
+<canvas id="cashBalanceLineChart" class="bg-white w-full h-[18rem]"></canvas>
 
 @pushOnce('footer')
     <script>
@@ -37,7 +37,7 @@
                         label: 'نمودار درصدی',
                         data: {!! json_encode($datas) !!},
                         borderColor: '#888',
-                        borderWidth: 5,
+                        borderWidth: 2,
                         fill: true,
                         tension: 0.4,
                         pointBackgroundColor: '#fff',
@@ -45,8 +45,8 @@
                             const value = context.raw;
                             return value >= 0 ? 'green' : 'red';
                         },
-                        pointBorderWidth: 3,
-                        pointRadius: 6
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
                     }]
                 },
                 options: {
@@ -55,6 +55,7 @@
                         intersect: false
                     },
                     responsive: true,
+                    maintainAspectRatio: false,
                     scales: {
                         x: {
                             display: false,

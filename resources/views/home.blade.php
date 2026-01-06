@@ -23,12 +23,12 @@
                             </h2>
                         </div>
 
-                        <div class="flex m-2 justify-between overflow-hidden" x-data="cashBookSelectHandler()" x-init="initializeCashBook()">
-                            <select x-model="selectedCashBook" x-on:change="handleCashBookChange"
+                        <div class="flex m-2 justify-between overflow-hidden" x-data="cashTypesSelectHandler()" x-init="initializeCashBook()">
+                            <select x-model="selectedCashType" x-on:change="handleCashBookChange"
                                 class="select ml-2 bg-[#DEE2E6] text-[#495057]">
-                                @foreach ($cashBooks as $item)
-                                    <option {{ $loop->first ? 'selected' : '' }} value="{{ $item->id }}">
-                                        {{ $item->name }}</option>
+                                @foreach ($cashTypes as $cashTypeKey => $cashTypeName)
+                                     <option {{ $loop->first ? 'selected' : '' }} value="{{ $cashTypeKey }}">
+                                        {{ __($cashTypeName) }}</option>
                                 @endforeach
                             </select>
 
@@ -42,10 +42,8 @@
                         </div>
                     </div>
 
-                    <div>
-                        <div class="p-2">
-                            <x-charts.cash-balance-chart :labels="[]" :datas="[]" />
-                        </div>
+                    <div class="p-2">
+                        <x-charts.cash-balance-chart :labels="[]" :datas="[]" />
                     </div>
                 </div>
             @endcan
@@ -244,7 +242,7 @@
                         </div>
 
                         <div class="flex m-2 overflow-hidden" x-data="bankSelectHandler()" x-init="initializeBank()">
-                            <select class="select bg-[#DEE2E6] text-[#495057] ml-2" x-model="selectedBank"
+                            <select class="select bg-[#DEE2E6] text-[#495057] ml-2" x-model="selectedBankAccount"
                                 @change="handleBankChange">
                                 @foreach ($bankAccounts as $bankAccount)
                                     <option {{ $loop->first ? 'selected' : '' }} value="{{ $bankAccount->id }}">
@@ -262,10 +260,8 @@
                         </div>
                     </div>
 
-                    <div>
-                        <div class="p-2">
-                            <x-charts.account-balance :labels="[]" :datas="[]" />
-                        </div>
+                    <div class="p-2">
+                        <x-charts.account-balance :labels="[]" :datas="[]" />
                     </div>
                 </div>
             </section>
@@ -327,19 +323,19 @@
 
     @pushOnce('footer')
         <script>
-            function cashBookSelectHandler() {
+            function cashTypesSelectHandler() {
                 return {
-                    selectedCashBook: null,
+                    selectedCashType: null,
                     selectedDuration: null,
                     initializeCashBook() {
-                        this.selectedCashBook = {{ $cashBooks?->first()?->id ?? '' }};
+                        this.selectedCashType = '{{ $cashTypes[0] }}';
                         this.selectedDuration = 1;
                         this.handleCashBookChange();
                     },
                     handleCashBookChange() {
                         try {
-                            const route = "{{ route('home.subject-detail') }}";
-                            const response = fetch(`${route}?cash_book=${this.selectedCashBook}&duration=${this.selectedDuration}`)
+                            const route = "{{ route('home.cash-banks') }}";
+                            const response = fetch(`${route}?type=${this.selectedCashType}&duration=${this.selectedDuration}`)
                                 .then(res => res.json())
                                 .then(data => {
                                     const labels = data.labels;
@@ -375,17 +371,17 @@
 
             function bankSelectHandler() {
                 return {
-                    selectedBank: null,
+                    selectedBankAccount: null,
                     selectedDuration: null,
                     initializeBank() {
-                        this.selectedBank = {{ $bankAccounts?->first()?->id ?? '' }};
+                        this.selectedBankAccount = {{ $bankAccounts?->first()?->id ?? '' }};
                         this.selectedDuration = 1;
                         this.handleBankChange();
                     },
                     handleBankChange() {
                         try {
-                            const route = "{{ route('home.subject-detail') }}";
-                            const response = fetch(`${route}?cash_book=${this.selectedBank}&duration=${this.selectedDuration}`)
+                            const route = "{{ route('home.bank-account') }}";
+                            const response = fetch(`${route}?cash_book=${this.selectedBankAccount}&duration=${this.selectedDuration}`)
                                 .then(res => res.json())
                                 .then(data => {
                                     const labels = data.labels;
