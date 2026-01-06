@@ -71,11 +71,7 @@ class HomeController extends Controller
 
     private function cashBookBalance(array $data, int $duration)
     {
-        $validatedData = validator($data, [
-            'cash_book' => 'required|integer|exists:subjects,id',
-        ])->validate();
-
-        $cashBookSubjectIds = Subject::where('parent_id', $validatedData['cash_book'])->pluck('id')->all();
+        $cashBookSubjectIds = Subject::where('parent_id', $data['cash_book'])->pluck('id')->all();
 
         return $this->balanceForSubjectIds($cashBookSubjectIds, $duration);
     }
@@ -111,7 +107,7 @@ class HomeController extends Controller
             )
             ->first();
 
-        $endDate = $lastTransaction->document->date ?? now();
+        $endDate = $lastTransaction?->document?->date ?? now();
         $endDate = $endDate instanceof Carbon ? $endDate : Carbon::parse((string) $endDate);
 
         $startDate = (clone $endDate)->subMonths($duration * 3);
@@ -158,12 +154,13 @@ class HomeController extends Controller
         ]);
     }
 
-    public function CashAndBanksBalances(Request $request)
+    public function cashAndBanksBalances(Request $request)
     {
         $data = $request->validate(
             [
                 'duration' => 'required|integer|in:1,2,3,4',
                 'type' => 'required|in:cash_book,bank,both',
+                'cash_book' => 'required_if:type,cash_book|integer|exists:subjects,id',
             ]
         );
         $duration = intval($data['duration']);
