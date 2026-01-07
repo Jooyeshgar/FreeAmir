@@ -1,10 +1,10 @@
 @php
-    $rating = round((float) ($comment->rating ?? 0) * 2) / 2;
+    $rating = old('rating', round((float) ($comment->rating ?? 0) * 2) / 2);
 @endphp
 
 <div class="grid grid-cols-2 gap-4">
     <input type="hidden" name="user_id" value="{{ Auth::id() ?? '' }}">
-    <input type="hidden" name="customer_id" value="{{ $comment->customer_id ?? '' }}">
+    <input type="hidden" name="customer_id" value="{{ $comment->customer_id ?? ($customer->id ?? '') }}">
 
     <div class="col-span-2 md:col-span-1 w-1/3">
         <x-input disabled="true" title="{{ __('Customer') }}" name="customer" id="customer" :value="old('customer', $comment->customer->name ?? ($customer->name ?? ''))" />

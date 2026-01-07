@@ -2,25 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreCommentRequest;
 use App\Models\Comment;
-use Illuminate\Http\Request;
+use App\Services\CommentService;
 
 class CommentController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly CommentService $service)
     {
         $this->middleware('permission:comments.view', ['only' => ['index']]);
         $this->middleware('permission:comments.create', ['only' => ['create', 'store']]);
         $this->middleware('permission:comments.edit', ['only' => ['edit', 'update']]);
         $this->middleware('permission:comments.delete', ['only' => ['destroy']]);
     }
-
-    private $rules = [
-        'content' => 'nullable|string|max:500|required_without:rating',
-        'rating' => 'nullable|numeric|min:0|max:5|required_without:content',
-        'customer_id' => 'required|exists:customers,id',
-        'user_id' => 'required|exists:users,id',
-    ];
 
     public function index(\App\Models\Customer $customer)
     {
@@ -36,10 +30,11 @@ class CommentController extends Controller
         return view('customers.comments.create', compact('customer', 'comment'));
     }
 
-    public function store(Request $request)
+    public function store(StoreCommentRequest $request)
     {
-        $validated = $request->validate($this->rules);
-        Comment::create($validated);
+        $validated = $request->validated();
+
+        $this->service->create($validated);
 
         return redirect()->route('comments.index', $validated['customer_id'])->with('success', 'Comment created successfully.');
     }
@@ -49,17 +44,17 @@ class CommentController extends Controller
         return view('customers.comments.edit', compact('comment'));
     }
 
-    public function update(Request $request, Comment $comment)
+    public function update(StoreCommentRequest $request, Comment $comment)
     {
-        $validated = $request->validate($this->rules);
-        $comment->update($validated);
+        $validated = $request->validated();
+        $this->service->update($comment, $validated);
 
         return redirect()->route('comments.index', $comment->customer_id)->with('success', 'Comment updated successfully.');
     }
 
     public function destroy(Comment $comment)
     {
-        $comment->delete();
+        $this->service->delete($comment);
 
         return redirect()->route('comments.index', $comment->customer_id)->with('success', 'Comment deleted successfully.');
     }

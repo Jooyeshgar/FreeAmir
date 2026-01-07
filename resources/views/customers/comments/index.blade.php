@@ -35,7 +35,7 @@
                                             $isFilled = $starValue <= $comment->rating;
                                         @endphp
                                         <input type="radio" disabled
-                                            class="mask mask-star-2 @if ($i % 2 == 1) mask-half-1 @else mask-half-2 @endif @if ($isFilled) bg-orange-400 @else bg-orange-250 @endif" />
+                                            class="pointer-events-none mask mask-star-2 @if ($i % 2 == 1) mask-half-1 @else mask-half-2 @endif @if ($isFilled) bg-orange-400 @else bg-orange-250 @endif" />
                                     @endfor
                                 </div>
                             </td>

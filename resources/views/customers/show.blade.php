@@ -264,6 +264,7 @@
                 </a>
 
                 <div class="flex gap-2">
+                    <a href="{{ route('comments.index', $customer) }}" class="btn btn-primary">{{ __('Comments') }}</a>
                     <a href="{{ route('customers.edit', $customer) }}" class="btn btn-primary">{{ __('Edit') }}</a>
                     <form action="{{ route('customers.destroy', $customer) }}" method="POST"
                         onsubmit="return confirm('{{ __('Are you sure you want to delete this customer?') }}')">
