@@ -52,6 +52,11 @@ class BankAccountController extends Controller
         return redirect()->route('bank-accounts.index')->with('success', __('Bank Account created successfully.'));
     }
 
+    public function show(Models\BankAccount $bankAccount)
+    {
+        return view('bankAccounts.show', compact('bankAccount'));
+    }
+
     public function edit(Models\BankAccount $bankAccount)
     {
         $bankIdsForSelect = Models\Bank::select('id', 'name')->limit(20)->pluck('id');
