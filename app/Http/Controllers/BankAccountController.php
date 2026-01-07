@@ -36,7 +36,7 @@ class BankAccountController extends Controller
             'bank_branch' => 'nullable|string|regex:/^[\w\d\s]*$/u',
             'bank_address' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
             'bank_phone' => 'nullable|numeric',
-            'bank_web_page' => 'nullable|string|regex:/^[\w\d\s]*$/u',
+            'bank_web_page' => 'nullable|url|max:200',
             'desc' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
         ]);
 
@@ -77,7 +77,7 @@ class BankAccountController extends Controller
             'bank_branch' => 'nullable|string|regex:/^[\w\d\s]*$/u',
             'bank_address' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
             'bank_phone' => 'nullable|numeric',
-            'bank_web_page' => 'nullable|string|regex:/^[\w\d\s]*$/u',
+            'bank_web_page' => 'nullable|url|max:200',
             'desc' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
         ]);
 
