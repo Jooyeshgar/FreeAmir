@@ -201,15 +201,7 @@ class InvoiceService
         DB::transaction(function () use ($invoiceId) {
             $invoice = Invoice::findOrFail($invoiceId);
 
-            CostOfGoodsService::refreshProductCOGAfterItemsDeletion($invoice, null);
-
-            $invoiceItems = $invoice->items;
-
             $invoice->items()->delete();
-
-            ProductService::subProductsQuantities($invoiceItems->toArray(), $invoice->invoice_type);
-
-            $invoice->document_id ? DocumentService::deleteDocument($invoice->document_id) : null;
 
             $invoice->delete();
         });
@@ -800,7 +792,7 @@ class InvoiceService
     /**
      * Prepare transactions for view (create/edit form)
      */
-    public static function prepareTransactions(?Invoice $source = null, string $mode = 'create'): \Illuminate\Support\Collection
+    public static function prepareTransactions(?Invoice $source = null, string $mode = 'create'): Collection
     {
         if (old('transactions')) {
             return self::prepareFromOldInput();
@@ -816,7 +808,7 @@ class InvoiceService
     /**
      * Restore transactions from old form input
      */
-    private static function prepareFromOldInput(): \Illuminate\Support\Collection
+    private static function prepareFromOldInput(): Collection
     {
         return collect(old('transactions'))->map(function ($transaction, $index) {
             $transaction['id'] = $index + 1;
@@ -841,7 +833,7 @@ class InvoiceService
     /**
      * Prepare transactions from existing invoice for edit form
      */
-    private static function prepareFromInvoice(Invoice $invoice): \Illuminate\Support\Collection
+    private static function prepareFromInvoice(Invoice $invoice): Collection
     {
         return $invoice->items->map(function ($item, $index) {
             $subtotalBeforeVat = $item->amount - $item->vat;
@@ -867,7 +859,7 @@ class InvoiceService
     /**
      * Get empty transaction structure for new invoice form
      */
-    public static function getEmptyTransaction(): \Illuminate\Support\Collection
+    public static function getEmptyTransaction(): Collection
     {
         return collect([[
             'id' => 1,
