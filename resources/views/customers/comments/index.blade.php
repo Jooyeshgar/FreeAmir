@@ -28,7 +28,7 @@
                             <td class="px-4 py-2">{{ $comment->commentBy->name }}</td>
                             <td class="px-4 py-2 w-1/2">
                                 <button type="button"
-                                    class="text-right w-full truncate max-w-xl hover:underline" data-full-content="{{ $comment->content }}"
+                                    class="text-right truncate max-w-xl hover:underline" data-full-content="{{ $comment->content }}"
                                     data-comment-author="{{ $comment->commentBy->name }}" data-comment-rating="{{ $comment->rating }}">
                                     {{ \Illuminate\Support\Str::limit($comment->content, 80, '…') }}
                                 </button>
