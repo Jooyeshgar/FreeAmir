@@ -33,9 +33,9 @@ class CustomerService
     public function delete(Customer $customer): void
     {
         DB::transaction(function () use ($customer) {
+            $customer->comments()->delete();
             $customer->delete();
             $customer->subject?->delete();
-            $customer->comments()->delete();
         });
     }
 
