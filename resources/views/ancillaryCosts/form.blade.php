@@ -2,64 +2,78 @@
     <x-card class="rounded-2xl w-full" class_body="p-4">
         <div class="flex gap-2 items-center justify-start">
             <div class="flex w-1/4">
+                @php
+                    $initialCustomerId = old('customer_id', $ancillaryCost->customer_id ?? null);
+                    $initialSelectedValue = $initialCustomerId ? "customer-$initialCustomerId" : null;
+                    $hint = '<a class="link text-blue-500 hover:underline" href="' .route('customers.create') .'">' . __('Add Customer') . '</a>';
+                @endphp
+
+                <div class="flex flex-wrap w-3/4" x-data="{
+                        customer_id: '{{ $initialCustomerId }}',
+                        selectedValue: '{{ $initialSelectedValue }}',
+                    }">
+                    <span class="text-gray-500">{{ __('Customer') }}
+                        <a href="{{ route('customers.create') }}"
+                            class="btn btn-xs btn-ghost text-blue-500 hover:text-blue-700" title="{{ __('Add Customer') }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M12 14.25c-2.485 0-4.5 1.79-4.5 4s2.015 4 4.5 4 4.5-1.79 4.5-4-2.015-4-4.5-4zm0-2.25a3 3 0 100-6 3 3 0 000 6zm6-1.5h3m-1.5-1.5v3" />
+                            </svg>
+                        </a>
+                    </span>
+
+                    <x-select-box url="{{ route('ancillary-costs.search-customer') }}" :options="[['headerGroup' => 'customer', 'options' => $customers]]" x-model="selectedValue"
+                        x-init="if (!selectedValue && customer_id) {
+                            selectedValue = 'customer-' + customer_id;
+                        }" placeholder="{{ __('Select Customer') }}" hint='{!! $hint !!}'
+                        @selected="customer_id = $event.detail.id;" class="" />
+                    <input type="hidden" x-bind:value="customer_id" name="customer_id">
+                </div>
+            </div>
+            <div class="flex w-1/8">
                 <div class="flex flex-wrap w-full">
-                    <span class="flex flex-col flex-wrap text-gray-500 w-full"> {{ __('Customer') }} </span>
-                    <select name="customer_id" id="customer_id" x-model="selectedCustomerId"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
-                        <option value="">{{ __('Select Customer') }}</option>
-                        @foreach ($customers as $customer)
-                            <option value="{{ $customer->id }}"
-                                {{ (old('customer_id') ?? ($ancillaryCost->customer_id ?? null)) == $customer->id ? 'selected' : '' }}>
-                                {{ $customer->name }}
-                            </option>
+                    @php
+                        $initialInvoiceId = old('invoice_id', $ancillaryCost->invoice_id ?? null);
+                        $initialSelectedValue = $initialInvoiceId ? "invoice-$initialInvoiceId" : null;
+                    @endphp
+                    <div class="flex flex-wrap w-full" x-data="{
+                            invoice_id: '{{ $initialInvoiceId }}',
+                            selectedValue: '{{ $initialSelectedValue }}',
+                        }">
+                        <span class="text-gray-500">{{ __('Invoice') }}</span>
+
+                        <x-select-box url="{{ route('ancillary-costs.search-invoice') }}" :options="[['headerGroup' => 'invoice', 'options' => $invoices]]" x-model="selectedValue"
+                            x-init="if (!selectedValue && invoice_id) {
+                                selectedValue = 'invoice-' + invoice_id;
+                            }" placeholder="{{ __('Select Invoice') }}"
+                            @selected="invoice_id = $event.detail.id; loadInvoiceProducts(invoice_id);" class="" />
+                        <input type="hidden" x-bind:value="invoice_id" name="invoice_id">
+                    </div>
+                </div>
+            </div>
+            <div class="flex w-1/4">
+                <div class="flex flex-wrap">
+                    <span class="flex flex-col flex-wrap text-gray-500 w-full"> {{ __('Cost Type') }} </span>
+                    <select name="type" id="type" x-model="selectedCostType"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm
+                            focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
+                        <option value="">{{ __('Select Cost Type') }}</option>
+                        @foreach (App\Enums\AncillaryCostType::cases() as $type)
+                            <option value="{{ $type->value }}">{{ $type->label() }}</option>
                         @endforeach
                     </select>
                 </div>
             </div>
-
-            <div class="flex gap-2 items-center justify-start">
-                <div class="flex w-1/4">
-                    <div class="flex flex-wrap w-full">
-                        <span class="flex flex-col flex-wrap text-gray-500 w-full"> {{ __('Invoice') }} </span>
-                        <select name="invoice_id" id="invoice_id" x-model="selectedInvoiceId"
-                            @change="loadInvoiceProducts($event.target.value)"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
-                            <option value="">{{ __('Select Invoice') }}</option>
-                            @foreach ($invoices as $invoice)
-                                <option value="{{ $invoice->id }}"
-                                    {{ (old('invoice_id') ?? ($ancillaryCost->invoice_id ?? null)) == $invoice->id ? 'selected' : '' }}>
-                                    {{ formatDocumentNumber($invoice->number) }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-
-                <div class="flex w-1/4">
-                    <div class="flex flex-wrap w-full">
-                        <span class="flex flex-col flex-wrap text-gray-500 w-full"> {{ __('Cost Type') }} </span>
-                        <select name="type" id="type" x-model="selectedCostType"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm
-                                focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
-                            <option value="">{{ __('Select Cost Type') }}</option>
-                            @foreach (App\Enums\AncillaryCostType::cases() as $type)
-                                <option value="{{ $type->value }}">{{ $type->label() }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-                <div class="flex w-1/4">
-                    <x-text-input placeholder="0" title="{{ __('VAT') }} (%)" input_name="vat" x-model="vat"
-                        input_value="{{ old('vat') ?? $ancillaryCost->vat }}" label_text_class="text-gray-500"
-                        label_class="w-full" input_class="border-white">
-                    </x-text-input>
-                </div>
-                <div class="flex w-1/4">
-                    <x-text-input data-jdp title="{{ __('date') }}" input_name="date"
-                        placeholder="{{ __('date') }}"
-                        input_value="{{ old('date') ?? convertToJalali($ancillaryCost->date ?? now()) }}"
-                        label_text_class="text-gray-500 text-nowrap" input_class="datePicker w-full"></x-text-input>
-                </div>
+            <div class="flex w-1/8">
+                <x-text-input placeholder="0" title="{{ __('VAT') }} (%)" input_name="vat" x-model="vat"
+                    input_value="{{ old('vat') ?? $ancillaryCost->vat }}" label_text_class="text-gray-500"
+                    label_class="w-full" input_class="border-gray-300"></x-text-input>
+            </div>
+            <div class="flex w-1/8">
+                <x-text-input data-jdp class="w-3/4" title="{{ __('date') }}" input_name="date"
+                    placeholder="{{ __('date') }}" input_value="{{ old('date') ?? convertToJalali($ancillaryCost->date ?? now()) }}"
+                    label_text_class="text-gray-500 text-nowrap" input_class="datePicker w-full"></x-text-input>
             </div>
     </x-card>
 
@@ -209,7 +223,6 @@
                 calculateTotalWithVat(vat) {
                     const total = this.calculateTotal();
                     const vatPercent = Number(this.$store.utils.convertToEnglish(vat)) || 0;
-                    console.log('VAT Percent:', vatPercent);
 
                     return total + (total * vatPercent / 100);
                 },

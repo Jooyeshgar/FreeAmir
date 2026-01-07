@@ -48,7 +48,7 @@ class ProductController extends Controller
 
     public function create()
     {
-        $groups = ProductGroup::select('id', 'name')->get();
+        $groups = ProductGroup::select('id', 'name')->limit(20)->get();
 
         return view('products.create', compact('groups'));
     }
@@ -64,7 +64,9 @@ class ProductController extends Controller
 
     public function edit(Product $product)
     {
-        $groups = ProductGroup::select('id', 'name', 'sstid')->get();
+        $productGroupIdsForSelect = ProductGroup::select('id', 'name')->limit(20)->pluck('id');
+        $oldGroup = $product->productGroup;
+        $groups = ProductGroup::whereIn('id', $productGroupIdsForSelect->push($oldGroup->id)->unique())->get();
 
         return view('products.edit', compact('product', 'groups'));
     }
@@ -106,5 +108,38 @@ class ProductController extends Controller
         $this->productService->delete($product);
 
         return redirect()->route('products.index')->with('success', __('Product deleted successfully.'));
+    }
+
+    public function searchProductGroup(\Illuminate\Http\Request $request)
+    {
+        $validated = $request->validate([
+            'q' => 'required|string|max:100',
+        ]);
+
+        $q = $validated['q'];
+        $productGroups = ProductGroup::where('name', 'like', "%{$q}%")->select('id', 'name')->limit(20)->get();
+
+        if ($productGroups->isEmpty()) {
+            return response()->json([]);
+        }
+
+        $grouped = [
+            0 => $productGroups->map(fn ($pg) => [
+                'id' => $pg->id,
+                'groupId' => 0,
+                'groupName' => 'General',
+                'text' => $pg->name,
+                'type' => 'product group',
+                'raw_data' => $pg->toArray(),
+            ])->values()->all(),
+        ];
+
+        return response()->json([
+            [
+                'id' => 'group_product_groups',
+                'headerGroup' => 'product group',
+                'options' => (object) $grouped,
+            ],
+        ]);
     }
 }

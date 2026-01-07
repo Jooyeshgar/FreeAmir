@@ -105,9 +105,9 @@ class InvoiceController extends Controller
         if (empty(config('amir.cust_subject'))) {
             return redirect()->route('configs.index')->with('error', __('Customer Subject is not configured. Please set it in configurations.'));
         }
-        $products = Product::with('inventorySubject', 'productGroup')->orderBy('name', 'asc')->get();
-        $services = Service::with('subject', 'serviceGroup')->orderBy('name', 'asc')->get();
-        $customers = Customer::with('group')->orderBy('name', 'asc')->get();
+        $products = Product::with('inventorySubject', 'productGroup')->orderBy('name', 'asc')->limit(20)->get();
+        $services = Service::with('subject', 'serviceGroup')->orderBy('name', 'asc')->limit(20)->get();
+        $customers = Customer::with('group')->orderBy('name', 'asc')->limit(20)->get();
         $previousDocumentNumber = floor(Document::max('number') ?? 0);
 
         $transactions = InvoiceService::prepareTransactions();
@@ -186,10 +186,23 @@ class InvoiceController extends Controller
     {
         $invoice->load('customer', 'document.transactions', 'items'); // Eager load relationships
 
-        $customers = Customer::with('group')->orderBy('name', 'asc')->get();
-        $products = Product::with(['inventorySubject', 'productGroup'])->orderBy('name', 'asc')->get();
-        $services = Service::with(['subject', 'serviceGroup'])->orderBy('name', 'asc')->get();
+        $customerIdsForSelect = Customer::orderBy('name', 'asc')->limit(20)->pluck('id');
+        $productIdsForSelect = Product::orderBy('name', 'asc')->limit(20)->pluck('id');
+        $serviceIdsForSelect = Service::orderBy('name', 'asc')->limit(20)->pluck('id');
         $previousDocumentNumber = floor(Document::max('number') ?? 0);
+
+        $selectedProductIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->unique();
+
+        $selectedServiceIds = $invoice->items->where('itemable_type', Service::class)->pluck('itemable_id')->unique();
+
+        $products = Product::with(['inventorySubject', 'productGroup'])->whereIn('id', $productIdsForSelect->merge($selectedProductIds)->unique())
+            ->orderBy('name', 'asc')->get();
+
+        $services = Service::with(['subject', 'serviceGroup'])->whereIn('id', $serviceIdsForSelect->merge($selectedServiceIds)->unique())
+            ->orderBy('name', 'asc')->get();
+
+        $customers = Customer::with('group')->whereIn('id', $customerIdsForSelect->push($invoice->customer_id)->unique())
+            ->orderBy('name', 'asc')->get();
 
         // Prepare transactions from invoice items
         $transactions = InvoiceService::prepareTransactions($invoice, 'edit');

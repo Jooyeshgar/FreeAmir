@@ -26,9 +26,19 @@
     <legend> {{ __('Bank Info') }} </legend>
     <div class="col-span-2 md:col-span-1">
         @php
+            $initialBankId = old('bank_id', $bankAccount->bank_id ?? null);
+            $initialSelectedValue = $initialBankId ? "bank-$initialBankId" : null;
             $hint = '<a class="link text-blue-500" href="' . route('banks.create') . '">اضافه کردن بانک</a>';
         @endphp
-        <x-select title="{{ __('Bank') }}" :hint="$hint" name="bank_id" id="bank_id" :options="$banks->pluck('name', 'id')" :selected="old('bank_id', $bankAccount->bank_id ?? '')" />
+        <div class="flex flex-wrap" x-data="{ bank_id: '{{ $initialBankId }}', selectedValue: '{{ $initialSelectedValue }}' }">
+            <span class="flex flex-wrap text-gray-500 w-full">{{ __('Bank') }}</span>
+
+            <x-select-box url="{{ route('bank-accounts.search-bank') }}" :options="[['headerGroup' => 'bank', 'options' => $banks]]" x-model="selectedValue"
+                x-init="if (!selectedValue && bank_id) { selectedValue = 'bank-' + bank_id; }" placeholder="{{ __('Select Bank') }}" hint='{!! $hint !!}'
+                @selected="bank_id = $event.detail.id;" class="" />
+
+            <input type="hidden" x-bind:value="bank_id" name="bank_id">
+        </div>
     </div>
     <div class="col-span-2 md:col-span-1">
         <x-input name="bank_branch" id="bank_branch" title="{{ __('Bank Branch') }}" :value="old('bank_branch', $bankAccount->bank_branch ?? '')" placeholder="{{ __('Please enter the bank branch') }}" />
