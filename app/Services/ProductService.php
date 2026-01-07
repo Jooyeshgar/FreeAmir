@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\Product;
-use Exception;
 
 class ProductService
 {
@@ -61,7 +60,7 @@ class ProductService
     public static function addProductsQuantities(array $invoiceItems, InvoiceType $invoice_type): void
     {
         foreach ($invoiceItems as $invoiceItem) {
-            if ($invoiceItem['itemable_type'] !== Product::class) {
+            if (! in_array($invoiceItem['itemable_type'], [Product::class, 'product'], true)) {
                 continue;
             }
             $product = Product::find($invoiceItem['itemable_id']);
@@ -97,25 +96,6 @@ class ProductService
                 $product->quantity += $invoiceItem['quantity'];
             }
 
-            $product->save();
-        }
-    }
-
-    public static function updateProductQuantities(array $oldItem, array $newItem, InvoiceType $invoice_type): void
-    {
-        $product = Product::find($newItem['itemable_id']);
-
-        if (! $product) {
-            throw new Exception(__('Product not found'), 404);
-        }
-
-        $diff = $newItem['quantity'] - $oldItem['quantity'];
-        if ($diff !== 0) {
-            if ($invoice_type === InvoiceType::BUY) {
-                $product->quantity += $diff;
-            } elseif ($invoice_type === InvoiceType::SELL) {
-                $product->quantity -= $diff;
-            }
             $product->save();
         }
     }
