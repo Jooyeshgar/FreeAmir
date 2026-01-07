@@ -25,12 +25,16 @@
 
                     @foreach ($bankAccounts as $bankAccount)
                         <tr>
-                            <td class="px-4 py-2">{{ $bankAccount->name }}</td>
+                            <td class="px-4 py-2">
+                                <a href="{{ route('bank-accounts.show', $bankAccount) }}">{{ $bankAccount->name }}</a>
+                            </td>
                             <td class="px-4 py-2">{{ $bankAccount->number }}</td>
                             <td class="px-4 py-2">{{ $bankAccount->owner }}</td>
                             <td class="px-4 py-2">{{ $bankAccount->type }}</td>
                             <td class="px-4 py-2">{{ $bankAccount->bank ? $bankAccount->bank->name : '' }}</td>
                             <td class="px-4 py-2">
+                                <a href="{{ route('bank-accounts.show', $bankAccount) }}"
+                                    class="btn btn-sm btn-info">{{ __('View') }}</a>
                                 <a href="{{ route('bank-accounts.edit', $bankAccount) }}"
                                     class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                 <form action="{{ route('bank-accounts.destroy', $bankAccount) }}" method="POST"
