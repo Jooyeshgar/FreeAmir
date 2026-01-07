@@ -17,7 +17,6 @@
                         <a
                             href="{{ route('transactions.index', ['subject_id' => $bankAccount->subject->id]) }}">{{ $bankAccount->subject->formattedCode() }}</a>
                     </span>
-                    </a>
                 @endif
             </div>
 
@@ -37,8 +36,8 @@
                         \App\Services\SubjectService::sumSubject($bankAccount->subject, true, false) ?? 0,
                     )" :link="route('transactions.index', ['subject_id' => $bankAccount->subject->id])" :currency="config('amir.currency') ?? __('Rial')" type="success"
                         icon="income" />
-                </div>
-            @endcan
+                @endcan
+            </div>
 
             <div class="card-actions justify-between mt-8">
                 <a href="{{ route('bank-accounts.index') }}" class="btn btn-ghost gap-2">
