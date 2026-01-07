@@ -69,9 +69,9 @@ class HomeController extends Controller
         ));
     }
 
-    private function cashBookBalance(array $data, int $duration)
+    private function cashBookBalance(int $duration)
     {
-        $cashBookSubjectIds = Subject::where('parent_id', $data['cash_book'])->pluck('id')->all();
+        $cashBookSubjectIds = Subject::where('parent_id', config('amir.cash_book'))->pluck('id')->all();
 
         return $this->balanceForSubjectIds($cashBookSubjectIds, $duration);
     }
@@ -83,7 +83,7 @@ class HomeController extends Controller
         return $this->balanceForSubjectIds($bankAccountSubjectIds, $duration);
     }
 
-    private function bothBalance(array $data, int $duration)
+    private function bothBalance(int $duration)
     {
         $bankAccountSubjectIds = Subject::where('parent_id', config('amir.bank'))->pluck('id')->all();
         $cashBookSubjectIds = Subject::where('parent_id', config('amir.cash_book'))->pluck('id')->all();
@@ -160,15 +160,14 @@ class HomeController extends Controller
             [
                 'duration' => 'required|integer|in:1,2,3,4',
                 'type' => 'required|in:cash_book,bank,both',
-                'cash_book' => 'required_if:type,cash_book|integer|exists:subjects,id',
             ]
         );
         $duration = intval($data['duration']);
 
         return match ($data['type']) {
-            'cash_book' => $this->cashBookBalance($data, $duration),
+            'cash_book' => $this->cashBookBalance($duration),
             'bank' => $this->bankBalance($duration),
-            'both' => $this->bothBalance($data, $duration),
+            'both' => $this->bothBalance($duration),
             default => response()->json([]),
         };
     }
@@ -177,14 +176,12 @@ class HomeController extends Controller
     {
         $data = $request->validate(
             [
-                'cash_book' => 'required|integer|exists:subjects,id',
+                'subject_id' => 'required|integer|exists:subjects,id',
                 'duration' => 'required|integer|in:1,2,3,4',
             ]
         );
 
-        $cashBookSubjectIds = Subject::where('parent_id', $data['cash_book'])->pluck('id')->all();
-
-        return $this->balanceForSubjectIds($cashBookSubjectIds, intval($data['duration']));
+        return $this->balanceForSubjectIds([$data['subject_id']], intval($data['duration']));
     }
 
     private function getProductsStats($columnName, bool $countOnly = false): array

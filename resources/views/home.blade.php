@@ -26,8 +26,8 @@
                         <div class="flex m-2 justify-between overflow-hidden" x-data="cashTypesSelectHandler()" x-init="initializeCashBook()">
                             <select x-model="selectedCashType" x-on:change="handleCashBookChange"
                                 class="select ml-2 bg-[#DEE2E6] text-[#495057]">
-                                @foreach ($cashTypes as $cashTypeKey => $cashTypeName)
-                                     <option {{ $loop->first ? 'selected' : '' }} value="{{ $cashTypeKey }}">
+                                @foreach ($cashTypes as $cashTypeName)
+                                     <option {{ $loop->first ? 'selected' : '' }} value="{{ $cashTypeName }}">
                                         {{ __($cashTypeName) }}</option>
                                 @endforeach
                             </select>
@@ -381,7 +381,7 @@
                     handleBankChange() {
                         try {
                             const route = "{{ route('home.bank-account') }}";
-                            const response = fetch(`${route}?cash_book=${this.selectedBankAccount}&duration=${this.selectedDuration}`)
+                            const response = fetch(`${route}?subject_id=${this.selectedBankAccount}&duration=${this.selectedDuration}`)
                                 .then(res => res.json())
                                 .then(data => {
                                     const labels = data.labels;
