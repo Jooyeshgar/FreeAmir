@@ -60,6 +60,8 @@ class ProductService
     public static function addProductsQuantities(array $invoiceItems, InvoiceType $invoice_type): void
     {
         foreach ($invoiceItems as $invoiceItem) {
+            // When editing an existing invoice, itemable_type is set to Product::class or Service::class.
+            // When creating a new invoice, itemable_type is set to the string 'product' or 'service'.
             if (! in_array($invoiceItem['itemable_type'], [Product::class, 'product'], true)) {
                 continue;
             }
@@ -80,6 +82,7 @@ class ProductService
     public static function subProductsQuantities(array $invoiceItems, InvoiceType $invoice_type): void
     {
         foreach ($invoiceItems as $invoiceItem) {
+            // itemable_type cannot be 'product' when unapproving invoices
             if ($invoiceItem['itemable_type'] !== Product::class) {
                 continue;
             }
