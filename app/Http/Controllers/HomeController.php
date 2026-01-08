@@ -73,14 +73,14 @@ class HomeController extends Controller
     {
         $cashBookSubjectIds = Subject::where('parent_id', config('amir.cash_book'))->pluck('id')->all();
 
-        return $this->balanceForSubjectIds($cashBookSubjectIds, $duration);
+        return $this->balanceForSubjectIds($cashBookSubjectIds, $duration, true);
     }
 
     private function bankBalance(int $duration)
     {
         $bankAccountSubjectIds = Subject::where('parent_id', config('amir.bank'))->pluck('id')->all();
 
-        return $this->balanceForSubjectIds($bankAccountSubjectIds, $duration);
+        return $this->balanceForSubjectIds($bankAccountSubjectIds, $duration, true);
     }
 
     private function bothBalance(int $duration)
@@ -90,10 +90,10 @@ class HomeController extends Controller
 
         $subjectIds = array_values(array_unique(array_merge($bankAccountSubjectIds, $cashBookSubjectIds)));
 
-        return $this->balanceForSubjectIds($subjectIds, $duration);
+        return $this->balanceForSubjectIds($subjectIds, $duration, true);
     }
 
-    private function balanceForSubjectIds(array $subjectIds, int $duration)
+    private function balanceForSubjectIds(array $subjectIds, int $duration, bool $invert = false)
     {
         $transactionQuery = Transaction::query()->whereIn('subject_id', $subjectIds);
 
@@ -124,6 +124,11 @@ class HomeController extends Controller
             ->orderBy('date')
             ->pluck('total', 'date')
             ->map(fn ($v) => (int) $v);
+
+        if ($invert) {
+            $initialBalance *= -1;
+            $dailyTransactions = $dailyTransactions->map(fn ($v) => $v * -1);
+        }
 
         $dailyBalances = [formatDate($startDate) => $initialBalance];
         $runningBalance = $initialBalance;
@@ -181,7 +186,7 @@ class HomeController extends Controller
             ]
         );
 
-        return $this->balanceForSubjectIds([$data['subject_id']], intval($data['duration']));
+        return $this->balanceForSubjectIds([$data['subject_id']], intval($data['duration']), true);
     }
 
     private function getProductsStats($columnName, bool $countOnly = false): array

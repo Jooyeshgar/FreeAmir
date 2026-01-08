@@ -1,5 +1,5 @@
 @can('documents.show')
-    <div class="w-1/3 max-[850px]:w-full bg-[#E9ECEF] rounded-[16px] relative">
+    <div class="w-1/3 max-[850px]:w-full bg-white rounded-[16px] relative">
         <div class="flex justify-between items-center max-[850px]:flex-col max-[850px]:mt-4">
             <div>
                 <h2 class="text-[#495057] ms-3">
@@ -8,14 +8,14 @@
             </div>
 
             <div class="flex m-2 justify-between overflow-hidden" x-data="cashTypesSelectHandler()" x-init="initializeCashBook()">
-                <select x-model="selectedCashType" x-on:change="handleCashBookChange" class="select ml-2 bg-[#DEE2E6] text-[#495057]">
+                <select x-model="selectedCashType" x-on:change="handleCashBookChange" class="select ml-2 select-bordered">
                     @foreach ($cashTypes as $cashTypeName)
                         <option {{ $loop->first ? 'selected' : '' }} value="{{ $cashTypeName }}">
                             {{ __($cashTypeName) }}</option>
                     @endforeach
                 </select>
 
-                <select x-model="selectedDuration" x-on:change="handleCashBookChange" class="select bg-[#DEE2E6] text-[#495057]">
+                <select x-model="selectedDuration" x-on:change="handleCashBookChange" class="select select-bordered">
                     <option value="1">{{ '۳ ' . __('Month') }}</option>
                     <option value="2">{{ '۶ ' . __('Month') }}</option>
                     <option value="3">{{ '۹ ' . __('Month') }}</option>
@@ -71,9 +71,9 @@
                         return label;
                     });
 
-                    cashBalanceLineChart.data.labels = formattedLabels;
-                    cashBalanceLineChart.data.datasets[0].data = data.datas;
-                    cashBalanceLineChart.update();
+                    cashBalanceChart.data.labels = formattedLabels;
+                    cashBalanceChart.data.datasets[0].data = data.datas;
+                    cashBalanceChart.update();
                 }
             };
         }
