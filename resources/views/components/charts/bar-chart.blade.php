@@ -11,10 +11,8 @@
     $resolvedChartId = $chartId ?? ($attributes->get('id') ?? 'barChart_' . uniqid());
 @endphp
 
-<div class="bg-white border border-gray-100 p-4">
-    <div class="relative {{ $heightClass }}">
-        <canvas id="{{ $resolvedChartId }}"></canvas>
-    </div>
+<div class="relative {{ $heightClass }}">
+    <canvas id="{{ $resolvedChartId }}"></canvas>
 </div>
 
 @push('footer')

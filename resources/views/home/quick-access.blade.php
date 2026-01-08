@@ -1,4 +1,4 @@
-<div class="w-1/3 max-[850px]:w-full bg-[#E9ECEF] rounded-[16px] relative">
+<div class="w-1/3 max-[850px]:w-full bg-white rounded-[16px] relative">
     <div class="flex justify-between items-center h-[62px]">
         <h2 class="text-[#495057] ms-3">
             {{ __('Quick Access') }}
