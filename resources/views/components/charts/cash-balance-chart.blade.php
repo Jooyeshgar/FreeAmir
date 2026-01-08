@@ -19,7 +19,6 @@
 @endphp
 
 <canvas id="cashBalanceLineChart" class="bg-white w-full h-[18rem]"></canvas>
-
 @pushOnce('footer')
     <script>
         var cashBalanceLineChart = null;
@@ -34,7 +33,6 @@
                 data: {
                     labels: {!! json_encode($convertedLabels) !!},
                     datasets: [{
-                        label: 'نمودار درصدی',
                         data: {!! json_encode($datas) !!},
                         borderColor: '#888',
                         borderWidth: 2,
