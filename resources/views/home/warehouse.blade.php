@@ -1,4 +1,4 @@
-    <div class="w-1/2 max-[1200px]:w-full bg-[#E9ECEF] rounded-[16px]">
+    <div class="w-1/2 max-[1200px]:w-full bg-white rounded-[16px]">
         <div class="flex justify-between items-center h-[62px]">
             <h2 class="text-[#495057] ms-3">{{ __('Warehouse') }}</h2>
         </div>

@@ -210,6 +210,8 @@ class HomeController extends Controller
                 'id' => $item->itemable_id,
                 'name' => $item->itemable->name ?? 'unknown',
                 'code' => $item->itemable->code ?? '-',
+                'selling_price' => $item->itemable->selling_price ?? null,
+                'average_cost' => $item->itemable->average_cost ?? null,
                 'quantity' => (int) $item->total_quantity,
                 'type' => $item->itemable_type === Product::class ? 'products' : 'services',
             ]);
