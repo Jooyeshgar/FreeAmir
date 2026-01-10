@@ -16,52 +16,58 @@
             $convertedLabels[] = $label;
         }
     }
-@endphp
 
-<canvas id="cashBalanceLineChart" class="bg-white rounded-[16px]"></canvas>
+    $convertedDatas = array_map(fn($value) => $value * -1, $datas);
+@endphp
+<div class="relative w-full h-[18rem]">
+    <canvas id="cashBalanceChart"></canvas>
+</div>
 
 @pushOnce('footer')
     <script>
-        var cashBalanceLineChart = null;
+        var cashBalanceChart = null;
         window.addEventListener("DOMContentLoaded", () => {
-            const ctx = document.getElementById('cashBalanceLineChart').getContext('2d');
-            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-            gradient.addColorStop(0, 'rgba(0, 255, 200, 0.3)');
-            gradient.addColorStop(1, 'rgba(0, 255, 200, 0)');
+            const ctx = document.getElementById('cashBalanceChart').getContext('2d');
 
-            cashBalanceLineChart = new Chart(ctx, {
+            cashBalanceChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: {!! json_encode($convertedLabels) !!},
                     datasets: [{
-                        label: 'نمودار درصدی',
-                        data: {!! json_encode($datas) !!},
-                        borderColor: '#888',
-                        borderWidth: 5,
-                        fill: true,
+                        data: {!! json_encode($convertedDatas) !!},
+                        borderColor: '#999999',
+                        pointRadius: 2,
                         tension: 0.4,
-                        pointBackgroundColor: '#fff',
-                        pointBorderColor: function(context) {
+                        backgroundColor: function(context) {
                             const value = context.raw;
-                            return value >= 0 ? 'green' : 'red';
+                            return value >= 0 ? '#10b981' : '#ef4444';
                         },
-                        pointBorderWidth: 3,
-                        pointRadius: 6
+
                     }]
                 },
                 options: {
                     interaction: {
-                        mode: 'nearest',
+                        mode: 'index',
                         intersect: false
                     },
                     responsive: true,
+                    maintainAspectRatio: false,
                     scales: {
                         x: {
-                            display: false,
+                            display: true,
+                            grid: {
+                                display: false
+                            }
                         },
                         y: {
-                            display: false,
+                            display: true,
                             beginAtZero: true,
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                display: false
+                            }
                         }
                     },
                     plugins: {
@@ -70,7 +76,8 @@
                         },
                         tooltip: {
                             enabled: true,
-                            mode: 'nearest',
+                            padding: 10,
+                            cornerRadius: 4,
                             callbacks: {
                                 label: function(context) {
                                     let value = context.raw;

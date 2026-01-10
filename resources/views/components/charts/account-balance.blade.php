@@ -1,6 +1,8 @@
 @props(['labels', 'datas'])
 
-<canvas id="accountBalanceChart" class="bg-white rounded-[16px]"></canvas>
+<div class="h-[25rem]">
+    <canvas id="accountBalanceChart" class="bg-white w-full"></canvas>
+</div>
 
 @pushOnce('footer')
     <script>
@@ -14,7 +16,7 @@
                     label: 'نمودار درصدی',
                     data: {!! json_encode($datas) !!},
                     borderColor: '#888',
-                    borderWidth: 5,
+                    borderWidth: 3,
                     fill: false,
                     tension: 0.4,
                     pointBackgroundColor: '#fff',
@@ -22,8 +24,8 @@
                         const value = context.raw;
                         return value >= 0 ? 'green' : 'red';
                     },
-                    pointBorderWidth: 3,
-                    pointRadius: 6
+                    pointBorderWidth: 2,
+                    pointRadius: 5
                 }]
             };
 
@@ -32,6 +34,8 @@
                     mode: 'nearest',
                     intersect: false
                 },
+                responsive: true,
+                maintainAspectRatio: false,
                 scales: {
                     x: {
                         grid: {
