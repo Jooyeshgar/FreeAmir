@@ -6,6 +6,7 @@ use App\Models\Bank;
 use App\Models\Company;
 use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 class BankAccountFactory extends Factory
 {
@@ -16,16 +17,16 @@ class BankAccountFactory extends Factory
 
         return [
             'name' => $this->faker->name,
-            'number' => uniqid('BA-'),
+            'number' => $this->faker->unique()->numerify('#######'),
             'type' => $this->faker->randomDigit(),
-            'owner' => $this->faker->name,
+            'owner' => $this->faker->words(2, true),
             'bank_id' => $this->faker->randomElement($bankIds),
             'company_id' => $this->faker->randomElement($companyIds),
             'bank_branch' => $this->faker->address,
             'bank_address' => $this->faker->streetAddress,
             'bank_phone' => substr($this->faker->phoneNumber, 0, 15),
             'bank_web_page' => $this->faker->url,
-            'desc' => $this->faker->paragraph(2),
+            'desc' => Str::limit($this->faker->words(20, true), 150, ''),
         ];
     }
 

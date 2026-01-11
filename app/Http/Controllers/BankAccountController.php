@@ -36,7 +36,7 @@ class BankAccountController extends Controller
             'bank_branch' => 'nullable|string|regex:/^[\w\d\s]*$/u',
             'bank_address' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
             'bank_phone' => 'nullable|numeric',
-            'bank_web_page' => 'nullable|string|regex:/^[\w\d\s]*$/u',
+            'bank_web_page' => 'nullable|url|max:200',
             'desc' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
         ]);
 
@@ -50,6 +50,11 @@ class BankAccountController extends Controller
         $bankAccount->subject()->save($bankSubject);
 
         return redirect()->route('bank-accounts.index')->with('success', __('Bank Account created successfully.'));
+    }
+
+    public function show(Models\BankAccount $bankAccount)
+    {
+        return view('bankAccounts.show', compact('bankAccount'));
     }
 
     public function edit(Models\BankAccount $bankAccount)
@@ -67,12 +72,12 @@ class BankAccountController extends Controller
             'name' => 'required|max:20',
             'number' => 'required|numeric',
             'type' => 'required|integer|regex:/^[\w\d\s]*$/u',
-            'owner' => 'required|string|regex:/^[\w\d\s]*$/u',
+            'owner' => 'nullable|string|regex:/^[\w\d\s]*$/u',
             'bank_id' => 'required|exists:banks,id|integer',
             'bank_branch' => 'nullable|string|regex:/^[\w\d\s]*$/u',
             'bank_address' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
             'bank_phone' => 'nullable|numeric',
-            'bank_web_page' => 'nullable|string|regex:/^[\w\d\s]*$/u',
+            'bank_web_page' => 'nullable|url|max:200',
             'desc' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
         ]);
 
