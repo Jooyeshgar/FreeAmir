@@ -7,18 +7,6 @@
     <x-show-message-bags />
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-2">
-                <x-stat-card :title="__('Customer')">
-                    <a href="{{ route('customers.show', $customer) }}" class="text-primary link link-hover">
-                        {{ $customer->name }}
-                    </a>
-                </x-stat-card>
-
-                @if ($customer->subject)
-                    <x-stat-card-link :link="route('transactions.index', ['subject_id' => $customer->subject->id])" :title="__('Subject Balance')" :value="formatNumber(\App\Services\SubjectService::sumSubject($customer->subject))" />
-                @endif
-            </div>    
-        
             <div class="card-actions flex justify-between gap-4 ">
                 <a href="{{ route('comments.create', $customer->id) }}"
                     class="btn btn-primary ">{{ __('Add Comment') }}</a>
@@ -83,7 +71,7 @@
             @endif
 
             <div class="card-actions justify-between mt-4 text-left">
-                <a href="{{ route('customers.index') }}" class="btn btn-ghost gap-2">
+                <a href="{{ route('customers.show', $customer) }}" class="btn btn-ghost gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
