@@ -118,6 +118,7 @@
     "Buy VAT": "مالیات خرید (%)",
     "Buy Vat": "مالیات خرید",
     "Buy price": "قیمت خرید",
+    "Branch": "شعبه",
     "COGS Subject": "موضوع COGS",
     "Cannot change ancillary cost status because there are previous ancillary costs those are not approved for the same invoice products. Please approve those ancillary costs first.": "نمی توان وضعیت هزینه های جانبی را تغییر داد زیرا هزینه های جانبی قبلی وجود دارد که برای همان محصولات فاکتور تأیید نشده اند. لطفاً ابتدا آن هزینه های جانبی را تأیید کنید.",
     "Cannot change ancillary cost status because there are subsequent ancillary costs those are approved for the same invoice products. Please unapprove those ancillary costs first.": "نمی توان وضعیت هزینه های جانبی را تغییر داد زیرا هزینه های جانبی بعدی وجود دارد که برای همان محصولات فاکتور تأیید شده است. لطفاً ابتدا آن هزینه های جانبی را لغو کنید.",

@@ -118,6 +118,7 @@
     "Buy VAT": "Buy VAT (%)",
     "Buy Vat": "Buy Vat",
     "Buy price": "Buy price",
+    "Branch": "Branch",
     "COGS Subject": "COGS Subject",
     "Cannot change ancillary cost status because there are previous ancillary costs those are not approved for the same invoice products. Please approve those ancillary costs first.": "Cannot change ancillary cost status because there are previous ancillary costs those are not approved for the same invoice products. Please approve those ancillary costs first.",
     "Cannot change ancillary cost status because there are subsequent ancillary costs those are approved for the same invoice products. Please unapprove those ancillary costs first.": "Cannot change ancillary cost status because there are subsequent ancillary costs those are approved for the same invoice products. Please unapprove those ancillary costs first.",

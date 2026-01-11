@@ -19,24 +19,39 @@
                     </span>
                 @endif
             </div>
-
-            <div class="max-w-7xl mt-2">
-                <div class="overflow-hidden sm:rounded-lg">
-                    <p class="text-gray-700"><strong>{{ __('Description') }}:</strong>
-                        {{ $bankAccount->desc }}
-                    </p>
-                </div>
-            </div>
         </div>
 
         <div class="card-body">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-3">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
+                <x-stat-card :title="__('Account number')" :value="convertToFarsi($bankAccount->number)" type="success" />
+                <x-stat-card :title="__('Account type')" :value="convertToFarsi($bankAccount->type)" type="info" />
+                <x-stat-card :title="__('Owner')" :value="$bankAccount->owner ?? '-'" type="info" />
                 @can('reports.ledger')
-                    <x-stat-card-link :title="__('Subject Balance')" :value="formatNumber(
-                        \App\Services\SubjectService::sumSubject($bankAccount->subject, true, false) ?? 0,
-                    )" :link="route('transactions.index', ['subject_id' => $bankAccount->subject->id])" :currency="config('amir.currency') ?? __('Rial')" type="success"
+                    <x-stat-card-link :title="__('Subject Balance')" :value="formatNumber(\App\Services\SubjectService::sumSubject($bankAccount->subject, true, false) ?? 0)"
+                        :link="route('transactions.index', ['subject_id' => $bankAccount->subject->id])" :currency="config('amir.currency') ?? __('Rial')" type="success"
                         icon="income" />
                 @endcan
+            </div>
+
+            <div class="divider text-lg font-semibold">{{ __('Bank Info') }}</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-3">
+                <x-stat-card :title="__('Name')" :value="$bankAccount->bank->name" type="info" />
+                <x-stat-card :title="__('Phone')" :value="convertToFarsi($bankAccount->bank_phone ?? '-')" type="info" />
+                <x-stat-card :title="__('Website')" :value="$bankAccount->bank_web_page ?? '-'" type="info" />
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 mb-3">
+                <x-stat-card :title="__('Branch')" :value="$bankAccount->bank_branch ?? '-'" type="info" />
+                <x-stat-card :title="__('Address')" :value="$bankAccount->bank_address ?? '-'" type="info" />
+            </div>
+            <div class="divider text-lg font-semibold">{{ __('Description') }}</div>
+                <div class="alert bg-base-200 shadow-sm mb-6">
+                    <div>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-info shrink-0 w-6 h-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span>{{ $bankAccount->desc }}</span>
+                    </div>
+                </div>
             </div>
 
             <div class="card-actions justify-between mt-8">
