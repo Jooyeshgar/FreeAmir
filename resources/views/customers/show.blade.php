@@ -100,6 +100,51 @@
                 </div>
             @endif
 
+            @if ($customer->comments)
+                <div class="divider text-lg font-semibold">{{ __('Comments') }}</div>
+                    <div class="overflow-x-auto shadow-lg rounded-lg">
+                        <table class="table table-zebra w-full">
+                        <thead class="bg-base-300">
+                            <tr>
+                                <th class="px-4 py-3">{{ __('Commented By') }}</th>
+                                <th class="px-4 py-3">{{ __('Content') }}</th>
+                                <th class="px-4 py-3">{{ __('Rating') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($customer->comments->take(5) as $comment)
+                                <tr class="hover">
+                                    <td class="px-4 py-3">
+                                        <span class="badge badge-ghost">{{ $comment->commentBy->name }}</span>
+                                    </td>
+                                    <td class="px-4 py-3 font-semibold">
+                                        <div class="text-xs text-gray-500">{{ \Illuminate\Support\Str::limit($comment->content, 80, '…') }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="rating rating-sm rating-half">
+                                            @for ($i = 1; $i <= 10; $i++)
+                                                @php
+                                                    $starValue = $i / 2;
+                                                    $isFilled = $starValue <= $comment->rating;
+                                                @endphp
+                                                <input type="radio" disabled
+                                                    class="pointer-events-none mask mask-star-2 @if ($i % 2 == 1) mask-half-1 @else mask-half-2 @endif @if ($isFilled) bg-orange-400 @else bg-orange-250 @endif" />
+                                            @endfor
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="text-center text-gray-500">
+                                        {{ __('There is no comments.') }}
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+
             <div class="divider text-lg font-semibold">{{ __('Contact Information') }}</div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div class="card bg-base-200 shadow">
@@ -264,6 +309,7 @@
                 </a>
 
                 <div class="flex gap-2">
+                    <a href="{{ route('comments.index', $customer) }}" class="btn btn-primary">{{ __('Comments') }}</a>
                     <a href="{{ route('customers.edit', $customer) }}" class="btn btn-primary">{{ __('Edit') }}</a>
                     <form action="{{ route('customers.destroy', $customer) }}" method="POST"
                         onsubmit="return confirm('{{ __('Are you sure you want to delete this customer?') }}')">
