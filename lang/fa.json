@@ -688,6 +688,7 @@
     "The subtractions may not be negative.": "کسریات نمی‌تواند منفی باشد.",
     "The subtractions must be a number.": "کسریات باید عددی باشد.",
     "The transaction field must be a valid array.": "قسمت معامله باید یک آرایه معتبر باشد.",
+    "There is no comments.": "هیچ نظری وجود ندارد.",
     "There are approved subsequent invoices for the selected products.": "فاکتورهای تایید شده بعدی برای محصولات انتخاب شده وجود دارد.",
     "There are later buy invoices with common items:": "فاکتورهای خرید بعدی با موارد مشترک وجود دارد:",
     "There are no items on this ancillary cost yet.": "هنوز هیچ موردی در مورد این هزینه جانبی وجود ندارد.",
