@@ -92,11 +92,12 @@ class InvoiceController extends Controller
             return $invoice;
         });
 
-        // remained
         if ($request->invoice_type === 'sell') {
             $invoices->totalSellAmount = $invoices->sum('amount');
-            $invoices->totalProductsQuantity = $invoices->sum('items.quantity');
-
+            $invoices->totalProductsQuantity = 0; // TODO: change to method for optimizition
+            foreach ($invoices as $invoice) {
+                $invoices->totalProductsQuantity += $invoice->items->where('itemable_type', Product::class)->sum('quantity');
+            }
         }
 
         return view('invoices.index', compact('invoices', 'statusCounts'));
