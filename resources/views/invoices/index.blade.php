@@ -45,6 +45,14 @@
                         <div class="col-span-2 md:col-span-1">
                             <x-date-picker name="end_date" class="w-40" placeholder="{{ __('End date') }}" value="{{ request('end_date') }}"></x-date-picker>
                         </div>
+                        <div class="col-span-2 md:col-span-1">
+                            <select name="status" id="status" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
+                                <option value="all">{{ __('All Invoices') }}</option>
+                                @foreach (\App\Enums\InvoiceStatus::cases() as $status)
+                                    <option value="{{ $status->value }}" @selected($status != 'all' && $status->value == request('status')) >{{ $status->label() }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                         <div class="col-span-2 md:col-span-1 text-center">
                             <input type="submit" value="{{ __('Search') }}" class="btn-primary btn" />
                         </div>
@@ -65,16 +73,19 @@
                             \App\Enums\InvoiceStatus::PENDING => 'info',
                             \App\Enums\InvoiceStatus::APPROVED_INACTIVE => 'error',
                         };
+
+                        $invoiceTypeToPast = match (request('invoice_type')){
+                            'sell' => 'Sold',
+                            'buy' => 'Bought',
+                        };
                     @endphp
 
                     <a href="{{ $url }}" class="block transition-transform hover:scale-105 {{ $isActive ? 'ring-2 ring-primary rounded-xl' : '' }}">
                         <x-stat-card :title="$status->label()" :value="convertToFarsi($count)" :type="$type" />
                     </a>
                 @endforeach
-                @if (request('invoice_type') == 'sell')
-                    <x-stat-card :title="__('Sold products quantity')" :value="formatNumber($invoices->totalProductsQuantity)" />
-                    <x-stat-card :title="__('Total sell invoice amount')" :value="formatNumber($invoices->totalSellAmount)" />
-                @endif
+                <x-stat-card :title="__($invoiceTypeToPast . ' Products Quantity')" :value="formatNumber($invoices->totalProductsQuantity)" />
+                <x-stat-card :title="__('Invoices Amount')" :value="formatNumber($invoices->totalAmount)" />
             </div>
 
             <table class="table w-full mt-4 overflow-auto">

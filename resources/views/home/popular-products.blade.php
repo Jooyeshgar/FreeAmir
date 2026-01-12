@@ -6,7 +6,7 @@
             <div class="flex rounded-[16px] m-1 overflow-hidden ">
                 <a href="{{ route('products.index') }}" class="flex ml-2 items-center justify-center bg-[#DEE2E6] text-[#242424] rounded-[16px] w-[72px] h-[56px]">
                     {{ __('Products') }}</a>
-                <a href="{{ route('services.index') }}" class="flex items-center text-center bg-[#DEE2E6] text-[#242424] rounded-[16px] w-[72px] h-[56px]">
+                <a href="{{ route('services.index') }}" class="flex items-center justify-center bg-[#DEE2E6] text-[#242424] rounded-[16px] w-[72px] h-[56px]">
                     {{ __('Services') }}</a>
             </div>
         </div>

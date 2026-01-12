@@ -13,6 +13,7 @@ class RolesAndPermissionsSeeder extends Seeder
     {
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
         $permissions = [
+            'home',
             'home.view',
             'home.subject-detail',
 
@@ -117,6 +118,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'banks.update',
             'banks.destroy',
 
+            'invoices',
             'invoices.index',
             'invoices.create',
             'invoices.store',
@@ -196,7 +198,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $warehousePermissions = Permission::where(function ($q) {
             $q->where('name', 'LIKE', 'products.%')
                 ->orWhere('name', 'LIKE', 'product-groups.%')
-                ->orWhere('name', 'LIKE', 'home.%');
+                ->orWhere('name', 'LIKE', 'home%');
         })
             ->pluck('name')
             ->toArray();
@@ -207,24 +209,35 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $sellerPermissions = Permission::where(function ($q) {
             $q->where('name', 'LIKE', 'invoices.%')
+                ->orWhere('name', 'LIKE', 'invoices')
                 ->Where('name', 'NOT LIKE', 'invoices.approve')
                 ->orWhere('name', 'LIKE', 'ancillary-costs.%')
                 ->Where('name', 'NOT LIKE', 'ancillary-costs.approve')
                 ->orWhere('name', 'LIKE', 'customers.%')
-                ->orWhere('name', 'LIKE', 'home.%');
+                ->orWhere('name', 'LIKE', 'home%');
         })->pluck('name')->toArray();
 
         $seller->syncPermissions($sellerPermissions);
 
-        $admin = User::firstOrCreate(
-            ['email' => 'admin@example.com'],
-            [
-                'name' => 'admin',
-                'password' => bcrypt('password'),
-            ]
-        );
+        $users = [
+            'admin' => 'Super-Admin',
+            'accountant' => 'Accountant',
+            'seller' => 'Seller',
+            'warehouse' => 'Warehousekeeper',
+            'seller-warehouse' => ['Seller', 'Warehousekeeper'],
+            'accountant-seller-warehouse' => ['Accountant', 'Seller', 'Warehousekeeper'],
+        ];
 
-        $admin->companies()->sync([1]);
-        $admin->assignRole('Super-Admin');
+        foreach ($users as $name => $role) {
+            $user = User::firstOrCreate(
+                ['email' => $name.'@example.com'],
+                [
+                    'name' => $name,
+                    'password' => bcrypt('password'),
+                ]
+            );
+            $user->companies()->sync([1]);
+            $user->assignRole($role);
+        }
     }
 }
