@@ -55,9 +55,32 @@ class ReportsController extends Controller
         if ($request->has('parent_id')) {
             $currentParent = Subject::find($request->get('parent_id'));
             $subjects = $currentParent->children()->with('subjectable');
+
+            // $subjects = $currentParent->children()->with(['subjectable', 'transactions.document']);
         } else {
             $subjects = Subject::whereIsRoot()->with('subjectable');
+
+            // $subjects = Subject::whereIsRoot()->with(['subjectable', 'transactions.document']);
         }
+
+        $columns_number = 4; // default columns number
+        // If request have columns_number and it equal to 2 we must set $columns_number = 2;
+
+        // if ($request->has('start_date')) {
+        // $documents = $subjects->get()->flatMap(function ($subject) {
+        //     return $subject->transactions->pluck('document')->filter();
+        // });
+
+        // }
+        // if ($request->has('end_date')) {
+
+        // }
+        // if ($request->has('start_document_number')) {
+
+        // }
+        // if ($request->has('end_document_number')) {
+
+        // }
 
         $subjects = $subjects->orderBy('code')->get();
 
