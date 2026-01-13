@@ -7,9 +7,16 @@ use App\Models\Subject;
 class SubjectService
 {
     /**
+     * Add 4 new filters : start_date, end_date, start_document_number and end_document_number for sumSubejct method.
+     * It must used for filtering calculating sum('value') just on transactions those in relation with document that have respective date or number
+     */
+
+    /**
      * Calculate the total sum of transactions for a subject with all its descendants recursively.
      */
-    public static function sumSubject(string|int|Subject $code, bool $both = true, bool $debit = false): int
+    public static function sumSubject(string|int|Subject $code, bool $both = true, bool $debit = false,
+        ?float $start_document_number = null, ?float $end_document_number = null,
+        ?\Date $start_date = null, ?\Date $end_date = null): int
     {
         if ($code instanceof Subject) {
             $subject = $code->loadMissing(['transactions']);

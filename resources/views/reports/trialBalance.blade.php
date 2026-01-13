@@ -27,6 +27,32 @@
                     </a>
                 @endif
             </div>
+            <form action="{{ route('reports.trial-balance') }}" method="get">
+                {{-- Pass parent_id for search --}}
+
+                <div class="flex flex-wrap gap-2 items-center">
+                    <div class="shrink-0 w-24 text-sm font-medium text-gray-600">{{ __('Date range :') }}</div>
+                    <div class="flex gap-2">
+                        <x-date-picker name="start_date" class="w-40" placeholder="{{ __('Start date') }}"></x-date-picker>
+                        <x-date-picker name="end_date" class="w-40" placeholder="{{ __('End date') }}"></x-date-picker>
+                    </div>
+                    <div class="shrink-0 w-24 text-sm font-medium text-gray-600">{{ __('Document Number:') }}</div>
+                    <div class="flex gap-2">
+                        <x-input name="start_document_number" class="w-40" placeholder="{{ __('Document start number') }}"></x-input>
+                        <x-input name="end_document_number" class="w-40" placeholder="{{ __('Document end number') }}"></x-input>
+                    </div>
+                    <div class="flex gap-2">
+                        {{-- Select box: Option for show 4 columns or 2 columns and default is 4 --}}
+                        {{-- If columns_number equal to 2, do not show the Balance columns --}}
+
+                        {{-- <select name="columns_number" class="" selected="$columns_number ?? 4">
+                            <option value="2">{{ __('Two column') }}</option>
+                            <option value="4">{{ __('Four column') }}</option>
+                        </select> --}}
+                    </div>
+                    <button type="submit" class="btn text-white btn-primary rounded-md"> {{ __('Search') }}</button>
+                </div>
+            </form>
             <table class="table table-zebra w-full mt-4 border border-gray-300">
                 <thead>
                     <tr class="bg-base-200 ">
@@ -68,6 +94,13 @@
                     @endforeach
                 </tbody>
             </table>
+            {{-- Add an action on the button below for printing all subjects those are showed in the blade with a header --}}
+
+            {{-- <div class="flex justify-end">
+                <form action="{{ route('reports.trialBalance.print') }}" method="get">
+                        <button type="submit" name="action" value="print" class="btn btn-default rounded-md"> {{ __('Print') }}</button>
+                </form>
+            </div> --}}
         </div>
     </div>
 </x-app-layout>
