@@ -29,18 +29,29 @@
                 <a href="{{ route('invoices.inactive') }}" class="btn btn-primary">{{ __('Approve Inactive') }}</a>
 
                 <form action="{{ route('invoices.index') }}" method="GET" class="ml-auto">
-                    <div class="mt-4 mb-4 grid grid-cols-6 gap-6">
+                    <div class="mt-4 mb-4 grid grid-cols-8 gap-6">
                         <div class="col-span-2 md:col-span-1" hidden>
                             <x-input name="invoice_type" value="{{ request('invoice_type') }}" placeholder="{{ __('Invoice Type') }}" />
                         </div>
                         <div class="col-span-2 md:col-span-1">
                             <x-input name="number" value="{{ request('number') }}" placeholder="{{ __('Invoice Number') }}" />
                         </div>
-                        <div class="col-span-2 md:col-span-1">
-                            <x-input name="date" placeholder="{{ __('date') }}" value="{{ request('date') }}"></x-input>
-                        </div>
                         <div class="col-span-6 md:col-span-3">
                             <x-input name="text" value="{{ request('text') }}" placeholder="{{ __('Search by customer name or transaction description') }}" />
+                        </div>
+                        <div class="col-span-2 md:col-span-1">
+                            <x-date-picker name="start_date" class="w-40" placeholder="{{ __('Start date') }}" value="{{ request('start_date') }}"></x-date-picker>
+                        </div>
+                        <div class="col-span-2 md:col-span-1">
+                            <x-date-picker name="end_date" class="w-40" placeholder="{{ __('End date') }}" value="{{ request('end_date') }}"></x-date-picker>
+                        </div>
+                        <div class="col-span-2 md:col-span-1">
+                            <select name="status" id="status" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
+                                <option value="all">{{ __('All Invoices') }}</option>
+                                @foreach (\App\Enums\InvoiceStatus::cases() as $status)
+                                    <option value="{{ $status->value }}" @selected($status != 'all' && $status->value == request('status')) >{{ $status->label() }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <div class="col-span-2 md:col-span-1 text-center">
                             <input type="submit" value="{{ __('Search') }}" class="btn-primary btn" />
@@ -49,7 +60,7 @@
                 </form>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
                 @foreach (\App\Enums\InvoiceStatus::cases() as $status)
                     @php
                         $count = $statusCounts->get($status->value, 0);
@@ -62,12 +73,19 @@
                             \App\Enums\InvoiceStatus::PENDING => 'info',
                             \App\Enums\InvoiceStatus::APPROVED_INACTIVE => 'error',
                         };
+
+                        $invoiceTypeToPast = match (request('invoice_type')){
+                            'sell' => 'Sold',
+                            'buy' => 'Bought',
+                        };
                     @endphp
 
                     <a href="{{ $url }}" class="block transition-transform hover:scale-105 {{ $isActive ? 'ring-2 ring-primary rounded-xl' : '' }}">
                         <x-stat-card :title="$status->label()" :value="convertToFarsi($count)" :type="$type" />
                     </a>
                 @endforeach
+                <x-stat-card :title="__($invoiceTypeToPast . ' Products Quantity')" :value="formatNumber($invoices->totalProductsQuantity)" />
+                <x-stat-card :title="__('Invoices Amount')" :value="formatNumber($invoices->totalAmount)" />
             </div>
 
             <table class="table w-full mt-4 overflow-auto">

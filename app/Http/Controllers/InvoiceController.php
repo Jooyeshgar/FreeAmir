@@ -53,8 +53,12 @@ class InvoiceController extends Controller
             fn ($q) => $q->where('number', $request->number)
         );
 
-        $builder->when($request->filled('date'),
-            fn ($q) => $q->whereDate('date', $request->date)
+        $builder->when($request->filled('start_date'),
+            fn ($q) => $q->where('date', '>=', convertToGregorian($request->start_date))
+        );
+
+        $builder->when($request->filled('end_date'),
+            fn ($q) => $q->where('date', '<=', convertToGregorian($request->end_date))
         );
 
         $builder->when($request->filled('text'),
@@ -87,6 +91,12 @@ class InvoiceController extends Controller
 
             return $invoice;
         });
+
+        $invoices->totalAmount = $invoices->sum('amount');
+        $invoices->totalProductsQuantity = 0; // TODO: change to method for optimizition
+        foreach ($invoices as $invoice) {
+            $invoices->totalProductsQuantity += $invoice->items->where('itemable_type', Product::class)->sum('quantity');
+        }
 
         return view('invoices.index', compact('invoices', 'statusCounts'));
     }
