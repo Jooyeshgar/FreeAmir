@@ -23,6 +23,42 @@ class HomeService
         };
     }
 
+    public function sumSubject(Subject $subject)
+    {
+        $subjectIds = $subject->getAllDescendantIds();
+
+        $months = [
+            1 => [1, 31],
+            2 => [1, 31],
+            3 => [1, 31],
+            4 => [1, 31],
+            5 => [1, 31],
+            6 => [1, 31],
+            7 => [1, 30],
+            8 => [1, 30],
+            9 => [1, 30],
+            10 => [1, 30],
+            11 => [1, 30],
+            12 => [1, 29],
+        ];
+
+        $year = 1404;
+
+        $sum = [];
+        foreach ($months as $month => [$startDay, $endDay]) {
+            $startDate = jalali_to_gregorian($year, $month, $startDay, '-');
+            $endDate = jalali_to_gregorian($year, $month, $endDay, '-');
+
+            // group by $month
+            $sum[$month] = Transaction::whereIn('subject_id', $subjectIds)->with('document')->get()->flatMap(function ($transaction) use ($startDate, $endDate) {
+                if ($transaction->document->whereBetween('date', [$startDate, $endDate])->exists()) {
+                    return $transaction->sum('value');
+                }
+            });
+        }
+
+    }
+
     public function monthlyData()
     {
         $monthlyIncome = $this->getProductsStats('income_subject_id');
