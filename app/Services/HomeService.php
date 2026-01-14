@@ -19,7 +19,7 @@ class HomeService
     {
         $incomeSubjectIds = [
             'service_revenue' => config('amir.service_revenue'),
-            'sales_revenue' => config(key: 'amir.sales_revenue'),
+            'sales_revenue' => config('amir.sales_revenue'),
             'income' => config('amir.income'), // other_icnome = income - (service_revenue + sales_revenue)
         ];
 
@@ -85,7 +85,7 @@ class HomeService
     {
         $incomeSubjectIds = [
             'service_revenue' => config('amir.service_revenue'),
-            'sales_revenue' => config(key: 'amir.sales_revenue'),
+            'sales_revenue' => config('amir.sales_revenue'),
             'income' => config('amir.income'), // other_icnome = income - (service_revenue + sales_revenue)
         ];
 
