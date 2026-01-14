@@ -13,20 +13,128 @@ use Carbon\Carbon;
 
 class HomeService
 {
-    public function cashAndBanksBalances(string $type, int $duration)
+    public function __construct(private readonly SubjectService $subjectService) {}
+
+    public function incomeData()
     {
-        return match ($type) {
-            'cash_book' => $this->cashBookBalance($duration),
-            'bank' => $this->bankBalance($duration),
-            'both' => $this->bothBalance($duration),
-            default => response()->json([]),
-        };
+        $incomeSubjectIds = [
+            'service_revenue' => config('amir.service_revenue'),
+            'sales_revenue' => config(key: 'amir.sales_revenue'),
+            'income' => config('amir.income'), // other_icnome = income - (service_revenue + sales_revenue)
+        ];
+
+        $incomes = [];
+        foreach ($incomeSubjectIds as $subject => $incomeSubjectId) {
+            $incomes[$subject] = $this->subjectService->sumSubject(Subject::find($incomeSubjectId));
+        }
+
+        $incomes['other_income'] = $incomes['income'] - ($incomes['service_revenue'] + $incomes['sales_revenue']);
+
+        return [$incomes['income'], $incomes['service_revenue'], $incomes['sales_revenue'], $incomes['other_income']];
     }
 
-    public function sumSubject(Subject $subject)
+    public function costData()
     {
-        $subjectIds = $subject->getAllDescendantIds();
+        $costSubjects = Subject::where('parent_id', config('amir.cost'))->select('id', 'name')->get();
 
+        $costs = [];
+        foreach ($costSubjects as $costSubject) {
+            $costs[$costSubject->name] = $this->subjectService->sumSubject(Subject::find($costSubject->id));
+        }
+
+        $totalCosts = collect($costs)->sum();
+
+        $wagesCostSubject = Subject::where('id', config('amir.wage'))->get();
+        $wagesCost = $this->subjectService->sumSubject($wagesCostSubject);
+
+        $cogProductSubjectIds = Product::pluck('cogs_subject_id')->all();
+        $cogProductsCost = 0;
+        foreach ($cogProductSubjectIds as $cogProductSubjectId) {
+            $cogProductsCost += $this->subjectService->sumSubject(Subject::find($cogProductSubjectId));
+        }
+
+        $otherCost = $totalCosts - ($wagesCost + $cogProductsCost);
+
+        return [$totalCosts, $wagesCost, $cogProductsCost, $otherCost];
+    }
+
+    public function cashAndBanksBalances(string $type, int $duration)
+    {
+        if ($type === 'cash_book') {
+            $subjectIds = Subject::where('parent_id', config('amir.cash_book'))->pluck('id')->all();
+        } elseif ($type === 'bank') {
+            $subjectIds = Subject::where('parent_id', config('amir.bank'))->pluck('id')->all();
+        } elseif ($type === 'both') {
+            $bankAccountSubjectIds = Subject::where('parent_id', config('amir.bank'))->pluck('id')->all();
+            $cashBookSubjectIds = Subject::where('parent_id', config('amir.cash_book'))->pluck('id')->all();
+
+            $subjectIds = array_values(array_unique(array_merge($bankAccountSubjectIds, $cashBookSubjectIds)));
+        } else {
+            return response()->json([]);
+        }
+
+        return $this->balanceForSubjectIds($subjectIds, $duration);
+    }
+
+    private function getMonthlyCost(array $months, int $year)
+    {
+        return $this->mapMonths($this->subjectService->sumSubjectWithDateRange(Subject::find(config('amir.cost')), $year, $months));
+    }
+
+    private function getMonthlyIncome(array $months, int $year)
+    {
+        $incomeSubjectIds = [
+            'service_revenue' => config('amir.service_revenue'),
+            'sales_revenue' => config(key: 'amir.sales_revenue'),
+            'income' => config('amir.income'), // other_icnome = income - (service_revenue + sales_revenue)
+        ];
+
+        $incomes = [];
+        foreach ($incomeSubjectIds as $subject => $incomeSubjectId) {
+            $incomes[$subject] = $this->mapMonths($this->subjectService->sumSubjectWithDateRange(Subject::find($incomeSubjectId), $year, $months));
+        }
+
+        $other_income = [];
+        foreach ($incomes['income'] as $month => $total) {
+            $other_income[$month] = $total - ($incomes['service_revenue'][$month] + $incomes['sales_revenue'][$month]);
+        }
+
+        foreach ($incomes['income'] as $month => $total) {
+            $incomes['total'][$month] = $incomes['service_revenue'][$month] + $incomes['sales_revenue'][$month] + $other_income[$month];
+        }
+
+        return $incomes['total'];
+    }
+
+    private function getMonthlyProductstat(array $months, int $year, $countOnly = false)
+    {
+        $productInventorySubjectIds = Product::pluck('inventory_subject_id')->all();
+        $monthlySellAmountPerProducts = [];
+
+        foreach ($productInventorySubjectIds as $productInventorySubjectId) {
+            $monthlySellAmountPerProducts[] = $this->subjectService->sumSubjectWithDateRange(Subject::find($productInventorySubjectId), $year, $months, $countOnly);
+        }
+
+        $result = [];
+        foreach ($monthlySellAmountPerProducts as $monthlySellAmountPerProduct) {
+            if (empty($monthlySellAmountPerProduct)) {
+                continue;
+            }
+
+            foreach ($monthlySellAmountPerProduct as $month => $total) {
+                if (! isset($result[$month])) {
+                    $result[$month] = 0;
+                }
+
+                $result[$month] += ($result[$month] ?? 0) + $total;
+            }
+        }
+
+        return $this->mapMonths($result);
+    }
+
+    public function monthlyData()
+    {
         $months = [
             1 => [1, 31],
             2 => [1, 31],
@@ -42,30 +150,15 @@ class HomeService
             12 => [1, 29],
         ];
 
-        $year = 1404;
+        $year = (int) jdate('Y', tr_num: 'en');
 
-        $sum = [];
-        foreach ($months as $month => [$startDay, $endDay]) {
-            $startDate = jalali_to_gregorian($year, $month, $startDay, '-');
-            $endDate = jalali_to_gregorian($year, $month, $endDay, '-');
+        $monthlyIncome = $this->getMonthlyIncome($months, $year);
+        $monthlyCost = $this->getMonthlyCost($months, $year);
 
-            // group by $month
-            $sum[$month] = Transaction::whereIn('subject_id', $subjectIds)->with('document')->get()->flatMap(function ($transaction) use ($startDate, $endDate) {
-                if ($transaction->document->whereBetween('date', [$startDate, $endDate])->exists()) {
-                    return $transaction->sum('value');
-                }
-            });
-        }
+        $monthlySellAmount = $this->getMonthlyProductstat($months, $year);
+        $monthlyWarehouse = $this->getMonthlyProductstat($months, $year, true);
 
-    }
-
-    public function monthlyData()
-    {
-        $monthlyIncome = $this->getProductsStats('income_subject_id');
-        $monthlySellAmount = $this->getProductsStats('inventory_subject_id');
-        $monthlyWarehouse = $this->getProductsStats('inventory_subject_id', true);
-
-        return [$monthlyIncome, $monthlySellAmount, $monthlyWarehouse];
+        return [$monthlyIncome, $monthlyCost, $monthlySellAmount, $monthlyWarehouse];
     }
 
     public function balanceForSubjectIds(array $subjectIds, int $duration)
@@ -110,7 +203,13 @@ class HomeService
 
         $dailyBalances[formatDate($endDate)] = $runningBalance;
 
-        return $this->lineChartFormattedResponse($initialBalance, $dailyBalances, $startDate, $endDate);
+        return response()->json([
+            'labels' => array_keys($dailyBalances),
+            'datas' => array_values($dailyBalances),
+            'sum' => end($dailyBalances) ? end($dailyBalances) : $initialBalance,
+            'start_date' => jdate('Y/m/d', $startDate->timestamp, tr_num: 'en'),
+            'end_date' => jdate('Y/m/d', $endDate->timestamp, tr_num: 'en'),
+        ]);
     }
 
     public function popularProductsAndServices()
@@ -155,95 +254,6 @@ class HomeService
         return [$bankAccounts, array_slice($bankAccountBalances, 0, 10, true)];
     }
 
-    private function cashBookBalance(int $duration)
-    {
-        $cashBookSubjectIds = Subject::where('parent_id', config('amir.cash_book'))->pluck('id')->all();
-
-        return $this->balanceForSubjectIds($cashBookSubjectIds, $duration);
-    }
-
-    private function bankBalance(int $duration)
-    {
-        $bankAccountSubjectIds = Subject::where('parent_id', config('amir.bank'))->pluck('id')->all();
-
-        return $this->balanceForSubjectIds($bankAccountSubjectIds, $duration);
-    }
-
-    private function bothBalance(int $duration)
-    {
-        $bankAccountSubjectIds = Subject::where('parent_id', config('amir.bank'))->pluck('id')->all();
-        $cashBookSubjectIds = Subject::where('parent_id', config('amir.cash_book'))->pluck('id')->all();
-
-        $subjectIds = array_values(array_unique(array_merge($bankAccountSubjectIds, $cashBookSubjectIds)));
-
-        return $this->balanceForSubjectIds($subjectIds, $duration);
-    }
-
-    private function lineChartFormattedResponse($initialBalance, $dailyBalances, $startDate, $endDate)
-    {
-        $sum = end($dailyBalances);
-        if ($sum === false) {
-            $sum = $initialBalance;
-        }
-
-        return response()->json([
-            'labels' => array_keys($dailyBalances),
-            'datas' => array_values($dailyBalances),
-            'sum' => $sum,
-            'start_date' => jdate('Y/m/d', $startDate->timestamp, tr_num: 'en'),
-            'end_date' => jdate('Y/m/d', $endDate->timestamp, tr_num: 'en'),
-        ]);
-    }
-
-    private function getProductsStats($columnName, bool $countOnly = false): array
-    {
-        $subjectIds = Product::pluck($columnName)->all();
-
-        return $this->monthlyStats($subjectIds, $countOnly);
-    }
-
-    private function monthlyStats(array $subjectIds, bool $countOnly = false): array
-    {
-        [$startDate, $endDate] = $this->currentJalaliYearRange();
-
-        if (empty($subjectIds)) {
-            return $this->mapMonths([]);
-        }
-
-        $select = $countOnly
-            ? 'COUNT(*) as total'
-            : 'SUM(transactions.value) as total';
-
-        $dailyTotals = Transaction::query()
-            ->join('documents', 'documents.id', '=', 'transactions.document_id')
-            ->where('transactions.value', '>', 0)
-            ->whereIn('transactions.subject_id', $subjectIds)
-            ->whereBetween('documents.date', [$startDate, $endDate])
-            ->selectRaw("DATE(documents.date) as date, {$select}")
-            ->groupBy('date')
-            ->pluck('total', 'date');
-
-        $byJalaliMonth = [];
-        foreach ($dailyTotals as $date => $total) {
-            $carbon = Carbon::parse((string) $date);
-            $jalaliMonth = (int) jdate('n', $carbon->timestamp, tr_num: 'en');
-            $byJalaliMonth[$jalaliMonth] = ($byJalaliMonth[$jalaliMonth] ?? 0) + (int) $total;
-        }
-
-        return $this->mapMonths($byJalaliMonth);
-    }
-
-    private function currentJalaliYearRange(): array
-    {
-        $year = (int) jdate('Y', tr_num: 'en');
-
-        $start = Carbon::parse(jalali_to_gregorian($year, '01', '01', '/'))->startOfDay();
-
-        $end = Carbon::parse(jalali_to_gregorian($year + 1, '01', '01', '/'))->subDay()->endOfDay();
-
-        return [$start, $end];
-    }
-
     private function mapMonths(array $data): array
     {
         $months = [
@@ -264,7 +274,7 @@ class HomeService
         $result = [];
 
         foreach ($months as $number => $name) {
-            $result[$name] = (int) ($data[$number] ?? 0);
+            $result[$name] = (int) abs($data[$number] ?? 0);
         }
 
         return $result;

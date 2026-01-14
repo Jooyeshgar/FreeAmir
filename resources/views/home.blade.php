@@ -18,12 +18,12 @@
 
             @can('documents.show')
                 @include('home.income')
+                @include('home.profit')
             @else
                 @include('home.sell')
                 @include('home.user-details')
+                @include('home.quick-access')
             @endcan
-
-            @include('home.quick-access')
         </section>
 
         @can('documents.show')

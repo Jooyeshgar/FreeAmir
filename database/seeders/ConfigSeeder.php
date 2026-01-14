@@ -15,8 +15,10 @@ class ConfigSeeder extends Seeder
     public function run()
     {
         $configs = [
+            ['type' => 3, 'category' => 1, 'key' => 'wage', 'value' => '10', 'desc' => 'حقوق پرسنل', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'cust_subject', 'value' => '4', 'desc' => 'مشتریان', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'cash_book', 'value' => '3', 'desc' => 'موجودی نقدی', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'cost', 'value' => '2', 'desc' => 'هزینه ها', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'bank', 'value' => '1', 'desc' => 'بانکها', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'cash', 'value' => '59', 'desc' => 'پول نقد', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'income', 'value' => '23', 'desc' => 'درآمد', 'company_id' => 1],

@@ -15,18 +15,45 @@ class HomeController extends Controller
 
         [$bankAccounts, $topTenBankAccountBalances] = $this->service->topTenBanksAccountBalances();
 
-        [$monthlyIncome, $monthlySellAmount, $monthlyWarehouse] = $this->service->monthlyData();
+        [$monthlyIncome, $monthlyCost, $monthlySellAmount, $monthlyWarehouse] = $this->service->monthlyData();
 
         $popularProductsAndServices = $this->service->popularProductsAndServices();
+
+        [$totalIncomes, $service_revenue, $sales_revenue, $other_income] = $this->service->incomeData();
+        [$totalCosts, $wagesCost, $cogProductsCost, $otherCost] = $this->service->costData();
+
+        $totalIncomesData = [
+            __('Sales Revenue') => $service_revenue,
+            __('Service Revenue') => $sales_revenue,
+            __('Other Incomes') => $other_income,
+            __('Wages') => 0,
+            __('Cost of Goods Sold') => 0,
+            __('Other Costs') => 0,
+        ];
+
+        $totalCostsData = [
+            __('Sales Revenue') => 0,
+            __('Service Revenue') => 0,
+            __('Other Incomes') => 0,
+            __('Wages') => abs($wagesCost),
+            __('Cost of Goods Sold') => abs($cogProductsCost),
+            __('Other Costs') => abs($otherCost),
+        ];
+
+        $profit = $totalIncomes + $totalCosts;
 
         return view('home', compact(
             'cashTypes',
             'bankAccounts',
             'topTenBankAccountBalances',
             'monthlyIncome',
+            'monthlyCost',
             'monthlySellAmount',
             'monthlyWarehouse',
             'popularProductsAndServices',
+            'totalIncomesData',
+            'totalCostsData',
+            'profit',
         ));
     }
 
