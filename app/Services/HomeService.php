@@ -131,34 +131,6 @@ class HomeService
         return $this->mapMonths($productsStat);
     }
 
-    public function monthlyData()
-    {
-        $months = [
-            1 => [1, 31],
-            2 => [1, 31],
-            3 => [1, 31],
-            4 => [1, 31],
-            5 => [1, 31],
-            6 => [1, 31],
-            7 => [1, 30],
-            8 => [1, 30],
-            9 => [1, 30],
-            10 => [1, 30],
-            11 => [1, 30],
-            12 => [1, 29],
-        ];
-
-        $year = (int) jdate('Y', tr_num: 'en');
-
-        $monthlyIncome = $this->getMonthlyIncome($months, $year);
-        $monthlyCost = $this->getMonthlyCost($months, $year);
-
-        $monthlySellAmount = $this->getMonthlyProductsStat($months, $year);
-        $monthlyWarehouse = $this->getMonthlyProductsStat($months, $year, true);
-
-        return [$monthlyIncome, $monthlyCost, $monthlySellAmount, $monthlyWarehouse];
-    }
-
     public function balanceForSubjectIds(array $subjectIds, int $duration, bool $inverse = true)
     {
         $transactionQuery = Transaction::query()->whereIn('subject_id', $subjectIds);
