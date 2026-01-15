@@ -15,12 +15,23 @@ class HomeController extends Controller
 
         [$bankAccounts, $topTenBankAccountBalances] = $this->service->topTenBanksAccountBalances();
 
-        [$monthlyIncome, $monthlyCost, $monthlySellAmount, $monthlyWarehouse] = $this->service->monthlyData();
+        $monthlyIncome = $this->service->getMonthlyIncome();
+        $monthlyCost = $this->service->getMonthlyCost();
+
+        $monthlySellAmount = $this->service->getMonthlyProductsStat();
+        $monthlyWarehouse = $this->service->getMonthlyProductsStat(true);
 
         $popularProductsAndServices = $this->service->popularProductsAndServices();
 
-        [$totalIncomes, $service_revenue, $sales_revenue, $otherIncome] = $this->service->incomeData();
-        [$totalCosts, $wagesCost, $productsCogCost, $otherCost] = $this->service->costsData();
+        [$service_revenue, $sales_revenue] = $this->service->incomeData();
+
+        $totalIncomes = array_sum($monthlyIncome);
+        $otherIncome = $totalIncomes - ($service_revenue + $sales_revenue);
+
+        [$wagesCost, $productsCogCost] = $this->service->costsData();
+
+        $totalCosts = -1 * array_sum($monthlyCost);
+        $otherCost = $totalCosts - ($wagesCost + $productsCogCost);
 
         $totalIncomesData = [
             __('Sales Revenue') => $sales_revenue,

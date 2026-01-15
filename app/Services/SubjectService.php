@@ -6,8 +6,25 @@ use App\Models\Subject;
 
 class SubjectService
 {
-    public function sumSubjectWithDateRange(Subject $subject, int $year, array $months, bool $countOnly = false)
+    public function sumSubjectWithDateRange(Subject $subject, bool $countOnly = false)
     {
+        $year = session('active-company-fiscal-year');
+
+        $months = [
+            1 => [1, 31],
+            2 => [1, 31],
+            3 => [1, 31],
+            4 => [1, 31],
+            5 => [1, 31],
+            6 => [1, 31],
+            7 => [1, 30],
+            8 => [1, 30],
+            9 => [1, 30],
+            10 => [1, 30],
+            11 => [1, 30],
+            12 => [1, 29],
+        ];
+
         $subjectIds = $subject->getAllDescendantIds();
         $transactionQuery = \App\Models\Transaction::query()->whereIn('subject_id', $subjectIds);
         $monthlySum = [];

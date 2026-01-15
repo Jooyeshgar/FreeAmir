@@ -36,8 +36,14 @@
                     datasets: [{
                         label: @json($label),
                         data: @json(array_values($datas)),
-                        backgroundColor: @json($backgroundColor),
-                        borderColor: @json($borderColor),
+                        backgroundColor: function(context) {
+                            const value = context.raw;
+                            return value >= 0 ? @json($backgroundColor) : 'red';
+                        },
+                        borderColor: function(context) {
+                            const value = context.raw;
+                            return value >= 0 ? @json($borderColor) : 'red';
+                        },
                         borderWidth: 2,
                         borderRadius: 0,
                         borderSkipped: false,
