@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\Document;
 use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\Subject;
@@ -160,24 +159,20 @@ class HomeService
         return [$monthlyIncome, $monthlyCost, $monthlySellAmount, $monthlyWarehouse];
     }
 
-    public function balanceForSubjectIds(array $subjectIds, int $duration)
+    public function balanceForSubjectIds(array $subjectIds, int $duration, bool $inverse = true)
     {
         $transactionQuery = Transaction::query()->whereIn('subject_id', $subjectIds);
 
-        $lastTransaction = (clone $transactionQuery)
-            ->with('document')
-            ->orderByDesc(
-                Document::query()
-                    ->select('date')
-                    ->whereColumn('documents.id', 'transactions.document_id')
-                    ->limit(1)
-            )
-            ->first();
-
-        $endDate = $lastTransaction?->document?->date ?? now();
-        $endDate = $endDate instanceof Carbon ? $endDate : Carbon::parse((string) $endDate);
+        $endDate = now();
 
         $startDate = (clone $endDate)->subMonths($duration * 3);
+
+        $year = session('active-company-fiscal-year');
+        $firstDatOfFiscalYear = Carbon::parse(jalali_to_gregorian($year, 1, 1, '/'));
+
+        if ($startDate->isBefore($firstDatOfFiscalYear)) {
+            $startDate = $firstDatOfFiscalYear;
+        }
 
         $initialBalance = (int) (clone $transactionQuery)
             ->whereHas('document', fn ($q) => $q->where('date', '<=', $startDate))
@@ -201,10 +196,15 @@ class HomeService
         }
 
         $dailyBalances[formatDate($endDate)] = $runningBalance;
+        $values = array_values($dailyBalances);
+
+        if ($inverse) {
+            $values = array_map(fn ($value) => $value * -1, $values);
+        }
 
         return response()->json([
             'labels' => array_keys($dailyBalances),
-            'datas' => array_values($dailyBalances),
+            'datas' => $values,
             'sum' => end($dailyBalances) ? end($dailyBalances) : $initialBalance,
             'start_date' => jdate('Y/m/d', $startDate->timestamp, tr_num: 'en'),
             'end_date' => jdate('Y/m/d', $endDate->timestamp, tr_num: 'en'),
