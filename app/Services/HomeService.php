@@ -129,17 +129,22 @@ class HomeService
 
     public function balanceForSubjectIds(array $subjectIds, int $duration, bool $inverse = true)
     {
-        $transactionQuery = Transaction::query()->whereIn('subject_id', $subjectIds);
+        $year = session('active-company-fiscal-year');
 
         $endDate = now();
+        $lastDayOfFiscalYear = Carbon::parse(jalali_to_gregorian($year, 12, 29, '/'));
+        if ($endDate->isAfter($lastDayOfFiscalYear)) {
+            $endDate = $lastDayOfFiscalYear;
+        }
+
+        $transactionQuery = Transaction::query()->whereIn('subject_id', $subjectIds);
 
         $startDate = (clone $endDate)->subMonths($duration * 3);
 
-        $year = session('active-company-fiscal-year');
-        $firstDatOfFiscalYear = Carbon::parse(jalali_to_gregorian($year, 1, 1, '/'));
+        $firstDayOfFiscalYear = Carbon::parse(jalali_to_gregorian($year, 1, 1, '/'));
 
-        if ($startDate->isBefore($firstDatOfFiscalYear)) {
-            $startDate = $firstDatOfFiscalYear;
+        if ($startDate->isBefore($firstDayOfFiscalYear)) {
+            $startDate = $firstDayOfFiscalYear;
         }
 
         $initialBalance = (int) (clone $transactionQuery)
