@@ -19,15 +19,15 @@ class HomeController extends Controller
 
         $popularProductsAndServices = $this->service->popularProductsAndServices();
 
-        [$totalIncomes, $service_revenue, $sales_revenue, $other_income] = $this->service->incomeData();
-        [$totalCosts, $wagesCost, $cogProductsCost, $otherCost] = $this->service->costData();
+        [$totalIncomes, $service_revenue, $sales_revenue, $otherIncome] = $this->service->incomeData();
+        [$totalCosts, $wagesCost, $productsCogCost, $otherCost] = $this->service->costsData();
 
         $totalIncomesData = [
             __('Sales Revenue') => $service_revenue,
             __('Service Revenue') => $sales_revenue,
-            __('Other Incomes') => $other_income,
+            __('Other Incomes') => $otherIncome,
             __('Wages') => 0,
-            __('Cost of Goods Sold') => 0,
+            __('Sold Product') => 0,
             __('Other Costs') => 0,
         ];
 
@@ -36,7 +36,7 @@ class HomeController extends Controller
             __('Service Revenue') => 0,
             __('Other Incomes') => 0,
             __('Wages') => abs($wagesCost),
-            __('Cost of Goods Sold') => abs($cogProductsCost),
+            __('Sold Product') => abs($productsCogCost),
             __('Other Costs') => abs($otherCost),
         ];
 

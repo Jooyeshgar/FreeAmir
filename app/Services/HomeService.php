@@ -24,8 +24,9 @@ class HomeService
         ];
 
         $incomes = [];
-        foreach ($incomeSubjectIds as $subject => $incomeSubjectId) {
-            $incomes[$subject] = $this->subjectService->sumSubject(Subject::find($incomeSubjectId));
+        foreach ($incomeSubjectIds as $index => $incomeSubjectId) {
+            $subject = Subject::find($incomeSubjectId);
+            $incomes[$index] = $this->subjectService->sumSubject($subject);
         }
 
         $incomes['other_income'] = $incomes['income'] - ($incomes['service_revenue'] + $incomes['sales_revenue']);
@@ -33,29 +34,30 @@ class HomeService
         return [$incomes['income'], $incomes['service_revenue'], $incomes['sales_revenue'], $incomes['other_income']];
     }
 
-    public function costData()
+    public function costsData()
     {
-        $costSubjects = Subject::where('parent_id', config('amir.cost'))->select('id', 'name')->get();
+        $costSubjects = Subject::where('parent_id', config('amir.cost'))->get();
 
         $costs = [];
         foreach ($costSubjects as $costSubject) {
-            $costs[$costSubject->name] = $this->subjectService->sumSubject(Subject::find($costSubject->id));
+            $costs[$costSubject->name] = $this->subjectService->sumSubject($costSubject);
         }
 
         $totalCosts = collect($costs)->sum();
 
-        $wagesCostSubject = Subject::where('id', config('amir.wage'))->get();
+        $wagesCostSubject = Subject::find(config('amir.wage'));
         $wagesCost = $this->subjectService->sumSubject($wagesCostSubject);
 
-        $cogProductSubjectIds = Product::pluck('cogs_subject_id')->all();
-        $cogProductsCost = 0;
-        foreach ($cogProductSubjectIds as $cogProductSubjectId) {
-            $cogProductsCost += $this->subjectService->sumSubject(Subject::find($cogProductSubjectId));
+        $productCogSubjectIds = Product::pluck('cogs_subject_id')->all();
+        $productsCogCost = 0;
+        foreach ($productCogSubjectIds as $productCogSubjectId) {
+            $productSubject = Subject::find($productCogSubjectId);
+            $productsCogCost += $this->subjectService->sumSubject($productSubject);
         }
 
-        $otherCost = $totalCosts - ($wagesCost + $cogProductsCost);
+        $otherCost = $totalCosts - ($wagesCost + $productsCogCost);
 
-        return [$totalCosts, $wagesCost, $cogProductsCost, $otherCost];
+        return [$totalCosts, $wagesCost, $productsCogCost, $otherCost];
     }
 
     public function cashAndBanksBalances(string $type, int $duration)
@@ -68,7 +70,7 @@ class HomeService
             $bankAccountSubjectIds = Subject::where('parent_id', config('amir.bank'))->pluck('id')->all();
             $cashBookSubjectIds = Subject::where('parent_id', config('amir.cash_book'))->pluck('id')->all();
 
-            $subjectIds = array_values(array_unique(array_merge($bankAccountSubjectIds, $cashBookSubjectIds)));
+            $subjectIds = array_merge($bankAccountSubjectIds, $cashBookSubjectIds);
         } else {
             return response()->json([]);
         }
@@ -78,7 +80,9 @@ class HomeService
 
     private function getMonthlyCost(array $months, int $year)
     {
-        return $this->mapMonths($this->subjectService->sumSubjectWithDateRange(Subject::find(config('amir.cost')), $year, $months));
+        $subject = Subject::find(config('amir.cost'));
+
+        return $this->mapMonths($this->subjectService->sumSubjectWithDateRange($subject, $year, $months));
     }
 
     private function getMonthlyIncome(array $months, int $year)
@@ -89,48 +93,50 @@ class HomeService
             'income' => config('amir.income'), // other_icnome = income - (service_revenue + sales_revenue)
         ];
 
-        $incomes = [];
-        foreach ($incomeSubjectIds as $subject => $incomeSubjectId) {
-            $incomes[$subject] = $this->mapMonths($this->subjectService->sumSubjectWithDateRange(Subject::find($incomeSubjectId), $year, $months));
+        $monthlyIncomes = [];
+        foreach ($incomeSubjectIds as $index => $incomeSubjectId) {
+            $subject = Subject::find($incomeSubjectId);
+            $monthlyIncomes[$index] = $this->mapMonths($this->subjectService->sumSubjectWithDateRange($subject, $year, $months));
         }
 
         $other_income = [];
-        foreach ($incomes['income'] as $month => $total) {
-            $other_income[$month] = $total - ($incomes['service_revenue'][$month] + $incomes['sales_revenue'][$month]);
+        foreach ($monthlyIncomes['income'] as $month => $total) {
+            $other_income[$month] = $total - ($monthlyIncomes['service_revenue'][$month] + $monthlyIncomes['sales_revenue'][$month]);
         }
 
-        foreach ($incomes['income'] as $month => $total) {
-            $incomes['total'][$month] = $incomes['service_revenue'][$month] + $incomes['sales_revenue'][$month] + $other_income[$month];
+        foreach ($monthlyIncomes['income'] as $month => $total) {
+            $monthlyIncomes['total'][$month] = $monthlyIncomes['service_revenue'][$month] + $monthlyIncomes['sales_revenue'][$month] + $other_income[$month];
         }
 
-        return $incomes['total'];
+        return $monthlyIncomes['total'];
     }
 
-    private function getMonthlyProductstat(array $months, int $year, $countOnly = false)
+    private function getMonthlyProductsStat(array $months, int $year, $countOnly = false)
     {
         $productInventorySubjectIds = Product::pluck('inventory_subject_id')->all();
-        $monthlySellAmountPerProducts = [];
+        $monthlyProductsStat = [];
 
         foreach ($productInventorySubjectIds as $productInventorySubjectId) {
-            $monthlySellAmountPerProducts[] = $this->subjectService->sumSubjectWithDateRange(Subject::find($productInventorySubjectId), $year, $months, $countOnly);
+            $productSubject = Subject::find($productInventorySubjectId);
+            $monthlyProductsStat[] = $this->subjectService->sumSubjectWithDateRange($productSubject, $year, $months, $countOnly);
         }
 
-        $result = [];
-        foreach ($monthlySellAmountPerProducts as $monthlySellAmountPerProduct) {
-            if (empty($monthlySellAmountPerProduct)) {
+        $productsStat = [];
+        foreach ($monthlyProductsStat as $monthlyProductStat) {
+            if (empty($monthlyProductStat)) {
                 continue;
             }
 
-            foreach ($monthlySellAmountPerProduct as $month => $total) {
-                if (! isset($result[$month])) {
-                    $result[$month] = 0;
+            foreach ($monthlyProductStat as $month => $stat) {
+                if (! isset($productsStat[$month])) {
+                    $productsStat[$month] = 0;
                 }
 
-                $result[$month] += ($result[$month] ?? 0) + $total;
+                $productsStat[$month] += ($productsStat[$month] ?? 0) + $stat;
             }
         }
 
-        return $this->mapMonths($result);
+        return $this->mapMonths($productsStat);
     }
 
     public function monthlyData()
@@ -155,8 +161,8 @@ class HomeService
         $monthlyIncome = $this->getMonthlyIncome($months, $year);
         $monthlyCost = $this->getMonthlyCost($months, $year);
 
-        $monthlySellAmount = $this->getMonthlyProductstat($months, $year);
-        $monthlyWarehouse = $this->getMonthlyProductstat($months, $year, true);
+        $monthlySellAmount = $this->getMonthlyProductsStat($months, $year);
+        $monthlyWarehouse = $this->getMonthlyProductsStat($months, $year, true);
 
         return [$monthlyIncome, $monthlyCost, $monthlySellAmount, $monthlyWarehouse];
     }

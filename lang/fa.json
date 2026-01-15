@@ -612,6 +612,7 @@
     "Show All Product Conflicts": "نمایش همه محصولات متعارض",
     "Something went wrong creating the invoice": "هنگام ایجاد فاکتور مشکلی رخ داد.",
     "Something went wrong creating the invoice.": "مشکلی پیش آمد که فاکتور را ایجاد کرد.",
+    "Sold Product": "کالای فروش رفته",
     "Sold Products Quantity": "تعداد محصولات فروخته شده",
     "Start date": "تاریخ شروع",
     "Start date cannot be greater than end date.": "تاریخ شروع نمی تواند بیشتر از تاریخ پایان باشد.",
