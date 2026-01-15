@@ -70,10 +70,6 @@ class HomeService
     {
         $subject = Subject::find(config('amir.cost'));
 
-        if (is_null($subject)) {
-            return [];
-        }
-
         return $this->mapMonths($this->subjectService->sumSubjectWithDateRange($subject));
     }
 

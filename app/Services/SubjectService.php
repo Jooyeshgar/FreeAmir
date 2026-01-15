@@ -6,8 +6,12 @@ use App\Models\Subject;
 
 class SubjectService
 {
-    public function sumSubjectWithDateRange(Subject $subject, bool $countOnly = false)
+    public function sumSubjectWithDateRange(?Subject $subject, bool $countOnly = false)
     {
+        if (is_null($subject)) {
+            return [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0, 8 => 0, 9 => 0, 10 => 0, 11 => 0, 12 => 0];
+        }
+
         $year = session('active-company-fiscal-year');
 
         $months = [
@@ -57,9 +61,11 @@ class SubjectService
     /**
      * Calculate the total sum of transactions for a subject with all its descendants recursively.
      */
-    public static function sumSubject(string|int|Subject $code, bool $both = true, bool $debit = false): int
+    public static function sumSubject(string|int|Subject|null $code, bool $both = true, bool $debit = false): int
     {
-        if ($code instanceof Subject) {
+        if (is_null($code)) {
+            return 0;
+        } elseif ($code instanceof Subject) {
             $subject = $code->loadMissing(['transactions']);
         } elseif (is_int($code)) {
             $subject = Subject::with(['transactions'])->find($code);
