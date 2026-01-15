@@ -9,6 +9,8 @@ enum ConfigTitle: string
     case BANK = 'BANK';
     case CASH = 'CASH';
     case INCOME = 'INCOME';
+    case COST = 'COST';
+    case WAGE = 'WAGE';
     case SELL_DISCOUNT = 'SELL_DISCOUNT';
     case BUY_DISCOUNT = 'BUY_DISCOUNT';
     case SELL_VAT = 'SELL_VAT';
@@ -28,6 +30,8 @@ enum ConfigTitle: string
             self::BANK => __('Banks'),
             self::CASH => __('Cash'),
             self::INCOME => __('Income'),
+            self::COST => __('Cost'),
+            self::WAGE => __('Wage'),
             self::SELL_DISCOUNT => __('Sell Discount'),
             self::BUY_DISCOUNT => __('Buy Discount'),
             self::SELL_VAT => __('Sell Vat'),

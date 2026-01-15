@@ -2,26 +2,24 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ConfigTitle;
 use App\Models;
 use App\Models\Subject;
-use App\Enums\ConfigTitle;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class ConfigController extends Controller
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     public function index()
     {
-        $configsTitle = array_map(fn($case) => [
+        $configsTitle = array_map(fn ($case) => [
             'value' => $case->value,
             'label' => $case->label(),
         ], ConfigTitle::cases());
         $configs = Models\Config::all();
         $subjects = Models\Subject::all();
+
         return view('configs.index', compact('subjects', 'configs', 'configsTitle'));
     }
 
@@ -63,14 +61,13 @@ class ConfigController extends Controller
     //     return redirect()->route('configs.index')->with('success', __('Config created successfully.'));
     // }
 
-
     public function edit($key)
     {
         $config = Models\Config::where('key', $key)->first();
-        
+
         // If config doesn't exist, create a new instance (not saved yet)
-        if (!$config) {
-            $config = new Models\Config();
+        if (! $config) {
+            $config = new Models\Config;
             $config->company_id = session('active-company-id');
             $config->key = $key;
             $config->value = 0;
@@ -80,6 +77,7 @@ class ConfigController extends Controller
             $config->save();
         }
         $subjects = Models\Subject::all();
+
         return view('configs.edit', compact('subjects', 'config'));
     }
 
@@ -91,9 +89,9 @@ class ConfigController extends Controller
         ]);
 
         $subject_id = Subject::where('code', $validatedData['code'])->first()->id;
-        
+
         $config = Models\Config::where('key', $validatedData['key'])->first();
-        
+
         $config->value = (string) $subject_id;
         $config->update();
 

@@ -46,7 +46,10 @@ class HomeService
         $totalCosts = collect($costs)->sum();
 
         $wagesCostSubject = Subject::find(config('amir.wage'));
-        $wagesCost = $this->subjectService->sumSubject($wagesCostSubject);
+        $wagesCost = 0;
+        if (! is_null($wagesCostSubject)) {
+            $wagesCost = $this->subjectService->sumSubject($wagesCostSubject);
+        }
 
         $productCogSubjectIds = Product::pluck('cogs_subject_id')->all();
         $productsCogCost = 0;
@@ -81,6 +84,10 @@ class HomeService
     private function getMonthlyCost(array $months, int $year)
     {
         $subject = Subject::find(config('amir.cost'));
+
+        if (is_null($subject)) {
+            return [];
+        }
 
         return $this->mapMonths($this->subjectService->sumSubjectWithDateRange($subject, $year, $months));
     }
