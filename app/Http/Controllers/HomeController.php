@@ -23,8 +23,8 @@ class HomeController extends Controller
         [$totalCosts, $wagesCost, $productsCogCost, $otherCost] = $this->service->costsData();
 
         $totalIncomesData = [
-            __('Sales Revenue') => $service_revenue,
-            __('Service Revenue') => $sales_revenue,
+            __('Sales Revenue') => $sales_revenue,
+            __('Service Revenue') => $service_revenue,
             __('Other Incomes') => $otherIncome,
             __('Wages') => 0,
             __('Sold Product') => 0,
