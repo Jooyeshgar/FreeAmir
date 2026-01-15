@@ -1,14 +1,17 @@
 @props([
-    'datas' => [],
+    'firstData' => [],
+    'secondData' => [],
     'chartId' => null,
     'heightClass' => 'h-64',
-    'label' => 'موجودی انبار',
-    'backgroundColor' => '#4bb946c4',
-    'borderColor' => '#4bb946',
+    'firstBackgroundColor' => '#4bb946c4',
+    'secondBackgroundColor' => 'red',
+    'firstBorderColor' => '#4bb946',
+    'secondBorderColor' => 'red',
 ])
 
 @php
     $resolvedChartId = $chartId ?? ($attributes->get('id') ?? 'barChart_' . uniqid());
+    $mergedData = array_unique(array_merge(array_keys($firstData), array_keys($secondData)));
 @endphp
 
 <div class="relative {{ $heightClass }}">
@@ -32,22 +35,24 @@
             window.__chartInstances[chartId] = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: @json(array_keys($datas)),
+                    labels: @json($mergedData),
                     datasets: [{
-                        label: @json($label),
-                        data: @json(array_values($datas)),
-                        backgroundColor: function(context) {
-                            const value = context.raw;
-                            return value >= 0 ? @json($backgroundColor) : 'red';
+                            data: @json(array_values($firstData)),
+                            backgroundColor: @json($firstBackgroundColor),
+                            borderColor: @json($firstBorderColor),
+                            borderWidth: 2,
+                            borderRadius: 0,
+                            borderSkipped: false,
                         },
-                        borderColor: function(context) {
-                            const value = context.raw;
-                            return value >= 0 ? @json($borderColor) : 'red';
-                        },
-                        borderWidth: 2,
-                        borderRadius: 0,
-                        borderSkipped: false,
-                    }]
+                        {
+                            data: @json(array_values($secondData)),
+                            backgroundColor: @json($secondBackgroundColor),
+                            borderColor: @json($secondBorderColor),
+                            borderWidth: 2,
+                            borderRadius: 0,
+                            borderSkipped: false,
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,

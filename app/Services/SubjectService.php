@@ -6,6 +6,54 @@ use App\Models\Subject;
 
 class SubjectService
 {
+    public function sumSubjectWithDateRange(Subject $subject, bool $countOnly = false)
+    {
+        $year = session('active-company-fiscal-year');
+
+        $months = [
+            1 => [1, 31],
+            2 => [1, 31],
+            3 => [1, 31],
+            4 => [1, 31],
+            5 => [1, 31],
+            6 => [1, 31],
+            7 => [1, 30],
+            8 => [1, 30],
+            9 => [1, 30],
+            10 => [1, 30],
+            11 => [1, 30],
+            12 => [1, 29],
+        ];
+
+        $subjectIds = $subject->getAllDescendantIds();
+        $transactionQuery = \App\Models\Transaction::query()->whereIn('subject_id', $subjectIds);
+        $monthlySum = [];
+
+        $select = $countOnly
+            ? 'COUNT(*) as total'
+            : 'SUM(transactions.value) as total';
+
+        foreach ($months as $month => [$startDay, $endDay]) {
+            $startDate = jalali_to_gregorian($year, $month, $startDay, '-');
+            $endDate = jalali_to_gregorian($year, $month, $endDay, '-');
+
+            $transactions = (clone $transactionQuery)
+                ->join('documents', 'documents.id', '=', 'transactions.document_id')
+                ->whereBetween('documents.date', [$startDate, $endDate])
+                ->selectRaw("DATE(documents.date) as date, {$select}")
+                ->groupBy('date')
+                ->orderBy('date')
+                ->pluck('total', 'date')
+                ->map(fn ($v) => (int) $v);
+
+            foreach ($transactions as $date => $total) {
+                $monthlySum[$month] = ($monthlySum[$month] ?? 0) + $total;
+            }
+        }
+
+        return $monthlySum;
+    }
+
     /**
      * Calculate the total sum of transactions for a subject with all its descendants recursively.
      */
