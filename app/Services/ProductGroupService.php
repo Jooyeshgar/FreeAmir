@@ -44,7 +44,7 @@ class ProductGroupService
 
     protected function syncSubjects(ProductGroup $productGroup): void
     {
-        $companyId = $productGroup->company_id ?? session('active-company-id');
+        $companyId = $productGroup->company_id ?? getActiveCompany();
 
         $subjectsConfig = [
             'income_subject_id' => [

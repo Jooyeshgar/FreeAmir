@@ -15,7 +15,7 @@ class ProductService
         $websites = $data['websites'] ?? [];
         unset($data['websites']);
 
-        $data['company_id'] ??= session('active-company-id');
+        $data['company_id'] ??= getActiveCompany();
 
         $product = Product::create($data);
 
@@ -108,7 +108,7 @@ class ProductService
         $product->loadMissing('productGroup', 'incomeSubject', 'salesReturnsSubject', 'cogsSubject', 'inventorySubject');
 
         $group = $product->productGroup;
-        $companyId = $product->company_id ?? $group?->company_id ?? session('active-company-id');
+        $companyId = $product->company_id ?? $group?->company_id ?? getActiveCompany();
 
         if (! $companyId) {
             throw new \RuntimeException('Unable to determine company for product subject synchronization.');

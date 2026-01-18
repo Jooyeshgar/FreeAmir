@@ -3,19 +3,20 @@
 namespace App\Services;
 
 use App\Enums\FiscalYearSection;
-use App\Models\Company;
-use App\Models\CustomerGroup;
-use App\Models\Subject;
-use App\Models\ProductGroup;
 use App\Models\Bank;
 use App\Models\BankAccount;
+use App\Models\Company;
 use App\Models\Config;
 use App\Models\Customer;
+use App\Models\CustomerGroup;
 use App\Models\Product;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use App\Models\ProductGroup;
+use App\Models\Subject;
+use Cookie;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class FiscalYearService
 {
@@ -36,9 +37,6 @@ class FiscalYearService
 
     /**
      * Filter an array of section keys to include only valid ones.
-     *
-     * @param array $sections
-     * @return array
      */
     protected static function filterValidSections(array $sections): array
     {
@@ -50,10 +48,10 @@ class FiscalYearService
     /**
      * Create a new fiscal year with data copied directly from an existing one in the database.
      *
-     * @param array $newFiscalYearData Data for the new Company record.
-     * @param int $sourceYearId The source fiscal year (Company) ID.
-     * @param array $sectionsToCopy Sections to copy from source.
-     * @return Company
+     * @param  array  $newFiscalYearData  Data for the new Company record.
+     * @param  int  $sourceYearId  The source fiscal year (Company) ID.
+     * @param  array  $sectionsToCopy  Sections to copy from source.
+     *
      * @throws Exception
      */
     public static function createWithCopiedData(array $newFiscalYearData, int $sourceYearId, array $sectionsToCopy): Company
@@ -68,8 +66,8 @@ class FiscalYearService
     /**
      * Export data from a specific fiscal year.
      *
-     * @param int $sourceYearId The fiscal year (Company) ID to export.
-     * @param array|null $sectionsToExport Specific sections to export (null for all available).
+     * @param  int  $sourceYearId  The fiscal year (Company) ID to export.
+     * @param  array|null  $sectionsToExport  Specific sections to export (null for all available).
      * @return array Data structure ready for JSON encoding.
      */
     public static function exportData(int $sourceYearId, ?array $sectionsToExport = null): array
@@ -96,9 +94,10 @@ class FiscalYearService
     /**
      * Import data from an array (e.g., decoded JSON) into a new fiscal year.
      *
-     * @param array $importData Data structure (from exportData or similar).
-     * @param array $newFiscalYearData Data for the new Company record.
+     * @param  array  $importData  Data structure (from exportData or similar).
+     * @param  array  $newFiscalYearData  Data for the new Company record.
      * @return Company The newly created Company (Fiscal Year).
+     *
      * @throws Exception
      */
     public static function importData(array $importData, array $newFiscalYearData): Company
@@ -115,8 +114,9 @@ class FiscalYearService
             $newFiscalYear = Company::create($newFiscalYearData);
             $targetYearId = $newFiscalYear->id;
 
-            $originalCompanyId = session('active-company-id');
-            session(['active-company-id' => $targetYearId]);
+            $originalCompanyId = getActiveCompany();
+            Cookie::forget('active-company-id');
+            Cookie::queue('active-company-id', $targetYearId);
 
             $idMappings = [
                 'subjects' => [],
@@ -138,7 +138,7 @@ class FiscalYearService
                     if (isset($importData['banks'])) {
                         $idMappings['banks'] = self::_importBanks($importData['banks'], $targetYearId);
                     }
-                    if (isset($importData['bank_accounts']) && !empty($idMappings['banks'])) {
+                    if (isset($importData['bank_accounts']) && ! empty($idMappings['banks'])) {
                         self::_importBankAccounts($importData['bank_accounts'], $targetYearId, $idMappings['banks']);
                     }
                 }
@@ -146,7 +146,7 @@ class FiscalYearService
                     if (isset($importData['customer_groups'])) {
                         $idMappings['customer_groups'] = self::_importCustomerGroups($importData['customer_groups'], $targetYearId, $idMappings['subjects']);
                     }
-                    if (isset($importData['customers']) && !empty($idMappings['customer_groups'])) {
+                    if (isset($importData['customers']) && ! empty($idMappings['customer_groups'])) {
                         $idMappings['customers'] = self::_importCustomers($importData['customers'], $targetYearId, $idMappings['customer_groups'], $idMappings['subjects']);
                     }
                 }
@@ -154,7 +154,7 @@ class FiscalYearService
                     if (isset($importData['product_groups'])) {
                         $idMappings['product_groups'] = self::_importProductGroups($importData['product_groups'], $targetYearId, $idMappings['subjects']);
                     }
-                    if (isset($importData['products']) && !empty($idMappings['product_groups'])) {
+                    if (isset($importData['products']) && ! empty($idMappings['product_groups'])) {
                         self::_importProducts($importData['products'], $targetYearId, $idMappings['product_groups']);
                     }
                 }
@@ -163,13 +163,13 @@ class FiscalYearService
                         $idMappings['documents'] = self::_importDocuments($importData['documents'], $targetYearId);
                     }
                     if (isset($importData['transactions'])) {
-                        if (!empty($idMappings['documents']) && !empty($idMappings['subjects'])) {
+                        if (! empty($idMappings['documents']) && ! empty($idMappings['subjects'])) {
                             self::_importTransactions($importData['transactions'], $targetYearId, $idMappings['documents'], $idMappings['subjects']);
                         } else {
-                            Log::warning("Skipping transactions import due to missing document or subject mappings.", [
+                            Log::warning('Skipping transactions import due to missing document or subject mappings.', [
                                 'target_year_id' => $targetYearId,
-                                'has_document_mapping' => !empty($idMappings['documents']),
-                                'has_subject_mapping' => !empty($idMappings['subjects']),
+                                'has_document_mapping' => ! empty($idMappings['documents']),
+                                'has_subject_mapping' => ! empty($idMappings['subjects']),
                             ]);
                         }
                     }
@@ -177,14 +177,15 @@ class FiscalYearService
 
                 return $newFiscalYear;
             } catch (Exception $e) {
-                Log::error("Fiscal Year Import Failed: " . $e->getMessage(), [
+                Log::error('Fiscal Year Import Failed: '.$e->getMessage(), [
                     'exception' => $e,
                     'new_fiscal_year_data' => $newFiscalYearData,
                     'import_data_keys' => array_keys($importData),
                 ]);
                 throw $e;
             } finally {
-                session(['active-company-id' => $originalCompanyId]);
+                Cookie::forget('active-company-id');
+                Cookie::queue('active-company-id', $originalCompanyId);
                 DB::statement('SET FOREIGN_KEY_CHECKS=1;');
                 Model::reguard();
             }
@@ -194,8 +195,6 @@ class FiscalYearService
     /**
      * Fetch data for specified sections from the source fiscal year.
      *
-     * @param int $sourceYearId
-     * @param array $sections
      * @return array<string, array>
      */
     protected static function fetchSourceData(int $sourceYearId, array $sections): array
@@ -246,7 +245,7 @@ class FiscalYearService
                 ->get()->toArray();
 
             $documentIds = collect($sourceData['documents'])->pluck('id')->toArray();
-            if (!empty($documentIds)) {
+            if (! empty($documentIds)) {
                 $sourceData['transactions'] = \App\Models\Transaction::whereIn('document_id', $documentIds)
                     ->get()->toArray();
             } else {
@@ -254,15 +253,13 @@ class FiscalYearService
             }
         }
 
-
         return $sourceData;
     }
 
     /**
      * Import Subjects, handling parent-child relationships and returning ID mapping.
      *
-     * @param array $subjectsData Array of subject data from import.
-     * @param int $targetYearId
+     * @param  array  $subjectsData  Array of subject data from import.
      * @return array<int, int> Mapping of old subject ID to new subject ID.
      */
     protected static function _importSubjects(array $subjectsData, int $targetYearId): array
@@ -282,11 +279,12 @@ class FiscalYearService
 
     protected static function _createSubject(array $subjectData, int $targetYearId, array &$mapping): Subject
     {
-        $newSubject = new Subject();
+        $newSubject = new Subject;
         $newSubject->fill(collect($subjectData)->except(['id', 'parent_id', 'company_id', '_lft', '_rgt'])->toArray());
         $newSubject->company_id = $targetYearId;
         $newSubject->parent_id = ($subjectData['parent_id'] == 0) ? null : $mapping[$subjectData['parent_id']];
         $newSubject->save();
+
         return $newSubject;
     }
 
@@ -294,7 +292,7 @@ class FiscalYearService
     {
         $children = $subjectsByOldParentId->get($oldParentId, collect());
         foreach ($children as $childData) {
-            if (!isset($mapping[$childData['id']])) {
+            if (! isset($mapping[$childData['id']])) {
                 $newSubject = self::_createSubject($childData, $targetYearId, $mapping);
                 $mapping[$childData['id']] = $newSubject->id;
                 if ($subjectsByOldParentId->has($childData['id'])) {
@@ -307,14 +305,12 @@ class FiscalYearService
     /**
      * Import Configs.
      *
-     * @param array $configsData
-     * @param int $targetYearId
-     * @param array $subjectMapping Mapping of old subject ID to new subject ID.
+     * @param  array  $subjectMapping  Mapping of old subject ID to new subject ID.
      */
     protected static function _importConfigs(array $configsData, int $targetYearId, array $subjectMapping): void
     {
         foreach ($configsData as $configData) {
-            $newConfig = new Config();
+            $newConfig = new Config;
             $newConfig->fill(collect($configData)->except(['id'])->toArray());
             $newConfig->company_id = $targetYearId;
 
@@ -325,7 +321,7 @@ class FiscalYearService
                 $newConfig->value = $oldValue; // Keep original value otherwise
             }
 
-            config(['amir.' . $newConfig->key => $newConfig->value]);
+            config(['amir.'.$newConfig->key => $newConfig->value]);
 
             $newConfig->save();
         }
@@ -334,40 +330,38 @@ class FiscalYearService
     /**
      * Import Banks.
      *
-     * @param array $banksData
-     * @param int $targetYearId
      * @return array<int, int> Mapping of old bank ID to new bank ID.
      */
     protected static function _importBanks(array $banksData, int $targetYearId): array
     {
         $mapping = [];
         foreach ($banksData as $bankData) {
-            $newBank = new Bank();
+            $newBank = new Bank;
             $newBank->fill(collect($bankData)->except(['id'])->toArray());
             $newBank->company_id = $targetYearId;
             $newBank->save();
             $mapping[$bankData['id']] = $newBank->id;
         }
+
         return $mapping;
     }
 
     /**
      * Import Bank Accounts.
      *
-     * @param array $bankAccountsData
-     * @param int $targetYearId
-     * @param array $bankMapping Mapping of old bank ID to new bank ID.
+     * @param  array  $bankMapping  Mapping of old bank ID to new bank ID.
      */
     protected static function _importBankAccounts(array $bankAccountsData, int $targetYearId, array $bankMapping): void
     {
         foreach ($bankAccountsData as $accountData) {
             $oldBankId = $accountData['bank_id'] ?? null;
-            if ($oldBankId === null || !isset($bankMapping[$oldBankId])) {
-                Log::warning("Skipping bank account import due to missing bank mapping.", ['old_bank_account_id' => $accountData['id'] ?? 'N/A', 'old_bank_id' => $oldBankId, 'target_year_id' => $targetYearId]);
+            if ($oldBankId === null || ! isset($bankMapping[$oldBankId])) {
+                Log::warning('Skipping bank account import due to missing bank mapping.', ['old_bank_account_id' => $accountData['id'] ?? 'N/A', 'old_bank_id' => $oldBankId, 'target_year_id' => $targetYearId]);
+
                 continue;
             }
 
-            $newAccount = new BankAccount();
+            $newAccount = new BankAccount;
             $newAccount->fill(collect($accountData)->except(['id'])->toArray());
             $newAccount->bank_id = $bankMapping[$oldBankId];
             $newAccount->company_id = $targetYearId;
@@ -378,16 +372,14 @@ class FiscalYearService
     /**
      * Import Customer Groups.
      *
-     * @param array $groupsData
-     * @param int $targetYearId
-     * @param array $subjectMapping Mapping of old subject ID to new subject ID.
+     * @param  array  $subjectMapping  Mapping of old subject ID to new subject ID.
      * @return array<int, int> Mapping of old group ID to new group ID.
      */
     protected static function _importCustomerGroups(array $groupsData, int $targetYearId, array $subjectMapping): array
     {
         $mapping = [];
         foreach ($groupsData as $groupData) {
-            $newGroup = new CustomerGroup();
+            $newGroup = new CustomerGroup;
             $newGroup->fill(collect($groupData)->except(['id'])->toArray());
             $newGroup->company_id = $targetYearId;
 
@@ -395,35 +387,36 @@ class FiscalYearService
             $newGroup->subject_id = ($oldSubjectId && isset($subjectMapping[$oldSubjectId])) ? $subjectMapping[$oldSubjectId] : null;
 
             $newGroup->save();
-            echo '-----------------' . config('amir.cust_subject') . "\n";
+            echo '-----------------'.config('amir.cust_subject')."\n";
             $mapping[$groupData['id']] = $newGroup->id;
         }
+
         return $mapping;
     }
 
     /**
      * Import Customers.
      *
-     * @param array $customersData
-     * @param int $targetYearId
-     * @param array $groupMapping Mapping of old customer group ID to new group ID.
+     * @param  array  $groupMapping  Mapping of old customer group ID to new group ID.
      */
     protected static function _importCustomers(array $customersData, int $targetYearId, array $groupMapping, array $subjectMapping): void
     {
         foreach ($customersData as $customerData) {
             $oldGroupId = $customerData['group_id'] ?? null;
-            if ($oldGroupId === null || !isset($groupMapping[$oldGroupId])) {
-                Log::warning("Skipping customer import due to missing group mapping.", ['old_customer_id' => $customerData['id'] ?? 'N/A', 'old_group_id' => $oldGroupId, 'target_year_id' => $targetYearId]);
+            if ($oldGroupId === null || ! isset($groupMapping[$oldGroupId])) {
+                Log::warning('Skipping customer import due to missing group mapping.', ['old_customer_id' => $customerData['id'] ?? 'N/A', 'old_group_id' => $oldGroupId, 'target_year_id' => $targetYearId]);
+
                 continue;
             }
 
             $oldSubjectId = $customerData['subject_id'] ?? null;
-            if ($oldSubjectId === null || !isset($subjectMapping[$oldSubjectId])) {
-                Log::warning("Skipping customer import due to missing subject mapping.", ['old_customer_id' => $customerData['id'] ?? 'N/A', 'old_subject_id' => $oldSubjectId, 'target_year_id' => $targetYearId]);
+            if ($oldSubjectId === null || ! isset($subjectMapping[$oldSubjectId])) {
+                Log::warning('Skipping customer import due to missing subject mapping.', ['old_customer_id' => $customerData['id'] ?? 'N/A', 'old_subject_id' => $oldSubjectId, 'target_year_id' => $targetYearId]);
+
                 continue;
             }
 
-            $newCustomer = new Customer();
+            $newCustomer = new Customer;
             $newCustomer->fill(collect($customerData)->except(['id', 'group_id', 'subject_id', 'company_id', 'introducer_id'])->toArray());
             $newCustomer->company_id = $targetYearId;
             $newCustomer->group_id = $groupMapping[$oldGroupId];
@@ -435,16 +428,14 @@ class FiscalYearService
     /**
      * Import Product Groups.
      *
-     * @param array $groupsData
-     * @param int $targetYearId
-     * @param array $subjectMapping Mapping of old subject ID to new subject ID.
+     * @param  array  $subjectMapping  Mapping of old subject ID to new subject ID.
      * @return array<int, int> Mapping of old group ID to new group ID.
      */
     protected static function _importProductGroups(array $groupsData, int $targetYearId, array $subjectMapping): array
     {
         $mapping = [];
         foreach ($groupsData as $groupData) {
-            $newGroup = new ProductGroup();
+            $newGroup = new ProductGroup;
             $newGroup->fill(collect($groupData)->except(['id'])->toArray());
             $newGroup->company_id = $targetYearId;
 
@@ -457,27 +448,27 @@ class FiscalYearService
             $newGroup->save();
             $mapping[$groupData['id']] = $newGroup->id;
         }
+
         return $mapping;
     }
 
     /**
      * Import Products.
      *
-     * @param array $productsData
-     * @param int $targetYearId
-     * @param array $groupMapping Mapping of old product group ID to new group ID.
+     * @param  array  $groupMapping  Mapping of old product group ID to new group ID.
      */
     protected static function _importProducts(array $productsData, int $targetYearId, array $groupMapping): void
     {
         foreach ($productsData as $productData) {
             // Assuming 'group' column holds the group ID in Product model
             $oldGroupId = $productData['group'] ?? null;
-            if ($oldGroupId === null || !isset($groupMapping[$oldGroupId])) {
-                Log::warning("Skipping product import due to missing group mapping.", ['old_product_id' => $productData['id'] ?? 'N/A', 'old_group_id' => $oldGroupId, 'target_year_id' => $targetYearId]);
+            if ($oldGroupId === null || ! isset($groupMapping[$oldGroupId])) {
+                Log::warning('Skipping product import due to missing group mapping.', ['old_product_id' => $productData['id'] ?? 'N/A', 'old_group_id' => $oldGroupId, 'target_year_id' => $targetYearId]);
+
                 continue; // Skip if the corresponding group wasn't imported or mapped
             }
 
-            $newProduct = new Product();
+            $newProduct = new Product;
             $newProduct->fill(collect($productData)->except(['id'])->toArray());
             $newProduct->group = $groupMapping[$oldGroupId]; // Use the new group ID
             $newProduct->company_id = $targetYearId;
@@ -488,30 +479,28 @@ class FiscalYearService
     /**
      * Import Documents.
      *
-     * @param array $documentsData
-     * @param int $targetYearId
      * @return array<int, int> Mapping of old document ID to new document ID.
      */
     protected static function _importDocuments(array $documentsData, int $targetYearId): array
     {
         $mapping = [];
         foreach ($documentsData as $docData) {
-            $newDoc = new \App\Models\Document();
+            $newDoc = new \App\Models\Document;
             $newDoc->fill(collect($docData)->except(['id'])->toArray());
             $newDoc->company_id = $targetYearId;
             $newDoc->save();
             $mapping[$docData['id']] = $newDoc->id;
         }
+
         return $mapping;
     }
 
     /**
      * Import Transactions.
      *
-     * @param array $transactionsData
-     * @param int $targetYearId The target company ID (though Transaction doesn't have it directly)
-     * @param array $documentMapping Mapping of old document ID to new document ID.
-     * @param array $subjectMapping Mapping of old subject ID to new subject ID.
+     * @param  int  $targetYearId  The target company ID (though Transaction doesn't have it directly)
+     * @param  array  $documentMapping  Mapping of old document ID to new document ID.
+     * @param  array  $subjectMapping  Mapping of old subject ID to new subject ID.
      */
     protected static function _importTransactions(array $transactionsData, int $targetYearId, array $documentMapping, array $subjectMapping): void
     {
@@ -520,16 +509,18 @@ class FiscalYearService
             $oldSubjectId = $transData['subject_id'] ?? null;
             $oldUserId = $transData['user_id'] ?? null; // Assumed global
 
-            if ($oldDocId === null || !isset($documentMapping[$oldDocId])) {
-                Log::warning("Skipping transaction import due to missing document mapping.", ['old_transaction_id' => $transData['id'] ?? 'N/A', 'old_document_id' => $oldDocId, 'target_year_id' => $targetYearId]);
+            if ($oldDocId === null || ! isset($documentMapping[$oldDocId])) {
+                Log::warning('Skipping transaction import due to missing document mapping.', ['old_transaction_id' => $transData['id'] ?? 'N/A', 'old_document_id' => $oldDocId, 'target_year_id' => $targetYearId]);
+
                 continue;
             }
-            if ($oldSubjectId === null || !isset($subjectMapping[$oldSubjectId])) {
-                Log::warning("Skipping transaction import due to missing subject mapping.", ['old_transaction_id' => $transData['id'] ?? 'N/A', 'old_subject_id' => $oldSubjectId, 'target_year_id' => $targetYearId]);
+            if ($oldSubjectId === null || ! isset($subjectMapping[$oldSubjectId])) {
+                Log::warning('Skipping transaction import due to missing subject mapping.', ['old_transaction_id' => $transData['id'] ?? 'N/A', 'old_subject_id' => $oldSubjectId, 'target_year_id' => $targetYearId]);
+
                 continue;
             }
 
-            $newTrans = new \App\Models\Transaction();
+            $newTrans = new \App\Models\Transaction;
             $newTrans->fill(collect($transData)->except(['id'])->toArray());
             $newTrans->document_id = $documentMapping[$oldDocId];
             $newTrans->subject_id = $subjectMapping[$oldSubjectId];

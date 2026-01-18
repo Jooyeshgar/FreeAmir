@@ -36,7 +36,7 @@ class DocumentService
             $data['number'] = Document::max('number') + 1;
         }
 
-        $data['company_id'] = session('active-company-id');
+        $data['company_id'] = getActiveCompany();
 
         $document = null;
         DB::transaction(function () use ($data, $transactions, $user, &$document) {

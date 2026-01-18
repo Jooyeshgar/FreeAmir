@@ -4,6 +4,11 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
 
+function getActiveCompany()
+{
+    return Cookie::get('active-company-id');
+}
+
 /**
  * Format a number with separators, parentheses for negatives,
  * and optionally convert to Farsi if the locale is Persian.

@@ -41,7 +41,7 @@ class ServiceGroupService
 
     protected function syncSubjects(ServiceGroup $serviceGroup): void
     {
-        $companyId = $serviceGroup->company_id ?? session('active-company-id');
+        $companyId = $serviceGroup->company_id ?? getActiveCompany();
 
         $column = 'subject_id';
         $relation = 'subject';

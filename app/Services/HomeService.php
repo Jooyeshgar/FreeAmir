@@ -129,7 +129,7 @@ class HomeService
 
     public function balanceForSubjectIds(array $subjectIds, int $duration, bool $inverse = true)
     {
-        $year = session('active-company-fiscal-year');
+        $year = config('active-company-fiscal-year');
 
         $endDate = now();
         $lastDayOfFiscalYear = Carbon::parse(jalali_to_gregorian($year, 12, 29, '/'));

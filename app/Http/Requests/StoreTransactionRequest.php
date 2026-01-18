@@ -68,7 +68,7 @@ class StoreTransactionRequest extends FormRequest
                 'decimal:0,2',
                 Rule::unique('documents', 'number')
                     ->where(function ($query) {
-                        return $query->where('company_id', session('active-company-id'));
+                        return $query->where('company_id', getActiveCompany());
                     })
                     ->ignore($this->request->get('document_id')), // Ignore the current document ID if updating
             ],

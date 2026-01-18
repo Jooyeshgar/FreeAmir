@@ -75,7 +75,7 @@ class AncillaryCostController extends Controller
     public function store(StoreAncillaryCostRequest $request)
     {
         $validated = $request->validated();
-        $validated['company_id'] = session('active-company-id');
+        $validated['company_id'] = getActiveCompany();
 
         $validatedInvoicesId = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing()->pluck('id')->toArray();
         if (! in_array($validated['invoice_id'], $validatedInvoicesId)) {
@@ -143,7 +143,7 @@ class AncillaryCostController extends Controller
         }
 
         $validated = $request->validated();
-        $validated['company_id'] = session('active-company-id');
+        $validated['company_id'] = getActiveCompany();
 
         $ancillaryCostInvoiceId = $ancillaryCost->invoice_id;
         $validatedInvoicesId = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing()->pluck('id')->toArray();

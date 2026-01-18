@@ -31,7 +31,7 @@
                 <td colspan="5" class="pt-3">
                     <div class="flex justify-between items-start p-4 border border-black rounded-lg">
                         <div class="text-center w-full">
-                            <h1 class="text-xl font-bold">{{ session('active-company-name') }}</h1>
+                            <h1 class="text-xl font-bold">{{ config('active-company-name') }}</h1>
                             <p class="text-lg">سند حسابداری</p>
                         </div>
                         <div class="text-sm text-right w-1/4">

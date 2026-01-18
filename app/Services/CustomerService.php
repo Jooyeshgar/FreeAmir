@@ -11,7 +11,7 @@ class CustomerService
 
     public function create(array $data): Customer
     {
-        $data['company_id'] ??= session('active-company-id');
+        $data['company_id'] ??= getActiveCompany();
 
         $customer = Customer::create($data);
 
@@ -41,7 +41,7 @@ class CustomerService
 
     protected function syncSubject(Customer $customer): void
     {
-        $companyId = $customer->company_id ?? session('active-company-id');
+        $companyId = $customer->company_id ?? getActiveCompany();
         $parentId = $customer->group?->subject_id ?? null;
 
         $subject = $customer->subject;
