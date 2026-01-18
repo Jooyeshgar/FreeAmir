@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\FiscalYearSection;
 use App\Models\Company;
 use App\Services\FiscalYearService;
+use Cookie;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -158,8 +159,9 @@ class CompanyController extends Controller
             abort(403);
         }
 
-        session([
-            'active-company-id' => $company->id,
+        Cookie::queue('active-company-id', $company->id);
+
+        config([
             'active-company-name' => $company->name,
             'active-company-fiscal-year' => $company->fiscal_year,
         ]);

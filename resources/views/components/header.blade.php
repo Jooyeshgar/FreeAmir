@@ -12,12 +12,12 @@
         <ul class="menu menu-horizontal px-1 bg-gray-200 rounded-xl">
             <li class="dropdown dropdown-end dropdown-hover">
                 <div tabindex="0" role="button">
-                    {{ session('active-company-id') ? session('active-company-name') . ' - ' . session('active-company-fiscal-year') : __('Please Select a Company') }}
+                    {{ cookie('active-company-id') ? config('active-company-name') . ' - ' . config('active-company-fiscal-year') : __('Please Select a Company') }}
                 </div>
                 <ul tabindex="0" class="dropdown-end dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
                     @foreach (auth()->user()->companies as $company)
                         <li>
-                            <a href="{{ route('change-company', ['company' => $company->id]) }}">
+                            <a href="{{ route('change-company', ['company' => $company]) }}">
                                 {{ $company->name . ' - ' . $company->fiscal_year }}
                             </a>
                         </li>
