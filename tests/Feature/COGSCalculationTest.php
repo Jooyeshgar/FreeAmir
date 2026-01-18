@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\AncillaryCostService;
 use App\Services\CostOfGoodsService;
 use App\Services\InvoiceService;
+use Cookie;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -38,7 +39,7 @@ class COGSCalculationTest extends TestCase
         parent::setUp();
 
         $company = Company::factory()->create();
-        session(['active-company-id' => $company->id]);
+        Cookie::queue('active-company-id', $company->id);
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();

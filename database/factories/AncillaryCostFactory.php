@@ -28,7 +28,7 @@ class AncillaryCostFactory extends Factory
             'number' => $this->faker->unique()->numerify('#####'),
             'type' => $this->faker->randomElement(AncillaryCostType::cases()),
             'date' => $invoice->date,
-            'company_id' => session('active-company-id') ?? 1,
+            'company_id' => getActiveCompany() ?? 1,
             'customer_id' => Customer::withoutGlobalScopes()->inRandomOrder()->first()->id,
             'status' => $this->faker->randomElement([InvoiceStatus::APPROVED, InvoiceStatus::UNAPPROVED]),
             'vat' => 0,
@@ -65,7 +65,7 @@ class AncillaryCostFactory extends Factory
 
                 $document = Document::factory()->create([
                     'number' => (Document::withoutGlobalScopes()->max('number') ?? 0) + 1,
-                    'company_id' => session('active-company-id'),
+                    'company_id' => getActiveCompany() ?? 1,
                     'date' => $ancillaryCost->date,
                     'title' => "Invoice Document #{$ancillaryCost->number}",
                     'documentable_type' => AncillaryCost::class,

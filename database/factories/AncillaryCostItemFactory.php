@@ -11,9 +11,12 @@ class AncillaryCostItemFactory extends Factory
 {
     public function definition(): array
     {
+        $ancillaryCost = AncillaryCost::withoutGlobalScopes()->inRandomOrder()->first();
+        $product = Product::withoutGlobalScopes()->inRandomOrder()->first();
+
         return [
-            'ancillary_cost_id' => AncillaryCost::inRandomOrder()->first()->id,
-            'product_id' => Product::inRandomOrder()->first()->id,
+            'ancillary_cost_id' => $ancillaryCost->id,
+            'product_id' => $product->id,
             'type' => $this->faker->randomElement(AncillaryCostType::cases()),
             'amount' => $this->faker->randomFloat(0, 100000, 1000000),
         ];
