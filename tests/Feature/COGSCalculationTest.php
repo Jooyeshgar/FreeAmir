@@ -40,7 +40,7 @@ class COGSCalculationTest extends TestCase
 
         $company = Company::factory()->create();
         Cookie::queue('active-company-id', $company->id);
-        $this->companyId = $company->id;
+        $this->companyId = $company->id ?? getActiveCompany();
 
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
@@ -111,7 +111,7 @@ class COGSCalculationTest extends TestCase
      */
     protected function unapproveInvoice(Invoice $invoice): void
     {
-        $svc = new \App\Services\InvoiceService;
+        $svc = new InvoiceService;
         $svc->changeInvoiceStatus($invoice, 'unapproved');
         $invoice->refresh();
     }
@@ -121,7 +121,7 @@ class COGSCalculationTest extends TestCase
      */
     protected function approveInvoice(Invoice $invoice): void
     {
-        $svc = new \App\Services\InvoiceService;
+        $svc = new InvoiceService;
         $svc->changeInvoiceStatus($invoice, 'approved');
         $invoice->refresh();
     }

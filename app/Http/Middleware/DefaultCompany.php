@@ -22,7 +22,7 @@ class DefaultCompany
             $company = Company::find($request->cookie('active-company-id'));
 
             if (! $company or ! $company->users->contains(auth()->id())) {
-                Cookie::forget('active-company-id');
+                Cookie::expire('active-company-id');
 
                 config([
                     'active-company-name' => null,

@@ -115,7 +115,7 @@ class FiscalYearService
             $targetYearId = $newFiscalYear->id;
 
             $originalCompanyId = getActiveCompany();
-            Cookie::forget('active-company-id');
+            Cookie::expire('active-company-id');
             Cookie::queue('active-company-id', $targetYearId);
 
             $idMappings = [
@@ -184,7 +184,7 @@ class FiscalYearService
                 ]);
                 throw $e;
             } finally {
-                Cookie::forget('active-company-id');
+                Cookie::expire('active-company-id');
                 Cookie::queue('active-company-id', $originalCompanyId);
                 DB::statement('SET FOREIGN_KEY_CHECKS=1;');
                 Model::reguard();

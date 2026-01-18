@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use Cookie;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -34,6 +35,7 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
+        Cookie::expire('active-company-id');
         Auth::logout();
         $request->session()->invalidate(); // Optional: Invalidate session for added security
         $request->session()->regenerateToken(); // Optional: Regenerate session token for CSRF protection

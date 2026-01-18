@@ -6,7 +6,7 @@ use Illuminate\Support\Str;
 
 function getActiveCompany()
 {
-    return Cookie::get('active-company-id');
+    return Cookie::get('active-company-id') ?? 1; // TODO: defualt active-company-id for seeder is 1. Set active-company-id in InvoiceSeeder.
 }
 
 /**
