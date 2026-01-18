@@ -48,7 +48,7 @@ class DefaultCompany
         if (Auth::check()) {
             $company = Auth::user()->companies()->first();
             if ($company) {
-                Cookie::queue('active-company-id', $company->id);
+                Cookie::queue('active-company-id', $company->id, 24 * 60 * 30);
 
                 config([
                     'active-company-name' => $company->name,
