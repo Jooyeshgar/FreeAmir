@@ -22,14 +22,14 @@ class DefaultCompany
             $company = Company::find($request->cookie('active-company-id'));
 
             if (! $company or ! $company->users->contains(auth()->id())) {
-                Cookie::expire('active-company-id');
+                Cookie::forget('active-company-id');
 
                 config([
                     'active-company-name' => null,
                     'active-company-fiscal-year' => null,
                 ]);
 
-                $this->setDefaultCompany($request);
+                $this->setDefaultCompany();
             } else {
                 config([
                     'active-company-name' => $company->name,
@@ -37,18 +37,18 @@ class DefaultCompany
                 ]);
             }
         } else {
-            $this->setDefaultCompany($request);
+            $this->setDefaultCompany();
         }
 
         return $next($request);
     }
 
-    private function setDefaultCompany(Request $request): void
+    private function setDefaultCompany(): void
     {
         if (Auth::check()) {
             $company = Auth::user()->companies()->first();
             if ($company) {
-                Cookie::queue('active-company-id', $company->id, 24 * 60 * 30);
+                Cookie::queue('active-company-id', $company->id, 362 * 24 * 60);
 
                 config([
                     'active-company-name' => $company->name,

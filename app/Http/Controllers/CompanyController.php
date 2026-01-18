@@ -159,7 +159,7 @@ class CompanyController extends Controller
             abort(403);
         }
 
-        Cookie::queue('active-company-id', $company->id, 24 * 60 * 30);
+        Cookie::queue('active-company-id', $company->id, 365 * 24 * 60);
 
         config([
             'active-company-name' => $company->name,
