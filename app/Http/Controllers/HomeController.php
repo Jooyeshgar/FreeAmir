@@ -23,6 +23,8 @@ class HomeController extends Controller
 
         $popularProductsAndServices = $this->service->popularProductsAndServices();
 
+        $sellAmountPerProducts = $this->service->getSellAmountPerProducts();
+
         [$service_revenue, $sales_revenue] = $this->service->incomeData();
 
         $totalIncomes = array_sum($monthlyIncome);
@@ -62,6 +64,7 @@ class HomeController extends Controller
             'monthlySellAmount',
             'monthlyWarehouse',
             'popularProductsAndServices',
+            'sellAmountPerProducts',
             'totalIncomesData',
             'totalCostsData',
             'profit',
