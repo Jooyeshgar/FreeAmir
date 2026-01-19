@@ -1,10 +1,10 @@
-@props(['datas', 'metric', 'label'])
+@props(['datas', 'metric', 'label', 'position' => 'bottom', 'heightClass' => ''])
 
 @php
     $chartId = 'pie_' . uniqid();
 @endphp
 
-<div style="width: 250px; height: 250px;">
+<div class="{{ $heightClass }}">
     <canvas id="{{ $chartId }}"></canvas>
 </div>
 
@@ -13,6 +13,7 @@
         document.addEventListener("DOMContentLoaded", () => {
             const metric = @json($metric);
             const chartLabel = @json($label);
+            const position = @json($position);
             const items = @json($datas).filter(i => i[metric] > 0);
             const baseColors = [
                 '#3B82F6', '#EF4444', '#10B981', '#F59E0B',
@@ -35,13 +36,12 @@
             const backgroundColors = uniqueColors(items.length);
 
             const values = items.map(i => i[metric]);
-            const total = values.reduce((a, b) => a + b, 0);
 
             const ctx = document.getElementById(@json($chartId));
             if (!ctx || typeof Chart === 'undefined') return;
 
             new Chart(ctx, {
-                type: 'doughnut',
+                type: 'pie',
                 data: {
                     labels: items.map(i => i.name),
                     datasets: [{
@@ -51,14 +51,9 @@
                     }]
                 },
                 options: {
-                    cutout: '70%',
-                    centerText: {
-                        value: total,
-                        label: @json(__('Total'))
-                    },
                     plugins: {
                         legend: {
-                            position: 'bottom'
+                            position: position
                         },
                         tooltip: {
                             rtl: true,

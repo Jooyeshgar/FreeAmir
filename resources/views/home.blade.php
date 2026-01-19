@@ -21,7 +21,7 @@
                 @include('home.profit')
             @else
                 @include('home.sell')
-                @include('home.user-details')
+                @include('home.sold-amount')
                 @include('home.quick-access')
             @endcan
         </section>

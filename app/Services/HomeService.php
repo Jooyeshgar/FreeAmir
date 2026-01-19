@@ -14,6 +14,40 @@ class HomeService
 {
     public function __construct(private readonly SubjectService $subjectService) {}
 
+    public function getSellAmountPerProducts()
+    {
+        // TODO : Optmize this method
+        $totalAmount = InvoiceItem::whereHas('invoice', fn ($q) => $q->where('invoice_type', InvoiceType::SELL)
+            ->where('status', InvoiceStatus::APPROVED)
+        )->with('itemable')
+            ->selectRaw('itemable_type, itemable_id, SUM(amount) as total_amount')
+            ->groupBy('itemable_type', 'itemable_id')
+            ->get()
+            ->sum('total_amount');
+
+        $topFiveInvoiceItemsSellAmount = InvoiceItem::whereHas('invoice', fn ($q) => $q->where('invoice_type', InvoiceType::SELL)
+            ->where('status', InvoiceStatus::APPROVED)
+        )->with('itemable')
+            ->selectRaw('itemable_type, itemable_id, SUM(amount) as total_amount')
+            ->groupBy('itemable_type', 'itemable_id')
+            ->orderByDesc('total_amount')
+            ->limit(5)
+            ->get()
+            ->map(fn ($item) => [
+                'name' => $item->itemable->name ?? 'unknown',
+                'amount' => $item->total_amount,
+                'type' => $item->itemable_type === Product::class ? __('Product') : __('Services'),
+            ]);
+
+        $sellInvoiceItemsTotalData = collect([[
+            'name' => __('Other'),
+            'amount' => $totalAmount - $topFiveInvoiceItemsSellAmount->sum('amount'),
+            'type' => __('None'),
+        ]]);
+
+        return $sellInvoiceItemsTotalData->concat($topFiveInvoiceItemsSellAmount);
+    }
+
     public function incomeData()
     {
         $incomeSubjectIds = [
