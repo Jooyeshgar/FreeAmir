@@ -26,13 +26,11 @@ class HomeController extends Controller
         $sellAmountPerProducts = $this->service->getSellAmountPerProducts();
 
         [$service_revenue, $sales_revenue] = $this->service->incomeData();
-
         $totalIncomes = array_sum($monthlyIncome);
         $otherIncome = $totalIncomes - ($service_revenue + $sales_revenue);
 
         [$wagesCost, $productsCogCost] = $this->service->costsData();
-
-        $totalCosts = -1 * array_sum($monthlyCost);
+        $totalCosts = -array_sum($monthlyCost);
         $otherCost = $totalCosts - ($wagesCost + $productsCogCost);
 
         $totalIncomesData = [
