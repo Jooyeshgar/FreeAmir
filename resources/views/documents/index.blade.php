@@ -75,6 +75,12 @@
                                                 d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                         </svg>
                                     </a>
+                                    <a href="{{ route('document-files.index', $document->id) }}" class="btn btn-sm btn-info btn-square" title="{{ __('Files') }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                            <path d="M4 0h5.5L14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2z"/>
+                                            <path d="M9.5 0V4a1 1 0 0 0 1 1H14"/>
+                                        </svg>
+                                    </a>
                                     @if ($document->documentable)
                                         <span class="tooltip" data-tip="{{ __('Cannot edit this document because it is linked to'). ' ' . __(class_basename($document->documentable_type)).'.' }}">
                                             <button class="btn btn-sm btn-info btn-square btn-disabled cursor-not-allowed" disabled
@@ -131,7 +137,7 @@
                 </tbody>
             </table>
 
-            {{ $documents->links() }}
+            {{ $documents->withQueryString()->links() }}
         </div>
     </div>
 

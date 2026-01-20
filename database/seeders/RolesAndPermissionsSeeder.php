@@ -35,6 +35,13 @@ class RolesAndPermissionsSeeder extends Seeder
             'documents.destroy',
             'documents.duplicate',
 
+            'documents.document-files.index',
+            'documents.document-files.create',
+            'documents.document-files.store',
+            'documents.document-files.edit',
+            'documents.document-files.update',
+            'documents.document-files.destroy',
+
             'transactions.index',
             'transactions.show',
 

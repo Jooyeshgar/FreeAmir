@@ -15,9 +15,8 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('document_id')->nullable();
             $table->unsignedBigInteger('user_id')->nullable();
-            $table->string('name', 60);
             $table->string('title')->nullable();
-            $table->string('file_address');
+            $table->string('path');
             $table->foreign('document_id')->references('id')->on('documents')->onDelete('set null');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');
             $table->timestamps();
