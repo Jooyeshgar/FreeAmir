@@ -11,8 +11,6 @@ class CommentService
 
     public function create(array $data): Comment
     {
-        $data['company_id'] ??= getActiveCompany();
-
         $comment = Comment::create($data);
 
         return $comment;
