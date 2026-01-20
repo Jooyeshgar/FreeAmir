@@ -62,4 +62,9 @@ class Document extends Model
     {
         return $this->morphTo();
     }
+
+    public function documentFiles()
+    {
+        return $this->hasMany(DocumentFile::class);
+    }
 }
