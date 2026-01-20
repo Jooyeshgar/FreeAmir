@@ -5,7 +5,6 @@ namespace App\Models\Scopes;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Scope;
-use Illuminate\Support\Facades\DB;
 
 class FiscalYearScope implements Scope
 {
@@ -14,6 +13,6 @@ class FiscalYearScope implements Scope
      */
     public function apply(Builder $builder, Model $model): void
     {
-        $builder->where('company_id', session('active-company-id'));
+        $builder->where('company_id', getActiveCompany());
     }
 }

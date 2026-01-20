@@ -4,6 +4,11 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
 
+function getActiveCompany()
+{
+    return Cookie::get('active-company-id') ?? 1; // TODO: defualt active-company-id for seeder is 1. Set active-company-id in InvoiceSeeder.
+}
+
 /**
  * Format a number with separators, parentheses for negatives,
  * and optionally convert to Farsi if the locale is Persian.

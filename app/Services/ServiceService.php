@@ -10,7 +10,7 @@ class ServiceService
 
     public function create(array $data): Service
     {
-        $data['company_id'] ??= session('active-company-id');
+        $data['company_id'] ??= getActiveCompany();
 
         $service = Service::create($data);
 
@@ -43,7 +43,7 @@ class ServiceService
     protected function syncSubject(Service $service): void
     {
         $group = $service->serviceGroup;
-        $companyId = $service->company_id ?? $group?->company_id ?? session('active-company-id');
+        $companyId = $service->company_id ?? $group?->company_id ?? getActiveCompany();
 
         if (! $companyId) {
             throw new \RuntimeException('Unable to determine company for service subject synchronization.');

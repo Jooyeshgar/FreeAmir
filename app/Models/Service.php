@@ -29,7 +29,7 @@ class Service extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($model) {
-            $model->company_id ??= session('active-company-id');
+            $model->company_id ??= getActiveCompany();
         });
     }
 

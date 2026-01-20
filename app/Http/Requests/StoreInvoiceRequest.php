@@ -178,7 +178,7 @@ class StoreInvoiceRequest extends FormRequest
                 'decimal:0,2',
                 Rule::unique('documents', 'number')
                     ->where(function ($query) {
-                        return $query->where('company_id', session('active-company-id'));
+                        return $query->where('company_id', getActiveCompany());
                     })
                     ->ignore($isEditing ? $invoice->document_id : null),
             ],
@@ -187,7 +187,7 @@ class StoreInvoiceRequest extends FormRequest
                 'integer',
                 Rule::unique('invoices', 'number')
                     ->where(function ($query) {
-                        return $query->where('company_id', session('active-company-id'))->where('invoice_type', $this->input('invoice_type'));
+                        return $query->where('company_id', getActiveCompany())->where('invoice_type', $this->input('invoice_type'));
                     })
                     ->ignore($isEditing ? $invoice->id : null),
             ],

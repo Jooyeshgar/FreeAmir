@@ -9,7 +9,6 @@ class InvoiceSeeder extends Seeder
 {
     public function run(): void
     {
-        session(['active-company-id' => 1]);
         Invoice::factory()->count(100)->create();
     }
 }

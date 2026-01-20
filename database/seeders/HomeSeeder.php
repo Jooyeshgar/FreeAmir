@@ -7,6 +7,7 @@ use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
+use Cookie;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -15,7 +16,7 @@ class HomeSeeder extends Seeder
 {
     public function run(): void
     {
-        session(['active-company-id' => 1]);
+        Cookie::queue('active-company-id', 1);
 
         $this->hydrateAmirConfig();
         $subjects = $this->existingCashAndBankSubjects();

@@ -7,7 +7,7 @@
         <div class="bg-white px-2 print:pl-8">
             <div class="flex justify-between items-start p-4 border border-black rounded-lg mb-4">
                 <div class="flex-grow text-center">
-                    <h1 class="text-xl font-bold">{{ session('active-company-name') }}</h1>
+                    <h1 class="text-xl font-bold">{{ config('active-company-name') }}</h1>
                     <p class="text-lg">{{ __('Ledger Report') }}</p>
                     <p class="text-right">{{ __('Account') }}: {{ $subject->formattedName() }}</p>
                 </div>
@@ -36,7 +36,7 @@
             <div class="bg-white px-2 pt-3 print:pl-8">
                 <div class="flex justify-between items-start p-4 border border-black rounded-lg mb-4">
                     <div class="flex-grow text-center">
-                        <h1 class="text-xl font-bold">{{ session('active-company-name') }}</h1>
+                        <h1 class="text-xl font-bold">{{ config('active-company-name') }}</h1>
                         <p class="text-lg">{{ __('Ledger Report') }}</p>
                         <p class="text-right">{{ __('Account') }}: {{ $subject->formattedName() }}</p>
                     </div>

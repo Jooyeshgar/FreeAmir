@@ -45,7 +45,7 @@ class Product extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($product) {
-            $product->company_id ??= session('active-company-id');
+            $product->company_id ??= getActiveCompany();
         });
 
     }

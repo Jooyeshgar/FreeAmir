@@ -16,7 +16,7 @@ class CustomerFactory extends Factory
     {
         $bankIds = Bank::withoutGlobalScopes()->pluck('id')->toArray();
 
-        $companyId = session('active-company-id') ?? 1;
+        $companyId = getActiveCompany() ?? 1;
         $group = CustomerGroup::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->whereNotNull('subject_id')
@@ -24,7 +24,7 @@ class CustomerFactory extends Factory
             ->first();
 
         return [
-            'company_id' => session('active-company-id') ?? 1,
+            'company_id' => getActiveCompany() ?? 1,
             'name' => $this->faker->name,
             'phone' => substr($this->faker->phoneNumber, 0, 15),
             'cell' => substr($this->faker->phoneNumber, 0, 15),

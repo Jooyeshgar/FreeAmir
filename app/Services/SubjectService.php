@@ -12,7 +12,7 @@ class SubjectService
             return [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0, 8 => 0, 9 => 0, 10 => 0, 11 => 0, 12 => 0];
         }
 
-        $year = session('active-company-fiscal-year');
+        $year = config('active-company-fiscal-year');
 
         $months = [
             1 => [1, 31],
@@ -138,7 +138,7 @@ class SubjectService
             $parentId = null; // normalize to null for roots
         }
 
-        $companyId = $data['company_id'] ?? session('active-company-id');
+        $companyId = $data['company_id'] ?? getActiveCompany();
         if (! $companyId) {
             throw new \InvalidArgumentException('The company_id is required or must be available in session.');
         }
