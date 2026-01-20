@@ -13,8 +13,7 @@ class DocumentFile extends Model
         'document_id',
         'user_id',
         'title',
-        'name',
-        'file_address',
+        'path',
     ];
 
     public function document()
