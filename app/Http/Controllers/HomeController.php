@@ -26,7 +26,6 @@ class HomeController extends Controller
         $sellAmountPerProducts = $this->service->getSellAmountPerProducts();
 
         [$service_revenue, $sales_revenue] = $this->service->incomeData();
-
         $totalIncomes = array_sum($monthlyIncome);
         $otherIncome = $totalIncomes - ($service_revenue + $sales_revenue);
 
