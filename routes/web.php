@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers;
+use App\Http\Controllers\DocumentFileController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
@@ -70,12 +71,23 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('', [Controllers\InvoiceController::class, 'index']);
     });
 
-    Route::group(['prefix' => 'comments', 'as' => 'comments.'], function () {
-        Route::get('{customer}', [Controllers\CommentController::class, 'index'])->name('index');
-        Route::get('create/{customer}', [Controllers\CommentController::class, 'create'])->name('create');
-        Route::get('edit/{comment}', [Controllers\CommentController::class, 'edit'])->name('edit');
-        Route::put('{comment}', [Controllers\CommentController::class, 'update'])->name('update');
-        Route::post('', [Controllers\CommentController::class, 'store'])->name('store');
-        Route::delete('{comment}', [Controllers\CommentController::class, 'destroy'])->name('destroy');
+    Route::prefix('comments')->as('comments.')->controller(Controllers\CommentController::class)->group(function () {
+        Route::get('{customer}', 'index')->name('index');
+        Route::get('create/{customer}', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('{comment}/edit', 'edit')->name('edit');
+        Route::put('{comment}', 'update')->name('update');
+        Route::delete('{comment}', 'destroy')->name('destroy');
+    });
+
+    Route::prefix('document-files')->as('document-files.')->controller(DocumentFileController::class)->group(function () {
+        Route::get('{document}', 'index')->name('index');
+        Route::get('{documentFile}/edit', 'edit')->name('edit');
+        Route::put('{documentFile}', 'update')->name('update');
+        Route::get('{document}/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::delete('{documentFile}', 'destroy')->name('destroy');
+        Route::get('{documentFile}/view', 'view')->name('view');
+        Route::get('{documentFile}/download', 'download')->name('download');
     });
 });

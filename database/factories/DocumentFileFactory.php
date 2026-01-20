@@ -15,9 +15,8 @@ class DocumentFileFactory extends Factory
     {
         return [
             'user_id' => User::withoutGlobalScopes()->inRandomOrder()->first()->id,
-            'name' => $this->faker->name,
             'title' => $this->faker->title,
-            'file_address' => '/document-'.$this->faker->randomDigit.'/file-'.$this->faker->randomNumber,
+            'path' => '/document-'.$this->faker->randomDigit.'/file-'.$this->faker->randomNumber,
         ];
     }
 
