@@ -36,7 +36,7 @@ class CommentController extends Controller
 
         $this->service->create($validated);
 
-        return redirect()->route('comments.index', $validated['customer_id'])->with('success', 'Comment created successfully.');
+        return redirect()->route('comments.index', $validated['customer_id'])->with('success', __('Comment created successfully.'));
     }
 
     public function edit(Comment $comment)
@@ -49,13 +49,13 @@ class CommentController extends Controller
         $validated = $request->validated();
         $this->service->update($comment, $validated);
 
-        return redirect()->route('comments.index', $comment->customer_id)->with('success', 'Comment updated successfully.');
+        return redirect()->route('comments.index', $comment->customer_id)->with('success', __('Comment updated successfully.'));
     }
 
     public function destroy(Comment $comment)
     {
         $this->service->delete($comment);
 
-        return redirect()->route('comments.index', $comment->customer_id)->with('success', 'Comment deleted successfully.');
+        return redirect()->route('comments.index', $comment->customer_id)->with('success', __('Comment deleted successfully.'));
     }
 }
