@@ -70,14 +70,14 @@
                 <p class="text-xs text-center text-gray-500 mt-1">{{ __('There is no document files.') }}</p>
             @endif
 
-            @if ($documentFiles->hasPages())
+            @if ($documentFiles->count() > 25)
                 <div class="mt-4 flex justify-center">
                     {!! $documentFiles->links() !!}
                 </div>
             @endif
 
             <div class="card-actions justify-between mt-4 text-left">
-                <a href="{{ route('documents.index') }}" class="btn btn-ghost gap-2">
+                <a href="{{ route('documents.index', request()->query()) }}" class="btn btn-ghost gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
