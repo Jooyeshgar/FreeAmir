@@ -14,6 +14,7 @@ class DocumentFileController extends Controller
         private readonly DocumentFileService $service
     ) {
         $this->middleware('permission:document-files.view')->only('index');
+        $this->middleware('permission:document-files.download')->only('download');
         $this->middleware('permission:document-files.create')->only(['create', 'store']);
         $this->middleware('permission:document-files.edit')->only(['edit', 'update']);
         $this->middleware('permission:document-files.delete')->only('destroy');
@@ -36,6 +37,7 @@ class DocumentFileController extends Controller
     public function store(StoreDocumentFileRequest $request)
     {
         $validated = $request->validated();
+        $validated['user_id'] ??= $request->user()->id;
 
         $this->service->create($validated);
 
@@ -52,6 +54,7 @@ class DocumentFileController extends Controller
     public function update(StoreDocumentFileRequest $request, DocumentFile $documentFile)
     {
         $validated = $request->validated();
+        $validated['user_id'] ??= $request->user()->id;
 
         $this->service->update($documentFile, $validated);
 
@@ -69,23 +72,25 @@ class DocumentFileController extends Controller
 
     public function view(DocumentFile $documentFile)
     {
-        if (! Storage::disk('public')->exists($documentFile->path)) {
-            return redirect()->route('document-files.index', $documentFile->document_id)->with('error', __('No document file found.'));
+        $disk = Storage::disk('public');
+        $path = $this->service->resolvePath($documentFile);
 
+        if (! $disk->exists($path)) {
+            return redirect()->route('document-files.index', $documentFile->document_id)->with('error', __('No document file found.'));
         }
 
-        return response()->file(Storage::disk('public')->path($documentFile->path));
+        return response()->file($disk->path($path));
     }
 
     public function download(DocumentFile $documentFile)
     {
         $disk = Storage::disk('public');
+        $path = $this->service->resolvePath($documentFile);
 
-        if (! $disk->exists($documentFile->path)) {
+        if (! $disk->exists($path)) {
             return redirect()->route('document-files.index', $documentFile->document_id)->with('error', __('No document file found.'));
-
         }
 
-        return response()->download($disk->path($documentFile->path), $documentFile->name);
+        return response()->download($disk->path($path), $documentFile->name ?? basename($path));
     }
 }

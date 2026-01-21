@@ -5,8 +5,9 @@
         </h2>
     </x-slot>
     <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('document-files.update', $documentFile) }}" method="POST">
+        <form action="{{ route('document-files.update', $documentFile) }}" method="POST" enctype="multipart/form-data">
             @csrf
+            @method('PUT')
             <div class="card-body">
                 <h2 class="card-title">{{ __('Edit Document File') }}</h2>
                 <x-show-message-bags />

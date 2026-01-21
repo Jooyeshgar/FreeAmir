@@ -14,10 +14,15 @@ class StoreDocumentFileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'document_id' => ['required', 'exists:documents,id'],
-            'user_id' => ['required', 'exists:users,id'],
-            'title' => ['nullable', 'string', 'max:255'],
-            'file' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            'document_id' => 'required|exists:documents,id',
+            'user_id' => 'nullable|exists:users,id',
+            'title' => 'nullable|string|max:255',
+            'file' => [
+                $this->isMethod('post') ? 'required' : 'nullable',
+                'file',
+                'mimes:jpg,jpeg,png,webp,pdf',
+                'max:5120',
+            ],
         ];
     }
 
