@@ -25,13 +25,14 @@ class TrialBalanceService
 
         $subjects = $subjects->map(function (Subject $subject) use ($filters) {
             // Opening columns: only documents 1 and 2
-            [$openingDebit, $openingCredit] = $this->aggregateSubjectColumns($subject, [], [1, 2]);
+            $documentNumbers = $filters['start_document_number'] <= 2 ? [$filters['start_document_number'] - 1] : [1, 2];
+
+            [$openingDebit, $openingCredit] = $this->aggregateSubjectColumns($subject, [], $documentNumbers);
 
             // Turnover columns: respect filters, by default starting from document 3 and excluding 1 and 2
             [$turnoverDebit, $turnoverCredit] = $this->aggregateSubjectColumns($subject, $filters);
 
-            $subject->opening_debit = $openingDebit;
-            $subject->opening_credit = $openingCredit;
+            $subject->opening = $openingDebit + $openingCredit;
             $subject->turnover_debit = $turnoverDebit;
             $subject->turnover_credit = $turnoverCredit;
 

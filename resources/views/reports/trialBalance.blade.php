@@ -53,17 +53,15 @@
                         <tr class="bg-base-200">
                             <th rowspan="2" class="px-4 py-2 text-center border-r align-middle border-gray-400">{{ __('Code') }}</th>
                             <th rowspan="2" class="px-4 py-2 text-center border-r align-middle border-gray-400">{{ __('Name') }}</th>
-                            <th colspan="2" class="px-4 py-2 text-center border-r border-gray-400">{{ __('Opening') }}</th>
+                            <th rowspan="2" class="px-4 py-2 text-center border-r border-gray-400">{{ __('Opening') }}</th>
                             <th colspan="2" class="px-4 py-2 text-center border-r border-gray-400">{{ __('Turnover') }}</th>
-                            <th colspan="2" class="px-4 py-2 text-center border-gray-400">{{ __('Balance') }}</th>
+                            <th colspan="2" class="px-4 py-2 text-center border-r border-gray-400">{{ __('Balance') }}</th>
                         </tr>
                         <tr class="bg-base-200">
                             <th class="px-4 py-2 text-center border-r border-gray-400">{{ __('Debtor') }}</th>
                             <th class="px-4 py-2 text-center border-r border-gray-400">{{ __('Creditor') }}</th>
                             <th class="px-4 py-2 text-center border-r border-gray-400">{{ __('Debtor') }}</th>
                             <th class="px-4 py-2 text-center border-r border-gray-400">{{ __('Creditor') }}</th>
-                            <th class="px-4 py-2 text-center border-r border-gray-400">{{ __('Debtor') }}</th>
-                            <th class="px-4 py-2 text-center">{{ __('Creditor') }}</th>
                         </tr>
                     </thead>
                     <tbody id="tb-rows">
@@ -80,7 +78,7 @@
                                 <td class="px-4 py-2 border-r border-gray-400">
                                     <div class="flex items-center gap-2" style="padding-left: {{ $depth * 12 }}px;">
                                         @if ($depth > 0)
-                                            <span class="w-2 h-2 rounded-full bg-gray-400 inline-block"></span>
+                                            <span>-</span>
                                         @endif
                                         <a href="{{ route('reports.trial-balance', array_merge(request()->query(), ['parent_id' => $subject->id])) }}" class="text-primary">{{ $subject->name }}</a>
                                         @if ($subject->subjectable)
@@ -92,12 +90,11 @@
                                         @endif
                                     </div>
                                 </td>
-                                <td class="px-4 py-2 border-r border-gray-400">{{ formatNumber(abs($subject->opening_debit)) }}</td>
-                                <td class="px-4 py-2 border-r border-gray-400">{{ formatNumber($subject->opening_credit) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-400">{{ formatNumber(abs($subject->opening)) }}</td>
                                 <td class="px-4 py-2 border-r border-gray-400">{{ formatNumber(abs($subject->turnover_debit)) }}</td>
                                 <td class="px-4 py-2 border-r border-gray-400">{{ formatNumber($subject->turnover_credit) }}</td>
                                 <td class="px-4 py-2 border-r border-gray-400">{{ $subject->balance < 0 ? formatNumber(abs($subject->balance)) : formatNumber(0) }}</td>
-                                <td class="px-4 py-2 border-r">{{ $subject->balance > 0 ? formatNumber(abs($subject->balance)) : formatNumber(0) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-400">{{ $subject->balance > 0 ? formatNumber(abs($subject->balance)) : formatNumber(0) }}</td>
                             </tr>
                         @empty
                             <tr>
