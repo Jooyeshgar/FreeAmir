@@ -1,16 +1,3 @@
-@props([
-    'datas' => [],
-    'chartId' => null,
-    'heightClass' => 'h-64',
-    'label' => 'موجودی انبار',
-    'backgroundColor' => '#4bb946c4',
-    'borderColor' => '#4bb946',
-])
-
-@php
-    $resolvedChartId = $chartId ?? ($attributes->get('id') ?? 'barChart_' . uniqid());
-@endphp
-
 <div class="relative {{ $heightClass }}">
     <canvas id="{{ $resolvedChartId }}"></canvas>
 </div>
@@ -32,22 +19,26 @@
             window.__chartInstances[chartId] = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: @json(array_keys($datas)),
-                    datasets: [{
-                        label: @json($label),
-                        data: @json(array_values($datas)),
-                        backgroundColor: function(context) {
-                            const value = context.raw;
-                            return value >= 0 ? @json($backgroundColor) : 'red';
+                    labels: @json($labels),
+                    datasets: @json($normalizedDatasets).map((dataset) => ({
+                        ...dataset,
+                        backgroundColor: (context) => {
+                            const value = context.raw ?? 0;
+                            const positive = dataset.backgroundColor ||
+                                @json($backgroundColor);
+                            const negative = dataset.negativeColor ||
+                                @json($negativeColor);
+                            return value >= 0 ? positive : negative;
                         },
-                        borderColor: function(context) {
-                            const value = context.raw;
-                            return value >= 0 ? @json($borderColor) : 'red';
+                        borderColor: (context) => {
+                            const value = context.raw ?? 0;
+                            const positive = dataset.borderColor ||
+                                @json($borderColor);
+                            const negative = dataset.negativeBorderColor || dataset
+                                .negativeColor || @json($negativeColor);
+                            return value >= 0 ? positive : negative;
                         },
-                        borderWidth: 2,
-                        borderRadius: 0,
-                        borderSkipped: false,
-                    }]
+                    }))
                 },
                 options: {
                     responsive: true,
@@ -75,7 +66,7 @@
                     },
                     plugins: {
                         legend: {
-                            display: false
+                            display: @json($resolvedShowLegend)
                         },
                         tooltip: {
                             rtl: true,
@@ -88,13 +79,14 @@
                             },
                             padding: 10,
                             callbacks: {
-                                label: (ctx) => ` ${ctx.raw.toLocaleString()}`
+                                label: (ctx) =>
+                                    `${ctx.dataset.label ? ctx.dataset.label + ': ' : ''}${ctx.raw.toLocaleString()}`
                             }
                         },
                         datalabels: {
                             anchor: 'end',
                             align: 'top',
-                            color: '#166534',
+                            color: @json($datalabelColor),
                             font: {
                                 weight: 'bold',
                                 size: 12
