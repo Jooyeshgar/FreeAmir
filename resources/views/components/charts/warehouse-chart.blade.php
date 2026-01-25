@@ -1,3 +1,3 @@
 @props(['datas', 'chartId' => null])
 
-<x-charts.bar-chart :datas="$datas" :chart-id="$chartId ?? ($attributes->get('id') ?? 'warehouseChart')" heightClass="h-96" />
+<x-charts.bar-chart chart-id="warehouseChart" heightClass="h-96" :datasets="[['data' => $datas]]" />
