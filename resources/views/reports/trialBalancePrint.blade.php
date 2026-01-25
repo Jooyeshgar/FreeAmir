@@ -21,7 +21,7 @@
                 <tr>
                     <th class="bg-gray-100 border border-gray-300 text-bold" rowspan="2">{{ __('Code') }}</th>
                     <th class="bg-gray-100 border border-gray-300 text-bold" rowspan="2">{{ __('Name') }}</th>
-                    <th class="bg-gray-100 border border-gray-300 text-bold" rowspan="2">{{ __('Opening') }}</th>
+                    <th class="bg-gray-100 border border-gray-300 text-bold" colspan="2">{{ __('Opening') }}</th>
                     <th class="bg-gray-100 border border-gray-300 text-bold" colspan="2">{{ __('Turnover') }}</th>
                     <th class="bg-gray-100 border border-gray-300 text-bold" colspan="2">{{ __('Balance') }}</th>
                 </tr>
@@ -30,14 +30,25 @@
                     <th class="bg-gray-100 border border-gray-300 text-bold">{{ __('Creditor') }}</th>
                     <th class="bg-gray-100 border border-gray-300 text-bold">{{ __('Debtor') }}</th>
                     <th class="bg-gray-100 border border-gray-300 text-bold">{{ __('Creditor') }}</th>
+                    <th class="bg-gray-100 border border-gray-300 text-bold">{{ __('Debtor') }}</th>
+                    <th class="bg-gray-100 border border-gray-300 text-bold">{{ __('Creditor') }}</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse ($subjects as $subject)
+                    @php
+                        $depth = $subject->getAttribute('depth') ?? 0;
+                    @endphp
                     <tr>
                         <td class="border border-gray-300 text-center">{{ $subject->formattedCode() }}</td>
-                        <td class="border border-gray-300 pr-1 pd-2">{{ $subject->name }}</td>
-                        <td class="border border-gray-300 pr-1 pd-2">{{ formatNumber(abs($subject->opening)) }}</td>
+                        <td class="border border-gray-300 pr-1 pd-2">
+                            @if ($depth > 0)
+                                <span>-</span>
+                            @endif
+                            {{ $subject->name }}
+                        </td>
+                        <td class="border border-gray-300 pr-1 pd-2">{{ $subject->opening < 0 ? formatNumber(abs($subject->opening)) : formatNumber(0) }}</td>
+                        <td class="border border-gray-300 pr-1 pd-2">{{ $subject->opening > 0 ? formatNumber(abs($subject->opening)) : formatNumber(0) }}</td>
                         <td class="border border-gray-300 pr-1 pd-2">{{ formatNumber(abs($subject->turnover_debit)) }}</td>
                         <td class="border border-gray-300 pr-1 pd-2">{{ formatNumber($subject->turnover_credit) }}</td>
                         <td class="border border-gray-300 pr-1 pd-2">{{ $subject->balance < 0 ? formatNumber(abs($subject->balance)) : formatNumber(0) }}</td>
@@ -52,7 +63,4 @@
             </tbody>
         </table>
     </div>
-    <script>
-        window.print();
-    </script>
 </x-report-layout>

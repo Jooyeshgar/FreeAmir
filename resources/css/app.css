@@ -23,7 +23,7 @@ body {
     color: black;
 
     main {
-        width: 200mm;
+        width: 210mm;
     }
 
     @media print {
