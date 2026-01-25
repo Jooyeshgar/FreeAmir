@@ -7,6 +7,7 @@ use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
 use App\Models\AncillaryCostItem;
+use App\Models\Company;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Invoice;
@@ -28,7 +29,7 @@ class AncillaryCostFactory extends Factory
             'number' => $this->faker->unique()->numerify('#####'),
             'type' => $this->faker->randomElement(AncillaryCostType::cases()),
             'date' => $invoice->date,
-            'company_id' => getActiveCompany() ?? 1,
+            'company_id' => Company::withoutGlobalScopes()->first()->id,
             'customer_id' => Customer::withoutGlobalScopes()->inRandomOrder()->first()->id,
             'status' => $this->faker->randomElement([InvoiceStatus::APPROVED, InvoiceStatus::UNAPPROVED]),
             'vat' => 0,
@@ -40,7 +41,9 @@ class AncillaryCostFactory extends Factory
     public function configure()
     {
         return $this->afterCreating(function (AncillaryCost $ancillaryCost) {
-            foreach ($ancillaryCost->invoice->items as $item) {
+            $invoice = Invoice::withoutGlobalScopes()->find($ancillaryCost->invoice_id);
+
+            foreach ($invoice->items as $item) {
                 if ($item->itemable_type === Product::class) {
                     AncillaryCostItem::factory()->create([
                         'ancillary_cost_id' => $ancillaryCost->id,
@@ -65,7 +68,7 @@ class AncillaryCostFactory extends Factory
 
                 $document = Document::factory()->create([
                     'number' => (Document::withoutGlobalScopes()->max('number') ?? 0) + 1,
-                    'company_id' => getActiveCompany() ?? 1,
+                    'company_id' => Company::withoutGlobalScopes()->first()->id,
                     'date' => $ancillaryCost->date,
                     'title' => "Invoice Document #{$ancillaryCost->number}",
                     'documentable_type' => AncillaryCost::class,
@@ -81,7 +84,7 @@ class AncillaryCostFactory extends Factory
                     Transaction::factory()->create([
                         'document_id' => $document->id,
                         'subject_id' => $product->inventory_subject_id,
-                        'desc' => __('Ancillary Cost for :item', ['item' => $product->name]).' '.__('On Invoice').' '.$ancillaryCost->invoice->invoice_type->label().' '.formatDocumentNumber($ancillaryCost->invoice->number),
+                        'desc' => __('Ancillary Cost for :item', ['item' => $product->name]).' '.__('On Invoice').' '.$invoice->invoice_type->label().' '.formatDocumentNumber($invoice->number),
                         'value' => $item->amount,
                     ]);
 
@@ -95,7 +98,7 @@ class AncillaryCostFactory extends Factory
                     Transaction::factory()->create([
                         'document_id' => $document->id,
                         'subject_id' => $subject_id,
-                        'desc' => __('Invoice').' '.$ancillaryCost->invoice->invoice_type->label().' '.__(' with number ').' '.formatDocumentNumber($ancillaryCost->invoice->number),
+                        'desc' => __('Invoice').' '.$invoice->invoice_type->label().' '.__(' with number ').' '.formatDocumentNumber($invoice->number),
                         'value' => -$item->amount,
                     ]);
                 }
