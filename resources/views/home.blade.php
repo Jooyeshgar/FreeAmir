@@ -13,7 +13,7 @@
             </h1>
         </div>
 
-        <section class="flex gap-4 max-[850px]:flex-wrap">
+        <section class="flex gap-4 max-[850px]:flex-wrap mb-4">
             @include('home.cash-and-banks')
 
             @can('documents.show')
@@ -27,18 +27,17 @@
         </section>
 
         @can('documents.show')
-            <section class="relative z-[3] flex max-[1200px]:flex-wrap gap-4 mt-4 mb-16">
+            <section class="relative z-[3] flex max-[1200px]:flex-wrap gap-4 mb-4">
                 @include('home.bank-account-list')
                 @include('home.bank-account-chart')
             </section>
-        @else
-            @canany(['products.index', 'services.index'])
-                <section class="relative z-[3] flex max-[1200px]:flex-wrap gap-4 mt-4 mb-2">
-                    @include('home.popular-products')
-                    @include('home.warehouse')
-                </section>
-            @endcanany
         @endcan
+        @canany(['documents.show', 'products.index', 'services.index'])
+            <section class="relative z-[3] flex max-[1200px]:flex-wrap gap-4 mb-4">
+                @include('home.popular-products')
+                @include('home.warehouse')
+            </section>
+        @endcanany
     </main>
 
 </x-app-layout>
