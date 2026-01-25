@@ -6,6 +6,10 @@
         </div>
 
         <div class="p-2">
-            <x-charts.twice-bar-chart :firstData="$totalIncomesData" :secondData="$totalCostsData" chart-id="profitChart" heightClass="h-64" />
+            <x-charts.bar-chart chart-id="profitChart" heightClass="h-64"
+                :datasets="[
+                    ['data' => $totalIncomesData, 'backgroundColor' => '#4bb946c4', 'borderColor' => '#4bb946'],
+                    ['data' => $totalCostsData, 'backgroundColor' => 'red', 'borderColor' => 'red'],
+                ]" />
         </div>
     </div>
