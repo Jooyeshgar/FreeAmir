@@ -16,7 +16,7 @@
             {{ $include_children ? ' | ' . __('Two levels') : '' }}
         </div>
 
-        <table class="font-sm border border-gray-300">
+        <table class="border border-gray-300 text-xs w-full">
             <thead>
                 <tr>
                     <th class="bg-gray-100 border border-gray-300 text-bold" rowspan="2">{{ __('Code') }}</th>
@@ -60,6 +60,17 @@
                             {{ __('No Subjects found with the selected filters.') }}</td>
                     </tr>
                 @endforelse
+                @if ($subjects->count())
+                    <tr class="bg-gray-100 border border-gray-300 font-semibold">
+                        <td class="border border-gray-300 pr-1 pd-2" colspan="2">{{ __('Total') }}</td>
+                        <td class="border border-gray-300 pr-1 pd-2">{{ formatNumber($subjects->sum(fn($s) => $s->opening < 0 ? abs($s->opening) : 0)) }}</td>
+                        <td class="border border-gray-300 pr-1 pd-2">{{ formatNumber($subjects->sum(fn($s) => $s->opening > 0 ? abs($s->opening) : 0)) }}</td>
+                        <td class="border border-gray-300 pr-1 pd-2">{{ formatNumber($subjects->sum(fn($s) => abs($s->turnover_debit))) }}</td>
+                        <td class="border border-gray-300 pr-1 pd-2">{{ formatNumber($subjects->sum(fn($s) => $s->turnover_credit)) }}</td>
+                        <td class="border border-gray-300 pr-1 pd-2">{{ formatNumber($subjects->sum(fn($s) => $s->balance < 0 ? abs($s->balance) : 0)) }}</td>
+                        <td class="border border-gray-300 pr-1 pd-2">{{ formatNumber($subjects->sum(fn($s) => $s->balance > 0 ? abs($s->balance) : 0)) }}</td>
+                    </tr>
+                @endif
             </tbody>
         </table>
     </div>

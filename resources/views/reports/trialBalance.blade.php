@@ -104,6 +104,17 @@
                                 <td colspan="8" class="text-center py-4 text-gray-500">{{ __('No Subjects found with the selected filters.') }}</td>
                             </tr>
                         @endforelse
+                        @if($subjects->count())
+                            <tr class="font-bold bg-base-200">
+                                <td class="px-4 py-2 border-r border-gray-400 text-center" colspan="2">{{ __('Total') }}</td>
+                                <td class="px-4 py-2 border-r border-gray-400">{{ formatNumber($subjects->sum(fn($s) => $s->opening < 0 ? abs($s->opening) : 0)) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-400">{{ formatNumber($subjects->sum(fn($s) => $s->opening > 0 ? abs($s->opening) : 0)) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-400">{{ formatNumber($subjects->sum(fn($s) => abs($s->turnover_debit))) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-400">{{ formatNumber($subjects->sum(fn($s) => abs($s->turnover_credit))) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-400">{{ formatNumber($subjects->sum(fn($s) => $s->balance < 0 ? abs($s->balance) : 0)) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-400">{{ formatNumber($subjects->sum(fn($s) => $s->balance > 0 ? abs($s->balance) : 0)) }}</td>
+                            </tr>
+                        @endif
                     </tbody>
                 </table>
                 <div id="tb-sentinel"></div>
