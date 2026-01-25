@@ -48,28 +48,14 @@ class ReportsController extends Controller
         return view('reports.documents');
     }
 
-    public function trialBalance(Request $request)
+    public function trialBalance(Request $request, \App\Services\TrialBalanceService $trialBalanceService)
     {
-        $currentParent = null;
+        return view('reports.trialBalance', $trialBalanceService->getTrialBalanceData($request));
+    }
 
-        if ($request->has('parent_id')) {
-            $currentParent = Subject::find($request->get('parent_id'));
-            $subjects = $currentParent->children()->with('subjectable');
-        } else {
-            $subjects = Subject::whereIsRoot()->with('subjectable');
-        }
-
-        $subjects = $subjects->orderBy('code')->get();
-
-        $subjects = $subjects->map(function (Subject $subject) {
-            $subject->credit = \App\Services\SubjectService::sumSubject($subject, false, false);
-            $subject->debit = \App\Services\SubjectService::sumSubject($subject, false, true);
-            $subject->balance = $subject->credit + $subject->debit;
-
-            return $subject;
-        });
-
-        return view('reports.trialBalance', compact('subjects', 'currentParent'));
+    public function printTrialBalance(Request $request, \App\Services\TrialBalanceService $trialBalanceService)
+    {
+        return view('reports.trialBalancePrint', $trialBalanceService->getTrialBalanceData($request));
     }
 
     public function result(Request $request)
