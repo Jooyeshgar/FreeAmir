@@ -12,8 +12,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('/home/cash-banks', [Controllers\HomeController::class, 'cashAndBanksBalances'])->name('home.cash-banks');
     Route::get('/home/bank-account', [Controllers\HomeController::class, 'bankAccount'])->name('home.bank-account');
     Route::resource('subjects', Controllers\SubjectController::class);
-    Route::post('subjects/search', [Controllers\SubjectController::class, 'search'])->name('subjects.search');
-
+    Route::get('subjects/search', [Controllers\SubjectController::class, 'search'])->name('subjects.search');
     Route::resource('documents', Controllers\DocumentController::class);
     Route::get('documents/{document}/print', [Controllers\DocumentController::class, 'print'])->name('documents.print');
     Route::get('documents/{document}/duplicate', [Controllers\DocumentController::class, 'duplicate'])->name('documents.duplicate');

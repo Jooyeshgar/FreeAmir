@@ -43,7 +43,7 @@ class DocumentController extends Controller
 
     public function create()
     {
-        $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->get();
+        $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->limit(15)->get();
 
         $transactions = old('transactions')
                     ? self::prepareTransactions(old('transactions'))
@@ -105,7 +105,14 @@ class DocumentController extends Controller
                     : self::prepareTransactions($document->transactions);
 
             $total = -1;
-            $subjects = Subject::all();
+
+            $subjectIdsForSelect = Subject::whereIsRoot()->with('children')->orderBy('code')->limit(15)->pluck('id');
+
+            $selectedSubjectIds = $document->transactions->pluck('subject_id')->unique();
+
+            $subjects = Subject::with(['parent', 'children'])->whereIn('id', $subjectIdsForSelect->merge($selectedSubjectIds)->unique())
+                ->orderBy('name')->get();
+
             $previousDocumentNumber = Document::where('number', '<', $document->number)->orderBy('number', 'desc')->first()->number ?? 0;
 
             return view('documents.edit', compact('previousDocumentNumber', 'document', 'subjects', 'transactions', 'total'));
