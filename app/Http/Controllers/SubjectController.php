@@ -112,33 +112,79 @@ class SubjectController extends Controller
 
     public function search(Request $request)
     {
-        $query = $request->input('query');
-        $subjects = Subject::with([
-            'subSubjects' => function ($subQuery) use ($query) {
-                $subQuery->where('code', 'like', '%'.$query.'%')
-                    ->orWhere('name', 'like', '%'.$query.'%');
-            },
-        ])
-            ->where(function ($parentQuery) use ($query) {
-                $parentQuery->where('parent_id', null) // Ensure parent subjects
-                    ->where(function ($innerQuery) use ($query) {
-                        $innerQuery->where('code', 'like', '%'.$query.'%')
-                            ->orWhere('name', 'like', '%'.$query.'%');
-                    });
-            })
-            ->orWhereHas('subSubjects', function ($subQuery) use ($query) {
-                $subQuery->where('code', 'like', '%'.$query.'%')
-                    ->orWhere('name', 'like', '%'.$query.'%');
-            })
-            ->get()
-            ->map(function ($subject) use ($query) {
-                if (stripos($subject->name, $query) !== false || stripos($subject->code, $query) !== false) {
-                    $subject->setRelation('subSubjects', $subject->subSubjects()->get());
+        $validated = $request->validate([
+            'q' => 'required|string|max:100',
+            'allSelectable' => 'sometimes|boolean',
+            'level' => 'sometimes|integer|min:1',
+        ]);
+
+        $query = $validated['q'];
+        $allSelectable = $validated['allSelectable'] ?? false;
+        $maxLevel = $validated['level'] ?? null;
+
+        $subjects = Subject::select('id', 'name', 'code', 'parent_id')->orderBy('code')->get();
+
+        $subjectsById = $subjects->keyBy('id');
+        $childrenMap = [];
+
+        foreach ($subjects as $subject) {
+            $parentKey = $subject->parent_id ?: 0;
+            $childrenMap[$parentKey][] = $subject;
+        }
+
+        $allowedIds = null;
+        if ($query !== '') {
+            $allowedIds = [];
+            $q = mb_strtolower($query);
+
+            foreach ($subjects as $subject) {
+                $name = mb_strtolower($subject->name);
+                $code = mb_strtolower($subject->code);
+
+                if (str_contains($name, $q) || str_contains($code, $q)) {
+                    $allowedIds[$subject->id] = true;
+
+                    $current = $subject;
+                    while ($current->parent_id && $subjectsById->has($current->parent_id)) {
+                        $current = $subjectsById[$current->parent_id];
+                        $allowedIds[$current->id] = true;
+                    }
+                }
+            }
+        }
+
+        $buildTree = function ($parentId, ?int $levelLeft = null) use (&$buildTree, $childrenMap, $allowedIds, $allSelectable) {
+            $items = $childrenMap[$parentId] ?? [];
+            $result = [];
+
+            foreach ($items as $subject) {
+                if (! is_null($allowedIds) && ! isset($allowedIds[$subject->id])) {
+                    continue;
                 }
 
-                return $subject;
-            });
+                $nextLevelLeft = $levelLeft;
+                if (! is_null($nextLevelLeft)) {
+                    $nextLevelLeft = $nextLevelLeft - 1;
+                }
 
-        return response()->json($subjects);
+                $children = [];
+                if (is_null($nextLevelLeft) || $nextLevelLeft > 0) {
+                    $children = $buildTree($subject->id, $nextLevelLeft);
+                }
+
+                $result[] = [
+                    'id' => $subject->id,
+                    'name' => $subject->name,
+                    'code' => $subject->code,
+                    'parent_id' => $subject->parent_id,
+                    'selectable' => $allSelectable || ! empty($children),
+                    'children' => $children,
+                ];
+            }
+
+            return $result;
+        };
+
+        return response()->json($buildTree(0, $maxLevel));
     }
 }
