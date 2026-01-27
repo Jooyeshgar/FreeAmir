@@ -113,11 +113,58 @@
                     code: ''
                 },
                 initialNodes: config.initialNodes || [],
+                init() {
+                    this.nodes = (this.initialNodes || []).map(node => this.normalizeNode(node));
+                    this.recomputeVisibleNodes();
+
+                    const selectedId = this.$el.dataset.selectedId;
+                    const selectedName = this.$el.dataset.selectedName;
+                    const selectedCode = this.$el.dataset.selectedCode;
+
+                    if (selectedId) {
+                        this.selection = {
+                            id: selectedId,
+                            name: selectedName || '',
+                            code: selectedCode || ''
+                        };
+                    }
+
+                    this.ensureSelectionVisible();
+                },
                 togglePanel() {
                     this.open = !this.open;
-                    if (this.open) {
-                        this.$nextTick(() => this.$refs.searchInput?.focus());
+                    this.focusSearchInput();
+                },
+                ensureSelectionVisible() {
+                    if (!this.selection?.id) {
+                        return;
                     }
+
+                    const existing = this.findNode(this.selection.id, this.nodes);
+                    if (existing) {
+                        this.recomputeVisibleNodes();
+                        return;
+                    }
+
+                    const stub = this.normalizeNode({
+                        id: this.selection.id,
+                        name: this.selection.name || this.placeholder,
+                        code: this.selection.code || '',
+                        parent_id: null,
+                        has_children: false,
+                        children: [],
+                    });
+
+                    this.nodes = this.mergeNodes(this.nodes, [stub]);
+                    this.recomputeVisibleNodes();
+                },
+                focusSearchInput() {
+                    if (!this.open) {
+                        return;
+                    }
+
+                    this.$nextTick(() => this.$refs.searchInput?.focus());
+                },
                 },
                 closePanel() {
                     this.open = false;
