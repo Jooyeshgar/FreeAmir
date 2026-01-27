@@ -7,6 +7,7 @@ use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Services\DocumentService;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 
 class DocumentController extends Controller
@@ -29,9 +30,9 @@ class DocumentController extends Controller
         if (request()->has('text') && request('text')) {
             $searchText = request('text');
             $query->where(function ($q) use ($searchText) {
-                $q->where('title', 'like', '%'.$searchText.'%')
+                $q->where('title', 'like', $searchText)
                     ->orWhereHas('transactions', function ($subQ) use ($searchText) {
-                        $subQ->where('desc', 'like', '%'.$searchText.'%');
+                        $subQ->where('desc', 'like', $searchText);
                     });
             });
         }
@@ -43,7 +44,7 @@ class DocumentController extends Controller
 
     public function create()
     {
-        $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->limit(15)->get();
+        $subjects = $this->formatSubjectsForTree($this->loadRootSubjects());
 
         $transactions = old('transactions')
                     ? self::prepareTransactions(old('transactions'))
@@ -106,12 +107,9 @@ class DocumentController extends Controller
 
             $total = -1;
 
-            $subjectIdsForSelect = Subject::whereIsRoot()->with('children')->orderBy('code')->limit(15)->pluck('id');
+            $documentSubjects = $document->transactions->map(fn ($t) => $t->subject);
 
-            $selectedSubjectIds = $document->transactions->pluck('subject_id')->unique();
-
-            $subjects = Subject::with(['parent', 'children'])->whereIn('id', $subjectIdsForSelect->merge($selectedSubjectIds)->unique())
-                ->orderBy('name')->get();
+            $subjects = $this->formatSubjectsForTree($this->loadRootSubjects($documentSubjects));
 
             $previousDocumentNumber = Document::where('number', '<', $document->number)->orderBy('number', 'desc')->first()->number ?? 0;
 
@@ -184,26 +182,19 @@ class DocumentController extends Controller
             ->with('success', __('Document duplicated successfully.'));
     }
 
-    public function fields($customers): array
+    private function subjectExistsInTree(Subject $node, int $targetId): bool
     {
-        return [
-            'code' => ['label' => 'code', 'type' => 'text'],
-            'date' => ['label' => 'date', 'type' => 'date'],
-            'bill' => ['label' => 'bill', 'type' => 'number'],
-            'customer_id' => ['label' => 'customer', 'type' => 'select', 'options' => $customers],
-            'addition' => ['label' => 'addition', 'type' => 'number'],
-            'subtraction' => ['label' => 'subtraction', 'type' => 'number'],
-            'tax' => ['label' => 'tax', 'type' => 'number'],
-            'payable_amount' => ['label' => 'payable_amount', 'type' => 'number'],
-            'cash_payment' => ['label' => 'cash_payment', 'type' => 'number'],
-            'destination' => ['label' => 'destination', 'type' => 'text'],
-            'ship_date' => ['label' => 'ship_date', 'type' => 'date'],
-            'ship_via' => ['label' => 'ship_via', 'type' => 'date'],
-            'permanent' => ['label' => 'permanent', 'type' => 'checkbox'],
-            'description' => ['label' => 'description', 'type' => 'textarea'],
-            'sell' => ['label' => 'sell', 'type' => 'checkbox'],
-            'activated' => ['label' => 'activated', 'type' => 'checkbox'],
-        ];
+        if ($node->id === $targetId) {
+            return true;
+        }
+
+        foreach ($node->children as $child) {
+            if ($this->subjectExistsInTree($child, $targetId)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -230,5 +221,122 @@ class DocumentController extends Controller
                 'debit' => $isModel ? ($t->debit ?? 0) : ($t['debit'] ?? 0),
             ];
         });
+    }
+
+    public function subjectSearch(\Illuminate\Http\Request $request)
+    {
+        $validated = $request->validate([
+            'q' => 'nullable|string|max:100',
+            'parent_id' => 'nullable|integer|exists:subjects,id',
+            'selected_id' => 'nullable|integer|exists:subjects,id',
+            'limit' => 'nullable|integer|min:1|max:50',
+        ]);
+
+        $limit = $validated['limit'] ?? 25;
+
+        if (! empty($validated['selected_id'])) {
+            return response()->json(
+                $this->buildSelectedPathPayload((int) $validated['selected_id'], $limit)
+            );
+        }
+
+        $subjectsQuery = Subject::query()->withCount('children')->orderBy('code');
+
+        if (! empty($validated['parent_id'])) {
+            $subjectsQuery->where('parent_id', $validated['parent_id']);
+        } elseif (! empty($validated['q'])) {
+            $searchTerm = $validated['q'];
+            $subjectsQuery->where(function ($query) use ($searchTerm) {
+                $query->where('name', 'like', '%'.$searchTerm.'%')
+                    ->orWhere('code', 'like', '%'.$searchTerm.'%');
+            });
+        } else {
+            $subjectsQuery->whereNull('parent_id');
+        }
+
+        $subjects = $subjectsQuery->limit($limit)->get();
+
+        $results = $subjects->map(function ($subject) use ($validated) {
+            $node = $this->formatSubjectNode($subject);
+
+            if (! empty($validated['q']) && empty($validated['parent_id'])) {
+                $node['ancestors'] = $this->buildAncestorTrail($subject);
+            }
+
+            return $node;
+        });
+
+        return response()->json(['results' => $results]);
+    }
+
+    private function loadRootSubjects(?Collection $documentSubjects = null): Collection
+    {
+        $roots = Subject::whereIsRoot()->withCount('children')->orderBy('code')->limit(50)->get();
+
+        if ($documentSubjects && $documentSubjects->isNotEmpty()) {
+            $existingRootIds = $roots->pluck('id');
+            $neededRootIds = $documentSubjects->map(fn ($subject) => $subject?->getRoot()?->id)->filter()->unique()
+                ->diff($existingRootIds);
+
+            if ($neededRootIds->isNotEmpty()) {
+                $missingRoots = Subject::whereIn('id', $neededRootIds)->withCount('children')->orderBy('code')->get();
+
+                $roots = $roots->concat($missingRoots)->unique('id')->sortBy('code')->values();
+            }
+        }
+
+        return $roots;
+    }
+
+    private function formatSubjectsForTree(Collection $subjects): array
+    {
+        return $subjects->map(fn ($subject) => $this->formatSubjectNode($subject))->values()->all();
+    }
+
+    private function formatSubjectNode(Subject $subject): array
+    {
+        return [
+            'id' => $subject->id,
+            'name' => $subject->name,
+            'code' => $subject->code,
+            'parent_id' => $subject->parent_id,
+            'has_children' => ($subject->children_count ?? 0) > 0,
+        ];
+    }
+
+    private function buildAncestorTrail(Subject $subject): array
+    {
+        return $subject->ancestors()->map(fn ($ancestor) => $this->formatSubjectNode($ancestor))->values()->all();
+    }
+
+    private function buildSelectedPathPayload(int $selectedId, int $limit = 25): array
+    {
+        $subject = Subject::with('parent')->findOrFail($selectedId);
+
+        $path = $subject->ancestors()->push($subject);
+
+        $pathWithIndex = $path->values();
+
+        $prefetch = $pathWithIndex->map(function (Subject $node, int $index) use ($pathWithIndex, $limit) {
+            $preferredChild = $pathWithIndex[$index + 1] ?? null;
+
+            $childrenQuery = Subject::where('parent_id', $node->id)->withCount('children');
+
+            if ($preferredChild) {
+                $childrenQuery->orderByRaw('id = ? desc', [$preferredChild->id]);
+            }
+
+            $children = $childrenQuery->orderBy('code')->limit($limit)->get();
+
+            return [
+                'parent_id' => $node->id,
+                'children' => $children->map(fn ($child) => $this->formatSubjectNode($child))->values()->all(),
+            ];
+        })->values()->all();
+
+        return [
+            'path' => $path->map(fn ($node) => $this->formatSubjectNode($node))->values()->all(),
+            'prefetch' => $prefetch,
+        ];
     }
 }

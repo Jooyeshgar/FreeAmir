@@ -48,21 +48,7 @@
     <div class="min-h-96 overflow-y-auto">
         <div id="transactions" x-data="{ activeTab: {{ $total }} }">
             <template x-for="(transaction, index) in transactions" :key="transaction.id">
-                <div :class="{ 'active': activeTab === index }" class="transaction flex gap-2 items-center px-4 pb-3"
-                    @click="activeTab = index" x-data="{
-                        selectedName: transaction.subject,
-                        selectedCode: transaction.code,
-                        selectedId: transaction.subject_id,
-                    }">
-                    <input type="text" x-bind:value="transaction.transaction_id"
-                        x-bind:name="'transactions[' + index + '][transaction_id]'" hidden>
-                    <input type="text" x-bind:value="selectedCode" x-bind:name="'transactions[' + index + '][code]'"
-                        hidden>
-                    <input type="text" x-bind:value="selectedId"
-                        x-bind:name="'transactions[' + index + '][subject_id]'" hidden>
-                    <input type="text" x-bind:value="selectedName"
-                        x-bind:name="'transactions[' + index + '][subject]'" hidden>
-
+                <div :class="{ 'active': activeTab === index }" class="transaction flex gap-2 items-center px-4 pb-3" @click="activeTab = index">
                     <div class="relative flex-1 text-center max-w-8 pt-2 pb-2 transaction-count-container">
                         <span class="transaction-count block" x-text="index + 1"></span>
                         <button @click.stop="transactions.splice(index, 1)" type="button"
@@ -80,8 +66,23 @@
                             label_text_class="text-gray-500" label_class="w-full"
                             input_class="border-white value codeInput "></x-text-input>
                     </div>
-                    <div>
-                        <x-subject-select-box :subjects="$subjects"></x-subject-select-box>
+                    <div class="flex-1 min-w-80 max-w-80">
+                        <x-subject-search-select-box :subjects="$subjects" parentSelectable="true" x-model="subject-picked"
+                            x-init="selcetedId = transaction.subject_id; selectedName = transaction.subject; selectedCode = transaction.code;"
+                            @selected="
+                                selectedId = $event.detail.id;
+                                selectedName = $event.detail.name;
+                                selectedCode = $event.detail.code;
+                                transaction.subject_id = selectedId;
+                                transaction.subject = selectedName;
+                                transaction.code = selectedCode;
+                            "
+                            x-on:subject-picked="selectedId = $event.detail.id; selectedName = $event.detail.name; selectedCode = $event.detail.code" />
+
+                            <input type="text" x-bind:value="transaction.transaction_id" x-bind:name="'transactions[' + index + '][transaction_id]'" hidden>
+                            <input type="text" x-bind:value="selectedCode" x-bind:name="'transactions[' + index + '][code]'" hidden>
+                            <input type="text" x-bind:value="selectedId" x-bind:name="'transactions[' + index + '][subject_id]'" hidden>
+                            <input type="text" x-bind:value="selectedName" x-bind:name="'transactions[' + index + '][subject]'" hidden>
                     </div>
                     <div class="flex-1 w-[200px]">
                         <x-text-input x-bind:value="transaction.desc"
