@@ -6,6 +6,7 @@ use App\Models\Scopes\FiscalYearScope;
 use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class Subject extends Model
 {
@@ -89,6 +90,19 @@ class Subject extends Model
     public function getRoot()
     {
         return $this->hasParent() ? $this->parent->getRoot() : $this;
+    }
+
+    public function ancestors(): Collection
+    {
+        $ancestors = collect();
+
+        $current = $this->parent;
+        while ($current) {
+            $ancestors->prepend($current);
+            $current = $current->parent;
+        }
+
+        return $ancestors->values();
     }
 
     /**
