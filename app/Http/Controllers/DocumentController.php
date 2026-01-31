@@ -7,6 +7,8 @@ use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Services\DocumentService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 
 class DocumentController extends Controller
@@ -43,7 +45,7 @@ class DocumentController extends Controller
 
     public function create()
     {
-        $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->get();
+        $subjects = Subject::whereIsRoot()->with('children')->orderBy('code')->limit(15)->get();
 
         $transactions = old('transactions')
                     ? self::prepareTransactions(old('transactions'))
@@ -100,12 +102,55 @@ class DocumentController extends Controller
                 return redirect()->route('documents.index')->with('error', __('Cannot edit this document because it is linked to').' '.__(class_basename($document->documentable_type)).'.');
             }
 
+            $transactionModels = $document->transactions()->with('subject')->get();
+
             $transactions = old('transactions')
                     ? self::prepareTransactions(old('transactions'))
-                    : self::prepareTransactions($document->transactions);
+                    : self::prepareTransactions($transactionModels);
 
             $total = -1;
-            $subjects = Subject::all();
+
+            $subjectsById = $transactionModels->pluck('subject')->filter()->keyBy('id');
+
+            $tParentIds = $subjectsById->pluck('parent_id')->unique();
+            if ($subjectsById->isNotEmpty()) {
+                $siblings = Subject::query()->where(function ($q) use ($tParentIds) {
+                    $ids = $tParentIds->reject(null);
+                    if ($ids->isNotEmpty()) {
+                        $q->whereIn('parent_id', $ids);
+                    }
+                    if ($tParentIds->contains(null)) {
+                        $q->orWhereNull('parent_id');
+                    }
+                })->limit(5)->get();
+
+                foreach ($siblings as $sibling) {
+                    $subjectsById->put($sibling->id, $sibling);
+                }
+            }
+
+            $parentIdsToCheck = $subjectsById->pluck('parent_id')->filter()->unique();
+            while ($parentIdsToCheck->isNotEmpty()) {
+                $parents = Subject::whereIn('id', $parentIdsToCheck)->get();
+                if ($parents->isEmpty()) {
+                    break;
+                }
+
+                $parentIdsToCheck = collect();
+                foreach ($parents as $parent) {
+                    if (! $subjectsById->has($parent->id)) {
+                        $subjectsById->put($parent->id, $parent);
+                        if ($parent->parent_id) {
+                            $parentIdsToCheck->push($parent->parent_id);
+                        }
+                    }
+                }
+                $parentIdsToCheck = $parentIdsToCheck->unique();
+            }
+
+            $subjects = $subjectsById->values();
+            $subjects = $this->formatSubjects($subjects);
+
             $previousDocumentNumber = Document::where('number', '<', $document->number)->orderBy('number', 'desc')->first()->number ?? 0;
 
             return view('documents.edit', compact('previousDocumentNumber', 'document', 'subjects', 'transactions', 'total'));
@@ -202,7 +247,7 @@ class DocumentController extends Controller
     /**
      * Prepares a collection of transaction data for further display.
      *
-     * @param  array|\Illuminate\Support\Collection  $transactions
+     * @param  iterable  $transactions
      * @return \Illuminate\Support\Collection
      */
     private static function prepareTransactions($transactions)
@@ -223,5 +268,70 @@ class DocumentController extends Controller
                 'debit' => $isModel ? ($t->debit ?? 0) : ($t['debit'] ?? 0),
             ];
         });
+    }
+
+    public function searchSubjects(Request $request)
+    {
+        $validated = $request->validate([
+            'q' => 'required|string|min:0|max:100',
+        ]);
+
+        $q = $validated['q'];
+
+        $matched = Subject::where('name', 'like', "%{$q}%")->orderBy('code')->limit(25)->get();
+
+        if ($matched->isEmpty()) {
+            return response()->json([]);
+        }
+
+        $subjects = $this->collectWithParents($matched);
+        $subjects->load(['parent', 'children']);
+
+        return response()->json($this->formatSubjects($subjects));
+    }
+
+    private function collectWithParents(Collection $subjects): Collection
+    {
+        $result = $subjects->keyBy('id');
+
+        $parentIds = $subjects->pluck('parent_id')->filter()->unique()->values();
+
+        while ($parentIds->isNotEmpty()) {
+            $parents = Subject::whereIn('id', $parentIds)->get();
+
+            foreach ($parents as $parent) {
+                $result->put($parent->id, $parent);
+            }
+
+            $parentIds = $parents->pluck('parent_id')->filter()->unique()->reject(fn ($id) => $result->has($id))->values();
+        }
+
+        return $result->values();
+    }
+
+    private function formatSubjects(Collection $subjects): array
+    {
+        $map = [];
+        $tree = [];
+
+        foreach ($subjects as $subject) {
+            $map[$subject->id] = [
+                'id' => $subject->id,
+                'name' => $subject->name,
+                'code' => $subject->code,
+                'parent_id' => $subject->parent_id,
+                'children' => [],
+            ];
+        }
+
+        foreach ($map as $id => &$node) {
+            if ($node['parent_id'] && isset($map[$node['parent_id']])) {
+                $map[$node['parent_id']]['children'][] = &$node;
+            } else {
+                $tree[] = &$node;
+            }
+        }
+
+        return $tree;
     }
 }
