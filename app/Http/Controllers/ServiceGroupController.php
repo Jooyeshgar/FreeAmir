@@ -14,7 +14,7 @@ class ServiceGroupController extends Controller
 
     public function index()
     {
-        $serviceGroups = ServiceGroup::paginate(12);
+        $serviceGroups = ServiceGroup::with('subject', 'cogsSubject')->paginate(12);
 
         return view('serviceGroups.index', compact('serviceGroups'));
     }
@@ -30,6 +30,8 @@ class ServiceGroupController extends Controller
 
     public function show(ServiceGroup $serviceGroup)
     {
+        $serviceGroup->load('subject', 'cogsSubject');
+
         return view('serviceGroups.show', compact('serviceGroup'));
     }
 

@@ -32,6 +32,8 @@
                 @can('reports.ledger')
                     <x-stat-card-link :title="__('Subject Balance')" :value="formatNumber(\App\Services\SubjectService::sumSubject($serviceGroup->subject) ?? 0)" :link="route('transactions.index', ['subject_id' => $serviceGroup->subject->id])" :currency="config('amir.currency') ?? __('Rial')" type="success"
                         icon="income" />
+                    <x-stat-card-link :title="__('COGS Subject')" :value="formatNumber(\App\Services\SubjectService::sumSubject($serviceGroup->cogsSubject) ?? 0)" :link="route('transactions.index', ['subject_id' => $serviceGroup->cogsSubject->id])" :currency="config('amir.currency') ?? __('Rial')" type="error"
+                        icon="cogs" />
                 @endcan
             </div>
 
