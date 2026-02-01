@@ -278,14 +278,15 @@ class DocumentController extends Controller
 
         $q = $validated['q'];
 
-        $matched = Subject::where('name', 'like', "%{$q}%")->orderBy('code')->limit(25)->get();
+        $matched = Subject::query()->select(['id', 'name', 'code', 'parent_id'])->where('name', 'like', "%{$q}%")
+            ->orderBy('code')->limit(25)->get();
 
         if ($matched->isEmpty()) {
             return response()->json([]);
         }
 
+        // Include ancestors so the client can render a full tree
         $subjects = $this->collectWithParents($matched);
-        $subjects->load(['parent', 'children']);
 
         return response()->json($this->formatSubjects($subjects));
     }
@@ -293,11 +294,11 @@ class DocumentController extends Controller
     private function collectWithParents(Collection $subjects): Collection
     {
         $result = $subjects->keyBy('id');
-
         $parentIds = $subjects->pluck('parent_id')->filter()->unique()->values();
 
         while ($parentIds->isNotEmpty()) {
-            $parents = Subject::whereIn('id', $parentIds)->get();
+            // Iteratively load only missing parents
+            $parents = Subject::query()->select(['id', 'name', 'code', 'parent_id'])->whereIn('id', $parentIds)->get();
 
             foreach ($parents as $parent) {
                 $result->put($parent->id, $parent);
@@ -314,6 +315,7 @@ class DocumentController extends Controller
         $map = [];
         $tree = [];
 
+        // Build a lookup table first for quick parent->child attachment
         foreach ($subjects as $subject) {
             $map[$subject->id] = [
                 'id' => $subject->id,
@@ -324,6 +326,7 @@ class DocumentController extends Controller
             ];
         }
 
+        // Create the tree in one pass without extra DB queries
         foreach ($map as $id => &$node) {
             if ($node['parent_id'] && isset($map[$node['parent_id']])) {
                 $map[$node['parent_id']]['children'][] = &$node;
