@@ -14,7 +14,7 @@ class ServiceService
 
         $service = Service::create($data);
 
-        $this->syncSubject($service);
+        $this->syncSubjects($service);
 
         return $service;
     }
@@ -24,7 +24,7 @@ class ServiceService
         $service->fill($data);
         $service->save();
 
-        $this->syncSubject($service);
+        $this->syncSubjects($service);
 
         return $service;
     }
@@ -38,10 +38,13 @@ class ServiceService
     public function deleteSubjects(Service $service): void
     {
         $service->subject?->delete();
+        $service->cogsSubject?->delete();
     }
 
-    protected function syncSubject(Service $service): void
+    protected function syncSubjects(Service $service): void
     {
+        $service->loadMissing('subject', 'cogsSubject');
+
         $group = $service->serviceGroup;
         $companyId = $service->company_id ?? $group?->company_id ?? getActiveCompany();
 
@@ -49,45 +52,69 @@ class ServiceService
             throw new \RuntimeException('Unable to determine company for service subject synchronization.');
         }
 
-        $column = 'subject_id';
-        $relation = 'subject';
+        $subjectConfigs = [
+            'subject_id' => [
+                'relation' => 'subject',
+                'parent_column' => 'subject_id',
+            ],
+            'cogs_subject_id' => [
+                'relation' => 'cogsSubject',
+                'parent_column' => 'cogs_subject_id',
+            ],
+        ];
 
-        $parentId = $group->subject_id;
-        $subject = $service->$relation;
+        $updatedIds = [];
 
-        if (! $subject) {
-            $subject = $this->subjectService->createSubject([
-                'name' => $service->name,
-                'parent_id' => $parentId,
-                'company_id' => $companyId,
-            ]);
+        foreach ($subjectConfigs as $column => $settings) {
+            $relation = $settings['relation'];
+            $subject = $service->$relation;
+            $parentId = $group?->{$settings['parent_column']} ?? null;
+            $targetName = $service->name;
+
+            if (! $subject) {
+                $subject = $this->subjectService->createSubject([
+                    'name' => $targetName,
+                    'parent_id' => $parentId,
+                    'company_id' => $companyId,
+                ]);
+            }
+
+            $needsSave = false;
+
+            if ($subject->name !== $targetName) {
+                $subject->name = $targetName;
+                $needsSave = true;
+            }
+
+            $normalizedParentId = $parentId ?: null;
+            if ($subject->parent_id !== $normalizedParentId) {
+                $subject->parent_id = $normalizedParentId;
+                $needsSave = true;
+            }
+
+            if ($subject->subjectable_id !== $service->id || $subject->subjectable_type !== $service->getMorphClass()) {
+                $subject->subjectable()->associate($service);
+                $needsSave = true;
+            }
+
+            if ($needsSave) {
+                $subject->save();
+            }
+
+            $service->setRelation($relation, $subject);
+            $updatedIds[$column] = $subject->id;
         }
 
-        $needsSave = false;
+        $dirtyIds = [];
 
-        if ($subject->name !== $service->name) {
-            $subject->name = $service->name;
-            $needsSave = true;
+        foreach ($updatedIds as $column => $id) {
+            if ($id !== $service->$column) {
+                $dirtyIds[$column] = $id;
+            }
         }
 
-        if ($parentId && $subject->parent_id !== $parentId) {
-            $subject->parent_id = $parentId;
-            $needsSave = true;
-        }
-
-        if ($subject->subjectable_id !== $service->id || $subject->subjectable_type !== $service->getMorphClass()) {
-            $subject->subjectable()->associate($service);
-            $needsSave = true;
-        }
-
-        if ($needsSave) {
-            $subject->save();
-        }
-
-        $service->setRelation($relation, $subject);
-
-        if ($subject->id !== $service->$column) {
-            $service->updateQuietly([$column => $subject->id]);
+        if ($dirtyIds) {
+            $service->updateQuietly($dirtyIds);
         }
     }
 }

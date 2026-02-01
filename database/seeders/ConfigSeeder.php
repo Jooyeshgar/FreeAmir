@@ -28,7 +28,8 @@ class ConfigSeeder extends Seeder
             ['type' => 3, 'category' => 1, 'key' => 'buy_vat', 'value' => '40', 'desc' => 'مالیات خرید', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'inventory', 'value' => '9', 'desc' => 'موجودی کالا', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'sales_returns', 'value' => '43', 'desc' => 'برگشت از فروش', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'cost_of_goods_sold', 'value' => '102', 'desc' => 'بهای تمام شده کالا فروش رقته', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'cost_of_goods_sold', 'value' => '105', 'desc' => 'بهای تمام شده کالا فروش رقته', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'cogs_service', 'value' => '106', 'desc' => 'بهای تمام شده خدمات', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'sales_revenue', 'value' => '104', 'desc' => 'درآمد فروش', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'service_revenue', 'value' => '103', 'desc' => 'درآمد خدمات', 'company_id' => 1],
         ];
