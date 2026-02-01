@@ -1,7 +1,7 @@
 <x-app-layout :title="__('Invoice') . ' ' . $invoice->invoice_type->label() . ' #' . formatDocumentNumber($invoice->number ?? $invoice->id)">
 
     <div class="card bg-base-100 shadow-xl">
-        <div class="card-header bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 px-6 py-4 rounded-t-2xl border-b-2 border-primary/20">
+        <div class="card-header bg-gradient-to-r from-blue-50 to-indigo-50 dark:text-white dark:from-gray-800 dark:to-gray-700 px-6 py-4 rounded-t-2xl border-b-2 border-primary/20">
             <div>
                 <h2 class="text-2xl font-bold text-gray-800 dark:text-white">
                     {{ __('Invoice') }} {{ $invoice->invoice_type->label() }}
