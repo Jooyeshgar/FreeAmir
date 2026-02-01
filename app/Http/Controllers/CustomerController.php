@@ -2,59 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreCustomerRequest;
 use App\Models;
 use App\Services\CustomerService;
 use App\Services\SubjectService;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class CustomerController extends Controller
 {
     public function __construct(private readonly CustomerService $service) {}
-
-    /**
-     * Build validation rules for both store and update actions.
-     * If you need per-record exceptions (e.g. unique on update),
-     * use the optional $customer parameter to adjust rules.
-     */
-    private function rules(Request $request, ?Models\Customer $customer = null): array
-    {
-
-        return [
-            'name' => [
-                'required',
-                'max:100',
-                'string',
-                'regex:/^[\w\d\s]*$/u',
-                Rule::unique('customers', 'name')
-                    ->where('group_id', $request->input('group_id'))
-                    ->ignore(optional($customer)->id),
-            ],
-            'phone' => [
-                'nullable',
-                'numeric',
-                'regex:/^09\d{9}$/',
-                Rule::unique('customers', 'phone')->ignore(optional($customer)->id),
-            ],
-            'fax' => 'nullable|numeric',
-            'address' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
-            'postal_code' => 'nullable|integer',
-            'email' => 'nullable|email',
-            'ecnmcs_code' => 'nullable|integer',
-            'personal_code' => 'nullable|integer',
-            'web_page' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
-            'responsible' => 'nullable',
-            'group_id' => 'required|exists:customer_groups,id|integer',
-            'desc' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
-            'rep_via_email' => 'nullable|in:on,off',
-            'acc_name_1' => 'nullable|string|max:50|regex:/^[\w\d\s]*$/u',
-            'acc_no_1' => 'nullable|string|max:50|regex:/^[\w\d\s]*$/u',
-            'acc_bank_1' => 'nullable|string|max:50|regex:/^[\w\d\s]*$/u',
-            'acc_name_2' => 'nullable|string|max:50|regex:/^[\w\d\s]*$/u',
-            'acc_no_2' => 'nullable|string|max:50|regex:/^[\w\d\s]*$/u',
-            'acc_bank_2' => 'nullable|string|max:50|regex:/^[\w\d\s]*$/u',
-        ];
-    }
 
     public function index(Request $request)
     {
@@ -80,11 +36,9 @@ class CustomerController extends Controller
         return view('customers.create', compact('groups'));
     }
 
-    public function store(Request $request)
+    public function store(StoreCustomerRequest $request)
     {
-        $validatedData = $request->validate($this->rules($request));
-
-        $validatedData['rep_via_email'] = $request->has('rep_via_email') ? 1 : 0;
+        $validatedData = $request->validated();
 
         $this->service->create($validatedData);
 
@@ -98,11 +52,9 @@ class CustomerController extends Controller
         return view('customers.edit', compact('customer', 'groups'));
     }
 
-    public function update(Request $request, Models\Customer $customer)
+    public function update(StoreCustomerRequest $request, Models\Customer $customer)
     {
-        $validatedData = $request->validate($this->rules($request, $customer));
-
-        $validatedData['rep_via_email'] = $request->has('rep_via_email') ? 1 : 0;
+        $validatedData = $request->validated();
 
         $this->service->update($customer, $validatedData);
 
