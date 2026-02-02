@@ -42,7 +42,7 @@ enum ConfigTitle: string
             self::SALES_RETURNS => __('Sales Returns'),
             self::SALES_REVENUE => __('Sales Revenue'),
             self::SERVICE_REVENUE => __('Service Revenue'),
-            self::COGS_SERVICE => __('COGS Service'),
+            self::COGS_SERVICE => __('Cost of Services'),
         };
     }
 }

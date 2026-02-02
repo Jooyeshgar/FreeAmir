@@ -45,10 +45,8 @@
                     </div>
                 </div>
                 @can('reports.ledger')
-                    <x-stat-card-link :title="__('Income Subject')" :value="formatNumber(\App\Services\SubjectService::sumSubject($service->subject))" :link="route('transactions.index', ['subject_id' => $service->subject->id])" :currency="config('amir.currency') ?? __('Rial')" type="success"
-                        icon="income" />
-                    <x-stat-card-link :title="__('COGS Subject')" :value="formatNumber(\App\Services\SubjectService::sumSubject($service->cogsSubject))" :link="route('transactions.index', ['subject_id' => $service->cogsSubject->id])" :currency="config('amir.currency') ?? __('Rial')" type="error"
-                        icon="cogs" />
+                    <x-stat-card-link :title="__('Income Subject')" :value="formatNumber(\App\Services\SubjectService::sumSubject($service->subject))" :link="route('transactions.index', ['subject_id' => $service->subject->id])" :currency="config('amir.currency') ?? __('Rial')" type="success" icon="income" />
+                    <x-stat-card-link :title="__('Cost of Services Subject')" :value="formatNumber(\App\Services\SubjectService::sumSubject($service->cogsSubject))" :link="route('transactions.index', ['subject_id' => $service->cogsSubject->id])" :currency="config('amir.currency') ?? __('Rial')" type="error" icon="cogs" />
                 @endcan
             </div>
 
