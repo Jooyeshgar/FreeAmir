@@ -91,7 +91,7 @@ class InvoiceService
             $invoiceData['creator_id'] = $user->id;
             $invoiceData['date'] = $date;
             $invoiceData['title'] = $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? ''));
-            $invoiceData['status'] = InvoiceStatus::PENDING;
+            $invoiceData['status'] = InvoiceStatus::PRE_INVOICE;
 
             $createdInvoice = Invoice::create($invoiceData);
 
@@ -292,10 +292,23 @@ class InvoiceService
             match ($status) {
                 'approved' => $this->approveInvoice($invoice),
                 'unapproved' => $this->unapproveInvoice($invoice),
+                'rejected' => $this->rejectInvoice($invoice),
+                'ready_to_approve' => $this->readyToApproveInvoice($invoice),
                 default => null,
             };
         });
+    }
 
+    private function rejectInvoice(Invoice $invoice): void
+    {
+        $invoice->status = InvoiceStatus::REJECTED;
+        $invoice->update();
+    }
+
+    private function readyToApproveInvoice(Invoice $invoice): void
+    {
+        $invoice->status = InvoiceStatus::READY_TO_APPROVE;
+        $invoice->update();
     }
 
     /**

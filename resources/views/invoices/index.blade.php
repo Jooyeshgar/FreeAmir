@@ -77,7 +77,7 @@
                 </form>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
                 @foreach (\App\Enums\InvoiceStatus::cases() as $status)
                     @php
                         $count = $statusCounts->get($status->value, 0);
@@ -90,8 +90,10 @@
                         $type = match ($status) {
                             \App\Enums\InvoiceStatus::APPROVED => 'success',
                             \App\Enums\InvoiceStatus::UNAPPROVED => 'warning',
-                            \App\Enums\InvoiceStatus::PENDING => 'info',
+                            \App\Enums\InvoiceStatus::PRE_INVOICE => 'info',
                             \App\Enums\InvoiceStatus::APPROVED_INACTIVE => 'error',
+                            \App\Enums\InvoiceStatus::REJECTED => 'error',
+                            \App\Enums\InvoiceStatus::READY_TO_APPROVE => 'info',
                         };
 
                         $invoiceTypeToPast = match (request('invoice_type')) {
@@ -168,26 +170,45 @@
                                 {{ $invoice->status?->label() ?? '' }}
                             </td>
                             <td class="px-4 py-2">
+                                @php
+                                    $canApprove =
+                                        $invoice->status->isReadyToApprove() || $invoice->status->isUnapproved();
+                                    $canUnapprove = $invoice->status->isApproved();
+                                    $canChangeStatus = $canApprove || $canUnapprove;
+                                @endphp
                                 <a href="{{ route('invoices.show', $invoice) }}" target="_blank" rel="noopener"
                                     class="btn btn-sm btn-info">{{ __('Show') }}</a>
                                 <a href="{{ route('invoices.print', $invoice) }}" target="_blank" rel="noopener"
                                     class="btn btn-sm btn-info">{{ __('Print') }}</a>
 
                                 @can('invoices.approve')
-                                    @if ($invoice->changeStatusValidation->hasErrors())
-                                        <a data-tip="{{ $invoice->changeStatusValidation->toText() }}"
-                                            href="{{ route('invoices.conflicts', $invoice) }}"
-                                            class="btn btn-sm btn-accent inline-flex tooltip">
-                                            {{ __('Fix Conflict') }}
+                                    @if ($invoice->status->isPreInvoice() || $invoice->status->isRejected())
+                                        <a href="{{ route('invoices.change-status', [$invoice, 'ready_to_approve']) }}"
+                                            class="btn btn-sm btn-success">{{ __('Ready to approve') }}
                                         </a>
-                                    @else
-                                        <a x-data="{}"
-                                            @if ($invoice->changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js($invoice->changeStatusValidation->toText()))) { window.location.href = '{{ route('invoices.change-status', [$invoice, $invoice->status->isApproved() ? 'unapproved' : 'approved']) }}?confirm=1' }" @endif
-                                            data-tip="{{ $invoice->changeStatusValidation->toText() }}"
-                                            href="{{ route('invoices.change-status', [$invoice, $invoice->status->isApproved() ? 'unapproved' : 'approved']) }}"
-                                            class="btn btn-sm inline-flex tooltip {{ $invoice->status->isApproved() ? 'btn-warning' : 'btn-success' }} {{ $invoice->changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
-                                            {{ $invoice->status->isApproved() ? __('Unapprove') : __('Approve') }}
+                                    @endif
+
+                                    @if ($invoice->status->isPreInvoice())
+                                        <a href="{{ route('invoices.change-status', [$invoice, 'rejected']) }}"
+                                            class="btn btn-sm btn-error">{{ __('Reject') }}
                                         </a>
+                                    @endif
+
+                                    @if ($canChangeStatus)
+                                        @if ($canApprove && $invoice->changeStatusValidation->hasErrors())
+                                            <a data-tip="{{ $invoice->changeStatusValidation->toText() }}"
+                                                href="{{ route('invoices.conflicts', $invoice) }}"
+                                                class="btn btn-sm btn-accent inline-flex tooltip">{{ __('Fix Conflict') }}
+                                            </a>
+                                        @else
+                                            <a x-data="{}"
+                                                @if ($canApprove && $invoice->changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js($invoice->changeStatusValidation->toText()))) { window.location.href = '{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}?confirm=1' }" @endif
+                                                data-tip="{{ $invoice->changeStatusValidation->toText() }}"
+                                                href="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}"
+                                                class="btn btn-sm inline-flex tooltip {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $invoice->changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
+                                                {{ $canUnapprove ? __('Unapprove') : __('Approve') }}
+                                            </a>
+                                        @endif
                                     @endif
                                 @endcan
 

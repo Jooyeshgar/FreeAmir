@@ -26,7 +26,7 @@
                     {{ $invoice->invoice_type->label() }}
                 </span>
                 <span
-                    class="badge badge-lg {{ $invoice->status->isApproved() ? 'badge-primary' : 'badge-warning' }} gap-2">
+                    class="badge badge-lg {{ $invoice->status->isApproved() ? 'badge-primary' : ($invoice->status->isRejected() ? 'badge-error' : 'badge-warning') }} gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -378,6 +378,11 @@
                 </a>
 
                 <div class="flex flex-wrap gap-2">
+                    @php
+                        $canApprove = $invoice->status->isReadyToApprove() || $invoice->status->isUnapproved();
+                        $canUnapprove = $invoice->status->isApproved();
+                        $canChangeStatus = $canApprove || $canUnapprove;
+                    @endphp
                     <a href="{{ route('invoices.print', $invoice) }}" class="btn btn-outline gap-2" target="_blank"
                         rel="noopener">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
@@ -389,20 +394,36 @@
                     </a>
 
                     @can('invoices.approve')
-                        @if ($changeStatusValidation->hasErrors())
-                            <a data-tip="{{ $changeStatusValidation->toText() }}"
-                                href="{{ route('invoices.conflicts', $invoice) }}"
-                                class="btn btn-accent inline-flex tooltip">
-                                {{ __('Fix Conflict') }}
+                        @if ($invoice->status->isPreInvoice() || $invoice->status->isRejected())
+                            <a href="{{ route('invoices.change-status', [$invoice, 'ready_to_approve']) }}"
+                                class="btn btn-success gap-2">
+                                {{ __('Ready to approve') }}
                             </a>
-                        @else
-                            <a x-data="{}"
-                                @if ($changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js('Did you read the warnings?'))) { window.location.href = '{{ route('invoices.change-status', [$invoice, $invoice->status->isApproved() ? 'unapproved' : 'approved']) }}?confirm=1' }" @endif
-                                data-tip="{{ $changeStatusValidation->toText() ?? '' }}"
-                                href="{{ route('invoices.change-status', [$invoice, $invoice->status->isApproved() ? 'unapproved' : 'approved']) }}"
-                                class="btn btn-primary gap-2 {{ $invoice->status->isApproved() ? 'btn-warning' : 'btn-success' }} {{ $changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
-                                {{ $invoice->status->isApproved() ? __('Unapprove') : __('Approve') }}
+                        @endif
+
+                        @if ($invoice->status->isPreInvoice())
+                            <a href="{{ route('invoices.change-status', [$invoice, 'rejected']) }}"
+                                class="btn btn-error gap-2">
+                                {{ __('Reject') }}
                             </a>
+                        @endif
+
+                        @if ($canChangeStatus)
+                            @if ($canApprove && $changeStatusValidation->hasErrors())
+                                <a data-tip="{{ $changeStatusValidation->toText() }}"
+                                    href="{{ route('invoices.conflicts', $invoice) }}"
+                                    class="btn btn-accent inline-flex tooltip">
+                                    {{ __('Fix Conflict') }}
+                                </a>
+                            @else
+                                <a x-data="{}"
+                                    @if ($canApprove && $changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js('Did you read the warnings?'))) { window.location.href = '{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}?confirm=1' }" @endif
+                                    data-tip="{{ $changeStatusValidation->toText() ?? '' }}"
+                                    href="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}"
+                                    class="btn btn-primary gap-2 {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
+                                    {{ $canUnapprove ? __('Unapprove') : __('Approve') }}
+                                </a>
+                            @endif
                         @endif
                     @endcan
 
