@@ -144,12 +144,12 @@ class InvoiceController extends Controller
             auth()->user()->can('invoices.approve');
         }
 
-        $result = $this->invoiceService->createInvoice(auth()->user(), $invoiceData, $items, $approved);
+        $invoice = $this->invoiceService->createInvoice(auth()->user(), $invoiceData, $items, $approved);
 
-        [$msgType, $msg] = $this->invoiceMessage($result, 'created', $approved);
+        [$msgType, $msg] = $this->invoiceMessage($invoice, 'created', $approved);
 
         return redirect()
-            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type])
+            ->route('invoices.index', ['invoice_type' => $invoice->invoice_type])
             ->with($msgType, $msg);
     }
 
@@ -251,12 +251,12 @@ class InvoiceController extends Controller
             auth()->user()->can('invoices.approve');
         }
 
-        $result = $this->invoiceService->updateInvoice($invoice->id, $invoiceData, $items, $approved);
+        $invoice = $this->invoiceService->updateInvoice($invoice->id, $invoiceData, $items, $approved);
 
-        [$msgType, $msg] = $this->invoiceMessage($result, 'updated', $approved);
+        [$msgType, $msg] = $this->invoiceMessage($invoice, 'updated', $approved);
 
         return redirect()
-            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type])
+            ->route('invoices.index', ['invoice_type' => $invoice->invoice_type])
             ->with($msgType, $msg);
     }
 
@@ -275,7 +275,7 @@ class InvoiceController extends Controller
         return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('info', __('Invoice deleted successfully.'));
     }
 
-    private function invoiceMessage(array $result, string $action = 'created', bool $approved = false)
+    private function invoiceMessage(Invoice $invoice, string $action = 'created', bool $approved = false)
     {
         if (! $approved) {
             return [
@@ -284,7 +284,7 @@ class InvoiceController extends Controller
             ];
         }
 
-        $documentMissing = empty($result['document']);
+        $documentMissing = empty($invoice->document);
 
         return [
             $documentMissing ? 'warning' : 'success',

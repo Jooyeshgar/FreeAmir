@@ -27,64 +27,35 @@ class InvoiceService
      *
      * @throws InvoiceServiceException
      */
-    public static function createInvoice(User $user, array $invoiceData, array $items = [], bool $approved = false): array
+    public static function createInvoice(User $user, array $invoiceData, array $items = [], bool $approved = false): Invoice
     {
         $date = $invoiceData['date'] ?? now()->toDateString();
 
         $transactionBuilder = new InvoiceTransactionBuilder($items, $invoiceData);
         $buildResult = $transactionBuilder->build();
 
-        $createdDocument = null;
-        $createdInvoice = self::createInvoiceWithoutApproval($user, $invoiceData, $items, $buildResult, $date);
+        $invoice = self::createInvoiceWithoutApproval($user, $invoiceData, $items, $buildResult, $date);
 
         if ($approved) {
 
-            if (! self::getChangeStatusValidation($createdInvoice)->canProceed) {
-                return [
-                    'document' => null,
-                    'invoice' => $createdInvoice,
-                ];
+            if (! self::getChangeStatusValidation($invoice)->canProceed) {
+                return $invoice;
             }
 
-            $transactions = $buildResult['transactions'];
-
-            $documentData = [
-                'date' => $date,
-                'title' => $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? '')),
-                'number' => $invoiceData['document_number'] ?? null,
-            ];
-
-            DB::transaction(function () use ($documentData, $user, $transactions, $invoiceData, $items, &$createdDocument, &$createdInvoice) {
-                $createdDocument = DocumentService::createDocument($user, $documentData, $transactions);
-
-                $invoiceData['document_id'] = $createdDocument->id;
-                $invoiceData['status'] = InvoiceStatus::APPROVED;
-
-                $createdInvoice->update($invoiceData);
-
-                DocumentService::syncDocumentable($createdDocument, $createdInvoice);
-
-                ProductService::addProductsQuantities($items, $createdInvoice->invoice_type);
-                self::syncInvoiceItems($createdInvoice, $items);
-
-                $createdInvoice->refresh();
-                CostOfGoodsService::updateProductsAverageCost($createdInvoice);
-
-                self::syncCOGAfterForInvoiceItems($createdInvoice);
+            DB::transaction(function () use ($invoiceData, &$invoice) {
+                $invoiceData['status'] = InvoiceStatus::READY_TO_APPROVE;
+                $invoice->update($invoiceData);
             });
         }
 
-        return [
-            'document' => $createdDocument,
-            'invoice' => $createdInvoice,
-        ];
+        return $invoice;
     }
 
     private static function createInvoiceWithoutApproval(User $user, array $invoiceData, array $items, array $buildResult, string $date)
     {
         $createdInvoice = null;
 
-        DB::transaction(function () use ($user, $invoiceData, $items, $buildResult, $date, &$createdDocument, &$createdInvoice) {
+        DB::transaction(function () use ($user, $invoiceData, $items, $buildResult, $date, &$createdInvoice) {
             $invoiceData['document_id'] = null;
             $invoiceData['vat'] = $buildResult['totalVat'];
             $invoiceData['amount'] = $buildResult['totalAmount'];
@@ -108,7 +79,7 @@ class InvoiceService
      *
      * @throws InvoiceServiceException
      */
-    public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = [], bool $approved = false): array
+    public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = [], bool $approved = false): Invoice
     {
         $invoice = Invoice::findOrFail($invoiceId);
 
@@ -117,46 +88,25 @@ class InvoiceService
         $transactionBuilder = new InvoiceTransactionBuilder($items, $invoiceData);
         $buildResult = $transactionBuilder->build();
 
-        $createdDocument = null;
         $invoice = self::updateInvoiceWithoutApproval($invoice, $invoiceData, $items, $buildResult);
 
         if ($approved) {
 
             if (! self::getChangeStatusValidation($invoice)->canProceed) {
-                return [
-                    'document' => null,
-                    'invoice' => $invoice,
-                ];
+                return $invoice;
             }
 
-            DB::transaction(function () use ($invoice, $invoiceData, $items, &$createdDocument) {
-                $createdDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
-
-                $invoiceData['status'] = InvoiceStatus::APPROVED;
-                $invoiceData['document_id'] = $createdDocument->id;
+            DB::transaction(function () use ($invoice, $invoiceData) {
+                $invoiceData['status'] = InvoiceStatus::READY_TO_APPROVE;
                 unset($invoiceData['document_number']); // Don't update invoice with document_number
-
                 $invoice->update($invoiceData);
-
-                // Add new quantities
-                ProductService::addProductsQuantities($items, $invoice->invoice_type);
-
-                self::syncInvoiceItems($invoice, $items);
-
-                $invoice->refresh();
-
-                CostOfGoodsService::updateProductsAverageCost($invoice);
-                self::syncCOGAfterForInvoiceItems($invoice);
             });
         }
 
-        return [
-            'document' => $createdDocument,
-            'invoice' => $invoice,
-        ];
+        return $invoice;
     }
 
-    private static function updateInvoiceWithoutApproval(Invoice $invoice, array $invoiceData, array $items, array $buildResult, bool $approved = false)
+    private static function updateInvoiceWithoutApproval(Invoice $invoice, array $invoiceData, array $items, array $buildResult): Invoice
     {
         DB::transaction(function () use ($invoice, $invoiceData, $items, $buildResult) {
             $invoiceData['vat'] = $buildResult['totalVat'];
