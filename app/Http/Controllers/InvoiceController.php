@@ -146,11 +146,9 @@ class InvoiceController extends Controller
 
         $invoice = $this->invoiceService->createInvoice(auth()->user(), $invoiceData, $items, $approved);
 
-        [$msgType, $msg] = $this->invoiceMessage($invoice, 'created', $approved);
-
         return redirect()
             ->route('invoices.index', ['invoice_type' => $invoice->invoice_type])
-            ->with($msgType, $msg);
+            ->with('success', __('Invoice created successfully.'));
     }
 
     public function show(Invoice $invoice)
@@ -253,11 +251,9 @@ class InvoiceController extends Controller
 
         $invoice = $this->invoiceService->updateInvoice($invoice->id, $invoiceData, $items, $approved);
 
-        [$msgType, $msg] = $this->invoiceMessage($invoice, 'updated', $approved);
-
         return redirect()
             ->route('invoices.index', ['invoice_type' => $invoice->invoice_type])
-            ->with($msgType, $msg);
+            ->with('success', __('Invoice updated successfully.'));
     }
 
     public function destroy(Invoice $invoice)
@@ -273,27 +269,6 @@ class InvoiceController extends Controller
         InvoiceService::deleteInvoice($invoice->id);
 
         return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('info', __('Invoice deleted successfully.'));
-    }
-
-    private function invoiceMessage(Invoice $invoice, string $action = 'created', bool $approved = false)
-    {
-        if (! $approved) {
-            return [
-                'success',
-                __("Invoice {$action} successfully."),
-            ];
-        }
-
-        $documentMissing = empty($invoice->document);
-
-        return [
-            $documentMissing ? 'warning' : 'success',
-            __("Invoice {$action} successfully.")
-                .($documentMissing
-                    ? ' '.__('but it could not be approved due to validation constraints.')
-                    : ''
-                ),
-        ];
     }
 
     public function searchCustomer(Request $request)
