@@ -15,6 +15,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::resource('subjects', Controllers\SubjectController::class);
     Route::post('subjects/search', [Controllers\SubjectController::class, 'search'])->name('subjects.search');
     Route::resource('documents', Controllers\DocumentController::class);
+    Route::get('documents/{document}/print', [Controllers\DocumentController::class, 'print'])->name('documents.print');
     Route::get('documents/{document}/duplicate', [Controllers\DocumentController::class, 'duplicate'])->name('documents.duplicate');
     Route::resource('transactions', Controllers\TransactionController::class)->only(['index', 'show']);
     Route::get('products/search-product-group', [Controllers\ProductController::class, 'searchProductGroup'])->name('products.search-product-group');
@@ -80,12 +81,12 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::delete('{comment}', 'destroy')->name('destroy');
     });
 
-    Route::prefix('document-files')->as('document-files.')->controller(DocumentFileController::class)->group(function () {
-        Route::get('{document}', 'index')->name('index');
+    Route::prefix('documents/{document}/document-files')->as('document-files.')->controller(DocumentFileController::class)->group(function () {
+        Route::get('', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::post('store', 'store')->name('store');
         Route::get('{documentFile}/edit', 'edit')->name('edit');
         Route::put('{documentFile}', 'update')->name('update');
-        Route::get('{document}/create', 'create')->name('create');
-        Route::post('/', 'store')->name('store');
         Route::delete('{documentFile}', 'destroy')->name('destroy');
         Route::get('{documentFile}/view', 'view')->name('view');
         Route::get('{documentFile}/download', 'download')->name('download');
