@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Create Invoice') }}
+            {{ $isServiceBuy ? __('Create') . ' ' . __('Service Buy Invoice') : __('Create Invoice') }}
         </h2>
     </x-slot>
 
@@ -9,7 +9,8 @@
         <form action="{{ route('invoices.store') }}" method="POST">
             @csrf
             <div class="card-body">
-                <h2 class="card-title">{{ __('Add Invoice') . ' ' . __($invoice_type) }}</h2>
+                <h2 class="card-title">
+                    {{ __('Add') . ' ' . ($isServiceBuy ? __('Service Buy Invoice') : __($invoice_type)) }}</h2>
                 <x-show-message-bags />
 
                 @php($invoice = $invoice ?? new \App\Models\Invoice())

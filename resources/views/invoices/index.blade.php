@@ -9,9 +9,15 @@
         <div class="card-body">
             <div class="card-actions flex items-center gap-3">
                 @if (request('invoice_type') === 'buy')
-                    <a href="{{ route('invoices.create', ['invoice_type' => 'buy']) }}" class="btn btn-primary">
-                        {{ __('Create buy invoice') }}
-                    </a>
+                    @if ($service_buy)
+                        <a href="{{ route('invoices.create', ['invoice_type' => 'buy', 'service_buy' => '1']) }}" class="btn btn-primary">
+                            {{ __('Service Buy Invoice') }}
+                        </a>
+                    @else
+                        <a href="{{ route('invoices.create', ['invoice_type' => 'buy']) }}" class="btn btn-primary">
+                            {{ __('Create buy invoice') }}
+                        </a>
+                    @endif
                 @elseif (request('invoice_type') === 'sell')
                     <a href="{{ route('invoices.create', ['invoice_type' => 'sell']) }}" class="btn btn-primary">
                         {{ __('Create sell invoice') }}
@@ -30,8 +36,10 @@
 
                 <form action="{{ route('invoices.index') }}" method="GET" class="ml-auto">
                     <div class="mt-4 mb-4 grid grid-cols-8 gap-6">
+
                         <div class="col-span-2 md:col-span-1" hidden>
                             <x-input name="invoice_type" value="{{ request('invoice_type') }}" placeholder="{{ __('Invoice Type') }}" />
+                            <x-input name="service_buy" value="{{ request('service_buy')}}" placeholder="{{ __('Service Buy') }}" />
                         </div>
                         <div class="col-span-2 md:col-span-1">
                             <x-input name="number" value="{{ request('number') }}" placeholder="{{ __('Invoice Number') }}" />
@@ -186,7 +194,7 @@
 
             @if (request('status') !== null)
                 <div class="px-4 py-2 text-left">
-                    <a class="btn btn-primary" href="{{ route('invoices.index', parameters: ['invoice_type' => request('invoice_type')]) }}">{{ __('Back') }}</a>
+                    <a class="btn btn-primary" href="{{ route('invoices.index', parameters: ['invoice_type' => request('invoice_type'), 'service_buy' => request('service_buy')]) }}">{{ __('Back') }}</a>
                 </div>
             @endif
 

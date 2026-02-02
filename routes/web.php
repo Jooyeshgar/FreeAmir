@@ -38,7 +38,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
 
     Route::get('invoices/inactive', [Controllers\InvoiceController::class, 'inactiveInvoices'])->name('invoices.inactive');
     Route::get('invoices/inactive/approve', [Controllers\InvoiceController::class, 'approveInactiveInvoices'])->name('invoices.inactive.approve');
-    Route::resource('invoices', Controllers\InvoiceController::class)->except(['index', 'create']);
+    Route::resource('invoices', Controllers\InvoiceController::class)->except(['index']);
     Route::get('invoices/{invoice}/conflicts', [Controllers\InvoiceController::class, 'conflicts'])->name('invoices.conflicts');
     Route::get('invoices/{invoice}/conflicts/{type}', [Controllers\InvoiceController::class, 'showMoreConflictsByType'])->name('invoices.conflicts.more');
     Route::get('invoices/{invoice}/groupAction', [Controllers\InvoiceController::class, 'groupAction'])->name('invoices.groupAction');
@@ -65,10 +65,6 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
     });
     Route::get('change-company/{company}', [Controllers\CompanyController::class, 'setActiveCompany'])->name('change-company');
-
-    Route::group(['prefix' => 'invoices/create', 'as' => 'invoices.create'], function () {
-        Route::get('{invoice_type}', [Controllers\InvoiceController::class, 'create']);
-    });
 
     Route::group(['prefix' => 'invoices', 'as' => 'invoices.index'], function () {
         Route::get('', [Controllers\InvoiceController::class, 'index']);

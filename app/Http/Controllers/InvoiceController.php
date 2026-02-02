@@ -78,6 +78,16 @@ class InvoiceController extends Controller
             fn ($invoice) => $invoice->where('status', $request->status)
         );
 
+        $service_buy = $request->filled('invoice_type') && $request->invoice_type === InvoiceType::BUY->value && $request->filled('service_buy') && $request->service_buy == '1';
+
+        $builder->when($service_buy, fn ($q) => $q->whereHas('items', function ($item) {
+            $item->where('itemable_type', Service::class);
+        }));
+
+        $builder->when(! $service_buy, fn ($q) => $q->whereHas('items', function ($item) {
+            $item->where('itemable_type', Product::class);
+        }));
+
         $invoices = $builder->paginate(25);
 
         $statusCounts = $statsBuilder->reorder()
@@ -98,7 +108,7 @@ class InvoiceController extends Controller
             $invoices->totalProductsQuantity += $invoice->items->where('itemable_type', Product::class)->sum('quantity');
         }
 
-        return view('invoices.index', compact('invoices', 'statusCounts'));
+        return view('invoices.index', compact('invoices', 'statusCounts', 'service_buy'));
     }
 
     /**
@@ -106,7 +116,7 @@ class InvoiceController extends Controller
      *
      * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory|\Illuminate\Http\RedirectResponse
      */
-    public function create($invoice_type)
+    public function create(Request $request)
     {
         if (empty(config('amir.inventory'))) {
             return redirect()->route('configs.index')->with('error', __('Inventory Subject is not configured. Please set it in configurations.'));
@@ -122,12 +132,14 @@ class InvoiceController extends Controller
 
         $transactions = InvoiceService::prepareTransactions();
 
+        $isServiceBuy = $request->invoice_type === 'buy' && $request->service_buy == '1';
+
         $total = count($transactions);
 
-        $invoice_type = in_array($invoice_type, ['buy', 'sell', 'return_buy', 'return_sell']) ? $invoice_type : 'sell';
+        $invoice_type = in_array($request->invoice_type, ['buy', 'sell', 'return_buy', 'return_sell']) ? $request->invoice_type : 'sell';
         $previousInvoiceNumber = floor(Invoice::where('invoice_type', $invoice_type)->max('number') ?? 0);
 
-        return view('invoices.create', compact('products', 'services', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type'));
+        return view('invoices.create', compact('products', 'services', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type', 'isServiceBuy'));
     }
 
     /**
@@ -221,6 +233,8 @@ class InvoiceController extends Controller
 
         $invoice_type = $invoice->invoice_type;
 
+        $isServiceBuy = $invoice->invoice_type === InvoiceType::BUY && $invoice->items->where('itemable_type', Product::class)->isEmpty();
+
         return view('invoices.edit', compact(
             'invoice',
             'customers',
@@ -229,7 +243,8 @@ class InvoiceController extends Controller
             'services',
             'transactions',
             'invoice_type',
-            'previousDocumentNumber'
+            'previousDocumentNumber',
+            'isServiceBuy'
         ));
     }
 
