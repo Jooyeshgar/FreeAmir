@@ -14,6 +14,37 @@ class HomeService
 {
     public function __construct(private readonly SubjectService $subjectService) {}
 
+    public function getSellAmountPerProducts()
+    {
+        $baseQuery = InvoiceItem::query()
+            ->whereHas('invoice', fn ($q) => $q->where('invoice_type', InvoiceType::SELL)
+                ->where('status', InvoiceStatus::APPROVED)
+            )
+            ->with('itemable')
+            ->selectRaw('itemable_type, itemable_id, SUM(amount) as total_amount')
+            ->groupBy('itemable_type', 'itemable_id');
+
+        $totalAmount = (clone $baseQuery)->get()->sum('total_amount');
+
+        $topFiveInvoiceItemsSellAmount = (clone $baseQuery)
+            ->orderByDesc('total_amount')
+            ->limit(5)
+            ->get()
+            ->map(fn ($item) => [
+                'name' => $item->itemable->name ?? 'unknown',
+                'amount' => (int) $item->total_amount,
+                'type' => $item->itemable_type === Product::class ? __('Product') : __('Services'),
+            ]);
+
+        $sellInvoiceItemsTotalData = collect([[
+            'name' => __('Other'),
+            'amount' => $totalAmount - $topFiveInvoiceItemsSellAmount->sum('amount'),
+            'type' => __('None'),
+        ]]);
+
+        return $sellInvoiceItemsTotalData->concat($topFiveInvoiceItemsSellAmount);
+    }
+
     public function incomeData()
     {
         $incomeSubjectIds = [
@@ -24,7 +55,7 @@ class HomeService
         $incomes = [];
         foreach ($incomeSubjectIds as $index => $incomeSubjectId) {
             $subject = Subject::find($incomeSubjectId);
-            $incomes[$index] = $this->subjectService->sumSubject($subject);
+            $incomes[$index] = $subject ? $this->subjectService->sumSubject($subject) : 0;
         }
 
         return [$incomes['service_revenue'], $incomes['sales_revenue']];
@@ -42,7 +73,9 @@ class HomeService
         $productsCogCost = 0;
         foreach ($productCogSubjectIds as $productCogSubjectId) {
             $productSubject = Subject::find($productCogSubjectId);
-            $productsCogCost += $this->subjectService->sumSubject($productSubject);
+            if (! is_null($productSubject)) {
+                $productsCogCost += $this->subjectService->sumSubject($productSubject);
+            }
         }
 
         return [$wagesCost, $productsCogCost];
@@ -84,7 +117,9 @@ class HomeService
         $monthlyIncomes = [];
         foreach ($incomeSubjectIds as $index => $incomeSubjectId) {
             $subject = Subject::find($incomeSubjectId);
-            $monthlyIncomes[$index] = $this->mapMonths($this->subjectService->sumSubjectWithDateRange($subject));
+            $monthlyIncomes[$index] = $subject
+                ? $this->mapMonths($this->subjectService->sumSubjectWithDateRange($subject))
+                : $this->mapMonths([]);
         }
 
         $other_income = [];
@@ -106,7 +141,9 @@ class HomeService
 
         foreach ($productInventorySubjectIds as $productInventorySubjectId) {
             $productSubject = Subject::find($productInventorySubjectId);
-            $monthlyProductsStat[] = $this->subjectService->sumSubjectWithDateRange($productSubject, $countOnly);
+            if (! is_null($productSubject)) {
+                $monthlyProductsStat[] = $this->subjectService->sumSubjectWithDateRange($productSubject, $countOnly);
+            }
         }
 
         $productsStat = [];
@@ -120,7 +157,7 @@ class HomeService
                     $productsStat[$month] = 0;
                 }
 
-                $productsStat[$month] += ($productsStat[$month] ?? 0) + $stat;
+                $productsStat[$month] += $stat;
             }
         }
 
@@ -165,7 +202,7 @@ class HomeService
 
         foreach ($dailyTransactions as $date => $dailyChange) {
             $runningBalance += $dailyChange;
-            $dailyBalances[(string) $date] = $runningBalance;
+            $dailyBalances[formatDate($date)] = $runningBalance;
         }
 
         $dailyBalances[formatDate($endDate)] = $runningBalance;
