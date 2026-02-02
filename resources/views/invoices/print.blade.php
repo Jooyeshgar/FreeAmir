@@ -46,7 +46,7 @@
             <tr class="right" width="100%">
                 <td class="right none lheight" width="33%" style="border-left:1px solid #000;">
                     شماره ملی: {{ convertToFarsi('10840096498') }}<br />
-                    شماره تلفن: <bdo dir="ltr">{{ convertToFarsi('031-32121091') }}</bdo>
+                    شماره تلفن: {{ convertToFarsi('031') }}<bdo dir="ltr">-</bdo>{{ convertToFarsi('32121091') }}
                 </td>
                 <td class="right none lheight" width="33%">
                     شماره اقتصادی: {{ convertToFarsi('411337894159') }}<br />
@@ -57,7 +57,7 @@
                     دفتر مرکزی: اصفهان میدان امام حسین ارگ جهان نما فاز ۴ طبقه ۴ واحد ۱۶
                 </td>
                 <td class="right none" width="6%" style="border-right:1px solid #000;">
-                    @php $logo = base64_encode(file_get_contents(public_path('images/logo.png'))); @endphp
+                    @php $logo = base64_encode(file_get_contents(public_path('images/logo.svg'))); @endphp
                     <img src="data:image/png;base64,{{ $logo }}" width="90" height="80" align="left">
                 </td>
             </tr>
@@ -89,8 +89,7 @@
                     {{ $invoice->customer->address }}
                 </td>
                 <td class="right none" width="6%" style="border-right:1px solid #000;">
-                    @php $user = base64_encode(file_get_contents(public_path('images/user.jpg'))); @endphp
-                    <img src="data:image/jpeg;base64,{{ $user }}" width="90" height="80" align="left">
+
                 </td>
             </tr>
         </tbody>
@@ -99,42 +98,42 @@
     <table width="100%" cellspacing="0" style="text-align:right;table-layout:fixed;margin-left:2px;">
         <tbody>
             <tr valign="top" style="line-height:1em;">
-                <td class="border" style="border-right: none;" width="15%">
-                    <p align="center" class="bold">جمع مبلغ کل
+                <td class="border center" style="border-right: none;" width="15%">
+                    <p class="bold">جمع مبلغ کل
                         بعلاوه جمع مالیات و عوارض
                         (ریال)
                     </p>
                 </td>
-                <td class="border" style="border-right: none;" width="12%">
-                    <p align="center" class="bold">جمع مالیات و عوارض (ریال)</p>
+                <td class="border center" style="border-right: none;" width="12%">
+                    <p class="bold">جمع مالیات و عوارض (ریال)</p>
                 </td>
-                <td class="border" style="border-right: none;" width="10%">
-                    <p align="center" class="bold">مبلغ کل پس از تخفیف (ریال)
+                <td class="border center" style="border-right: none;" width="10%">
+                    <p class="bold">مبلغ کل پس از تخفیف (ریال)
                     </p>
                 </td>
-                <td class="border" style="border-right: none;" width="4%">
-                    <p align="center" class="bold">مبلغ تخفیف</p>
+                <td class="border center" style="border-right: none;" width="4%">
+                    <p class="bold">مبلغ تخفیف</p>
                 </td>
-                <td class="border" style="border-right: none;" width="5%">
-                    <p align="center" class="bold">مبلغ کل (ریال)</p>
+                <td class="border center" style="border-right: none;" width="5%">
+                    <p class="bold">مبلغ کل (ریال)</p>
                 </td>
-                <td class="border" style="border-right: none;" width="5%">
-                    <p align="center" class="bold">مبلغ واحد (ریال)</p>
+                <td class="border center" style="border-right: none;" width="5%">
+                    <p class="bold">مبلغ واحد (ریال)</p>
                 </td>
-                <td class="border" style="border-right: none;" width="4%">
-                    <p align="center" class="bold">واحد اندازه گیری</p>
+                <td class="border center" style="border-right: none;" width="4%">
+                    <p class="bold">واحد اندازه گیری</p>
                 </td>
-                <td class="border" style="border-right: none;" width="4%">
-                    <p align="center" class="bold">تعداد مقدار</p>
+                <td class="border center" style="border-right: none;" width="4%">
+                    <p class="bold">تعداد مقدار</p>
                 </td>
-                <td class="border" style="border-right: none;" width="20%">
-                    <p align="center" class="bold">شرح کالا یا خدمات</p>
+                <td class="border center" style="border-right: none;" width="20%">
+                    <p class="bold">شرح کالا یا خدمات</p>
                 </td>
-                <td class="border" style="border-right: none;" width="2%">
-                    <p align="center" class="bold">کد کالا</p>
+                <td class="border center" style="border-right: none;" width="2%">
+                    <p class="bold">کد کالا</p>
                 </td>
-                <td class="border" width="2%">
-                    <p class="vertical bold" align="center" style="font-size:8pt;width:50%;margin-top:10pt">ردیف</p>
+                <td class="border center" width="2%">
+                    <p class="vertical bold" style="font-size:8pt;width:50%;margin-top:10pt">ردیف</p>
                 </td>
             </tr>
             @php
@@ -186,7 +185,7 @@
                         <p align="center">{{ $invoiceItem->description }}</p>
                     </td>
                     <td class="border center mainlineheight" style="border border-right: none;">
-                        <p align="center">{{ formatCode($code) }}</p>
+                        <p align="center">{{ convertToFarsi($code) }}</p>
                     </td>
                     <td class="border center mainlineheight">
                         <p align="center" class="bold">{{ convertToFarsi($index + 1) }}</p>
