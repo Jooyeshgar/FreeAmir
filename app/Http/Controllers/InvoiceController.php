@@ -294,27 +294,6 @@ class InvoiceController extends Controller
         return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('info', __('Invoice deleted successfully.'));
     }
 
-    private function invoiceMessage(Invoice $invoice, string $action = 'created', bool $approved = false)
-    {
-        if (! $approved) {
-            return [
-                'success',
-                __("Invoice {$action} successfully."),
-            ];
-        }
-
-        $documentMissing = empty($invoice->document);
-
-        return [
-            $documentMissing ? 'warning' : 'success',
-            __("Invoice {$action} successfully.")
-                .($documentMissing
-                    ? ' '.__('but it could not be approved due to validation constraints.')
-                    : ''
-                ),
-        ];
-    }
-
     public function searchCustomer(Request $request)
     {
         $validated = $request->validate([

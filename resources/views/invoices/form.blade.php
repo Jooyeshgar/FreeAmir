@@ -321,7 +321,7 @@
     @can('invoices.approve')
         <button id="submitFormAndApprove" type="submit" name="approve" value="1"
             class="btn text-white btn-primary rounded-md">
-            {{ __('save and approve') }} </button>
+            {{ __('save and ready to approve') }} </button>
     @endcan
 </div>
 
