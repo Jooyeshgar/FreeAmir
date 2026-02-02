@@ -87,6 +87,11 @@ class DocumentController extends Controller
         return view('documents.show', compact('document'));
     }
 
+    public function print(Document $document)
+    {
+        return view('documents.print', compact('document'));
+    }
+
     public function edit($id)
     {
         $document = Document::find($id);

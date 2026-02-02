@@ -5,7 +5,7 @@
         </h2>
     </x-slot>
     <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('document-files.store') }}" method="POST" enctype="multipart/form-data">
+        <form action="{{ route('document-files.store', $document->id) }}" method="POST" enctype="multipart/form-data">
             @csrf
             <div class="card-body">
                 <h2 class="card-title">{{ __('Add Document File') }}</h2>
