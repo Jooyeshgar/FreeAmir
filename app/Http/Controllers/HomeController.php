@@ -28,7 +28,7 @@ class HomeController extends Controller
         $totalIncomes = array_sum($monthlyIncome);
         $otherIncome = $totalIncomes - ($service_revenue + $sales_revenue);
 
-        [$wagesCost, $productsCogCost] = $this->service->costsData();
+        [$wagesCost, $productsCogCost, $servicesCogCost] = $this->service->costsData();
 
         $totalCosts = -1 * array_sum($monthlyCost);
         $otherCost = $totalCosts - $wagesCost;
@@ -38,7 +38,8 @@ class HomeController extends Controller
             __('Service Revenue') => $service_revenue,
             __('Other Incomes') => $otherIncome,
             __('Wages') => 0,
-            __('Sold Product') => 0,
+            __('Cost of Goods') => 0,
+            __('Services COG') => 0,
             __('Other Costs') => 0,
         ];
 
@@ -47,11 +48,12 @@ class HomeController extends Controller
             __('Service Revenue') => 0,
             __('Other Incomes') => 0,
             __('Wages') => abs($wagesCost),
-            __('Sold Product') => abs($productsCogCost),
+            __('Cost of Goods') => abs($productsCogCost),
+            __('Services COG') => abs($servicesCogCost),
             __('Other Costs') => abs($otherCost),
         ];
 
-        $profit = $totalIncomes + $totalCosts + $productsCogCost;
+        $profit = $totalIncomes + $totalCosts + $productsCogCost + $servicesCogCost;
 
         return view('home', compact(
             'cashTypes',
