@@ -1,8 +1,6 @@
 @php
     $sumCredit = $document->transactions->where('value', '>', 0)->sum('value');
-    $sumDebit = $document->transactions
-        ->where('value', '<', 0)
-        ->reduce(fn($carry, $transaction) => $carry + abs($transaction->value), 0);
+    $sumDebit = $document->transactions->where('value', '<', 0)->reduce(fn($carry, $transaction) => $carry + abs($transaction->value), 0);
     $documentFiles = $document->documentFiles ?? collect();
 @endphp
 
@@ -23,8 +21,7 @@
             </div>
             <div class="flex flex-wrap gap-2 mt-2">
                 <span class="badge badge-lg badge-primary gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M7 7h.01M7 3h10a2 2 0 012 2v4a2 2 0 01-.586 1.414l-7 7a2 2 0 01-2.828 0l-4.586-4.586A2 2 0 014 12V5a2 2 0 012-2z" />
                     </svg>
@@ -32,10 +29,8 @@
                 </span>
                 @if ($document->documentable)
                     <span class="badge badge-lg badge-info gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 12h6m2 8H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2z" />
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m2 8H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2z" />
                         </svg>
                         {{ __(class_basename($document->documentable_type)) }}
                     </span>
@@ -94,16 +89,14 @@
                             <tbody>
                                 <tr class="hover">
                                     <td class="px-4 py-3 font-semibold">
-                                        <a href="{{ route('invoices.show', $document->invoice) }}"
-                                            class="link link-hover">
+                                        <a href="{{ route('invoices.show', $document->invoice) }}" class="link link-hover">
                                             {{ formatDocumentNumber($document->invoice->number ?? $document->invoice->id) }}
                                         </a>
                                     </td>
                                     <td class="px-4 py-3">{{ $document->invoice->title ?? '—' }}</td>
                                     <td class="px-4 py-3">{{ $document->invoice->invoice_type?->label() ?? '—' }}</td>
                                     <td class="px-4 py-3">
-                                        <span
-                                            class="badge {{ $document->invoice->status?->isApproved() ? 'badge-success' : 'badge-ghost' }}">
+                                        <span class="badge {{ $document->invoice->status?->isApproved() ? 'badge-success' : 'badge-ghost' }}">
                                             {{ $document->invoice->status?->label() ?? '—' }}
                                         </span>
                                     </td>
@@ -114,8 +107,7 @@
                                         {{ formatNumber(($document->invoice->amount ?? 0) - ($document->invoice->subtraction ?? 0)) }}
                                     </td>
                                     <td class="px-4 py-3 text-center">
-                                        <a href="{{ route('invoices.show', $document->invoice) }}"
-                                            class="btn btn-sm btn-info">{{ __('Show') }}</a>
+                                        <a href="{{ route('invoices.show', $document->invoice) }}" class="btn btn-sm btn-info">{{ __('Show') }}</a>
                                     </td>
                                 </tr>
                             </tbody>
@@ -166,8 +158,17 @@
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="6" class="px-4 py-3 text-right text-sm text-gray-600">
+                                <td colspan="3" class="px-4 py-3 text-right text-sm text-gray-600">
                                     {{ __('Total entries: :count', ['count' => convertToFarsi($document->transactions->count())]) }}
+                                </td>
+                                <td class="px-4 py-3 text-right text-sm text-gray-600">
+                                    {{ __('Total Document:') }}
+                                </td>
+                                <td class="px-4 py-3 text-right text-sm text-gray-600">
+                                    {{ formatNumber($sumDebit) }}
+                                </td>
+                                <td class="px-4 py-3 text-right text-sm text-gray-600">
+                                    {{ formatNumber($sumCredit) }}
                                 </td>
                             </tr>
                         </tfoot>
@@ -178,105 +179,109 @@
             <div>
                 <div class="divider text-lg font-semibold">{{ __('Document Files') }}</div>
                 @if ($documentFiles->isNotEmpty())
-                    <div class="overflow-x-auto">
-                        <table class="table w-full">
-                            <thead>
-                                <tr>
-                                    <th class="px-4 py-3">{{ __('Attached By') }}</th>
-                                    <th class="px-4 py-3">{{ __('File Title') }}</th>
-                                    <th class="px-4 py-3">{{ __('Create At') }}</th>
-                                    <th class="px-4 py-3">{{ __('Update At') }}</th>
-                                    <th class="px-4 py-3 text-center">{{ __('Action') }}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($documentFiles->take(5) as $documentFile)
-                                    <tr class="hover">
-                                        <td class="px-4 py-3">
-                                            <span
-                                                class="badge badge-ghost">{{ $documentFile->attachBy?->name ?? '—' }}</span>
-                                        </td>
-                                        <td class="px-4 py-3 font-semibold">
-                                            {{ $documentFile->title ?? '—' }}
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            {{ formatDate($documentFile->created_at) ?? '—' }}
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            {{ formatDate($documentFile->updated_at) ?? '—' }}
-                                        </td>
-                                        <td class="px-4 py-3 text-center">
-                                            <div class="flex items-center justify-center gap-2">
-                                                <a href="{{ route('document-files.view', [$document, $documentFile]) }}"
-                                                    class="btn btn-sm btn-info btn-square"
-                                                    title="{{ __('View') }}">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5"
-                                                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            stroke-width="2"
-                                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                        @foreach ($documentFiles as $documentFile)
+                            <div class="card bg-base-100 border border-gray-200 hover:shadow-md transition-shadow">
+                                <figure class="px-4 pt-4">
+                                    <a href="{{ route('documents.files.view', [$document, $documentFile]) }}"
+                                        class="block w-full h-48 overflow-hidden rounded-lg bg-gray-100">
+                                        @php
+                                            $extension = strtolower(pathinfo($documentFile->path ?? '', PATHINFO_EXTENSION));
+                                            $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+                                        @endphp
+                                        @if (in_array($extension, $imageExtensions))
+                                            <img src="{{ route('documents.files.view', [$document, $documentFile]) }}" alt="{{ $documentFile->title }}"
+                                                class="w-full h-full object-cover">
+                                        @else
+                                            <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                                                @if ($extension === 'pdf')
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
+                                                        <path
+                                                            d="M14 2v6h6M9.5 11.5a1.5 1.5 0 1 1 0 3h-1v2h-1v-5h2zm0 2a.5.5 0 1 0 0-1h-1v1h1zm3.5-2h1.5a1 1 0 0 1 0 2H13v1h1.5a1 1 0 0 1 0 2H13v1h-1v-6zm1 2h.5a.5.5 0 1 0 0-1H14v1h.5zm3-2H18v5h-1v-2h-.5a1.5 1.5 0 0 1 0-3zm0 2h.5a.5.5 0 1 0 0-1H17v1z" />
                                                     </svg>
-                                                </a>
-                                                <a href="{{ route('document-files.download', [$document, $documentFile]) }}"
-                                                    class="btn btn-sm btn-info btn-square"
-                                                    title="{{ __('Download') }}">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5"
-                                                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            stroke-width="2"
-                                                            d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            stroke-width="2" d="M7 10l5 5 5-5M12 15V3" />
+                                                @elseif (in_array($extension, ['doc', 'docx']))
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
+                                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
+                                                        <path d="M14 2v6h6M10 14H8v4h2c1.1 0 2-.9 2-2s-.9-2-2-2zm0 3h-1v-2h1c.55 0 1 .45 1 1s-.45 1-1 1z" />
                                                     </svg>
-                                                </a>
+                                                @elseif (in_array($extension, ['xls', 'xlsx']))
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-green-500" fill="currentColor" viewBox="0 0 24 24">
+                                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
+                                                        <path d="M14 2v6h6M9 15l2 2-2 2M15 15l-2 2 2 2" />
+                                                    </svg>
+                                                @else
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-gray-400" fill="none" viewBox="0 0 24 24"
+                                                        stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                                    </svg>
+                                                @endif
                                             </div>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="3" class="text-center">
-                                            {{ __('There is no document files.') }}
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="mt-4 flex justify-end">
-                        <a href="{{ route('document-files.index', $document->id) }}" class="btn btn-primary">
-                            {{ __('View all files') }}
-                        </a>
-                    </div>
-                @else
-                    <div class="text-center text-sm text-gray-500">
-                        <span>{{ __('There is no document files.') }}</span>
-                    </div>
-                    <div class="mt-4 flex justify-end">
-                        <a href="{{ route('document-files.index', $document->id) }}" class="btn btn-primary">
-                            {{ __('Manage files') }}
-                        </a>
+                                        @endif
+                                    </a>
+                                </figure>
+                                <div class="card-body p-4">
+                                    <h3 class="card-title text-base">{{ $documentFile->title ?? '—' }}</h3>
+                                    <div class="text-sm text-gray-500 space-y-1">
+                                        <p>{{ $documentFile->attachBy?->name ?? '—' }}, {{ formatDate($documentFile->created_at) ?? '—' }}</p>
+                                    </div>
+                                    <div class="card-actions justify-between mt-3">
+                                        <a href="{{ route('documents.files.download', [$document, $documentFile]) }}" class="btn btn-sm btn-info gap-1"
+                                            title="{{ __('Download') }}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+                                            </svg>
+                                            {{ __('Download') }}
+                                        </a>
+                                        <div class="flex gap-1">
+                                            <a href="{{ route('documents.files.edit', [$document, $documentFile]) }}" class="btn btn-sm btn-warning btn-square"
+                                                title="{{ __('Edit') }}">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                            </a>
+                                            <form action="{{ route('documents.files.destroy', [$document, $documentFile]) }}" method="POST" class="inline-block"
+                                                onsubmit="return confirm('{{ __('Are you sure you want to delete this file?') }}')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-error btn-square" title="{{ __('Delete') }}">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
                 @endif
+                <div class="mt-4 flex justify-end">
+                    <a href="{{ route('documents.files.create', $document->id) }}" class="btn btn-primary gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        {{ __('Add new file') }}
+                    </a>
+                </div>
             </div>
 
             <div class="card-actions justify-between mt-4">
                 <a href="{{ route('documents.index', request()->query()) }}" class="btn btn-ghost gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
                     {{ __('Back') }}
                 </a>
 
                 <div class="flex flex-wrap gap-2">
-                    <a href="{{ route('documents.print', $document) }}" class="btn btn-outline gap-2"
-                        target="_blank" rel="noopener">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
+                    <a href="{{ route('documents.print', $document) }}" class="btn btn-outline gap-2" target="_blank" rel="noopener">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M7 8h10M7 12h10m-7 8h4m-7-4h10V8a2 2 0 00-2-2h-2V4a2 2 0 00-2-2h-2a2 2 0 00-2 2v2H9a2 2 0 00-2 2v8z" />
                         </svg>
@@ -287,8 +292,7 @@
                         <span class="tooltip"
                             data-tip="{{ __('Cannot edit this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
                             <button class="btn btn-primary gap-2 btn-disabled cursor-not-allowed" disabled>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
@@ -297,8 +301,7 @@
                         </span>
                     @else
                         <a href="{{ route('documents.edit', $document->id) }}" class="btn btn-primary gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
-                                viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
@@ -310,8 +313,7 @@
                         <span class="tooltip"
                             data-tip="{{ __('Cannot delete this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
                             <button class="btn btn-error gap-2 btn-disabled cursor-not-allowed" disabled>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
@@ -319,14 +321,12 @@
                             </button>
                         </span>
                     @else
-                        <form action="{{ route('documents.destroy', $document) }}" method="POST"
-                            class="inline-block"
+                        <form action="{{ route('documents.destroy', $document) }}" method="POST" class="inline-block"
                             onsubmit="return confirm('{{ __('Are you sure you want to delete this document?') }}')">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-error gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
