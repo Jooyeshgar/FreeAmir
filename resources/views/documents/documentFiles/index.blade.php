@@ -11,7 +11,7 @@
 
 
             <div class="card-actions flex justify-between gap-4 ">
-                <a href="{{ route('document-files.create', $document->id) }}" class="btn btn-primary ">{{ __('Add Document File') }}</a>
+                <a href="{{ route('documents.files.create', $document->id) }}" class="btn btn-primary ">{{ __('Add Document File') }}</a>
             </div>
 
             <table class="table w-full mt-4">
@@ -33,25 +33,30 @@
                             <td class="px-4 py-2">{{ $documentFile->created_at }}</td>
                             <td class="px-4 py-2">{{ $documentFile->updated_at }}</td>
                             <td class="px-4 py-2 flex gap-2 items-center">
-                                <a href="{{ route('document-files.view', [$document, $documentFile]) }}" class="btn btn-sm btn-info btn-square" title="{{ __('View') }}">
+                                <a href="{{ route('documents.files.view', [$document, $documentFile]) }}" class="btn btn-sm btn-info btn-square"
+                                    title="{{ __('View') }}">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7
                                                 -1.274 4.057-5.064 7-9.542 7 -4.477 0-8.268-2.943-9.542-7z" />
                                     </svg>
                                 </a>
-                                <a href="{{ route('document-files.download', [$document, $documentFile]) }}" class="btn btn-sm btn-info btn-square" title="{{ __('Download') }}">
+                                <a href="{{ route('documents.files.download', [$document, $documentFile]) }}" class="btn btn-sm btn-info btn-square"
+                                    title="{{ __('Download') }}">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 10l5 5 5-5M12 15V3" />
                                     </svg>
                                 </a>
-                                <a href="{{ route('document-files.edit', [$document, $documentFile]) }}" class="btn btn-sm btn-info btn-square" title="{{ __('Edit') }}">
+                                <a href="{{ route('documents.files.edit', [$document, $documentFile]) }}" class="btn btn-sm btn-info btn-square"
+                                    title="{{ __('Edit') }}">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                     </svg>
                                 </a>
-                                <form action="{{ route('document-files.destroy', [$document->id, $documentFile]) }}" method="POST" class="m-0" onsubmit="return confirm('Are you sure?')">
+                                <form action="{{ route('documents.files.destroy', [$document->id, $documentFile]) }}" method="POST" class="m-0"
+                                    onsubmit="return confirm('Are you sure?')">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-error btn-square" title="{{ __('Delete') }}">

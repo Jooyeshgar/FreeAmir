@@ -39,7 +39,7 @@ class DocumentFileController extends Controller
 
         $this->service->create($validated);
 
-        return redirect()->route('document-files.index', $validated['document_id'])->with('success', __('Document file created successfully.'));
+        return redirect()->route('documents.show', $validated['document_id'])->with('success', __('Document file created successfully.'));
     }
 
     public function edit(Document $document, DocumentFile $documentFile)
@@ -56,7 +56,7 @@ class DocumentFileController extends Controller
 
         $this->service->update($documentFile, $validated);
 
-        return redirect()->route('document-files.index', $documentFile->document_id)->with('success', __('Document file updated successfully.'));
+        return redirect()->route('documents.show', $documentFile->document_id)->with('success', __('Document file updated successfully.'));
     }
 
     public function destroy(Document $document, DocumentFile $documentFile)
@@ -65,7 +65,7 @@ class DocumentFileController extends Controller
 
         $this->service->delete($documentFile);
 
-        return redirect()->route('document-files.index', $documentId)->with('success', __('Document file deleted successfully.'));
+        return redirect()->route('documents.show', $documentId)->with('success', __('Document file deleted successfully.'));
     }
 
     public function view(Document $document, DocumentFile $documentFile)
@@ -74,7 +74,7 @@ class DocumentFileController extends Controller
         $path = $this->service->resolvePath($documentFile);
 
         if (! $disk->exists($path)) {
-            return redirect()->route('document-files.index', $document)->with('error', __('No document file found.'));
+            return redirect()->route('documents.show', $document)->with('error', __('No document file found.'));
         }
 
         return response()->file($disk->path($path));
@@ -86,7 +86,7 @@ class DocumentFileController extends Controller
         $path = $this->service->resolvePath($documentFile);
 
         if (! $disk->exists($path)) {
-            return redirect()->route('document-files.index', $documentFile->document_id)->with('error', __('No document file found.'));
+            return redirect()->route('documents.show', $documentFile->document_id)->with('error', __('No document file found.'));
         }
 
         return response()->download($disk->path($path), $documentFile->name ?? basename($path));

@@ -14,9 +14,11 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('/home/bank-account', [Controllers\HomeController::class, 'bankAccount'])->name('home.bank-account');
     Route::resource('subjects', Controllers\SubjectController::class);
     Route::post('subjects/search', [Controllers\SubjectController::class, 'search'])->name('subjects.search');
+
     Route::resource('documents', Controllers\DocumentController::class);
     Route::get('documents/{document}/print', [Controllers\DocumentController::class, 'print'])->name('documents.print');
     Route::get('documents/{document}/duplicate', [Controllers\DocumentController::class, 'duplicate'])->name('documents.duplicate');
+
     Route::resource('transactions', Controllers\TransactionController::class)->only(['index', 'show']);
     Route::get('products/search-product-group', [Controllers\ProductController::class, 'searchProductGroup'])->name('products.search-product-group');
     Route::resource('products', Controllers\ProductController::class);
@@ -81,7 +83,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::delete('{comment}', 'destroy')->name('destroy');
     });
 
-    Route::prefix('documents/{document}/document-files')->as('document-files.')->controller(DocumentFileController::class)->group(function () {
+    Route::prefix('documents/{document}/files')->as('documents.files.')->controller(DocumentFileController::class)->group(function () {
         Route::get('', 'index')->name('index');
         Route::get('create', 'create')->name('create');
         Route::post('store', 'store')->name('store');
