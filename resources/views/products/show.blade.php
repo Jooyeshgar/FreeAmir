@@ -91,9 +91,9 @@
             @endif
 
             <div class="divider text-lg font-semibold">{{ __('Transaction History') }}</div>
-            <div class="overflow-x-auto shadow-lg rounded-lg">
-                <table class="table table-zebra w-full">
-                    <thead class="bg-base-300">
+            <div class="overflow-x-auto">
+                <table class="table w-full">
+                    <thead>
                         <tr>
                             <th class="px-4 py-3">{{ __('Date') }}</th>
                             <th class="px-4 py-3 text-center">{{ __('Buy') }}</th>
@@ -198,7 +198,7 @@
                             </tr>
                         @endforelse
                         @if ($historyItems->hasPages())
-                            <tr class="bg-base-300 font-semibold">
+                            <tr class="font-semibold">
                                 <td colspan="7" class="px-4 py-3 text-right">
                                     {{ __('Balance from previous page') }}
                                 <td class="px-4 py-3 text-center">

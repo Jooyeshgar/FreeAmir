@@ -100,11 +100,111 @@
                 </div>
             @endif
 
+            <div class="divider text-lg font-semibold">{{ __('Contact Information') }}</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div class="card bg-base-200">
+                    <div class="card-body p-4">
+                        <h3 class="card-title text-sm text-gray-500">{{ __('Phone') }}</h3>
+                        <p class="text-xl font-semibold">{{ $customer->tel ?? ($customer->phone ?? '-') }}</p>
+                    </div>
+                </div>
+
+                <div class="card bg-base-200">
+                    <div class="card-body p-4">
+                        <h3 class="card-title text-sm text-gray-500">{{ __('Mobile') }}</h3>
+                        <p class="text-xl font-semibold">{{ $customer->cell ?? '-' }}</p>
+                    </div>
+                </div>
+
+                <div class="card bg-base-200">
+                    <div class="card-body p-4">
+                        <h3 class="card-title text-sm text-gray-500">{{ __('Email') }}</h3>
+                        <p class="text-xl font-semibold">{{ $customer->email ?? '-' }}</p>
+                    </div>
+                </div>
+
+                <div class="card bg-base-200">
+                    <div class="card-body p-4">
+                        <h3 class="card-title text-sm text-gray-500">{{ __('Website') }}</h3>
+                        <p class="text-xl font-semibold">{{ $customer->web_page ?? '-' }}</p>
+                    </div>
+                </div>
+
+                <div class="card bg-base-200">
+                    <div class="card-body p-4">
+                        <h3 class="card-title text-sm text-gray-500">{{ __('Fax') }}</h3>
+                        <p class="text-xl font-semibold">{{ $customer->fax ?? '-' }}</p>
+                    </div>
+                </div>
+
+                <div class="card bg-base-200">
+                    <div class="card-body p-4">
+                        <h3 class="card-title text-sm text-gray-500">{{ __('Postal code') }}</h3>
+                        <p class="text-xl font-semibold">{{ $customer->postal_code ?? '-' }}</p>
+                    </div>
+                </div>
+
+                <div class="card bg-base-200 lg:col-span-2">
+                    <div class="card-body p-4">
+                        <h3 class="card-title text-sm text-gray-500">{{ __('Address') }}</h3>
+                        <p class="text-xl font-semibold">{{ $customer->address ?? '-' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="divider text-lg font-semibold">{{ __('Financial Information') }}</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="card bg-base-200">
+                    <div class="card-body p-4">
+                        <h3 class="card-title text-sm text-gray-500">{{ __('Account 1') }}</h3>
+                        <div class="text-sm text-gray-600">{{ __('Name') }}: <span
+                                class="font-semibold text-base-content">{{ $customer->acc_name_1 ?? '-' }}</span>
+                        </div>
+                        <div class="text-sm text-gray-600">{{ __('Account number') }}: <span
+                                class="font-semibold text-base-content">{{ $customer->acc_no_1 ?? '-' }}</span></div>
+                        <div class="text-sm text-gray-600">{{ __('Bank') }}: <span
+                                class="font-semibold text-base-content">{{ $customer->acc_bank_1 ?? '-' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card bg-base-200">
+                    <div class="card-body p-4">
+                        <h3 class="card-title text-sm text-gray-500">{{ __('Account 2') }}</h3>
+                        <div class="text-sm text-gray-600">{{ __('Name') }}: <span
+                                class="font-semibold text-base-content">{{ $customer->acc_name_2 ?? '-' }}</span>
+                        </div>
+                        <div class="text-sm text-gray-600">{{ __('Account number') }}: <span
+                                class="font-semibold text-base-content">{{ $customer->acc_no_2 ?? '-' }}</span></div>
+                        <div class="text-sm text-gray-600">{{ __('Bank') }}: <span
+                                class="font-semibold text-base-content">{{ $customer->acc_bank_2 ?? '-' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="divider text-lg font-semibold">{{ __('Other Information') }}</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="card bg-base-200">
+                    <div class="card-body p-4">
+                        <h3 class="card-title text-sm text-gray-500">{{ __('Connector') }}</h3>
+                        <p class="text-xl font-semibold">{{ $customer->connector ?? '-' }}</p>
+                    </div>
+                </div>
+
+                <div class="card bg-base-200">
+                    <div class="card-body p-4">
+                        <h3 class="card-title text-sm text-gray-500">{{ __('Responsible') }}</h3>
+                        <p class="text-xl font-semibold">{{ $customer->responsible ?? '-' }}</p>
+                    </div>
+                </div>
+            </div>
+
             @if ($customer->comments)
                 <div class="divider text-lg font-semibold">{{ __('Comments') }}</div>
-                    <div class="overflow-x-auto shadow-lg rounded-lg">
-                        <table class="table table-zebra w-full">
-                        <thead class="bg-base-300">
+                <div class="overflow-x-auto">
+                    <table class="table w-full">
+                        <thead>
                             <tr>
                                 <th class="px-4 py-3">{{ __('Commented By') }}</th>
                                 <th class="px-4 py-3">{{ __('Content') }}</th>
@@ -118,7 +218,8 @@
                                         <span class="badge badge-ghost">{{ $comment->commentBy->name }}</span>
                                     </td>
                                     <td class="px-4 py-3 font-semibold">
-                                        <div class="text-xs text-gray-500">{{ \Illuminate\Support\Str::limit($comment->content, 80, '…') }}</div>
+                                        <div class="text-xs text-gray-500">
+                                            {{ \Illuminate\Support\Str::limit($comment->content, 80, '…') }}</div>
                                     </td>
                                     <td>
                                         <div class="rating rating-sm rating-half">
@@ -145,106 +246,10 @@
                 </div>
             @endif
 
-            <div class="divider text-lg font-semibold">{{ __('Contact Information') }}</div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div class="card bg-base-200 shadow">
-                    <div class="card-body p-4">
-                        <h3 class="card-title text-sm text-gray-500">{{ __('Phone') }}</h3>
-                        <p class="text-xl font-semibold">{{ $customer->tel ?? ($customer->phone ?? '-') }}</p>
-                    </div>
-                </div>
-
-                <div class="card bg-base-200 shadow">
-                    <div class="card-body p-4">
-                        <h3 class="card-title text-sm text-gray-500">{{ __('Mobile') }}</h3>
-                        <p class="text-xl font-semibold">{{ $customer->cell ?? '-' }}</p>
-                    </div>
-                </div>
-
-                <div class="card bg-base-200 shadow">
-                    <div class="card-body p-4">
-                        <h3 class="card-title text-sm text-gray-500">{{ __('Email') }}</h3>
-                        <p class="text-xl font-semibold">{{ $customer->email ?? '-' }}</p>
-                    </div>
-                </div>
-
-                <div class="card bg-base-200 shadow">
-                    <div class="card-body p-4">
-                        <h3 class="card-title text-sm text-gray-500">{{ __('Website') }}</h3>
-                        <p class="text-xl font-semibold">{{ $customer->web_page ?? '-' }}</p>
-                    </div>
-                </div>
-
-                <div class="card bg-base-200 shadow">
-                    <div class="card-body p-4">
-                        <h3 class="card-title text-sm text-gray-500">{{ __('Fax') }}</h3>
-                        <p class="text-xl font-semibold">{{ $customer->fax ?? '-' }}</p>
-                    </div>
-                </div>
-
-                <div class="card bg-base-200 shadow">
-                    <div class="card-body p-4">
-                        <h3 class="card-title text-sm text-gray-500">{{ __('Postal code') }}</h3>
-                        <p class="text-xl font-semibold">{{ $customer->postal_code ?? '-' }}</p>
-                    </div>
-                </div>
-
-                <div class="card bg-base-200 shadow lg:col-span-2">
-                    <div class="card-body p-4">
-                        <h3 class="card-title text-sm text-gray-500">{{ __('Address') }}</h3>
-                        <p class="text-xl font-semibold">{{ $customer->address ?? '-' }}</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="divider text-lg font-semibold">{{ __('Financial Information') }}</div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div class="card bg-base-200 shadow">
-                    <div class="card-body p-4">
-                        <h3 class="card-title text-sm text-gray-500">{{ __('Account 1') }}</h3>
-                        <div class="text-sm text-gray-600">{{ __('Name') }}: <span
-                                class="font-semibold text-base-content">{{ $customer->acc_name_1 ?? '-' }}</span></div>
-                        <div class="text-sm text-gray-600">{{ __('Account number') }}: <span
-                                class="font-semibold text-base-content">{{ $customer->acc_no_1 ?? '-' }}</span></div>
-                        <div class="text-sm text-gray-600">{{ __('Bank') }}: <span
-                                class="font-semibold text-base-content">{{ $customer->acc_bank_1 ?? '-' }}</span></div>
-                    </div>
-                </div>
-
-                <div class="card bg-base-200 shadow">
-                    <div class="card-body p-4">
-                        <h3 class="card-title text-sm text-gray-500">{{ __('Account 2') }}</h3>
-                        <div class="text-sm text-gray-600">{{ __('Name') }}: <span
-                                class="font-semibold text-base-content">{{ $customer->acc_name_2 ?? '-' }}</span></div>
-                        <div class="text-sm text-gray-600">{{ __('Account number') }}: <span
-                                class="font-semibold text-base-content">{{ $customer->acc_no_2 ?? '-' }}</span></div>
-                        <div class="text-sm text-gray-600">{{ __('Bank') }}: <span
-                                class="font-semibold text-base-content">{{ $customer->acc_bank_2 ?? '-' }}</span></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="divider text-lg font-semibold">{{ __('Other Information') }}</div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div class="card bg-base-200 shadow">
-                    <div class="card-body p-4">
-                        <h3 class="card-title text-sm text-gray-500">{{ __('Connector') }}</h3>
-                        <p class="text-xl font-semibold">{{ $customer->connector ?? '-' }}</p>
-                    </div>
-                </div>
-
-                <div class="card bg-base-200 shadow">
-                    <div class="card-body p-4">
-                        <h3 class="card-title text-sm text-gray-500">{{ __('Responsible') }}</h3>
-                        <p class="text-xl font-semibold">{{ $customer->responsible ?? '-' }}</p>
-                    </div>
-                </div>
-            </div>
-
             <div class="divider text-lg font-semibold">{{ __('Orders') }}</div>
-            <div class="overflow-x-auto shadow-lg rounded-lg">
-                <table class="table table-zebra w-full">
-                    <thead class="bg-base-300">
+            <div class="overflow-x-auto">
+                <table class="table w-full">
+                    <thead>
                         <tr>
                             <th class="px-4 py-3">{{ __('Date') }}</th>
                             <th class="px-4 py-3">{{ __('Invoice Number') }}</th>

@@ -146,9 +146,9 @@
 
             <div>
                 <div class="divider text-lg font-semibold">{{ __('Items') }}</div>
-                <div class="overflow-x-auto shadow-lg rounded-lg">
-                    <table class="table table-zebra w-full">
-                        <thead class="bg-base-300">
+                <div class="overflow-x-auto">
+                    <table class="table w-full">
+                        <thead>
                             <tr>
                                 <th class="px-4 py-3">#</th>
                                 <th class="px-4 py-3 text-right">
@@ -191,7 +191,7 @@
                                 </tr>
                             @endforelse
                         </tbody>
-                        <tfoot class="bg-base-300">
+                        <tfoot>
                             <tr>
                                 <td colspan="8" class="px-4 py-3 text-right text-sm text-gray-600">
                                     {{ __('Total items: :count', ['count' => convertToFarsi($invoice->items->count())]) }}
@@ -206,9 +206,9 @@
                 <div class="divider text-lg font-semibold">{{ __('Ancillary Costs') }}</div>
 
                 @if ($invoice->ancillaryCosts->isNotEmpty())
-                    <div class="overflow-x-auto shadow-lg rounded-lg mt-4">
-                        <table class="table table-zebra w-full">
-                            <thead class="bg-base-300">
+                    <div class="overflow-x-auto mt-4">
+                        <table class="table w-full">
+                            <thead>
                                 <tr>
                                     <th class="px-4 py-3">#</th>
                                     <th class="px-4 py-3">{{ __('Doc Number') }}</th>

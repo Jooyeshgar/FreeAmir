@@ -172,9 +172,9 @@
                 <div class="divider text-lg font-semibold">{{ __('Items') }}</div>
 
                 @if ($ancillaryCost->items->isNotEmpty())
-                    <div class="overflow-x-auto shadow-lg rounded-lg">
-                        <table class="table table-zebra w-full">
-                            <thead class="bg-base-300">
+                    <div class="overflow-x-auto">
+                        <table class="table w-full">
+                            <thead>
                                 <tr>
                                     <th class="px-4 py-3">#</th>
                                     <th class="px-4 py-3">{{ __('Product') }}</th>
