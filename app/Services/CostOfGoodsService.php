@@ -33,6 +33,10 @@ class CostOfGoodsService
         }
 
         foreach ($invoice->items as $invoiceItem) {
+            if ($invoiceItem->itemable_type !== Product::class) {
+                continue;
+            }
+
             $product = $invoiceItem->itemable;
             $previousInvoice = self::getPreviousInvoice($invoice, $product->id);
 

@@ -187,6 +187,9 @@ class InvoiceService
             if (! $item->itemable) {
                 continue;
             }
+            if ($item->itemable_type !== Product::class) {
+                continue;
+            }
 
             $item->cog_after = $item->itemable->average_cost;
             $item->update();

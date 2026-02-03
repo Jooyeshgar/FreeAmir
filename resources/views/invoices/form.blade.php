@@ -82,16 +82,30 @@
                 class="text-sm flex-1 min-w-24 max-w-64 text-center text-gray-500 pt-3 
             flex items-center justify-center gap-2">
                 <div class="flex items-center gap-3 ml-1">
-                    {{ __('Product') }}
-                    <a href="{{ route('products.create') }}"
-                        class="flex items-center gap-1 btn btn-xs btn-ghost text-blue-500 hover:text-blue-700"
-                        title="{{ __('Create Product') }}">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                d="M21 7.5l-9-4.5-9 4.5m18 0l-9 4.5m9-4.5v9l-9 4.5m0-9L3 7.5m9 4.5v9m-9-13.5v9l9 4.5" />
-                        </svg>
-                    </a>
+                    @if (!$isServiceBuy)
+                        {{ __('Product') }}
+                        <a href="{{ route('products.create') }}"
+                            class="flex items-center gap-1 btn btn-xs btn-ghost text-blue-500 hover:text-blue-700"
+                            title="{{ __('Create Product') }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M21 7.5l-9-4.5-9 4.5m18 0l-9 4.5m9-4.5v9l-9 4.5m0-9L3 7.5m9 4.5v9m-9-13.5v9l9 4.5" />
+                            </svg>
+                        </a>
+                    @else
+                        {{ __('Services') }}
+                        <a href="{{ route('services.create') }}"
+                            class="flex items-center gap-1 btn btn-xs btn-ghost text-blue-500 hover:text-blue-700"
+                            title="{{ __('Create Service') }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M15.232 5.232a4 4 0 015.536 5.536l-7.768 7.768a4 4 0 01-5.536-5.536l1.232-1.232" />
+                            </svg>
+                        </a>
+                    @endif
+
                     @if (($invoice->invoice_type ?? $invoice_type) === App\Enums\InvoiceType::SELL || ($invoice_type ?? null) === 'sell')
                         {{ __('Services') }}
                         <a href="{{ route('services.create') }}"
@@ -153,19 +167,24 @@
                             $options = [
                                 [
                                     'headerGroup' => 'product',
-                                    'options' => $products,
+                                    'options' => $isServiceBuy ? [] : $products,
                                 ],
                                 [
                                     'headerGroup' => 'service',
-                                    'options' => $isSellType ? $services : [],
+                                    'options' => $isSellType || $isServiceBuy ? $services : [],
                                 ],
                             ];
-                            $hint =
-                                '<a class="link text-blue-500" href="' .
-                                route('products.create') .
-                                '">' .
-                                __('Create Product') .
-                                '</a>';
+                            $hint = !$isServiceBuy
+                                ? '<a class="link text-blue-500" href="' .
+                                    route('products.create') .
+                                    '">' .
+                                    __('Create Product') .
+                                    '</a>'
+                                : '<a class="link text-blue-500" href="' .
+                                    route('services.create') .
+                                    '">' .
+                                    __('Create Service') .
+                                    '</a>';
                             $hint2 = $isSellType
                                 ? '<a class="link text-blue-500" href="' .
                                     route('services.create') .
@@ -173,11 +192,13 @@
                                     __('Create Service') .
                                     '</a>'
                                 : '';
+
+                            $placeholder = $isSellType ? __('Select Product/Service') : __('Select Product');
+                            $placeholder = $isServiceBuy ? __('Select Service') : $placeholder;
                         @endphp
 
                         <x-select-box url="{{ route('invoices.search-product-service') }}" :options="$options"
-                            x-model="selectedValue" x-init="selectedValue = initItemSelection(transaction)"
-                            placeholder="{{ $isSellType ? __('Select Product/Service') : __('Select Product') }}"
+                            x-model="selectedValue" x-init="selectedValue = initItemSelection(transaction)" placeholder="{{ $placeholder }}"
                             @selected="selectItem(transaction, $event.detail.type, $event.detail.id)"
                             hint='{!! $hint !!}' hint2='{!! $hint2 !!}' />
 
