@@ -46,10 +46,11 @@
                             <x-date-picker name="end_date" class="w-40" placeholder="{{ __('End date') }}" value="{{ request('end_date') }}"></x-date-picker>
                         </div>
                         <div class="col-span-2 md:col-span-1">
-                            <select name="status" id="status" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
+                            <select name="status" id="status"
+                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
                                 <option value="all">{{ __('All Invoices') }}</option>
                                 @foreach (\App\Enums\InvoiceStatus::cases() as $status)
-                                    <option value="{{ $status->value }}" @selected($status != 'all' && $status->value == request('status')) >{{ $status->label() }}</option>
+                                    <option value="{{ $status->value }}" @selected($status != 'all' && $status->value == request('status'))>{{ $status->label() }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -60,7 +61,7 @@
                 </form>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 @foreach (\App\Enums\InvoiceStatus::cases() as $status)
                     @php
                         $count = $statusCounts->get($status->value, 0);
@@ -76,7 +77,7 @@
                             \App\Enums\InvoiceStatus::READY_TO_APPROVE => 'info',
                         };
 
-                        $invoiceTypeToPast = match (request('invoice_type')){
+                        $invoiceTypeToPast = match (request('invoice_type')) {
                             'sell' => 'Sold',
                             'buy' => 'Bought',
                         };
@@ -148,25 +149,21 @@
                                     $canChangeStatus = $canApprove || $canUnapprove;
                                 @endphp
                                 <a href="{{ route('invoices.show', $invoice) }}" target="_blank" rel="noopener" class="btn btn-sm btn-info">{{ __('Show') }}</a>
-                                <a href="{{ route('invoices.print', $invoice) }}" target="_blank" rel="noopener" class="btn btn-sm btn-info">{{ __('Print') }}</a>
 
                                 @can('invoices.approve')
                                     @if ($invoice->status->isPreInvoice() || $invoice->status->isRejected())
-                                        <a href="{{ route('invoices.change-status', [$invoice, 'ready_to_approve']) }}"
-                                            class="btn btn-sm btn-success">{{ __('Ready to approve') }}
+                                        <a href="{{ route('invoices.change-status', [$invoice, 'ready_to_approve']) }}" class="btn btn-sm btn-success">{{ __('Issue') }}
                                         </a>
                                     @endif
 
                                     @if ($invoice->status->isPreInvoice())
-                                        <a href="{{ route('invoices.change-status', [$invoice, 'rejected']) }}"
-                                            class="btn btn-sm btn-error">{{ __('Reject') }}
+                                        <a href="{{ route('invoices.change-status', [$invoice, 'rejected']) }}" class="btn btn-sm btn-error">{{ __('Reject') }}
                                         </a>
                                     @endif
 
                                     @if ($canChangeStatus)
                                         @if ($canApprove && $invoice->changeStatusValidation->hasErrors())
-                                            <a data-tip="{{ $invoice->changeStatusValidation->toText() }}"
-                                                href="{{ route('invoices.conflicts', $invoice) }}"
+                                            <a data-tip="{{ $invoice->changeStatusValidation->toText() }}" href="{{ route('invoices.conflicts', $invoice) }}"
                                                 class="btn btn-sm btn-accent inline-flex tooltip">{{ __('Fix Conflict') }}
                                             </a>
                                         @else
