@@ -82,6 +82,8 @@ class InvoiceTransactionBuilder
 
         $this->buildCogsTransaction();
 
+        $this->buildCogsServiceTransaction();
+
         return [
             'transactions' => $this->transactions,
             'totalVat' => $this->totalVat,
@@ -89,6 +91,31 @@ class InvoiceTransactionBuilder
             'totalAmount' => $this->totalAmount + $this->totalVat - $this->subtractions,
             'subtractions' => $this->subtractions,
         ];
+    }
+
+    private function buildCogsServiceTransaction(): void
+    {
+        $isServiceBuy = $this->invoiceType === InvoiceType::BUY && collect($this->items)->where('itemable_type', 'product')->isEmpty();
+
+        if (! $isServiceBuy) {
+            return;
+        }
+
+        foreach ($this->items as $item) {
+            $type = $item['itemable_type'] ?? null;
+
+            if ($type !== 'service') {
+                continue;
+            }
+
+            $service = Service::find($item['itemable_id']) ?? null;
+
+            $this->transactions[] = [
+                'subject_id' => $service->cogs_subject_id,
+                'desc' => __('Cost of Goods Sold').' '.__('Invoice').' '.$this->invoiceType->label().' '.__(' with number ').' '.formatNumber($this->invoiceData['number']),
+                'value' => -$item['unit'] ?? 0,
+            ];
+        }
     }
 
     private function buildCogsTransaction(): void

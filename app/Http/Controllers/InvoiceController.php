@@ -71,13 +71,6 @@ class InvoiceController extends Controller
             })
         );
 
-        $statsBuilder = $builder->clone();
-
-        $builder->when($request->filled('status') &&
-            in_array($request->status, ['approved', 'unapproved', 'pending', 'approved_inactive']),
-            fn ($invoice) => $invoice->where('status', $request->status)
-        );
-
         $service_buy = $request->filled('invoice_type') && $request->invoice_type === InvoiceType::BUY->value && $request->filled('service_buy') && $request->service_buy == '1';
 
         $builder->when($service_buy, fn ($q) => $q->whereHas('items', function ($item) {
@@ -87,6 +80,13 @@ class InvoiceController extends Controller
         $builder->when(! $service_buy, fn ($q) => $q->whereHas('items', function ($item) {
             $item->where('itemable_type', Product::class);
         }));
+
+        $statsBuilder = $builder->clone();
+
+        $builder->when($request->filled('status') &&
+            in_array($request->status, ['approved', 'unapproved', 'pending', 'approved_inactive']),
+            fn ($invoice) => $invoice->where('status', $request->status)
+        );
 
         $invoices = $builder->paginate(25);
 
@@ -163,8 +163,10 @@ class InvoiceController extends Controller
 
         [$msgType, $msg] = $this->invoiceMessage($result, 'created', $approved);
 
+        $isServiceBuy = $result['invoice']->invoice_type === InvoiceType::BUY && $result['invoice']->items->where('itemable_type', Product::class)->isEmpty();
+
         return redirect()
-            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type])
+            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type, 'service_buy' => $isServiceBuy ? '1' : null])
             ->with($msgType, $msg);
     }
 
@@ -273,8 +275,10 @@ class InvoiceController extends Controller
 
         [$msgType, $msg] = $this->invoiceMessage($result, 'updated', $approved);
 
+        $isServiceBuy = $result['invoice']->invoice_type === InvoiceType::BUY && $result['invoice']->items->where('itemable_type', Product::class)->isEmpty();
+
         return redirect()
-            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type])
+            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type, 'service_buy' => $isServiceBuy ? '1' : null])
             ->with($msgType, $msg);
     }
 
