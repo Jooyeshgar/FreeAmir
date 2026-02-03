@@ -27,12 +27,19 @@
                     </svg>
                     {{ __('Accounting Document') }}
                 </span>
-                @if ($document->documentable)
+                @php
+                    $documentableRoute = match (true) {
+                        $document->documentable instanceof \App\Models\Invoice => 'invoices.show',
+                        $document->documentable instanceof \App\Models\AncillaryCost => 'ancillary-costs.show',
+                        default => null,
+                    };
+                @endphp
+                @if ($document->documentable && $documentableRoute)
                     <span class="badge badge-lg badge-info gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m2 8H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2z" />
                         </svg>
-                        <a href="{{ route('invoices.show', $document->invoice) }}" class="link link-hover">
+                        <a href="{{ route($documentableRoute, $document->documentable) }}" class="link link-hover">
                             {{ __(class_basename($document->documentable_type)) }}
                         </a>
                     </span>

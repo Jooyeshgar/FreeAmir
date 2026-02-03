@@ -61,6 +61,7 @@
     "Amount must be at least :min.": "مبلغ باید حداقل :min باشد.",
     "Amount per unit": "مبلغ هر واحد",
     "An error occurred, Try again.": "خطایی رخ داد ، دوباره امتحان کنید.",
+    "AncillaryCost": "هزینه جانبی",
     "Ancillary Cost": "هزینه جانبی",
     "Ancillary Cost #": "هزینه جانبی #",
     "Ancillary Cost List": "هزینه های جانبی",
