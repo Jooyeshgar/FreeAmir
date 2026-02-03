@@ -131,7 +131,7 @@
                 </tbody>
             </table>
 
-            {{ $documents->links() }}
+            {{ $documents->withQueryString()->links() }}
         </div>
     </div>
 

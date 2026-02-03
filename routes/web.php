@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers;
+use App\Http\Controllers\DocumentFileController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
@@ -13,8 +14,11 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('/home/bank-account', [Controllers\HomeController::class, 'bankAccount'])->name('home.bank-account');
     Route::resource('subjects', Controllers\SubjectController::class);
     Route::post('subjects/search', [Controllers\SubjectController::class, 'search'])->name('subjects.search');
+
     Route::resource('documents', Controllers\DocumentController::class);
+    Route::get('documents/{document}/print', [Controllers\DocumentController::class, 'print'])->name('documents.print');
     Route::get('documents/{document}/duplicate', [Controllers\DocumentController::class, 'duplicate'])->name('documents.duplicate');
+
     Route::resource('transactions', Controllers\TransactionController::class)->only(['index', 'show']);
     Route::get('products/search-product-group', [Controllers\ProductController::class, 'searchProductGroup'])->name('products.search-product-group');
     Route::resource('products', Controllers\ProductController::class);
@@ -70,12 +74,22 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('', [Controllers\InvoiceController::class, 'index']);
     });
 
-    Route::group(['prefix' => 'comments', 'as' => 'comments.'], function () {
-        Route::get('{customer}', [Controllers\CommentController::class, 'index'])->name('index');
-        Route::get('create/{customer}', [Controllers\CommentController::class, 'create'])->name('create');
-        Route::get('edit/{comment}', [Controllers\CommentController::class, 'edit'])->name('edit');
-        Route::put('{comment}', [Controllers\CommentController::class, 'update'])->name('update');
-        Route::post('', [Controllers\CommentController::class, 'store'])->name('store');
-        Route::delete('{comment}', [Controllers\CommentController::class, 'destroy'])->name('destroy');
+    Route::prefix('comments')->as('comments.')->controller(Controllers\CommentController::class)->group(function () {
+        Route::get('{customer}', 'index')->name('index');
+        Route::get('create/{customer}', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('{comment}/edit', 'edit')->name('edit');
+        Route::put('{comment}', 'update')->name('update');
+        Route::delete('{comment}', 'destroy')->name('destroy');
+    });
+
+    Route::prefix('documents/{document}/files')->as('documents.files.')->controller(DocumentFileController::class)->group(function () {
+        Route::get('create', 'create')->name('create');
+        Route::post('store', 'store')->name('store');
+        Route::get('{documentFile}/edit', 'edit')->name('edit');
+        Route::put('{documentFile}', 'update')->name('update');
+        Route::delete('{documentFile}', 'destroy')->name('destroy');
+        Route::get('{documentFile}/view', 'view')->name('view');
+        Route::get('{documentFile}/download', 'download')->name('download');
     });
 });
