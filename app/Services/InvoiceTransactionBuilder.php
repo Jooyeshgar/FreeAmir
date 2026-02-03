@@ -112,7 +112,7 @@ class InvoiceTransactionBuilder
 
             $this->transactions[] = [
                 'subject_id' => $service->cogs_subject_id,
-                'desc' => __('Cost of Goods Sold').' '.__('Invoice').' '.$this->invoiceType->label().' '.__(' with number ').' '.formatNumber($this->invoiceData['number']),
+                'desc' => __('Cost of Services').' '.__('Invoice').' '.$this->invoiceType->label().' '.__(' with number ').' '.formatNumber($this->invoiceData['number']),
                 'value' => -$item['unit'] ?? 0,
             ];
         }
