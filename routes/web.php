@@ -84,7 +84,6 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     });
 
     Route::prefix('documents/{document}/files')->as('documents.files.')->controller(DocumentFileController::class)->group(function () {
-        Route::get('', 'index')->name('index');
         Route::get('create', 'create')->name('create');
         Route::post('store', 'store')->name('store');
         Route::get('{documentFile}/edit', 'edit')->name('edit');

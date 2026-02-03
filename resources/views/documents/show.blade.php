@@ -32,7 +32,9 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m2 8H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2z" />
                         </svg>
-                        {{ __(class_basename($document->documentable_type)) }}
+                        <a href="{{ route('invoices.show', $document->invoice) }}" class="link link-hover">
+                            {{ __(class_basename($document->documentable_type)) }}
+                        </a>
                     </span>
                 @endif
             </div>
@@ -135,7 +137,9 @@
                                 <tr class="hover">
                                     <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
                                     <td class="px-4 py-3">
-                                        {{ $transaction->subject?->formattedCode() ?? '—' }}
+                                        <a href="{{ route('transactions.index', ['subject_id' => $transaction->subject_id]) }}" class="link link-hover">
+                                            {{ $transaction->subject?->formattedCode() ?? '—' }}
+                                        </a>
                                     </td>
                                     <td class="px-4 py-3">
                                         {{ $transaction->subject?->name ?? '—' }}

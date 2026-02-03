@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Exceptions\DocumentServiceException;
 use App\Models\Document;
+use App\Models\DocumentFile;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -190,9 +191,15 @@ class DocumentService
 
     public static function deleteDocument(int $documentId): void
     {
-        DB::beginTransaction();
-        Transaction::where('document_id', $documentId)->delete();
-        Document::where('id', $documentId)->delete();
-        DB::commit();
+        $documentFileService = new DocumentFileService;
+        DB::transaction(function () use ($documentId, $documentFileService) {
+            $documentFiles = DocumentFile::where('document_id', $documentId)->get();
+            foreach ($documentFiles as $documentFile) {
+                $documentFileService->delete($documentFile);
+            }
+
+            Transaction::where('document_id', $documentId)->delete();
+            Document::where('id', $documentId)->delete();
+        });
     }
 }

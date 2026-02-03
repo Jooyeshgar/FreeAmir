@@ -18,13 +18,6 @@ class DocumentFileController extends Controller
         $this->middleware('permission:documents.delete')->only('destroy');
     }
 
-    public function index(Document $document)
-    {
-        $documentFiles = DocumentFile::where('document_id', $document->id)->latest()->paginate(25);
-
-        return view('documents.documentFiles.index', compact('documentFiles', 'document'));
-    }
-
     public function create(Document $document)
     {
         $documentFile = new DocumentFile;
