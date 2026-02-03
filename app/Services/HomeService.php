@@ -6,6 +6,7 @@ use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\InvoiceItem;
 use App\Models\Product;
+use App\Models\Service;
 use App\Models\Subject;
 use App\Models\Transaction;
 use Carbon\Carbon;
@@ -77,8 +78,14 @@ class HomeService
                 $productsCogCost += $this->subjectService->sumSubject($productSubject);
             }
         }
+        $serviceCogSubjectIds = Service::pluck('cogs_subject_id')->all();
+        $servicesCogCost = 0;
+        foreach ($serviceCogSubjectIds as $serviceCogSubjectId) {
+            $serviceSubject = Subject::find($serviceCogSubjectId);
+            $servicesCogCost += $this->subjectService->sumSubject($serviceSubject);
+        }
 
-        return [$wagesCost, $productsCogCost];
+        return [$wagesCost, $productsCogCost, $servicesCogCost];
     }
 
     public function cashAndBanksBalances(string $type, int $duration)

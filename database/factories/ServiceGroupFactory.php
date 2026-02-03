@@ -22,17 +22,29 @@ class ServiceGroupFactory extends Factory
     {
         return $this->afterCreating(function (ServiceGroup $group) {
             $companyId = $group->company_id;
-            $parent = Subject::withoutGlobalScopes()->find(config('amir.sales_revenue'));
+            $subjectParent = Subject::withoutGlobalScopes()->find(config('amir.sales_revenue'));
+            $cogsParent = Subject::withoutGlobalScopes()->find(config('amir.cogs_service'));
 
             $subject = Subject::factory()
                 ->state([
                     'name' => $group->name,
                     'company_id' => $companyId,
                 ])
-                ->withParent($parent)
+                ->withParent($subjectParent)
                 ->create();
 
-            $group->updateQuietly(['subject_id' => $subject->id]);
+            $cogsSubject = Subject::factory()
+                ->state([
+                    'name' => $group->name,
+                    'company_id' => $companyId,
+                ])
+                ->withParent($cogsParent)
+                ->create();
+
+            $group->updateQuietly([
+                'subject_id' => $subject->id,
+                'cogs_subject_id' => $cogsSubject->id,
+            ]);
         });
     }
 }

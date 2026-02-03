@@ -18,6 +18,7 @@ class ServiceGroup extends Model
         'sstid',
         'company_id',
         'subject_id',
+        'cogs_subject_id',
     ];
 
     public static function booted(): void
@@ -37,5 +38,10 @@ class ServiceGroup extends Model
     public function subject(): BelongsTo
     {
         return $this->belongsTo(Subject::class, 'subject_id');
+    }
+
+    public function cogsSubject(): BelongsTo
+    {
+        return $this->belongsTo(Subject::class, 'cogs_subject_id');
     }
 }
