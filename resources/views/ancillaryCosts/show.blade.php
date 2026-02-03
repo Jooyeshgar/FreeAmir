@@ -68,7 +68,7 @@
 
                 @can('ancillary-costs.approve')
                     @if (!empty($changeStatusValidation) && ($changeStatusValidation['allowed'] ?? false))
-                        <div class="stats shadow bg-base-100 border border-base-300 col-span-1 md:col-span-2 lg:col-span-4">
+                        <div class="border col-span-1 md:col-span-2 lg:col-span-4">
                             <div class="stat">
                                 <div class="stat-title">{{ __('Status') }}</div>
                                 <div class="stat-value">
@@ -80,12 +80,12 @@
                             </div>
                         </div>
                     @elseif (!empty($changeStatusValidation) && !($changeStatusValidation['allowed'] ?? true))
-                        <div class="stats shadow bg-base-100 border border-base-300 col-span-1 md:col-span-2 lg:col-span-4">
+                        <div class="border col-span-1 md:col-span-2 lg:col-span-4">
                             <div class="stat">
                                 <div class="stat-title">{{ __('Status') }}</div>
                                 <div class="stat-value">
                                     <span class="tooltip" data-tip="{{ $changeStatusValidation['reason'] ?? '' }}">
-                                        <button class="btn {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }} btn-disabled cursor-not-allowed" disabled>
+                                        <button class="btn {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }} btn-disabled cursor-not-allowed">
                                             {{ __($ancillaryCost->status?->isApproved() ? 'Unapprove' : 'Approve') }}
                                         </button>
                                     </span>
@@ -210,14 +210,14 @@
             </div>
 
             <div class="card-actions justify-between mt-4">
-                <a href="{{ route('ancillary-costs.index') }}" class="btn btn-ghost gap-2">
+                <a href="{{ isset($invoice) && $invoice ? route('invoices.show', $invoice) : route('ancillary-costs.index') }}" class="btn btn-ghost gap-2">
                     {{ __('Back') }}
                 </a>
 
                 <div class="flex flex-wrap gap-2">
                     @if (!empty($editDeleteStatus) && ($editDeleteStatus['allowed'] ?? false) && !$ancillaryCost->status?->isApproved())
                         @can('ancillary-costs.edit')
-                            <a href="{{ route('ancillary-costs.edit', $ancillaryCost) }}" class="btn btn-primary gap-2">
+                            <a href="{{ route('invoices.ancillary-costs.edit', [$invoice ?? $ancillaryCost->invoice_id, $ancillaryCost]) }}" class="btn btn-primary gap-2">
                                 {{ __('Edit') }}
                             </a>
                         @endcan

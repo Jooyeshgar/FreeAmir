@@ -37,8 +37,9 @@ class AncillaryCostController extends Controller
         return view('ancillaryCosts.index', compact('ancillaryCosts'));
     }
 
-    public function show(AncillaryCost $ancillaryCost)
+    public function show(Invoice $invoice, AncillaryCost $ancillaryCost)
     {
+        $this->ensureInvoiceMatchesAncillaryCost($invoice, $ancillaryCost);
         $ancillaryCost->load([
             'invoice',
             'document',
@@ -49,30 +50,38 @@ class AncillaryCostController extends Controller
         $editDeleteStatus = AncillaryCostService::getEditDeleteStatus($ancillaryCost);
         $changeStatusValidation = AncillaryCostService::getChangeStatusValidation($ancillaryCost);
 
-        return view('ancillaryCosts.show', compact('ancillaryCost', 'editDeleteStatus', 'changeStatusValidation'));
+        return view('ancillaryCosts.show', compact('ancillaryCost', 'editDeleteStatus', 'changeStatusValidation', 'invoice'));
     }
 
-    public function create()
+    public function create(?Invoice $invoice = null)
     {
-        $invoices = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing()->take(20)
-            ->map(function ($invoice) { // Format invoices for select box
-                return [
-                    'id' => $invoice->id,
-                    'groupId' => 0,
-                    'groupName' => 'General',
-                    'text' => $invoice->number,
-                    'type' => 'invoice',
-                ];
-            })->all();
+        $invoiceItems = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing()->take(20);
+
+        if ($invoice) {
+            $invoiceItems = $invoiceItems->filter(fn ($item) => $item->id === $invoice->id);
+        }
+
+        $invoices = $invoiceItems->map(function ($item) { // Format invoices for select box
+            return [
+                'id' => $item->id,
+                'groupId' => 0,
+                'groupName' => 'General',
+                'text' => $item->number,
+                'type' => 'invoice',
+            ];
+        })->values()->all();
 
         $customers = Customer::with('group')->orderBy('name', 'asc')->limit(20)->get();
         $ancillaryCost = new AncillaryCost;
+        if ($invoice) {
+            $ancillaryCost->invoice_id = $invoice->id;
+        }
         $ancillaryCostItems = old('ancillaryCosts') ?? [];
 
-        return view('ancillaryCosts.create', compact('invoices', 'customers', 'ancillaryCost', 'ancillaryCostItems'));
+        return view('ancillaryCosts.create', compact('invoices', 'customers', 'ancillaryCost', 'ancillaryCostItems', 'invoice'));
     }
 
-    public function store(StoreAncillaryCostRequest $request)
+    public function store(StoreAncillaryCostRequest $request, ?Invoice $invoice = null)
     {
         $validated = $request->validated();
         $validated['company_id'] = getActiveCompany();
@@ -88,17 +97,26 @@ class AncillaryCostController extends Controller
             auth()->user()->can('ancillary-costs.approve');
         }
 
+        if ($invoice) {
+            $validated['invoice_id'] = $invoice->id;
+        }
+
         $result = AncillaryCostService::createAncillaryCost(auth()->user(), $validated, $approved);
 
         [$msgType, $msg] = $this->ancillaryCostMessage($result, 'created', $approved);
 
-        return redirect()
-            ->route('ancillary-costs.index')
-            ->with($msgType, $msg);
+        if ($invoice) {
+            return redirect()
+                ->route('invoices.show', $invoice)
+                ->with($msgType, $msg);
+        }
+
+        return redirect()->route('ancillary-costs.index')->with($msgType, $msg);
     }
 
-    public function edit(AncillaryCost $ancillaryCost)
+    public function edit(Invoice $invoice, AncillaryCost $ancillaryCost)
     {
+        $this->ensureInvoiceMatchesAncillaryCost($invoice, $ancillaryCost);
         $invoices = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing()->take(20)
             ->map(function ($invoice) { // Format invoices for select box
                 return [
@@ -133,11 +151,12 @@ class AncillaryCostController extends Controller
         $vatPercentage = $subtotalBeforeVat > 0 ? ($ancillaryCost['vat'] / $subtotalBeforeVat) * 100 : 0;
         $ancillaryCost['vat'] = $vatPercentage;
 
-        return view('ancillaryCosts.edit', compact('ancillaryCost', 'invoices', 'customers', 'ancillaryCostItems'));
+        return view('ancillaryCosts.edit', compact('ancillaryCost', 'invoices', 'customers', 'ancillaryCostItems', 'invoice'));
     }
 
-    public function update(StoreAncillaryCostRequest $request, AncillaryCost $ancillaryCost)
+    public function update(StoreAncillaryCostRequest $request, Invoice $invoice, AncillaryCost $ancillaryCost)
     {
+        $this->ensureInvoiceMatchesAncillaryCost($invoice, $ancillaryCost);
         if (AncillaryCostService::getEditDeleteStatus($ancillaryCost)['allowed'] === false) {
             throw new Exception(__('Ancillary Cost cannot be edited.'), 400);
         }
@@ -158,13 +177,21 @@ class AncillaryCostController extends Controller
             auth()->user()->can('ancillary-costs.approve');
         }
 
+        if ($invoice) {
+            $validated['invoice_id'] = $invoice->id;
+        }
+
         $result = AncillaryCostService::updateAncillaryCost(auth()->user(), $ancillaryCost, $validated, $approved);
 
         [$msgType, $msg] = $this->ancillaryCostMessage($result, 'updated', $approved);
 
-        return redirect()
-            ->route('ancillary-costs.index')
-            ->with($msgType, $msg);
+        if ($invoice) {
+            return redirect()
+                ->route('invoices.show', $invoice)
+                ->with($msgType, $msg);
+        }
+
+        return redirect()->route('ancillary-costs.index')->with($msgType, $msg);
     }
 
     private function ancillaryCostMessage(array $result, string $action = 'created', bool $approved = false)
@@ -188,17 +215,22 @@ class AncillaryCostController extends Controller
         ];
     }
 
-    public function destroy(AncillaryCost $ancillaryCost)
+    public function destroy(Invoice $invoice, AncillaryCost $ancillaryCost)
     {
+        $this->ensureInvoiceMatchesAncillaryCost($invoice, $ancillaryCost);
         if (AncillaryCostService::getEditDeleteStatus($ancillaryCost)['allowed'] === false) {
             throw new Exception(__('Ancillary Cost cannot be deleted.'), 400);
         }
 
         AncillaryCostService::deleteAncillaryCost($ancillaryCost);
 
-        return redirect()
-            ->route('ancillary-costs.index')
-            ->with('success', __('Ancillary Cost deleted successfully.'));
+        if ($invoice) {
+            return redirect()
+                ->route('invoices.show', $invoice)
+                ->with('success', __('Ancillary Cost deleted successfully.'));
+        }
+
+        return redirect()->route('ancillary-costs.index')->with('success', __('Ancillary Cost deleted successfully.'));
     }
 
     public function getBuyInvoiceProducts($invoice_id)
@@ -225,8 +257,9 @@ class AncillaryCostController extends Controller
         return response()->json(['products' => $products]);
     }
 
-    public function changeStatus(AncillaryCost $ancillaryCost, string $status, AncillaryCostService $service)
+    public function changeStatus(AncillaryCost $ancillaryCost, string $status, AncillaryCostService $service, ?Invoice $invoice = null)
     {
+        $this->ensureInvoiceMatchesAncillaryCost($invoice, $ancillaryCost);
         if (! in_array($status, ['approve', 'unapprove'])) {
             return redirect()->route('ancillary-costs.index')
                 ->with('error', __('Invalid status action.'));
@@ -242,7 +275,14 @@ class AncillaryCostController extends Controller
 
         $message = $status === 'approve' ? __('Ancillary Cost approved successfully.') : __('Ancillary Cost unapproved successfully.');
 
-        return redirect()->route('ancillary-costs.index')->with('success', __($message));
+        return redirect()->route('invoices.ancillary-costs.show', [$ancillaryCost->invoice_id, $ancillaryCost])->with('success', value: __($message));
+    }
+
+    private function ensureInvoiceMatchesAncillaryCost(?Invoice $invoice, AncillaryCost $ancillaryCost): void
+    {
+        if ($invoice && $ancillaryCost->invoice_id !== $invoice->id) {
+            abort(404);
+        }
     }
 
     public function searchCustomer(Request $request)

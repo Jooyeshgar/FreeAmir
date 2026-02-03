@@ -78,6 +78,7 @@
     "Ancillary Cost {$action} successfully.": "Ancillary Cost {$action} successfully.",
     "Ancillary Costs": "Ancillary Costs",
     "Ancillary costs can only be added to buy invoices": "Ancillary costs can only be added to buy invoices",
+    "Ancillary cost items are not synchronized with invoice items. Please edit the ancillary cost to synchronize with the invoice items.": "Ancillary cost items are not synchronized with invoice items. Please edit the ancillary cost to synchronize with the invoice items.",
     "Approve": "Approve",
     "Approve All": "Approve All",
     "Approve Inactive": "Approve Inactive",

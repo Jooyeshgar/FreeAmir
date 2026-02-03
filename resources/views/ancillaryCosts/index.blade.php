@@ -7,10 +7,6 @@
     <x-show-message-bags />
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <div class="card-actions">
-                <a href="{{ route('ancillary-costs.create') }}" class="btn btn-primary">{{ __('Create Ancillary Cost') }}</a>
-            </div>
-
             <dl class="grid grid-cols-4 gap-3">
                 @foreach (\App\Enums\InvoiceStatus::cases() as $status)
                     <div class="bg-base-100 p-3 rounded-md border">
@@ -74,7 +70,7 @@
                                 {{ $ancillaryCost->status?->label() ?? '' }}
                             </td>
                             <td class="p-2">
-                                <a href="{{ route('ancillary-costs.show', $ancillaryCost) }}" class="btn btn-sm btn-info">{{ __('Show') }}</a>
+                                <a href="{{ route('invoices.ancillary-costs.show', [$ancillaryCost->invoice_id, $ancillaryCost]) }}" class="btn btn-sm btn-info">{{ __('Show') }}</a>
 
                                 @can('ancillary-costs.approve')
                                     @if ($ancillaryCost->changeStatusValidation['allowed'])
@@ -84,16 +80,18 @@
                                         </a>
                                     @else
                                         <span class="tooltip" data-tip="{{ $ancillaryCost->changeStatusValidation['reason'] }}">
-                                            <button class="btn btn-sm {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }} btn-disabled cursor-not-allowed" disabled
-                                                title="{{ $ancillaryCost->changeStatusValidation['reason'] }}">{{ $ancillaryCost->status?->isApproved() ? __('Unapprove') : __('Approve') }}</button>
+                                            <button class="btn btn-sm {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }} btn-disabled cursor-not-allowed"
+                                                disabled title="{{ $ancillaryCost->changeStatusValidation['reason'] }}">{{ $ancillaryCost->status?->isApproved() ? __('Unapprove') : __('Approve') }}</button>
                                         </span>
                                     @endif
                                 @endcan
                                 
                                 @if ($ancillaryCost->editDeleteStatus['allowed'])
                                     @if (!$ancillaryCost->status->isApproved())
-                                        <a href="{{ route('ancillary-costs.edit', $ancillaryCost) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                        <form action="{{ route('ancillary-costs.destroy', $ancillaryCost) }}" method="POST" class="inline-block">
+                                        <a href="{{ route('invoices.ancillary-costs.edit', [$ancillaryCost->invoice_id, $ancillaryCost]) }}" class="btn btn-sm btn-info">
+                                            {{ __('Edit') }}</a>
+                                        <form action="{{ route('invoices.ancillary-costs.destroy', [$ancillaryCost->invoice_id, $ancillaryCost]) }}"
+                                            method="POST" class="inline-block"> 
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>

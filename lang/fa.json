@@ -79,6 +79,7 @@
     "Ancillary Cost updated successfully.": "هزینه جانبی با موفقیت به روز شد.",
     "Ancillary Cost {$action} successfully.": "هزینه کمکی {$action} با موفقیت انجام شد.",
     "Ancillary Costs": "هزینه های جانبی",
+    "Ancillary cost items are not synchronized with invoice items. Please edit the ancillary cost to synchronize with the invoice items.": "اقلام هزینه جانبی با اقلام فاکتور همگام نیستند. لطفاً هزینه جانبی را ویرایش کنید تا با اقلام فاکتور همگام شود.",
     "Ancillary costs can only be added to buy invoices": "هزینه های جانبی را فقط می توان برای فاکتور خرید اضافه کرد",
     "Approve": "تایید",
     "Approve All": "تایید همه",

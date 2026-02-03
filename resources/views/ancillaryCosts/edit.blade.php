@@ -6,7 +6,7 @@
     </x-slot>
 
     <div class="">
-        <form action="{{ route('ancillary-costs.update', $ancillaryCost) }}" method="POST">
+        <form action="{{ isset($invoice) && $invoice ? route('invoices.ancillary-costs.update', [$invoice, $ancillaryCost]) : route('ancillary-costs.update', $ancillaryCost) }}" method="POST">
             @csrf
             @method('PUT')
             <div class="card-body">

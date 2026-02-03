@@ -6,7 +6,7 @@
     </x-slot>
 
     <div class="">
-        <form action="{{ route('ancillary-costs.store') }}" method="POST">
+        <form action="{{ isset($invoice) && $invoice ? route('invoices.ancillary-costs.store', $invoice) : route('ancillary-costs.store') }}" method="POST">
             @csrf
             <div class="card-body">
                 <h2 class="card-title">{{ __('Add Ancillary Cost') }}</h2>

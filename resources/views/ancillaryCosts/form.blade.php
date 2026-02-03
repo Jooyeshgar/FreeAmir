@@ -31,7 +31,7 @@
                     <input type="hidden" x-bind:value="customer_id" name="customer_id">
                 </div>
             </div>
-            <div class="flex w-1/8">
+            <div class="flex w-1/8 hidden">
                 <div class="flex flex-wrap w-full">
                     @php
                         $initialInvoiceId = old('invoice_id', $ancillaryCost->invoice_id ?? null);
@@ -70,7 +70,7 @@
                     input_value="{{ old('vat') ?? $ancillaryCost->vat }}" label_text_class="text-gray-500"
                     label_class="w-full" input_class="border-gray-300"></x-text-input>
             </div>
-            <div class="flex w-1/8">
+            <div class="flex w-1/8 hidden">
                 <x-text-input data-jdp class="w-3/4" title="{{ __('date') }}" input_name="date"
                     placeholder="{{ __('date') }}" input_value="{{ old('date') ?? convertToJalali($ancillaryCost->date ?? now()) }}"
                     label_text_class="text-gray-500 text-nowrap" input_class="datePicker w-full"></x-text-input>
@@ -165,7 +165,7 @@
 </div>
 
 <div class="mt-4 flex gap-2 justify-end">
-    <a href="{{ route('ancillary-costs.index') }}" type="submit" class="btn btn-default rounded-md">
+    <a href="{{ isset($invoice) && $invoice ? route('invoices.show', $invoice) : route('ancillary-costs.index') }}" type="submit" class="btn btn-default rounded-md">
         {{ __('cancel') }}
     </a>
     <button id="submitForm" type="submit" class="btn text-white btn-primary rounded-md">
@@ -246,7 +246,7 @@
                         return;
                     }
 
-                    fetch(`/ancillary-costs/get-products/${invoiceId}`)
+                    fetch(`/invoices/ancillary-costs/get-products/${invoiceId}`)
                         .then(response => response.json())
                         .then(data => {
                             this.availableProducts = data.products;
