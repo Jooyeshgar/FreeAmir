@@ -5,7 +5,7 @@
         </h2>
     </x-slot>
     <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('comments.store') }}" method="POST">
+        <form action="{{ route('comments.store', $customer->id) }}" method="POST">
             @csrf
             <div class="card-body">
                 <h2 class="card-title">{{ __('Add comment') }}</h2>

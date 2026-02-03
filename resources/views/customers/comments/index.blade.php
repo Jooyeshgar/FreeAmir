@@ -46,9 +46,9 @@
                                 </div>
                             </td>
                             <td class="px-4 py-2">
-                                <a href="{{ route('comments.edit', $comment) }}"
+                                <a href="{{ route('comments.edit', [$comment->customer_id, $comment]) }}"
                                     class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                <form action="{{ route('comments.destroy', $comment) }}" method="POST"
+                                <form action="{{ route('comments.destroy', [$comment->customer_id, $comment]) }}" method="POST"
                                     class="inline-block">
                                     @csrf
                                     @method('DELETE')

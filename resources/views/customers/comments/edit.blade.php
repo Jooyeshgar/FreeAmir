@@ -6,7 +6,7 @@
     </x-slot>
 
     <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('comments.update', $comment) }}" method="POST">
+        <form action="{{ route('comments.update', [$comment->customer_id, $comment]) }}" method="POST">
             @csrf
             @method('PUT')
             <div class="card-body">

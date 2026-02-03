@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers;
-use App\Http\Controllers\DocumentFileController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
@@ -74,16 +73,16 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('', [Controllers\InvoiceController::class, 'index']);
     });
 
-    Route::prefix('comments')->as('comments.')->controller(Controllers\CommentController::class)->group(function () {
-        Route::get('{customer}', 'index')->name('index');
-        Route::get('create/{customer}', 'create')->name('create');
-        Route::post('/', 'store')->name('store');
+    Route::prefix('customers/{customer}/comments')->as('comments.')->controller(Controllers\CommentController::class)->group(function () {
+        Route::get('', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::post('', 'store')->name('store');
         Route::get('{comment}/edit', 'edit')->name('edit');
         Route::put('{comment}', 'update')->name('update');
         Route::delete('{comment}', 'destroy')->name('destroy');
     });
 
-    Route::prefix('documents/{document}/files')->as('documents.files.')->controller(DocumentFileController::class)->group(function () {
+    Route::prefix('documents/{document}/files')->as('documents.files.')->controller(Controllers\DocumentFileController::class)->group(function () {
         Route::get('create', 'create')->name('create');
         Route::post('store', 'store')->name('store');
         Route::get('{documentFile}/edit', 'edit')->name('edit');
