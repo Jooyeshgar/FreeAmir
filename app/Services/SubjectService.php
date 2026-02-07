@@ -155,6 +155,7 @@ class SubjectService
             'parent_id' => $parentId,
             'company_id' => $companyId,
             'code' => $code,
+            'is_permanent' => $data['is_permanent'],
         ];
 
         return Subject::create($attributes);
@@ -198,7 +199,7 @@ class SubjectService
                 }
             }
 
-            if (isset($data['code']) && $data['code'] !== '') {
+            if (isset($data['code']) && ! empty($data['code'])) {
                 $newCode = $this->buildCodeWithParent($data['code'], $newParentId, $companyId);
                 $this->validateCodeUniqueness($newCode, $companyId, $subject->id);
             } else {
@@ -206,11 +207,11 @@ class SubjectService
             }
             $data['code'] = $newCode;
 
-            $subject->update(array_intersect_key($data, array_flip(['name', 'parent_id', 'code', 'type'])));
+            $subject->update(array_intersect_key($data, array_flip(['name', 'parent_id', 'code', 'type', 'is_permanent'])));
 
             $this->updateDescendantCodes($subject);
         } else {
-            $allowedFields = array_intersect_key($data, array_flip(['name', 'type']));
+            $allowedFields = array_intersect_key($data, array_flip(['name', 'code', 'type', 'is_permanent']));
             if (! empty($allowedFields)) {
                 $subject->update($allowedFields);
             }

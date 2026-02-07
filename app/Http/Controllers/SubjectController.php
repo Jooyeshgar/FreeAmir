@@ -43,12 +43,16 @@ class SubjectController extends Controller
         $validatedData = $request->validate([
             'name' => 'required|max:60',
             'parent_id' => 'nullable|exists:subjects,id',
-            'code' => 'nullable|string|max:3',
+            'subject_code' => 'nullable|string|max:3',
+            'is_permanent' => 'required|in:Permanent,Temporary',
         ]);
+
+        $validatedData['code'] = $validatedData['subject_code'] ?? null;
 
         $data = [
             'name' => $validatedData['name'],
             'parent_id' => $validatedData['parent_id'] ?? null,
+            'is_permanent' => $validatedData['is_permanent'] === 'Permanent',
         ];
 
         if (! empty($validatedData['code'])) {
@@ -68,7 +72,7 @@ class SubjectController extends Controller
     public function edit(Subject $subject)
     {
         $parentSubject = $subject->parent;
-        $subjects = Subject::whereIsRoot()->with('children')->orderBy('code', 'asc')->get();
+        $subjects = Subject::whereIsRoot()->with('children')->orderBy('code')->get();
 
         return view('subjects.edit', compact('subject', 'parentSubject', 'subjects'));
     }
@@ -76,11 +80,15 @@ class SubjectController extends Controller
     public function update(Request $request, Subject $subject)
     {
         $validatedData = $request->validate([
-            'code' => 'required|max:20',
+            'subject_code' => 'nullable|max:20',
             'name' => 'required|max:60',
             'parent_id' => 'nullable|exists:subjects,id',
             'type' => 'required|in:debtor,creditor,both',
+            'is_permanent' => 'required|in:Permanent,Temporary',
         ]);
+
+        $validatedData['is_permanent'] = $validatedData['is_permanent'] === 'Permanent';
+        $validatedData['code'] = $validatedData['subject_code'];
 
         try {
             $updatedSubject = app(SubjectService::class)->editSubject($subject, $validatedData);

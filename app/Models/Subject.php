@@ -17,6 +17,7 @@ class Subject extends Model
         'parent_id',
         'company_id',
         'type',
+        'is_permanent',
     ];
 
     protected $attributes = [
