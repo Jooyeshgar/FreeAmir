@@ -33,7 +33,7 @@
                         <th class="px-4 py-2">{{ __('Parent') }}</th>
                         <th class="px-4 py-2">{{ __('Type') }}</th>
                         <th class="px-4 py-2">{{ __('Permanent/Temporary') }}</th>
-                        <th class="px-4 py-2">{{ __('Create at') }}</th>
+                        <th class="px-4 py-2">{{ __('Created at') }}</th>
                         <th class="px-4 py-2">{{ __('Action') }}</th>
                     </tr>
                 </thead>

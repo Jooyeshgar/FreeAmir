@@ -49,25 +49,17 @@ class SubjectController extends Controller
         ]);
 
         $validatedData['code'] = $validatedData['subject_code'] ?? null;
+        $validatedData['is_permanent'] = $validatedData['is_permanent'] === 'Permanent';
+        $validatedData['code'] = ! empty($validatedData['code']) ? str_pad($validatedData['code'], 3, '0', STR_PAD_LEFT) : null;
 
-        $data = [
-            'name' => $validatedData['name'],
-            'parent_id' => $validatedData['parent_id'] ?? null,
-            'is_permanent' => $validatedData['is_permanent'] === 'Permanent',
-            'type' => $validatedData['type'],
-        ];
-
-        $allowedTypes = $this->subjectService->getAllowedTypesForSubject($validatedData['parent_id'] ? Subject::find($validatedData['parent_id']) : null);
+        $parentSubject = $validatedData['parent_id'] ? Subject::find($validatedData['parent_id']) : null;
+        $allowedTypes = $this->subjectService->getAllowedTypesForSubject($parentSubject);
 
         if (! in_array($validatedData['type'], $allowedTypes)) {
             return redirect()->back()->withErrors(['type' => __('The selected type is not allowed according to the chosen parent subject.')])->withInput();
         }
 
-        if (! empty($validatedData['code'])) {
-            $data['code'] = str_pad($validatedData['code'], 3, '0', STR_PAD_LEFT);
-        }
-
-        $subject = $this->subjectService->createSubject($data);
+        $subject = $this->subjectService->createSubject($validatedData);
 
         $redirectUrl = route('subjects.index');
         if ($subject->parent_id) {
@@ -88,7 +80,7 @@ class SubjectController extends Controller
     public function update(Request $request, Subject $subject)
     {
         $validatedData = $request->validate([
-            'subject_code' => 'nullable|max:20',
+            'subject_code' => 'nullable|max:3',
             'name' => 'required|max:60',
             'parent_id' => 'nullable|exists:subjects,id',
             'type' => 'required|in:debtor,creditor,both',
