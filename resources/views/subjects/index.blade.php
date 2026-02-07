@@ -32,6 +32,8 @@
                         <th class="px-4 py-2">{{ __('Name') }}</th>
                         <th class="px-4 py-2">{{ __('Parent') }}</th>
                         <th class="px-4 py-2">{{ __('Type') }}</th>
+                        <th class="px-4 py-2">{{ __('Permanent/Temporary') }}</th>
+                        <th class="px-4 py-2">{{ __('Created at') }}</th>
                         <th class="px-4 py-2">{{ __('Action') }}</th>
                     </tr>
                 </thead>
@@ -55,6 +57,8 @@
                             </td>
                             <td class="px-4 py-2">{{ $subject->parent ? $subject->parent->name : __('Main') }}</td>
                             <td class="px-4 py-2">{{ $subject->type ? __(ucfirst($subject->type)) : '-' }}</td>
+                            <td class="px-4 py-2">{{ $subject->is_permanent ? __('Permanent') : __('Temporary') }}</td>
+                            <td class="px-4 py-2">{{ $subject->created_at ? formatDate($subject->created_at) : '-' }}</td>
                             <td class="px-4 py-2">
                                 @if ($subject->subjectable)
                                     <a href="{{ route(model_route($subject->subjectable, 'edit'), $subject->subjectable) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
