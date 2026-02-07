@@ -98,6 +98,11 @@
                             'sell' => 'Sold',
                             'buy' => 'Bought',
                         };
+
+                        $isServiceBuy = request('service_buy') == '1';
+                        $quantityTitle = __(
+                            $invoiceTypeToPast . ($isServiceBuy ? ' Services' : ' Products') . ' Quantity',
+                        );
                     @endphp
 
                     <a href="{{ $url }}"
@@ -105,7 +110,7 @@
                         <x-stat-card :title="$status->label()" :value="convertToFarsi($count)" :type="$type" />
                     </a>
                 @endforeach
-                <x-stat-card :title="__($invoiceTypeToPast . ' Products Quantity')" :value="formatNumber($invoices->totalProductsQuantity)" />
+                <x-stat-card :title="$quantityTitle" :value="formatNumber($invoices->totalProductsQuantity)" />
                 <x-stat-card :title="__('Invoices Amount')" :value="formatNumber($invoices->totalAmount)" />
             </div>
 
