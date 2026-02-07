@@ -16,7 +16,7 @@
     "dependencies": {
         "@majidh1/jalalidatepicker": "^0.9.4",
         "alpinejs": "^3.14.8",
-        "chart.js": "^4.4.7",
+        "chart.js": "^4.5.1",
         "chartjs-plugin-datalabels": "^2.2.0",
         "daisyui": "^4.12.23"
     },
