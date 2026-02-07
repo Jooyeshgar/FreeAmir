@@ -178,7 +178,9 @@
                             <td class="px-4 py-2">
                                 @php
                                     $canApprove =
-                                        $invoice->status->isReadyToApprove() || $invoice->status->isUnapproved();
+                                        $invoice->status->isReadyToApprove() ||
+                                        $invoice->status->isUnapproved() ||
+                                        $invoice->status->isApprovedInactive();
                                     $canUnapprove = $invoice->status->isApproved();
                                     $canChangeStatus = $canApprove || $canUnapprove;
                                 @endphp

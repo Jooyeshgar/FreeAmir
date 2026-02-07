@@ -379,7 +379,7 @@
 
                 <div class="flex flex-wrap gap-2">
                     @php
-                        $canApprove = $invoice->status->isReadyToApprove() || $invoice->status->isUnapproved();
+                        $canApprove = $invoice->status->isReadyToApprove() || $invoice->status->isUnapproved() || $invoice->status->isApprovedInactive();
                         $canUnapprove = $invoice->status->isApproved();
                         $canChangeStatus = $canApprove || $canUnapprove;
                     @endphp
