@@ -323,7 +323,6 @@ Alpine.store('utils', {
         e.querySelector(".selfSelectBox").style.display = "block";
     },
     formatCode(input) {
-        console.log(input);
         if (!input) return '';
         const formatted = input.match(/.{1,3}/g)?.join('/') || input;
         return ['fa', 'fa_IR'].includes('fa') ? this.convertToFarsi(formatted) : formatted;

@@ -54,14 +54,7 @@
                         selectedCode: transaction.code,
                         selectedId: transaction.subject_id,
                     }">
-                    <input type="text" x-bind:value="transaction.transaction_id"
-                        x-bind:name="'transactions[' + index + '][transaction_id]'" hidden>
-                    <input type="text" x-bind:value="selectedCode" x-bind:name="'transactions[' + index + '][code]'"
-                        hidden>
-                    <input type="text" x-bind:value="selectedId"
-                        x-bind:name="'transactions[' + index + '][subject_id]'" hidden>
-                    <input type="text" x-bind:value="selectedName"
-                        x-bind:name="'transactions[' + index + '][subject]'" hidden>
+                    <input type="hidden" x-bind:value="transaction.transaction_id"x-bind:name="'transactions[' + index + '][transaction_id]'">
 
                     <div class="relative flex-1 text-center max-w-8 pt-2 pb-2 transaction-count-container">
                         <span class="transaction-count block" x-text="index + 1"></span>
@@ -81,7 +74,19 @@
                             input_class="border-white value codeInput "></x-text-input>
                     </div>
                     <div>
-                        <x-subject-select-box :subjects="$subjects"></x-subject-select-box>
+                        <x-subject-select url="{{ route('documents.search-subjects') }}" :subjects="$subjects"
+                            x-bind:selected_id="selectedId" x-bind:selected_name="selectedName"
+                            x-bind:selected_code="selectedCode" placeholder="{{ __('Select a subject') }}"
+                            @selected="
+                                selectedName = $event.detail.name;
+                                selectedCode = $event.detail.code;
+                                selectedId = $event.detail.id;
+                            "
+                            class="w-80 max-w-80" />
+
+                        <input type="hidden" x-bind:value="selectedCode" x-bind:name="'transactions[' + index + '][code]'">
+                        <input type="hidden" x-bind:value="selectedId" x-bind:name="'transactions[' + index + '][subject_id]'">
+                        <input type="hidden" x-bind:value="selectedName" x-bind:name="'transactions[' + index + '][subject]'">
                     </div>
                     <div class="flex-1 w-[200px]">
                         <x-text-input x-bind:value="transaction.desc"
