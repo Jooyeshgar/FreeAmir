@@ -154,6 +154,7 @@ class SubjectService
             'name' => $name,
             'parent_id' => $parentId,
             'company_id' => $companyId,
+            'type' => $data['type'] ?? 'both',
             'code' => $code,
             'is_permanent' => $data['is_permanent'],
         ];
@@ -237,6 +238,15 @@ class SubjectService
                 $this->updateDescendantCodes($child);
             }
         }
+    }
+
+    public function getAllowedTypesForSubject(?Subject $parentSubject): array
+    {
+        if (is_null($parentSubject) || $parentSubject->type === 'both') {
+            return ['debtor', 'creditor', 'both'];
+        }
+
+        return [$parentSubject->type];
     }
 
     /**

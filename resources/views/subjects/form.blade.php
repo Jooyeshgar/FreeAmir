@@ -7,7 +7,7 @@
             'debtor' => __('Debtor'),
             'creditor' => __('Creditor'),
             'both' => __('Both'),
-        ]" :selected="old('type', $subject->type ?? 'both')" />
+        ]" :selected="old('type', $subject->type ?? $parentSubject?->type ?? 'both')" />
     </div>
 
     <div class="col-span-2 md:col-span-1">
