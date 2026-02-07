@@ -79,52 +79,6 @@
                 </div>
             </div>
 
-            @if ($document->invoice)
-                <div>
-                    <div class="divider text-lg font-semibold">{{ __('Invoice') }}</div>
-                    <div class="overflow-x-auto">
-                        <table class="table w-full">
-                            <thead>
-                                <tr>
-                                    <th class="px-4 py-3">{{ __('Invoice Number') }}</th>
-                                    <th class="px-4 py-3">{{ __('Title') }}</th>
-                                    <th class="px-4 py-3">{{ __('Type') }}</th>
-                                    <th class="px-4 py-3">{{ __('Status') }}</th>
-                                    <th class="px-4 py-3">{{ __('Date') }}</th>
-                                    <th class="px-4 py-3 text-right">{{ __('Grand total') }}</th>
-                                    <th class="px-4 py-3 text-center">{{ __('Action') }}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr class="hover">
-                                    <td class="px-4 py-3 font-semibold">
-                                        <a href="{{ route('invoices.show', $document->invoice) }}" class="link link-hover">
-                                            {{ formatDocumentNumber($document->invoice->number ?? $document->invoice->id) }}
-                                        </a>
-                                    </td>
-                                    <td class="px-4 py-3">{{ $document->invoice->title ?? '—' }}</td>
-                                    <td class="px-4 py-3">{{ $document->invoice->invoice_type?->label() ?? '—' }}</td>
-                                    <td class="px-4 py-3">
-                                        <span class="badge {{ $document->invoice->status?->isApproved() ? 'badge-success' : 'badge-ghost' }}">
-                                            {{ $document->invoice->status?->label() ?? '—' }}
-                                        </span>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        {{ $document->invoice->date ? formatDate($document->invoice->date) : '—' }}
-                                    </td>
-                                    <td class="px-4 py-3 text-right">
-                                        {{ formatNumber(($document->invoice->amount ?? 0) - ($document->invoice->subtraction ?? 0)) }}
-                                    </td>
-                                    <td class="px-4 py-3 text-center">
-                                        <a href="{{ route('invoices.show', $document->invoice) }}" class="btn btn-sm btn-info">{{ __('Show') }}</a>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            @endif
-
             <div>
                 <div class="divider text-lg font-semibold">{{ __('Transactions') }}</div>
                 <div class="overflow-x-auto">
@@ -186,6 +140,52 @@
                     </table>
                 </div>
             </div>
+
+            @if ($document->invoice)
+                <div>
+                    <div class="divider text-lg font-semibold">{{ __('Invoice') }}</div>
+                    <div class="overflow-x-auto">
+                        <table class="table w-full">
+                            <thead>
+                                <tr>
+                                    <th class="px-4 py-3">{{ __('Invoice Number') }}</th>
+                                    <th class="px-4 py-3">{{ __('Title') }}</th>
+                                    <th class="px-4 py-3">{{ __('Type') }}</th>
+                                    <th class="px-4 py-3">{{ __('Status') }}</th>
+                                    <th class="px-4 py-3">{{ __('Date') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ __('Grand total') }}</th>
+                                    <th class="px-4 py-3 text-center">{{ __('Action') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="hover">
+                                    <td class="px-4 py-3 font-semibold">
+                                        <a href="{{ route('invoices.show', $document->invoice) }}" class="link link-hover">
+                                            {{ formatDocumentNumber($document->invoice->number ?? $document->invoice->id) }}
+                                        </a>
+                                    </td>
+                                    <td class="px-4 py-3">{{ $document->invoice->title ?? '—' }}</td>
+                                    <td class="px-4 py-3">{{ $document->invoice->invoice_type?->label() ?? '—' }}</td>
+                                    <td class="px-4 py-3">
+                                        <span class="badge {{ $document->invoice->status?->isApproved() ? 'badge-success' : 'badge-ghost' }}">
+                                            {{ $document->invoice->status?->label() ?? '—' }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        {{ $document->invoice->date ? formatDate($document->invoice->date) : '—' }}
+                                    </td>
+                                    <td class="px-4 py-3 text-right">
+                                        {{ formatNumber(($document->invoice->amount ?? 0) - ($document->invoice->subtraction ?? 0)) }}
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        <a href="{{ route('invoices.show', $document->invoice) }}" class="btn btn-sm btn-info">{{ __('Show') }}</a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endif
 
             <div>
                 <div class="divider text-lg font-semibold">{{ __('Document Files') }}</div>
