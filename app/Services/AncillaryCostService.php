@@ -367,6 +367,7 @@ class AncillaryCostService
             $productIds = self::getProductIdsFromAncillaryCost($ancillaryCost);
 
             self::validateAncillaryCostInvoiceApproval($ancillaryCost);
+            self::validateAncillaryCostItemsSyncedWithInvoice($ancillaryCost, $productIds);
             self::validateRelatedAncillaryCostStatus($ancillaryCost, $productIds);
             self::validateNoApprovedInvoicesAfterAncillaryCostWithSameProducts($ancillaryCost, $productIds);
 
@@ -385,6 +386,30 @@ class AncillaryCostService
         }
 
         return $productIds;
+    }
+
+    private static function validateAncillaryCostItemsSyncedWithInvoice(AncillaryCost $ancillaryCost, array $productIds): void
+    {
+        $invoice = $ancillaryCost->invoice;
+
+        if ($invoice->invoice_type !== InvoiceType::BUY) {
+            return;
+        }
+
+        $invoiceProductIds = $invoice->items()->where('itemable_type', Product::class)->pluck('itemable_id')->values()->toArray();
+
+        if (empty($invoiceProductIds)) {
+            throw new Exception(__('Ancillary cost items are not synchronized with invoice items. Please edit the ancillary cost to synchronize with the invoice items.'), 400);
+        }
+
+        $ancillaryProductIds = collect($productIds)->unique()->values()->toArray();
+
+        sort($invoiceProductIds);
+        sort($ancillaryProductIds);
+
+        if ($invoiceProductIds !== $ancillaryProductIds) {
+            throw new Exception(__('Ancillary cost items are not synchronized with invoice items. Please edit the ancillary cost to synchronize with the invoice items.'), 400);
+        }
     }
 
     private static function validateNoApprovedInvoicesAfterAncillaryCostWithSameProducts(AncillaryCost $ancillaryCost, array $productIds): void
