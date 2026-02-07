@@ -158,12 +158,12 @@ class InvoiceController extends Controller
 
         $invoice = $this->invoiceService->createInvoice(auth()->user(), $invoiceData, $items, $approved);
 
-        [$msgType, $msg] = $this->invoiceMessage($result, 'created', $approved);
+        [$msgType, $msg] = $this->invoiceMessage($invoice, 'created', $approved);
 
-        $isServiceBuy = $result['invoice']->invoice_type === InvoiceType::BUY && $result['invoice']->items->where('itemable_type', Product::class)->isEmpty();
+        $isServiceBuy = $invoice['invoice']->invoice_type === InvoiceType::BUY && $invoice['invoice']->items->where('itemable_type', Product::class)->isEmpty();
 
         return redirect()
-            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type, 'service_buy' => $isServiceBuy ? '1' : null])
+            ->route('invoices.index', ['invoice_type' => $invoice['invoice']->invoice_type, 'service_buy' => $isServiceBuy ? '1' : null])
             ->with($msgType, $msg);
     }
 
@@ -270,12 +270,12 @@ class InvoiceController extends Controller
 
         $invoice = $this->invoiceService->updateInvoice($invoice->id, $invoiceData, $items, $approved);
 
-        [$msgType, $msg] = $this->invoiceMessage($result, 'updated', $approved);
+        [$msgType, $msg] = $this->invoiceMessage($invoice, 'updated', $approved);
 
-        $isServiceBuy = $result['invoice']->invoice_type === InvoiceType::BUY && $result['invoice']->items->where('itemable_type', Product::class)->isEmpty();
+        $isServiceBuy = $invoice['invoice']->invoice_type === InvoiceType::BUY && $invoice['invoice']->items->where('itemable_type', Product::class)->isEmpty();
 
         return redirect()
-            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type, 'service_buy' => $isServiceBuy ? '1' : null])
+            ->route('invoices.index', ['invoice_type' => $invoice['invoice']->invoice_type, 'service_buy' => $isServiceBuy ? '1' : null])
             ->with($msgType, $msg);
     }
 
