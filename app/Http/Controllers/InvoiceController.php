@@ -84,7 +84,7 @@ class InvoiceController extends Controller
         $statsBuilder = $builder->clone();
 
         $builder->when($request->filled('status') &&
-            in_array($request->status, ['approved', 'unapproved', 'pre_invoice', 'approved_inactive', 'rejected', 'ready_to_approve']),
+            in_array($request->status, ['approved', 'unapproved', 'pending', 'approved_inactive', 'rejected', 'ready_to_approve', 'pre_invoice']),
             fn ($invoice) => $invoice->where('status', $request->status)
         );
 
@@ -156,14 +156,14 @@ class InvoiceController extends Controller
             auth()->user()->can('invoices.approve');
         }
 
-        $invoice = $this->invoiceService->createInvoice(auth()->user(), $invoiceData, $items, $approved);
+        $result = $this->invoiceService->createInvoice(auth()->user(), $invoiceData, $items, $approved);
 
-        [$msgType, $msg] = $this->invoiceMessage($invoice, 'created', $approved);
+        [$msgType, $msg] = $this->invoiceMessage($result, 'created', $approved);
 
-        $isServiceBuy = $invoice['invoice']->invoice_type === InvoiceType::BUY && $invoice['invoice']->items->where('itemable_type', Product::class)->isEmpty();
+        $isServiceBuy = $result['invoice']->invoice_type === InvoiceType::BUY && $result['invoice']->items->where('itemable_type', Product::class)->isEmpty();
 
         return redirect()
-            ->route('invoices.index', ['invoice_type' => $invoice['invoice']->invoice_type, 'service_buy' => $isServiceBuy ? '1' : null])
+            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type, 'service_buy' => $isServiceBuy ? '1' : null])
             ->with($msgType, $msg);
     }
 
@@ -268,14 +268,14 @@ class InvoiceController extends Controller
             auth()->user()->can('invoices.approve');
         }
 
-        $invoice = $this->invoiceService->updateInvoice($invoice->id, $invoiceData, $items, $approved);
+        $result = $this->invoiceService->updateInvoice($invoice->id, $invoiceData, $items, $approved);
 
-        [$msgType, $msg] = $this->invoiceMessage($invoice, 'updated', $approved);
+        [$msgType, $msg] = $this->invoiceMessage($result, 'updated', $approved);
 
-        $isServiceBuy = $invoice['invoice']->invoice_type === InvoiceType::BUY && $invoice['invoice']->items->where('itemable_type', Product::class)->isEmpty();
+        $isServiceBuy = $result['invoice']->invoice_type === InvoiceType::BUY && $result['invoice']->items->where('itemable_type', Product::class)->isEmpty();
 
         return redirect()
-            ->route('invoices.index', ['invoice_type' => $invoice['invoice']->invoice_type, 'service_buy' => $isServiceBuy ? '1' : null])
+            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type, 'service_buy' => $isServiceBuy ? '1' : null])
             ->with($msgType, $msg);
     }
 
@@ -292,6 +292,27 @@ class InvoiceController extends Controller
         InvoiceService::deleteInvoice($invoice->id);
 
         return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('info', __('Invoice deleted successfully.'));
+    }
+
+    private function invoiceMessage(array $result, string $action = 'created', bool $approved = false)
+    {
+        if (! $approved) {
+            return [
+                'success',
+                __("Invoice {$action} successfully."),
+            ];
+        }
+
+        $documentMissing = empty($result['document']);
+
+        return [
+            $documentMissing ? 'warning' : 'success',
+            __("Invoice {$action} successfully.")
+                .($documentMissing
+                    ? ' '.__('but it could not be approved due to validation constraints.')
+                    : ''
+                ),
+        ];
     }
 
     public function searchCustomer(Request $request)
@@ -400,17 +421,11 @@ class InvoiceController extends Controller
 
     public function changeStatus(Invoice $invoice, string $status)
     {
-        if (in_array($status, ['rejected', 'ready_to_approve'])) {
-            if ($invoice->status->isApproved()) {
-                return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])
-                    ->with('error', __('Can not change status to rejected or ready to approve of approved invoices.'));
-            }
-            $this->invoiceService->changeInvoiceStatus($invoice, $status);
+        $sellAllowedStatuses = ['approved', 'unapproved', 'ready_to_approve', 'rejected'];
+        $defaultAllowedStatuses = ['approved', 'unapproved'];
+        $allowedStatuses = $invoice->invoice_type === InvoiceType::SELL ? $sellAllowedStatuses : $defaultAllowedStatuses;
 
-            return redirect()->back()->with('success', __('Invoice status changed successfully.'));
-        }
-
-        if (! in_array($status, ['approved', 'unapproved'])) {
+        if (! in_array($status, $allowedStatuses)) {
             return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])
                 ->with('error', __('Invalid status action.'));
         }

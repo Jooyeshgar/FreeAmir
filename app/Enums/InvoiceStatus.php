@@ -4,6 +4,8 @@ namespace App\Enums;
 
 enum InvoiceStatus: string
 {
+    case PENDING = 'pending';
+
     case PRE_INVOICE = 'pre_invoice';
 
     case APPROVED = 'approved';
@@ -22,6 +24,7 @@ enum InvoiceStatus: string
     public function label(): string
     {
         return match ($this) {
+            self::PENDING => __('pending'),
             self::PRE_INVOICE => __('Pre Invoice'),
             self::APPROVED => __('approved'),
             self::UNAPPROVED => __('unapproved'),
@@ -29,6 +32,11 @@ enum InvoiceStatus: string
             self::REJECTED => __('rejected'),
             self::READY_TO_APPROVE => __('ready to approve'),
         };
+    }
+
+    public function isPending(): bool
+    {
+        return $this === self::PENDING;
     }
 
     public function isReadyToApprove(): bool

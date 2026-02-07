@@ -318,10 +318,15 @@
     <button id="submitForm" type="submit" class="btn text-white btn-primary rounded-md">
         {{ __('save') }} </button>
 
+    @php
+        $resolvedInvoiceType = $invoice->invoice_type ?? $invoice_type;
+        $isSellType = $resolvedInvoiceType == App\Enums\InvoiceType::SELL || $resolvedInvoiceType == 'sell';
+        $approveLabel = $isSellType ? __('save and ready to approve') : __('save and approve');
+    @endphp
     @can('invoices.approve')
-        <button id="submitFormAndApprove" type="submit" name="approve" value="1"
-            class="btn text-white btn-primary rounded-md">
-            {{ __('save and ready to approve') }} </button>
+        <button id="submitFormAndApprove" type="submit" name="approve" value="1" class="btn text-white btn-primary rounded-md">
+            {{ $approveLabel }}
+        </button>
     @endcan
 </div>
 

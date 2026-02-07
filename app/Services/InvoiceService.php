@@ -27,42 +27,80 @@ class InvoiceService
      *
      * @throws InvoiceServiceException
      */
-    public static function createInvoice(User $user, array $invoiceData, array $items = [], bool $approved = false): Invoice
+    public static function createInvoice(User $user, array $invoiceData, array $items = [], bool $approved = false): array
     {
         $date = $invoiceData['date'] ?? now()->toDateString();
 
         $transactionBuilder = new InvoiceTransactionBuilder($items, $invoiceData);
         $buildResult = $transactionBuilder->build();
 
-        $invoice = self::createInvoiceWithoutApproval($user, $invoiceData, $items, $buildResult, $date);
+        $createdDocument = null;
+        $createdInvoice = self::createInvoiceWithoutApproval($user, $invoiceData, $items, $buildResult, $date);
 
         if ($approved) {
 
-            if (! self::getChangeStatusValidation($invoice)->canProceed) {
-                return $invoice;
+            if ($createdInvoice->invoice_type === InvoiceType::SELL) {
+                $createdInvoice->update(['status' => InvoiceStatus::READY_TO_APPROVE]);
+
+                return [
+                    'document' => null,
+                    'invoice' => $createdInvoice,
+                ];
             }
 
-            DB::transaction(function () use ($invoiceData, &$invoice) {
-                $invoiceData['status'] = InvoiceStatus::READY_TO_APPROVE;
-                $invoice->update($invoiceData);
+            if (! self::getChangeStatusValidation($createdInvoice)->canProceed) {
+                return [
+                    'document' => null,
+                    'invoice' => $createdInvoice,
+                ];
+            }
+
+            $transactions = $buildResult['transactions'];
+
+            $documentData = [
+                'date' => $date,
+                'title' => $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? '')),
+                'number' => $invoiceData['document_number'] ?? null,
+            ];
+
+            DB::transaction(function () use ($documentData, $user, $transactions, $invoiceData, $items, &$createdDocument, &$createdInvoice) {
+                $createdDocument = DocumentService::createDocument($user, $documentData, $transactions);
+
+                $invoiceData['document_id'] = $createdDocument->id;
+                $invoiceData['status'] = InvoiceStatus::APPROVED;
+
+                $createdInvoice->update($invoiceData);
+
+                DocumentService::syncDocumentable($createdDocument, $createdInvoice);
+
+                ProductService::addProductsQuantities($items, $createdInvoice->invoice_type);
+                self::syncInvoiceItems($createdInvoice, $items);
+
+                $createdInvoice->refresh();
+                CostOfGoodsService::updateProductsAverageCost($createdInvoice);
+
+                self::syncCOGAfterForInvoiceItems($createdInvoice);
             });
         }
 
-        return $invoice;
+        return [
+            'document' => $createdDocument,
+            'invoice' => $createdInvoice,
+        ];
     }
 
     private static function createInvoiceWithoutApproval(User $user, array $invoiceData, array $items, array $buildResult, string $date)
     {
         $createdInvoice = null;
 
-        DB::transaction(function () use ($user, $invoiceData, $items, $buildResult, $date, &$createdInvoice) {
+        DB::transaction(function () use ($user, $invoiceData, $items, $buildResult, $date, &$createdDocument, &$createdInvoice) {
             $invoiceData['document_id'] = null;
             $invoiceData['vat'] = $buildResult['totalVat'];
             $invoiceData['amount'] = $buildResult['totalAmount'];
             $invoiceData['creator_id'] = $user->id;
             $invoiceData['date'] = $date;
             $invoiceData['title'] = $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? ''));
-            $invoiceData['status'] = InvoiceStatus::PRE_INVOICE;
+            $invoiceData['status'] = $invoiceData['invoice_type'] === InvoiceType::SELL ? InvoiceStatus::PRE_INVOICE : InvoiceStatus::PENDING;
 
             $createdInvoice = Invoice::create($invoiceData);
 
@@ -79,7 +117,7 @@ class InvoiceService
      *
      * @throws InvoiceServiceException
      */
-    public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = [], bool $approved = false): Invoice
+    public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = [], bool $approved = false): array
     {
         $invoice = Invoice::findOrFail($invoiceId);
 
@@ -88,25 +126,55 @@ class InvoiceService
         $transactionBuilder = new InvoiceTransactionBuilder($items, $invoiceData);
         $buildResult = $transactionBuilder->build();
 
+        $createdDocument = null;
         $invoice = self::updateInvoiceWithoutApproval($invoice, $invoiceData, $items, $buildResult);
 
         if ($approved) {
 
-            if (! self::getChangeStatusValidation($invoice)->canProceed) {
-                return $invoice;
+            if ($invoice->invoice_type === InvoiceType::SELL) {
+                $invoice->update(['status' => InvoiceStatus::READY_TO_APPROVE]);
+
+                return [
+                    'document' => null,
+                    'invoice' => $invoice,
+                ];
             }
 
-            DB::transaction(function () use ($invoice, $invoiceData) {
-                $invoiceData['status'] = InvoiceStatus::READY_TO_APPROVE;
+            if (! self::getChangeStatusValidation($invoice)->canProceed) {
+                return [
+                    'document' => null,
+                    'invoice' => $invoice,
+                ];
+            }
+
+            DB::transaction(function () use ($invoice, $invoiceData, $items, &$createdDocument) {
+                $createdDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
+
+                $invoiceData['status'] = InvoiceStatus::APPROVED;
+                $invoiceData['document_id'] = $createdDocument->id;
                 unset($invoiceData['document_number']); // Don't update invoice with document_number
+
                 $invoice->update($invoiceData);
+
+                // Add new quantities
+                ProductService::addProductsQuantities($items, $invoice->invoice_type);
+
+                self::syncInvoiceItems($invoice, $items);
+
+                $invoice->refresh();
+
+                CostOfGoodsService::updateProductsAverageCost($invoice);
+                self::syncCOGAfterForInvoiceItems($invoice);
             });
         }
 
-        return $invoice;
+        return [
+            'document' => $createdDocument,
+            'invoice' => $invoice,
+        ];
     }
 
-    private static function updateInvoiceWithoutApproval(Invoice $invoice, array $invoiceData, array $items, array $buildResult): Invoice
+    private static function updateInvoiceWithoutApproval(Invoice $invoice, array $invoiceData, array $items, array $buildResult, bool $approved = false)
     {
         DB::transaction(function () use ($invoice, $invoiceData, $items, $buildResult) {
             $invoiceData['vat'] = $buildResult['totalVat'];
@@ -240,25 +308,14 @@ class InvoiceService
     {
         DB::transaction(function () use ($invoice, $status) {
             match ($status) {
+                'ready_to_approve' => $invoice->update(['status' => InvoiceStatus::READY_TO_APPROVE]),
+                'rejected' => $invoice->update(['status' => InvoiceStatus::REJECTED]),
                 'approved' => $this->approveInvoice($invoice),
                 'unapproved' => $this->unapproveInvoice($invoice),
-                'rejected' => $this->rejectInvoice($invoice),
-                'ready_to_approve' => $this->readyToApproveInvoice($invoice),
                 default => null,
             };
         });
-    }
 
-    private function rejectInvoice(Invoice $invoice): void
-    {
-        $invoice->status = InvoiceStatus::REJECTED;
-        $invoice->update();
-    }
-
-    private function readyToApproveInvoice(Invoice $invoice): void
-    {
-        $invoice->status = InvoiceStatus::READY_TO_APPROVE;
-        $invoice->update();
     }
 
     /**

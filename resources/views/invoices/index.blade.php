@@ -84,35 +84,42 @@
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                @php
+                    $invoiceType = request('invoice_type');
+                    $statusFilter = request('status');
+                    $baseQuery = request()->except('page');
+
+                    $skipIfSell = fn($status) => $status->isPending();
+                    $skipIfNotSell = fn($status) => $status->isReadyToApprove() ||
+                        $status->isPreInvoice() ||
+                        $status->isRejected();
+                    $shouldSkip = $invoiceType === 'sell' ? $skipIfSell : $skipIfNotSell;
+
+                    $statusTypes = [
+                        \App\Enums\InvoiceStatus::PENDING->value => 'info',
+                        \App\Enums\InvoiceStatus::APPROVED->value => 'success',
+                        \App\Enums\InvoiceStatus::UNAPPROVED->value => 'warning',
+                        \App\Enums\InvoiceStatus::PRE_INVOICE->value => 'info',
+                        \App\Enums\InvoiceStatus::APPROVED_INACTIVE->value => 'error',
+                        \App\Enums\InvoiceStatus::REJECTED->value => 'error',
+                        \App\Enums\InvoiceStatus::READY_TO_APPROVE->value => 'info',
+                    ];
+
+                    $invoiceTypeToPast = match ($invoiceType) {
+                        'sell' => 'Sold',
+                        'buy' => 'Bought',
+                    };
+                @endphp
                 @foreach (\App\Enums\InvoiceStatus::cases() as $status)
+                    @if ($shouldSkip($status))
+                        @continue
+                    @endif
                     @php
                         $count = $statusCounts->get($status->value, 0);
-                        $isActive = request('status') == $status->value;
-                        $url = route(
-                            'invoices.index',
-                            array_merge(request()->except('page'), ['status' => $status->value]),
-                        );
-
-                        $type = match ($status) {
-                            \App\Enums\InvoiceStatus::APPROVED => 'success',
-                            \App\Enums\InvoiceStatus::UNAPPROVED => 'warning',
-                            \App\Enums\InvoiceStatus::PRE_INVOICE => 'info',
-                            \App\Enums\InvoiceStatus::APPROVED_INACTIVE => 'error',
-                            \App\Enums\InvoiceStatus::REJECTED => 'error',
-                            \App\Enums\InvoiceStatus::READY_TO_APPROVE => 'info',
-                        };
-
-                        $invoiceTypeToPast = match (request('invoice_type')) {
-                            'sell' => 'Sold',
-                            'buy' => 'Bought',
-                        };
-
-                        $isServiceBuy = request('service_buy') == '1';
-                        $quantityTitle = __(
-                            $invoiceTypeToPast . ($isServiceBuy ? ' Services' : ' Products') . ' Quantity',
-                        );
+                        $isActive = $statusFilter == $status->value;
+                        $url = route('invoices.index', array_merge($baseQuery, ['status' => $status->value]));
+                        $type = $statusTypes[$status->value] ?? 'info';
                     @endphp
-
                     <a href="{{ $url }}"
                         class="block transition-transform hover:scale-105 {{ $isActive ? 'ring-2 ring-primary rounded-xl' : '' }}">
                         <x-stat-card :title="$status->label()" :value="convertToFarsi($count)" :type="$type" />
@@ -180,7 +187,8 @@
                                     $canApprove =
                                         $invoice->status->isReadyToApprove() ||
                                         $invoice->status->isUnapproved() ||
-                                        $invoice->status->isApprovedInactive();
+                                        $invoice->status->isApprovedInactive() ||
+                                        $invoice->status->isPending();
                                     $canUnapprove = $invoice->status->isApproved();
                                     $canChangeStatus = $canApprove || $canUnapprove;
                                 @endphp
