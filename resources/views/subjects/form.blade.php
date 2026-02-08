@@ -10,9 +10,28 @@
         ]" :selected="old('type', $subject->type ?? $parentSubject?->type ?? 'both')" />
     </div>
 
+    @if (! $parentSubject)
+        <div class="col-span-2 md:col-span-1">
+            <x-select title="{{ __('Permanent/Temporary') }}" name="is_permanent" id="is_permanent" :options="[
+                '1' => __('Permanent'),
+                '0' => __('Temporary'),
+            ]" :selected="old('is_permanent', $subject->is_permanent ?? 0)" />
+        </div>
+    @endif
+
+    <div class="col-span-2 md:col-span-1">
+        @if (isset($subject) && $subject->parent_id)
+            <x-subject-select-box :subjects="$subjects" name="parent_id" id_field="parent_id" title="{{ __('Parent Subject') }}" allSelectable="true" :selected="old('parent_id', $subject->parent_id)"
+                :exclude-id="$subject->id" />
+        @else
+            <x-input name="parent_name" id="parent_name" title="{{ __('Subject') }}" :value="$parentSubject->name ?? __('Main Subject')" disabled />
+            <input type="hidden" name="parent_id" value="{{ $parentSubject->id ?? null }}">
+        @endif
+    </div>
+
     <div class="col-span-2 md:col-span-1">
         <div class="flex gap-2 items-end">
-            <div>
+            <div class="w-2/3">
                 <x-input name="subject_code" id="subject_code" title="{{ __('Code') }}" placeholder="{{ __('Code will generate automatically') }}"
                     value="{{ old('subject_code', isset($subject) && $subject->code ? substr($subject->code, -3) : '') }}" />
             </div>
@@ -24,23 +43,6 @@
                 </div>
             @endif
         </div>
-    </div>
-
-    <div class="col-span-2 md:col-span-1">
-        @if (isset($subject))
-            <x-subject-select-box :subjects="$subjects" name="parent_id" id_field="parent_id" title="{{ __('Parent Subject') }}" allSelectable="true" :selected="old('parent_id', $subject->parent_id)"
-                :exclude-id="$subject->id" />
-        @else
-            <x-input name="parent_name" id="parent_name" title="{{ __('Subject') }}" :value="$parentSubject->name ?? __('Main Subject')" disabled />
-            <input type="hidden" name="parent_id" value="{{ $parentSubject->id ?? null }}">
-        @endif
-    </div>
-
-    <div class="col-span-2 md:col-span-1">
-        <x-select title="{{ __('Permanent/Temporary') }}" name="is_permanent" id="is_permanent" :options="[
-            'Permanent' => __('Permanent'),
-            'Temporary' => __('Temporary'),
-        ]" :selected="old('is_permanent', isset($subject) ? ($subject->is_permanent ? __('Permanent') : __('Temporary')) : __('Permanent'))" />
     </div>
 
 </div>
