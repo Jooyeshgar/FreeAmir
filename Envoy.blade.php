@@ -138,7 +138,7 @@
 @endtask
 
 @task('deployment_migrate')
-    {{ $php }} {{ $release }}/artisan migrate --no-interaction --force --seed
+    {{ $php }} {{ $release }}/artisan migrate --no-interaction --force
 @endtask
 
 @task('deployment_db_seed')
