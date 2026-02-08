@@ -143,6 +143,15 @@ class SubjectService
             throw new \InvalidArgumentException('The company_id is required or must be available in session.');
         }
 
+        $parentSubject = null;
+        if ($parentId !== null) {
+            $parentSubject = Subject::withoutGlobalScopes()->where('company_id', $companyId)->find($parentId);
+
+            if (! $parentSubject) {
+                throw new \InvalidArgumentException(__('Parent subject not found in the given company.'));
+            }
+        }
+
         if (isset($data['code']) && $data['code'] !== '') {
             $code = $this->buildCodeWithParent($data['code'], $parentId, (int) $companyId);
             $this->validateCodeUniqueness($code, (int) $companyId);
@@ -150,13 +159,16 @@ class SubjectService
             $code = $this->generateCode($parentId, (int) $companyId);
         }
 
+        $resolvedType = $parentSubject ? $this->resolveTypeForParent($parentSubject, $data['type']) : ($data['type'] ?? 'both');
+        $is_permanent = $parentSubject ? $parentSubject->is_permanent : ($data['is_permanent']);
+
         $attributes = [
             'name' => $name,
             'parent_id' => $parentId,
             'company_id' => $companyId,
-            'type' => $data['type'] ?? 'both',
+            'type' => $resolvedType,
             'code' => $code,
-            'is_permanent' => $data['is_permanent'],
+            'is_permanent' => $is_permanent,
         ];
 
         return Subject::create($attributes);
@@ -198,6 +210,9 @@ class SubjectService
                 if (! $newParent) {
                     throw new \InvalidArgumentException(__('New parent subject not found in the given company.'));
                 }
+
+                $data['is_permanent'] = $newParent->is_permanent;
+                $data['type'] = $this->resolveTypeForParent($newParent, $data['type'] ?? null);
             }
 
             if (isset($data['code']) && ! empty($data['code'])) {
@@ -210,32 +225,59 @@ class SubjectService
 
             $subject->update(array_intersect_key($data, array_flip(['name', 'parent_id', 'code', 'type', 'is_permanent'])));
 
-            $this->updateDescendantCodes($subject);
+            $this->updateDescendantCodesTypesIsPermanents($subject);
         } else {
             $allowedFields = array_intersect_key($data, array_flip(['name', 'code', 'type', 'is_permanent']));
             if (! empty($allowedFields)) {
+                $oldCode = $subject->code;
+                $oldType = $subject->type;
+                $oldIsPermanent = $subject->is_permanent;
+
+                if (isset($allowedFields['code']) && ! empty($allowedFields['code'])) {
+                    $newCode = $this->buildCodeWithParent($allowedFields['code'], null, $companyId);
+                    $this->validateCodeUniqueness($newCode, $companyId, $subject->id);
+                } else {
+                    $newCode = $this->generateCode(null, $companyId);
+                }
+
+                $allowedFields['code'] = $newCode;
+
                 $subject->update($allowedFields);
+                if ($allowedFields['code'] !== $oldCode || $allowedFields['type'] !== $oldType || $allowedFields['is_permanent'] !== $oldIsPermanent) {
+                    $this->updateDescendantCodesTypesIsPermanents($subject);
+                }
             }
         }
 
         return $subject->fresh();
     }
 
+    private function resolveTypeForParent(Subject $parent, ?string $requestedType): string
+    {
+        if ($parent->type !== 'both') {
+            return $parent->type;
+        }
+
+        return $requestedType ?? 'both';
+    }
+
     /**
-     * Recursively update codes for all descendants of a subject.
+     * Recursively update codes, types and is_permanent for all descendants of a subject.
      */
-    private function updateDescendantCodes(Subject $subject): void
+    private function updateDescendantCodesTypesIsPermanents(Subject $subject): void
     {
         $children = $subject->children()->get();
 
         foreach ($children as $child) {
             $childOwnPortion = substr($child->code, -3);
             $newCode = $subject->code.$childOwnPortion;
+            $newType = $this->resolveTypeForParent($subject, $child->type);
+            $newIsPermanent = $subject->is_permanent;
 
-            $child->update(['code' => $newCode]);
+            $child->update(['code' => $newCode, 'type' => $newType, 'is_permanent' => $newIsPermanent]);
 
             if ($child->hasChildren()) {
-                $this->updateDescendantCodes($child);
+                $this->updateDescendantCodesTypesIsPermanents($child);
             }
         }
     }

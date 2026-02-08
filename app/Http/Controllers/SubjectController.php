@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreSubjectRequest;
 use App\Models\Subject;
 use App\Services\SubjectService;
 use Illuminate\Http\Request;
@@ -38,26 +39,9 @@ class SubjectController extends Controller
         return view('subjects.create', compact('parentSubject'));
     }
 
-    public function store(Request $request)
+    public function store(StoreSubjectRequest $request)
     {
-        $validatedData = $request->validate([
-            'name' => 'required|max:60',
-            'parent_id' => 'nullable|exists:subjects,id',
-            'subject_code' => 'nullable|string|max:3',
-            'is_permanent' => 'required|in:Permanent,Temporary',
-            'type' => 'required|in:debtor,creditor,both',
-        ]);
-
-        $validatedData['code'] = $validatedData['subject_code'] ?? null;
-        $validatedData['is_permanent'] = $validatedData['is_permanent'] === 'Permanent';
-        $validatedData['code'] = ! empty($validatedData['code']) ? str_pad($validatedData['code'], 3, '0', STR_PAD_LEFT) : null;
-
-        $parentSubject = $validatedData['parent_id'] ? Subject::find($validatedData['parent_id']) : null;
-        $allowedTypes = $this->subjectService->getAllowedTypesForSubject($parentSubject);
-
-        if (! in_array($validatedData['type'], $allowedTypes)) {
-            return redirect()->back()->withErrors(['type' => __('The selected type is not allowed according to the chosen parent subject.')])->withInput();
-        }
+        $validatedData = $request->getValidatedData();
 
         $subject = $this->subjectService->createSubject($validatedData);
 
@@ -77,23 +61,9 @@ class SubjectController extends Controller
         return view('subjects.edit', compact('subject', 'parentSubject', 'subjects'));
     }
 
-    public function update(Request $request, Subject $subject)
+    public function update(StoreSubjectRequest $request, Subject $subject)
     {
-        $validatedData = $request->validate([
-            'subject_code' => 'nullable|max:3',
-            'name' => 'required|max:60',
-            'parent_id' => 'nullable|exists:subjects,id',
-            'type' => 'required|in:debtor,creditor,both',
-            'is_permanent' => 'required|in:Permanent,Temporary',
-        ]);
-
-        $validatedData['is_permanent'] = $validatedData['is_permanent'] === 'Permanent';
-        $validatedData['code'] = $validatedData['subject_code'];
-        $allowedTypes = $this->subjectService->getAllowedTypesForSubject($validatedData['parent_id'] ? Subject::find($validatedData['parent_id']) : null);
-
-        if (! in_array($validatedData['type'], $allowedTypes)) {
-            return redirect()->back()->withErrors(['type' => __('The selected type is not allowed according to the chosen parent subject.')]);
-        }
+        $validatedData = $request->getValidatedData();
 
         try {
             $updatedSubject = $this->subjectService->editSubject($subject, $validatedData);
