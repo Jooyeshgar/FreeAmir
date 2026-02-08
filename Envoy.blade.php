@@ -27,11 +27,12 @@
     $release = $releases.'/'.$date;
 @endsetup
 
-@servers(['web' => $server, 'accRoot' => 'accRoot'])
+<!-- @servers(['web' => $server, 'accRoot' => 'accRoot']) -->
+@servers(['web' => $server])
 
 @task('init')
-    installing_apache
-    installing_php
+    <!-- installing_apache -->
+    <!-- installing_php -->
 
     if [ ! -d {{ $path }}/storage ]; then
     cd {{ $path }}
@@ -140,7 +141,8 @@
 @endtask
 
 @task('deployment_migrate')
-    {{ $php }} {{ $release }}/artisan migrate --no-interaction --force
+    {{ $php }} {{ $release }}/artisan migrate --no-interaction --force --seed
+    <!-- {{ $php }} {{ $release }}/artisan db:seed --class=DemoSeeder -->
 @endtask
 
 @task('deployment_npm')
