@@ -2,9 +2,9 @@
     <fieldset id="subjectForm" class="grid grid-cols-2 gap-6 border p-5 my-3">
         <div class="col-span-2 md:col-span-1">
             <div class="flex gap-4" x-data="{
-                selectedName: '',
-                selectedCode: '',
-                selectedId: '',
+                selectedName: @js($selectedSubject?->name ?? ''),
+                selectedCode: @js($selectedSubject?->code ?? ''),
+                selectedId: @js($selectedSubject?->id ?? ''),
             }">
                 <input type="hidden" name="key" value="{{ $config->key }}">
                 <div class="w-1/3 hidden">
@@ -12,9 +12,15 @@
                         x-bind:value="$store.utils.formatCode(selectedCode)">
                     </x-input>
                 </div>
-                <x-subject-select-box class="w-2/3" :subjects="$subjects" title="{{ $config->desc }}" id_field="{{ $config->key }}"
-                    placeholder="{{ $subjects->where('id', config('amir.' . $config->key))->first()?->name ?? __('Select a subject') }}"
-                    allSelectable="true"></x-subject-select-box>
+                <x-subject-select class="w-2/3" url="{{ route('subjects.search') }}" :subjects="$subjects"
+                    title="{{ $config->desc }}" placeholder="{{ __('Select a subject') }}"
+                    @selected="
+                        selectedName = $event.detail.name;
+                        selectedCode = $event.detail.code;
+                        selectedId = $event.detail.id;
+                    " />
+                <input type="hidden" name="code" x-bind:value="selectedCode">
+                <input type="hidden" name="{{ $config->key }}" x-bind:value="selectedId">
             </div>
         </div>
     </fieldset>

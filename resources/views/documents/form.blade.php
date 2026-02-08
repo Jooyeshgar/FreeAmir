@@ -74,7 +74,7 @@
                             input_class="border-white value codeInput "></x-text-input>
                     </div>
                     <div>
-                        <x-subject-select url="{{ route('documents.search-subjects') }}" :subjects="$subjects"
+                        <x-subject-select url="{{ route('subjects.search') }}" :subjects="$subjects"
                             x-bind:selected_id="selectedId" x-bind:selected_name="selectedName"
                             x-bind:selected_code="selectedCode" placeholder="{{ __('Select a subject') }}"
                             @selected="

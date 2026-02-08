@@ -6,6 +6,7 @@ use App\Http\Requests\StoreSubjectRequest;
 use App\Models\Subject;
 use App\Services\SubjectService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class SubjectController extends Controller
 {
@@ -56,7 +57,8 @@ class SubjectController extends Controller
     public function edit(Subject $subject)
     {
         $parentSubject = $subject->parent;
-        $subjects = Subject::whereIsRoot()->with('children')->orderBy('code')->get();
+        $subjects = Subject::orderBy('code')->get(['id', 'name', 'code', 'parent_id']);
+        $subjects = $this->buildSubjectOptionsForSelectBox($subjects);
 
         return view('subjects.edit', compact('subject', 'parentSubject', 'subjects'));
     }
@@ -93,35 +95,98 @@ class SubjectController extends Controller
         }
     }
 
+    /**
+     * Build a subject tree suitable for the subject-select component.
+     */
+    private function buildSubjectOptionsForSelectBox(Collection $subjects): array
+    {
+        $rootKey = 'root';
+        $grouped = $subjects->groupBy(function ($subject) use ($rootKey) {
+            return empty($subject->parent_id) ? $rootKey : (string) $subject->parent_id;
+        });
+
+        $buildTree = function (string $parentKey) use (&$buildTree, $grouped): array {
+            $children = $grouped->get($parentKey, collect());
+
+            return $children->map(function ($subject) use (&$buildTree) {
+                return [
+                    'id' => $subject->id,
+                    'name' => $subject->name,
+                    'code' => $subject->code,
+                    'parent_id' => $subject->parent_id,
+                    'children' => $buildTree((string) $subject->id),
+                ];
+            })->values()->all();
+        };
+
+        return $buildTree($rootKey);
+    }
+
+    private function collectWithParents(Collection $subjects): Collection
+    {
+        $result = $subjects->keyBy('id');
+        $parentIds = $subjects->pluck('parent_id')->filter()->unique()->values();
+
+        while ($parentIds->isNotEmpty()) {
+            // Iteratively load only missing parents
+            $parents = Subject::query()->select(['id', 'name', 'code', 'parent_id'])->whereIn('id', $parentIds)->get();
+
+            foreach ($parents as $parent) {
+                $result->put($parent->id, $parent);
+            }
+
+            $parentIds = $parents->pluck('parent_id')->filter()->unique()->reject(fn ($id) => $result->has($id))->values();
+        }
+
+        return $result->values();
+    }
+
+    private function formatSubjects(Collection $subjects): array
+    {
+        $map = [];
+        $tree = [];
+
+        // Build a lookup table first for quick parent->child attachment
+        foreach ($subjects as $subject) {
+            $map[$subject->id] = [
+                'id' => $subject->id,
+                'name' => $subject->name,
+                'code' => $subject->code,
+                'parent_id' => $subject->parent_id,
+                'children' => [],
+            ];
+        }
+
+        // Create the tree in one pass without extra DB queries
+        foreach ($map as $id => &$node) {
+            if ($node['parent_id'] && isset($map[$node['parent_id']])) {
+                $map[$node['parent_id']]['children'][] = &$node;
+            } else {
+                $tree[] = &$node;
+            }
+        }
+
+        return $tree;
+    }
+
     public function search(Request $request)
     {
-        $query = $request->input('query');
-        $subjects = Subject::with([
-            'subSubjects' => function ($subQuery) use ($query) {
-                $subQuery->where('code', 'like', '%'.$query.'%')
-                    ->orWhere('name', 'like', '%'.$query.'%');
-            },
-        ])
-            ->where(function ($parentQuery) use ($query) {
-                $parentQuery->where('parent_id', null) // Ensure parent subjects
-                    ->where(function ($innerQuery) use ($query) {
-                        $innerQuery->where('code', 'like', '%'.$query.'%')
-                            ->orWhere('name', 'like', '%'.$query.'%');
-                    });
-            })
-            ->orWhereHas('subSubjects', function ($subQuery) use ($query) {
-                $subQuery->where('code', 'like', '%'.$query.'%')
-                    ->orWhere('name', 'like', '%'.$query.'%');
-            })
-            ->get()
-            ->map(function ($subject) use ($query) {
-                if (stripos($subject->name, $query) !== false || stripos($subject->code, $query) !== false) {
-                    $subject->setRelation('subSubjects', $subject->subSubjects()->get());
-                }
+        $validated = $request->validate([
+            'q' => 'required|string|min:0|max:100',
+        ]);
 
-                return $subject;
-            });
+        $q = $validated['q'];
 
-        return response()->json($subjects);
+        $matched = Subject::query()->select(['id', 'name', 'code', 'parent_id'])->where('name', 'like', "%{$q}%")
+            ->orderBy('code')->limit(25)->get();
+
+        if ($matched->isEmpty()) {
+            return response()->json([]);
+        }
+
+        // Include ancestors so the client can render a full tree
+        $subjects = $this->collectWithParents($matched);
+
+        return response()->json($this->formatSubjects($subjects));
     }
 }

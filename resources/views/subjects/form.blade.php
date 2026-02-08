@@ -21,8 +21,20 @@
 
     <div class="col-span-2 md:col-span-1">
         @if (isset($subject) && $subject->parent_id)
-            <x-subject-select-box :subjects="$subjects" name="parent_id" id_field="parent_id" title="{{ __('Parent Subject') }}" allSelectable="true" :selected="old('parent_id', $subject->parent_id)"
-                :exclude-id="$subject->id" />
+            <div x-data="{
+                selectedName: @js($parentSubject?->name ?? ''),
+                selectedCode: @js($parentSubject?->code ?? ''),
+                selectedId: @js(old('parent_id', $subject->parent_id)),
+            }">
+                <x-subject-select url="{{ route('subjects.search') }}" :subjects="$subjects" title="{{ __('Parent Subject') }}"
+                    placeholder="{{ __('Select a subject') }}"
+                    @selected="
+                        selectedName = $event.detail.name;
+                        selectedCode = $event.detail.code;
+                        selectedId = $event.detail.id;
+                    " />
+                <input type="hidden" name="parent_id" x-bind:value="selectedId">
+            </div>
         @else
             <x-input name="parent_name" id="parent_name" title="{{ __('Subject') }}" :value="$parentSubject->name ?? __('Main Subject')" disabled />
             <input type="hidden" name="parent_id" value="{{ $parentSubject->id ?? null }}">
