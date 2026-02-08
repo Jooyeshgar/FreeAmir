@@ -48,7 +48,7 @@ class StoreSubjectRequest extends FormRequest
 
         $validatedData['code'] = $validatedData['subject_code'] ?? null;
         unset($validatedData['subject_code']);
-        $validatedData['is_permanent'] = $this->has('is_permanent') ? $this->boolean('is_permanent') : null;
+        $validatedData['is_permanent'] = $this->has('is_permanent') ? $this->boolean('is_permanent') : false;
 
         return $validatedData;
     }
