@@ -53,7 +53,6 @@
     deployment_composer
     deployment_npm
     deployment_migrate
-    deployment_db_seed
     deployment_cache
     deployment_symlink
     deployment_reload
