@@ -159,8 +159,13 @@ class SubjectService
             $code = $this->generateCode($parentId, (int) $companyId);
         }
 
-        $resolvedType = $parentSubject ? $this->resolveTypeForParent($parentSubject, $data['type']) : ($data['type'] ?? 'both');
-        $is_permanent = $parentSubject ? $parentSubject->is_permanent : ($data['is_permanent']);
+        if (isset($data['type'], $data['is_permanent'])) {
+            $resolvedType = $parentSubject ? $this->resolveTypeForParent($parentSubject, $data['type']) : ($data['type'] ?? 'both');
+            $is_permanent = $parentSubject ? $parentSubject->is_permanent : ($data['is_permanent']);
+        } else {
+            $resolvedType = $parentSubject ? $this->resolveTypeForParent($parentSubject, null) : 'both';
+            $is_permanent = $parentSubject ? $parentSubject->is_permanent : false;
+        }
 
         $attributes = [
             'name' => $name,
