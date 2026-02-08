@@ -1,10 +1,15 @@
-<div {{ $attributes->except(['url', 'subjects', 'placeholder', 'disabled', 'class'])->merge(['class' => 'relative ' . $class]) }}
+<div {{ $attributes->except(['url', 'subjects', 'placeholder', 'disabled', 'class', 'title'])->merge(['class' => 'relative ' . $class]) }}
     x-data="searchSelect({
         url: '{{ $url }}',
         options: @js($finalLocalOptions),
         placeholder: '{{ $placeholder }}',
         disabled: @js($disabled),
     })" @click.outside="close()" x-cloak>
+    @if ($title !== '')
+        <div class="label">
+            <span class="label-text">{{ $title }}</span>
+        </div>
+    @endif
     <button type="button" @click="toggle()" :disabled="disabled" :class="{ 'opacity-60 cursor-not-allowed': disabled }"
         class="input input-bordered w-full text-left flex items-center justify-between px-4 bg-base-100 focus:outline-none focus:border-primary">
         <span x-text="selectedLabel ? selectedLabel : placeholder"

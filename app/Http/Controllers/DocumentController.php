@@ -7,7 +7,6 @@ use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Services\DocumentService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 
