@@ -24,6 +24,8 @@ table {
     font-family: "sahel";
     font-size: 12pt;
     height: 100%;
+    margin-left: 0;
+    margin-right: 0;
 }
 
 .bold {

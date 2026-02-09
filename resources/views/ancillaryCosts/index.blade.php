@@ -9,19 +9,25 @@
         <div class="card-body">
             <dl class="grid grid-cols-4 gap-3">
                 @foreach (\App\Enums\InvoiceStatus::cases() as $status)
-                    <div class="bg-base-100 p-3 rounded-md border">
-                        <dd class="text-sm font-semibold">
-                            @if ($ancillaryCosts->where('status', $status)->count() == 0 || request('status') == $status->value)
-                                <span class="text-gray-500">{{ $status->label() }} :
-                                    {{ convertToFarsi($ancillaryCosts->where('status', $status)->count()) }}</span>
-                            @else
-                                <a class="link link-hover" href="{{ route('ancillary-costs.index', ['status' => $status]) }}">
-                                    {{ $status->label() }} :
-                                    {{ convertToFarsi($ancillaryCosts->where('status', $status)->count()) }}
-                                </a>
-                            @endif
-                        </dd>
-                    </div>
+                    @if (! $status->isReadyToApprove() && ! $status->isRejected())
+                        @php
+                            $statusCount = $ancillaryCosts->where('status', $status)->count();
+                            $isActiveStatus = request('status') == $status->value;
+                        @endphp
+                        <div class="bg-base-100 p-3 rounded-md border">
+                            <dd class="text-sm font-semibold">
+                                @if ($statusCount == 0 || $isActiveStatus)
+                                    <span class="text-gray-500">{{ $status->label() }} :
+                                        {{ convertToFarsi($statusCount) }}</span>
+                                @else
+                                    <a class="link link-hover" href="{{ route('ancillary-costs.index', ['status' => $status]) }}">
+                                        {{ $status->label() }} :
+                                        {{ convertToFarsi($statusCount) }}
+                                    </a>
+                                @endif
+                            </dd>
+                        </div>
+                    @endif
                 @endforeach
             </dl>
 

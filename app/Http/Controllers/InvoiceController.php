@@ -84,7 +84,7 @@ class InvoiceController extends Controller
         $statsBuilder = $builder->clone();
 
         $builder->when($request->filled('status') &&
-            in_array($request->status, ['approved', 'unapproved', 'pending', 'approved_inactive']),
+            in_array($request->status, ['approved', 'unapproved', 'pending', 'approved_inactive', 'rejected', 'ready_to_approve', 'pre_invoice']),
             fn ($invoice) => $invoice->where('status', $request->status)
         );
 
@@ -103,10 +103,7 @@ class InvoiceController extends Controller
         });
 
         $invoices->totalAmount = $invoices->sum('amount');
-        $invoices->totalProductsQuantity = 0; // TODO: change to method for optimizition
-        foreach ($invoices as $invoice) {
-            $invoices->totalProductsQuantity += $invoice->items->where('itemable_type', Product::class)->sum('quantity');
-        }
+        $invoices->totalProductsQuantity = $invoices->sum(fn ($invoice) => $invoice->items->where('itemable_type', Product::class)->sum('quantity'));
 
         return view('invoices.index', compact('invoices', 'statusCounts', 'service_buy'));
     }
@@ -424,7 +421,11 @@ class InvoiceController extends Controller
 
     public function changeStatus(Invoice $invoice, string $status)
     {
-        if (! in_array($status, ['approved', 'unapproved'])) {
+        $sellAllowedStatuses = ['approved', 'unapproved', 'ready_to_approve', 'rejected'];
+        $defaultAllowedStatuses = ['approved', 'unapproved'];
+        $allowedStatuses = $invoice->invoice_type === InvoiceType::SELL ? $sellAllowedStatuses : $defaultAllowedStatuses;
+
+        if (! in_array($status, $allowedStatuses)) {
             return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])
                 ->with('error', __('Invalid status action.'));
         }

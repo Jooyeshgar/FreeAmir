@@ -39,6 +39,15 @@ class InvoiceService
 
         if ($approved) {
 
+            if ($createdInvoice->invoice_type === InvoiceType::SELL) {
+                $createdInvoice->update(['status' => InvoiceStatus::READY_TO_APPROVE]);
+
+                return [
+                    'document' => null,
+                    'invoice' => $createdInvoice,
+                ];
+            }
+
             if (! self::getChangeStatusValidation($createdInvoice)->canProceed) {
                 return [
                     'document' => null,
@@ -91,7 +100,7 @@ class InvoiceService
             $invoiceData['creator_id'] = $user->id;
             $invoiceData['date'] = $date;
             $invoiceData['title'] = $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? ''));
-            $invoiceData['status'] = InvoiceStatus::PENDING;
+            $invoiceData['status'] = $invoiceData['invoice_type'] === InvoiceType::SELL ? InvoiceStatus::PRE_INVOICE : InvoiceStatus::PENDING;
 
             $createdInvoice = Invoice::create($invoiceData);
 
@@ -121,6 +130,15 @@ class InvoiceService
         $invoice = self::updateInvoiceWithoutApproval($invoice, $invoiceData, $items, $buildResult);
 
         if ($approved) {
+
+            if ($invoice->invoice_type === InvoiceType::SELL) {
+                $invoice->update(['status' => InvoiceStatus::READY_TO_APPROVE]);
+
+                return [
+                    'document' => null,
+                    'invoice' => $invoice,
+                ];
+            }
 
             if (! self::getChangeStatusValidation($invoice)->canProceed) {
                 return [
@@ -290,6 +308,8 @@ class InvoiceService
     {
         DB::transaction(function () use ($invoice, $status) {
             match ($status) {
+                'ready_to_approve' => $invoice->update(['status' => InvoiceStatus::READY_TO_APPROVE]),
+                'rejected' => $invoice->update(['status' => InvoiceStatus::REJECTED]),
                 'approved' => $this->approveInvoice($invoice),
                 'unapproved' => $this->unapproveInvoice($invoice),
                 default => null,
