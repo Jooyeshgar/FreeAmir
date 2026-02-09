@@ -122,43 +122,42 @@ class SubjectController extends Controller
         return $buildTree($rootKey);
     }
 
-    private function collectWithChildren(Collection $subjects): Collection
+    private function collectWithRelations(Collection $subjects): Collection
     {
         $result = $subjects->keyBy('id');
 
-        $childIds = collect();
-        $subjects->each(fn ($subject) => $childIds->push($subject->getAllDescendantIds()));
+        $downIds = $subjects->pluck('id')->unique()->values(); // children
+        $upIds = $subjects->pluck('parent_id')->filter()->unique()->values(); // parents
 
-        $childIds = $childIds->flatten()->unique()->reject(fn ($id) => $result->has($id))->values();
+        while ($downIds->isNotEmpty() || $upIds->isNotEmpty()) {
+            $children = collect();
+            if ($downIds->isNotEmpty()) {
+                $children = Subject::query()->select(['id', 'name', 'code', 'parent_id'])->whereIn('parent_id', $downIds)->get()
+                    ->reject(fn ($s) => $result->has($s->id));
+            }
 
-        while ($childIds->isNotEmpty()) {
-            // Iteratively load only missing children
-            $children = Subject::query()->select(['id', 'name', 'code', 'parent_id'])->whereIn('id', $childIds)->get();
+            $parents = collect();
+            if ($upIds->isNotEmpty()) {
+                $parents = Subject::query()->select(['id', 'name', 'code', 'parent_id'])->whereIn('id', $upIds)->get()
+                    ->reject(fn ($s) => $result->has($s->id));
+            }
 
+            if ($children->isEmpty() && $parents->isEmpty()) {
+                break;
+            }
+
+            // merge results
             foreach ($children as $child) {
                 $result->put($child->id, $child);
             }
-
-            $childIds = $children->pluck('id')->reject(fn ($id) => $result->has($id))->values();
-        }
-
-        return $result->values();
-    }
-
-    private function collectWithParents(Collection $subjects): Collection
-    {
-        $result = $subjects->keyBy('id');
-        $parentIds = $subjects->pluck('parent_id')->filter()->unique()->values();
-
-        while ($parentIds->isNotEmpty()) {
-            // Iteratively load only missing parents
-            $parents = Subject::query()->select(['id', 'name', 'code', 'parent_id'])->whereIn('id', $parentIds)->get();
 
             foreach ($parents as $parent) {
                 $result->put($parent->id, $parent);
             }
 
-            $parentIds = $parents->pluck('parent_id')->filter()->unique()->reject(fn ($id) => $result->has($id))->values();
+            // next iteration IDs
+            $downIds = $children->pluck('id')->values();
+            $upIds = $parents->pluck('parent_id')->filter()->reject(fn ($id) => $result->has($id))->unique()->values();
         }
 
         return $result->values();
@@ -207,11 +206,7 @@ class SubjectController extends Controller
             return response()->json([]);
         }
 
-        $withChildrenMatched = $this->collectWithChildren($matched);
-        $withParentsMatched = $this->collectWithParents($matched);
-
-        // Include ancestors and descendants so the client can render a full tree
-        $subjects = $withChildrenMatched->merge($withParentsMatched)->unique('id');
+        $subjects = $this->collectWithRelations($matched);
 
         return response()->json($this->formatSubjects($subjects));
     }

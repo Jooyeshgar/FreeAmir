@@ -5,8 +5,8 @@
             $initialSelectedValue = $initialGroupId ? "group-$initialGroupId" : null;
             $hint = '<a class="link text-blue-500" href="' . route('product-groups.create') . '">اضافه کردن گروه محصول</a>';
         @endphp
-        <div class="flex flex-wrap" x-data="{ group_id: '{{ $initialGroupId }}', selectedValue: '{{ $initialSelectedValue }}' }">
-            <span class="flex flex-wrap text-gray-500 w-full">{{ __('Product group') }}</span>
+        <div class="h-full flex flex-wrap items-end" x-data="{ group_id: '{{ $initialGroupId }}', selectedValue: '{{ $initialSelectedValue }}' }">
+            <span class="label-text">{{ __('Product group') }}</span>
 
             <x-select-box url="{{ route('products.search-product-group') }}" :options="[['headerGroup' => 'group', 'options' => $groups]]" x-model="selectedValue"
                 x-init="if (!selectedValue && group_id) { selectedValue = 'group-' + group_id; }" placeholder="{{ __('Select Product group') }}" hint='{!! $hint !!}'

@@ -269,68 +269,6 @@ class DocumentController extends Controller
         });
     }
 
-    public function searchSubjects(Request $request)
-    {
-        $validated = $request->validate([
-            'q' => 'required|string|min:0|max:100',
-        ]);
-
-        $q = $validated['q'];
-
-        $matched = Subject::query()->select(['id', 'name', 'code', 'parent_id'])->where('name', 'like', "%{$q}%")
-            ->orderBy('code')->limit(25)->get();
-
-        if ($matched->isEmpty()) {
-            return response()->json([]);
-        }
-
-        $subjects = $this->collectWithRelations($matched);
-
-        return response()->json($this->formatSubjects($subjects));
-    }
-
-    private function collectWithRelations(Collection $subjects): Collection
-    {
-        $result = $subjects->keyBy('id');
-
-        $downIds = $subjects->pluck('id')->unique()->values(); // children
-        $upIds = $subjects->pluck('parent_id')->filter()->unique()->values(); // parents
-
-        while ($downIds->isNotEmpty() || $upIds->isNotEmpty()) {
-            $children = collect();
-            if ($downIds->isNotEmpty()) {
-                $children = Subject::query()->select(['id', 'name', 'code', 'parent_id'])->whereIn('parent_id', $downIds)->get()
-                    ->reject(fn ($s) => $result->has($s->id));
-            }
-
-            $parents = collect();
-            if ($upIds->isNotEmpty()) {
-                $parents = Subject::query()->select(['id', 'name', 'code', 'parent_id'])->whereIn('id', $upIds)->get()
-                    ->reject(fn ($s) => $result->has($s->id));
-            }
-
-            if ($children->isEmpty() && $parents->isEmpty()) {
-                break;
-            }
-
-            // merge results
-            foreach ($children as $child) {
-                $result->put($child->id, $child);
-            }
-
-            foreach ($parents as $parent) {
-                $result->put($parent->id, $parent);
-            }
-
-            // next iteration IDs
-            $downIds = $children->pluck('id')->values();
-
-            $upIds = $parents->pluck('parent_id')->filter()->reject(fn ($id) => $result->has($id))->unique()->values();
-        }
-
-        return $result->values();
-    }
-
     private function formatSubjects(Collection $subjects): array
     {
         $map = [];
