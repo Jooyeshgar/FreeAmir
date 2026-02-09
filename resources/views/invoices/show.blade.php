@@ -349,14 +349,6 @@
                                 </tbody>
                             </table>
                         </div>
-                        @can('ancillary-costs.create')
-                            <div class="flex mt-2">
-                                <a href="{{ route('invoices.ancillary-costs.create', $invoice) }}"
-                                    class="btn btn-primary">
-                                    {{ __('Create Ancillary Cost') }}
-                                </a>
-                            </div>
-                        @endcan
                     @else
                         <div class="alert bg-base-200 shadow-sm">
                             <div>
@@ -364,6 +356,13 @@
                             </div>
                         </div>
                     @endif
+                    @can('ancillary-costs.create')
+                        <div class="flex mt-2">
+                            <a href="{{ route('invoices.ancillary-costs.create', $invoice) }}" class="btn btn-primary">
+                                {{ __('Create Ancillary Cost') }}
+                            </a>
+                        </div>
+                    @endcan
             @endif
 
             <div class="card-actions justify-between mt-4">
