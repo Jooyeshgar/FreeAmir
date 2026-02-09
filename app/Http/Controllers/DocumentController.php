@@ -285,10 +285,36 @@ class DocumentController extends Controller
             return response()->json([]);
         }
 
-        // Include ancestors so the client can render a full tree
-        $subjects = $this->collectWithParents($matched);
+        $withChildrenMatched = $this->collectWithChildren($matched);
+        $withParentsMatched = $this->collectWithParents($matched);
+
+        // Include ancestors and descendants so the client can render a full tree
+        $subjects = $withChildrenMatched->merge($withParentsMatched)->unique('id');
 
         return response()->json($this->formatSubjects($subjects));
+    }
+
+    private function collectWithChildren(Collection $subjects): Collection
+    {
+        $result = $subjects->keyBy('id');
+
+        $childIds = collect();
+        $subjects->each(fn ($subject) => $childIds->push($subject->getAllDescendantIds()));
+
+        $childIds = $childIds->flatten()->unique()->reject(fn ($id) => $result->has($id))->values();
+
+        while ($childIds->isNotEmpty()) {
+            // Iteratively load only missing children
+            $children = Subject::query()->select(['id', 'name', 'code', 'parent_id'])->whereIn('id', $childIds)->get();
+
+            foreach ($children as $child) {
+                $result->put($child->id, $child);
+            }
+
+            $childIds = $children->pluck('id')->reject(fn ($id) => $result->has($id))->values();
+        }
+
+        return $result->values();
     }
 
     private function collectWithParents(Collection $subjects): Collection

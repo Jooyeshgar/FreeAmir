@@ -164,7 +164,6 @@
                         const allowed = this.collectWithParents(matches);
                         this.filteredTree = this.buildFilteredTree(allowed, this.initialTree);
                         this.rebuildFlatOptions();
-                        return;
                     }
 
                     this.searchRemote(q);
