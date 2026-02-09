@@ -69,7 +69,21 @@ class Subject extends Model
 
     public function fullname()
     {
-        return (! is_null($this->parent) ? $this->parent->fullname().' / ' : '').$this->name;
+        $parts = [];
+        $current = $this;
+        $visited = [];
+
+        while ($current) {
+            if (isset($visited[$current->id])) {
+                break;
+            }
+
+            $visited[$current->id] = true;
+            array_unshift($parts, $current->name);
+            $current = $current->parent;
+        }
+
+        return implode(' / ', $parts);
     }
 
     public function ledger()
@@ -89,7 +103,19 @@ class Subject extends Model
 
     public function getRoot()
     {
-        return $this->hasParent() ? $this->parent->getRoot() : $this;
+        $current = $this;
+        $visited = [];
+
+        while ($current && $current->parent_id) {
+            if (isset($visited[$current->id])) {
+                break;
+            }
+
+            $visited[$current->id] = true;
+            $current = $current->parent;
+        }
+
+        return $current ?? $this;
     }
 
     /**
@@ -185,10 +211,22 @@ class Subject extends Model
 
     public function getAllDescendantIds(): array
     {
-        $ids = [$this->id];
+        $ids = [];
+        $visited = [];
+        $stack = [$this];
 
-        foreach ($this->children as $child) {
-            $ids = array_merge($ids, $child->getAllDescendantIds());
+        while (! empty($stack)) {
+            $current = array_pop($stack);
+            if (! $current || isset($visited[$current->id])) {
+                continue;
+            }
+
+            $visited[$current->id] = true;
+            $ids[] = $current->id;
+
+            foreach ($current->children as $child) {
+                $stack[] = $child;
+            }
         }
 
         return $ids;

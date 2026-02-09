@@ -181,7 +181,7 @@
     <script>
         document.addEventListener('alpine:init', () => {
             if (!Alpine.store('subjects')) {
-                const subjects = @js($subjects);
+                const subjects = @js($subjects ?? []);
                 const subjectCodeSearchUrl = @js(route('subjects.search-code'));
                 const byCode = {};
                 const subjectsTree = Array.isArray(subjects) ? subjects : [];

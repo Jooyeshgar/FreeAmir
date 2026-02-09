@@ -58,7 +58,7 @@ class SubjectController extends Controller
     {
         $parentSubject = $subject->parent;
         $subjects = Subject::orderBy('code')->get(['id', 'name', 'code', 'parent_id']);
-        $subjects = $this->buildSubjectOptionsForSelectBox($subjects);
+        $subjects = $this->subjectService->buildSubjectTreeFromCollection($subjects);
 
         return view('subjects.edit', compact('subject', 'parentSubject', 'subjects'));
     }
@@ -93,33 +93,6 @@ class SubjectController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()->with('errors', $e->getMessage());
         }
-    }
-
-    /**
-     * Build a subject tree suitable for the subject-select component.
-     */
-    private function buildSubjectOptionsForSelectBox(Collection $subjects): array
-    {
-        $rootKey = 'root';
-        $grouped = $subjects->groupBy(function ($subject) use ($rootKey) {
-            return empty($subject->parent_id) ? $rootKey : (string) $subject->parent_id;
-        });
-
-        $buildTree = function (string $parentKey) use (&$buildTree, $grouped): array {
-            $children = $grouped->get($parentKey, collect());
-
-            return $children->map(function ($subject) use (&$buildTree) {
-                return [
-                    'id' => $subject->id,
-                    'name' => $subject->name,
-                    'code' => $subject->code,
-                    'parent_id' => $subject->parent_id,
-                    'children' => $buildTree((string) $subject->id),
-                ];
-            })->values()->all();
-        };
-
-        return $buildTree($rootKey);
     }
 
     private function collectWithRelations(Collection $subjects): Collection
@@ -163,34 +136,6 @@ class SubjectController extends Controller
         return $result->values();
     }
 
-    private function formatSubjects(Collection $subjects): array
-    {
-        $map = [];
-        $tree = [];
-
-        // Build a lookup table first for quick parent->child attachment
-        foreach ($subjects as $subject) {
-            $map[$subject->id] = [
-                'id' => $subject->id,
-                'name' => $subject->name,
-                'code' => $subject->code,
-                'parent_id' => $subject->parent_id,
-                'children' => [],
-            ];
-        }
-
-        // Create the tree in one pass without extra DB queries
-        foreach ($map as $id => &$node) {
-            if ($node['parent_id'] && isset($map[$node['parent_id']])) {
-                $map[$node['parent_id']]['children'][] = &$node;
-            } else {
-                $tree[] = &$node;
-            }
-        }
-
-        return $tree;
-    }
-
     /**
      * Search for a subject by name.
      * Format the result as a tree with parents and children for each matched subject.
@@ -212,7 +157,7 @@ class SubjectController extends Controller
 
         $subjects = $this->collectWithRelations($matched);
 
-        return response()->json($this->formatSubjects($subjects));
+        return response()->json($this->subjectService->buildSubjectTreeFromCollection($subjects));
     }
 
     /**
@@ -236,6 +181,6 @@ class SubjectController extends Controller
 
         $subjects = $this->collectWithRelations(collect([$matched]));
 
-        return response()->json($this->formatSubjects($subjects));
+        return response()->json($this->subjectService->buildSubjectTreeFromCollection($subjects));
     }
 }

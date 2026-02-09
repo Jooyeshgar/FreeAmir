@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
+use App\Services\SubjectService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
@@ -12,7 +13,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportsController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly SubjectService $subjectService)
     {
         $this->middleware('permission:reports.ledger', ['only' => ['ledger']]);
         $this->middleware('permission:reports.journal', ['only' => ['journal']]);
@@ -39,7 +40,7 @@ class ReportsController extends Controller
     public function subLedger()
     {
         $subjects = Subject::orderBy('code')->get(['id', 'name', 'code', 'parent_id']);
-        $subjects = $this->buildSubjectOptionsForSelectBox($subjects);
+        $subjects = $this->subjectService->buildSubjectTreeFromCollection($subjects);
 
         return view('reports.subLedger', compact('subjects'));
     }
@@ -243,32 +244,5 @@ class ReportsController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
-    }
-
-    /**
-     * Build a subject tree suitable for the subject-select component.
-     */
-    private function buildSubjectOptionsForSelectBox(Collection $subjects): array
-    {
-        $rootKey = 'root';
-        $grouped = $subjects->groupBy(function ($subject) use ($rootKey) {
-            return empty($subject->parent_id) ? $rootKey : (string) $subject->parent_id;
-        });
-
-        $buildTree = function (string $parentKey) use (&$buildTree, $grouped): array {
-            $children = $grouped->get($parentKey, collect());
-
-            return $children->map(function ($subject) use (&$buildTree) {
-                return [
-                    'id' => $subject->id,
-                    'name' => $subject->name,
-                    'code' => $subject->code,
-                    'parent_id' => $subject->parent_id,
-                    'children' => $buildTree((string) $subject->id),
-                ];
-            })->values()->all();
-        };
-
-        return $buildTree($rootKey);
     }
 }

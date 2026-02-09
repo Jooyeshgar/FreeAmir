@@ -4,12 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Subject;
 use App\Models\Transaction;
+use App\Services\SubjectService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 
 class TransactionController extends Controller
 {
-    public function __construct() {}
+    public function __construct(private readonly SubjectService $subjectService) {}
 
     public function index(Request $request)
     {
@@ -82,7 +82,8 @@ class TransactionController extends Controller
             ? Subject::find($request->integer('subject_id'))
             : null;
 
-        $subjects = $this->buildSubjectOptionsForSelectBox($currentSubject);
+        $selectedRootId = $currentSubject?->getRoot()?->id;
+        $subjects = $this->subjectService->buildSubjectTreeForRootSelection($selectedRootId);
 
         return view('transactions.index', compact(
             'transactions',
@@ -173,65 +174,4 @@ class TransactionController extends Controller
         return view('transactions.show', compact('transaction'));
     }
 
-    /**
-     * Build a subject tree suitable for the subject-select component.
-     */
-    private function buildSubjectTree(Collection $subjects): array
-    {
-        $rootKey = 'root';
-        $grouped = $subjects->groupBy(function ($subject) use ($rootKey) {
-            return empty($subject->parent_id) ? $rootKey : (string) $subject->parent_id;
-        });
-
-        $buildTree = function (string $parentKey) use (&$buildTree, $grouped): array {
-            $children = $grouped->get($parentKey, collect());
-
-            return $children->map(function ($subject) use (&$buildTree) {
-                return [
-                    'id' => $subject->id,
-                    'name' => $subject->name,
-                    'code' => $subject->code,
-                    'parent_id' => $subject->parent_id,
-                    'children' => $buildTree((string) $subject->id),
-                ];
-            })->values()->all();
-        };
-
-        return $buildTree($rootKey);
-    }
-
-    private function buildSubjectOptionsForSelectBox(?Subject $currentSubject): array
-    {
-        $roots = Subject::whereIsRoot()->orderBy('code')->get(['id', 'name', 'code', 'parent_id']);
-
-        if ($roots->isEmpty()) {
-            return [];
-        }
-
-        $selectedRootId = $currentSubject?->getRoot()?->id;
-        $rootSelection = $roots->take(5);
-
-        if ($selectedRootId && ! $rootSelection->contains('id', $selectedRootId)) {
-            $selectedRoot = $roots->firstWhere('id', $selectedRootId);
-
-            if ($selectedRoot) {
-                $rootSelection = $rootSelection->take(4)->push($selectedRoot);
-            }
-        }
-
-        $rootCodes = $rootSelection->pluck('code')->unique()->values();
-
-        if ($rootCodes->isEmpty()) {
-            return [];
-        }
-
-        $subjects = Subject::query()->select(['id', 'name', 'code', 'parent_id'])
-            ->where(function ($query) use ($rootCodes) {
-                foreach ($rootCodes as $code) {
-                    $query->orWhere('code', 'like', $code.'%');
-                }
-            })->orderBy('code')->get();
-
-        return $this->buildSubjectTree($subjects);
-    }
 }

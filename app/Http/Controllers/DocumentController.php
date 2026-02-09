@@ -7,7 +7,6 @@ use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Services\DocumentService;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 
 class DocumentController extends Controller
@@ -267,33 +266,5 @@ class DocumentController extends Controller
                 'debit' => $isModel ? ($t->debit ?? 0) : ($t['debit'] ?? 0),
             ];
         });
-    }
-
-    private function formatSubjects(Collection $subjects): array
-    {
-        $map = [];
-        $tree = [];
-
-        // Build a lookup table first for quick parent->child attachment
-        foreach ($subjects as $subject) {
-            $map[$subject->id] = [
-                'id' => $subject->id,
-                'name' => $subject->name,
-                'code' => $subject->code,
-                'parent_id' => $subject->parent_id,
-                'children' => [],
-            ];
-        }
-
-        // Create the tree in one pass without extra DB queries
-        foreach ($map as $id => &$node) {
-            if ($node['parent_id'] && isset($map[$node['parent_id']])) {
-                $map[$node['parent_id']]['children'][] = &$node;
-            } else {
-                $tree[] = &$node;
-            }
-        }
-
-        return $tree;
     }
 }

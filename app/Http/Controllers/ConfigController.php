@@ -5,11 +5,12 @@ namespace App\Http\Controllers;
 use App\Enums\ConfigTitle;
 use App\Models\Config;
 use App\Models\Subject;
+use App\Services\SubjectService;
 use Illuminate\Http\Request;
 
 class ConfigController extends Controller
 {
-    public function __construct() {}
+    public function __construct(private readonly SubjectService $subjectService) {}
 
     public function index()
     {
@@ -40,7 +41,8 @@ class ConfigController extends Controller
         }
         $selectedSubjectId = (int) (config('amir.'.$config->key) ?: $config->value);
         $selectedSubject = $selectedSubjectId ? Subject::find($selectedSubjectId) : null;
-        $subjects = $this->buildSubjectOptionsForSelectBox($selectedSubject);
+        $selectedRootId = $selectedSubject ? $this->resolveRootId($selectedSubject) : null;
+        $subjects = $this->subjectService->buildSubjectTreeForRootSelection($selectedRootId);
 
         return view('configs.edit', compact('subjects', 'config', 'selectedSubject'));
     }
@@ -62,55 +64,20 @@ class ConfigController extends Controller
         return redirect()->route('configs.index')->with('success', __('Config updated successfully.'));
     }
 
-    private function buildSubjectOptionsForSelectBox(?Subject $selectedSubject): array
-    {
-        $roots = Subject::whereIsRoot()->orderBy('code')->get();
-        $selectedRootId = $selectedSubject ? $this->resolveRootId($selectedSubject) : null;
-
-        if ($roots->count() <= 5) {
-            $selectedRoots = $roots;
-        } else {
-            $selectedRoots = $roots->take(5);
-
-            if ($selectedRootId && ! $selectedRoots->contains('id', $selectedRootId)) {
-                $selectedRoots = $roots->take(4);
-                $selectedRoot = $roots->firstWhere('id', $selectedRootId)
-                    ?? Subject::find($selectedRootId);
-
-                if ($selectedRoot) {
-                    $selectedRoots = $selectedRoots->push($selectedRoot);
-                }
-            }
-        }
-
-        return $selectedRoots->map(fn (Subject $root) => $this->buildSubjectTree($root))->values()->all();
-    }
-
     private function resolveRootId(Subject $subject): int
     {
         $current = $subject;
+        $visited = [];
 
-        while ($current->parent_id) {
-            $current = $current->parent;
-
-            if (! $current) {
+        while ($current && $current->parent_id) {
+            if (isset($visited[$current->id])) {
                 break;
             }
+
+            $visited[$current->id] = true;
+            $current = $current->parent;
         }
 
-        return (int) $current->id;
-    }
-
-    private function buildSubjectTree(Subject $subject): array
-    {
-        $children = $subject->children()->orderBy('code')->get();
-
-        return [
-            'id' => $subject->id,
-            'name' => $subject->name,
-            'code' => $subject->code,
-            'parent_id' => $subject->parent_id,
-            'children' => $children->map(fn (Subject $child) => $this->buildSubjectTree($child))->values()->all(),
-        ];
+        return (int) ($current?->id ?? $subject->id);
     }
 }

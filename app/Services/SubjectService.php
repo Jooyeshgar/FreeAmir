@@ -6,6 +6,70 @@ use App\Models\Subject;
 
 class SubjectService
 {
+    public function buildSubjectTreeFromCollection(\Illuminate\Support\Collection $subjects): array
+    {
+        $rootKey = 'root';
+        $grouped = $subjects->groupBy(function ($subject) use ($rootKey) {
+            return empty($subject->parent_id) ? $rootKey : (string) $subject->parent_id;
+        });
+
+        $buildTree = function (string $parentKey) use (&$buildTree, $grouped): array {
+            $children = $grouped->get($parentKey, collect());
+
+            return $children->map(function ($subject) use (&$buildTree) {
+                return [
+                    'id' => $subject->id,
+                    'name' => $subject->name,
+                    'code' => $subject->code,
+                    'parent_id' => $subject->parent_id,
+                    'children' => $buildTree((string) $subject->id),
+                ];
+            })->values()->all();
+        };
+
+        return $buildTree($rootKey);
+    }
+
+    public function buildSubjectTreeForRootSelection(?int $selectedRootId, int $maxRoots = 5): array
+    {
+        $roots = Subject::whereIsRoot()->orderBy('code')->get(['id', 'name', 'code', 'parent_id']);
+
+        if ($roots->isEmpty()) {
+            return [];
+        }
+
+        if ($roots->count() <= $maxRoots) {
+            $selectedRoots = $roots;
+        } else {
+            $selectedRoots = $roots->take($maxRoots);
+
+            if ($selectedRootId && ! $selectedRoots->contains('id', $selectedRootId)) {
+                $selectedRoots = $roots->take(max($maxRoots - 1, 0));
+                $selectedRoot = $roots->firstWhere('id', $selectedRootId)
+                    ?? Subject::find($selectedRootId);
+
+                if ($selectedRoot) {
+                    $selectedRoots = $selectedRoots->push($selectedRoot);
+                }
+            }
+        }
+
+        $rootCodes = $selectedRoots->pluck('code')->unique()->values();
+
+        if ($rootCodes->isEmpty()) {
+            return [];
+        }
+
+        $subjects = Subject::query()->select(['id', 'name', 'code', 'parent_id'])
+            ->where(function ($query) use ($rootCodes) {
+                foreach ($rootCodes as $code) {
+                    $query->orWhere('code', 'like', $code.'%');
+                }
+            })->orderBy('code')->get();
+
+        return $this->buildSubjectTreeFromCollection($subjects);
+    }
+
     public function sumSubjectWithDateRange(?Subject $subject, bool $countOnly = false)
     {
         if (is_null($subject)) {
