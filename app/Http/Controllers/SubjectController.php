@@ -191,6 +191,10 @@ class SubjectController extends Controller
         return $tree;
     }
 
+    /**
+     * Search for a subject by name.
+     * Format the result as a tree with parents and children for each matched subject.
+     */
     public function search(Request $request)
     {
         $validated = $request->validate([
@@ -207,6 +211,30 @@ class SubjectController extends Controller
         }
 
         $subjects = $this->collectWithRelations($matched);
+
+        return response()->json($this->formatSubjects($subjects));
+    }
+
+    /**
+     * Search for a subject by code.
+     * This is used in document form when user enters a code.
+     * It tries to find an exact match for the code and returns the subject with its parents and children if found.
+     */
+    public function searchCode(Request $request)
+    {
+        $validated = $request->validate([
+            'q' => 'required|string|min:1|max:20',
+        ]);
+
+        $q = preg_replace('/[^0-9]/', '', $validated['q']); // Normalize code by removing '/' characters
+
+        $matched = Subject::query()->select(['id', 'name', 'code', 'parent_id'])->where('code', $q)->first();
+
+        if (! $matched) {
+            return response()->json([]);
+        }
+
+        $subjects = $this->collectWithRelations(collect([$matched]));
 
         return response()->json($this->formatSubjects($subjects));
     }
