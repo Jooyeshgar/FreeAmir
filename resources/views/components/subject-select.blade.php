@@ -85,6 +85,15 @@
                 parentMap: {},
 
                 init() {
+                    const subjectsStore = Alpine.store('subjects');
+                    if (subjectsStore && typeof subjectsStore.getTree === 'function') {
+                        const storeTree = subjectsStore.getTree();
+                        if (Array.isArray(storeTree) && storeTree.length) {
+                            this.initialTree = storeTree;
+                            this.filteredTree = storeTree;
+                        }
+                    }
+
                     this.buildIndex(this.initialTree, null);
                     this.rebuildFlatOptions();
                 },

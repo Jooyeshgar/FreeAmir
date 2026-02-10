@@ -30,8 +30,7 @@
             selectedCode: @js($parentSubject?->code ?? ''),
             selectedId: @js(old('parent_id', $subject->parent_id)),
         }">
-            <x-subject-select url="{{ route('subjects.search') }}" :subjects="$subjects" title="{{ __('Parent Subject') }}" 
-                placeholder="{{ __('Select a subject') }}"
+            <x-subject-select :subjects="$subjects" title="{{ __('Parent Subject') }}" placeholder="{{ __('Select a subject') }}"
                 @selected="
                     selectedName = $event.detail.name;
                     selectedCode = $event.detail.code;

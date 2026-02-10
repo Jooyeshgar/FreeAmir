@@ -1,10 +1,4 @@
-@php
-    $subjectIds = $document->transactions->pluck('subject_id')->toArray();
-@endphp
-
 <x-card class="rounded-2xl w-full" class_body="p-4">
-    <x-text-input type="text" input_value="{{ $subjectIds ? implode(',', $subjectIds) : 0 }}" input_class="subjectIds"
-        hidden></x-text-input>
     <div class="flex gap-2">
         <x-text-input input_name="title" title="{{ __('document name') }}"
             input_value="{{ old('title') ?? $document->title }}" placeholder="{{ __('document name') }}"
@@ -89,16 +83,25 @@
                     <div class="flex-1 min-w-24 max-w-32">
                         <input type="text" :value="$store.utils.formatCode(selectedCode)"
                             @input="
-                                selectedCode = $store.subjects.normalize($event.target.value);
+                                selectedCode = $store.subjects.normalizeForTyping($event.target.value);
                                 $event.target.value = $store.utils.formatCode(selectedCode);
                             "
-                            @keydown.enter.prevent="syncSubjectByCode(); syncSubjectByCodeRemote()"
-                            @blur="syncSubjectByCode(); syncSubjectByCodeRemote()"
+                            @keydown.enter.prevent="
+                                selectedCode = $store.subjects.normalize($event.target.value);
+                                $event.target.value = $store.utils.formatCode(selectedCode);
+                                syncSubjectByCode();
+                                syncSubjectByCodeRemote();
+                            "
+                            @blur="
+                                selectedCode = $store.subjects.normalize($event.target.value);
+                                $event.target.value = $store.utils.formatCode(selectedCode);
+                                syncSubjectByCode();
+                                syncSubjectByCodeRemote();
+                            "
                             class="max-h-10 input input-bordered border-slate-400 disabled:background-slate-700 w-full max-w-42 border-white value codeInput" />
                     </div>
                     <div>
-                        <x-subject-select url="{{ route('subjects.search') }}" :subjects="$subjects" data-subject-select
-                            x-bind:selected_id="selectedId" x-bind:selected_name="selectedName"
+                        <x-subject-select :subjects="$subjects" data-subject-select x-bind:selected_id="selectedId" x-bind:selected_name="selectedName"
                             x-bind:selected_code="selectedCode" placeholder="{{ __('Select a subject') }}"
                             @selected="
                                 selectedName = $event.detail.name;
@@ -190,7 +193,38 @@
                     if (!code) return '';
 
                     const englishCode = Alpine.store('utils').convertToEnglish(code);
-                    return englishCode.replace(/\D/g, '');
+                    const cleaned = englishCode.replace(/[^0-9/]/g, '');
+                    if (!cleaned) return '';
+
+                    if (!cleaned.includes('/')) {
+                        const digits = cleaned.replace(/\D/g, '');
+                        if (!digits) return '';
+
+                        if (digits.length < 3) {
+                            return digits.padStart(3, '0');
+                        }
+
+                        const remainder = digits.length % 3;
+                        if (remainder === 0) return digits;
+
+                        const head = digits.slice(0, digits.length - remainder);
+                        const tail = digits.slice(-remainder);
+                        if (digits.startsWith('0')) {
+                            return head + tail;
+                        }
+
+                        return head + tail.padStart(3, '0');
+                    }
+
+                    const parts = cleaned.split('/').filter(part => part.length);
+                    if (!parts.length) return '';
+
+                    const padded = parts.map(part => {
+                        const digits = part.replace(/\D/g, '');
+                        return digits ? digits.padStart(3, '0') : '';
+                    });
+
+                    return padded.join('');
                 };
 
                 const walk = (nodes) => {
@@ -263,6 +297,23 @@
 
                 Alpine.store('subjects', {
                     normalize,
+                    normalizeForTyping(code) {
+                        if (!code) return '';
+
+                        const englishCode = Alpine.store('utils').convertToEnglish(code);
+                        const cleaned = englishCode.replace(/[^0-9/]/g, '');
+                        if (!cleaned) return '';
+
+                        if (!cleaned.includes('/')) {
+                            return cleaned.replace(/\D/g, '');
+                        }
+
+                        const parts = cleaned.split('/').filter(part => part.length);
+                        if (!parts.length) return '';
+
+                        return parts.map(part => part.replace(/\D/g, '')).join('');
+                    },
+
                     findByCode(code) {
                         const key = normalize(code);
                         return key ? byCode[key] ?? null : null;

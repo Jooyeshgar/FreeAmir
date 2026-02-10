@@ -31,8 +31,7 @@
                         selectedCode: '{{ $currentSubject ? $currentSubject->code : '' }}',
                         selectedId: @js(old('subject_id', $currentSubject?->id)),
                     }">
-                        <x-subject-select class="w-full" url="{{ route('subjects.search') }}" :subjects="$subjects"
-                            title="{{ __('Subject') }}" placeholder="{{ __('All Subjects') }}"
+                        <x-subject-select class="w-full" :subjects="$subjects" title="{{ __('Subject') }}" placeholder="{{ __('All Subjects') }}"
                             @selected="
                                 selectedName = $event.detail.name;
                                 selectedCode = $event.detail.code;

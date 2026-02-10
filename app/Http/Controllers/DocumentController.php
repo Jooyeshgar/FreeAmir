@@ -7,6 +7,7 @@ use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Services\DocumentService;
+use App\Services\SubjectService;
 use Illuminate\Support\Facades\Auth;
 
 class DocumentController extends Controller
@@ -147,7 +148,7 @@ class DocumentController extends Controller
             }
 
             $subjects = $subjectsById->values();
-            $subjects = $this->formatSubjects($subjects);
+            $subjects = (new SubjectService)->buildSubjectTreeFromCollection($subjects);
 
             $previousDocumentNumber = Document::where('number', '<', $document->number)->orderBy('number', 'desc')->first()->number ?? 0;
 

@@ -23,8 +23,7 @@
                         x-bind:value="$store.utils.formatCode(selectedCode)">
                     </x-input>
                 </div>
-                <x-subject-select class="w-2/3" url="{{ route('subjects.search') }}" :subjects="$subjects"
-                    title="{{ __('Subject name') }}" placeholder="{{ __('Select a subject') }}"
+                <x-subject-select class="w-2/3" :subjects="$subjects" title="{{ __('Subject name') }}" placeholder="{{ __('Select a subject') }}"
                     @selected="
                         selectedName = $event.detail.name;
                         selectedCode = $event.detail.code;
