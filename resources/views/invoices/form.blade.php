@@ -44,6 +44,30 @@
                 input_value="{{ old('title') ?? ($invoice->title ?? '') }}" placeholder="{{ __('Invoice Name') }}"
                 label_text_class="text-gray-500" label_class="w-1/2"></x-text-input>
         </div>
+
+        @if (in_array($invoice->invoice_type ?? $invoice_type, ['return_buy', 'return_sell']))
+            @php
+                $invoices = $buyInvoices ?? $sellInvoices;
+                $initialInvoiceId = old('invoice_id', $invoice->id ?? null);
+                $initialSelectedValue = $initialInvoiceId ? "invoice-$initialInvoiceId" : null;
+            @endphp
+            <div class="flex w-1/3">
+                <div class="flex-wrap w-full" x-data="{
+                        invoice_id: '{{ $initialInvoiceId }}',
+                        selectedValue: '{{ $initialSelectedValue }}',
+                    }">
+                    <span class="text-gray-500">{{ __('Invoice for return') }}</span>
+                    <x-select-box url="{{ route('invoices.search', ['invoice_type' => $invoice->invoice_type ?? $invoice_type]) }}" :options="[['headerGroup' => 'invoice', 'options' => $invoices]]" x-model="selectedValue"
+                        x-init="if (!selectedValue && invoice_id) {
+                            selectedValue = 'invoice-' + invoice_id;
+                        }" placeholder="{{ __('Select Invoice') }}"
+                        @selected="
+                            invoice_id = $event.detail.id;
+                        "
+                    />
+                </div>
+            </div>
+        @endif
     </div>
 
     <div class="flex justify-start gap-2 mt-2">
@@ -72,7 +96,7 @@
             label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
     </div>
 </x-card>
-<x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-4" x-data="transactionForm">
+<x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-4" x-data="transactionForm" x-on:change="loadInvoiceItems($event.detail.items)">
     <div class="flex flex-wrap overflow-x-auto overflow-y-hidden gap-2 items-center px-4">
         <div class="text-sm flex-1 max-w-8 text-center text-gray-500 pt-3">
             *
@@ -199,6 +223,7 @@
 
                         <x-select-box url="{{ route('invoices.search-product-service') }}" :options="$options"
                             x-model="selectedValue" x-init="selectedValue = initItemSelection(transaction)" placeholder="{{ $placeholder }}"
+                            disabled="transaction.is_locked === true"
                             @selected="selectItem(transaction, $event.detail.type, $event.detail.id)"
                             hint='{!! $hint !!}' hint2='{!! $hint2 !!}' />
 
@@ -358,6 +383,27 @@
                         vat: null,
                         desc: ''
                     });
+                },
+                loadInvoiceItems(items) {
+                    if (!Array.isArray(items)) {
+                        return;
+                    }
+
+                    this.transactions = items.map((item, index) => ({
+                        id: index + 1,
+                        name: '',
+                        subject: item.subject || '',
+                        service_id: item.service_id || null,
+                        product_id: item.product_id || null,
+                        item_id: item.item_type && (item.product_id || item.service_id) ? `${item.item_type}-${item.product_id || item.service_id}` : null,
+                        item_type: item.item_type || null,
+                        quantity: item.quantity ?? 1,
+                        unit: item.unit ?? null,
+                        total: item.total ?? 0,
+                        vat: item.vat ?? 0,
+                        off: item.off ?? 0,
+                        desc: item.desc ?? '',
+                    }));
                 },
                 getProductPrice(productId) {
                     const product = this.products.find(p => p.id == productId);

@@ -126,6 +126,10 @@
                             $quantityTitle = request('service_buy') == '1' ? __('Bought Services Quantity') : __('Bought Products Quantity');
                         } elseif ($invoiceType === 'sell') {
                             $quantityTitle = __('Sold Products Quantity');
+                        }elseif ($invoiceType === 'return_buy') {
+                            $quantityTitle = __('Returned Bought Products Quantity');
+                        }elseif ($invoiceType === 'return_sell') {
+                            $quantityTitle = __('Returned Sold Products Quantity');
                         }
                     @endphp
                     <a href="{{ $url }}"

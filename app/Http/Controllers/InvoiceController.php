@@ -122,6 +122,16 @@ class InvoiceController extends Controller
         if (empty(config('amir.cust_subject'))) {
             return redirect()->route('configs.index')->with('error', __('Customer Subject is not configured. Please set it in configurations.'));
         }
+
+        $buyInvoices = collect();
+        $sellInvoices = collect();
+
+        if ($request->invoice_type === 'return_buy') {
+            $buyInvoices = Invoice::where('invoice_type', InvoiceType::BUY)->where('status', InvoiceStatus::APPROVED)->with('items')->get();
+        } elseif ($request->invoice_type === 'return_sell') {
+            $sellInvoices = Invoice::where('invoice_type', InvoiceType::SELL)->where('status', InvoiceStatus::APPROVED)->with('items')->get();
+        }
+
         $products = Product::with('inventorySubject', 'productGroup')->orderBy('name', 'asc')->limit(20)->get();
         $services = Service::with('subject', 'serviceGroup')->orderBy('name', 'asc')->limit(20)->get();
         $customers = Customer::with('group')->orderBy('name', 'asc')->limit(20)->get();
@@ -136,7 +146,7 @@ class InvoiceController extends Controller
         $invoice_type = in_array($request->invoice_type, ['buy', 'sell', 'return_buy', 'return_sell']) ? $request->invoice_type : 'sell';
         $previousInvoiceNumber = floor(Invoice::where('invoice_type', $invoice_type)->max('number') ?? 0);
 
-        return view('invoices.create', compact('products', 'services', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type', 'isServiceBuy'));
+        return view('invoices.create', compact('sellInvoices', 'buyInvoices', 'products', 'services', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type', 'isServiceBuy'));
     }
 
     /**
@@ -313,6 +323,52 @@ class InvoiceController extends Controller
                     : ''
                 ),
         ];
+    }
+
+    public function search(Request $request, string $invoice_type)
+    {
+        $validated = $request->validate([
+            'q' => 'required|string|max:100',
+        ]);
+
+        $invoice_type = $request->invoice_type;
+
+        if (in_array($invoice_type, ['return_buy', 'return_sell'])) {
+            $baseType = str_replace('return_', '', $invoice_type);
+            $invoice_type = $baseType;
+        }
+
+        $q = $validated['q'];
+
+        $invoices = Invoice::where('status', InvoiceStatus::APPROVED)->where('invoice_type', $invoice_type)
+            ->where(function ($query) use ($q) {
+                $query->where('number', 'like', "%{$q}%")
+                    ->orWhere('title', 'like', "%{$q}%");
+            })->select('id', 'number', 'date', 'title')->limit(20)->get();
+
+        if ($invoices->isEmpty()) {
+            return response()->json([]);
+        }
+
+        $options = (object) [
+            0 => $invoices->map(fn ($invoice) => [
+                'id' => $invoice->id,
+                'groupId' => 0,
+                'groupName' => 'General',
+                'text' => trim(($invoice->title ?? '').' - '.$invoice->number, ' -'),
+                'title' => $invoice->title,
+                'number' => $invoice->number,
+                'type' => 'invoice',
+            ])->all(),
+        ];
+
+        return response()->json([
+            [
+                'id' => 'group_invoices',
+                'headerGroup' => 'invoice',
+                'options' => $options,
+            ],
+        ]);
     }
 
     public function searchCustomer(Request $request)
