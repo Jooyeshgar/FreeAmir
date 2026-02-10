@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Http\Requests\StoreInvoiceRequest;
+use App\Http\Requests\UpdateInvoiceRequest;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
@@ -252,11 +253,11 @@ class InvoiceController extends Controller
      *
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function update(StoreInvoiceRequest $request, Invoice $invoice)
+    public function update(UpdateInvoiceRequest $request, Invoice $invoice)
     {
         $validated = $request->validated();
         $invoiceData = InvoiceService::extractInvoiceData($validated);
-        $items = InvoiceService::mapTransactionsToItems($validated['transactions']);
+        $items = InvoiceService::mapTransactionsToItems($validated['transactions'], true);
 
         if ($invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {
             return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('error', __('Invoice has associated approved ancillary costs and cannot be edited.'));
