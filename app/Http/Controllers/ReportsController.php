@@ -6,6 +6,7 @@ use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -84,9 +85,9 @@ class ReportsController extends Controller
                 }
             }
             if ($request->filled('start_date') && $request->filled('end_date')) {
-                $start = jalali_to_gregorian_date($request->start_date);
-                $end = jalali_to_gregorian_date($request->end_date);
-                if ($start > $end) {
+                $start = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($request->start_date));
+                $end = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($request->end_date));
+                if ($start->isAfter($end)) {
                     $validator->errors()->add('start_date', __('Start date cannot be greater than end date.'));
                 }
             }
