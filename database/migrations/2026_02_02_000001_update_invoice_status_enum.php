@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -14,18 +13,15 @@ return new class extends Migration
     {
         Schema::table('invoices', function (Blueprint $table) {
             $table->enum('status', [
+                'pending',
                 'pre_invoice',
                 'approved',
                 'unapproved',
                 'approved_inactive',
                 'rejected',
                 'ready_to_approve',
-            ])->default('pre_invoice')->change();
+            ])->default('pending')->change();
         });
-
-        DB::table('invoices')
-            ->where('status', 'pending')
-            ->update(['status' => 'pre_invoice']);
     }
 
     /**
@@ -33,10 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::table('invoices')
-            ->whereIn('status', ['pre_invoice', 'rejected', 'ready_to_approve'])
-            ->update(['status' => 'pending']);
-
         Schema::table('invoices', function (Blueprint $table) {
             $table->enum('status', [
                 'pending',
