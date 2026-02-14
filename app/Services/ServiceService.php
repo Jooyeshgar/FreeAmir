@@ -39,11 +39,12 @@ class ServiceService
     {
         $service->subject?->delete();
         $service->cogsSubject?->delete();
+        $service->salesReturnsSubject?->delete();
     }
 
     protected function syncSubjects(Service $service): void
     {
-        $service->loadMissing('subject', 'cogsSubject');
+        $service->loadMissing('subject', 'cogsSubject', 'salesReturnsSubject');
 
         $group = $service->serviceGroup;
         $companyId = $service->company_id ?? $group?->company_id ?? getActiveCompany();
@@ -60,6 +61,10 @@ class ServiceService
             'cogs_subject_id' => [
                 'relation' => 'cogsSubject',
                 'parent_column' => 'cogs_subject_id',
+            ],
+            'sales_returns_subject_id' => [
+                'relation' => 'salesReturnsSubject',
+                'parent_column' => 'sales_returns_subject_id',
             ],
         ];
 
@@ -116,5 +121,15 @@ class ServiceService
         if ($dirtyIds) {
             $service->updateQuietly($dirtyIds);
         }
+    }
+
+    public function totalCOGS(Service $service): float
+    {
+        return $this->subjectService->sumSubject($service->cogsSubject);
+    }
+
+    public function totalSalesReturns(Service $service): float
+    {
+        return $this->subjectService->sumSubject($service->salesReturnsSubject);
     }
 }

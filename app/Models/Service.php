@@ -19,6 +19,7 @@ class Service extends Model
         'sstid',
         'subject_id',
         'cogs_subject_id',
+        'sales_returns_subject_id',
         'selling_price',
         'vat',
         'description',
@@ -47,6 +48,11 @@ class Service extends Model
     public function cogsSubject(): BelongsTo
     {
         return $this->belongsTo(Subject::class, 'cogs_subject_id');
+    }
+
+    public function salesReturnsSubject(): BelongsTo
+    {
+        return $this->belongsTo(Subject::class, 'sales_returns_subject_id');
     }
 
     public function invoiceItems(): MorphMany
