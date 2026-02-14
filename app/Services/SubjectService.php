@@ -382,7 +382,6 @@ class SubjectService
                         }
                         $code = $parentCode.str_pad($next, 3, '0', STR_PAD_LEFT);
                     }
-                    throw new \Exception("Failed to generate unique code for child of parent {$parentCode}: ".$e->getMessage());
                 }
 
                 return $code;
