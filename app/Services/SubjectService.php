@@ -239,16 +239,16 @@ class SubjectService
                 $oldIsPermanent = $subject->is_permanent;
 
                 if (isset($allowedFields['code']) && ! empty($allowedFields['code'])) {
-                    $newCode = $this->buildCodeWithParent($allowedFields['code'], null, $companyId);
+                    $newCode = $this->buildCodeWithParent($allowedFields['code'], $subject->parent_id, $companyId);
                     $this->validateCodeUniqueness($newCode, $companyId, $subject->id);
                 } else {
-                    $newCode = $this->generateCode(null, $companyId);
+                    $newCode = $subject->code; // If code is not being changed, keep the old code to avoid unnecessary updates and descendant code regenerations
                 }
 
                 $allowedFields['code'] = $newCode;
 
                 $subject->update($allowedFields);
-                if ($allowedFields['code'] !== $oldCode || $allowedFields['type'] !== $oldType || $allowedFields['is_permanent'] !== $oldIsPermanent) {
+                if ($allowedFields['code'] !== $oldCode || (isset($allowedFields['type']) && $allowedFields['type'] !== $oldType) || (isset($allowedFields['is_permanent']) && $allowedFields['is_permanent'] !== $oldIsPermanent)) {
                     $this->updateDescendantCodesTypesIsPermanents($subject);
                 }
             }
@@ -370,7 +370,22 @@ class SubjectService
                     throw new \Exception("Maximum of 999 children reached for parent {$parentCode}");
                 }
 
-                return $parentCode.str_pad($next, 3, '0', STR_PAD_LEFT);
+                $code = $parentCode.str_pad($next, 3, '0', STR_PAD_LEFT);
+
+                try {
+                    $this->validateCodeUniqueness($code, $companyId);
+                } catch (\Exception $e) {
+                    while (Subject::withoutGlobalScopes()->where('company_id', $companyId)->where('code', $code)->exists()) {
+                        $next++;
+                        if ($next > 999) {
+                            throw new \Exception("Maximum of 999 children reached for parent {$parentCode}");
+                        }
+                        $code = $parentCode.str_pad($next, 3, '0', STR_PAD_LEFT);
+                    }
+                    throw new \Exception("Failed to generate unique code for child of parent {$parentCode}: ".$e->getMessage());
+                }
+
+                return $code;
             }
 
             return $parentCode.'001';
