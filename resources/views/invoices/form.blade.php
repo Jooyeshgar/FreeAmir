@@ -393,6 +393,10 @@
                     }
                     return 0;
                 },
+                calcVatValue(rate, qty, unit, off) {
+                    const subtotal = Number(qty) * Number(unit);
+                    return ((subtotal - Number(off)) * Number(rate)) / 100;
+                },
                 getProductInventorySubjectId(productId) {
                     const product = this.products.find(p => p.id == productId);
                     if (!product) return null;
@@ -417,17 +421,16 @@
                     transaction.service_id = isProduct ? null : id;
                     transaction.item_type = type;
                     transaction.item_id = `${type}-${id}`;
-                    transaction.inventory_subject_id = isProduct ? this.getProductInventorySubjectId(
-                        id) : null;
+                    transaction.inventory_subject_id = isProduct ? this.getProductInventorySubjectId(id) : null;
 
                     const isEditable = !this.isEditing || transaction.unit == null || transaction.vat ==
                         null;
                     if (isEditable) {
-                        transaction.unit = isProduct ? this.getProductPrice(id) : this.getServicePrice(
-                            id);
-                        transaction.vat = isProduct ? this.getProductVat(id) : this.getServiceVat(id);
+                        transaction.unit = isProduct ? this.getProductPrice(id) : this.getServicePrice(id);
                         transaction.quantity = 1;
                         transaction.off = 0;
+                        const vatRate = isProduct ? this.getProductVat(id) : this.getServiceVat(id);
+                        transaction.vat = this.isEditing ? this.calcVatValue(vatRate, transaction.quantity, transaction.unit, transaction.off) : vatRate;
                     }
                 },
                 calcTotal(t) {
@@ -437,7 +440,7 @@
                     const vat = Number(this.$store.utils.convertToEnglish(t.vat)) || 0;
 
                     const subtotal = qty * unit;
-                    t.total = subtotal + ((subtotal - off) * vat / 100) - off;
+                    t.total = this.isEditing ? subtotal - off + vat : subtotal + ((subtotal - off) * vat / 100) - off;
                     return t.total.toLocaleString();
                 }
             }));

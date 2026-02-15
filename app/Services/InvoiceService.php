@@ -265,10 +265,8 @@ class InvoiceService
             $unitPrice = $item['unit'];
             $unitDiscount = $item['unit_discount'] ?? 0;
 
-            // Calculate item VAT
-            $vatRate = ($item['vat'] ?? 0) / 100;
-
-            $itemVat = $vatRate * ($quantity * $unitPrice - $unitDiscount);
+            $vatIsValue = $item['vat_is_value'] ?? false;
+            $itemVat = $vatIsValue ? floatval($item['vat'] ?? 0) : (($item['vat'] ?? 0) / 100) * ($quantity * $unitPrice - $unitDiscount);
 
             // Calculate item amount (price - discount, VAT is separate but included in total)
             $itemAmount = $quantity * $unitPrice - $unitDiscount + $itemVat;
@@ -404,7 +402,8 @@ class InvoiceService
                 'quantity' => $t->quantity,
                 'description' => $t->description,
                 'unit_discount' => $t->unit_discount,
-                'vat' => ($t->amount - $t->vat) > 0 ? ($t->vat / ($t->amount - $t->vat)) * 100 : 0,
+                'vat' => $t->vat,
+                'vat_is_value' => true,
                 'unit' => $t->unit_price,
                 'total' => $t->amount,
             ])
@@ -797,7 +796,7 @@ class InvoiceService
     /**
      * Map form transactions to invoice items array
      */
-    public static function mapTransactionsToItems(array $transactions): array
+    public static function mapTransactionsToItems(array $transactions, bool $vatIsValue = false): array
     {
         return collect($transactions)->map(fn ($t, $i) => [
             'transaction_index' => $i,
@@ -807,6 +806,7 @@ class InvoiceService
             'description' => $t['desc'] ?? null,
             'unit_discount' => $t['unit_discount'] ?? 0,
             'vat' => $t['vat'] ?? 0,
+            'vat_is_value' => $vatIsValue,
             'unit' => $t['unit'] ?? 0,
             'total' => $t['total'] ?? 0,
         ])->toArray();
@@ -859,7 +859,6 @@ class InvoiceService
     private static function prepareFromInvoice(Invoice $invoice): Collection
     {
         return $invoice->items->map(function ($item, $index) {
-            $subtotalBeforeVat = $item->amount - $item->vat;
             $isProduct = isset($item->itemable->inventory_subject_id);
 
             return [
@@ -869,7 +868,7 @@ class InvoiceService
                 'quantity' => $item->quantity,
                 'unit' => $item->unit_price,
                 'off' => $item->unit_discount,
-                'vat' => $subtotalBeforeVat > 0 ? ($item->vat / $subtotalBeforeVat) * 100 : 0,
+                'vat' => $item->vat,
                 'total' => $item->amount,
                 'inventory_subject_id' => $item->itemable->inventory_subject_id ?? $item->itemable->subject_id ?? null,
                 'subject' => $item->itemable->name ?? null,

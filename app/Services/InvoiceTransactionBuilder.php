@@ -25,7 +25,8 @@ class InvoiceTransactionBuilder
      * - `quantity` (int|float)       : Quantity of the item. Optional, defaults to `1` when omitted.
      * - `unit` (int|float)           : Unit price for the item (required for amount calculations).
      * - `unit_discount` (int|float)  : Discount amount applied to this item line (optional, default `0`). Note: this is treated as an absolute amount for the line.
-     * - `vat` (int|float)           : VAT percentage (e.g. `9` for 9%). Optional, treated as `0` when omitted.
+     * - `vat` (int|float)           : VAT percentage (e.g. `9` for 9%), or VAT value when `vat_is_value` is true.
+     * - `vat_is_value` (bool)       : When true, treat `vat` as a value instead of a percentage.
      *
      * Example:
      * ```php
@@ -168,8 +169,8 @@ class InvoiceTransactionBuilder
             $quantity = $item['quantity'] ?? 1;
             $unitPrice = $item['unit'];
             $itemDiscount = $item['unit_discount'] ?? 0;
-            $vatRate = ($item['vat'] ?? 0) / 100;
-            $itemVat = $vatRate * ($quantity * $unitPrice - $itemDiscount);
+            $vatIsValue = $item['vat_is_value'] ?? false;
+            $itemVat = $vatIsValue ? floatval($item['vat'] ?? 0) : (($item['vat'] ?? 0) / 100) * ($quantity * $unitPrice - $itemDiscount);
             $itemAmount = $quantity * $unitPrice;
 
             $this->totalDiscount += $itemDiscount;

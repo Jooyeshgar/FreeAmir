@@ -256,7 +256,7 @@ class InvoiceController extends Controller
     {
         $validated = $request->validated();
         $invoiceData = InvoiceService::extractInvoiceData($validated);
-        $items = InvoiceService::mapTransactionsToItems($validated['transactions']);
+        $items = InvoiceService::mapTransactionsToItems($validated['transactions'], true);
 
         if ($invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {
             return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('error', __('Invoice has associated approved ancillary costs and cannot be edited.'));
