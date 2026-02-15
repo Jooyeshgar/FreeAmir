@@ -28,7 +28,7 @@
 *   برای جزئیات بیشتر به **[مستندات رسمی Sail](https://laravel.com/docs/sail)** مراجعه کنید.
 
 1.  **پیش نیازها:**
-    *   PHP >= 8.1
+    *   PHP >= 8.2
     *   Composer
     *   MySQL database
     *   Node.js >= 18.0.0
