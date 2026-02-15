@@ -27,12 +27,9 @@
     $release = $releases.'/'.$date;
 @endsetup
 
-@servers(['web' => $server, 'accRoot' => 'accRoot'])
+@servers(['web' => $server])
 
 @task('init')
-    installing_apache
-    installing_php
-
     if [ ! -d {{ $path }}/storage ]; then
     cd {{ $path }}
     git clone {{ $repo }} --branch={{ $branch }} --depth=1 -q {{ $release }}
@@ -141,6 +138,14 @@
 
 @task('deployment_migrate')
     {{ $php }} {{ $release }}/artisan migrate --no-interaction --force
+@endtask
+
+@task('deployment_db_seed')
+    {{ $php }} {{ $release }}/artisan db:seed --no-interaction --force
+@endtask
+
+@task('deployment_db_demo_seeder')
+    {{ $php }} {{ $release }}/artisan db:seed --class=DemoSeeder --no-interaction --force
 @endtask
 
 @task('deployment_npm')
