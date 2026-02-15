@@ -36,6 +36,7 @@
 
 ```bash
 git clone https://github.com/Jooyeshgar/FreeAmir.git
+cd FreeAmir
 ```
 
 3.  **نصب وابستگی ها:**
