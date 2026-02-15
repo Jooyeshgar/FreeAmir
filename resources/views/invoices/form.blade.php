@@ -140,7 +140,7 @@
             {{ __('Total') }}
         </div>
     </div>
-    <div class="h-96 overflow-y-auto">
+    <div class="min-h-96">
         <div id="transactions" x-data="{ activeTab: {{ $total }} }">
             <template x-for="(transaction, index) in transactions" :key="transaction.id">
                 <div :class="{ 'active': activeTab === index }" class="transaction flex gap-2 items-center px-4 pb-3"
@@ -324,7 +324,8 @@
         $approveLabel = $isSellType ? __('save and ready to approve') : __('save and approve');
     @endphp
     @can('invoices.approve')
-        <button id="submitFormAndApprove" type="submit" name="approve" value="1" class="btn text-white btn-primary rounded-md">
+        <button id="submitFormAndApprove" type="submit" name="approve" value="1"
+            class="btn text-white btn-primary rounded-md">
             {{ $approveLabel }}
         </button>
     @endcan
@@ -421,16 +422,19 @@
                     transaction.service_id = isProduct ? null : id;
                     transaction.item_type = type;
                     transaction.item_id = `${type}-${id}`;
-                    transaction.inventory_subject_id = isProduct ? this.getProductInventorySubjectId(id) : null;
+                    transaction.inventory_subject_id = isProduct ? this.getProductInventorySubjectId(
+                        id) : null;
 
                     const isEditable = !this.isEditing || transaction.unit == null || transaction.vat ==
                         null;
                     if (isEditable) {
-                        transaction.unit = isProduct ? this.getProductPrice(id) : this.getServicePrice(id);
+                        transaction.unit = isProduct ? this.getProductPrice(id) : this.getServicePrice(
+                            id);
                         transaction.quantity = 1;
                         transaction.off = 0;
                         const vatRate = isProduct ? this.getProductVat(id) : this.getServiceVat(id);
-                        transaction.vat = this.isEditing ? this.calcVatValue(vatRate, transaction.quantity, transaction.unit, transaction.off) : vatRate;
+                        transaction.vat = this.isEditing ? this.calcVatValue(vatRate, transaction
+                            .quantity, transaction.unit, transaction.off) : vatRate;
                     }
                 },
                 calcTotal(t) {
@@ -440,7 +444,8 @@
                     const vat = Number(this.$store.utils.convertToEnglish(t.vat)) || 0;
 
                     const subtotal = qty * unit;
-                    t.total = this.isEditing ? subtotal - off + vat : subtotal + ((subtotal - off) * vat / 100) - off;
+                    t.total = this.isEditing ? subtotal - off + vat : subtotal + ((subtotal - off) *
+                        vat / 100) - off;
                     return t.total.toLocaleString();
                 }
             }));

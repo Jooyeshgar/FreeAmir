@@ -22,8 +22,8 @@
         </svg>
     </button>
 
-    <div x-show="open" x-transition.opacity.duration.200ms
-        class="absolute z-[100] w-full mt-1 bg-base-100 border border-base-300 rounded-box shadow-xl max-h-60 flex flex-col overflow-hidden">
+    <div x-show="open" x-transition.opacity.duration.200ms x-ref="panel" :class="dropUp ? 'bottom-full mb-1' : 'top-full mt-1'"
+        class="absolute left-0 right-0 z-[100] w-full bg-base-100 border border-base-300 rounded-box shadow-xl max-h-60 flex flex-col overflow-hidden">
         <div class="p-2 bg-base-100 border-b border-base-200 sticky top-0 z-10">
             <input x-ref="searchInput" x-model="search" @input.debounce.300ms="handleSearch()"
                 @keydown="onKeydown($event)" type="text" class="input input-sm input-bordered w-full"
@@ -79,6 +79,7 @@
                 url,
                 remoteCache: {},
                 abortController: null,
+                dropUp: false,
                 minQueryLength: 2,
                 searchIndex: {},
                 nodeMap: {},
@@ -96,6 +97,7 @@
 
                     this.buildIndex(this.initialTree, null);
                     this.rebuildFlatOptions();
+                    this.$watch('flatOptions', () => this.refreshPlacement());
                 },
 
                 get selectedLabel() {
@@ -154,7 +156,10 @@
                     if (this.disabled) return;
                     this.open = !this.open;
                     if (this.open) {
-                        this.$nextTick(() => this.$refs.searchInput?.focus());
+                        this.$nextTick(() => {
+                            this.updatePlacement();
+                            this.$refs.searchInput?.focus();
+                        });
                     }
                 },
 
@@ -169,6 +174,7 @@
                     if (q.length < this.minQueryLength) {
                         this.filteredTree = this.initialTree;
                         this.rebuildFlatOptions();
+                        this.refreshPlacement();
                         return;
                     }
 
@@ -181,6 +187,7 @@
                     }
 
                     this.searchRemote(q);
+                    this.refreshPlacement();
                 },
 
                 indexedSearch(query) {
@@ -251,6 +258,7 @@
                             this.filteredTree = prepared;
                             this.rebuildFlatOptions();
                             this.isLoading = false;
+                            this.refreshPlacement();
                         })
                         .catch(err => {
                             if (err.name !== 'AbortError') {
@@ -335,6 +343,25 @@
                         '<span class="bg-yellow-200">$1</span>'
                     );
                 },
+
+                refreshPlacement() {
+                    if (!this.open) return;
+                    this.$nextTick(() => this.updatePlacement());
+                },
+
+                updatePlacement() {
+                    const panel = this.$refs.panel;
+                    if (!panel) return;
+
+                    const rect = this.$el.getBoundingClientRect();
+                    const computed = getComputedStyle(panel).maxHeight;
+                    const maxHeight = Number.isFinite(parseFloat(computed)) ? parseFloat(computed) : panel.scrollHeight;
+                    const panelHeight = Math.min(panel.scrollHeight || 0, maxHeight || 0) || 0;
+                    const spaceBelow = window.innerHeight - rect.bottom;
+                    const spaceAbove = rect.top;
+
+                    this.dropUp = spaceBelow < panelHeight && spaceAbove > spaceBelow;
+                }
             };
         }
     </script>
