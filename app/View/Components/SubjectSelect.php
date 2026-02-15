@@ -10,6 +10,8 @@ class SubjectSelect extends Component
 {
     public string $url = '';
 
+    public string $title = '';
+
     public string $placeholder = '';
 
     public bool $disabled = false;
@@ -19,13 +21,15 @@ class SubjectSelect extends Component
     public array $finalLocalOptions = [];
 
     public function __construct(
-        string $url,
+        string $url = '',
+        string $title = '',
         string $placeholder = '',
         bool $disabled = false,
         string $class = '',
         array|Collection|null $subjects = null,
     ) {
-        $this->url = $url;
+        $this->url = $url ?: route('subjects.search');
+        $this->title = $title;
         $this->placeholder = __($placeholder);
         $this->disabled = $disabled;
         $this->class = $class;

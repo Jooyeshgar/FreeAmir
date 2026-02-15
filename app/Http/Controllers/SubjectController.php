@@ -6,6 +6,7 @@ use App\Http\Requests\StoreSubjectRequest;
 use App\Models\Subject;
 use App\Services\SubjectService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class SubjectController extends Controller
 {
@@ -56,7 +57,8 @@ class SubjectController extends Controller
     public function edit(Subject $subject)
     {
         $parentSubject = $subject->parent;
-        $subjects = Subject::whereIsRoot()->with('children')->orderBy('code')->get();
+        $subjects = Subject::orderBy('code')->get(['id', 'name', 'code', 'parent_id']);
+        $subjects = $this->subjectService->buildSubjectTreeFromCollection($subjects);
 
         return view('subjects.edit', compact('subject', 'parentSubject', 'subjects'));
     }
@@ -93,35 +95,92 @@ class SubjectController extends Controller
         }
     }
 
+    private function collectWithRelations(Collection $subjects): Collection
+    {
+        $result = $subjects->keyBy('id');
+
+        $downIds = $subjects->pluck('id')->unique()->values(); // children
+        $upIds = $subjects->pluck('parent_id')->filter()->unique()->values(); // parents
+
+        while ($downIds->isNotEmpty() || $upIds->isNotEmpty()) {
+            $children = collect();
+            if ($downIds->isNotEmpty()) {
+                $children = Subject::query()->select(['id', 'name', 'code', 'parent_id'])->whereIn('parent_id', $downIds)->get()
+                    ->reject(fn ($s) => $result->has($s->id));
+            }
+
+            $parents = collect();
+            if ($upIds->isNotEmpty()) {
+                $parents = Subject::query()->select(['id', 'name', 'code', 'parent_id'])->whereIn('id', $upIds)->get()
+                    ->reject(fn ($s) => $result->has($s->id));
+            }
+
+            if ($children->isEmpty() && $parents->isEmpty()) {
+                break;
+            }
+
+            // merge results
+            foreach ($children as $child) {
+                $result->put($child->id, $child);
+            }
+
+            foreach ($parents as $parent) {
+                $result->put($parent->id, $parent);
+            }
+
+            // next iteration IDs
+            $downIds = $children->pluck('id')->values();
+            $upIds = $parents->pluck('parent_id')->filter()->reject(fn ($id) => $result->has($id))->unique()->values();
+        }
+
+        return $result->values();
+    }
+
+    /**
+     * Search for a subject by name.
+     * Format the result as a tree with parents and children for each matched subject.
+     */
     public function search(Request $request)
     {
-        $query = $request->input('query');
-        $subjects = Subject::with([
-            'subSubjects' => function ($subQuery) use ($query) {
-                $subQuery->where('code', 'like', '%'.$query.'%')
-                    ->orWhere('name', 'like', '%'.$query.'%');
-            },
-        ])
-            ->where(function ($parentQuery) use ($query) {
-                $parentQuery->where('parent_id', null) // Ensure parent subjects
-                    ->where(function ($innerQuery) use ($query) {
-                        $innerQuery->where('code', 'like', '%'.$query.'%')
-                            ->orWhere('name', 'like', '%'.$query.'%');
-                    });
-            })
-            ->orWhereHas('subSubjects', function ($subQuery) use ($query) {
-                $subQuery->where('code', 'like', '%'.$query.'%')
-                    ->orWhere('name', 'like', '%'.$query.'%');
-            })
-            ->get()
-            ->map(function ($subject) use ($query) {
-                if (stripos($subject->name, $query) !== false || stripos($subject->code, $query) !== false) {
-                    $subject->setRelation('subSubjects', $subject->subSubjects()->get());
-                }
+        $validated = $request->validate([
+            'q' => 'required|string|min:0|max:100',
+        ]);
 
-                return $subject;
-            });
+        $q = $validated['q'];
 
-        return response()->json($subjects);
+        $matched = Subject::query()->select(['id', 'name', 'code', 'parent_id'])->where('name', 'like', "%{$q}%")
+            ->orderBy('code')->limit(25)->get();
+
+        if ($matched->isEmpty()) {
+            return response()->json([]);
+        }
+
+        $subjects = $this->collectWithRelations($matched);
+
+        return response()->json($this->subjectService->buildSubjectTreeFromCollection($subjects));
+    }
+
+    /**
+     * Search for a subject by code.
+     * This is used in document form when user enters a code.
+     * It tries to find an exact match for the code and returns the subject with its parents and children if found.
+     */
+    public function searchCode(Request $request)
+    {
+        $validated = $request->validate([
+            'q' => 'required|string|min:1|max:20',
+        ]);
+
+        $q = preg_replace('/[^0-9]/', '', $validated['q']); // Normalize code by removing '/' characters
+
+        $matched = Subject::query()->select(['id', 'name', 'code', 'parent_id'])->where('code', $q)->first();
+
+        if (! $matched) {
+            return response()->json([]);
+        }
+
+        $subjects = $this->collectWithRelations(collect([$matched]));
+
+        return response()->json($this->subjectService->buildSubjectTreeFromCollection($subjects));
     }
 }

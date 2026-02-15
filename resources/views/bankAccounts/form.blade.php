@@ -30,8 +30,8 @@
             $initialSelectedValue = $initialBankId ? "bank-$initialBankId" : null;
             $hint = '<a class="link text-blue-500" href="' . route('banks.create') . '">اضافه کردن بانک</a>';
         @endphp
-        <div class="flex flex-wrap" x-data="{ bank_id: '{{ $initialBankId }}', selectedValue: '{{ $initialSelectedValue }}' }">
-            <span class="flex flex-wrap text-gray-500 w-full">{{ __('Bank') }}</span>
+        <div class="h-full flex flex-wrap items-end" x-data="{ bank_id: '{{ $initialBankId }}', selectedValue: '{{ $initialSelectedValue }}' }">
+            <span class="label-text">{{ __('Bank') }}</span>
 
             <x-select-box url="{{ route('bank-accounts.search-bank') }}" :options="[['headerGroup' => 'bank', 'options' => $banks]]" x-model="selectedValue"
                 x-init="if (!selectedValue && bank_id) { selectedValue = 'bank-' + bank_id; }" placeholder="{{ __('Select Bank') }}" hint='{!! $hint !!}'

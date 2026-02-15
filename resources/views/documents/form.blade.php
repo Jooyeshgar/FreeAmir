@@ -1,10 +1,4 @@
-@php
-    $subjectIds = $document->transactions->pluck('subject_id')->toArray();
-@endphp
-
 <x-card class="rounded-2xl w-full" class_body="p-4">
-    <x-text-input type="text" input_value="{{ $subjectIds ? implode(',', $subjectIds) : 0 }}" input_class="subjectIds"
-        hidden></x-text-input>
     <div class="flex gap-2">
         <x-text-input input_name="title" title="{{ __('document name') }}"
             input_value="{{ old('title') ?? $document->title }}" placeholder="{{ __('document name') }}"
@@ -53,6 +47,24 @@
                         selectedName: transaction.subject,
                         selectedCode: transaction.code,
                         selectedId: transaction.subject_id,
+                        applySubject(match) {
+                            if (match) {
+                                const normalized = this.$store.subjects.normalize(match.code);
+                                this.selectedId = match.id;
+                                this.selectedName = match.name;
+                                this.selectedCode = normalized;
+                            } else {
+                                this.selectedId = '';
+                                this.selectedName = '';
+                            }
+                        },
+                        syncSubjectByCode() {
+                            this.applySubject($store.subjects.findByCode(this.selectedCode));
+                        },
+                        async syncSubjectByCodeRemote() {
+                            const match = await $store.subjects.findByCodeRemote(this.selectedCode);
+                            this.applySubject(match);
+                        }
                     }">
                     <input type="hidden" x-bind:value="transaction.transaction_id"x-bind:name="'transactions[' + index + '][transaction_id]'">
 
@@ -69,17 +81,31 @@
                         </button>
                     </div>
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input x-bind:value="$store.utils.formatCode(selectedCode)"
-                            label_text_class="text-gray-500" label_class="w-full"
-                            input_class="border-white value codeInput "></x-text-input>
+                        <input type="text" :value="$store.utils.formatCode(selectedCode)"
+                            @input="
+                                selectedCode = $store.subjects.normalizeForTyping($event.target.value);
+                                $event.target.value = $store.utils.formatCode(selectedCode);
+                            "
+                            @keydown.enter.prevent="
+                                selectedCode = $store.subjects.normalize($event.target.value);
+                                $event.target.value = $store.utils.formatCode(selectedCode);
+                                syncSubjectByCode();
+                                syncSubjectByCodeRemote();
+                            "
+                            @blur="
+                                selectedCode = $store.subjects.normalize($event.target.value);
+                                $event.target.value = $store.utils.formatCode(selectedCode);
+                                syncSubjectByCode();
+                                syncSubjectByCodeRemote();
+                            "
+                            class="max-h-10 input input-bordered border-slate-400 disabled:background-slate-700 w-full max-w-42 border-white value codeInput" />
                     </div>
                     <div>
-                        <x-subject-select url="{{ route('documents.search-subjects') }}" :subjects="$subjects"
-                            x-bind:selected_id="selectedId" x-bind:selected_name="selectedName"
+                        <x-subject-select :subjects="$subjects" data-subject-select x-bind:selected_id="selectedId" x-bind:selected_name="selectedName"
                             x-bind:selected_code="selectedCode" placeholder="{{ __('Select a subject') }}"
                             @selected="
                                 selectedName = $event.detail.name;
-                                selectedCode = $event.detail.code;
+                                selectedCode = $store.subjects.normalize($event.detail.code);
                                 selectedId = $event.detail.id;
                             "
                             class="w-80 max-w-80" />
@@ -157,6 +183,190 @@
     </script>
     <script>
         document.addEventListener('alpine:init', () => {
+            if (!Alpine.store('subjects')) {
+                const subjects = @js($subjects ?? []);
+                const subjectCodeSearchUrl = @js(route('subjects.search-code'));
+                const byCode = {};
+                const subjectsTree = Array.isArray(subjects) ? subjects : [];
+
+                const normalize = (code) => {
+                    if (!code) return '';
+
+                    const englishCode = Alpine.store('utils').convertToEnglish(code);
+                    const cleaned = englishCode.replace(/[^0-9/]/g, '');
+                    if (!cleaned) return '';
+
+                    if (!cleaned.includes('/')) {
+                        const digits = cleaned.replace(/\D/g, '');
+                        if (!digits) return '';
+
+                        if (digits.length < 3) {
+                            return digits.padStart(3, '0');
+                        }
+
+                        const remainder = digits.length % 3;
+                        if (remainder === 0) return digits;
+
+                        const head = digits.slice(0, digits.length - remainder);
+                        const tail = digits.slice(-remainder);
+                        if (digits.startsWith('0')) {
+                            return head + tail;
+                        }
+
+                        return head + tail.padStart(3, '0');
+                    }
+
+                    const parts = cleaned.split('/').filter(part => part.length);
+                    if (!parts.length) return '';
+
+                    const padded = parts.map(part => {
+                        const digits = part.replace(/\D/g, '');
+                        return digits ? digits.padStart(3, '0') : '';
+                    });
+
+                    return padded.join('');
+                };
+
+                const walk = (nodes) => {
+                    if (!Array.isArray(nodes)) return;
+                    nodes.forEach(node => {
+                        if (node?.code) {
+                            byCode[normalize(node.code)] = {
+                                id: node.id,
+                                name: node.name,
+                                code: node.code
+                            };
+                        }
+                        if (node?.children?.length) walk(node.children);
+                    });
+                };
+
+                walk(subjectsTree);
+
+                const mergeTrees = (base, incoming) => {
+                    const byId = new Map();
+
+                    const cloneNode = (node) => ({
+                        id: node.id,
+                        name: node.name,
+                        code: node.code,
+                        parent_id: node.parent_id ?? null,
+                        children: Array.isArray(node.children) ? node.children.map(cloneNode) : []
+                    });
+
+                    const index = (nodes) => {
+                        nodes.forEach(n => {
+                            byId.set(n.id, n);
+                            if (Array.isArray(n.children) && n.children.length) index(n.children);
+                        });
+                    };
+
+                    const mergeNode = (target, source) => {
+                        target.name = source.name ?? target.name;
+                        target.code = source.code ?? target.code;
+                        target.parent_id = source.parent_id ?? target.parent_id;
+                        const targetChildren = Array.isArray(target.children) ? target.children : [];
+                        const targetChildrenById = new Map(targetChildren.map(c => [c.id, c]));
+                        (source.children || []).forEach(child => {
+                            const existing = targetChildrenById.get(child.id);
+                            if (existing) {
+                                mergeNode(existing, child);
+                            } else {
+                                targetChildren.push(cloneNode(child));
+                            }
+                        });
+                        target.children = targetChildren;
+                    };
+
+                    index(base);
+
+                    const attachIncoming = (nodes) => {
+                        nodes.forEach(n => {
+                            const existing = byId.get(n.id);
+                            if (existing) {
+                                mergeNode(existing, n);
+                            } else {
+                                base.push(cloneNode(n));
+                                byId.set(n.id, base[base.length - 1]);
+                            }
+                        });
+                    };
+
+                    attachIncoming(incoming);
+                };
+
+                Alpine.store('subjects', {
+                    normalize,
+                    normalizeForTyping(code) {
+                        if (!code) return '';
+
+                        const englishCode = Alpine.store('utils').convertToEnglish(code);
+                        const cleaned = englishCode.replace(/[^0-9/]/g, '');
+                        if (!cleaned) return '';
+
+                        if (!cleaned.includes('/')) {
+                            return cleaned.replace(/\D/g, '');
+                        }
+
+                        const parts = cleaned.split('/').filter(part => part.length);
+                        if (!parts.length) return '';
+
+                        return parts.map(part => part.replace(/\D/g, '')).join('');
+                    },
+
+                    findByCode(code) {
+                        const key = normalize(code);
+                        return key ? byCode[key] ?? null : null;
+                    },
+                    getTree() {
+                        return subjectsTree;
+                    },
+                    async findByCodeRemote(code) {
+                        const key = normalize(code);
+                        if (!key) return null;
+                        if (byCode[key]) return byCode[key];
+
+                        try {
+                            const res = await fetch(`${subjectCodeSearchUrl}?q=${encodeURIComponent(key)}`);
+                            if (!res.ok) return null;
+                            const data = await res.json();
+                            if (Array.isArray(data) && data.length) {
+                                mergeTrees(subjectsTree, data);
+                                walk(data);
+
+                                document.querySelectorAll('[data-subject-select]').forEach(el => {
+                                    const component = Alpine.$data(el);
+                                    if (!component) return;
+
+                                    const prepared = typeof component.prepareIncoming === 'function' ? component.prepareIncoming(data) : data;
+
+                                    mergeTrees(component.initialTree, prepared);
+                                    component.searchIndex = {};
+                                    component.nodeMap = {};
+                                    component.parentMap = {};
+                                    component.buildIndex(component.initialTree, null);
+
+                                    if ((component.search || '').trim().length >= component.minQueryLength) {
+                                        component.handleSearch();
+                                    } else {
+                                        component.filteredTree = component.initialTree;
+                                        component.rebuildFlatOptions();
+                                    }
+                                });
+
+                                window.dispatchEvent(new CustomEvent('subjects:merge', {
+                                    detail: data
+                                }));
+                            }
+                            return byCode[key] ?? null;
+                        } catch (e) {
+                            console.error(e);
+                            return null;
+                        }
+                    }
+                });
+            }
+
             Alpine.data('transactionForm', () => ({
                 transactions: {!! json_encode($transactions, JSON_UNESCAPED_UNICODE) !!},
                 addTransaction() {

@@ -4,11 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Subject;
 use App\Models\Transaction;
+use App\Services\SubjectService;
 use Illuminate\Http\Request;
 
 class TransactionController extends Controller
 {
-    public function __construct() {}
+    public function __construct(private readonly SubjectService $subjectService) {}
 
     public function index(Request $request)
     {
@@ -77,14 +78,12 @@ class TransactionController extends Controller
 
         $this->addRunningBalance($transactions, $balanceBeforePage);
 
-        $subjects = Subject::whereIsRoot()
-            ->with('children')
-            ->orderBy('code', 'asc')
-            ->get();
-
         $currentSubject = $request->filled('subject_id')
             ? Subject::find($request->integer('subject_id'))
             : null;
+
+        $selectedRootId = $currentSubject?->getRoot()?->id;
+        $subjects = $this->subjectService->buildSubjectTreeForRootSelection($selectedRootId);
 
         return view('transactions.index', compact(
             'transactions',
@@ -174,4 +173,5 @@ class TransactionController extends Controller
 
         return view('transactions.show', compact('transaction'));
     }
+
 }

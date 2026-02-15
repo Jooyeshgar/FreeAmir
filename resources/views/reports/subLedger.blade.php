@@ -23,8 +23,14 @@
                         x-bind:value="$store.utils.formatCode(selectedCode)">
                     </x-input>
                 </div>
-                <x-subject-select-box class="w-2/3" :subjects="$subjects" title="{{ __('Subject name') }}" id_field="subject_id" placeholder="{{ __('Select a subject') }}"
-                    allSelectable="true"></x-subject-select-box>
+                <x-subject-select class="w-2/3" :subjects="$subjects" title="{{ __('Subject name') }}" placeholder="{{ __('Select a subject') }}"
+                    @selected="
+                        selectedName = $event.detail.name;
+                        selectedCode = $event.detail.code;
+                        selectedId = $event.detail.id;
+                    " />
+                <input type="hidden" name="subject_id" x-bind:value="selectedId">
+                <input type="hidden" name="code" x-bind:value="selectedCode">
             </div>
 
             @include('reports.form', ['type' => 'subLedger'])

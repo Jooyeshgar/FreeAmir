@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
+use App\Services\SubjectService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -13,7 +14,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportsController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly SubjectService $subjectService)
     {
         $this->middleware('permission:reports.ledger', ['only' => ['ledger']]);
         $this->middleware('permission:reports.journal', ['only' => ['journal']]);
@@ -39,7 +40,8 @@ class ReportsController extends Controller
 
     public function subLedger()
     {
-        $subjects = Subject::orderBy('code', 'asc')->get();
+        $subjects = Subject::orderBy('code')->get(['id', 'name', 'code', 'parent_id']);
+        $subjects = $this->subjectService->buildSubjectTreeFromCollection($subjects);
 
         return view('reports.subLedger', compact('subjects'));
     }

@@ -29,10 +29,15 @@
                     <div class="col-span-12 lg:col-span-3" x-data="{
                         selectedName: '{{ $currentSubject ? $currentSubject->name : '' }}',
                         selectedCode: '{{ $currentSubject ? $currentSubject->code : '' }}',
-                        selectedId: '{{ request('subject_id', '') }}',
+                        selectedId: @js(old('subject_id', $currentSubject?->id)),
                     }">
-                        <x-subject-select-box :subjects="$subjects" title="{{ __('Subject') }}" id_field="subject_id" placeholder="{{ __('All Subjects') }}"
-                            allSelectable="true" class="w-full" />
+                        <x-subject-select class="w-full" :subjects="$subjects" title="{{ __('Subject') }}" placeholder="{{ __('All Subjects') }}"
+                            @selected="
+                                selectedName = $event.detail.name;
+                                selectedCode = $event.detail.code;
+                                selectedId = $event.detail.id;
+                            " />
+                        <input type="hidden" name="subject_id" x-bind:value="selectedId">
                     </div>
                     <div class="col-span-6 sm:col-span-3 lg:col-span-2">
                         <x-date-picker name="start_date" value="{{ request('start_date') }}" class="w-full" placeholder="{{ __('Start date') }}" />

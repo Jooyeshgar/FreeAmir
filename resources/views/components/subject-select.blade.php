@@ -1,19 +1,24 @@
-<div {{ $attributes->except(['url', 'subjects', 'placeholder', 'disabled', 'class'])->merge(['class' => 'relative ' . $class]) }}
+<div {{ $attributes->except(['url', 'subjects', 'placeholder', 'disabled', 'class', 'title'])->merge(['class' => 'relative ' . $class]) }}
     x-data="searchSelect({
         url: '{{ $url }}',
         options: @js($finalLocalOptions),
         placeholder: '{{ $placeholder }}',
         disabled: @js($disabled),
     })" @click.outside="close()" x-cloak>
+    @if ($title !== '')
+        <div class="label">
+            <span class="label-text">{{ $title }}</span>
+        </div>
+    @endif
     <button type="button" @click="toggle()" :disabled="disabled" :class="{ 'opacity-60 cursor-not-allowed': disabled }"
-        class="input input-bordered w-full text-left flex items-center justify-between px-4 bg-base-100 focus:outline-none focus:border-primary">
+        class="input input-bordered h-10 min-h-10 w-full text-left flex items-center justify-between px-4 bg-base-100 focus:outline-none focus:border-primary">
         <span x-text="selectedLabel ? selectedLabel : placeholder"
             :class="{ 'text-base-content': selectedLabel, 'text-gray-400': !selectedLabel }"
             class="block truncate"></span>
 
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 transition-transform duration-200"
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition-transform duration-200"
             :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-5 5-5-5" />
         </svg>
     </button>
 
@@ -80,6 +85,15 @@
                 parentMap: {},
 
                 init() {
+                    const subjectsStore = Alpine.store('subjects');
+                    if (subjectsStore && typeof subjectsStore.getTree === 'function') {
+                        const storeTree = subjectsStore.getTree();
+                        if (Array.isArray(storeTree) && storeTree.length) {
+                            this.initialTree = storeTree;
+                            this.filteredTree = storeTree;
+                        }
+                    }
+
                     this.buildIndex(this.initialTree, null);
                     this.rebuildFlatOptions();
                 },
