@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Http\Requests\StoreInvoiceRequest;
-use App\Http\Requests\UpdateInvoiceRequest;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
@@ -253,7 +252,7 @@ class InvoiceController extends Controller
      *
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function update(UpdateInvoiceRequest $request, Invoice $invoice)
+    public function update(StoreInvoiceRequest $request, Invoice $invoice)
     {
         $validated = $request->validated();
         $invoiceData = InvoiceService::extractInvoiceData($validated);

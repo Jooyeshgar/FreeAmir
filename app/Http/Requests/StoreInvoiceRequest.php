@@ -165,7 +165,7 @@ class StoreInvoiceRequest extends FormRequest
         $invoice = $this->route('invoice');
         $isEditing = $invoice !== null;
 
-        return [
+        $rules = [
             'title' => 'nullable|string|min:2|max:255',
             'description' => 'nullable|string',
             'date' => 'required|date',
@@ -220,6 +220,12 @@ class StoreInvoiceRequest extends FormRequest
             'transactions.*.unit' => 'required|numeric|min:0',
             'transactions.*.total' => 'required|numeric|min:0',
         ];
+
+        if ($isEditing) {
+            $rules['transactions.*.vat'] = 'required|numeric|min:0|max:100';
+        }
+
+        return $rules;
     }
 
     /**
