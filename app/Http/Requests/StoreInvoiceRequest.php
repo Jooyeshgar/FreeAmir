@@ -222,7 +222,7 @@ class StoreInvoiceRequest extends FormRequest
         ];
 
         if ($isEditing) {
-            $rules['transactions.*.vat'] = 'required|numeric|min:0|max:100';
+            $rules['transactions.*.vat'] = 'required|numeric|min:0';
         }
 
         return $rules;
