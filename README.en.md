@@ -34,6 +34,7 @@ Alternatively, you can use **[Laravel Sail](https://laravel.com/docs/sail)** for
 
 ```bash
 git clone https://github.com/Jooyeshgar/FreeAmir.git
+cd FreeAmir
 ```
 
 3. **Install dependencies:**
