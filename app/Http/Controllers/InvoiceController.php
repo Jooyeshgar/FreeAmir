@@ -123,18 +123,53 @@ class InvoiceController extends Controller
             return redirect()->route('configs.index')->with('error', __('Customer Subject is not configured. Please set it in configurations.'));
         }
 
-        $buyInvoices = collect();
-        $sellInvoices = collect();
+        $returnedInvoices = collect();
+        $products = collect();
+        $services = collect();
+        $customers = collect();
 
-        if ($request->invoice_type === 'return_buy') {
-            $buyInvoices = Invoice::where('invoice_type', InvoiceType::BUY)->where('status', InvoiceStatus::APPROVED)->with('items')->get();
-        } elseif ($request->invoice_type === 'return_sell') {
-            $sellInvoices = Invoice::where('invoice_type', InvoiceType::SELL)->where('status', InvoiceStatus::APPROVED)->with('items')->get();
+        $returnInvoiceTypeMap = [
+            'return_buy' => InvoiceType::BUY,
+            'return_sell' => InvoiceType::SELL,
+        ];
+
+        if (isset($returnInvoiceTypeMap[$request->invoice_type])) {
+            // If it's return invoice, we need to load the returned Invoices items (products/services) and customers to form
+            $returnInvoiceType = $returnInvoiceTypeMap[$request->invoice_type];
+
+            $returnedInvoices = Invoice::where('invoice_type', $returnInvoiceType)->where('status', InvoiceStatus::APPROVED)->with(['customer', 'items'])->get();
+
+            if ($returnedInvoices->isNotEmpty()) {
+                $productIds = $returnedInvoices->flatMap(function ($invoice) {
+                    return $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id');
+                })->unique();
+                $products = Product::with('inventorySubject', 'productGroup')->whereIn('id', $productIds)->get();
+
+                $serviceIds = $returnedInvoices->flatMap(function ($invoice) {
+                    return $invoice->items->where('itemable_type', Service::class)->pluck('itemable_id');
+                })->unique();
+                $services = Service::with('subject', 'serviceGroup')->whereIn('id', $serviceIds)->get();
+
+                $customerIds = $returnedInvoices->pluck('customer.id')->unique();
+                $customers = Customer::with('group')->whereIn('id', $customerIds)->get();
+            }
+        } else {
+            $products = Product::with('inventorySubject', 'productGroup')->orderBy('name')->limit(20)->get();
+            $services = Service::with('subject', 'serviceGroup')->orderBy('name')->limit(20)->get();
+            $customers = Customer::with('group')->orderBy('name')->limit(20)->get();
         }
 
-        $products = Product::with('inventorySubject', 'productGroup')->orderBy('name', 'asc')->limit(20)->get();
-        $services = Service::with('subject', 'serviceGroup')->orderBy('name', 'asc')->limit(20)->get();
-        $customers = Customer::with('group')->orderBy('name', 'asc')->limit(20)->get();
+        $returnedInvoices = $returnedInvoices->map(function ($invoice) { // Format invoices for select box
+            return [
+                'id' => $invoice->id,
+                'groupId' => 0,
+                'groupName' => 'General',
+                'text' => trim(($invoice->title ?? '').' - '.$invoice->number, ' -'),
+                'type' => 'invoice',
+                'customer_id' => $invoice->customer_id,
+            ];
+        })->values()->all();
+
         $previousDocumentNumber = floor(Document::max('number') ?? 0);
 
         $transactions = InvoiceService::prepareTransactions();
@@ -144,9 +179,10 @@ class InvoiceController extends Controller
         $total = count($transactions);
 
         $invoice_type = in_array($request->invoice_type, ['buy', 'sell', 'return_buy', 'return_sell']) ? $request->invoice_type : 'sell';
+        $isReturnInvoice = in_array($invoice_type, ['return_buy', 'return_sell'], true);
         $previousInvoiceNumber = floor(Invoice::where('invoice_type', $invoice_type)->max('number') ?? 0);
 
-        return view('invoices.create', compact('sellInvoices', 'buyInvoices', 'products', 'services', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type', 'isServiceBuy'));
+        return view('invoices.create', compact('returnedInvoices', 'products', 'services', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type', 'isServiceBuy', 'isReturnInvoice'));
     }
 
     /**
@@ -217,9 +253,25 @@ class InvoiceController extends Controller
     {
         $invoice->load('customer', 'document.transactions', 'items'); // Eager load relationships
 
-        $customerIdsForSelect = Customer::orderBy('name', 'asc')->limit(20)->pluck('id');
-        $productIdsForSelect = Product::orderBy('name', 'asc')->limit(20)->pluck('id');
-        $serviceIdsForSelect = Service::orderBy('name', 'asc')->limit(20)->pluck('id');
+        $returnedInvoices = [];
+        if (in_array($invoice->invoice_type, [InvoiceType::RETURN_BUY, InvoiceType::RETURN_SELL]) && $invoice->returned_invoice_id) {
+            $returnedInvoice = $invoice->returnedInvoice()->with('customer')->first();
+
+            if ($returnedInvoice) {
+                $returnedInvoices = [[
+                    'id' => $returnedInvoice->id,
+                    'groupId' => 0,
+                    'groupName' => 'General',
+                    'text' => trim(($returnedInvoice->title ?? '').' - '.$returnedInvoice->number, ' -'),
+                    'type' => 'invoice',
+                    'customer_id' => $returnedInvoice->customer_id,
+                ]];
+            }
+        }
+
+        $customerIdsForSelect = Customer::orderBy('name')->limit(20)->pluck('id');
+        $productIdsForSelect = Product::orderBy('name')->limit(20)->pluck('id');
+        $serviceIdsForSelect = Service::orderBy('name')->limit(20)->pluck('id');
         $previousDocumentNumber = floor(Document::max('number') ?? 0);
 
         $selectedProductIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->unique();
@@ -227,13 +279,13 @@ class InvoiceController extends Controller
         $selectedServiceIds = $invoice->items->where('itemable_type', Service::class)->pluck('itemable_id')->unique();
 
         $products = Product::with(['inventorySubject', 'productGroup'])->whereIn('id', $productIdsForSelect->merge($selectedProductIds)->unique())
-            ->orderBy('name', 'asc')->get();
+            ->orderBy('name')->get();
 
         $services = Service::with(['subject', 'serviceGroup'])->whereIn('id', $serviceIdsForSelect->merge($selectedServiceIds)->unique())
-            ->orderBy('name', 'asc')->get();
+            ->orderBy('name')->get();
 
         $customers = Customer::with('group')->whereIn('id', $customerIdsForSelect->push($invoice->customer_id)->unique())
-            ->orderBy('name', 'asc')->get();
+            ->orderBy('name')->get();
 
         // Prepare transactions from invoice items
         $transactions = InvoiceService::prepareTransactions($invoice, 'edit');
@@ -241,11 +293,13 @@ class InvoiceController extends Controller
         $total = $transactions->count();
 
         $invoice_type = $invoice->invoice_type;
+        $isReturnInvoice = in_array($invoice_type, [InvoiceType::RETURN_BUY, InvoiceType::RETURN_SELL], true);
 
         $isServiceBuy = $invoice->invoice_type === InvoiceType::BUY && $invoice->items->where('itemable_type', Product::class)->isEmpty();
 
         return view('invoices.edit', compact(
             'invoice',
+            'returnedInvoices', // for return invoice select box
             'customers',
             'total',
             'products',
@@ -253,7 +307,8 @@ class InvoiceController extends Controller
             'transactions',
             'invoice_type',
             'previousDocumentNumber',
-            'isServiceBuy'
+            'isServiceBuy',
+            'isReturnInvoice'
         ));
     }
 
@@ -344,7 +399,7 @@ class InvoiceController extends Controller
             ->where(function ($query) use ($q) {
                 $query->where('number', 'like', "%{$q}%")
                     ->orWhere('title', 'like', "%{$q}%");
-            })->select('id', 'number', 'date', 'title')->limit(20)->get();
+            })->select('id', 'number', 'date', 'title', 'customer_id')->limit(20)->get();
 
         if ($invoices->isEmpty()) {
             return response()->json([]);
@@ -358,6 +413,7 @@ class InvoiceController extends Controller
                 'text' => trim(($invoice->title ?? '').' - '.$invoice->number, ' -'),
                 'title' => $invoice->title,
                 'number' => $invoice->number,
+                'customer_id' => $invoice->customer_id,
                 'type' => 'invoice',
             ])->all(),
         ];
@@ -369,6 +425,31 @@ class InvoiceController extends Controller
                 'options' => $options,
             ],
         ]);
+    }
+
+    /**
+     * Get invoice items for a given invoice. Used when an invoice is selected in return sell or return buy.
+     */
+    public function getItems(Invoice $invoice)
+    {
+        $items = $invoice->items()->with('itemable')->get()->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'name' => $item->itemable->name,
+                'subject' => $item->itemable_type === Product::class ? $item->itemable->inventorySubject->name : ($item->itemable_type === Service::class ? $item->itemable->subject->name : ''),
+                'service_id' => $item->itemable_type === Service::class ? $item->itemable_id : null,
+                'product_id' => $item->itemable_type === Product::class ? $item->itemable_id : null,
+                'inventory_subject_id' => $item->itemable_type === Product::class ? $item->itemable->inventory_subject_id : null,
+                'vat' => $item->vat,
+                'quantity' => $item->quantity,
+                'unit' => $item->unit_price,
+                'off' => $item->unit_discount,
+                'total' => $item->amount,
+                'desc' => $item->description,
+            ];
+        });
+
+        return response()->json($items);
     }
 
     public function searchCustomer(Request $request)

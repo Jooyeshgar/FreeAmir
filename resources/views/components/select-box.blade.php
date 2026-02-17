@@ -361,7 +361,8 @@
                     this.$dispatch('selected', {
                         id: opt.id,
                         type: opt.type,
-                        text: opt.text
+                        text: opt.text,
+                        customer_id: opt.customer_id ?? null
                     });
                 },
 

@@ -16,7 +16,20 @@
             <div class="flex flex-wrap w-3/4" x-data="{
                 customer_id: '{{ $initialCustomerId }}',
                 selectedValue: '{{ $initialSelectedValue }}',
-            }">
+                customerSelectRender: true,
+                refreshCustomerSelect() {
+                    this.customerSelectRender = false;
+                    this.$nextTick(() => {
+                        this.customerSelectRender = true;
+                    });
+                }
+            }" @return-invoice-customer-selected.window="
+                if ($event.detail?.customerId) {
+                    customer_id = $event.detail.customerId;
+                    selectedValue = 'customer-' + customer_id;
+                    refreshCustomerSelect();
+                }
+            ">
                 <span class="flex flex-wrap text-gray-500 w-full">{{ __('Customer') }}
                     <a href="{{ route('customers.create') }}"
                         class="btn btn-xs btn-ghost text-blue-500 hover:text-blue-700" title="{{ __('Add Customer') }}">
@@ -28,11 +41,14 @@
                     </a>
                 </span>
 
-                <x-select-box url="{{ route('invoices.search-customer') }}" :options="[['headerGroup' => 'customer', 'options' => $customers]]" x-model="selectedValue"
-                    x-init="if (!selectedValue && customer_id) {
-                        selectedValue = 'customer-' + customer_id;
-                    }" placeholder="{{ __('Select Customer') }}" hint='{!! $hint !!}'
-                    @selected="customer_id = $event.detail.id;" class="" />
+                <template x-if="customerSelectRender">
+                    <x-select-box url="{{ route('invoices.search-customer') }}" :options="[['headerGroup' => 'customer', 'options' => $customers]]" x-model="selectedValue"
+                        x-init="if (!selectedValue && customer_id) {
+                            selectedValue = 'customer-' + customer_id;
+                        }" placeholder="{{ __('Select Customer') }}" hint='{!! $hint !!}' @selected="customer_id = $event.detail.id;"
+                        :disabled="$isReturnInvoice"
+                    />
+                </template>
 
                 <input type="hidden" x-bind:value="customer_id" name="customer_id">
             </div>
@@ -45,26 +61,40 @@
                 label_text_class="text-gray-500" label_class="w-1/2"></x-text-input>
         </div>
 
-        @if (in_array($invoice->invoice_type ?? $invoice_type, ['return_buy', 'return_sell']))
+        @if ($isReturnInvoice)
             @php
-                $invoices = $buyInvoices ?? $sellInvoices;
-                $initialInvoiceId = old('invoice_id', $invoice->id ?? null);
-                $initialSelectedValue = $initialInvoiceId ? "invoice-$initialInvoiceId" : null;
+                $initialReturnedInvoiceId = old('returned_invoice_id', $invoice->returned_invoice_id ?? null);
+                $initialSelectedValue = $initialReturnedInvoiceId ? "invoice-$initialReturnedInvoiceId" : null;
             @endphp
             <div class="flex w-1/3">
                 <div class="flex-wrap w-full" x-data="{
-                        invoice_id: '{{ $initialInvoiceId }}',
+                        returnedInvoiceId: '{{ $initialReturnedInvoiceId }}',
+                        invoiceCustomers: @js(collect($returnedInvoices)->pluck('customer_id', 'id')),
                         selectedValue: '{{ $initialSelectedValue }}',
                     }">
-                    <span class="text-gray-500">{{ __('Invoice for return') }}</span>
-                    <x-select-box url="{{ route('invoices.search', ['invoice_type' => $invoice->invoice_type ?? $invoice_type]) }}" :options="[['headerGroup' => 'invoice', 'options' => $invoices]]" x-model="selectedValue"
-                        x-init="if (!selectedValue && invoice_id) {
-                            selectedValue = 'invoice-' + invoice_id;
+                    <span class="text-gray-500">{{ __('Returned Invoice') }}</span>
+                    <x-select-box url="{{ route('invoices.search', ['invoice_type' => $invoice->invoice_type ?? $invoice_type]) }}" :options="[['headerGroup' => 'invoice', 'options' => $returnedInvoices]]" x-model="selectedValue"
+                        x-init="if (!selectedValue && returnedInvoiceId) {
+                            selectedValue = 'invoice-' + returnedInvoiceId;
+                        }
+                        if (returnedInvoiceId) {
+                            window.dispatchEvent(new CustomEvent('return-invoice-selected', { detail: { invoiceId: returnedInvoiceId } }));
+                            const customerId = invoiceCustomers[returnedInvoiceId] ?? null;
+                            if (customerId) {
+                                window.dispatchEvent(new CustomEvent('return-invoice-customer-selected', { detail: { customerId } }));
+                            }
                         }" placeholder="{{ __('Select Invoice') }}"
                         @selected="
-                            invoice_id = $event.detail.id;
+                            returnedInvoiceId = $event.detail.id;
+                            window.dispatchEvent(new CustomEvent('return-invoice-selected', { detail: { invoiceId: returnedInvoiceId } }));
+                            const customerId = $event.detail.customer_id ?? invoiceCustomers[returnedInvoiceId] ?? null;
+                            if (customerId) {
+                                window.dispatchEvent(new CustomEvent('return-invoice-customer-selected', { detail: { customerId } }));
+                            }
                         "
+                        disabled="{{ $invoice->exists }}"
                     />
+                    <input type="hidden" name="returned_invoice_id" x-bind:value="returnedInvoiceId">
                 </div>
             </div>
         @endif
@@ -96,7 +126,7 @@
             label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
     </div>
 </x-card>
-<x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-4" x-data="transactionForm" x-on:change="loadInvoiceItems($event.detail.items)">
+<x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-4" x-data="transactionForm">
     <div class="flex flex-wrap overflow-x-auto overflow-y-hidden gap-2 items-center px-4">
         <div class="text-sm flex-1 max-w-8 text-center text-gray-500 pt-3">
             *
@@ -223,9 +253,9 @@
 
                         <x-select-box url="{{ route('invoices.search-product-service') }}" :options="$options"
                             x-model="selectedValue" x-init="selectedValue = initItemSelection(transaction)" placeholder="{{ $placeholder }}"
-                            disabled="transaction.is_locked === true"
-                            @selected="selectItem(transaction, $event.detail.type, $event.detail.id)"
-                            hint='{!! $hint !!}' hint2='{!! $hint2 !!}' />
+                            @selected="selectItem(transaction, $event.detail.type, $event.detail.id)" hint='{!! $hint !!}' hint2='{!! $hint2 !!}'
+                            :disabled="$isReturnInvoice"
+                        />
 
                         <input type="hidden" x-bind:value="transaction.product_id || ''"
                             x-bind:name="'transactions[' + index + '][product_id]'">
@@ -251,6 +281,8 @@
                         <x-text-input placeholder="0" x-model.number="transaction.off"
                             x-bind:name="'transactions[' + index + '][off]'"
                             x-bind:disabled="!transaction.product_id && !transaction.service_id"
+                            x-bind:readonly="isReturnType"
+                            x-bind:class="isReturnType ? 'bg-base-200 opacity-60 cursor-not-allowed' : ''"
                             label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
                             x-on:input="transaction.off = $store.utils.convertToEnglish($event.target.value); $event.target.value = $store.utils.formatNumber(transaction.off)">
                         </x-text-input>
@@ -260,6 +292,8 @@
                         <x-text-input placeholder="0" x-model.number="transaction.vat"
                             x-bind:name="'transactions[' + index + '][vat]'"
                             x-bind:disabled="!transaction.product_id && !transaction.service_id"
+                            x-bind:readonly="isReturnType"
+                            x-bind:class="isReturnType ? 'bg-base-200 opacity-60 cursor-not-allowed' : ''"
                             label_text_class="text-gray-500" label_class="w-full" input_class="border-white">
                         </x-text-input>
                     </div>
@@ -268,6 +302,8 @@
                         <x-text-input placeholder="0" x-model.number="transaction.unit"
                             x-bind:name="'transactions[' + index + '][unit]'"
                             x-bind:disabled="!transaction.product_id && !transaction.service_id"
+                            x-bind:readonly="isReturnType"
+                            x-bind:class="isReturnType ? 'bg-base-200 opacity-60 cursor-not-allowed' : ''"
                             label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
                             x-on:input="transaction.unit = $store.utils.convertToEnglish($event.target.value); $event.target.value = $store.utils.formatNumber(transaction.unit)">
                         </x-text-input>
@@ -284,13 +320,15 @@
             </template>
         </div>
 
-        <button class="flex justify-content gap-4 align-center w-full px-4" id="addTransaction"
-            @click="addTransaction; activeTab = transactions.length;" type="button">
-            <div class="bg-gray-200 max-h-10 min-h-10 hover:bg-gray-300 border-none btn w-full rounded-md btn-active">
-                <span class="text-2xl">+</span>
-                {{ __('Add Transaction') }}
-            </div>
-        </button>
+        @if (! $isReturnInvoice)
+            <button class="flex justify-content gap-4 align-center w-full px-4" id="addTransaction"
+                @click="addTransaction; activeTab = transactions.length;" type="button">
+                <div class="bg-gray-200 max-h-10 min-h-10 hover:bg-gray-300 border-none btn w-full rounded-md btn-active">
+                    <span class="text-2xl">+</span>
+                    {{ __('Add Transaction') }}
+                </div>
+            </button>
+        @endif
     </div>
     <hr style="">
     <div class="flex flex-row justify-between" x-data="{ subtractionsInput: '{{ old('subtraction') ?? ($invoice->subtraction ?? 0) }}' }">
@@ -368,6 +406,22 @@
                 services: {!! json_encode($services, JSON_UNESCAPED_UNICODE) !!},
                 invoice_type: {!! json_encode($invoice->invoice_type ?? $invoice_type, JSON_UNESCAPED_UNICODE) !!},
                 isEditing: {{ $invoice->exists ? 'true' : 'false' }},
+                isReturnType: {{ $isReturnInvoice ? 'true' : 'false' }},
+                selectedReturnInvoiceId: {!! json_encode(old('returned_invoice_id', $invoice->returned_invoice_id ?? null), JSON_UNESCAPED_UNICODE) !!},
+                init() {
+                    window.addEventListener('return-invoice-selected', (event) => {
+                        const invoiceId = event?.detail?.invoiceId;
+                        this.selectedReturnInvoiceId = invoiceId;
+
+                        if (!this.isEditing) {
+                            this.loadInvoiceItems(invoiceId);
+                        }
+                    });
+
+                    if (this.selectedReturnInvoiceId && !this.isEditing) {
+                        this.loadInvoiceItems(this.selectedReturnInvoiceId);
+                    }
+                },
                 addTransaction() {
                     const newId = this.transactions.length ? this.transactions[this.transactions
                         .length - 1].id + 1 : 1;
@@ -385,26 +439,33 @@
                         desc: ''
                     });
                 },
-                loadInvoiceItems(items) {
-                    if (!Array.isArray(items)) {
+                loadInvoiceItems(invoiceId) {
+                    if (!invoiceId) {
+                        this.transactions = [];
                         return;
                     }
 
-                    this.transactions = items.map((item, index) => ({
-                        id: index + 1,
-                        name: '',
-                        subject: item.subject || '',
-                        service_id: item.service_id || null,
-                        product_id: item.product_id || null,
-                        item_id: item.item_type && (item.product_id || item.service_id) ? `${item.item_type}-${item.product_id || item.service_id}` : null,
-                        item_type: item.item_type || null,
-                        quantity: item.quantity ?? 1,
-                        unit: item.unit ?? null,
-                        total: item.total ?? 0,
-                        vat: item.vat ?? 0,
-                        off: item.off ?? 0,
-                        desc: item.desc ?? '',
-                    }));
+                    fetch(`/invoices/get-items/${invoiceId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            this.transactions = data.map(item => ({
+                                id: item.id,
+                                product_id: item.product_id,
+                                service_id: item.service_id,
+                                quantity: item.quantity,
+                                unit: item.unit,
+                                total: item.total,
+                                vat: item.vat,
+                                desc: item.desc,
+                                inventory_subject_id: item.inventory_subject_id,
+                                item_type: item.product_id ? 'product' : (item.service_id ? 'service' : null),
+                                item_id: item.product_id ? `product-${item.product_id}` : (item.service_id ? `service-${item.service_id}` : '')
+                            }));
+                        })
+                        .catch(error => {
+                            console.error('Error loading invoice items:', error);
+                            this.transactions = [];
+                        });
                 },
                 getProductPrice(productId) {
                     const product = this.products.find(p => p.id == productId);
@@ -479,7 +540,7 @@
                         transaction.quantity = 1;
                         transaction.off = 0;
                         const vatRate = isProduct ? this.getProductVat(id) : this.getServiceVat(id);
-                        transaction.vat = this.isEditing ? this.calcVatValue(vatRate, transaction
+                        transaction.vat = (this.isReturnType || this.isEditing) ? this.calcVatValue(vatRate, transaction
                             .quantity, transaction.unit, transaction.off) : vatRate;
                     }
                 },
@@ -490,7 +551,8 @@
                     const vat = Number(this.$store.utils.convertToEnglish(t.vat)) || 0;
 
                     const subtotal = qty * unit;
-                    t.total = this.isEditing ? subtotal - off + vat : subtotal + ((subtotal - off) *
+                    const vatIsValue = this.isEditing || this.isReturnType;
+                    t.total = vatIsValue ? subtotal - off + vat : subtotal + ((subtotal - off) *
                         vat / 100) - off;
                     return t.total.toLocaleString();
                 }

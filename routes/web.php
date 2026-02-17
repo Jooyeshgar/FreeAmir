@@ -36,6 +36,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::resource('banks', Controllers\BankController::class);
 
     Route::get('invoices/search/{invoice_type}', [Controllers\InvoiceController::class, 'search'])->name('invoices.search');
+    Route::get('invoices/get-items/{invoice}', [Controllers\InvoiceController::class, 'getItems'])->name('invoices.get-items');
     Route::get('invoices/search-customer', [Controllers\InvoiceController::class, 'searchCustomer'])->name('invoices.search-customer');
     Route::get('invoices/search-product-service', [Controllers\InvoiceController::class, 'searchProductService'])->name('invoices.search-product-service');
 

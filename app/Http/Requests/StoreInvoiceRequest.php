@@ -32,6 +32,7 @@ class StoreInvoiceRequest extends FormRequest
             'invoice_number' => convertToInt($this->input('invoice_number')),
             'subtractions' => convertToFloat($this->input('subtraction', 0)),
             'customer_id' => convertToInt($this->input('customer_id')),
+            'returned_invoice_id' => convertToInt($this->input('returned_invoice_id')),
         ]);
 
         if (str_contains($this->input('document_number'), '/')) {
@@ -164,6 +165,7 @@ class StoreInvoiceRequest extends FormRequest
     {
         $invoice = $this->route('invoice');
         $isEditing = $invoice !== null;
+        $isReturnInvoice = in_array($this->input('invoice_type'), [InvoiceType::RETURN_BUY->value, InvoiceType::RETURN_SELL->value], true);
 
         $rules = [
             'title' => 'nullable|string|min:2|max:255',
@@ -173,6 +175,7 @@ class StoreInvoiceRequest extends FormRequest
             'invoice_type' => ['required', Rule::in(array_column(InvoiceType::cases(), 'value'))],
             'customer_id' => 'required|exists:customers,id|integer',
             'invoice_id' => Rule::when($invoice !== null, ['required', 'integer', 'exists:invoices,id']),
+            'returned_invoice_id' => 'nullable|integer|exists:invoices,id',
             'document_number' => [
                 'required',
                 'decimal:0,2',
@@ -213,17 +216,13 @@ class StoreInvoiceRequest extends FormRequest
             ],
 
             'transactions.*.item_type' => 'required|string|in:product,service',
-            'transactions.*.vat' => 'required|numeric|min:0|max:100',
+            'transactions.*.vat' => $isReturnInvoice || $isEditing ? 'required|numeric|min:0' : 'required|numeric|min:0|max:100',
             'transactions.*.desc' => 'nullable|string|max:500',
             'transactions.*.quantity' => 'required|numeric|min:1',
             'transactions.*.unit_discount' => 'required|numeric|min:0',
             'transactions.*.unit' => 'required|numeric|min:0',
             'transactions.*.total' => 'required|numeric|min:0',
         ];
-
-        if ($isEditing) {
-            $rules['transactions.*.vat'] = 'required|numeric|min:0';
-        }
 
         return $rules;
     }
