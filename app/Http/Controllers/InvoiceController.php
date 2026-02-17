@@ -217,6 +217,8 @@ class InvoiceController extends Controller
     {
         $changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
 
+        $isServiceBuy = $invoice->invoice_type === InvoiceType::BUY && $invoice->items->where('itemable_type', Product::class)->isEmpty();
+
         $invoice->load([
             'customer',
             'document',
@@ -228,7 +230,7 @@ class InvoiceController extends Controller
             'ancillaryCosts.items',
         ]);
 
-        return view('invoices.show', compact('invoice', 'changeStatusValidation'));
+        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy'));
     }
 
     public function print(Invoice $invoice)

@@ -236,6 +236,7 @@ class InvoiceService
             'invoice_type' => $invoiceData['invoice_type'],
             'number' => isset($invoiceData['number']) ? (int) $invoiceData['number'] : null,
             'customer_id' => $invoiceData['customer_id'],
+            'returned_invoice_id' => $invoiceData['returned_invoice_id'] ?? null,
             'document_number' => $invoiceData['document_number'],
             'description' => $invoiceData['description'] ?? null,
             'subtraction' => floatval($invoiceData['subtraction'] ?? 0),
@@ -287,6 +288,15 @@ class InvoiceService
                 'itemable_type' => $itemableType,
                 'itemable_id' => $itemableId,
             ];
+
+            if (in_array($invoice->invoice_type, [InvoiceType::RETURN_SELL, InvoiceType::RETURN_BUY]) && $invoice->returned_invoice_id) {
+                $originalItem = InvoiceItem::where('invoice_id', $invoice->returned_invoice_id)
+                    ->where('itemable_type', $itemableType)->where('itemable_id', $itemableId)->first();
+
+                if ($originalItem) {
+                    $invoiceItemData['cog_after'] = $originalItem->cog_after;
+                }
+            }
 
             $invoiceItem = InvoiceItem::updateOrCreate([
                 'invoice_id' => $invoice->id,
@@ -785,6 +795,7 @@ class InvoiceService
             'date' => $validated['date'],
             'invoice_type' => InvoiceType::from($validated['invoice_type']),
             'customer_id' => $validated['customer_id'],
+            'returned_invoice_id' => $validated['returned_invoice_id'] ?? null,
             'document_number' => $validated['document_number'],
             'number' => $validated['invoice_number'],
             'subtraction' => $validated['subtractions'] ?? 0,

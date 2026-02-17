@@ -70,9 +70,9 @@ class ProductService
                 continue;
             }
 
-            if ($invoice_type === InvoiceType::BUY) {
+            if ($invoice_type === InvoiceType::BUY || $invoice_type === InvoiceType::RETURN_SELL) {
                 $product->quantity += $invoiceItem['quantity'];
-            } elseif ($invoice_type === InvoiceType::SELL) {
+            } elseif ($invoice_type === InvoiceType::SELL || $invoice_type === InvoiceType::RETURN_BUY) {
                 $product->quantity -= $invoiceItem['quantity'];
             }
             $product->save();
@@ -93,9 +93,9 @@ class ProductService
                 continue;
             }
 
-            if ($invoice_type === InvoiceType::BUY) {
+            if ($invoice_type === InvoiceType::BUY || $invoice_type === InvoiceType::RETURN_SELL) {
                 $product->quantity -= $invoiceItem['quantity'];
-            } elseif ($invoice_type === InvoiceType::SELL) {
+            } elseif ($invoice_type === InvoiceType::SELL || $invoice_type === InvoiceType::RETURN_BUY) {
                 $product->quantity += $invoiceItem['quantity'];
             }
 

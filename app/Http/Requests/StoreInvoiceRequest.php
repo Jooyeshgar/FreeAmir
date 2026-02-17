@@ -32,8 +32,14 @@ class StoreInvoiceRequest extends FormRequest
             'invoice_number' => convertToInt($this->input('invoice_number')),
             'subtractions' => convertToFloat($this->input('subtraction', 0)),
             'customer_id' => convertToInt($this->input('customer_id')),
-            'returned_invoice_id' => convertToInt($this->input('returned_invoice_id')),
         ]);
+
+        $returnedInvoiceId = $this->input('returned_invoice_id') ?? null;
+        if ($returnedInvoiceId) {
+            $this->merge([
+                'returned_invoice_id' => convertToInt($returnedInvoiceId),
+            ]);
+        }
 
         if (str_contains($this->input('document_number'), '/')) {
             $this->merge([
@@ -76,7 +82,59 @@ class StoreInvoiceRequest extends FormRequest
             $inputDate = $this->input('date');
             $invoice = $this->route('invoice');
             $isApproved = $this->input('approve');
-            $invoiceNumber = $this->input('invoice_number');
+
+            if (in_array($invoiceType, ['return_sell', 'return_buy'])) {
+                $returnedInvoiceId = $this->input('returned_invoice_id');
+                $returnedInvoice = Invoice::find($returnedInvoiceId);
+
+                // To return an invoice, a valid invoice must be provided
+                if (! $returnedInvoice) {
+                    $validator->errors()->add(
+                        'returned_invoice_id',
+                        __('The returned invoice ID is invalid.')
+                    );
+
+                    return;
+                }
+
+                // Input invoice type must match the returned invoice type
+                if ($invoiceType === 'return_sell' && $returnedInvoice->invoice_type !== InvoiceType::SELL) {
+                    $validator->errors()->add(
+                        'returned_invoice_id',
+                        __('The returned invoice must be a sell invoice for a return sell type.')
+                    );
+                } elseif ($invoiceType === 'return_buy' && $returnedInvoice->invoice_type !== InvoiceType::BUY) {
+                    $validator->errors()->add(
+                        'returned_invoice_id',
+                        __('The returned invoice must be a buy invoice for a return buy type.')
+                    );
+                }
+
+                // Can not return an invoice before its date
+                if ($inputDate < $returnedInvoice->date) {
+                    $validator->errors()->add(
+                        'date',
+                        __('The invoice date must be after or equal to the returned invoice date: :date.', ['date' => $returnedInvoice->date->format('Y-m-d')])
+                    );
+                }
+                foreach ($transactions as $index => $transaction) {
+                    // Original item is the item in the returned invoice that matches the current transaction item
+                    $originalItem = $returnedInvoice->items()
+                        ->where('itemable_type', $transaction['item_type'] === 'product' ? Product::class : Service::class)
+                        ->where('itemable_id', $transaction['item_id'])->first();
+
+                    if (! $originalItem) {
+                        continue; // No matching item in original invoice, skip validation for this item because this item is an unreturned item, not effect on original item
+                    }
+
+                    if ($transaction['quantity'] > $originalItem->quantity) {
+                        $validator->errors()->add(
+                            "transactions.{$index}.quantity",
+                            __('The quantity for this item cannot exceed the original invoice quantity of :quantity.', ['quantity' => $originalItem->quantity])
+                        );
+                    }
+                }
+            }
 
             if (! in_array($invoiceType, ['sell', 'buy'])) {
                 return;
