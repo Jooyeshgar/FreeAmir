@@ -39,7 +39,7 @@ class InvoiceService
 
         if ($approved) {
 
-            if ($createdInvoice->invoice_type === InvoiceType::SELL) {
+            if (self::usesSellStatusWorkflow($createdInvoice->invoice_type)) {
                 $createdInvoice->update(['status' => InvoiceStatus::READY_TO_APPROVE]);
 
                 return [
@@ -100,7 +100,7 @@ class InvoiceService
             $invoiceData['creator_id'] = $user->id;
             $invoiceData['date'] = $date;
             $invoiceData['title'] = $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? ''));
-            $invoiceData['status'] = $invoiceData['invoice_type'] === InvoiceType::SELL ? InvoiceStatus::PRE_INVOICE : InvoiceStatus::PENDING;
+            $invoiceData['status'] = self::usesSellStatusWorkflow($invoiceData['invoice_type']) ? InvoiceStatus::PRE_INVOICE : InvoiceStatus::PENDING;
 
             $createdInvoice = Invoice::create($invoiceData);
 
@@ -131,7 +131,7 @@ class InvoiceService
 
         if ($approved) {
 
-            if ($invoice->invoice_type === InvoiceType::SELL) {
+            if (self::usesSellStatusWorkflow($invoice->invoice_type)) {
                 $invoice->update(['status' => InvoiceStatus::READY_TO_APPROVE]);
 
                 return [
@@ -544,7 +544,7 @@ class InvoiceService
     {
         $decision = new InvoiceStatusDecision;
 
-        if ($invoice->invoice_type === InvoiceType::SELL && $nextStatus->isApproved()) {
+        if (self::usesSellConflictWorkflow($invoice->invoice_type) && $nextStatus->isApproved()) {
             self::checkProductsQuantityForStatusChange($invoice, $productIds, $decision);
         }
 
@@ -604,7 +604,7 @@ class InvoiceService
             return [];
         }
 
-        $query = Invoice::where('invoice_type', InvoiceType::SELL)
+        $query = Invoice::whereIn('invoice_type', [InvoiceType::SELL, InvoiceType::RETURN_BUY])
             ->where('status', '!=', InvoiceStatus::APPROVED)
             ->where(function ($q) use ($date, $invoiceNumber) {
                 $q->where('date', '<', $date)
@@ -623,6 +623,20 @@ class InvoiceService
         }
 
         return $query->get(['id', 'invoice_type', 'number'])->toArray();
+    }
+
+    private static function usesSellStatusWorkflow(InvoiceType|string $invoiceType): bool
+    {
+        $type = $invoiceType instanceof InvoiceType ? $invoiceType : InvoiceType::from($invoiceType);
+
+        return $type === InvoiceType::SELL;
+    }
+
+    private static function usesSellConflictWorkflow(InvoiceType|string $invoiceType): bool
+    {
+        $type = $invoiceType instanceof InvoiceType ? $invoiceType : InvoiceType::from($invoiceType);
+
+        return in_array($type, [InvoiceType::SELL, InvoiceType::RETURN_BUY], true);
     }
 
     private static function checkProductsQuantityForStatusChange(Invoice $invoice, array $productIds, InvoiceStatusDecision $decision): void

@@ -63,11 +63,12 @@
                         <div class="col-span-2 md:col-span-1">
                             @php
                                 $invoiceType = request('invoice_type');
+                                $isSellWorkflow = $invoiceType === 'sell';
                                 $skipIfSell = fn($status) => $status->isPending();
                                 $skipIfNotSell = fn($status) => $status->isReadyToApprove() ||
                                     $status->isPreInvoice() ||
                                     $status->isRejected();
-                                $shouldSkip = $invoiceType === 'sell' ? $skipIfSell : $skipIfNotSell;
+                                $shouldSkip = $isSellWorkflow ? $skipIfSell : $skipIfNotSell;
                             @endphp
                             <select name="status" id="status"
                                 class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
@@ -93,12 +94,13 @@
                     $invoiceType = request('invoice_type');
                     $statusFilter = request('status');
                     $baseQuery = request()->except('page');
+                    $isSellWorkflow = $invoiceType === 'sell';
 
                     $skipIfSell = fn($status) => $status->isPending();
                     $skipIfNotSell = fn($status) => $status->isReadyToApprove() ||
                         $status->isPreInvoice() ||
                         $status->isRejected();
-                    $shouldSkip = $invoiceType === 'sell' ? $skipIfSell : $skipIfNotSell;
+                    $shouldSkip = $isSellWorkflow ? $skipIfSell : $skipIfNotSell;
 
                     $statusTypes = [
                         \App\Enums\InvoiceStatus::PENDING->value => 'info',
@@ -196,11 +198,8 @@
                             </td>
                             <td class="px-4 py-2">
                                 @php
-                                    $canApprove =
-                                        $invoice->status->isReadyToApprove() ||
-                                        $invoice->status->isUnapproved() ||
-                                        $invoice->status->isApprovedInactive() ||
-                                        $invoice->status->isPending();
+                                    $isSellWorkflow = $invoice->invoice_type === \App\Enums\InvoiceType::SELL;
+                                    $canApprove = ($isSellWorkflow ? false : $invoice->status->isPending()) || $invoice->status->isReadyToApprove() || $invoice->status->isUnapproved() || $invoice->status->isApprovedInactive();
                                     $canUnapprove = $invoice->status->isApproved();
                                     $canChangeStatus = $canApprove || $canUnapprove;
                                 @endphp
@@ -208,13 +207,13 @@
                                     rel="noopener" class="btn btn-sm btn-info">{{ __('Show') }}</a>
 
                                 @can('invoices.approve')
-                                    @if ($invoice->status->isPreInvoice() || $invoice->status->isRejected())
+                                    @if ($isSellWorkflow && ($invoice->status->isPreInvoice() || $invoice->status->isRejected()))
                                         <a href="{{ route('invoices.change-status', [$invoice, 'ready_to_approve']) }}"
                                             class="btn btn-sm btn-success">{{ __('Issue') }}
                                         </a>
                                     @endif
 
-                                    @if ($invoice->status->isPreInvoice())
+                                    @if ($isSellWorkflow && $invoice->status->isPreInvoice())
                                         <a href="{{ route('invoices.change-status', [$invoice, 'rejected']) }}"
                                             class="btn btn-sm btn-error">{{ __('Reject') }}
                                         </a>

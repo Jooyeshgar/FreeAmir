@@ -624,7 +624,8 @@
 
                 <div class="flex flex-wrap gap-2">
                     @php
-                        $canApprove = $invoice->status->isReadyToApprove() || $invoice->status->isUnapproved() || $invoice->status->isApprovedInactive();
+                        $isSellWorkflow = $invoice->invoice_type === App\Enums\InvoiceType::SELL;
+                        $canApprove = ($isSellWorkflow ? false : $invoice->status->isPending()) || $invoice->status->isReadyToApprove() || $invoice->status->isUnapproved() || $invoice->status->isApprovedInactive();
                         $canUnapprove = $invoice->status->isApproved();
                         $canChangeStatus = $canApprove || $canUnapprove;
                     @endphp
@@ -639,14 +640,14 @@
                     </a>
 
                     @can('invoices.approve')
-                        @if ($invoice->status->isPreInvoice() || $invoice->status->isRejected())
+                        @if ($isSellWorkflow && ($invoice->status->isPreInvoice() || $invoice->status->isRejected()))
                             <a href="{{ route('invoices.change-status', [$invoice, 'ready_to_approve']) }}"
                                 class="btn btn-success gap-2">
                                 {{ __('Ready to approve') }}
                             </a>
                         @endif
 
-                        @if ($invoice->status->isPreInvoice())
+                        @if ($isSellWorkflow && $invoice->status->isPreInvoice())
                             <a href="{{ route('invoices.change-status', [$invoice, 'rejected']) }}"
                                 class="btn btn-error gap-2">
                                 {{ __('Reject') }}
