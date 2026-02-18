@@ -28,7 +28,7 @@ class CostOfGoodsService
      */
     public static function updateProductsAverageCost(Invoice $invoice)
     {
-        if ($invoice->invoice_type !== InvoiceType::BUY) {
+        if (! in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL])) {
             return;
         }
 
@@ -172,7 +172,7 @@ class CostOfGoodsService
      */
     public static function refreshProductCOGAfterItemsDeletion(Invoice $invoice, ?array $excludeItemIds = null): void
     {
-        if ($invoice->invoice_type !== InvoiceType::BUY) {
+        if (! in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_BUY])) {
             return;
         }
 
@@ -226,19 +226,17 @@ class CostOfGoodsService
 
     private static function getPreviousInvoice(Invoice $invoice, $productId)
     {
+        $allowedInvoiceTypes = match ($invoice->invoice_type) {
+            InvoiceType::BUY => [InvoiceType::BUY, InvoiceType::RETURN_SELL],
+            InvoiceType::RETURN_SELL => [InvoiceType::RETURN_SELL, InvoiceType::BUY],
+            InvoiceType::SELL => [InvoiceType::SELL, InvoiceType::RETURN_BUY],
+            InvoiceType::RETURN_BUY => [InvoiceType::RETURN_BUY, InvoiceType::SELL],
+            default => [],
+        };
+
         return Invoice::where('number', '<', $invoice->number)
             ->where('status', InvoiceStatus::APPROVED)
-            ->where('invoice_type', $invoice->invoice_type)
-            ->whereHas('items', fn ($query) => $query->where('itemable_id', $productId)
-                                                                            && $query->where('itemable_type', Product::class))
-            ->orderByDesc('number')->first();
-    }
-
-    private static function getNextInvoice(Invoice $invoice, $productId)
-    {
-        return Invoice::where('number', '>', $invoice->number)
-            ->where('status', InvoiceStatus::APPROVED)
-            ->where('invoice_type', $invoice->invoice_type)
+            ->whereIn('invoice_type', $allowedInvoiceTypes)
             ->whereHas('items', fn ($query) => $query->where('itemable_id', $productId)
                                                                             && $query->where('itemable_type', Product::class))
             ->orderByDesc('number')->first();

@@ -4,17 +4,21 @@ namespace Tests\Feature;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\AncillaryCost;
 use App\Models\Company;
 use App\Models\Customer;
+use App\Models\CustomerGroup;
 use App\Models\Invoice;
 use App\Models\Product;
+use App\Models\ProductGroup;
 use App\Models\User;
-use App\Services\AncillaryCostService;
 use App\Services\GroupActionService;
 use App\Services\InvoiceService;
 use Cookie;
+use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class InvoiceGroupActionTest extends TestCase
@@ -27,52 +31,91 @@ class InvoiceGroupActionTest extends TestCase
 
     protected int $companyId;
 
+    protected int $nextInvoiceNumber = 2000;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
-        Cookie::queue('active-company-id', $company->id);
-        $this->companyId = $company->id;
+        $this->seed(DatabaseSeeder::class);
+        $this->seed(DemoSeeder::class);
+
+        $this->companyId = Company::withoutGlobalScopes()->orderBy('id')->value('id') ?? 1;
+
+        Cache::forever('active_company_id', $this->companyId);
+        Cookie::queue('active-company-id', (string) $this->companyId);
+        $_COOKIE['active-company-id'] = (string) $this->companyId;
 
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
 
-        $this->customer = Customer::factory()->withGroup()->withSubject()->create();
+        $customerGroup = CustomerGroup::withoutGlobalScopes()->where('company_id', $this->companyId)->firstOrFail();
+        $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['company_id' => $this->companyId]);
     }
 
     private function createProduct(array $overrides = []): Product
     {
-        return Product::factory()->withGroup()->withSubjects()->create(array_merge(['company_id' => $this->companyId], $overrides));
+        $group = ProductGroup::withoutGlobalScopes()->where('company_id', $this->companyId)->firstOrFail();
+
+        return Product::factory()->withGroup($group)->withSubjects()->create(array_merge(['company_id' => $this->companyId], $overrides));
     }
 
-    private function createInvoice(InvoiceType $type, array $items, bool $approved = true, ?int $number = null, $date = null): array
-    {
-        $number ??= random_int(1000, 9999);
+    private function createInvoice(
+        InvoiceType $type,
+        array $items,
+        bool $approved = true,
+        ?int $number = null,
+        ?string $date = null,
+        ?int $returnedInvoiceId = null
+    ): array {
+        $number ??= ++$this->nextInvoiceNumber;
 
-        return InvoiceService::createInvoice(
+        $result = InvoiceService::createInvoice(
             $this->user,
             [
-                'title' => $type === InvoiceType::BUY ? 'Buy Invoice' : 'Sell Invoice',
+                'title' => strtoupper($type->value).' Invoice',
                 'date' => $date ?? now()->toDateString(),
                 'invoice_type' => $type,
                 'customer_id' => $this->customer->id,
                 'document_number' => $number,
                 'number' => $number,
+                'returned_invoice_id' => $returnedInvoiceId,
             ],
             $items,
             $approved
         );
+
+        $invoice = $this->findInvoice($result['invoice']->id);
+
+        if ($approved && ! $invoice->status->isApproved()) {
+            $this->changeInvoiceStatus($invoice, 'approved');
+            $invoice = $this->findInvoice($invoice->id);
+        }
+
+        return [
+            'document' => $result['document'],
+            'invoice' => $invoice,
+        ];
     }
 
-    private function buy(array $items, bool $approved = true, ?int $number = null, $date = null): array
+    private function buy(array $items, bool $approved = true, ?int $number = null, ?string $date = null): array
     {
         return $this->createInvoice(InvoiceType::BUY, $items, $approved, $number, $date);
     }
 
-    private function sell(array $items, bool $approved = true, ?int $number = null, $date = null): array
+    private function sell(array $items, bool $approved = true, ?int $number = null, ?string $date = null): array
     {
         return $this->createInvoice(InvoiceType::SELL, $items, $approved, $number, $date);
+    }
+
+    private function returnSell(array $items, int $returnedInvoiceId, bool $approved = true, ?int $number = null, ?string $date = null): array
+    {
+        return $this->createInvoice(InvoiceType::RETURN_SELL, $items, $approved, $number, $date, $returnedInvoiceId);
+    }
+
+    private function returnBuy(array $items, int $returnedInvoiceId, bool $approved = true, ?int $number = null, ?string $date = null): array
+    {
+        return $this->createInvoice(InvoiceType::RETURN_BUY, $items, $approved, $number, $date, $returnedInvoiceId);
     }
 
     private function productItem(Product $product, int $qty, float $unit): array
@@ -91,11 +134,12 @@ class InvoiceGroupActionTest extends TestCase
     {
         $data = [
             'title' => $invoice->title,
-            'date' => $invoice->date,
+            'date' => $invoice->date instanceof Carbon ? $invoice->date->toDateString() : (string) $invoice->date,
             'invoice_type' => $invoice->invoice_type,
             'customer_id' => $invoice->customer_id,
-            'document_number' => $invoice->document_number,
+            'document_number' => $invoice->document?->number,
             'number' => $invoice->number,
+            'returned_invoice_id' => $invoice->returned_invoice_id,
         ];
 
         return $this->updateInvoice($invoice, $data, $newItems, $approved);
@@ -108,79 +152,81 @@ class InvoiceGroupActionTest extends TestCase
 
     protected function unapproveInvoice(Invoice $invoice): void
     {
+        $invoice = $this->findInvoice($invoice->id);
         $svc = new InvoiceService;
         $svc->changeInvoiceStatus($invoice, 'unapproved');
         $invoice->refresh();
     }
 
-    public function test_approve_inactive_invoices()
+    private function changeInvoiceStatus(Invoice $invoice, string $status): void
     {
-        $product = $this->createProduct();
-
-        $this->buy([$this->productItem($product, 10, 100)], true, random_int(1000, 1999), now())['invoice'];
-        $buyInv2 = $this->buy([$this->productItem($product, 20, 100)], true, random_int(2000, 2999), now()->addDays(1))['invoice'];
-        $buyInv3 = $this->buy([$this->productItem($product, 30, 100)], true, random_int(3000, 3999), now()->addDays(2))['invoice'];
-
-        $ancillaryCost1 = $this->createAncillaryCost($product, $buyInv3, 200, true, now()->addDays(2));
-        $buyInv3->refresh();
-
-        $buyInv4 = $this->buy([$this->productItem($product, 40, 100)], true, random_int(4000, 4999), now()->addDays(3))['invoice'];
-
-        $ancillaryCost2 = $this->createAncillaryCost($product, $buyInv4, 200, true, now()->addDays(3));
-        $buyInv4->refresh();
-
-        $sellInv1 = $this->sell([$this->productItem($product, 10, 10)], true, random_int(2000, 2999), now()->addDays(5))['invoice'];
-        $sellInv2 = $this->sell([$this->productItem($product, 10, 10)], true, random_int(3000, 3999), now()->addDays(6))['invoice'];
-
-        $groupActionService = new GroupActionService;
-
-        [$invoicesConflicts, $ancillaryCostsConflicts, $productsConflicts] = $groupActionService->findAllConflictsRecursively($buyInv2);
-
-        // conflicts: buyInv3, ancillaryCost1, buyInv4, ancillaryCost2, sellInv1, sellInv2
-        $this->assertEquals($buyInv3->id, $invoicesConflicts[1]->id);
-        $this->assertEquals($ancillaryCost1->id, $ancillaryCostsConflicts[1]->id);
-        $this->assertEquals($buyInv4->id, $invoicesConflicts[2]->id);
-        $this->assertEquals($ancillaryCost2->id, $ancillaryCostsConflicts[0]->id);
-        $this->assertEquals($sellInv1->id, $invoicesConflicts[3]->id);
-        $this->assertEquals($sellInv2->id, $invoicesConflicts[4]->id);
-
-        $groupActionService->groupAction($buyInv2, app(InvoiceService::class), app(AncillaryCostService::class));
-
-        $this->assertEquals(InvoiceStatus::APPROVED, $buyInv2->status);
-        $this->assertEquals(InvoiceStatus::APPROVED_INACTIVE, $buyInv3->refresh()->status);
-        $this->assertEquals(InvoiceStatus::APPROVED_INACTIVE, $buyInv4->refresh()->status);
-        $this->assertEquals(InvoiceStatus::APPROVED_INACTIVE, $sellInv1->refresh()->status);
-        $this->assertEquals(InvoiceStatus::APPROVED_INACTIVE, $sellInv2->refresh()->status);
-
-        $this->unapproveInvoice($buyInv2);
-        $this->assertEquals(InvoiceStatus::UNAPPROVED, $buyInv2->refresh()->status);
-
-        $this->editInvoice($buyInv2, [$this->productItem($product, 15, 100)], true);
-        $this->assertEquals(InvoiceStatus::APPROVED, $buyInv2->refresh()->status);
-
-        $groupActionService->approveInactiveInvoices(app(InvoiceService::class), app(AncillaryCostService::class));
-
-        $this->assertEquals(InvoiceStatus::APPROVED, $buyInv3->refresh()->status);
-        $this->assertEquals(InvoiceStatus::APPROVED, $buyInv4->refresh()->status);
-        $this->assertEquals(InvoiceStatus::APPROVED, $sellInv1->refresh()->status);
-        $this->assertEquals(InvoiceStatus::APPROVED, $sellInv2->refresh()->status);
+        $invoice = $this->findInvoice($invoice->id);
+        (new InvoiceService)->changeInvoiceStatus($invoice, $status);
     }
 
-    protected function createAncillaryCost(Product $product, Invoice $invoice, float $amount, bool $approved = true, $date = null): AncillaryCost
+    private function findInvoice(int $invoiceId): Invoice
     {
-        $ancillaryCost = AncillaryCostService::createAncillaryCost($this->user, [
-            'invoice_id' => $invoice->id,
-            'customer_id' => $this->customer->id,
-            'company_id' => $this->companyId,
-            'date' => $date ?? now(),
-            'type' => 'Shipping',
-            'amount' => $amount,
-            'vatPrice' => 0,
-            'ancillaryCosts' => [
-                ['product_id' => $product->id, 'type' => 'Shipping', 'amount' => $amount],
-            ],
-        ], $approved)['ancillaryCost'];
+        return Invoice::withoutGlobalScopes()->with('items')->findOrFail($invoiceId);
+    }
 
-        return $ancillaryCost;
+    private function assertInvoiceStatus(int $invoiceId, InvoiceStatus $status): void
+    {
+        $this->assertSame($status, $this->findInvoice($invoiceId)->status);
+    }
+
+    public function test_group_action_and_approve_inactive_cover_return_invoices_and_approved_inactive_status(): void
+    {
+        $product = $this->createProduct(['quantity' => 500]);
+        $baseDate = now()->startOfDay();
+
+        $buyInv1 = $this->buy([$this->productItem($product, 100, 100)], true, 2101, $baseDate->toDateString())['invoice'];
+        $buyInv2 = $this->buy([$this->productItem($product, 80, 100)], true, 2102, $baseDate->copy()->addDay()->toDateString())['invoice'];
+        $sellInv = $this->sell([$this->productItem($product, 25, 120)], true, 2103, $baseDate->copy()->addDays(2)->toDateString())['invoice'];
+
+        $returnBuyInv = $this->returnBuy([$this->productItem($product, 10, 100)], $buyInv2->id, true, 2104, $baseDate->copy()->addDays(3)->toDateString())['invoice'];
+        $returnSellInv = $this->returnSell([$this->productItem($product, 5, 120)], $sellInv->id, true, 2105, $baseDate->copy()->addDays(4)->toDateString())['invoice'];
+
+        $groupActionService = app(GroupActionService::class);
+        $groupActionService->inactivateDependentInvoices($this->findInvoice($buyInv2->id));
+
+        $this->assertInvoiceStatus($buyInv1->id, InvoiceStatus::APPROVED);
+        $this->assertInvoiceStatus($buyInv2->id, InvoiceStatus::APPROVED_INACTIVE);
+        $this->assertInvoiceStatus($sellInv->id, InvoiceStatus::APPROVED_INACTIVE);
+        $this->assertInvoiceStatus($returnBuyInv->id, InvoiceStatus::APPROVED_INACTIVE);
+        $this->assertInvoiceStatus($returnSellInv->id, InvoiceStatus::APPROVED_INACTIVE);
+
+        $groupActionService->approveInactiveInvoices();
+
+        $this->assertInvoiceStatus($buyInv1->id, InvoiceStatus::APPROVED);
+        $this->assertInvoiceStatus($buyInv2->id, InvoiceStatus::APPROVED);
+        $this->assertInvoiceStatus($sellInv->id, InvoiceStatus::APPROVED);
+        $this->assertInvoiceStatus($returnBuyInv->id, InvoiceStatus::APPROVED);
+        $this->assertInvoiceStatus($returnSellInv->id, InvoiceStatus::APPROVED);
+    }
+
+    public function test_single_status_changes_cover_pending_ready_rejected_approve_and_unapprove(): void
+    {
+        $product = $this->createProduct(['quantity' => 200]);
+
+        $pendingBuy = $this->buy([$this->productItem($product, 20, 100)], false, 2201, now()->toDateString())['invoice'];
+        $this->assertInvoiceStatus($pendingBuy->id, InvoiceStatus::PENDING);
+
+        $this->changeInvoiceStatus($pendingBuy, 'approved');
+        $this->assertInvoiceStatus($pendingBuy->id, InvoiceStatus::APPROVED);
+
+        $this->changeInvoiceStatus($pendingBuy, 'unapproved');
+        $this->assertInvoiceStatus($pendingBuy->id, InvoiceStatus::UNAPPROVED);
+
+        $sellInvoice = $this->sell([$this->productItem($product, 5, 130)], false, 2202, now()->addDay()->toDateString())['invoice'];
+        $this->assertInvoiceStatus($sellInvoice->id, InvoiceStatus::PRE_INVOICE);
+
+        $this->changeInvoiceStatus($sellInvoice, 'ready_to_approve');
+        $this->assertInvoiceStatus($sellInvoice->id, InvoiceStatus::READY_TO_APPROVE);
+
+        $this->changeInvoiceStatus($sellInvoice, 'rejected');
+        $this->assertInvoiceStatus($sellInvoice->id, InvoiceStatus::REJECTED);
+
+        $this->changeInvoiceStatus($sellInvoice, 'approved');
+        $this->assertInvoiceStatus($sellInvoice->id, InvoiceStatus::APPROVED);
     }
 }

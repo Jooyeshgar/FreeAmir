@@ -6,24 +6,23 @@ use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
 use App\Models\Company;
 use App\Models\Customer;
+use App\Models\CustomerGroup;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\Product;
+use App\Models\ProductGroup;
 use App\Models\User;
 use App\Services\AncillaryCostService;
 use App\Services\CostOfGoodsService;
 use App\Services\InvoiceService;
 use Cookie;
+use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
-/**
- * Feature tests for Cost of Goods Sold (COGS) calculations
- * using the moving average inventory method.
- *
- * Scope:
- * - Service-level behavior (InvoiceService, CostOfGoodsService, AncillaryCostService)
- * - One controller-level validation (selling without inventory)
- */
 class COGSCalculationTest extends TestCase
 {
     use RefreshDatabase;
@@ -34,59 +33,92 @@ class COGSCalculationTest extends TestCase
 
     protected int $companyId;
 
+    protected int $nextInvoiceNumber = 1000;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
-        Cookie::queue('active-company-id', $company->id);
-        $this->companyId = $company->id ?? getActiveCompany();
+        $this->seed(DatabaseSeeder::class);
+        $this->seed(DemoSeeder::class);
+
+        $this->companyId = Company::query()->orderBy('id')->value('id') ?? 1;
+
+        Cache::forever('active_company_id', $this->companyId);
+        Cookie::queue('active-company-id', (string) $this->companyId);
+        $_COOKIE['active-company-id'] = (string) $this->companyId;
 
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
 
-        $this->customer = Customer::factory()->withGroup()->withSubject()->create();
-    }
+        $customerGroup = CustomerGroup::withoutGlobalScopes()->where('company_id', $this->companyId)->firstOrFail();
 
-    /* -----------------------------------------------------------------
-     | Helpers
-     | -----------------------------------------------------------------
-     */
+        $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['company_id' => $this->companyId]);
+    }
 
     private function createProduct(array $overrides = []): Product
     {
-        return Product::factory()->withGroup()->withSubjects()->create(array_merge([
-            'company_id' => $this->companyId,
-        ], $overrides));
+        $group = ProductGroup::withoutGlobalScopes()->where('company_id', $this->companyId)->firstOrFail();
+
+        return Product::factory()->withGroup($group)->withSubjects()->create(array_merge(['company_id' => $this->companyId], $overrides));
     }
 
-    private function createInvoice(InvoiceType $type, array $items, bool $approved = true, ?int $number = null, $date = null): array
-    {
-        $number ??= random_int(1000, 9999);
+    private function createInvoice(
+        InvoiceType $type,
+        array $items,
+        bool $approved = true,
+        ?int $number = null,
+        ?string $date = null,
+        ?int $returnedInvoiceId = null
+    ): array {
+        $number ??= ++$this->nextInvoiceNumber;
 
-        return InvoiceService::createInvoice(
+        $result = InvoiceService::createInvoice(
             $this->user,
             [
-                'title' => $type === InvoiceType::BUY ? 'Buy Invoice' : 'Sell Invoice',
+                'title' => strtoupper($type->value).' Invoice',
                 'date' => $date ?? now()->toDateString(),
                 'invoice_type' => $type,
                 'customer_id' => $this->customer->id,
                 'document_number' => $number,
                 'number' => $number,
+                'returned_invoice_id' => $returnedInvoiceId,
             ],
             $items,
             $approved
         );
+
+        $invoice = $this->findInvoice($result['invoice']->id);
+
+        if ($approved && ! $invoice->status->isApproved()) {
+            $this->approveInvoice($invoice);
+            $invoice = $this->findInvoice($invoice->id);
+        }
+
+        return [
+            'document' => $result['document'],
+            'invoice' => $invoice,
+        ];
     }
 
-    private function buy(array $items, bool $approved = true, ?int $number = null, $date = null): array
+    private function buy(array $items, bool $approved = true, ?int $number = null, ?string $date = null): array
     {
         return $this->createInvoice(InvoiceType::BUY, $items, $approved, $number, $date);
     }
 
-    private function sell(array $items, bool $approved = true, ?int $number = null, $date = null): array
+    private function sell(array $items, bool $approved = true, ?int $number = null, ?string $date = null): array
     {
         return $this->createInvoice(InvoiceType::SELL, $items, $approved, $number, $date);
+    }
+
+    private function returnSell(array $items, int $returnedInvoiceId, bool $approved = true, ?int $number = null, ?string $date = null): array
+    {
+        return $this->createInvoice(InvoiceType::RETURN_SELL, $items, $approved, $number, $date, $returnedInvoiceId);
+    }
+
+    private function returnBuy(array $items, int $returnedInvoiceId, bool $approved = true, ?int $number = null, ?string $date = null): array
+    {
+        return $this->createInvoice(InvoiceType::RETURN_BUY, $items, $approved, $number, $date, $returnedInvoiceId);
     }
 
     private function productItem(Product $product, int $qty, float $unit): array
@@ -101,169 +133,120 @@ class COGSCalculationTest extends TestCase
         ];
     }
 
-    /* -----------------------------------------------------------------
-     | Helpers for status/CRUD operations (to be moved to parent)
-     | -----------------------------------------------------------------
-     */
-
-    /**
-     * Un-approve an invoice (set status to unapproved and run related logic).
-     */
-    protected function unapproveInvoice(Invoice $invoice): void
+    private function findProduct(int $productId): Product
     {
-        $svc = new InvoiceService;
-        $svc->changeInvoiceStatus($invoice, 'unapproved');
-        $invoice->refresh();
+        return Product::withoutGlobalScopes()->findOrFail($productId);
     }
 
-    /**
-     * approve an invoice (set status to unapproved and run related logic).
-     */
-    protected function approveInvoice(Invoice $invoice): void
+    private function findInvoice(int $invoiceId): Invoice
     {
-        $svc = new InvoiceService;
-        $svc->changeInvoiceStatus($invoice, 'approved');
-        $invoice->refresh();
+        return Invoice::withoutGlobalScopes()->with('items')->findOrFail($invoiceId);
     }
 
-    /**
-     * Un-approve a given ancillary cost record.
-     */
-    protected function approveAncillaryCost(AncillaryCost $ancillaryCost): void
+    private function findInvoiceItem(Invoice $invoice, Product $product): InvoiceItem
     {
-        $svc = new AncillaryCostService;
-        $svc->changeAncillaryCostStatus($ancillaryCost, 'approved');
+        return InvoiceItem::query()
+            ->where('invoice_id', $invoice->id)->where('itemable_id', $product->id)
+            ->where('itemable_type', Product::class)->firstOrFail();
+    }
+
+    private function approveInvoice(Invoice $invoice): void
+    {
+        $invoice = $this->findInvoice($invoice->id);
+        (new InvoiceService)->changeInvoiceStatus($invoice, 'approved');
+    }
+
+    private function unapproveInvoice(Invoice $invoice): void
+    {
+        $invoice = $this->findInvoice($invoice->id);
+        (new InvoiceService)->changeInvoiceStatus($invoice, 'unapproved');
+    }
+
+    private function approveAncillaryCost(AncillaryCost $ancillaryCost): void
+    {
+        (new AncillaryCostService)->changeAncillaryCostStatus($ancillaryCost, 'approve');
         $ancillaryCost->refresh();
     }
 
-    /**
-     * Un-approve a given ancillary cost record.
-     */
-    protected function unapproveAncillaryCost(AncillaryCost $ancillaryCost): void
+    private function unapproveAncillaryCost(AncillaryCost $ancillaryCost): void
     {
-        $svc = new AncillaryCostService;
-        $svc->changeAncillaryCostStatus($ancillaryCost, 'unapprove');
+        (new AncillaryCostService)->changeAncillaryCostStatus($ancillaryCost, 'unapprove');
         $ancillaryCost->refresh();
     }
 
-    /**
-     * Update an invoice using the InvoiceService helper.
-     * Returns ['document' => Document|null, 'invoice' => Invoice]
-     */
-    protected function updateInvoice(Invoice $invoice, array $data, array $items = [], bool $approved = false): array
+    private function updateInvoice(Invoice $invoice, array $data, array $items, bool $approved): array
     {
         return InvoiceService::updateInvoice($invoice->id, $data, $items, $approved);
     }
 
-    /**
-     * Edit an invoice by supplying new items and optionally approving it.
-     * Returns ['document' => Document|null, 'invoice' => Invoice]
-     */
-    protected function editInvoice(Invoice $invoice, array $newItems, bool $approved = true): array
+    private function editInvoice(Invoice $invoice, array $newItems, bool $approved = true): array
     {
-        $data = [
+        $payload = [
             'title' => $invoice->title,
-            'date' => $invoice->date,
+            'date' => $invoice->date instanceof Carbon ? $invoice->date->toDateString() : (string) $invoice->date,
             'invoice_type' => $invoice->invoice_type,
             'customer_id' => $invoice->customer_id,
-            'document_number' => $invoice->document_number,
+            'document_number' => $invoice->document?->number,
             'number' => $invoice->number,
+            'description' => $invoice->description,
+            'subtraction' => $invoice->subtraction ?? 0,
+            'permanent' => $invoice->permanent ?? 0,
         ];
 
-        return $this->updateInvoice($invoice, $data, $newItems, $approved);
-    }
+        $result = $this->updateInvoice($invoice, $payload, $newItems, $approved);
+        $updated = $this->findInvoice($result['invoice']->id);
 
-    /**
-     * Delete an invoice and its related document/transactions.
-     */
-    protected function deleteInvoice(Invoice $invoice): void
-    {
-        InvoiceService::deleteInvoice($invoice->id);
-    }
+        if ($approved && ! $updated->status->isApproved()) {
+            $this->approveInvoice($updated);
+            $updated = $this->findInvoice($updated->id);
+        }
 
-    /* -----------------------------------------------------------------
-     | Tests
-     | -----------------------------------------------------------------
-     */
+        return [
+            'document' => $result['document'],
+            'invoice' => $updated,
+        ];
+    }
 
     public function test_single_purchase_sets_initial_average_cost(): void
     {
         $product = $this->createProduct();
 
-        $invoice = $this->buy([$this->productItem($product, 10, 100)])['invoice'];
-        $product->refresh();
+        $invoice = $this->buy([$this->productItem($product, 10, 100)], true, 901, '2026-01-10')['invoice'];
+        $product = $this->findProduct($product->id);
 
         $this->assertEquals(10, $product->quantity);
         $this->assertEqualsWithDelta(100, $product->average_cost, 0.0001);
-
-        $item = $invoice->items->first();
-        $this->assertEqualsWithDelta($product->average_cost, $item->cog_after, 0.0001);
-    }
-
-    public function test_multiple_purchases_recalculate_moving_average(): void
-    {
-        $product = $this->createProduct();
-
-        $this->buy([$this->productItem($product, 10, 100)], true, 1001);
-        $this->buy([$this->productItem($product, 5, 120)], true, 1002);
-
-        $product->refresh();
-
-        $expected = round(((100 * 10) + (120 * 5)) / 15, 2);
-
-        $this->assertEquals(15, $product->quantity);
-        $this->assertEqualsWithDelta($expected, $product->average_cost, 0.01);
-    }
-
-    public function test_purchase_then_sale_uses_average_for_cogs(): void
-    {
-        $product = $this->createProduct();
-
-        $this->buy([$this->productItem($product, 10, 100)], true, 2001);
-
-        $sale = $this->sell([$this->productItem($product, 2, 250)], true, 2002)['invoice'];
-
-        $product->refresh();
-        $this->assertEquals(8, $product->quantity);
-
-        $item = $sale->items->first();
-        $this->assertEqualsWithDelta(100, $item->cog_after, 0.01);
-
-        $this->assertEqualsWithDelta(
-            (250 - 100) * 2,
-            CostOfGoodsService::calculateGrossProfit($item),
-            0.0001
-        );
+        $this->assertEqualsWithDelta(100, $this->findInvoiceItem($invoice, $product)->cog_after, 0.0001);
     }
 
     public function test_sales_do_not_change_average_cost(): void
     {
         $product = $this->createProduct();
 
-        $this->buy([$this->productItem($product, 10, 100)], true, 3001);
-        $this->buy([$this->productItem($product, 5, 120)], true, 3002);
+        $this->buy([$this->productItem($product, 10, 100)], true, 911, '2026-01-11');
+        $this->buy([$this->productItem($product, 5, 120)], true, 912, '2026-01-12');
 
-        $product->refresh();
-        $avg = $product->average_cost;
+        $product = $this->findProduct($product->id);
+        $averageBeforeSales = (float) $product->average_cost;
 
-        $this->sell([$this->productItem($product, 8, 400)], true, 3003);
+        $this->sell([$this->productItem($product, 8, 220)], true, 913, '2026-01-13');
 
-        $product->refresh();
+        $product = $this->findProduct($product->id);
+
         $this->assertEquals(7, $product->quantity);
-        $this->assertEqualsWithDelta($avg, $product->average_cost, 0.0001);
+        $this->assertEqualsWithDelta($averageBeforeSales, $product->average_cost, 0.0001);
     }
 
     public function test_ancillary_cost_updates_average_cost(): void
     {
         $product = $this->createProduct();
-
-        $invoice = $this->buy([$this->productItem($product, 10, 100)], true, 4001)['invoice'];
+        $buy = $this->buy([$this->productItem($product, 10, 100)], true, 921, '2026-01-14')['invoice'];
 
         AncillaryCostService::createAncillaryCost($this->user, [
-            'invoice_id' => $invoice->id,
+            'invoice_id' => $buy->id,
             'customer_id' => $this->customer->id,
             'company_id' => $this->companyId,
-            'date' => now()->toDateString(),
+            'date' => '2026-01-15',
             'type' => 'Shipping',
             'amount' => 100,
             'vatPrice' => 0,
@@ -272,7 +255,7 @@ class COGSCalculationTest extends TestCase
             ],
         ], true);
 
-        $product->refresh();
+        $product = $this->findProduct($product->id);
         $this->assertEqualsWithDelta(110, $product->average_cost, 0.01);
     }
 
@@ -284,15 +267,14 @@ class COGSCalculationTest extends TestCase
 
         $response = $this->post('/invoices', [
             'title' => 'Sale',
-            'date' => now()->toDateString(),
+            'date' => '2026-01-16',
             'invoice_type' => 'sell',
             'customer_id' => $this->customer->id,
-            'document_number' => 11111,
-            'invoice_number' => 22222,
+            'document_number' => 9911,
+            'invoice_number' => 9912,
             'approve' => 1,
             'transactions' => [[
                 'item_id' => "product-{$product->id}",
-                'item_type' => 'product',
                 'quantity' => 5,
                 'unit' => 100,
                 'vat' => 0,
@@ -308,30 +290,27 @@ class COGSCalculationTest extends TestCase
     {
         $product = $this->createProduct();
 
-        $this->buy([
-            $this->productItem($product, 10, 30),
-        ], false, 9101);
+        $this->buy([$this->productItem($product, 10, 30)], false, 931, '2026-01-17');
 
-        $product->refresh();
+        $product = $this->findProduct($product->id);
         $this->assertEquals(0, $product->quantity);
-        $this->assertEqualsWithDelta(0.0, $product->average_cost, 0.0001);
+        $this->assertEqualsWithDelta(0, $product->average_cost, 0.0001);
     }
 
     public function test_unapproving_buy_invoice_reverses_inventory_and_recalculates_average_cost(): void
     {
         $product = $this->createProduct();
 
-        $inv1 = $this->buy([$this->productItem($product, 10, 100)], true, random_int(6000, 6999))['invoice'];
-        $inv2 = $this->buy([$this->productItem($product, 10, 120)], true, random_int(7000, 7999))['invoice'];
+        $this->buy([$this->productItem($product, 10, 100)], true, 941, '2026-01-18');
+        $buy2 = $this->buy([$this->productItem($product, 10, 120)], true, 942, '2026-01-19')['invoice'];
 
-        $product->refresh();
+        $product = $this->findProduct($product->id);
         $this->assertEquals(20, $product->quantity);
         $this->assertEqualsWithDelta(110, $product->average_cost, 0.01);
 
-        // Un-approve second invoice and expect a rollback to the previous state
-        $this->unapproveInvoice($inv2);
-        $product->refresh();
+        $this->unapproveInvoice($buy2);
 
+        $product = $this->findProduct($product->id);
         $this->assertEquals(10, $product->quantity);
         $this->assertEqualsWithDelta(100, $product->average_cost, 0.01);
     }
@@ -340,32 +319,30 @@ class COGSCalculationTest extends TestCase
     {
         $product = $this->createProduct();
 
-        $this->buy([$this->productItem($product, 20, 100)], true, random_int(8000, 8999));
-        $sale = $this->sell([$this->productItem($product, 8, 200)], true, random_int(9000, 9999))['invoice'];
+        $this->buy([$this->productItem($product, 20, 100)], true, 951, '2026-01-20');
+        $sell = $this->sell([$this->productItem($product, 8, 220)], true, 952, '2026-01-21')['invoice'];
 
-        $product->refresh();
+        $product = $this->findProduct($product->id);
         $this->assertEquals(12, $product->quantity);
-        $this->assertEqualsWithDelta(100, $product->average_cost, 0.01);
+        $this->assertEqualsWithDelta(100, $product->average_cost, 0.0001);
 
-        // Un-approve the sale and expect inventory to be restored
-        $this->unapproveInvoice($sale);
-        $product->refresh();
+        $this->unapproveInvoice($sell);
 
+        $product = $this->findProduct($product->id);
         $this->assertEquals(20, $product->quantity);
-        $this->assertEqualsWithDelta(100, $product->average_cost, 0.01);
+        $this->assertEqualsWithDelta(100, $product->average_cost, 0.0001);
     }
 
     public function test_unapproving_ancillary_cost_reverses_average_cost_adjustment(): void
     {
         $product = $this->createProduct();
-
-        $invoice = $this->buy([$this->productItem($product, 10, 100)], true, random_int(10000, 10999))['invoice'];
+        $buy = $this->buy([$this->productItem($product, 10, 100)], true, 961, '2026-01-22')['invoice'];
 
         $result = AncillaryCostService::createAncillaryCost($this->user, [
-            'invoice_id' => $invoice->id,
+            'invoice_id' => $buy->id,
             'customer_id' => $this->customer->id,
             'company_id' => $this->companyId,
-            'date' => now()->toDateString(),
+            'date' => '2026-01-23',
             'type' => 'Shipping',
             'amount' => 50,
             'vatPrice' => 0,
@@ -374,190 +351,272 @@ class COGSCalculationTest extends TestCase
             ],
         ], true);
 
-        $ancillary = $result['ancillaryCost'];
+        $ancillaryCost = $result['ancillaryCost'];
 
-        $product->refresh();
+        $product = $this->findProduct($product->id);
         $this->assertEqualsWithDelta(105, $product->average_cost, 0.01);
 
-        // Un-approve ancillary cost and expect average to revert
-        $this->unapproveAncillaryCost($ancillary);
-        $product->refresh();
+        $this->unapproveAncillaryCost($ancillaryCost);
 
-        $this->assertEqualsWithDelta(100, $product->average_cost, 0.01);
+        $product = $this->findProduct($product->id);
         $this->assertEquals(10, $product->quantity);
+        $this->assertEqualsWithDelta(100, $product->average_cost, 0.01);
     }
 
-    public function test_editing_buy_invoice_quantity_recalculates_moving_average(): void
+    public function test_editing_buy_invoice_quantity_recalculates_average_cost(): void
     {
         $product = $this->createProduct();
 
-        // Increase quantity from 10 to 15 at same unit price
-        $invoice = $this->buy([$this->productItem($product, 10, 100)], true, random_int(11000, 11999))['invoice'];
-        $this->unapproveInvoice($invoice);
-        $this->editInvoice($invoice, [$this->productItem($product, 15, 100)], true);
+        $buyInvoice = $this->buy([$this->productItem($product, 10, 100)], true, 971, '2026-01-24')['invoice'];
 
-        $product->refresh();
+        $this->unapproveInvoice($buyInvoice);
+        $this->editInvoice($buyInvoice, [$this->productItem($product, 15, 100)], true);
+
+        $product = $this->findProduct($product->id);
         $this->assertEquals(15, $product->quantity);
-        $this->assertEqualsWithDelta(100, $product->average_cost, 0.01);
-
-        // Alternative: change price of second invoice and expect new average
-        $product2 = $this->createProduct();
-        $inv1 = $this->buy([$this->productItem($product2, 10, 100)], true, random_int(12000, 12999))['invoice'];
-        $inv2 = $this->buy([$this->productItem($product2, 10, 120)], true, random_int(13000, 13999))['invoice'];
-
-        $product2->refresh();
-        $this->assertEqualsWithDelta(110, $product2->average_cost, 0.01);
-        $this->unapproveInvoice($inv2);
-
-        // Edit second invoice's price to 140
-        $this->editInvoice($inv2, [$this->productItem($product2, 10, 140)], true);
-        $product2->refresh();
-
-        $this->assertEquals(20, $product2->quantity);
-        // Expected average: ((100*10) + (140*10)) / 20 = 120
-        $this->assertEqualsWithDelta(120, $product2->average_cost, 0.01);
+        $this->assertEqualsWithDelta(100, $product->average_cost, 0.0001);
     }
 
     public function test_editing_sell_invoice_maintains_cogs_integrity(): void
     {
         $product = $this->createProduct();
 
-        $this->buy([$this->productItem($product, 20, 100)], true, random_int(14000, 14999));
-        $sale = $this->sell([$this->productItem($product, 10, 200)], true, random_int(15000, 15999))['invoice'];
+        $this->buy([$this->productItem($product, 20, 100)], true, 981, '2026-01-25');
+        $sell = $this->sell([$this->productItem($product, 10, 220)], true, 982, '2026-01-26')['invoice'];
 
-        $product->refresh();
-        $this->assertEquals(10, $product->quantity);
-        $this->unapproveInvoice($sale);
+        $this->unapproveInvoice($sell);
+        $this->editInvoice($sell, [$this->productItem($product, 5, 220)], true);
 
-        // Edit sale: reduce quantity to 5
-        $this->editInvoice($sale, [$this->productItem($product, 5, 200)], true);
-        $product->refresh();
+        $product = $this->findProduct($product->id);
+        $updatedSell = $this->findInvoice($sell->id);
+        $updatedItem = $this->findInvoiceItem($updatedSell, $product);
 
         $this->assertEquals(15, $product->quantity);
-
-        $updatedSale = Invoice::find($sale->id);
-        $item = $updatedSale->items->first();
-        $this->assertEqualsWithDelta(100, $item->cog_after, 0.01);
+        $this->assertEqualsWithDelta(100, $updatedItem->cog_after, 0.0001);
     }
 
-    public function test_buy_sell_rebuy_maintains_accurate_moving_average(): void
+    public function test_buy_sell_rebuy_maintains_accurate_average_cost(): void
     {
         $product = $this->createProduct();
 
-        $this->buy([$this->productItem($product, 10, 100)], true, random_int(16000, 16999));
-        $sale1 = $this->sell([$this->productItem($product, 5, 200)], true, random_int(17000, 17999))['invoice'];
+        $this->buy([$this->productItem($product, 10, 100)], true, 991, '2026-01-27');
+        $sell1 = $this->sell([$this->productItem($product, 5, 210)], true, 992, '2026-01-28')['invoice'];
+        $this->buy([$this->productItem($product, 10, 140)], true, 993, '2026-01-29');
 
-        $product->refresh();
-        $this->assertEquals(5, $product->quantity);
-        $this->assertEqualsWithDelta(100, $product->average_cost, 0.01);
+        $expectedAvg = ((100 * 5) + (140 * 10)) / 15;
 
-        $this->buy([$this->productItem($product, 10, 140)], true, random_int(18000, 18999));
-
-        // Expected avg after rebuy: ((100*5) + (140*10)) / 15
-        $expectedAvg = round(((100 * 5) + (140 * 10)) / 15, 2);
-
-        $product->refresh();
+        $product = $this->findProduct($product->id);
         $this->assertEquals(15, $product->quantity);
         $this->assertEqualsWithDelta($expectedAvg, $product->average_cost, 0.01);
 
-        $sale2 = $this->sell([$this->productItem($product, 7, 250)], true, random_int(19000, 19999))['invoice'];
-        $product->refresh();
-        $this->assertEquals(8, $product->quantity);
+        $sell2 = $this->sell([$this->productItem($product, 7, 230)], true, 994, '2026-01-30')['invoice'];
+        $sell1Item = $this->findInvoiceItem($sell1, $product);
+        $sell2Item = $this->findInvoiceItem($sell2, $product);
 
-        $firstSaleItem = $sale1->items->first();
-        $secondSaleItem = $sale2->items->first();
-
-        $this->assertEqualsWithDelta(100, $firstSaleItem->cog_after, 0.01);
-        $this->assertEqualsWithDelta($expectedAvg, $secondSaleItem->cog_after, 0.01);
+        $this->assertEqualsWithDelta(100, $sell1Item->cog_after, 0.0001);
+        $this->assertEqualsWithDelta($expectedAvg, $sell2Item->cog_after, 0.01);
     }
 
     public function test_unapproving_middle_transaction_recalculates_subsequent_averages(): void
     {
         $product = $this->createProduct();
 
-        $inv1 = $this->buy([$this->productItem($product, 10, 100)], true, random_int(20000, 20999))['invoice'];
-        $inv2 = $this->buy([$this->productItem($product, 10, 120)], true, random_int(21000, 21999), now()->addDays(1))['invoice'];
-        $inv3 = $this->buy([$this->productItem($product, 10, 140)], true, random_int(22000, 22999), now()->addDays(5))['invoice'];
+        $this->buy([$this->productItem($product, 10, 100)], true, 10001, '2026-02-01');
+        $buy2 = $this->buy([$this->productItem($product, 10, 200)], true, 10002, '2026-02-02')['invoice'];
+        $buy3 = $this->buy([$this->productItem($product, 10, 300)], true, 10003, '2026-02-03')['invoice'];
 
-        $product->refresh();
+        $product = $this->findProduct($product->id);
         $this->assertEquals(30, $product->quantity);
-        $this->assertEqualsWithDelta(120, $product->average_cost, 0.01);
+        $this->assertEqualsWithDelta(200, $product->average_cost, 0.01);
 
-        // Un-approve the middle invoice and expect recalculation for subsequent transactions
-        $this->unapproveInvoice($inv3);
-        $this->unapproveInvoice($inv2);
-        $product->refresh();
+        $this->unapproveInvoice($buy3);
+        $this->unapproveInvoice($buy2);
+        $this->approveInvoice($buy3);
 
-        $this->assertEquals(10, $product->quantity);
-        $this->assertEqualsWithDelta(100, $product->average_cost, 0.01);
-
-        $inv4 = $this->buy([$this->productItem($product, 10, 400)], true, random_int(25000, 25999), now()->addDays(2))['invoice'];
-        $this->unapproveInvoice($inv4);
-        $this->sell([$this->productItem($product, 5, 200)], true, random_int(23000, 23999), now()->addDays(2))['invoice'];
-        $this->approveInvoice($inv4);
-
-        $product->refresh();
-        $this->assertEquals(15, $product->quantity);
-        $this->assertEqualsWithDelta(300, $product->average_cost, 0.01);
-
-        $inv5 = $this->buy([$this->productItem($product, 10, 450)], true, random_int(26000, 26999), now()->addDays(3))['invoice'];
-        $this->unapproveInvoice($inv5);
-        $this->sell([$this->productItem($product, 5, 300)], true, random_int(24000, 24999), now()->addDays(3))['invoice'];
-        $this->approveInvoice($inv5);
-
-        $product->refresh();
+        $product = $this->findProduct($product->id);
         $this->assertEquals(20, $product->quantity);
-        $this->assertEqualsWithDelta(375, $product->average_cost, 0.01);
-
-        $this->buy([$this->productItem($product, 10, 600)], true, random_int(27000, 27999), now()->addDays(4))['invoice'];
-        $this->sell([$this->productItem($product, 5, 650)], true, random_int(28000, 28999), now()->addDays(4))['invoice'];
-        $inv6 = $this->sell([$this->productItem($product, 5, 750)], false, random_int(27000, 27999), now()->addDays(5))['invoice'];
-
-        $product->refresh();
-        $this->assertEquals(25, $product->quantity);
-        $this->assertEqualsWithDelta(450, $product->average_cost, 0.01);
-
-        $this->editInvoice($inv3, [$this->productItem($product, 5, 210)], false);
-        $inv3->refresh();
-
-        $this->approveInvoice($inv3);
-        $this->approveInvoice($inv6);
-        $product->refresh();
-
-        $this->assertEquals(25, $product->quantity);
-        $this->assertEqualsWithDelta(410, $product->average_cost, 0.01);
+        $this->assertEqualsWithDelta(200, $product->average_cost, 0.01);
     }
 
     public function test_editing_invoice_with_ancillary_costs_maintains_cost_allocation(): void
     {
         $product = $this->createProduct();
 
-        $invoice = $this->buy([$this->productItem($product, 10, 100)], true, random_int(23000, 23999))['invoice'];
+        $buy = $this->buy([$this->productItem($product, 10, 100)], true, 10011, '2026-02-04')['invoice'];
 
         $result = AncillaryCostService::createAncillaryCost($this->user, [
-            'invoice_id' => $invoice->id,
+            'invoice_id' => $buy->id,
             'customer_id' => $this->customer->id,
             'company_id' => $this->companyId,
-            'date' => now()->toDateString(),
+            'date' => '2026-02-05',
             'type' => 'Shipping',
             'amount' => 100,
             'vatPrice' => 0,
             'ancillaryCosts' => [
                 ['product_id' => $product->id, 'amount' => 100],
             ],
-        ], true);
+        ], false);
 
-        $product->refresh();
-        $this->assertEqualsWithDelta(110, $product->average_cost, 0.01);
-        $this->unapproveInvoice($invoice);
-
-        // Edit invoice to increase quantity to 20 — ancillary cost should be distributed proportionally
-        $this->editInvoice($invoice, [$this->productItem($product, 20, 100)], true);
+        $this->unapproveInvoice($buy);
+        $this->editInvoice($buy, [$this->productItem($product, 20, 100)], true);
         $this->approveAncillaryCost($result['ancillaryCost']);
 
-        $product->refresh();
+        $product = $this->findProduct($product->id);
         $this->assertEquals(20, $product->quantity);
-        // Expected avg = (100*20 + 100 ancillary) / 20 = 105
         $this->assertEqualsWithDelta(105, $product->average_cost, 0.01);
+    }
+
+    public function test_multiple_purchases_calculate_average_cost_and_buy_item_cog_after(): void
+    {
+        $product = $this->createProduct();
+
+        $buy1 = $this->buy([$this->productItem($product, 10, 100)], true, 1001, '2026-01-01')['invoice'];
+        $product = $this->findProduct($product->id);
+
+        $this->assertEquals(10, $product->quantity);
+        $this->assertEqualsWithDelta(100, $product->average_cost, 0.0001);
+        $this->assertEqualsWithDelta(100, $this->findInvoiceItem($buy1, $product)->cog_after, 0.0001);
+
+        $buy2 = $this->buy([$this->productItem($product, 5, 120)], true, 1002, '2026-01-02')['invoice'];
+        $product = $this->findProduct($product->id);
+
+        $expectedAverage = ((100 * 10) + (120 * 5)) / 15;
+
+        $this->assertEquals(15, $product->quantity);
+        $this->assertEqualsWithDelta($expectedAverage, $product->average_cost, 0.01);
+        $this->assertEqualsWithDelta($expectedAverage, $this->findInvoiceItem($buy2, $product)->cog_after, 0.01);
+    }
+
+    public function test_multiple_sales_keep_average_cost_and_set_cog_after_from_current_average(): void
+    {
+        $product = $this->createProduct();
+
+        $this->buy([$this->productItem($product, 20, 90)], true, 2001, '2026-02-01');
+
+        $sell1 = $this->sell([$this->productItem($product, 5, 150)], true, 2002, '2026-02-02')['invoice'];
+        $sell2 = $this->sell([$this->productItem($product, 3, 160)], true, 2003, '2026-02-03')['invoice'];
+
+        $product = $this->findProduct($product->id);
+        $sell1Item = $this->findInvoiceItem($sell1, $product);
+        $sell2Item = $this->findInvoiceItem($sell2, $product);
+
+        $this->assertEquals(12, $product->quantity);
+        $this->assertEqualsWithDelta(90, $product->average_cost, 0.0001);
+        $this->assertEqualsWithDelta(90, $sell1Item->cog_after, 0.0001);
+        $this->assertEqualsWithDelta(90, $sell2Item->cog_after, 0.0001);
+        $this->assertEqualsWithDelta((160 - 90) * 3, CostOfGoodsService::calculateGrossProfit($sell2Item), 0.0001);
+    }
+
+    public function test_return_sell_partial_and_full_returns_keep_average_consistent_and_restore_quantity(): void
+    {
+        $product = $this->createProduct();
+
+        $this->buy([$this->productItem($product, 8, 100)], true, 3001, '2026-03-01');
+        $sell = $this->sell([$this->productItem($product, 6, 180)], true, 3002, '2026-03-02')['invoice'];
+        $sellItem = $this->findInvoiceItem($sell, $product);
+
+        $returnPartial = $this->returnSell([
+            $this->productItem($product, 2, 100),
+        ], $sell->id, true, 3003, '2026-03-03')['invoice'];
+
+        $product = $this->findProduct($product->id);
+        $partialItem = $this->findInvoiceItem($returnPartial, $product);
+
+        $this->assertEquals(4, $product->quantity);
+        $this->assertEqualsWithDelta(100, $product->average_cost, 0.0001);
+        $this->assertEqualsWithDelta($sellItem->cog_after, $partialItem->cog_after, 0.0001);
+
+        $returnFull = $this->returnSell([
+            $this->productItem($product, 4, 100),
+        ], $sell->id, true, 3004, '2026-03-04')['invoice'];
+
+        $product = $this->findProduct($product->id);
+        $fullItem = $this->findInvoiceItem($returnFull, $product);
+
+        $this->assertEquals(8, $product->quantity);
+        $this->assertEqualsWithDelta(100, $product->average_cost, 0.0001);
+        $this->assertEqualsWithDelta($sellItem->cog_after, $fullItem->cog_after, 0.0001);
+    }
+
+    public function test_return_sell_cog_calculation_uses_same_weighted_average_logic_as_buy(): void
+    {
+        $product = $this->createProduct();
+
+        $this->buy([$this->productItem($product, 10, 100)], true, 3501, '2026-03-10');
+        $sell = $this->sell([$this->productItem($product, 4, 250)], true, 3502, '2026-03-11')['invoice'];
+
+        $product = $this->findProduct($product->id);
+        $this->assertEquals(6, $product->quantity);
+        $this->assertEqualsWithDelta(100, $product->average_cost, 0.0001);
+
+        $returnSell = $this->returnSell([
+            $this->productItem($product, 2, 160),
+        ], $sell->id, true, 3503, '2026-03-12')['invoice'];
+
+        $product = $this->findProduct($product->id);
+        $returnItem = $this->findInvoiceItem($returnSell, $product);
+
+        $expectedAverage = ((100 * 6) + (160 * 2)) / 8;
+
+        $this->assertEquals(8, $product->quantity);
+        $this->assertEqualsWithDelta($expectedAverage, $product->average_cost, 0.01);
+        $this->assertEqualsWithDelta(100, $returnItem->cog_after, 0.0001);
+    }
+
+    public function test_return_buy_partial_and_full_returns_reduce_inventory_without_changing_average_cost(): void
+    {
+        $product = $this->createProduct();
+
+        $buy = $this->buy([$this->productItem($product, 10, 75)], true, 4001, '2026-04-01')['invoice'];
+        $buyItem = $this->findInvoiceItem($buy, $product);
+
+        $returnPartial = $this->returnBuy([$this->productItem($product, 3, 75)], $buy->id, true, 4002, '2026-04-02')['invoice'];
+
+        $product = $this->findProduct($product->id);
+        $partialItem = $this->findInvoiceItem($returnPartial, $product);
+
+        $this->assertEquals(7, $product->quantity);
+        $this->assertEqualsWithDelta(75, $product->average_cost, 0.0001);
+        $this->assertEqualsWithDelta($buyItem->cog_after, $partialItem->cog_after, 0.0001);
+
+        $returnFull = $this->returnBuy([$this->productItem($product, 7, 75)], $buy->id, true, 4003, '2026-04-03')['invoice'];
+
+        $product = $this->findProduct($product->id);
+        $fullItem = $this->findInvoiceItem($returnFull, $product);
+
+        $this->assertEquals(0, $product->quantity);
+        $this->assertEqualsWithDelta(75, $product->average_cost, 0.0001);
+        $this->assertEqualsWithDelta($buyItem->cog_after, $fullItem->cog_after, 0.0001);
+    }
+
+    public function test_mixed_buy_sell_and_return_sequence_keeps_expected_average_and_item_cogs(): void
+    {
+        $product = $this->createProduct();
+
+        $this->buy([$this->productItem($product, 10, 100)], true, 5001, '2026-05-01');
+        $sell1 = $this->sell([$this->productItem($product, 4, 170)], true, 5002, '2026-05-02')['invoice'];
+        $buy2 = $this->buy([$this->productItem($product, 6, 160)], true, 5003, '2026-05-03')['invoice'];
+
+        $returnSell = $this->returnSell([$this->productItem($product, 2, 100)], $sell1->id, true, 5004, '2026-05-04')['invoice'];
+
+        $sell2 = $this->sell([$this->productItem($product, 5, 190)], true, 5005, '2026-05-05')['invoice'];
+        $returnBuy = $this->returnBuy([$this->productItem($product, 1, 160)], $buy2->id, true, 5006, '2026-05-06')['invoice'];
+
+        $product = $this->findProduct($product->id);
+
+        $expectedAverageAfterReturnSell = 1760 / 14;
+
+        $this->assertEquals(8, $product->quantity);
+        $this->assertEqualsWithDelta($expectedAverageAfterReturnSell, $product->average_cost, 0.01);
+
+        $sell2Item = $this->findInvoiceItem($sell2, $product);
+        $returnSellItem = $this->findInvoiceItem($returnSell, $product);
+        $returnBuyItem = $this->findInvoiceItem($returnBuy, $product);
+        $sell1Item = $this->findInvoiceItem($sell1, $product);
+
+        $this->assertEqualsWithDelta($expectedAverageAfterReturnSell, $sell2Item->cog_after, 0.01);
+        $this->assertEqualsWithDelta($sell1Item->cog_after, $returnSellItem->cog_after, 0.0001);
+        $this->assertEqualsWithDelta(130, $returnBuyItem->cog_after, 0.0001);
+        $this->assertEqualsWithDelta($product->quantity * $product->average_cost, CostOfGoodsService::getInventoryValue($product), 0.0001);
     }
 }

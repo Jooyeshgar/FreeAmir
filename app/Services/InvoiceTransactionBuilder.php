@@ -217,7 +217,7 @@ class InvoiceTransactionBuilder
                         'value' => -$returnedItemCogsCost * $quantity,
                     ];
                 }
-            } else {
+            } elseif ($this->invoiceType === InvoiceType::RETURN_BUY) {
                 $subjectId = $product ? $product->inventory_subject_id : $service->subject_id;
 
                 $this->transactions[] = [
