@@ -191,7 +191,7 @@ class InvoiceService
 
     public static function syncCOGAfterForInvoiceItems(Invoice $invoice)
     {
-        if ($invoice->invoice_type !== InvoiceType::BUY) {
+        if (! in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::SELL])) {
             return;
         }
 
@@ -278,7 +278,7 @@ class InvoiceService
             $invoiceItemData = [
                 'invoice_id' => $invoice->id,
                 'quantity' => $quantity,
-                'cog_after' => $product->average_cost ?? $unitPrice,                                            // must be updated after creating invoice
+                'cog_after' => $product?->average_cost ?? $unitPrice,                                            // must be updated after creating invoice
                 'quantity_at' => $product ? ($product->quantity > $quantity ? $product->quantity - $quantity : 0) : 0,         // quantity before this invoice
                 'unit_price' => $unitPrice,
                 'unit_discount' => $unitDiscount,

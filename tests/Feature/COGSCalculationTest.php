@@ -507,6 +507,27 @@ class COGSCalculationTest extends TestCase
         $this->assertEqualsWithDelta((160 - 90) * 3, CostOfGoodsService::calculateGrossProfit($sell2Item), 0.0001);
     }
 
+    public function test_sell_approval_repopulates_missing_cog_after_on_invoice_items(): void
+    {
+        $product = $this->createProduct();
+
+        $this->buy([$this->productItem($product, 10, 100)], true, 2101, '2026-02-10');
+
+        $sell = $this->sell([$this->productItem($product, 2, 180)], false, 2102, '2026-02-11')['invoice'];
+        $sellItem = $this->findInvoiceItem($sell, $product);
+
+        $sellItem->update(['cog_after' => 0]);
+
+        $this->approveInvoice($sell);
+
+        $sell = $this->findInvoice($sell->id);
+        $sellItem = $this->findInvoiceItem($sell, $product);
+        $product = $this->findProduct($product->id);
+
+        $this->assertEqualsWithDelta(100, $product->average_cost, 0.0001);
+        $this->assertEqualsWithDelta(100, $sellItem->cog_after, 0.0001);
+    }
+
     public function test_return_sell_partial_and_full_returns_keep_average_consistent_and_restore_quantity(): void
     {
         $product = $this->createProduct();

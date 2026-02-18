@@ -391,11 +391,11 @@ class InvoiceController extends Controller
             'q' => 'required|string|max:100',
         ]);
 
-        $invoice_type = $request->invoice_type;
+        $invoice_type = InvoiceType::from($invoice_type);
 
-        if (in_array($invoice_type, ['return_buy', 'return_sell'])) {
-            $baseType = str_replace('return_', '', $invoice_type);
-            $invoice_type = $baseType;
+        if (in_array($invoice_type, [InvoiceType::RETURN_BUY, InvoiceType::RETURN_SELL])) {
+            $baseType = str_replace('return_', '', $invoice_type->value);
+            $invoice_type = InvoiceType::from($baseType);
         }
 
         $q = $validated['q'];
