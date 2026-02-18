@@ -500,6 +500,11 @@ class InvoiceService
         if (! empty($invoiceTypes)) {
             $query->whereIn('invoice_type', $invoiceTypes);
         }
+
+        if (in_array($invoice->invoice_type, [InvoiceType::RETURN_BUY, InvoiceType::RETURN_SELL], true) && $invoice->returned_invoice_id) {
+            $query->where('id', '!=', $invoice->returned_invoice_id);
+        }
+
         $query->whereHas('items', fn ($q) => $q->where('itemable_type', Product::class)
             ->whereIn('itemable_id', $productIds)
         )
@@ -544,6 +549,8 @@ class InvoiceService
     {
         $decision = new InvoiceStatusDecision;
 
+        self::checkReturnInvoiceRelationForStatusChange($invoice, $nextStatus, $decision);
+
         if (self::usesSellConflictWorkflow($invoice->invoice_type) && $nextStatus->isApproved()) {
             self::checkProductsQuantityForStatusChange($invoice, $productIds, $decision);
         }
@@ -572,6 +579,40 @@ class InvoiceService
         }
 
         return $decision;
+    }
+
+    private static function checkReturnInvoiceRelationForStatusChange(Invoice $invoice, InvoiceStatus $nextStatus, InvoiceStatusDecision $decision): void
+    {
+        if (in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::SELL], true) && $nextStatus->isUnapproved()) {
+            $returnInvoice = $invoice->getReturnInvoice();
+            if ($returnInvoice) {
+                $decision->addMessage('error', __('invoices.status_change.blocked_by_return_invoice', [
+                    'invoice' => $returnInvoice->number,
+                ]));
+                $decision->addConflict($returnInvoice);
+            }
+
+            return;
+        }
+
+        if (! in_array($invoice->invoice_type, [InvoiceType::RETURN_BUY, InvoiceType::RETURN_SELL], true)) {
+            return;
+        }
+
+        $originalInvoice = $invoice->getReturnedInvoice();
+        if (! $originalInvoice) {
+            return;
+        }
+
+        $originalDateIsAfterReturnDate = $originalInvoice->date !== null && $invoice->date !== null
+            ? strtotime((string) $originalInvoice->date) > strtotime((string) $invoice->date) : false;
+
+        $messageKey = $originalDateIsAfterReturnDate ? 'invoices.status_change.warning_original_after_return' : 'invoices.status_change.warning_linked_original_invoice';
+
+        $decision->addMessage('warning', __($messageKey, [
+            'invoice' => $originalInvoice->number,
+        ]));
+        $decision->addConflict($originalInvoice);
     }
 
     public static function getChangeStatusDecision(Invoice $invoice, $nextStatus): InvoiceStatusDecision

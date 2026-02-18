@@ -123,7 +123,7 @@ class InvoiceController extends Controller
             return redirect()->route('configs.index')->with('error', __('Customer Subject is not configured. Please set it in configurations.'));
         }
 
-        $returnedInvoices = collect();
+        $returnInvoices = collect();
         $products = collect();
         $services = collect();
         $customers = collect();
@@ -137,20 +137,23 @@ class InvoiceController extends Controller
             // If it's return invoice, we need to load the returned Invoices items (products/services) and customers to form
             $returnInvoiceType = $returnInvoiceTypeMap[$request->invoice_type];
 
-            $returnedInvoices = Invoice::where('invoice_type', $returnInvoiceType)->where('status', InvoiceStatus::APPROVED)->with(['customer', 'items'])->get();
+            $returnInvoices = Invoice::where('invoice_type', $returnInvoiceType)->where('status', InvoiceStatus::APPROVED)->with(['customer', 'items'])->get();
+            $returnInvoices = $returnInvoices->filter(function ($invoice) {
+                return ! $invoice->getReturnInvoice();
+            });
 
-            if ($returnedInvoices->isNotEmpty()) {
-                $productIds = $returnedInvoices->flatMap(function ($invoice) {
+            if ($returnInvoices->isNotEmpty()) {
+                $productIds = $returnInvoices->flatMap(function ($invoice) {
                     return $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id');
                 })->unique();
                 $products = Product::with('inventorySubject', 'productGroup')->whereIn('id', $productIds)->get();
 
-                $serviceIds = $returnedInvoices->flatMap(function ($invoice) {
+                $serviceIds = $returnInvoices->flatMap(function ($invoice) {
                     return $invoice->items->where('itemable_type', Service::class)->pluck('itemable_id');
                 })->unique();
                 $services = Service::with('subject', 'serviceGroup')->whereIn('id', $serviceIds)->get();
 
-                $customerIds = $returnedInvoices->pluck('customer.id')->unique();
+                $customerIds = $returnInvoices->pluck('customer.id')->unique();
                 $customers = Customer::with('group')->whereIn('id', $customerIds)->get();
             }
         } else {
@@ -159,7 +162,7 @@ class InvoiceController extends Controller
             $customers = Customer::with('group')->orderBy('name')->limit(20)->get();
         }
 
-        $returnedInvoices = $returnedInvoices->map(function ($invoice) { // Format invoices for select box
+        $returnInvoices = $returnInvoices->map(function ($invoice) { // Format invoices for select box
             return [
                 'id' => $invoice->id,
                 'groupId' => 0,
@@ -182,7 +185,7 @@ class InvoiceController extends Controller
         $isReturnInvoice = in_array($invoice_type, ['return_buy', 'return_sell'], true);
         $previousInvoiceNumber = floor(Invoice::where('invoice_type', $invoice_type)->max('number') ?? 0);
 
-        return view('invoices.create', compact('returnedInvoices', 'products', 'services', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type', 'isServiceBuy', 'isReturnInvoice'));
+        return view('invoices.create', compact('returnInvoices', 'products', 'services', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type', 'isServiceBuy', 'isReturnInvoice'));
     }
 
     /**
@@ -255,12 +258,12 @@ class InvoiceController extends Controller
     {
         $invoice->load('customer', 'document.transactions', 'items'); // Eager load relationships
 
-        $returnedInvoices = [];
+        $returnInvoices = [];
         if (in_array($invoice->invoice_type, [InvoiceType::RETURN_BUY, InvoiceType::RETURN_SELL]) && $invoice->returned_invoice_id) {
             $returnedInvoice = $invoice->returnedInvoice()->with('customer')->first();
 
             if ($returnedInvoice) {
-                $returnedInvoices = [[
+                $returnInvoices = [[
                     'id' => $returnedInvoice->id,
                     'groupId' => 0,
                     'groupName' => 'General',
@@ -301,7 +304,7 @@ class InvoiceController extends Controller
 
         return view('invoices.edit', compact(
             'invoice',
-            'returnedInvoices', // for return invoice select box
+            'returnInvoices', // for return invoice select box
             'customers',
             'total',
             'products',

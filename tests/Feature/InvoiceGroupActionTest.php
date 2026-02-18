@@ -229,4 +229,61 @@ class InvoiceGroupActionTest extends TestCase
         $this->changeInvoiceStatus($sellInvoice, 'approved');
         $this->assertInvoiceStatus($sellInvoice->id, InvoiceStatus::APPROVED);
     }
+
+    public function test_status_change_is_blocked_for_original_buy_when_return_invoice_exists(): void
+    {
+        $product = $this->createProduct(['quantity' => 200]);
+        $baseDate = now()->startOfDay();
+
+        $buyInvoice = $this->buy([$this->productItem($product, 40, 100)], true, 2301, $baseDate->toDateString())['invoice'];
+
+        $returnBuyInvoice = $this->returnBuy(
+            [$this->productItem($product, 5, 100)],
+            $buyInvoice->id,
+            false,
+            2302,
+            $baseDate->copy()->addDay()->toDateString()
+        )['invoice'];
+
+        $decision = InvoiceService::getChangeStatusDecision($this->findInvoice($buyInvoice->id), 'unapproved');
+
+        $this->assertTrue($decision->hasErrors());
+        $this->assertFalse($decision->canProceed);
+        $this->assertSame(
+            __('invoices.status_change.blocked_by_return_invoice', ['invoice' => $returnBuyInvoice->number]),
+            $decision->messages->first(fn ($m) => $m->type === 'error')?->text
+        );
+    }
+
+    public function test_status_change_shows_warning_for_return_buy_linked_to_original_with_later_date(): void
+    {
+        $product = $this->createProduct(['quantity' => 200]);
+        $baseDate = now()->startOfDay();
+
+        $buyInvoice = $this->buy(
+            [$this->productItem($product, 40, 100)],
+            true,
+            2311,
+            $baseDate->copy()->addDays(3)->toDateString()
+        )['invoice'];
+
+        $returnBuyInvoice = $this->returnBuy(
+            [$this->productItem($product, 4, 100)],
+            $buyInvoice->id,
+            false,
+            2312,
+            $baseDate->copy()->addDay()->toDateString()
+        )['invoice'];
+
+        $decision = InvoiceService::getChangeStatusDecision($this->findInvoice($returnBuyInvoice->id), 'approved');
+
+        $this->assertFalse($decision->hasErrors());
+        $this->assertTrue($decision->canProceed);
+        $this->assertTrue($decision->hasWarning());
+        $this->assertTrue($decision->needsConfirmation);
+        $this->assertSame(
+            __('invoices.status_change.warning_original_after_return', ['invoice' => $buyInvoice->number]),
+            $decision->messages->first(fn ($m) => $m->type === 'warning')?->text
+        );
+    }
 }

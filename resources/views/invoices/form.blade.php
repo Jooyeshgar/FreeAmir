@@ -69,11 +69,11 @@
             <div class="flex w-1/3">
                 <div class="flex-wrap w-full" x-data="{
                         returnedInvoiceId: '{{ $initialReturnedInvoiceId }}',
-                        invoiceCustomers: @js(collect($returnedInvoices)->pluck('customer_id', 'id')),
+                        invoiceCustomers: @js(collect($returnInvoices)->pluck('customer_id', 'id')),
                         selectedValue: '{{ $initialSelectedValue }}',
                     }">
                     <span class="text-gray-500">{{ __('Returned Invoice') }}</span>
-                    <x-select-box url="{{ route('invoices.search', ['invoice_type' => $invoice->invoice_type ?? $invoice_type]) }}" :options="[['headerGroup' => 'invoice', 'options' => $returnedInvoices]]" x-model="selectedValue"
+                    <x-select-box url="{{ route('invoices.search', ['invoice_type' => $invoice->invoice_type ?? $invoice_type]) }}" :options="[['headerGroup' => 'invoice', 'options' => $returnInvoices]]" x-model="selectedValue"
                         x-init="if (!selectedValue && returnedInvoiceId) {
                             selectedValue = 'invoice-' + returnedInvoiceId;
                         }
@@ -217,7 +217,7 @@
 
                         @php
                             $isSellType =
-                                $invoice->invoice_type == App\Enums\InvoiceType::SELL || $invoice_type == 'sell';
+                                $invoice->invoice_type == App\Enums\InvoiceType::SELL || $invoice_type == 'sell' || ($invoice->invoice_type == App\Enums\InvoiceType::RETURN_SELL || $invoice_type == 'return_sell');
                             $options = [
                                 [
                                     'headerGroup' => 'product',

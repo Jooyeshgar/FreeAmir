@@ -26,7 +26,7 @@ class GroupActionService
 
         DB::transaction(function () use ($invoices) {
             foreach ($invoices as $invoice) {
-                $decision = $this->invoiceService->getChangeStatusValidation($invoice);
+                $decision = $this->invoiceService->getChangeStatusDecision($invoice, 'approved');
 
                 if ($decision->hasErrors()) {
                     $conflicts = collect($decision->conflictsItems)
