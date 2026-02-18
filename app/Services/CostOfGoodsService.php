@@ -172,7 +172,7 @@ class CostOfGoodsService
      */
     public static function refreshProductCOGAfterItemsDeletion(Invoice $invoice, ?array $excludeItemIds = null): void
     {
-        if (! in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_BUY])) {
+        if (! in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL])) {
             return;
         }
 
