@@ -255,7 +255,7 @@ class InvoiceGroupActionTest extends TestCase
         );
     }
 
-    public function test_status_change_shows_warning_for_return_buy_linked_to_original_with_later_date(): void
+    public function test_status_change_blocks_for_return_buy_when_original_invoice_date_is_later(): void
     {
         $product = $this->createProduct(['quantity' => 200]);
         $baseDate = now()->startOfDay();
@@ -277,13 +277,11 @@ class InvoiceGroupActionTest extends TestCase
 
         $decision = InvoiceService::getChangeStatusDecision($this->findInvoice($returnBuyInvoice->id), 'approved');
 
-        $this->assertFalse($decision->hasErrors());
-        $this->assertTrue($decision->canProceed);
-        $this->assertTrue($decision->hasWarning());
-        $this->assertTrue($decision->needsConfirmation);
+        $this->assertTrue($decision->hasErrors());
+        $this->assertFalse($decision->canProceed);
         $this->assertSame(
-            __('invoices.status_change.warning_original_after_return', ['invoice' => $buyInvoice->number]),
-            $decision->messages->first(fn ($m) => $m->type === 'warning')?->text
+            __('Original invoice (:invoice) date is after return invoice date. Return invoice cannot be before its original invoice.', ['invoice' => $buyInvoice->number]),
+            $decision->messages->first(fn ($m) => $m->type === 'error')?->text
         );
     }
 }

@@ -227,7 +227,7 @@
                                             </a>
                                         @else
                                             <a x-data="{}"
-                                                @if ($canApprove && $invoice->changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js($invoice->changeStatusValidation->toText()))) { window.location.href = '{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}?confirm=1' }" @endif
+                                                @if ($invoice->changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js($invoice->changeStatusValidation->toText()))) { window.location.href = '{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}?confirm=1' }" @endif
                                                 data-tip="{{ $invoice->changeStatusValidation->toText() }}"
                                                 href="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}"
                                                 class="btn btn-sm inline-flex tooltip {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $invoice->changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">

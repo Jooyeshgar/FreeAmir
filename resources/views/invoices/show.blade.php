@@ -663,10 +663,10 @@
                                 </a>
                             @else
                                 <a x-data="{}"
-                                    @if ($canApprove && $changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js('Did you read the warnings?'))) { window.location.href = '{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}?confirm=1' }" @endif
-                                    data-tip="{{ $changeStatusValidation->toText() ?? '' }}"
+                                    @if ($changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js($changeStatusValidation->toText()))) { window.location.href = '{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}?confirm=1' }" @endif
+                                    data-tip="{{ $changeStatusValidation->toText() }}"
                                     href="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}"
-                                    class="btn btn-primary gap-2 {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
+                                    class="btn btn-primary gap-2 inline-flex tooltip {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
                                     {{ $canUnapprove ? __('Unapprove') : __('Approve') }}
                                 </a>
                             @endif

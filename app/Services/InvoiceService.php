@@ -39,7 +39,7 @@ class InvoiceService
 
         if ($approved) {
 
-            if (self::usesSellStatusWorkflow($createdInvoice->invoice_type)) {
+            if ($createdInvoice->invoice_type === InvoiceType::SELL) {
                 $createdInvoice->update(['status' => InvoiceStatus::READY_TO_APPROVE]);
 
                 return [
@@ -100,7 +100,7 @@ class InvoiceService
             $invoiceData['creator_id'] = $user->id;
             $invoiceData['date'] = $date;
             $invoiceData['title'] = $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? ''));
-            $invoiceData['status'] = self::usesSellStatusWorkflow($invoiceData['invoice_type']) ? InvoiceStatus::PRE_INVOICE : InvoiceStatus::PENDING;
+            $invoiceData['status'] = $invoiceData['invoice_type'] === InvoiceType::SELL ? InvoiceStatus::PRE_INVOICE : InvoiceStatus::PENDING;
 
             $createdInvoice = Invoice::create($invoiceData);
 
@@ -131,7 +131,7 @@ class InvoiceService
 
         if ($approved) {
 
-            if (self::usesSellStatusWorkflow($invoice->invoice_type)) {
+            if ($invoice->invoice_type === InvoiceType::SELL) {
                 $invoice->update(['status' => InvoiceStatus::READY_TO_APPROVE]);
 
                 return [
@@ -551,7 +551,7 @@ class InvoiceService
 
         self::checkReturnInvoiceRelationForStatusChange($invoice, $nextStatus, $decision);
 
-        if (self::usesSellConflictWorkflow($invoice->invoice_type) && $nextStatus->isApproved()) {
+        if (in_array($invoice->invoice_type, [InvoiceType::SELL, InvoiceType::RETURN_BUY], true) && $nextStatus->isApproved()) {
             self::checkProductsQuantityForStatusChange($invoice, $productIds, $decision);
         }
 
@@ -607,9 +607,16 @@ class InvoiceService
         $originalDateIsAfterReturnDate = $originalInvoice->date !== null && $invoice->date !== null
             ? strtotime((string) $originalInvoice->date) > strtotime((string) $invoice->date) : false;
 
-        $messageKey = $originalDateIsAfterReturnDate ? 'invoices.status_change.warning_original_after_return' : 'invoices.status_change.warning_linked_original_invoice';
+        if ($originalDateIsAfterReturnDate) {
+            $decision->addMessage('error', __('Original invoice (:invoice) date is after return invoice date. Return invoice cannot be before its original invoice.', [
+                'invoice' => $originalInvoice->number,
+            ]));
+            $decision->addConflict($originalInvoice);
 
-        $decision->addMessage('warning', __($messageKey, [
+            return;
+        }
+
+        $decision->addMessage('warning', __('Return invoice is linked to original invoice (:invoice).', [
             'invoice' => $originalInvoice->number,
         ]));
         $decision->addConflict($originalInvoice);
@@ -664,20 +671,6 @@ class InvoiceService
         }
 
         return $query->get(['id', 'invoice_type', 'number'])->toArray();
-    }
-
-    private static function usesSellStatusWorkflow(InvoiceType|string $invoiceType): bool
-    {
-        $type = $invoiceType instanceof InvoiceType ? $invoiceType : InvoiceType::from($invoiceType);
-
-        return $type === InvoiceType::SELL;
-    }
-
-    private static function usesSellConflictWorkflow(InvoiceType|string $invoiceType): bool
-    {
-        $type = $invoiceType instanceof InvoiceType ? $invoiceType : InvoiceType::from($invoiceType);
-
-        return in_array($type, [InvoiceType::SELL, InvoiceType::RETURN_BUY], true);
     }
 
     private static function checkProductsQuantityForStatusChange(Invoice $invoice, array $productIds, InvoiceStatusDecision $decision): void
