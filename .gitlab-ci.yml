@@ -19,7 +19,7 @@ before_script:
   - ./vendor/bin/sail npm run build
   - ./vendor/bin/sail php artisan migrate:fresh --seed
 after_script:
-  - rm -f .env
+  # - rm -f .env
   - ./vendor/bin/sail down
 
 test:
