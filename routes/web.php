@@ -14,6 +14,9 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('subjects/search', [Controllers\SubjectController::class, 'search'])->name('subjects.search');
     Route::get('subjects/search-code', [Controllers\SubjectController::class, 'searchCode'])->name('subjects.search-code');
     Route::resource('subjects', Controllers\SubjectController::class);
+    Route::get('documents/sort-numbers', [Controllers\DocumentController::class, 'sortNumbers'])->name('documents.sort-numbers');
+    Route::post('documents/sort-numbers/start', [Controllers\DocumentController::class, 'startSorting'])->name('documents.sort-numbers.start');
+    Route::post('documents/sort-numbers/process', [Controllers\DocumentController::class, 'processSorting'])->name('documents.sort-numbers.process');
     Route::resource('documents', Controllers\DocumentController::class);
     Route::get('documents/{document}/print', [Controllers\DocumentController::class, 'print'])->name('documents.print');
     Route::get('documents/{document}/duplicate', [Controllers\DocumentController::class, 'duplicate'])->name('documents.duplicate');
