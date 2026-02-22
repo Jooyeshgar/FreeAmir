@@ -13,6 +13,7 @@ class PayrollElement extends Model
 
     protected $fillable = [
         'title',
+        'company_id',
         'system_code',
         'category',
         'calc_type',
