@@ -38,6 +38,11 @@ class BankSeeder extends Seeder
             ['name' => 'بانک ایران زمین', 'company_id' => 1],
         ];
 
-        Bank::insert($subjectData);
+        foreach ($subjectData as $bank) {
+            Bank::firstOrCreate([
+                'name' => $bank['name'],
+                'company_id' => $bank['company_id'],
+            ]);
+        }
     }
 }

@@ -10,7 +10,7 @@ class CompanySeeder extends Seeder
 {
     public function run(): void
     {
-        $company = Company::create([
+        $company = Company::updateOrCreate(['id' => 1], [
             'id' => 1,
             'name' => 'نام شرکت',
             'fiscal_year' => '1403',
@@ -18,7 +18,7 @@ class CompanySeeder extends Seeder
 
         $users = User::all();
         foreach ($users as $user) {
-            $user->companies()->attach($company->id);
+            $user->companies()->syncWithoutDetaching([$company->id]);
         }
     }
 }

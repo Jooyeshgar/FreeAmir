@@ -22,9 +22,9 @@ class SubjectSeeder extends Seeder
             ['id' => 8, 'code' => '068', 'name' => 'جاری شرکا', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 9, 'code' => '019', 'name' => 'موجودی کالا', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 17, 'code' => '062', 'name' => 'خرید', 'parent_id' => null, 'type' => 'debtor', 'company_id' => 1],
-            ['id' => 18, 'code' => '060', 'name' => 'فروش', 'parent_id' => null, 'type' => 1, 'company_id' => 1],
+            ['id' => 18, 'code' => '060', 'name' => 'فروش', 'parent_id' => null, 'type' => 'creditor', 'company_id' => 1],
             ['id' => 22, 'code' => '020', 'name' => 'اسناد پرداختنی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
-            ['id' => 23, 'code' => '050', 'name' => 'درآمدها', 'parent_id' => null, 'type' => 1, 'company_id' => 1],
+            ['id' => 23, 'code' => '050', 'name' => 'درآمدها', 'parent_id' => null, 'type' => 'creditor', 'company_id' => 1],
             ['id' => 25, 'code' => '061', 'name' => 'برگشت از فروش و تخفیفات', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 38, 'code' => '018', 'name' => 'سایر حسابهای دریافتنی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 39, 'code' => '023', 'name' => 'سایر حسابهای پرداختنی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
@@ -102,11 +102,11 @@ class SubjectSeeder extends Seeder
 
             ['id' => 89, 'code' => '041001', 'name' => 'قیمت تمام شده کالای فروش رفته', 'parent_id' => 88, 'type' => 'both', 'company_id' => 1],
 
-            ['id' => 36, 'code' => '050001', 'name' => 'درآمد متفرقه', 'parent_id' => 23, 'type' => 1, 'company_id' => 1],
-            ['id' => 103, 'code' => '050002', 'name' => 'درآمد خدمات', 'parent_id' => 23, 'type' => 1, 'company_id' => 1],
+            ['id' => 36, 'code' => '050001', 'name' => 'درآمد متفرقه', 'parent_id' => 23, 'type' => 'creditor', 'company_id' => 1],
+            ['id' => 103, 'code' => '050002', 'name' => 'درآمد خدمات', 'parent_id' => 23, 'type' => 'creditor', 'company_id' => 1],
             ['id' => 104, 'code' => '050003', 'name' => 'درآمد فروش', 'parent_id' => 23, 'type' => 'both', 'company_id' => 1],
 
-            ['id' => 20, 'code' => '060001', 'name' => 'فروش', 'parent_id' => 18, 'type' => 1, 'company_id' => 1],
+            ['id' => 20, 'code' => '060001', 'name' => 'فروش', 'parent_id' => 18, 'type' => 'creditor', 'company_id' => 1],
 
             ['id' => 55, 'code' => '061001', 'name' => 'تخفیفات فروش', 'parent_id' => 25, 'type' => 'both', 'company_id' => 1],
             ['id' => 43, 'code' => '061002', 'name' => 'برگشت از فروش', 'parent_id' => 25, 'type' => 'both', 'company_id' => 1],
@@ -121,8 +121,8 @@ class SubjectSeeder extends Seeder
 
             ['id' => 15, 'code' => '067001', 'name' => 'تراز افتتاحیه', 'parent_id' => 5, 'type' => 'both', 'company_id' => 1],
 
-            ['id' => 37, 'code' => '068001', 'name' => 'جاری شرکا', 'parent_id' => 8, 'type' => 1, 'company_id' => 1],
+            ['id' => 37, 'code' => '068001', 'name' => 'جاری شرکا', 'parent_id' => 8, 'type' => 'creditor', 'company_id' => 1],
         ];
-        DB::table('subjects')->insert($subjectData);
+        DB::table('subjects')->upsert($subjectData, ['id'], ['code', 'name', 'parent_id', 'type', 'company_id']);
     }
 }

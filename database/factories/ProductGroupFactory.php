@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Company;
 use App\Models\ProductGroup;
 use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -18,10 +19,12 @@ class ProductGroupFactory extends Factory
      */
     public function definition(): array
     {
+        $companyId = Company::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveCompany() ?? Company::factory()->create()->id;
+
         return [
             'name' => $this->faker->name,
             'vat' => 0,
-            'company_id' => 1,
+            'company_id' => $companyId,
         ];
     }
 

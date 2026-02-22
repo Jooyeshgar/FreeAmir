@@ -16,7 +16,19 @@ class InvoiceItemFactory extends Factory
         $product = Product::withoutGlobalScopes()->inRandomOrder()->first();
         $service = Service::withoutGlobalScopes()->inRandomOrder()->first();
 
-        $itemableType = $this->faker->randomElement([Product::class, Service::class]);
+        if (! $product && ! $service) {
+            $product = Product::factory()->withGroup()->withSubjects()->create();
+        }
+
+        $availableTypes = [];
+        if ($product) {
+            $availableTypes[] = Product::class;
+        }
+        if ($service) {
+            $availableTypes[] = Service::class;
+        }
+
+        $itemableType = $this->faker->randomElement($availableTypes);
         $itemableId = $itemableType === Product::class ? $product->id : $service->id;
 
         return [

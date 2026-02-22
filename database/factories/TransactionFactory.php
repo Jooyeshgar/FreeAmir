@@ -11,11 +11,15 @@ class TransactionFactory extends Factory
 {
     public function definition(): array
     {
+        $subject = Subject::withoutGlobalScopes()->inRandomOrder()->first() ?? Subject::factory()->create();
+        $document = Document::withoutGlobalScopes()->inRandomOrder()->first() ?? Document::factory()->create();
+        $user = User::inRandomOrder()->first() ?? User::factory()->create();
+
         return [
             'value' => $this->faker->randomFloat(2, 100, 1000),
-            'subject_id' => Subject::withoutGlobalScopes()->inRandomOrder()->first()->id,
-            'document_id' => Document::withoutGlobalScopes()->inRandomOrder()->first()->id,
-            'user_id' => User::inRandomOrder()->first()->id,
+            'subject_id' => $subject->id,
+            'document_id' => $document->id,
+            'user_id' => $user->id,
             'desc' => $this->faker->paragraph(2),
         ];
     }

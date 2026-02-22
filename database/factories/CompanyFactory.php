@@ -25,7 +25,7 @@ class CompanyFactory extends Factory
     {
         return $this->afterCreating(function (Company $company) {
             $user = User::first() ?? User::factory()->create();
-            $user->companies()->attach($company->id);
+            $user->companies()->syncWithoutDetaching([$company->id]);
         });
     }
 }
