@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('monthly_attendances', function (Blueprint $table) {
             $table->increments('id');
+            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->unsignedInteger('employee_id');
             $table->smallInteger('year')->unsigned();
             $table->tinyInteger('month')->unsigned()->comment('1-12');
@@ -38,6 +39,7 @@ return new class extends Migration
 
         Schema::create('attendance_logs', function (Blueprint $table) {
             $table->increments('id');
+            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->unsignedInteger('employee_id');
             $table->unsignedInteger('monthly_attendance_id')->nullable()->comment('NULL = هنوز محاسبه نشده');
             $table->date('log_date');

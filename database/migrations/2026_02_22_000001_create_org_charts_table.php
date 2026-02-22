@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('org_charts', function (Blueprint $table) {
             $table->increments('id');
+            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->string('title', 200);
             $table->unsignedInteger('parent_id')->nullable()->comment('NULL = root node');
             $table->text('description')->nullable();

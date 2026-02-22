@@ -17,4 +17,9 @@ class PublicHoliday extends Model
     protected $casts = [
         'date' => 'date',
     ];
+
+    public static function booted(): void
+    {
+        static::addGlobalScope(new FiscalYearScope);
+    }
 }

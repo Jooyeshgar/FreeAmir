@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('public_holidays', function (Blueprint $table) {
             $table->increments('id');
+            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->date('date')->unique();
             $table->string('name', 200);
             $table->timestamps();

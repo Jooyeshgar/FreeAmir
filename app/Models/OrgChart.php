@@ -17,6 +17,11 @@ class OrgChart extends Model
         'description',
     ];
 
+    public static function booted(): void
+    {
+        static::addGlobalScope(new FiscalYearScope);
+    }
+
     public function parent(): BelongsTo
     {
         return $this->belongsTo(OrgChart::class, 'parent_id');

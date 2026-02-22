@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WorkSite extends Model
 {
@@ -22,13 +23,13 @@ class WorkSite extends Model
         'is_active' => 'boolean',
     ];
 
-    public function contractFrameworks(): BelongsToMany
+    public static function booted(): void
     {
-        return $this->belongsToMany(
-            ContractFramework::class,
-            'work_site_contracts',
-            'work_site_id',
-            'contract_framework_id'
-        )->withPivot('created_at');
+        static::addGlobalScope(new FiscalYearScope);
+    }
+
+    public function workSiteContracts(): HasMany
+    {
+        return $this->hasMany(WorkSiteContract::class, 'work_site_id');
     }
 }

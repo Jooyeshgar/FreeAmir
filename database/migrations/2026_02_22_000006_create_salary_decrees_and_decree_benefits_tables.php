@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('salary_decrees', function (Blueprint $table) {
             $table->increments('id');
+            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->unsignedInteger('employee_id');
             $table->unsignedInteger('org_chart_id');
             $table->string('name', 200)->nullable()->comment('Decree name or number');

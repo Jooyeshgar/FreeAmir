@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('personnel_requests', function (Blueprint $table) {
             $table->increments('id');
+            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->unsignedInteger('employee_id');
 
             $table->enum('request_type', [

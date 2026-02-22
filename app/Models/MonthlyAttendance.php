@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -41,6 +42,11 @@ class MonthlyAttendance extends Model
         'friday_hours' => 'decimal:2',
         'holiday_hours' => 'decimal:2',
     ];
+
+    public static function booted(): void
+    {
+        static::addGlobalScope(new FiscalYearScope);
+    }
 
     public function employee(): BelongsTo
     {

@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('payroll_elements', function (Blueprint $table) {
             $table->increments('id');
+            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->string('title', 100);
             $table->enum('system_code', [
                 'CHILD_ALLOWANCE',
