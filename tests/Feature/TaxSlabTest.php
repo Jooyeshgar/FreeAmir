@@ -5,8 +5,8 @@ namespace Tests\Feature;
 use App\Models\Company;
 use App\Models\TaxSlab;
 use App\Models\User;
-use Cookie;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class TaxSlabTest extends TestCase
@@ -22,11 +22,17 @@ class TaxSlabTest extends TestCase
         parent::setUp();
 
         $company = Company::factory()->create();
-        Cookie::queue('active-company-id', $company->id);
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();
+        $company->users()->attach($this->user);
+
+        $this->user->givePermissionTo(
+            Permission::firstOrCreate(['name' => 'tax-slabs.*'])
+        );
+
         $this->actingAs($this->user);
+        $this->withCookies(['active-company-id' => $this->companyId]);
     }
 
     private function makeTaxSlab(array $overrides = []): TaxSlab
@@ -233,7 +239,7 @@ class TaxSlabTest extends TestCase
 
     public function test_unauthenticated_user_is_redirected_to_login(): void
     {
-        $this->post('/logout');
+        auth()->logout();
 
         $response = $this->get(route('tax-slabs.index'));
 

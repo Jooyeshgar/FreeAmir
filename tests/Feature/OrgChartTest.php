@@ -27,11 +27,8 @@ class OrgChartTest extends TestCase
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
 
-        foreach (['index', 'create', 'store', 'show', 'edit', 'update', 'destroy'] as $action) {
-            Permission::firstOrCreate(['name' => "org-charts.{$action}"]);
-        }
         $this->user->givePermissionTo(
-            Permission::where('name', 'like', 'org-charts.%')->get()
+            Permission::firstOrCreate(['name' => 'org-charts.*'])
         );
 
         $this->actingAs($this->user);
