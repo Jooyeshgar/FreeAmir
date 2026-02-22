@@ -86,4 +86,14 @@ class Employee extends Model
     {
         return $this->hasMany(Payroll::class, 'employee_id');
     }
+
+    public function personnelRequests(): HasMany
+    {
+        return $this->hasMany(PersonnelRequest::class, 'employee_id');
+    }
+
+    public function approvedPersonnelRequests(): HasMany
+    {
+        return $this->hasMany(PersonnelRequest::class, 'approved_by');
+    }
 }
