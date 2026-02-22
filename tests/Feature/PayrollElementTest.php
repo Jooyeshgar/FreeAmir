@@ -38,7 +38,7 @@ class PayrollElementTest extends TestCase
     private function makeElement(array $overrides = []): PayrollElement
     {
         return PayrollElement::factory()->create(array_merge([
-            'company_id'   => $this->companyId,
+            'company_id' => $this->companyId,
             'is_system_locked' => false,
         ], $overrides));
     }
@@ -46,14 +46,14 @@ class PayrollElementTest extends TestCase
     private function validPayload(array $overrides = []): array
     {
         return array_merge([
-            'title'           => 'Housing Allowance',
-            'system_code'     => 'HOUSING_ALLOWANCE',
-            'category'        => 'earning',
-            'calc_type'       => 'fixed',
-            'formula'         => null,
-            'default_amount'  => 2_000_000,
-            'is_taxable'      => false,
-            'is_insurable'    => true,
+            'title' => 'Housing Allowance',
+            'system_code' => 'HOUSING_ALLOWANCE',
+            'category' => 'earning',
+            'calc_type' => 'fixed',
+            'formula' => null,
+            'default_amount' => 2_000_000,
+            'is_taxable' => false,
+            'is_insurable' => true,
             'show_in_payslip' => true,
             'gl_account_code' => '3210',
         ], $overrides);
@@ -116,11 +116,11 @@ class PayrollElementTest extends TestCase
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('payroll_elements', [
-            'company_id'  => $this->companyId,
-            'title'       => 'Housing Allowance',
+            'company_id' => $this->companyId,
+            'title' => 'Housing Allowance',
             'system_code' => 'HOUSING_ALLOWANCE',
-            'category'    => 'earning',
-            'calc_type'   => 'fixed',
+            'category' => 'earning',
+            'calc_type' => 'fixed',
         ]);
     }
 
@@ -161,8 +161,8 @@ class PayrollElementTest extends TestCase
     public function test_store_allows_nullable_optional_fields(): void
     {
         $payload = $this->validPayload([
-            'formula'         => null,
-            'default_amount'  => null,
+            'formula' => null,
+            'default_amount' => null,
             'gl_account_code' => null,
         ]);
 
@@ -170,8 +170,8 @@ class PayrollElementTest extends TestCase
 
         $response->assertRedirect(route('payroll-elements.index'));
         $this->assertDatabaseHas('payroll_elements', [
-            'company_id'      => $this->companyId,
-            'default_amount'  => null,
+            'company_id' => $this->companyId,
+            'default_amount' => null,
             'gl_account_code' => null,
         ]);
     }
@@ -203,8 +203,8 @@ class PayrollElementTest extends TestCase
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('payroll_elements', [
-            'id'        => $element->id,
-            'title'     => 'New Title',
+            'id' => $element->id,
+            'title' => 'New Title',
             'calc_type' => 'percentage',
         ]);
     }
