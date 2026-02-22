@@ -9,27 +9,23 @@
 
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <div class="card-actions">
+            <div class="flex items-center justify-between gap-3">
+                <form action="{{ route('public-holidays.index') }}" method="GET" class="flex items-center gap-2">
+                    <input type="text" name="name" value="{{ request('name') }}" placeholder="{{ __('Filter by name') }}"
+                        class="px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 text-sm rounded-lg shadow transition-all">
+                        {{ __('Search') }}
+                    </button>
+                </form>
+
                 @can('salary.public-holidays.create')
-                    <a href="{{ route('public-holidays.create') }}" class="btn btn-primary">
-                        {{ __('Create Public Holiday') }}
+                    <a href="{{ route('public-holidays.create') }}" class="btn btn-primary btn-circle" title="{{ __('Create Public Holiday') }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                        </svg>
                     </a>
                 @endcan
             </div>
-
-            <form action="{{ route('public-holidays.index') }}" method="GET">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full md:w-2/5">
-                    <div class="relative">
-                        <input type="text" name="name" value="{{ request('name') }}" placeholder="{{ __('Filter by name') }}"
-                            class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
-                    </div>
-                    <div class="flex items-center">
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 text-sm rounded-lg shadow transition-all">
-                            {{ __('Search') }}
-                        </button>
-                    </div>
-                </div>
-            </form>
 
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
