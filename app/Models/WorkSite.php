@@ -12,6 +12,7 @@ class WorkSite extends Model
     use HasFactory;
 
     protected $fillable = [
+        'company_id',
         'name',
         'code',
         'address',

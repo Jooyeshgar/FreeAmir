@@ -108,13 +108,17 @@
         @canany(['management.configs.index', 'management.configs.create', 'management.configs.edit'])
             <li><a href="{{ route('configs.index') }}">{{ __('Configs') }}</a></li>
         @endcanany
-        @canany(['salary.tax-slabs.index', 'salary.tax-slabs.create', 'salary.tax-slabs.edit'])
+        @canany(['salary.tax-slabs.index', 'salary.tax-slabs.create', 'salary.tax-slabs.edit', 'salary.work-sites.index', 'salary.work-sites.create',
+            'salary.work-sites.edit'])
             <li>
                 <details>
                     <summary>{{ __('Salary') }}</summary>
                     <ul>
                         @can('salary.tax-slabs.index')
                             <li><a href="{{ route('tax-slabs.index') }}">{{ __('Tax Slabs') }}</a></li>
+                        @endcan
+                        @can('salary.work-sites.index')
+                            <li><a href="{{ route('work-sites.index') }}">{{ __('Work Sites') }}</a></li>
                         @endcan
                     </ul>
                 </details>
