@@ -14,7 +14,7 @@ class PublicHolidayController extends Controller
         $query = PublicHoliday::orderBy('date', 'asc');
 
         if ($request->filled('name')) {
-            $query->where('name', 'like', '%' . $request->name . '%');
+            $query->where('name', 'like', '%'.$request->name.'%');
         }
 
         $publicHolidays = $query->paginate(15);
@@ -51,7 +51,7 @@ class PublicHolidayController extends Controller
     public function update(Request $request, PublicHoliday $publicHoliday): RedirectResponse
     {
         $validated = $request->validate([
-            'date' => ['required', 'date', 'unique:public_holidays,date,' . $publicHoliday->id],
+            'date' => ['required', 'date', 'unique:public_holidays,date,'.$publicHoliday->id],
             'name' => ['required', 'string', 'max:200'],
         ]);
 
