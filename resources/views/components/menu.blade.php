@@ -112,7 +112,7 @@
             <li><a href="{{ route('configs.index') }}">{{ __('Configs') }}</a></li>
         @endcanany
         @canany(['salary.tax-slabs.index', 'salary.tax-slabs.create', 'salary.tax-slabs.edit', 'salary.work-sites.index', 'salary.work-sites.create',
-            'salary.work-sites.edit'])
+            'salary.work-sites.edit', 'salary.public-holidays.index', 'salary.public-holidays.create', 'salary.public-holidays.edit'])
             <li>
                 <details>
                     <summary>{{ __('Salary') }}</summary>
@@ -125,6 +125,9 @@
                         @endcan
                         @can('salary.work-site-contracts.index')
                             <li><a href="{{ route('work-site-contracts.index') }}">{{ __('Work Site Contracts') }}</a></li>
+                        @endcan
+                        @can('salary.public-holidays.index')
+                            <li><a href="{{ route('public-holidays.index') }}">{{ __('Public Holidays') }}</a></li>
                         @endcan
                     </ul>
                 </details>

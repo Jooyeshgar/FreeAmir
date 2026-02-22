@@ -1052,5 +1052,16 @@
     "Direct Reports": "Direct Reports",
     "Organization chart node created successfully.": "Organization chart node created successfully.",
     "Organization chart node updated successfully.": "Organization chart node updated successfully.",
-    "Organization chart node deleted successfully.": "Organization chart node deleted successfully."
+    "Organization chart node deleted successfully.": "Organization chart node deleted successfully.",
+    "Public Holidays": "Public Holidays",
+    "Public Holiday": "Public Holiday",
+    "Create Public Holiday": "Create Public Holiday",
+    "Add Public Holiday": "Add Public Holiday",
+    "Edit Public Holiday": "Edit Public Holiday",
+    "Public holiday created successfully.": "Public holiday created successfully.",
+    "Public holiday updated successfully.": "Public holiday updated successfully.",
+    "Public holiday deleted successfully.": "Public holiday deleted successfully.",
+    "No public holidays found.": "No public holidays found.",
+    "Filter by name": "Filter by name",
+    "e.g. Nowruz": "e.g. Nowruz"
 }
