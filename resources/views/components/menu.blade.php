@@ -123,6 +123,9 @@
                         @can('salary.work-sites.index')
                             <li><a href="{{ route('work-sites.index') }}">{{ __('Work Sites') }}</a></li>
                         @endcan
+                        @can('salary.work-site-contracts.index')
+                            <li><a href="{{ route('work-site-contracts.index') }}">{{ __('Work Site Contracts') }}</a></li>
+                        @endcan
                     </ul>
                 </details>
             </li>
