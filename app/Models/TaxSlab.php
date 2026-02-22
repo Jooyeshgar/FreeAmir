@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -10,6 +11,7 @@ class TaxSlab extends Model
     use HasFactory;
 
     protected $fillable = [
+        'company_id',
         'year',
         'slab_order',
         'income_from',

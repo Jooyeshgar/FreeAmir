@@ -56,7 +56,8 @@
     </li>
 @endcanany
 
-@canany(['products.index', 'product-groups.index']) <li class="dropdown dropdown-hover">
+@canany(['products.index', 'product-groups.index'])
+    <li class="dropdown dropdown-hover">
         <div tabindex="3" role="button">{{ __('Warehouse') }}</div>
         <ul tabindex="3" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
             <li><a href="{{ route('products.index') }}">{{ __('Products') }}</a></li>
@@ -106,6 +107,18 @@
         @endcan
         @canany(['management.configs.index', 'management.configs.create', 'management.configs.edit'])
             <li><a href="{{ route('configs.index') }}">{{ __('Configs') }}</a></li>
+        @endcanany
+        @canany(['salary.tax-slabs.index', 'salary.tax-slabs.create', 'salary.tax-slabs.edit'])
+            <li>
+                <details>
+                    <summary>{{ __('Salary') }}</summary>
+                    <ul>
+                        @can('salary.tax-slabs.index')
+                            <li><a href="{{ route('tax-slabs.index') }}">{{ __('Tax Slabs') }}</a></li>
+                        @endcan
+                    </ul>
+                </details>
+            </li>
         @endcanany
         <li><a href="https://github.com/Jooyeshgar/FreeAmir/issues">{{ __('Support') }}</a></li>
     </ul>

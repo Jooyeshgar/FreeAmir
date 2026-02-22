@@ -70,7 +70,7 @@ return new class extends Migration
                 ->references('id')->on('work_sites');
 
             $table->foreign('contract_framework_id')
-                ->references('id')->on('contract_frameworks')
+                ->references('id')->on('work_site_contracts')
                 ->nullOnDelete();
         });
     }
