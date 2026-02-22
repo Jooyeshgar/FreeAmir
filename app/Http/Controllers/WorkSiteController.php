@@ -9,11 +9,18 @@ use Illuminate\View\View;
 
 class WorkSiteController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $workSites = WorkSite::orderBy('name')->paginate(15);
+        $search = $request->input('search', '');
 
-        return view('work-sites.index', compact('workSites'));
+        $workSites = WorkSite::orderBy('name')
+            ->when($search, fn ($q) => $q->where(fn ($q) => $q
+                ->where('name', 'like', "%{$search}%")
+                ->orWhere('code', 'like', "%{$search}%")
+            ))
+            ->paginate(15);
+
+        return view('work-sites.index', compact('workSites', 'search'));
     }
 
     public function create(): View

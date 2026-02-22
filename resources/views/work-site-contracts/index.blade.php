@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Work Sites') }}
+            {{ __('Work Site Contracts') }}
         </h2>
     </x-slot>
 
@@ -10,14 +10,14 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="card-actions">
-                @can('salary.work-sites.create')
-                    <a href="{{ route('work-sites.create') }}" class="btn btn-primary">
-                        {{ __('Create Work Site') }}
+                @can('salary.work-site-contracts.create')
+                    <a href="{{ route('work-site-contracts.create') }}" class="btn btn-primary">
+                        {{ __('Create Work Site Contract') }}
                     </a>
                 @endcan
             </div>
 
-            <form action="{{ route('work-sites.index') }}" method="GET">
+            <form action="{{ route('work-site-contracts.index') }}" method="GET">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full md:w-2/5">
                     <div class="relative">
                         <input type="text" name="search" value="{{ $search }}" placeholder="{{ __('Search by name or code') }}"
@@ -36,37 +36,32 @@
                     <tr>
                         <th>{{ __('Name') }}</th>
                         <th>{{ __('Code') }}</th>
-                        <th>{{ __('Phone') }}</th>
+                        <th>{{ __('Work Site') }}</th>
                         <th>{{ __('Active') }}</th>
                         <th>{{ __('Action') }}</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse ($workSites as $workSite)
+                    @forelse ($contracts as $contract)
                         <tr>
-                            <td>{{ $workSite->name }}</td>
-                            <td>{{ $workSite->code }}</td>
-                            <td>{{ $workSite->phone ?? '-' }}</td>
+                            <td>{{ $contract->name }}</td>
+                            <td>{{ $contract->code }}</td>
+                            <td>{{ $contract->workSites?->name ?? '-' }}</td>
                             <td>
-                                @if ($workSite->is_active)
+                                @if ($contract->is_active)
                                     <span class="badge badge-success">{{ __('Yes') }}</span>
                                 @else
                                     <span class="badge badge-ghost">{{ __('No') }}</span>
                                 @endif
                             </td>
                             <td class="flex gap-2">
-                                @can('salary.work-sites.edit')
-                                    <a href="{{ route('work-sites.edit', $workSite) }}" class="btn btn-sm btn-info">
+                                @can('salary.work-site-contracts.edit')
+                                    <a href="{{ route('work-site-contracts.edit', $contract) }}" class="btn btn-sm btn-info">
                                         {{ __('Edit') }}
                                     </a>
                                 @endcan
-                                @can('salary.work-sites.index')
-                                    <a href="{{ route('work-site-contracts.index', ['work_site_id' => $workSite->id]) }}" class="btn btn-sm btn-ghost">
-                                        {{ __('Contracts') }}
-                                    </a>
-                                @endcan
-                                @can('salary.work-sites.delete')
-                                    <form action="{{ route('work-sites.destroy', $workSite) }}" method="POST" class="inline-block"
+                                @can('salary.work-site-contracts.delete')
+                                    <form action="{{ route('work-site-contracts.destroy', $contract) }}" method="POST" class="inline-block"
                                         onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                         @csrf
                                         @method('DELETE')
@@ -80,7 +75,7 @@
                     @empty
                         <tr>
                             <td colspan="5" class="text-center py-4 text-gray-500">
-                                {{ __('No work sites found.') }}
+                                {{ __('No work site contracts found.') }}
                             </td>
                         </tr>
                     @endforelse
@@ -88,7 +83,7 @@
             </table>
 
             <div class="mt-4">
-                {{ $workSites->withQueryString()->links() }}
+                {{ $contracts->withQueryString()->links() }}
             </div>
         </div>
     </div>

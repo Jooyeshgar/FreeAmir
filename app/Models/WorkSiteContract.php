@@ -11,6 +11,7 @@ class WorkSiteContract extends Model
     use HasFactory;
 
     protected $fillable = [
+        'work_site_id',
         'name',
         'code',
         'description',

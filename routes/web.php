@@ -67,7 +67,8 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
 
     Route::group(['prefix' => 'salary'], function () {
         Route::resource('tax-slabs', Controllers\TaxSlabController::class);
-        Route::resource('work-sites', Controllers\WorkSiteController::class);
+        Route::resource('work-sites', Controllers\WorkSiteController::class)->except(['show']);
+        Route::resource('work-site-contracts', Controllers\WorkSiteContractController::class)->except(['show']);
     });
     Route::group(['prefix' => 'reports', 'as' => 'reports.'], function () {
         Route::get('ledger', [Controllers\ReportsController::class, 'ledger'])->name('ledger');

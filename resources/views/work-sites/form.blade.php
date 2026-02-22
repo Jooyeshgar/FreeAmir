@@ -8,25 +8,27 @@
     </div>
 
     <div class="col-span-2 md:col-span-1">
-        <x-input name="phone" id="phone" title="{{ __('Phone') }}" :value="old('phone', $workSite->phone ?? '')" placeholder="{{ __('Phone number') }}" />
-    </div>
-
-    <div class="col-span-2">
-        <label class="label" for="address">
-            <span class="label-text">{{ __('Address') }}</span>
-        </label>
-        <textarea name="address" id="address" rows="3" class="textarea textarea-bordered w-full" placeholder="{{ __('Address') }}">{{ old('address', $workSite->address ?? '') }}</textarea>
-        @error('address')
-            <span class="text-error text-sm">{{ $message }}</span>
-        @enderror
+        <x-input name="phone" id="phone" title="{{ __('Phone') }}" :value="old('phone', $workSite->phone ?? '')" placeholder="{{ __('Optional phone number') }}" />
     </div>
 
     <div class="col-span-2 md:col-span-1">
-        <label class="label cursor-pointer justify-start gap-3">
-            <input type="hidden" name="is_active" value="0" />
-            <input type="checkbox" name="is_active" id="is_active" value="1" class="checkbox checkbox-primary"
-                {{ old('is_active', $workSite->is_active ?? true) ? 'checked' : '' }} />
-            <span class="label-text">{{ __('Active') }}</span>
+        <label for="is_active" class="block text-sm font-medium text-gray-700 mb-1">
+            {{ __('Active') }}
         </label>
+        <input type="checkbox" name="is_active" id="is_active" value="1" class="checkbox" {{ old('is_active', $workSite->is_active ?? true) ? 'checked' : '' }} />
+        @error('is_active')
+            <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+        @enderror
+    </div>
+
+    <div class="col-span-2">
+        <label for="address" class="block text-sm font-medium text-gray-700 mb-1">
+            {{ __('Address') }}
+        </label>
+        <textarea name="address" id="address" rows="3"
+            class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" placeholder="{{ __('Optional address') }}">{{ old('address', $workSite->address ?? '') }}</textarea>
+        @error('address')
+            <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+        @enderror
     </div>
 </div>
