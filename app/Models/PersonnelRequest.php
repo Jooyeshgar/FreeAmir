@@ -28,6 +28,11 @@ class PersonnelRequest extends Model
         'duration_minutes' => 'integer',
     ];
 
+    public static function booted(): void
+    {
+        static::addGlobalScope(new FiscalYearScope);
+    }
+
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'employee_id');

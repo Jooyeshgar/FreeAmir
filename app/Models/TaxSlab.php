@@ -26,4 +26,9 @@ class TaxSlab extends Model
         'tax_rate' => 'decimal:2',
         'annual_exemption' => 'decimal:2',
     ];
+
+    public static function booted(): void
+    {
+        static::addGlobalScope(new FiscalYearScope);
+    }
 }

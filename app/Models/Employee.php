@@ -52,6 +52,11 @@ class Employee extends Model
         'children_count' => 'integer',
     ];
 
+    public static function booted(): void
+    {
+        static::addGlobalScope(new FiscalYearScope);
+    }
+
     public function orgChart(): BelongsTo
     {
         return $this->belongsTo(OrgChart::class, 'org_chart_id');

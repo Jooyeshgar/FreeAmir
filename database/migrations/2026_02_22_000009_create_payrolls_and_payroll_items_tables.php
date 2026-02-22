@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('payrolls', function (Blueprint $table) {
             $table->increments('id');
+            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->unsignedInteger('employee_id');
             $table->unsignedInteger('decree_id')->nullable();
             $table->smallInteger('year')->unsigned();
