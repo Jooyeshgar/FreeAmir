@@ -20,21 +20,18 @@
             <form action="{{ route('payroll-elements.index') }}" method="GET">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3 w-full md:w-3/5">
                     <div class="relative">
-                        <input type="text" name="title" value="{{ request('title') }}"
-                            placeholder="{{ __('Filter by title') }}"
+                        <input type="text" name="title" value="{{ request('title') }}" placeholder="{{ __('Filter by title') }}"
                             class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
                     </div>
                     <div class="relative">
-                        <select name="category"
-                            class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                        <select name="category" class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
                             <option value="">{{ __('All Categories') }}</option>
-                            <option value="earning"   @selected(request('category') === 'earning')>{{ __('Earning') }}</option>
+                            <option value="earning" @selected(request('category') === 'earning')>{{ __('Earning') }}</option>
                             <option value="deduction" @selected(request('category') === 'deduction')>{{ __('Deduction') }}</option>
                         </select>
                     </div>
                     <div class="flex items-center">
-                        <button type="submit"
-                            class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 text-sm rounded-lg shadow transition-all">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 text-sm rounded-lg shadow transition-all">
                             {{ __('Search') }}
                         </button>
                     </div>
@@ -88,8 +85,8 @@
                                 @endcan
                                 @can('salary.payroll-elements.delete')
                                     @unless ($element->is_system_locked)
-                                        <form action="{{ route('payroll-elements.destroy', $element) }}" method="POST"
-                                            class="inline-block" onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                        <form action="{{ route('payroll-elements.destroy', $element) }}" method="POST" class="inline-block"
+                                            onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-error">
