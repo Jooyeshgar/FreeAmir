@@ -1023,5 +1023,22 @@
     "Wage": "دستمزد",
     "pagination.next": "بعدی",
     "pagination.previous": "قبلی",
-    "‌Balance": "تعادل"
+    "‌Balance": "تعادل",
+    "Organization Chart": "چارت سازمانی",
+    "Create Node": "ایجاد گره",
+    "Search by title": "جستجو بر اساس عنوان",
+    "No organization chart nodes found.": "هیچ گره‌ای در چارت سازمانی یافت نشد.",
+    "Create Organization Chart Node": "ایجاد گره چارت سازمانی",
+    "Add Node": "افزودن گره",
+    "Edit Organization Chart Node": "ویرایش گره چارت سازمانی",
+    "Edit Node": "ویرایش گره",
+    "e.g. CEO": "مثلاً مدیرعامل",
+    "Parent Node": "گره والد",
+    "None (Root Node)": "هیچ‌کدام (گره ریشه)",
+    "Optional description": "توضیحات اختیاری",
+    "Organization Chart Node": "گره چارت سازمانی",
+    "Direct Reports": "زیرمجموعه‌های مستقیم",
+    "Organization chart node created successfully.": "گره چارت سازمانی با موفقیت ایجاد شد.",
+    "Organization chart node updated successfully.": "گره چارت سازمانی با موفقیت به‌روزرسانی شد.",
+    "Organization chart node deleted successfully.": "گره چارت سازمانی با موفقیت حذف شد."
 }

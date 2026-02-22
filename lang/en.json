@@ -1025,5 +1025,22 @@
     "Wage": "Wage",
     "pagination.next": "Next",
     "pagination.previous": "Previous",
-    "‌Balance": "Balance"
+    "‌Balance": "Balance",
+    "Organization Chart": "Organization Chart",
+    "Create Node": "Create Node",
+    "Search by title": "Search by title",
+    "No organization chart nodes found.": "No organization chart nodes found.",
+    "Create Organization Chart Node": "Create Organization Chart Node",
+    "Add Node": "Add Node",
+    "Edit Organization Chart Node": "Edit Organization Chart Node",
+    "Edit Node": "Edit Node",
+    "e.g. CEO": "e.g. CEO",
+    "Parent Node": "Parent Node",
+    "None (Root Node)": "None (Root Node)",
+    "Optional description": "Optional description",
+    "Organization Chart Node": "Organization Chart Node",
+    "Direct Reports": "Direct Reports",
+    "Organization chart node created successfully.": "Organization chart node created successfully.",
+    "Organization chart node updated successfully.": "Organization chart node updated successfully.",
+    "Organization chart node deleted successfully.": "Organization chart node deleted successfully."
 }
