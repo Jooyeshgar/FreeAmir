@@ -63,6 +63,8 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::resource('configs', Controllers\ConfigController::class);
     });
 
+    Route::resource('org-charts', Controllers\OrgChartController::class);
+
     Route::group(['prefix' => 'salary'], function () {
         Route::resource('tax-slabs', Controllers\TaxSlabController::class);
     });

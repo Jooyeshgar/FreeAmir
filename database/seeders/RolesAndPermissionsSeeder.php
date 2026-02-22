@@ -171,6 +171,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'reports.trial-balance',
             'reports.documents',
             'reports.result',
+
+            'org-charts.index',
+            'org-charts.create',
+            'org-charts.store',
+            'org-charts.show',
+            'org-charts.edit',
+            'org-charts.update',
+            'org-charts.destroy',
         ];
 
         foreach ($permissions as $permission) {

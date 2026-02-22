@@ -69,6 +69,9 @@
 <li class="dropdown dropdown-hover">
     <div tabindex="4" role="button">{{ __('Management') }}</div>
     <ul tabindex="4" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
+        @canany(['org-charts.index', 'org-charts.create', 'org-charts.edit'])
+            <li><a href="{{ route('org-charts.index') }}">{{ __('Organization Chart') }}</a></li>
+        @endcanany
         @canany(['subjects.index', 'subjects.create', 'subjects.edit'])
             <li><a href="{{ route('subjects.index') }}">{{ __('Subjects') }}</a></li>
         @endcanany
