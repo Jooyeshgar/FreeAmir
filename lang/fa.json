@@ -1008,5 +1008,16 @@
     "Contracts": "پیمان‌ها",
     "Optional phone number": "شماره تلفن (اختیاری)",
     "Optional address": "آدرس (اختیاری)",
-    "Search by name or code": "جستجو بر اساس نام یا کد"
+    "Search by name or code": "جستجو بر اساس نام یا کد",
+    "Public Holidays": "تعطیلات رسمی",
+    "Public Holiday": "تعطیل رسمی",
+    "Create Public Holiday": "ایجاد تعطیل رسمی",
+    "Add Public Holiday": "افزودن تعطیل رسمی",
+    "Edit Public Holiday": "ویرایش تعطیل رسمی",
+    "Public holiday created successfully.": "تعطیل رسمی با موفقیت ایجاد شد.",
+    "Public holiday updated successfully.": "تعطیل رسمی با موفقیت بروزرسانی شد.",
+    "Public holiday deleted successfully.": "تعطیل رسمی با موفقیت حذف شد.",
+    "No public holidays found.": "هیچ تعطیل رسمی‌ای یافت نشد.",
+    "Filter by name": "فیلتر بر اساس نام",
+    "e.g. Nowruz": "مثلاً نوروز"
 }
