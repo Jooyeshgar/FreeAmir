@@ -76,6 +76,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::resource('work-site-contracts', Controllers\WorkSiteContractController::class)->except(['show']);
         Route::resource('public-holidays', Controllers\PublicHolidayController::class)->except(['show']);
         Route::resource('payroll-elements', Controllers\PayrollElementController::class)->except(['show']);
+        Route::resource('salary-decrees', Controllers\SalaryDecreeController::class)->except(['show']);
     });
     Route::group(['prefix' => 'reports', 'as' => 'reports.'], function () {
         Route::get('ledger', [Controllers\ReportsController::class, 'ledger'])->name('ledger');

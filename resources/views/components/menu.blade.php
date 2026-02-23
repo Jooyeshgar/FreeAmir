@@ -87,7 +87,7 @@
         {{-- Salary --}}
         @canany(['salary.tax-slabs.index', 'salary.tax-slabs.create', 'salary.tax-slabs.edit', 'salary.work-sites.index', 'salary.work-sites.create',
             'salary.work-sites.edit', 'salary.public-holidays.index', 'salary.public-holidays.create', 'salary.public-holidays.edit', 'salary.payroll-elements.index',
-            'salary.payroll-elements.create', 'salary.payroll-elements.edit'])
+            'salary.payroll-elements.create', 'salary.payroll-elements.edit', 'salary.salary-decrees.index', 'salary.salary-decrees.create', 'salary.salary-decrees.edit'])
             <li>
                 <details>
                     <summary>{{ __('Salary') }}</summary>
@@ -106,6 +106,9 @@
                         @endcan
                         @can('salary.payroll-elements.index')
                             <li><a href="{{ route('payroll-elements.index') }}">{{ __('Payroll Elements') }}</a></li>
+                        @endcan
+                        @can('salary.salary-decrees.index')
+                            <li><a href="{{ route('salary-decrees.index') }}">{{ __('Salary Decrees') }}</a></li>
                         @endcan
                     </ul>
                 </details>
