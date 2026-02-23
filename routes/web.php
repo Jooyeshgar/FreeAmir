@@ -74,6 +74,8 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
 
     Route::group(['prefix' => 'attendance'], function () {
         Route::resource('attendance-logs', Controllers\AttendanceLogController::class)->except(['show']);
+        Route::post('monthly-attendances/{monthly_attendance}/recalculate', [Controllers\MonthlyAttendanceController::class, 'recalculate'])->name('monthly-attendances.recalculate');
+        Route::resource('monthly-attendances', Controllers\MonthlyAttendanceController::class);
     });
 
     Route::group(['prefix' => 'salary'], function () {

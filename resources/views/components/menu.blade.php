@@ -92,13 +92,17 @@
         @endcanany
 
         {{-- Attendance --}}
-        @canany(['attendance.attendance-logs.index', 'attendance.attendance-logs.create', 'attendance.attendance-logs.edit'])
+        @canany(['attendance.attendance-logs.index', 'attendance.attendance-logs.create', 'attendance.attendance-logs.edit', 'attendance.monthly-attendances.index',
+            'attendance.monthly-attendances.create', 'attendance.monthly-attendances.show'])
             <li>
                 <details>
                     <summary>{{ __('Attendance') }}</summary>
                     <ul>
                         @canany(['attendance.attendance-logs.index', 'attendance.attendance-logs.create', 'attendance.attendance-logs.edit'])
                             <li><a href="{{ route('attendance-logs.index') }}">{{ __('Attendance Logs') }}</a></li>
+                        @endcanany
+                        @canany(['attendance.monthly-attendances.index', 'attendance.monthly-attendances.create', 'attendance.monthly-attendances.show'])
+                            <li><a href="{{ route('monthly-attendances.index') }}">{{ __('Monthly Attendances') }}</a></li>
                         @endcanany
                     </ul>
                 </details>
