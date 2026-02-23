@@ -31,7 +31,7 @@
     </div>
 
     <div>
-        <x-select name="approved_by" id="approved_by" title="{{ __('Approved By') }}" :options="array_merge(['' => __('— None —')], $employees->mapWithKeys(fn($e) => [$e->id => $e->first_name . ' ' . $e->last_name])->toArray())" :selected="old('approved_by', $personnelRequest->approved_by ?? '')" />
+        <x-select name="approved_by" id="approved_by" title="{{ __('Approved By') }}" :options="['' => __('— None —')] + $employees->mapWithKeys(fn($e) => [$e->id => $e->first_name . ' ' . $e->last_name])->toArray()" :selected="old('approved_by', $personnelRequest->approved_by ?? '')" />
     </div>
 
     <div class="md:col-span-2">
