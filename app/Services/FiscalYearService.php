@@ -9,9 +9,12 @@ use App\Models\Company;
 use App\Models\Config;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\Document;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Subject;
+use App\Models\Transaction;
+use App\Models\User;
 use Cookie;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
@@ -240,13 +243,13 @@ class FiscalYearService
                 ->get()->toArray();
         }
         if (in_array('documents', $sections)) {
-            $sourceData['documents'] = \App\Models\Document::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+            $sourceData['documents'] = Document::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
 
             $documentIds = collect($sourceData['documents'])->pluck('id')->toArray();
             if (! empty($documentIds)) {
-                $sourceData['transactions'] = \App\Models\Transaction::whereIn('document_id', $documentIds)
+                $sourceData['transactions'] = Transaction::whereIn('document_id', $documentIds)
                     ->get()->toArray();
             } else {
                 $sourceData['transactions'] = [];
@@ -485,7 +488,7 @@ class FiscalYearService
     {
         $mapping = [];
         foreach ($documentsData as $docData) {
-            $newDoc = new \App\Models\Document;
+            $newDoc = new Document;
             $newDoc->fill(collect($docData)->except(['id'])->toArray());
             $newDoc->company_id = $targetYearId;
             $newDoc->save();
@@ -520,7 +523,7 @@ class FiscalYearService
                 continue;
             }
 
-            $newTrans = new \App\Models\Transaction;
+            $newTrans = new Transaction;
             $newTrans->fill(collect($transData)->except(['id'])->toArray());
             $newTrans->document_id = $documentMapping[$oldDocId];
             $newTrans->subject_id = $subjectMapping[$oldSubjectId];
@@ -528,5 +531,197 @@ class FiscalYearService
 
             $newTrans->save();
         }
+    }
+
+    protected static function validateClosingFiscalYear(Company $company): array
+    {
+        $errors = [];
+
+        $isCloseYear = $company->closed_at !== null;
+        if ($isCloseYear) {
+            $errors[] = __('Cannot close fiscal year because the year is not open.');
+        }
+
+        $draftDocsCount = Document::where('company_id', $company->id)->whereNull('approved_at')->count();
+        if ($draftDocsCount > 0) {
+            $errors[] = __('Cannot close fiscal year with draft documents. Please approve or delete all draft documents before closing the year.');
+        }
+
+        $unbalancedDocsCount = Document::where('company_id', $company->id)->has('transactions')
+            ->withSum('transactions', 'value')->having('transactions_sum_value', '!=', 0)->count();
+
+        if ($unbalancedDocsCount > 0) {
+            $errors[] = __('Cannot close fiscal year with unbalanced documents. Please ensure all documents are balanced before closing the year.');
+        }
+
+        return $errors;
+    }
+
+    protected static function balanceCurrentProfitAndLoss(Company $company, Document $document, User $user): void
+    {
+        $difference = (float) $document->transactions()->sum('value');
+
+        if ($difference != 0.0) {
+            $subject = Subject::where('company_id', $company->id)
+                ->where('name', __('Current Profit and Loss Summary'))->first();
+
+            if (! $subject) {
+                $subjectService = new SubjectService;
+                $subject = $subjectService->createSubject([
+                    'name' => __('Current Profit and Loss Summary'),
+                    'company_id' => $company->id,
+                ]);
+            }
+
+            $document->transactions()->create([
+                'subject_id' => $subject->id, // برای تراز حساب افتتاحیه
+                'value' => -1 * $difference,
+                'user_id' => $user->id,
+            ]);
+        }
+    }
+
+    protected static function createOpeningDocument(Company $company, Document $closeDocument, User $user): void
+    {
+        // سند افتتاحیه: دقیقا برعکس سند اختتامیه (سند خلاصه سود و ضرر جاری + حسابهای دائمی)
+        $documentData = [
+            'number' => 1,
+            'date' => now(),
+            'title' => __('Year Opening Document'),
+            'creator_id' => $user->id,
+            'company_id' => $company->id,
+        ];
+
+        $transactions = $closeDocument->transactions()->get()->map(function ($transaction) use ($user) {
+            return [
+                'subject_id' => $transaction->subject_id,
+                'value' => -1 * $transaction->value,
+                'user_id' => $user->id,
+            ];
+        })->toArray();
+
+        DocumentService::createDocument($user, $documentData, $transactions);
+    }
+
+    protected static function createClosingDocument(Company $company, Document $currentPL, Document $accumulatedPL, User $user): Document
+    {
+        // سند اختتامیه: سند خلاصه سود و ضرر جاری + حسابهای دائمی
+        $documentData = [
+            'number' => Document::where('company_id', $company->id)->max('number') + 1,
+            'date' => now(),
+            'title' => __('Year Closing Document'),
+            'creator_id' => $user->id,
+            'company_id' => $company->id,
+        ];
+
+        $transactions = Transaction::query()->whereIn('document_id', [$currentPL->id, $accumulatedPL->id])
+            ->selectRaw('subject_id, SUM(value) as value, ? as user_id', [$user->id]) // `subject_id`, `value` and `user_id` for transactions are needed
+            ->groupBy('subject_id')->get()->toArray();
+
+        return DocumentService::createDocument($user, $documentData, $transactions);
+    }
+
+    protected static function newFiscalYear(Company $company, User $user): Company
+    {
+        $newFiscalYearData = collect($company->getAttributes())->except(['id', 'closed_at', 'fiscal_year'])
+            ->merge(['fiscal_year' => $company->fiscal_year + 1])->toArray();
+
+        $sectionsToCopy = ['subjects', 'configs', 'banks', 'customers', 'products'];
+
+        $newFiscalYear = self::createWithCopiedData($newFiscalYearData, $company->id, $sectionsToCopy);
+        $newFiscalYear->users()->attach($user->id);
+
+        return $newFiscalYear;
+    }
+
+    public static function closeFiscalYear(Company $company, User $user): array
+    {
+        $newFiscalYear = null;
+        $validationErrors = [];
+
+        DB::transaction(function () use ($company, &$newFiscalYear, &$validationErrors, $user) {
+            $validationErrors = self::validateClosingFiscalYear($company);
+
+            if (! empty($validationErrors)) {
+                return;
+            }
+
+            // خلاصه سود و ضرر جاری
+            $currentProfitAndLoss = self::currentProfitAndLoss($company, $user);
+
+            // خلاصه سود و زیان
+            $accumulatedProfitAndLoss = self::accumulatedProfitAndLoss($company, $user);
+
+            // در صورت وجود مانده در موارد سند خلاصه سود و ضرر جاری، این مانده به حساب خلاصه سود و زیان منتقل میشود (برای تراز شدن).
+            self::balanceCurrentProfitAndLoss($company, $currentProfitAndLoss, $user);
+
+            $closeDocument = self::createClosingDocument($company, $currentProfitAndLoss, $accumulatedProfitAndLoss, $user);
+
+            $newFiscalYear = self::newFiscalYear($company, $user);
+
+            self::createOpeningDocument($newFiscalYear, $closeDocument, $user);
+
+            $company->closed_at = now();
+            $company->closed_by = $user->id;
+            $company->save();
+        });
+
+        return [$newFiscalYear, $validationErrors];
+    }
+
+    protected static function accumulatedProfitAndLoss(Company $company, User $user): Document
+    {
+        // حسابهای دائمی: تمامی حسابهای دارایی، بدهی و سرمایه بسته نمیشوند و مانده آنها به سال بعد منتقل میشود. در صورت وجود مانده، این مانده به حساب تراز افتتاحیه منتقل میشود.
+        $documentData = [
+            'number' => Document::where('company_id', $company->id)->max('number') + 1,
+            'date' => now(),
+            'title' => __('Accumulated Profit and Loss'),
+            'creator_id' => $user->id,
+            'company_id' => $company->id,
+        ];
+
+        $transactions = Transaction::query()
+            ->whereHas('document', fn ($document) => $document->where('company_id', $company->id))
+            ->whereHas('subject', fn ($subject) => $subject->where('company_id', $company->id)->where('is_permanent', true))
+            ->selectRaw('subject_id, SUM(value) as value')->groupBy('subject_id')
+            ->havingRaw('SUM(value) != 0') // حذف مانده‌های صفر
+            ->get()
+            ->map(fn ($transaction) => [
+                'subject_id' => $transaction->subject_id,
+                'value' => $transaction->value,
+                'user_id' => $user->id,
+            ])->all();
+
+        return DocumentService::createDocument($user, $documentData, $transactions);
+    }
+
+    protected static function currentProfitAndLoss(Company $company, User $user): Document
+    {
+        // حسابهای موقت: تمامی درآمد ها به عنوان سود و تمامی هزینه ها به عنوان زیان در نظر گرفته میشوند و بسته میشوند. در نتیجه مانده این حسابها صفر میشود.
+        // both نوعی از حساب است که هم میتواند درآمد باشد و هم هزینه. برای همین در هر دو دسته قرار میگیرد و مانده آن به هر دو حساب خلاصه سود و زیان جاری و تراز افتتاحیه منتقل میشود.
+        $documentData = [
+            'number' => Document::where('company_id', $company->id)->max('number') + 1,
+            'date' => now(),
+            'title' => __('Current Profit and Loss Summary'),
+            'creator_id' => $user->id,
+            'company_id' => $company->id,
+        ];
+
+        $temporarySubjects = Subject::where('company_id', $company->id)
+            ->where('is_permanent', false)->pluck('id')->toArray();
+
+        $transactions = Transaction::query()
+            ->whereHas('document', fn ($document) => $document->where('company_id', $company->id))
+            ->whereIn('subject_id', $temporarySubjects)
+            ->selectRaw('subject_id, SUM(value) as value')->groupBy('subject_id')
+            ->havingRaw('SUM(value) != 0') // حذف مانده‌های صفر
+            ->get()
+            ->map(fn ($transaction) => [
+                'subject_id' => $transaction->subject_id,
+                'value' => $transaction->value,
+                'user_id' => $user->id,
+            ])->all();
+
+        return DocumentService::createDocument($user, $documentData, $transactions);
     }
 }

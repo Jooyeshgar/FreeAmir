@@ -12,7 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('companies', function (Blueprint $table) {
-            $table->date('close_at')->nullable();
+            $table->date('closed_at')->nullable();
+            $table->unsignedBigInteger('closed_by')->nullable();
+
+            $table->foreign('closed_by')->references('id')->on('users')->onDelete('set null');
         });
     }
 
@@ -22,7 +25,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('companies', function (Blueprint $table) {
-            $table->dropColumn('close_at');
+            $table->dropForeign(['closed_by']);
+            $table->dropColumn('closed_at');
+            $table->dropColumn('closed_by');
         });
     }
 };
