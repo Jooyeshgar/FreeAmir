@@ -71,13 +71,16 @@
     <ul tabindex="4" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
 
         {{-- HR & Organization --}}
-        @canany(['org-charts.index', 'org-charts.create', 'org-charts.edit'])
+        @canany(['org-charts.index', 'org-charts.create', 'org-charts.edit', 'hr.personnel-requests.index', 'hr.personnel-requests.create', 'hr.personnel-requests.edit'])
             <li>
                 <details>
                     <summary>{{ __('HR & Organization') }}</summary>
                     <ul>
                         @canany(['org-charts.index', 'org-charts.create', 'org-charts.edit'])
                             <li><a href="{{ route('org-charts.index') }}">{{ __('Organization Chart') }}</a></li>
+                        @endcanany
+                        @canany(['hr.personnel-requests.index', 'hr.personnel-requests.create', 'hr.personnel-requests.edit'])
+                            <li><a href="{{ route('personnel-requests.index') }}">{{ __('Personnel Requests') }}</a></li>
                         @endcanany
                     </ul>
                 </details>
