@@ -168,4 +168,21 @@ class CompanyController extends Controller
 
         return redirect()->route('home');
     }
+
+    public function closeFiscalYear(Company $company, Request $request): RedirectResponse
+    {
+        if (! $company->users->contains($request->user()->id)) {
+            abort(403);
+        }
+
+        [$newFiscalYear, $validationErrors] = FiscalYearService::closeFiscalYear($company, $request->user());
+
+        if (! $newFiscalYear && ! empty($validationErrors)) {
+            return redirect()->back()->withErrors(implode(' ', $validationErrors));
+        }
+
+        $this->setActiveCompany($newFiscalYear);
+
+        return redirect()->route('companies.index')->with('success', __('Fiscal year closed successfully.'));
+    }
 }

@@ -28,6 +28,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::resource('customers', Controllers\CustomerController::class);
     Route::resource('customer-groups', Controllers\CustomerGroupController::class);
     Route::resource('companies', Controllers\CompanyController::class);
+    Route::post('companies/close-fiscal-year/{company}', [Controllers\CompanyController::class, 'closeFiscalYear'])->name('companies.close-fiscal-year');
     Route::get('bank-accounts/search-bank', [Controllers\BankAccountController::class, 'searchBank'])->name('bank-accounts.search-bank');
     Route::resource('bank-accounts', Controllers\BankAccountController::class);
     Route::resource('banks', Controllers\BankController::class);
