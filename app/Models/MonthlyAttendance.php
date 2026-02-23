@@ -13,19 +13,19 @@ class MonthlyAttendance extends Model
     use HasFactory;
 
     protected $fillable = [
+        'company_id',
         'employee_id',
         'year',
         'month',
         'work_days',
         'present_days',
         'absent_days',
-        'overtime_hours',
+        'overtime',
         'mission_days',
         'paid_leave_days',
         'unpaid_leave_days',
-        'sick_leave_days',
-        'friday_hours',
-        'holiday_hours',
+        'friday',
+        'holiday',
     ];
 
     protected $casts = [
@@ -34,13 +34,20 @@ class MonthlyAttendance extends Model
         'work_days' => 'integer',
         'present_days' => 'integer',
         'absent_days' => 'integer',
-        'overtime_hours' => 'decimal:2',
+        'overtime' => 'integer',
         'mission_days' => 'integer',
         'paid_leave_days' => 'integer',
         'unpaid_leave_days' => 'integer',
-        'sick_leave_days' => 'integer',
-        'friday_hours' => 'decimal:2',
-        'holiday_hours' => 'decimal:2',
+        'friday' => 'integer',
+        'holiday' => 'integer',
+    ];
+
+    /** Jalali month names indexed 1–12 */
+    public const MONTH_NAMES = [
+        1 => 'فروردین', 2 => 'اردیبهشت', 3 => 'خرداد',
+        4 => 'تیر', 5 => 'مرداد', 6 => 'شهریور',
+        7 => 'مهر', 8 => 'آبان', 9 => 'آذر',
+        10 => 'دی', 11 => 'بهمن', 12 => 'اسفند',
     ];
 
     public static function booted(): void
@@ -56,5 +63,11 @@ class MonthlyAttendance extends Model
     public function logs(): HasMany
     {
         return $this->hasMany(AttendanceLog::class, 'monthly_attendance_id');
+    }
+
+    /** Human-readable Jalali month label */
+    public function getMonthNameAttribute(): string
+    {
+        return self::MONTH_NAMES[$this->month] ?? (string) $this->month;
     }
 }
