@@ -2,6 +2,13 @@
 
 namespace App\Models;
 
+use App\Enums\EmployeeDutyStatus;
+use App\Enums\EmployeeEducationLevel;
+use App\Enums\EmployeeEmploymentType;
+use App\Enums\EmployeeGender;
+use App\Enums\EmployeeInsuranceType;
+use App\Enums\EmployeeMaritalStatus;
+use App\Enums\EmployeeNationality;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -43,6 +50,7 @@ class Employee extends Model
         'work_site_id',
         'contract_framework_id',
         'is_active',
+        'company_id',
     ];
 
     protected $casts = [
@@ -51,6 +59,13 @@ class Employee extends Model
         'contract_end_date' => 'date',
         'is_active' => 'boolean',
         'children_count' => 'integer',
+        'nationality' => EmployeeNationality::class,
+        'gender' => EmployeeGender::class,
+        'marital_status' => EmployeeMaritalStatus::class,
+        'duty_status' => EmployeeDutyStatus::class,
+        'insurance_type' => EmployeeInsuranceType::class,
+        'education_level' => EmployeeEducationLevel::class,
+        'employment_type' => EmployeeEmploymentType::class,
     ];
 
     public static function booted(): void
@@ -68,9 +83,9 @@ class Employee extends Model
         return $this->belongsTo(WorkSite::class, 'work_site_id');
     }
 
-    public function contractFramework(): BelongsTo
+    public function workSiteContract(): BelongsTo
     {
-        return $this->belongsTo(ContractFramework::class, 'contract_framework_id');
+        return $this->belongsTo(WorkSiteContract::class, 'work_site_contract_id');
     }
 
     public function salaryDecrees(): HasMany

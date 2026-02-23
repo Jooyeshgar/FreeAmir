@@ -63,6 +63,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::resource('configs', Controllers\ConfigController::class);
     });
 
+    Route::resource('employees', Controllers\EmployeeController::class);
     Route::resource('org-charts', Controllers\OrgChartController::class);
     Route::resource('personnel-requests', Controllers\PersonnelRequestController::class);
 
