@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\PersonnelRequestType;
+use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +14,7 @@ class PersonnelRequest extends Model
 
     protected $fillable = [
         'employee_id',
+        'company_id',
         'request_type',
         'start_date',
         'end_date',
@@ -26,6 +29,7 @@ class PersonnelRequest extends Model
         'start_date' => 'datetime',
         'end_date' => 'datetime',
         'duration_minutes' => 'integer',
+        'request_type' => PersonnelRequestType::class,
     ];
 
     public static function booted(): void
