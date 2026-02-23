@@ -101,6 +101,9 @@
         @canany(['management.roles.index', 'management.roles.create', 'management.roles.edit'])
             <li><a href="{{ route('roles.index') }}">{{ __('Roles') }}</a></li>
         @endcanany
+        @canany(['documents.index', 'documents.create', 'documents.edit'])
+            <li><a href="{{ route('documents.sort-numbers') }}">{{ __('Sort Documents Number') }}</a></li>
+        @endcan
         @canany(['management.configs.index', 'management.configs.create', 'management.configs.edit'])
             <li><a href="{{ route('configs.index') }}">{{ __('Configs') }}</a></li>
         @endcanany

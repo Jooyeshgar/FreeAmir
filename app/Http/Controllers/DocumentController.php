@@ -6,13 +6,15 @@ use App\Http\Requests\StoreTransactionRequest;
 use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
+use App\Services\DocumentNumberService;
 use App\Services\DocumentService;
 use App\Services\SubjectService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class DocumentController extends Controller
 {
-    public function __construct() {}
+    public function __construct(private readonly DocumentNumberService $documentNumberService) {}
 
     public function index()
     {
@@ -91,6 +93,50 @@ class DocumentController extends Controller
     public function print(Document $document)
     {
         return view('documents.print', compact('document'));
+    }
+
+    public function sortNumbers(Request $request)
+    {
+        return view('documents.sort-numbers', [
+            'statistics' => $this->documentNumberService->sortStats(),
+            'progress' => $this->documentNumberService->getProgress($request->user()->id),
+        ]);
+    }
+
+    public function startSorting(Request $request)
+    {
+        $stats = $this->documentNumberService->sortStats();
+
+        if ((int) ($stats['unused_document_numbers_count'] ?? 0) === 0) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => __('No unused document number found to sort.')]);
+            }
+
+            return redirect()->route('documents.sort-numbers')->with('error', __('No unused document number found to sort.'));
+        }
+
+        $progress = $this->documentNumberService->initializeSorting($request->user()->id);
+
+        if ($request->expectsJson()) {
+            return response()->json($progress);
+        }
+
+        return redirect()->route('documents.sort-numbers')->with('success', __('Sorting process started successfully.'));
+    }
+
+    public function processSorting(Request $request)
+    {
+        $progress = $this->documentNumberService->processNextSortingBatch($request->user()->id);
+
+        if ($request->expectsJson()) {
+            return response()->json($progress);
+        }
+
+        if (($progress['status'] ?? '') === 'completed') {
+            return redirect()->route('documents.sort-numbers')->with('success', __('Sorting process completed successfully.'));
+        }
+
+        return redirect()->route('documents.sort-numbers');
     }
 
     public function edit($id)
