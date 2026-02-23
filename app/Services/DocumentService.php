@@ -202,4 +202,15 @@ class DocumentService
             Document::where('id', $documentId)->delete();
         });
     }
+
+    public static function changeDocumentStatus(Document $document, User $user): void
+    {
+        DB::transaction(function () use ($document, $user) {
+            if ($document->approved_at) {
+                self::unapproveDocument($user, $document);
+            } else {
+                self::approveDocument($user, $document);
+            }
+        });
+    }
 }

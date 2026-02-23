@@ -42,6 +42,9 @@
                         <th class="p-2">{{ __('Title') }}</th>
                         <th class="p-2 w-40">{{ __('Sum') }}</th>
                         <th class="p-2 w-40">{{ __('Date') }}</th>
+                        <th class="p-2 w-40">{{ __('Linked To') }}</th>
+                        <th class="p-2 w-40">{{ __('Approved at') }}</th>
+                        <th class="p-2 w-40">{{ __('Approver') }}</th>
                         <th class="p-2 w-60">{{ __('Action') }}</th>
                     </tr>
                 </thead>
@@ -67,6 +70,38 @@
                             </td>
 
                             <td class="p-2">
+                                @php
+                                    $documentableRoute = match (true) {
+                                        $document->documentable instanceof \App\Models\Invoice => [
+                                            'name' => 'invoices.show',
+                                            'params' => $document->documentable,
+                                        ],
+                                        $document->documentable instanceof \App\Models\AncillaryCost => [
+                                            'name' => 'invoices.ancillary-costs.show',
+                                            'params' => [
+                                                $document->documentable->invoice_id ?? $document->documentable->invoice?->id,
+                                                $document->documentable,
+                                            ],
+                                        ],
+                                        default => null,
+                                    };
+                                @endphp
+                                @if ($document->documentable && $documentableRoute)
+                                    <a href="{{ route($documentableRoute['name'], $documentableRoute['params']) }}" class="link link-hover"> 
+                                        {{ __(class_basename($document->documentable_type)) }} {{ $document->documentable->number }}
+                                    </a>
+                                @endif
+                            </td>
+
+                            <td class="p-2">
+                                {{ formatDate($document->approved_at) }}
+                            </td>
+
+                            <td class="p-2">
+                                {{ $document->approver?->name }}
+                            </td>
+                            
+                            <td class="p-2">
                                 <div class="flex gap-2">
                                     <a href="{{ route('documents.show', $document->id) }}" class="btn btn-sm btn-info btn-square" title="{{ __('View') }}">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -90,6 +125,24 @@
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                        </a>
+                                    @endif
+
+                                    @if ($document->approved_at)
+                                        <span class="tooltip" data-tip="{{ __('Cannot change status of an approved document.') }}">
+                                            <button class="btn btn-sm btn-outline btn-square btn-disabled cursor-not-allowed" disabled
+                                                title="{{ __('Cannot change status of an approved document.') }}">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                            </button>
+                                        </span>
+                                    @else
+                                        <a href="{{ route('documents.change-status', $document->id) }}" class="btn btn-sm btn-outline btn-square" title="{{ __('Change Status') }}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
                                         </a>
                                     @endif
