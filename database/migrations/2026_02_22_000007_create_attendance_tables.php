@@ -20,18 +20,15 @@ return new class extends Migration
             $table->tinyInteger('work_days')->unsigned()->default(30);
             $table->tinyInteger('present_days')->unsigned()->default(0);
             $table->tinyInteger('absent_days')->unsigned()->default(0);
-            $table->decimal('overtime_hours', 5, 2)->default(0.00);
+            $table->unsignedSmallInteger('overtime')->default(0);
             $table->tinyInteger('mission_days')->unsigned()->default(0);
             $table->tinyInteger('paid_leave_days')->unsigned()->default(0);
             $table->tinyInteger('unpaid_leave_days')->unsigned()->default(0);
-            $table->tinyInteger('sick_leave_days')->unsigned()->default(0);
-            $table->decimal('friday_hours', 5, 2)->default(0.00)->comment('Friday overtime hours');
-            $table->decimal('holiday_hours', 5, 2)->default(0.00)->comment('Holiday work hours');
+            $table->unsignedSmallInteger('friday')->default(0);
+            $table->unsignedSmallInteger('holiday')->default(0);
             $table->timestamps();
-
             $table->unique(['employee_id', 'year', 'month'], 'uq_monthly_attendance');
             $table->index(['year', 'month'], 'idx_ma_year_month');
-
             $table->foreign('employee_id')
                 ->references('id')->on('employees')
                 ->cascadeOnDelete();
@@ -45,17 +42,22 @@ return new class extends Migration
             $table->date('log_date');
             $table->time('entry_time')->nullable();
             $table->time('exit_time')->nullable();
-            $table->enum('log_type', ['normal', 'contract_overtime', 'mission'])->default('normal');
+            $table->unsignedSmallInteger('worked')->default(0);
+            $table->unsignedSmallInteger('delay')->default(0);
+            $table->unsignedSmallInteger('early_leave')->default(0);
+            $table->unsignedSmallInteger('overtime')->default(0);
+            $table->unsignedSmallInteger('mission')->default(0);
+            $table->unsignedSmallInteger('paid_leave')->default(0);
+            $table->unsignedSmallInteger('unpaid_leave')->default(0);
+            $table->boolean('is_friday')->default(false);
+            $table->boolean('is_holiday')->default(false);
             $table->boolean('is_manual')->default(false)->comment('Manually corrected by operator');
             $table->text('description')->nullable();
             $table->timestamps();
-
             $table->index('log_date', 'idx_logs_date');
-
             $table->foreign('employee_id')
                 ->references('id')->on('employees')
                 ->cascadeOnDelete();
-
             $table->foreign('monthly_attendance_id')
                 ->references('id')->on('monthly_attendances')
                 ->nullOnDelete();

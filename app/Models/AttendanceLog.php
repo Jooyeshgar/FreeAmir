@@ -13,6 +13,7 @@ class AttendanceLog extends Model
 
     protected $fillable = [
         'employee_id',
+        'company_id',
         'monthly_attendance_id',
         'log_date',
         'entry_time',

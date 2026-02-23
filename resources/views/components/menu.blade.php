@@ -91,6 +91,20 @@
             </li>
         @endcanany
 
+        {{-- Attendance --}}
+        @canany(['attendance.attendance-logs.index', 'attendance.attendance-logs.create', 'attendance.attendance-logs.edit'])
+            <li>
+                <details>
+                    <summary>{{ __('Attendance') }}</summary>
+                    <ul>
+                        @canany(['attendance.attendance-logs.index', 'attendance.attendance-logs.create', 'attendance.attendance-logs.edit'])
+                            <li><a href="{{ route('attendance-logs.index') }}">{{ __('Attendance Logs') }}</a></li>
+                        @endcanany
+                    </ul>
+                </details>
+            </li>
+        @endcanany
+
         {{-- Salary --}}
         @canany(['salary.tax-slabs.index', 'salary.tax-slabs.create', 'salary.tax-slabs.edit', 'salary.work-sites.index', 'salary.work-sites.create',
             'salary.work-sites.edit', 'salary.public-holidays.index', 'salary.public-holidays.create', 'salary.public-holidays.edit', 'salary.payroll-elements.index',

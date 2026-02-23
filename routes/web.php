@@ -67,6 +67,10 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::resource('org-charts', Controllers\OrgChartController::class);
     Route::resource('personnel-requests', Controllers\PersonnelRequestController::class);
 
+    Route::group(['prefix' => 'attendance'], function () {
+        Route::resource('attendance-logs', Controllers\AttendanceLogController::class)->except(['show']);
+    });
+
     Route::group(['prefix' => 'salary'], function () {
         Route::resource('tax-slabs', Controllers\TaxSlabController::class);
         Route::resource('work-sites', Controllers\WorkSiteController::class)->except(['show']);
