@@ -32,6 +32,7 @@ class Invoice extends Model
         'vat',
         'amount',
         'title',
+        'returned_invoice_id',
     ];
 
     protected $casts = [
@@ -73,5 +74,22 @@ class Invoice extends Model
     public function ancillaryCosts()
     {
         return $this->hasMany(AncillaryCost::class, 'invoice_id');
+    }
+
+    public function returnedInvoice()
+    {
+        return $this->belongsTo(Invoice::class, 'returned_invoice_id');
+    }
+
+    // Return invoice for the current returned invoice (If it is returned). e.g. sell -> return sell
+    public function getReturnInvoice()
+    {
+        return Invoice::where('returned_invoice_id', $this->id)->first();
+    }
+
+    // Returned invoice for the current return invoice. e.g. return sell -> sell
+    public function getReturnedInvoice()
+    {
+        return Invoice::find($this->returned_invoice_id);
     }
 }

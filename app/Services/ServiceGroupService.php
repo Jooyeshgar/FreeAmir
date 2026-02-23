@@ -38,11 +38,12 @@ class ServiceGroupService
     {
         $serviceGroup->subject?->delete();
         $serviceGroup->cogsSubject?->delete();
+        $serviceGroup->salesReturnsSubject?->delete();
     }
 
     protected function syncSubjects(ServiceGroup $serviceGroup): void
     {
-        $serviceGroup->loadMissing('subject', 'cogsSubject');
+        $serviceGroup->loadMissing('subject', 'cogsSubject', 'salesReturnsSubject');
 
         $companyId = $serviceGroup->company_id ?? getActiveCompany();
 
@@ -54,6 +55,10 @@ class ServiceGroupService
             'cogs_subject_id' => [
                 'relation' => 'cogsSubject',
                 'config_key' => 'amir.cogs_service',
+            ],
+            'sales_returns_subject_id' => [
+                'relation' => 'salesReturnsSubject',
+                'config_key' => 'amir.sales_returns',
             ],
         ];
 

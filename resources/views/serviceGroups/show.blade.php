@@ -28,14 +28,20 @@
             <div class="grid grid-cols-3 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-3">
                 <x-stat-card :title="__('VAT')" :value="formatNumber($serviceGroup->vat) . '%'" type="base" icon="vat" />
                 <x-stat-card :title="__('Services Count')" :value="formatNumber($serviceGroup->services->count()) ?? '-'" type="base" icon="services" />
+            </div>
 
-                @can('reports.ledger')
+            @can('reports.ledger')
+                <div class="grid grid-cols-3 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-3">
                     <x-stat-card-link :title="__('Subject Balance')" :value="formatNumber(\App\Services\SubjectService::sumSubject($serviceGroup->subject) ?? 0)" :link="route('transactions.index', ['subject_id' => $serviceGroup->subject->id])" :currency="config('amir.currency') ?? __('Rial')" type="success"
                         icon="income" />
-                    <x-stat-card-link :title="__('COGS Subject')" :value="formatNumber(\App\Services\SubjectService::sumSubject($serviceGroup->cogsSubject) ?? 0)" :link="route('transactions.index', ['subject_id' => $serviceGroup->cogsSubject->id])" :currency="config('amir.currency') ?? __('Rial')" type="error"
-                        icon="cogs" />
-                @endcan
-            </div>
+                    <x-stat-card-link :title="__('COGS Subject')" :value="formatNumber(\App\Services\SubjectService::sumSubject($serviceGroup->cogsSubject) ?? 0)" :link="route('transactions.index', ['subject_id' => $serviceGroup->cogsSubject->id])" :currency="config('amir.currency') ?? __('Rial')"
+                        type="error" icon="cogs" />
+                    <x-stat-card-link :title="__('Sales Returns Subject')" :value="formatNumber(
+                        \App\Services\SubjectService::sumSubject($serviceGroup->salesReturnsSubject) ?? 0,
+                    )" :link="route('transactions.index', ['subject_id' => $serviceGroup->salesReturnsSubject->id])" :currency="config('amir.currency') ?? __('Rial')"
+                        type="warning" icon="returns" />
+                </div>
+            @endcan
 
             <div class="card-actions justify-between mt-8">
                 <a href="{{ route('service-groups.index') }}" class="btn btn-ghost gap-2">

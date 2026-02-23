@@ -44,9 +44,14 @@
                         <div class="stat-desc">{{ __('Tax Rate') }}</div>
                     </div>
                 </div>
+            </div>
+
+            <div class="divider text-lg font-semibold">{{ __('Account Subjects') }}</div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 @can('reports.ledger')
                     <x-stat-card-link :title="__('Income Subject')" :value="formatNumber(\App\Services\SubjectService::sumSubject($service->subject))" :link="route('transactions.index', ['subject_id' => $service->subject->id])" :currency="config('amir.currency') ?? __('Rial')" type="success" icon="income" />
                     <x-stat-card-link :title="__('Cost of Services Subject')" :value="formatNumber(\App\Services\SubjectService::sumSubject($service->cogsSubject))" :link="route('transactions.index', ['subject_id' => $service->cogsSubject->id])" :currency="config('amir.currency') ?? __('Rial')" type="error" icon="cogs" />
+                    <x-stat-card-link :title="__('Sales Returns Subject')" :value="formatNumber(\App\Services\SubjectService::sumSubject($service->salesReturnsSubject))" :link="route('transactions.index', ['subject_id' => $service->salesReturnsSubject->id])" :currency="config('amir.currency') ?? __('Rial')" type="warning" icon="returns" />
                 @endcan
             </div>
 

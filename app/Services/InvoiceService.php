@@ -191,7 +191,7 @@ class InvoiceService
 
     public static function syncCOGAfterForInvoiceItems(Invoice $invoice)
     {
-        if ($invoice->invoice_type !== InvoiceType::BUY) {
+        if (! in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::SELL])) {
             return;
         }
 
@@ -236,6 +236,7 @@ class InvoiceService
             'invoice_type' => $invoiceData['invoice_type'],
             'number' => isset($invoiceData['number']) ? (int) $invoiceData['number'] : null,
             'customer_id' => $invoiceData['customer_id'],
+            'returned_invoice_id' => $invoiceData['returned_invoice_id'] ?? null,
             'document_number' => $invoiceData['document_number'],
             'description' => $invoiceData['description'] ?? null,
             'subtraction' => floatval($invoiceData['subtraction'] ?? 0),
@@ -277,7 +278,7 @@ class InvoiceService
             $invoiceItemData = [
                 'invoice_id' => $invoice->id,
                 'quantity' => $quantity,
-                'cog_after' => $product->average_cost ?? $unitPrice,                                            // must be updated after creating invoice
+                'cog_after' => $product?->average_cost ?? $unitPrice,                                            // must be updated after creating invoice
                 'quantity_at' => $product ? ($product->quantity > $quantity ? $product->quantity - $quantity : 0) : 0,         // quantity before this invoice
                 'unit_price' => $unitPrice,
                 'unit_discount' => $unitDiscount,
@@ -287,6 +288,15 @@ class InvoiceService
                 'itemable_type' => $itemableType,
                 'itemable_id' => $itemableId,
             ];
+
+            if (in_array($invoice->invoice_type, [InvoiceType::RETURN_SELL, InvoiceType::RETURN_BUY]) && $invoice->returned_invoice_id) {
+                $originalItem = InvoiceItem::where('invoice_id', $invoice->returned_invoice_id)
+                    ->where('itemable_type', $itemableType)->where('itemable_id', $itemableId)->first();
+
+                if ($originalItem) {
+                    $invoiceItemData['cog_after'] = $originalItem->cog_after;
+                }
+            }
 
             $invoiceItem = InvoiceItem::updateOrCreate([
                 'invoice_id' => $invoice->id,
@@ -490,6 +500,11 @@ class InvoiceService
         if (! empty($invoiceTypes)) {
             $query->whereIn('invoice_type', $invoiceTypes);
         }
+
+        if (in_array($invoice->invoice_type, [InvoiceType::RETURN_BUY, InvoiceType::RETURN_SELL], true) && $invoice->returned_invoice_id) {
+            $query->where('id', '!=', $invoice->returned_invoice_id);
+        }
+
         $query->whereHas('items', fn ($q) => $q->where('itemable_type', Product::class)
             ->whereIn('itemable_id', $productIds)
         )
@@ -534,7 +549,9 @@ class InvoiceService
     {
         $decision = new InvoiceStatusDecision;
 
-        if ($invoice->invoice_type === InvoiceType::SELL && $nextStatus->isApproved()) {
+        self::checkReturnInvoiceRelationForStatusChange($invoice, $nextStatus, $decision);
+
+        if (in_array($invoice->invoice_type, [InvoiceType::SELL, InvoiceType::RETURN_BUY], true) && $nextStatus->isApproved()) {
             self::checkProductsQuantityForStatusChange($invoice, $productIds, $decision);
         }
 
@@ -562,6 +579,47 @@ class InvoiceService
         }
 
         return $decision;
+    }
+
+    private static function checkReturnInvoiceRelationForStatusChange(Invoice $invoice, InvoiceStatus $nextStatus, InvoiceStatusDecision $decision): void
+    {
+        if (in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::SELL], true) && $nextStatus->isUnapproved()) {
+            $returnInvoice = $invoice->getReturnInvoice();
+            if ($returnInvoice) {
+                $decision->addMessage('error', __('invoices.status_change.blocked_by_return_invoice', [
+                    'invoice' => $returnInvoice->number,
+                ]));
+                $decision->addConflict($returnInvoice);
+            }
+
+            return;
+        }
+
+        if (! in_array($invoice->invoice_type, [InvoiceType::RETURN_BUY, InvoiceType::RETURN_SELL], true)) {
+            return;
+        }
+
+        $originalInvoice = $invoice->getReturnedInvoice();
+        if (! $originalInvoice) {
+            return;
+        }
+
+        $originalDateIsAfterReturnDate = $originalInvoice->date !== null && $invoice->date !== null
+            ? strtotime((string) $originalInvoice->date) > strtotime((string) $invoice->date) : false;
+
+        if ($originalDateIsAfterReturnDate) {
+            $decision->addMessage('error', __('Original invoice (:invoice) date is after return invoice date. Return invoice cannot be before its original invoice.', [
+                'invoice' => $originalInvoice->number,
+            ]));
+            $decision->addConflict($originalInvoice);
+
+            return;
+        }
+
+        $decision->addMessage('warning', __('Return invoice is linked to original invoice (:invoice).', [
+            'invoice' => $originalInvoice->number,
+        ]));
+        $decision->addConflict($originalInvoice);
     }
 
     public static function getChangeStatusDecision(Invoice $invoice, $nextStatus): InvoiceStatusDecision
@@ -594,7 +652,7 @@ class InvoiceService
             return [];
         }
 
-        $query = Invoice::where('invoice_type', InvoiceType::SELL)
+        $query = Invoice::whereIn('invoice_type', [InvoiceType::SELL, InvoiceType::RETURN_BUY])
             ->where('status', '!=', InvoiceStatus::APPROVED)
             ->where(function ($q) use ($date, $invoiceNumber) {
                 $q->where('date', '<', $date)
@@ -785,6 +843,7 @@ class InvoiceService
             'date' => $validated['date'],
             'invoice_type' => InvoiceType::from($validated['invoice_type']),
             'customer_id' => $validated['customer_id'],
+            'returned_invoice_id' => $validated['returned_invoice_id'] ?? null,
             'document_number' => $validated['document_number'],
             'number' => $validated['invoice_number'],
             'subtraction' => $validated['subtractions'] ?? 0,

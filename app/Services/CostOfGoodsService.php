@@ -28,7 +28,7 @@ class CostOfGoodsService
      */
     public static function updateProductsAverageCost(Invoice $invoice)
     {
-        if ($invoice->invoice_type !== InvoiceType::BUY) {
+        if (! in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL])) {
             return;
         }
 
@@ -98,8 +98,8 @@ class CostOfGoodsService
 
     private static function sumQuantityApprovedPreviousInvoices(Invoice $invoice, InvoiceItem $invoiceItem): float
     {
-        $buildQuery = function (InvoiceType $invoiceType) use ($invoice, $invoiceItem) {
-            return Invoice::where('invoice_type', $invoiceType)
+        $buildQuery = function (array $invoiceTypes) use ($invoice, $invoiceItem) {
+            return Invoice::whereIn('invoice_type', $invoiceTypes)
                 ->where('status', InvoiceStatus::APPROVED)
                 ->where(function ($q) use ($invoice) {
                     $q->where('date', '<', $invoice->date)
@@ -119,10 +119,10 @@ class CostOfGoodsService
                 ->sum('quantity');
         };
 
-        $totalBoughtQuantity = (float) $buildQuery(InvoiceType::BUY);
-        $totalSoldQuantity = (float) $buildQuery(InvoiceType::SELL);
+            $totalIncomingQuantity = (float) $buildQuery([InvoiceType::BUY, InvoiceType::RETURN_SELL]);
+            $totalOutgoingQuantity = (float) $buildQuery([InvoiceType::SELL, InvoiceType::RETURN_BUY]);
 
-        return $totalBoughtQuantity - $totalSoldQuantity;
+            return $totalIncomingQuantity - $totalOutgoingQuantity;
     }
 
     private static function sumApprovedAncillaryCostsForProduct($ancillaryCosts, int $productId): float
@@ -172,7 +172,7 @@ class CostOfGoodsService
      */
     public static function refreshProductCOGAfterItemsDeletion(Invoice $invoice, ?array $excludeItemIds = null): void
     {
-        if ($invoice->invoice_type !== InvoiceType::BUY) {
+        if (! in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL])) {
             return;
         }
 
@@ -226,19 +226,17 @@ class CostOfGoodsService
 
     private static function getPreviousInvoice(Invoice $invoice, $productId)
     {
+        $allowedInvoiceTypes = match ($invoice->invoice_type) {
+            InvoiceType::BUY => [InvoiceType::BUY, InvoiceType::RETURN_SELL],
+            InvoiceType::RETURN_SELL => [InvoiceType::RETURN_SELL, InvoiceType::BUY],
+            InvoiceType::SELL => [InvoiceType::SELL, InvoiceType::RETURN_BUY],
+            InvoiceType::RETURN_BUY => [InvoiceType::RETURN_BUY, InvoiceType::SELL],
+            default => [],
+        };
+
         return Invoice::where('number', '<', $invoice->number)
             ->where('status', InvoiceStatus::APPROVED)
-            ->where('invoice_type', $invoice->invoice_type)
-            ->whereHas('items', fn ($query) => $query->where('itemable_id', $productId)
-                                                                            && $query->where('itemable_type', Product::class))
-            ->orderByDesc('number')->first();
-    }
-
-    private static function getNextInvoice(Invoice $invoice, $productId)
-    {
-        return Invoice::where('number', '>', $invoice->number)
-            ->where('status', InvoiceStatus::APPROVED)
-            ->where('invoice_type', $invoice->invoice_type)
+            ->whereIn('invoice_type', $allowedInvoiceTypes)
             ->whereHas('items', fn ($query) => $query->where('itemable_id', $productId)
                                                                             && $query->where('itemable_type', Product::class))
             ->orderByDesc('number')->first();

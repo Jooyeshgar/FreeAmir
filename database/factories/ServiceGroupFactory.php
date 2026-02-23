@@ -24,6 +24,7 @@ class ServiceGroupFactory extends Factory
             $companyId = $group->company_id;
             $subjectParent = Subject::withoutGlobalScopes()->find(config('amir.sales_revenue'));
             $cogsParent = Subject::withoutGlobalScopes()->find(config('amir.cogs_service'));
+            $salesReturnsParent = Subject::withoutGlobalScopes()->find(config('amir.sales_returns'));
 
             $subject = Subject::factory()
                 ->state([
@@ -41,9 +42,18 @@ class ServiceGroupFactory extends Factory
                 ->withParent($cogsParent)
                 ->create();
 
+            $salesReturnsSubject = Subject::factory()
+                ->state([
+                    'name' => $group->name,
+                    'company_id' => $companyId,
+                ])
+                ->withParent($salesReturnsParent)
+                ->create();
+
             $group->updateQuietly([
                 'subject_id' => $subject->id,
                 'cogs_subject_id' => $cogsSubject->id,
+                'sales_returns_subject_id' => $salesReturnsSubject->id,
             ]);
         });
     }

@@ -29,7 +29,7 @@ class ServiceController extends Controller
             });
         }
 
-        $services = $query->with('serviceGroup', 'cogsSubject')->paginate(12);
+        $services = $query->with('serviceGroup', 'cogsSubject', 'salesReturnsSubject')->paginate(12);
 
         return view('services.index', compact('services'));
     }
@@ -52,7 +52,7 @@ class ServiceController extends Controller
 
     public function show(Service $service)
     {
-        $service->load('serviceGroup', 'subject', 'cogsSubject');
+        $service->load('serviceGroup', 'subject', 'cogsSubject', 'salesReturnsSubject');
 
         return view('services.show', compact('service'));
     }

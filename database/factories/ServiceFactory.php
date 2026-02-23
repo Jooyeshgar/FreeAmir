@@ -43,6 +43,7 @@ class ServiceFactory extends Factory
             $group = ServiceGroup::withoutGlobalScopes()->find($service->group);
             $subjectParent = Subject::withoutGlobalScopes()->find($group?->subject_id);
             $cogsParent = Subject::withoutGlobalScopes()->find($group?->cogs_subject_id);
+            $salesReturnsParent = Subject::withoutGlobalScopes()->find($group?->sales_returns_subject_id);
 
             $subject = Subject::factory()
                 ->withParent($subjectParent)
@@ -58,9 +59,17 @@ class ServiceFactory extends Factory
                     'company_id' => $service->company_id,
                 ]);
 
+            $salesReturnsSubject = Subject::factory()
+                ->withParent($salesReturnsParent)
+                ->create([
+                    'name' => $service->name,
+                    'company_id' => $service->company_id,
+                ]);
+
             $service->updateQuietly([
                 'subject_id' => $subject->id,
                 'cogs_subject_id' => $cogsSubject->id,
+                'sales_returns_subject_id' => $salesReturnsSubject->id,
             ]);
         });
     }

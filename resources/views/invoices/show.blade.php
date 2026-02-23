@@ -227,6 +227,252 @@
                 </div>
             </div>
 
+            @if (in_array($invoice->invoice_type, [App\Enums\InvoiceType::BUY, App\Enums\InvoiceType::SELL]))
+                <!-- Returned Invoice Information -->
+                <div class="divider text-lg font-semibold">{{ __('Invoice') }} {{ __('Return from') }} {{ $invoice->invoice_type->label() }}</div>
+                @if ($invoice->getReturnInvoice())
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                        <div class="card bg-base-200 shadow-sm">
+                            <div class="card-body p-4">
+                                <h3 class="card-title text-sm font-medium text-gray-500">{{ __('Returned Invoice') }}</h3>
+                                <p class="text-lg font-semibold text-gray-800">
+                                    <a href="{{ route('invoices.show', $invoice->getReturnInvoice()) }}" class="link link-hover link-primary">
+                                        {{ $invoice->getReturnInvoice()?->title }} ({{ $invoice->getReturnInvoice()?->invoice_type->label() }} #{{ formatDocumentNumber($invoice->getReturnInvoice()?->number ?? $invoice->getReturnInvoice()?->id) }})
+                                    </a>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="stats shadow bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60">
+                            <div class="stat">
+                                <div class="stat-title text-blue-500">{{ __('Subtotal') }}
+                                    ({{ config('amir.currency') ?? __('Rial') }})</div>
+                                <div class="stat-value text-blue-600 text-3xl">
+                                    {{ formatNumber($invoice->getReturnInvoice()?->items->reduce(fn($carry, $item) => $carry + ($item->quantity ?? 0) * ($item->unit_price ?? 0), 0)) }}
+                                </div>
+                                <div class="stat-desc text-blue-400">{{ __('Before discounts and tax') }}</div>
+                            </div>
+                        </div>
+
+                        <div class="stats shadow bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200/60">
+                            <div class="stat">
+                                <div class="stat-title text-amber-500">{{ __('Discounts') }}
+                                    ({{ config('amir.currency') ?? __('Rial') }})</div>
+                                <div class="stat-value text-amber-600 text-3xl">
+                                    {{ formatNumber($invoice->getReturnInvoice()?->items->reduce(fn($carry, $item) => $carry + ($item->unit_discount ?? 0), 0)) }}
+                                </div>
+                                <div class="stat-desc text-amber-400">{{ __('Total deductions') }}</div>
+                            </div>
+                        </div>
+
+                        <div class="stats shadow bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/60">
+                            <div class="stat">
+                                <div class="stat-title text-emerald-500">{{ __('VAT') }}
+                                    ({{ config('amir.currency') ?? __('Rial') }})</div>
+                                <div class="stat-value text-emerald-600 text-3xl">
+                                    {{ formatNumber($invoice->getReturnInvoice()?->items->reduce(fn($carry, $item) => $carry + ($item->vat ?? 0), 0)) }}
+                                </div>
+                                <div class="stat-desc text-emerald-400">{{ __('Collected tax') }}</div>
+                            </div>
+                        </div>
+
+                        <div class="stats shadow bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/60">
+                            <div class="stat">
+                                <div class="stat-title text-indigo-500">{{ __('Grand total') }}
+                                    ({{ config('amir.currency') ?? __('Rial') }})</div>
+                                <div class="stat-value text-indigo-600 text-3xl">
+                                    {{ formatNumber(($invoice->getReturnInvoice()?->amount ?? 0) - ($invoice->getReturnInvoice()?->subtraction ?? 0)) }}</div>
+                                <div class="stat-desc text-indigo-400">{{ __('Payable amount') }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {{-- <div class="divider text-sm font-semibold font-medium">{{ __('Returned Items') }}</div> --}}
+                    <div class="overflow-x-auto shadow-lg rounded-lg">
+                        <table class="table table-zebra w-full">
+                            <thead class="bg-base-300">
+                                <tr>
+                                    <th class="px-4 py-3">#</th>
+                                    <th class="px-4 py-3 text-right">
+                                        @if ($invoice->invoice_type == App\Enums\InvoiceType::BUY)
+                                            @if ($isServiceBuy) {{ __('Service') }} @endif
+                                            {{ __('Product') }}
+                                        @else
+                                            {{ __('Product/Service') }}
+                                        @endif
+                                    </th>
+                                    <th class="px-4 py-3 text-right">{{ __('Description') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ __('Quantity') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ __('Unit price') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ __('Discount') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ __('VAT') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ __('Total') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($invoice->getReturnInvoice()?->items as $index => $item)
+                                    <tr class="hover">
+                                        <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
+                                        <td class="px-4 py-3">
+                                            @if ($item->itemable)
+                                                <a href="{{ route($item->itemable instanceof App\Models\Product ? 'products.show' : 'services.show', $item->itemable) }}"
+                                                    class="link link-hover link-primary">
+                                                    {{ $item->itemable->name }}
+                                                </a>
+                                            @else
+                                                <span class="text-gray-500">{{ __('Removed product/service') }}</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-4 py-3">{{ $item->description }}</td>
+                                        <td class="px-4 py-3 text-right">{{ formatNumber($item->quantity ?? 0) }}</td>
+                                        <td class="px-4 py-3 text-right">{{ formatNumber($item->unit_price ?? 0) }}</td>
+                                        <td class="px-4 py-3 text-right">{{ formatNumber($item->unit_discount ?? 0) }}</td>
+                                        <td class="px-4 py-3 text-right">{{ formatNumber($item->vat ?? 0) }}</td>
+                                        <td class="px-4 py-3 text-right">{{ formatNumber(($item->quantity ?? 0) * ($item->unit_price ?? 0) - ($item->unit_discount ?? 0) + ($item->vat ?? 0)) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="8" class="px-4 py-6 text-center text-gray-500">
+                                            {{ __('There are no items on this return invoice yet.') }}
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                            <tfoot class="bg-base-300">
+                                <tr>
+                                    <td colspan="8" class="px-4 py-3 text-right text-sm text-gray-600">
+                                        {{ __('Total items: :count', ['count' => convertToFarsi($invoice->getReturnInvoice()?->items->count() ?? 0)]) }}
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                @else
+                    <div class="alert bg-base-200 shadow-sm">
+                        <span>{{ __('This invoice does not returned yet.') }}</span>
+                    </div>
+                @endif
+            @endif
+
+            @if (in_array($invoice->invoice_type, [App\Enums\InvoiceType::RETURN_BUY, App\Enums\InvoiceType::RETURN_SELL]))
+                <div class="divider text-lg font-semibold">{{ __('Invoice') }} {{$invoice->getReturnedInvoice()?->invoice_type->label() }}</div>
+                @if ($invoice->getReturnedInvoice())
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                        <div class="card bg-base-200 shadow-sm">
+                            <div class="card-body p-4">
+                                <h3 class="card-title text-sm font-medium text-gray-500">{{ __('Title') }} {{ __('Invoice') }}</h3>
+                                <p class="text-lg font-semibold text-gray-800">
+                                    <a href="{{ route('invoices.show', $invoice->getReturnedInvoice()) }}" class="link link-hover link-primary">
+                                        {{ $invoice->getReturnedInvoice()?->title }} ({{ $invoice->getReturnedInvoice()?->invoice_type->label() }} #{{ formatDocumentNumber($invoice->getReturnedInvoice()?->number ?? $invoice->getReturnedInvoice()?->id) }})
+                                    </a>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="stats shadow bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60">
+                            <div class="stat">
+                                <div class="stat-title text-blue-500">{{ __('Subtotal') }}
+                                    ({{ config('amir.currency') ?? __('Rial') }})</div>
+                                <div class="stat-value text-blue-600 text-3xl">
+                                    {{ formatNumber($invoice->getReturnedInvoice()?->items->reduce(fn($carry, $item) => $carry + ($item->quantity ?? 0) * ($item->unit_price ?? 0), 0)) }}
+                                </div>
+                                <div class="stat-desc text-blue-400">{{ __('Before discounts and tax') }}</div>
+                            </div>
+                        </div>
+
+                        <div class="stats shadow bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200/60">
+                            <div class="stat">
+                                <div class="stat-title text-amber-500">{{ __('Discounts') }}
+                                    ({{ config('amir.currency') ?? __('Rial') }})</div>
+                                <div class="stat-value text-amber-600 text-3xl">
+                                    {{ formatNumber($invoice->getReturnedInvoice()?->items->reduce(fn($carry, $item) => $carry + ($item->unit_discount ?? 0), 0)) }}
+                                </div>
+                                <div class="stat-desc text-amber-400">{{ __('Total deductions') }}</div>
+                            </div>
+                        </div>
+
+                        <div class="stats shadow bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/60">
+                            <div class="stat">
+                                <div class="stat-title text-emerald-500">{{ __('VAT') }}
+                                    ({{ config('amir.currency') ?? __('Rial') }})</div>
+                                <div class="stat-value text-emerald-600 text-3xl">
+                                    {{ formatNumber($invoice->getReturnedInvoice()?->items->reduce(fn($carry, $item) => $carry + ($item->vat ?? 0), 0)) }}
+                                </div>
+                                <div class="stat-desc text-emerald-400">{{ __('Collected tax') }}</div>
+                            </div>
+                        </div>
+
+                        <div class="stats shadow bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/60">
+                            <div class="stat">
+                                <div class="stat-title text-indigo-500">{{ __('Grand total') }}
+                                    ({{ config('amir.currency') ?? __('Rial') }})</div>
+                                <div class="stat-value text-indigo-600 text-3xl">
+                                    {{ formatNumber(($invoice->getReturnedInvoice()?->amount ?? 0) - ($invoice->getReturnedInvoice()?->subtraction ?? 0)) }}</div>
+                                <div class="stat-desc text-indigo-400">{{ __('Payable amount') }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {{-- <div class="divider text-sm font-semibold"> {{ __('Items') }} {{ __('Invoice') }} {{ $invoice->getReturnedInvoice()?->invoice_type->label() }}</div> --}}
+                    <div class="overflow-x-auto shadow-lg rounded-lg">
+                        <table class="table table-zebra w-full">
+                            <thead class="bg-base-300">
+                                <tr>
+                                    <th class="px-4 py-3">#</th>
+                                    <th class="px-4 py-3 text-right">
+                                        {{ $invoice->invoice_type == App\Enums\InvoiceType::BUY ? __('Product') : __('Product/Service') }}
+                                    </th>
+                                    <th class="px-4 py-3 text-right">{{ __('Description') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ __('Quantity') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ __('Unit price') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ __('Discount') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ __('VAT') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ __('Total') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($invoice->getReturnedInvoice()?->items as $index => $item)
+                                    <tr class="hover">
+                                        <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
+                                        <td class="px-4 py-3">
+                                            @if ($item->itemable)
+                                                <a href="{{ route($item->itemable instanceof App\Models\Product ? 'products.show' : 'services.show', $item->itemable) }}"
+                                                    class="link link-hover link-primary">
+                                                    {{ $item->itemable->name }}
+                                                </a>
+                                            @else
+                                                <span class="text-gray-500">{{ __('Removed product/service') }}</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-4 py-3">{{ $item->description }}</td>
+                                        <td class="px-4 py-3 text-right">{{ formatNumber($item->quantity ?? 0) }}</td>
+                                        <td class="px-4 py-3 text-right">{{ formatNumber($item->unit_price ?? 0) }}</td>
+                                        <td class="px-4 py-3 text-right">{{ formatNumber($item->unit_discount ?? 0) }}</td>
+                                        <td class="px-4 py-3 text-right">{{ formatNumber($item->vat ?? 0) }}</td>
+                                        <td class="px-4 py-3 text-right">{{ formatNumber(($item->quantity ?? 0) * ($item->unit_price ?? 0) - ($item->unit_discount ?? 0) + ($item->vat ?? 0)) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="8" class="px-4 py-6 text-center text-gray-500">
+                                            {{ __('There are no items on this return invoice yet.') }}
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                            <tfoot class="bg-base-300">
+                                <tr>
+                                    <td colspan="8" class="px-4 py-3 text-right text-sm text-gray-600">
+                                        {{ __('Total items: :count', ['count' => convertToFarsi($invoice->getReturnedInvoice()?->items->count() ?? 0)]) }}
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                @else
+                    <div class="alert bg-base-200 shadow-sm">
+                        <span>{{ __('This invoice has not any returned invoices.') }}</span>
+                    </div>
+                @endif
+            @endif
+
             @if ($invoice->invoice_type === App\Enums\InvoiceType::BUY)
                 <div>
                     <div class="divider text-lg font-semibold">{{ __('Ancillary Costs') }}</div>
@@ -378,7 +624,8 @@
 
                 <div class="flex flex-wrap gap-2">
                     @php
-                        $canApprove = $invoice->status->isReadyToApprove() || $invoice->status->isUnapproved() || $invoice->status->isApprovedInactive();
+                        $isSellWorkflow = $invoice->invoice_type === App\Enums\InvoiceType::SELL;
+                        $canApprove = ($isSellWorkflow ? false : $invoice->status->isPending()) || $invoice->status->isReadyToApprove() || $invoice->status->isUnapproved() || $invoice->status->isApprovedInactive();
                         $canUnapprove = $invoice->status->isApproved();
                         $canChangeStatus = $canApprove || $canUnapprove;
                     @endphp
@@ -393,14 +640,14 @@
                     </a>
 
                     @can('invoices.approve')
-                        @if ($invoice->status->isPreInvoice() || $invoice->status->isRejected())
+                        @if ($isSellWorkflow && ($invoice->status->isPreInvoice() || $invoice->status->isRejected()))
                             <a href="{{ route('invoices.change-status', [$invoice, 'ready_to_approve']) }}"
                                 class="btn btn-success gap-2">
                                 {{ __('Ready to approve') }}
                             </a>
                         @endif
 
-                        @if ($invoice->status->isPreInvoice())
+                        @if ($isSellWorkflow && $invoice->status->isPreInvoice())
                             <a href="{{ route('invoices.change-status', [$invoice, 'rejected']) }}"
                                 class="btn btn-error gap-2">
                                 {{ __('Reject') }}
@@ -416,10 +663,10 @@
                                 </a>
                             @else
                                 <a x-data="{}"
-                                    @if ($canApprove && $changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js('Did you read the warnings?'))) { window.location.href = '{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}?confirm=1' }" @endif
-                                    data-tip="{{ $changeStatusValidation->toText() ?? '' }}"
+                                    @if ($changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js($changeStatusValidation->toText()))) { window.location.href = '{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}?confirm=1' }" @endif
+                                    data-tip="{{ $changeStatusValidation->toText() }}"
                                     href="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}"
-                                    class="btn btn-primary gap-2 {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
+                                    class="btn btn-primary gap-2 inline-flex tooltip {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
                                     {{ $canUnapprove ? __('Unapprove') : __('Approve') }}
                                 </a>
                             @endif
