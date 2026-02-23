@@ -98,8 +98,8 @@ class CostOfGoodsService
 
     private static function sumQuantityApprovedPreviousInvoices(Invoice $invoice, InvoiceItem $invoiceItem): float
     {
-        $buildQuery = function (InvoiceType $invoiceType) use ($invoice, $invoiceItem) {
-            return Invoice::where('invoice_type', $invoiceType)
+        $buildQuery = function (array $invoiceTypes) use ($invoice, $invoiceItem) {
+            return Invoice::whereIn('invoice_type', $invoiceTypes)
                 ->where('status', InvoiceStatus::APPROVED)
                 ->where(function ($q) use ($invoice) {
                     $q->where('date', '<', $invoice->date)
@@ -119,10 +119,10 @@ class CostOfGoodsService
                 ->sum('quantity');
         };
 
-        $totalBoughtQuantity = (float) $buildQuery(InvoiceType::BUY);
-        $totalSoldQuantity = (float) $buildQuery(InvoiceType::SELL);
+            $totalIncomingQuantity = (float) $buildQuery([InvoiceType::BUY, InvoiceType::RETURN_SELL]);
+            $totalOutgoingQuantity = (float) $buildQuery([InvoiceType::SELL, InvoiceType::RETURN_BUY]);
 
-        return $totalBoughtQuantity - $totalSoldQuantity;
+            return $totalIncomingQuantity - $totalOutgoingQuantity;
     }
 
     private static function sumApprovedAncillaryCostsForProduct($ancillaryCosts, int $productId): float
