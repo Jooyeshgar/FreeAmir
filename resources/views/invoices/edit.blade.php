@@ -34,6 +34,9 @@
                     @break
 
                     @case('return_buy')
+                        @if ($isReturnServiceBuy)
+                            @php($isServiceBuy = true)
+                        @endif
                         @include('invoices.forms.return_buy')
                     @break
 
