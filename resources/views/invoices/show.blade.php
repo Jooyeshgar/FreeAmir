@@ -287,7 +287,7 @@
                             </div>
                         </div>
                     </div>
-                    {{-- <div class="divider text-sm font-semibold font-medium">{{ __('Returned Items') }}</div> --}}
+                    <div class="divider text-sm font-semibold font-medium">{{ __('Returned Items') }}</div>
                     <div class="overflow-x-auto shadow-lg rounded-lg">
                         <table class="table table-zebra w-full">
                             <thead class="bg-base-300">
@@ -351,19 +351,19 @@
                     <div class="alert bg-base-200 shadow-sm">
                         <span>{{ __('This invoice does not returned yet.') }}</span>
                     </div>
-                @endif
-                @if (! in_array($invoice->invoice_type, [App\Enums\InvoiceType::RETURN_BUY, App\Enums\InvoiceType::RETURN_SELL]))
-                    <div class="flex mt-2">
-                        @if ($invoice->invoice_type === App\Enums\InvoiceType::BUY)
-                            <a href="{{ route('invoices.create', ['invoice_type' => 'return_buy', 'returned_invoice_id' => $invoice->id]) }}" class="btn btn-primary">
-                                {{ __('Create return buy invoice') }}
-                            </a>
-                        @elseif ($invoice->invoice_type === App\Enums\InvoiceType::SELL)
-                            <a href="{{ route('invoices.create', ['invoice_type' => 'return_sell', 'returned_invoice_id' => $invoice->id]) }}" class="btn btn-primary">
-                                {{ __('Create return sell invoice') }}
-                            </a>
-                        @endif
-                    </div>
+                    @if (! in_array($invoice->invoice_type, [App\Enums\InvoiceType::RETURN_BUY, App\Enums\InvoiceType::RETURN_SELL]))
+                        <div class="mt-2 tooltip" data-tip="{{ $invoice->status->isApproved() ? '' : __('Only approved invoices can be returned.') }}">
+                            @if ($invoice->invoice_type === App\Enums\InvoiceType::BUY)
+                                <a href="{{ route('invoices.create', ['invoice_type' => 'return_buy', 'returned_invoice_id' => $invoice->id, 'service_buy' => $isServiceBuy ? '1' : null]) }}" class="btn btn-primary {{ $invoice->status->isApproved() ? '' : 'btn-disabled'}}">
+                                    {{ __('Create return buy invoice') }}
+                                </a>
+                            @elseif ($invoice->invoice_type === App\Enums\InvoiceType::SELL)
+                                <a href="{{ route('invoices.create', ['invoice_type' => 'return_sell', 'returned_invoice_id' => $invoice->id]) }}" class="btn btn-primary {{ $invoice->status->isApproved() ? '' : 'btn-disabled' }}">
+                                    {{ __('Create return sell invoice') }}
+                                </a>
+                            @endif
+                        </div>
+                    @endif
                 @endif
             @endif
 

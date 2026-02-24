@@ -128,10 +128,12 @@
                             $quantityTitle = request('service_buy') == '1' ? __('Bought Services Quantity') : __('Bought Products Quantity');
                         } elseif ($invoiceType === 'sell') {
                             $quantityTitle = __('Sold Products Quantity');
-                        }elseif ($invoiceType === 'return_buy') {
+                        }elseif ($invoiceType === 'return_buy' && ! request('service_buy') == '1') {
                             $quantityTitle = __('Returned Bought Products Quantity');
                         }elseif ($invoiceType === 'return_sell') {
                             $quantityTitle = __('Returned Sold Products Quantity');
+                        }elseif ($invoiceType === 'return_buy' && request('service_buy') == '1') {
+                            $quantityTitle = __('Returned Sold Services Quantity');
                         }
                     @endphp
                     <a href="{{ $url }}"
@@ -139,7 +141,11 @@
                         <x-stat-card :title="$status->label()" :value="convertToFarsi($count)" :type="$type" />
                     </a>
                 @endforeach
-                <x-stat-card :title="$quantityTitle" :value="formatNumber($invoices->totalProductsQuantity)" />
+                @if(request('service_buy') == '1')
+                    <x-stat-card :title="$quantityTitle" :value="formatNumber($invoices->totalServicesQuantity)" />
+                @else
+                    <x-stat-card :title="$quantityTitle" :value="formatNumber($invoices->totalProductsQuantity)" />
+                @endif
                 <x-stat-card :title="__('Invoices Amount')" :value="formatNumber($invoices->totalAmount)" />
             </div>
 
