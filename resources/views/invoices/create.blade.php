@@ -10,7 +10,12 @@
             @csrf
             <div class="card-body">
                 <h2 class="card-title">
-                    {{ __('Add') . ' ' . ($isServiceBuy ? __('Service Buy Invoice') : __($invoice_type)) }}</h2>
+                    @if ($isReturnServiceBuy)
+                        {{ __('Add') . ' ' . __('Return Service Buy Invoice') }}
+                    @else
+                        {{ __('Add') . ' ' . ($isServiceBuy ? __('Service Buy Invoice') : __($invoice_type)) }}
+                    @endif
+                </h2>
                 <x-show-message-bags />
 
                 @php($invoice = $invoice ?? new \App\Models\Invoice())

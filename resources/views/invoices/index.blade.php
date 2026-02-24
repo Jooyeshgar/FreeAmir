@@ -24,9 +24,15 @@
                         {{ __('Create sell invoice') }}
                     </a>
                 @elseif (request('invoice_type') === 'return_buy')
-                    <a href="{{ route('invoices.create', ['invoice_type' => 'return_buy']) }}" class="btn btn-primary">
-                        {{ __('Create return buy invoice') }}
-                    </a>
+                    @if ($service_buy)
+                        <a href="{{ route('invoices.create', ['invoice_type' => 'return_buy', 'service_buy' => '1']) }}" class="btn btn-primary">
+                            {{ __('Create return service buy invoice') }}
+                        </a>
+                    @else
+                        <a href="{{ route('invoices.create', ['invoice_type' => 'return_buy']) }}" class="btn btn-primary">
+                            {{ __('Create return buy invoice') }}
+                        </a>
+                    @endif
                 @elseif (request('invoice_type') === 'return_sell')
                     <a href="{{ route('invoices.create', ['invoice_type' => 'return_sell']) }}" class="btn btn-primary">
                         {{ __('Create return sell invoice') }}
