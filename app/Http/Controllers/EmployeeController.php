@@ -13,6 +13,7 @@ use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Models\Employee;
 use App\Models\OrgChart;
+use App\Models\WorkShift;
 use App\Models\WorkSite;
 use App\Models\WorkSiteContract;
 use Illuminate\Http\RedirectResponse;
@@ -51,9 +52,10 @@ class EmployeeController extends Controller
         $workSites = WorkSite::orderBy('name')->get(['id', 'name']);
         $orgCharts = OrgChart::orderBy('title')->get(['id', 'title']);
         $workSiteContracts = WorkSiteContract::orderBy('name')->get(['id', 'name']);
+        $workShifts = WorkShift::orderBy('name')->get(['id', 'name']);
 
         return view('employees.create', array_merge(
-            compact('workSites', 'orgCharts', 'workSiteContracts'),
+            compact('workSites', 'orgCharts', 'workSiteContracts', 'workShifts'),
             self::enumOptions()
         ));
     }
@@ -71,7 +73,7 @@ class EmployeeController extends Controller
 
     public function show(Employee $employee): View
     {
-        $employee->load(['workSite', 'orgChart', 'workSiteContract']);
+        $employee->load(['workSite', 'orgChart', 'workSiteContract', 'workShift']);
 
         return view('employees.show', compact('employee'));
     }
@@ -81,9 +83,10 @@ class EmployeeController extends Controller
         $workSites = WorkSite::orderBy('name')->get(['id', 'name']);
         $orgCharts = OrgChart::orderBy('title')->get(['id', 'title']);
         $workSiteContracts = WorkSiteContract::orderBy('name')->get(['id', 'name']);
+        $workShifts = WorkShift::orderBy('name')->get(['id', 'name']);
 
         return view('employees.edit', array_merge(
-            compact('employee', 'workSites', 'orgCharts', 'workSiteContracts'),
+            compact('employee', 'workSites', 'orgCharts', 'workSiteContracts', 'workShifts'),
             self::enumOptions()
         ));
     }

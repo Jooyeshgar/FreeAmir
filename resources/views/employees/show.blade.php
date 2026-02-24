@@ -45,6 +45,15 @@
                 <div><span class="font-medium">{{ __('Duty Status') }}:</span> {{ $employee->duty_status?->label() ?? '—' }}</div>
             </div>
 
+            {{-- Organization --}}
+            <div class="divider text-sm font-semibold">{{ __('Organization') }}</div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                <div><span class="font-medium">{{ __('Work Site') }}:</span> {{ $employee->workSite?->name ?? '—' }}</div>
+                <div><span class="font-medium">{{ __('Org Chart Position') }}:</span> {{ $employee->orgChart?->title ?? '—' }}</div>
+                <div><span class="font-medium">{{ __('Contract Framework') }}:</span> {{ $employee->workSiteContract?->name ?? '—' }}</div>
+                <div><span class="font-medium">{{ __('Work Shift') }}:</span> {{ $employee->workShift?->name ?? '—' }}</div>
+            </div>
+
             {{-- Contact --}}
             <div class="divider text-sm font-semibold">{{ __('Contact') }}</div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
@@ -81,14 +90,6 @@
                 <div><span class="font-medium">{{ __('Employment Type') }}:</span> {{ $employee->employment_type?->label() ?? '—' }}</div>
                 <div><span class="font-medium">{{ __('Contract Start Date') }}:</span> {{ $employee->contract_start_date?->format('Y-m-d') ?? '—' }}</div>
                 <div><span class="font-medium">{{ __('Contract End Date') }}:</span> {{ $employee->contract_end_date?->format('Y-m-d') ?? '—' }}</div>
-            </div>
-
-            {{-- Organization --}}
-            <div class="divider text-sm font-semibold">{{ __('Organization') }}</div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                <div><span class="font-medium">{{ __('Work Site') }}:</span> {{ $employee->workSite?->name ?? '—' }}</div>
-                <div><span class="font-medium">{{ __('Org Chart Position') }}:</span> {{ $employee->orgChart?->title ?? '—' }}</div>
-                <div><span class="font-medium">{{ __('Contract Framework') }}:</span> {{ $employee->workSiteContract?->name ?? '—' }}</div>
             </div>
 
         </div>
