@@ -18,7 +18,7 @@ class DocumentController extends Controller
 
     public function index()
     {
-        $query = Document::orderByDesc('date');
+        $query = Document::orderByDesc('date')->orderByDesc('number');
 
         if (request()->has('number') && request('number')) {
             $query->where('number', convertToFloat(request('number')));
