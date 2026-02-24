@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WorkShift extends Model
 {
@@ -33,5 +34,10 @@ class WorkShift extends Model
     public static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope);
+    }
+
+    public function employees(): HasMany
+    {
+        return $this->hasMany(Employee::class, 'work_shift_id');
     }
 }
