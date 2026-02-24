@@ -93,7 +93,8 @@
 
         {{-- Attendance --}}
         @canany(['attendance.attendance-logs.index', 'attendance.attendance-logs.create', 'attendance.attendance-logs.edit', 'attendance.monthly-attendances.index',
-            'attendance.monthly-attendances.create', 'attendance.monthly-attendances.show'])
+            'attendance.monthly-attendances.create', 'attendance.monthly-attendances.show', 'attendance.work-shifts.index', 'attendance.work-shifts.create',
+            'attendance.work-shifts.edit'])
             <li>
                 <details>
                     <summary>{{ __('Attendance') }}</summary>
@@ -103,6 +104,9 @@
                         @endcanany
                         @canany(['attendance.monthly-attendances.index', 'attendance.monthly-attendances.create', 'attendance.monthly-attendances.show'])
                             <li><a href="{{ route('monthly-attendances.index') }}">{{ __('Monthly Attendances') }}</a></li>
+                        @endcanany
+                        @canany(['attendance.work-shifts.index', 'attendance.work-shifts.create', 'attendance.work-shifts.edit'])
+                            <li><a href="{{ route('work-shifts.index') }}">{{ __('Work Shifts') }}</a></li>
                         @endcanany
                     </ul>
                 </details>
