@@ -183,9 +183,22 @@ class InvoiceController extends Controller
 
         $invoice_type = in_array($request->invoice_type, ['buy', 'sell', 'return_buy', 'return_sell']) ? $request->invoice_type : 'sell';
         $isReturnInvoice = in_array($invoice_type, ['return_buy', 'return_sell'], true);
+        $prefilledReturnedInvoiceId = null;
+        $lockReturnedInvoiceSelection = false;
+
+        if ($isReturnInvoice && $request->filled('returned_invoice_id')) {
+            $requestedReturnedInvoiceId = (int) $request->returned_invoice_id;
+            $isValidReturnInvoice = collect($returnInvoices)->contains(fn ($returnInvoice) => (int) ($returnInvoice['id'] ?? 0) === $requestedReturnedInvoiceId);
+
+            if ($isValidReturnInvoice) {
+                $prefilledReturnedInvoiceId = $requestedReturnedInvoiceId;
+                $lockReturnedInvoiceSelection = true;
+            }
+        }
+
         $previousInvoiceNumber = floor(Invoice::where('invoice_type', $invoice_type)->max('number') ?? 0);
 
-        return view('invoices.create', compact('returnInvoices', 'products', 'services', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type', 'isServiceBuy', 'isReturnInvoice'));
+        return view('invoices.create', compact('returnInvoices', 'products', 'services', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type', 'isServiceBuy', 'isReturnInvoice', 'prefilledReturnedInvoiceId', 'lockReturnedInvoiceSelection'));
     }
 
     /**

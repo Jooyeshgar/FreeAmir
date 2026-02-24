@@ -14,7 +14,30 @@
                 <x-show-message-bags />
 
                 @php($invoice = $invoice ?? new \App\Models\Invoice())
-                @include('invoices.form')
+                @switch($invoice_type)
+                    @case('sell')
+                        @include('invoices.forms.sell')
+                    @break
+
+                    @case('buy')
+                        @if ($isServiceBuy)
+                            @include('invoices.forms.buy_service')
+                        @else
+                            @include('invoices.forms.buy')
+                        @endif
+                    @break
+
+                    @case('return_sell')
+                        @include('invoices.forms.return_sell')
+                    @break
+
+                    @case('return_buy')
+                        @include('invoices.forms.return_buy')
+                    @break
+
+                    @default
+                        <p>{{ __('Invalid invoice type') }}</p>
+                @endswitch
             </div>
         </form>
     </div>
