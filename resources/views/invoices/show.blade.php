@@ -229,6 +229,7 @@
 
             @if (in_array($invoice->invoice_type, [App\Enums\InvoiceType::BUY, App\Enums\InvoiceType::SELL]))
                 <!-- Returned Invoice Information -->
+            <div>
                 <div class="divider text-lg font-semibold">{{ __('Invoice') }} {{ __('Return from') }} {{ $invoice->invoice_type->label() }}</div>
                 @if ($invoice->getReturnInvoice())
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -351,6 +352,19 @@
                         <span>{{ __('This invoice does not returned yet.') }}</span>
                     </div>
                 @endif
+                @if (! in_array($invoice->invoice_type, [App\Enums\InvoiceType::RETURN_BUY, App\Enums\InvoiceType::RETURN_SELL]))
+                    <div class="flex mt-2">
+                        @if ($invoice->invoice_type === App\Enums\InvoiceType::BUY)
+                            <a href="{{ route('invoices.create', ['invoice_type' => 'return_buy', 'returned_invoice_id' => $invoice->id]) }}" class="btn btn-primary">
+                                {{ __('Create return buy invoice') }}
+                            </a>
+                        @elseif ($invoice->invoice_type === App\Enums\InvoiceType::SELL)
+                            <a href="{{ route('invoices.create', ['invoice_type' => 'return_sell', 'returned_invoice_id' => $invoice->id]) }}" class="btn btn-primary">
+                                {{ __('Create return sell invoice') }}
+                            </a>
+                        @endif
+                    </div>
+                @endif
             @endif
 
             @if (in_array($invoice->invoice_type, [App\Enums\InvoiceType::RETURN_BUY, App\Enums\InvoiceType::RETURN_SELL]))
@@ -411,7 +425,6 @@
                             </div>
                         </div>
                     </div>
-                    {{-- <div class="divider text-sm font-semibold"> {{ __('Items') }} {{ __('Invoice') }} {{ $invoice->getReturnedInvoice()?->invoice_type->label() }}</div> --}}
                     <div class="overflow-x-auto shadow-lg rounded-lg">
                         <table class="table table-zebra w-full">
                             <thead class="bg-base-300">
