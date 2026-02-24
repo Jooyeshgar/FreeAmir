@@ -5,13 +5,18 @@ namespace App\Services;
 use App\Enums\FiscalYearSection;
 use App\Models\Bank;
 use App\Models\BankAccount;
+use App\Models\Comment;
 use App\Models\Company;
 use App\Models\Config;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
+use App\Models\DocumentFile;
 use App\Models\Product;
 use App\Models\ProductGroup;
+use App\Models\ProductWebsite;
+use App\Models\Service;
+use App\Models\ServiceGroup;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
@@ -224,6 +229,15 @@ class FiscalYearService
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
         }
+        if (in_array('services', $sections)) {
+            $sourceData['service_groups'] = ServiceGroup::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+                ->where('company_id', $sourceYearId)
+                ->get()->toArray();
+
+            $sourceData['services'] = Service::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+                ->where('company_id', $sourceYearId)
+                ->get()->toArray();
+        }
         if (in_array('customers', $sections)) {
             $sourceData['customer_groups'] = CustomerGroup::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
                 ->where('company_id', $sourceYearId)
@@ -231,6 +245,10 @@ class FiscalYearService
 
             $sourceData['customers'] = Customer::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
                 ->where('company_id', $sourceYearId)
+                ->get()->toArray();
+
+            $sourceData['comments'] = Comment::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+                ->whereIn('customer_id', collect($sourceData['customers'])->pluck('id')->toArray())
                 ->get()->toArray();
         }
         if (in_array('products', $sections)) {
@@ -240,6 +258,10 @@ class FiscalYearService
 
             $sourceData['products'] = Product::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
                 ->where('company_id', $sourceYearId)
+                ->get()->toArray();
+
+            $sourceData['product_websites'] = ProductWebsite::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+                ->whereIn('product_id', collect($sourceData['products'])->pluck('id')->toArray())
                 ->get()->toArray();
         }
         if (in_array('documents', $sections)) {
@@ -251,8 +273,12 @@ class FiscalYearService
             if (! empty($documentIds)) {
                 $sourceData['transactions'] = Transaction::whereIn('document_id', $documentIds)
                     ->get()->toArray();
+
+                $sourceData['document_files'] = DocumentFile::whereIn('document_id', $documentIds)
+                    ->get()->toArray();
             } else {
                 $sourceData['transactions'] = [];
+                $sourceData['document_files'] = [];
             }
         }
 
@@ -626,8 +652,7 @@ class FiscalYearService
         $newFiscalYearData = collect($company->getAttributes())->except(['id', 'closed_at', 'fiscal_year'])
             ->merge(['fiscal_year' => $company->fiscal_year + 1])->toArray();
 
-        $sectionsToCopy = ['subjects', 'configs', 'banks', 'customers', 'products'];
-
+        $sectionsToCopy = ['subjects', 'configs', 'banks', 'customers', 'products', 'services']; // Sections to copy to the new fiscal year
         $newFiscalYear = self::createWithCopiedData($newFiscalYearData, $company->id, $sectionsToCopy);
         $newFiscalYear->users()->attach($user->id);
 
