@@ -12,11 +12,15 @@
             @method('PUT')
             <div class="card-body">
                 <h2 class="card-title">
-                    {{ $isServiceBuy ? __('Edit') . ' ' . __('Service Buy Invoice') : __('Edit Invoice') . ' ' . $invoice->invoice_type->label() }}
+                    @if ($isReturnServiceBuy)
+                        {{ __('Edit') . ' ' . __('Return Service Buy Invoice') }}
+                    @else
+                        {{ __('Edit') . ' ' . ($isServiceBuy ? __('Service Buy Invoice') : ($isReturnServiceBuy ? __('Return Service Buy Invoice') : $invoice_type->label())) }}
+                    @endif
                 </h2>
                 <x-show-message-bags />
 
-                @switch($invoice->invoice_type)
+                @switch($invoice_type->value)
                     @case('sell')
                         @include('invoices.forms.sell')
                     @break
@@ -34,9 +38,6 @@
                     @break
 
                     @case('return_buy')
-                        @if ($isReturnServiceBuy)
-                            @php($isServiceBuy = true)
-                        @endif
                         @include('invoices.forms.return_buy')
                     @break
 

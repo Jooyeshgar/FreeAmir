@@ -144,6 +144,12 @@ class InvoiceController extends Controller
                 return ! $invoice->getReturnInvoice();
             });
 
+            if ($request->filled('service_buy')) {
+                $returnInvoices = $returnInvoices->filter(function ($invoice) {
+                    return $invoice->items->where('itemable_type', Product::class)->isEmpty();
+                });
+            }
+
             if ($returnInvoices->isNotEmpty()) {
                 $productIds = $returnInvoices->flatMap(function ($invoice) {
                     return $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id');
@@ -225,7 +231,7 @@ class InvoiceController extends Controller
 
         [$msgType, $msg] = $this->invoiceMessage($result, 'created', $approved);
 
-        $isServiceBuy = $result['invoice']->invoice_type === InvoiceType::BUY && $result['invoice']->items->where('itemable_type', Product::class)->isEmpty();
+        $isServiceBuy = in_array($result['invoice']->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_BUY]) && $result['invoice']->items->where('itemable_type', Product::class)->isEmpty();
 
         return redirect()
             ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type, 'service_buy' => $isServiceBuy ? '1' : null])
@@ -361,7 +367,7 @@ class InvoiceController extends Controller
 
         [$msgType, $msg] = $this->invoiceMessage($result, 'updated', $approved);
 
-        $isServiceBuy = $result['invoice']->invoice_type === InvoiceType::BUY && $result['invoice']->items->where('itemable_type', Product::class)->isEmpty();
+        $isServiceBuy = in_array($result['invoice']->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_BUY]) && $result['invoice']->items->where('itemable_type', Product::class)->isEmpty();
 
         return redirect()
             ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type, 'service_buy' => $isServiceBuy ? '1' : null])

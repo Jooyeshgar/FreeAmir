@@ -114,7 +114,7 @@
         <div class="text-sm flex-1 min-w-24 max-w-64 text-center text-gray-500 pt-3">
             <div class="text-sm flex-1 min-w-24 max-w-64 text-center text-gray-500 pt-3 flex items-center justify-center gap-2">
                 <div class="flex items-center gap-3 ml-1">
-                    @if (!$isServiceBuy)
+                    @if (!$isReturnServiceBuy)
                         {{ __('Product') }}
                         <a href="{{ route('products.create') }}" class="flex items-center gap-1 btn btn-xs btn-ghost text-blue-500 hover:text-blue-700"
                             title="{{ __('Create Product') }}">
@@ -163,20 +163,20 @@
                             $options = [
                                 [
                                     'headerGroup' => 'product',
-                                    'options' => $isServiceBuy ? [] : $products,
+                                    'options' => $isReturnServiceBuy ? [] : $products,
                                 ],
                                 [
                                     'headerGroup' => 'service',
-                                    'options' => $isServiceBuy ? $services : [],
+                                    'options' => $isReturnServiceBuy ? $services : [],
                                 ],
                             ];
-                            $hint = !$isServiceBuy ? '<a class="link text-blue-500" href="' . route('products.create') . '">' . __('Create Product') . '</a>'
+                            $hint = !$isReturnServiceBuy ? '<a class="link text-blue-500" href="' . route('products.create') . '">' . __('Create Product') . '</a>'
                                     : '<a class="link text-blue-500" href="' . route('services.create') . '">' . __('Create Service') . '</a>';
-                            $hint2 = $isServiceBuy ? '<a class="link text-blue-500" href="' . route('services.create') . '">' . __('Create Service') . '</a>' : '';
+                            $hint2 = $isReturnServiceBuy ? '<a class="link text-blue-500" href="' . route('services.create') . '">' . __('Create Service') . '</a>' : '';
                         @endphp
 
                         <x-select-box url="{{ route('invoices.search-product-service') }}" :options="$options" x-model="selectedValue" 
-                            x-init="selectedValue = initItemSelection(transaction)" placeholder="{{ $isServiceBuy ? __('Select Service') : __('Select Product') }}" :disabled="true"
+                            x-init="selectedValue = initItemSelection(transaction)" placeholder="{{ $isReturnServiceBuy ? __('Select Service') : __('Select Product') }}" :disabled="true"
                             @selected="selectItem(transaction, $event.detail.type, $event.detail.id)" hint='{!! $hint !!}' hint2='{!! $hint2 !!}' />
 
                         <input type="hidden" x-bind:value="transaction.product_id || ''" x-bind:name="'transactions[' + index + '][product_id]'">
