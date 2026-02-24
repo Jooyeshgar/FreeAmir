@@ -49,6 +49,8 @@ class Employee extends Model
         'org_chart_id',
         'work_site_id',
         'contract_framework_id',
+        'work_shift_id',
+        'user_id',
         'is_active',
         'company_id',
     ];
@@ -85,7 +87,17 @@ class Employee extends Model
 
     public function workSiteContract(): BelongsTo
     {
-        return $this->belongsTo(WorkSiteContract::class, 'work_site_contract_id');
+        return $this->belongsTo(WorkSiteContract::class, 'contract_framework_id');
+    }
+
+    public function workShift(): BelongsTo
+    {
+        return $this->belongsTo(WorkShift::class, 'work_shift_id');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function salaryDecrees(): HasMany

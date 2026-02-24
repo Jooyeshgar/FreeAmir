@@ -58,6 +58,8 @@ return new class extends Migration
             $table->unsignedInteger('org_chart_id')->nullable();
             $table->unsignedInteger('work_site_id');
             $table->unsignedInteger('contract_framework_id')->nullable();
+            $table->unsignedInteger('work_shift_id');
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
 
             $table->boolean('is_active')->default(true);
             $table->timestamps();
@@ -72,6 +74,9 @@ return new class extends Migration
             $table->foreign('contract_framework_id')
                 ->references('id')->on('work_site_contracts')
                 ->nullOnDelete();
+
+            $table->foreign('work_shift_id')
+                ->references('id')->on('work_shifts');
         });
     }
 
