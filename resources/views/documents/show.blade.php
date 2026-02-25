@@ -53,6 +53,15 @@
                         </a>
                     </span>
                 @endif
+                <span
+                    class="badge badge-lg {{ $document->approved_at ? 'badge-outline' : 'badge-warning' }} gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {{ $document->approved_at ? __('Approved') : __('Not Approved') }}
+                </span>
             </div>
         </div>
 
@@ -319,6 +328,16 @@
                                 {{ __('Edit') }}
                             </button>
                         </span>
+                        <span class="tooltip"
+                            data-tip="{{ __('Cannot change status of this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
+                            <button class="btn btn-primary gap-2 btn-disabled cursor-not-allowed" disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                {{ $document->approved_at ? __('Unapprove') : __('Approve') }}
+                            </button>
+                        </span>
                     @else
                         <a href="{{ route('documents.edit', $document->id) }}" class="btn btn-primary gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -326,6 +345,12 @@
                                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                             {{ __('Edit') }}
+                        </a>
+                        <a href="{{ route('documents.change-status', $document->id) }}" class="btn btn-active gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {{ $document->approved_at ? __('Unapprove') : __('Approve') }}
                         </a>
                     @endif
 
