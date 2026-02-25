@@ -876,7 +876,7 @@ class FiscalYearService
     {
         $difference = (float) $document->transactions()->sum('value');
 
-        if ($difference != 0.0) {
+        if ($difference !== 0.0) {
             $subject = Subject::where('company_id', $company->id)
                 ->where('name', __('Current Profit and Loss Summary'))->first();
 
