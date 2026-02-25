@@ -34,6 +34,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'documents.update',
             'documents.destroy',
             'documents.duplicate',
+            'documents.approve',
 
             'transactions.index',
             'transactions.show',
@@ -93,6 +94,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'companies.edit',
             'companies.update',
             'companies.destroy',
+            'companies.close-fiscal-year',
             'change-company',
 
             'bank-accounts.index',
