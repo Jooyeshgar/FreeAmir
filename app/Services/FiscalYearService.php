@@ -904,12 +904,14 @@ class FiscalYearService
             'title' => __('Year Opening Document'),
             'creator_id' => $user->id,
             'company_id' => $company->id,
+            'approved_at' => now(),
+            'approver_id' => $user->id,
         ];
 
         // Reverse the transactions of closing document to create opening document for the new fiscal year
         $transactions = $closeDocument->transactions()->get()->map(function ($transaction) use ($user) {
             return [
-                'subject_id' => $transaction->subject_id,
+                'subject_id' => $subjectMapping[$transaction->subject_id] ?? null,
                 'value' => -1 * $transaction->value,
                 'user_id' => $user->id,
             ];
@@ -926,6 +928,8 @@ class FiscalYearService
             'title' => __('Year Closing Document'),
             'creator_id' => $user->id,
             'company_id' => $company->id,
+            'approved_at' => now(),
+            'approver_id' => $user->id,
         ];
 
         // Permanent and temporary accounts for creating closing document
@@ -988,6 +992,8 @@ class FiscalYearService
             'title' => __('Accumulated Profit and Loss'),
             'creator_id' => $user->id,
             'company_id' => $company->id,
+            'approved_at' => now(),
+            'approver_id' => $user->id,
         ];
 
         // Permanent accounts
@@ -1014,6 +1020,8 @@ class FiscalYearService
             'title' => __('Current Profit and Loss Summary'),
             'creator_id' => $user->id,
             'company_id' => $company->id,
+            'approved_at' => now(),
+            'approver_id' => $user->id,
         ];
 
         // Temporary income and expense accounts

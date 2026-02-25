@@ -37,7 +37,7 @@ class DocumentService
             $data['number'] = Document::max('number') + 1;
         }
 
-        $data['company_id'] = getActiveCompany();
+        $data['company_id'] = isset($data['company_id']) ? $data['company_id'] : getActiveCompany();
 
         $document = null;
         DB::transaction(function () use ($data, $transactions, $user, &$document) {
