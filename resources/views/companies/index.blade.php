@@ -31,7 +31,7 @@
                             <td class="px-4 py-2">{{ $company->economical_code }}</td>
                             <td class="px-4 py-2">{{ $company->address }}</td>
                             <td class="px-4 py-2">{{ $company->currency }}</td>
-                            <td class="px-4 py-2">{{ $company->closed_at }}</td>
+                            <td class="px-4 py-2">{{ formatDate($company->closed_at) }}</td>
                             <td class="px-4 py-2">{{ $company->closedBy ? $company->closedBy->name : '' }}</td>
                             <td class="px-4 py-2">
                                 <a href="{{ route('companies.edit', $company) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>

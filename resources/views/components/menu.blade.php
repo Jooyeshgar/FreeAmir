@@ -6,10 +6,16 @@
         <div tabindex="0" role="button">{{ __('Operation') }}</div>
         <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
             <li><a href="{{ route('invoices.index', ['invoice_type' => 'sell']) }}">{{ __('Invoice Sell List') }}</a></li>
-            <li><a href="{{ route('invoices.index', ['invoice_type' => 'buy', 'service_buy' => '1']) }}">{{ __('Service Buy Invoice') }}</a></li>
+            <li><a
+                    href="{{ route('invoices.index', ['invoice_type' => 'buy', 'service_buy' => '1']) }}">{{ __('Service Buy Invoice') }}</a>
+            </li>
             <li><a href="{{ route('invoices.index', ['invoice_type' => 'buy']) }}">{{ __('Invoice Buy List') }}</a></li>
-            <li><a href="{{ route('invoices.index', ['invoice_type' => 'return_buy']) }}">{{ __('Invoice Return Buy List') }}</a></li>
-            <li><a href="{{ route('invoices.index', ['invoice_type' => 'return_sell']) }}">{{ __('Invoice Return Sell List') }}</a></li>
+            <li><a
+                    href="{{ route('invoices.index', ['invoice_type' => 'return_buy']) }}">{{ __('Invoice Return Buy List') }}</a>
+            </li>
+            <li><a
+                    href="{{ route('invoices.index', ['invoice_type' => 'return_sell']) }}">{{ __('Invoice Return Sell List') }}</a>
+            </li>
             <li><a href="{{ route('customers.create') }}">{{ __('Add Customer') }}</a></li>
             <li><a href="{{ route('ancillary-costs.index') }}">{{ __('Ancillary Cost List') }}</a></li>
         </ul>
@@ -71,8 +77,9 @@
     <ul tabindex="4" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
 
         {{-- HR & Organization --}}
-        @canany(['hr.employees.index', 'hr.employees.create', 'hr.employees.edit', 'org-charts.index', 'org-charts.create', 'org-charts.edit',
-            'hr.personnel-requests.index', 'hr.personnel-requests.create', 'hr.personnel-requests.edit'])
+        @canany(['hr.employees.index', 'hr.employees.create', 'hr.employees.edit', 'org-charts.index',
+            'org-charts.create', 'org-charts.edit', 'hr.personnel-requests.index', 'hr.personnel-requests.create',
+            'hr.personnel-requests.edit'])
             <li>
                 <details>
                     <summary>{{ __('HR & Organization') }}</summary>
@@ -83,7 +90,8 @@
                         @canany(['org-charts.index', 'org-charts.create', 'org-charts.edit'])
                             <li><a href="{{ route('org-charts.index') }}">{{ __('Organization Chart') }}</a></li>
                         @endcanany
-                        @canany(['hr.personnel-requests.index', 'hr.personnel-requests.create', 'hr.personnel-requests.edit'])
+                        @canany(['hr.personnel-requests.index', 'hr.personnel-requests.create',
+                            'hr.personnel-requests.edit'])
                             <li><a href="{{ route('personnel-requests.index') }}">{{ __('Personnel Requests') }}</a></li>
                         @endcanany
                     </ul>
@@ -92,20 +100,24 @@
         @endcanany
 
         {{-- Attendance --}}
-        @canany(['attendance.attendance-logs.index', 'attendance.attendance-logs.create', 'attendance.attendance-logs.edit', 'attendance.monthly-attendances.index',
-            'attendance.monthly-attendances.create', 'attendance.monthly-attendances.show', 'attendance.work-shifts.index', 'attendance.work-shifts.create',
-            'attendance.work-shifts.edit'])
+        @canany(['attendance.attendance-logs.index', 'attendance.attendance-logs.create',
+            'attendance.attendance-logs.edit', 'attendance.monthly-attendances.index',
+            'attendance.monthly-attendances.create', 'attendance.monthly-attendances.show', 'attendance.work-shifts.index',
+            'attendance.work-shifts.create', 'attendance.work-shifts.edit'])
             <li>
                 <details>
                     <summary>{{ __('Attendance') }}</summary>
                     <ul>
-                        @canany(['attendance.attendance-logs.index', 'attendance.attendance-logs.create', 'attendance.attendance-logs.edit'])
+                        @canany(['attendance.attendance-logs.index', 'attendance.attendance-logs.create',
+                            'attendance.attendance-logs.edit'])
                             <li><a href="{{ route('attendance-logs.index') }}">{{ __('Attendance Logs') }}</a></li>
                         @endcanany
-                        @canany(['attendance.monthly-attendances.index', 'attendance.monthly-attendances.create', 'attendance.monthly-attendances.show'])
+                        @canany(['attendance.monthly-attendances.index', 'attendance.monthly-attendances.create',
+                            'attendance.monthly-attendances.show'])
                             <li><a href="{{ route('monthly-attendances.index') }}">{{ __('Monthly Attendances') }}</a></li>
                         @endcanany
-                        @canany(['attendance.work-shifts.index', 'attendance.work-shifts.create', 'attendance.work-shifts.edit'])
+                        @canany(['attendance.work-shifts.index', 'attendance.work-shifts.create',
+                            'attendance.work-shifts.edit'])
                             <li><a href="{{ route('work-shifts.index') }}">{{ __('Work Shifts') }}</a></li>
                         @endcanany
                     </ul>
@@ -114,9 +126,11 @@
         @endcanany
 
         {{-- Salary --}}
-        @canany(['salary.tax-slabs.index', 'salary.tax-slabs.create', 'salary.tax-slabs.edit', 'salary.work-sites.index', 'salary.work-sites.create',
-            'salary.work-sites.edit', 'salary.public-holidays.index', 'salary.public-holidays.create', 'salary.public-holidays.edit', 'salary.payroll-elements.index',
-            'salary.payroll-elements.create', 'salary.payroll-elements.edit', 'salary.salary-decrees.index', 'salary.salary-decrees.create', 'salary.salary-decrees.edit'])
+        @canany(['salary.tax-slabs.index', 'salary.tax-slabs.create', 'salary.tax-slabs.edit',
+            'salary.work-sites.index', 'salary.work-sites.create', 'salary.work-sites.edit', 'salary.public-holidays.index',
+            'salary.public-holidays.create', 'salary.public-holidays.edit', 'salary.payroll-elements.index',
+            'salary.payroll-elements.create', 'salary.payroll-elements.edit', 'salary.salary-decrees.index',
+            'salary.salary-decrees.create', 'salary.salary-decrees.edit'])
             <li>
                 <details>
                     <summary>{{ __('Salary') }}</summary>
@@ -145,8 +159,9 @@
         @endcanany
 
         {{-- Customers & Services --}}
-        @canany(['customers.index', 'customers.create', 'customers.edit', 'customer-groups.index', 'customer-groups.create', 'customer-groups.edit', 'services.index',
-            'services.create', 'services.edit', 'service-groups.index', 'service-groups.create', 'service-groups.edit'])
+        @canany(['customers.index', 'customers.create', 'customers.edit', 'customer-groups.index',
+            'customer-groups.create', 'customer-groups.edit', 'services.index', 'services.create', 'services.edit',
+            'service-groups.index', 'service-groups.create', 'service-groups.edit'])
             <li>
                 <details>
                     <summary>{{ __('Customers & Services') }}</summary>
@@ -169,8 +184,8 @@
         @endcanany
 
         {{-- Finance --}}
-        @canany(['bank-accounts.index', 'bank-accounts.create', 'bank-accounts.edit', 'banks.index', 'banks.create', 'banks.edit', 'subjects.index', 'subjects.create',
-            'subjects.edit'])
+        @canany(['bank-accounts.index', 'bank-accounts.create', 'bank-accounts.edit', 'banks.index', 'banks.create',
+            'banks.edit', 'subjects.index', 'subjects.create', 'subjects.edit'])
             <li>
                 <details>
                     <summary>{{ __('Finance') }}</summary>
@@ -190,9 +205,11 @@
         @endcanany
 
         {{-- System --}}
-        @canany(['companies.index', 'companies.create', 'companies.edit', 'management.users.index', 'management.users.create', 'management.users.edit',
-            'management.permissions.index', 'management.permissions.create', 'management.permissions.edit', 'management.roles.index', 'management.roles.create',
-            'management.roles.edit', 'management.configs.index', 'management.configs.create', 'management.configs.edit'])
+        @canany(['companies.index', 'companies.create', 'companies.edit', 'management.users.index',
+            'management.users.create', 'management.users.edit', 'management.permissions.index',
+            'management.permissions.create', 'management.permissions.edit', 'management.roles.index',
+            'management.roles.create', 'management.roles.edit', 'management.configs.index', 'management.configs.create',
+            'management.configs.edit'])
             <li>
                 <details>
                     <summary>{{ __('System') }}</summary>
@@ -203,7 +220,8 @@
                         @canany(['management.users.index', 'management.users.create', 'management.users.edit'])
                             <li><a href="{{ route('users.index') }}">{{ __('Users') }}</a></li>
                         @endcanany
-                        @canany(['management.permissions.index', 'management.permissions.create', 'management.permissions.edit'])
+                        @canany(['management.permissions.index', 'management.permissions.create',
+                            'management.permissions.edit'])
                             <li><a href="{{ route('permissions.index') }}">{{ __('Permissions') }}</a></li>
                         @endcanany
                         @canany(['management.roles.index', 'management.roles.create', 'management.roles.edit'])
