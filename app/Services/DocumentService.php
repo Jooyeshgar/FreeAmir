@@ -59,7 +59,7 @@ class DocumentService
     {
         $sum = $document->transactions()->sum('value');
 
-        if ($sum !== 0) {
+        if ($sum != 0) {
             throw ValidationException::withMessages([
                 'transactions' => ['The sum of transactions must be zero'],
             ]);
