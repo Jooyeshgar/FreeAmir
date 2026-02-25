@@ -203,14 +203,14 @@ class DocumentService
         });
     }
 
-    public static function changeDocumentStatus(Document $document, User $user): void
+    public static function changeDocumentStatus(Document $document, User $user, string $status): void
     {
-        DB::transaction(function () use ($document, $user) {
-            if ($document->approved_at) {
-                self::unapproveDocument($user, $document);
-            } else {
-                self::approveDocument($user, $document);
-            }
+        DB::transaction(function () use ($document, $user, $status) {
+            match ($status) {
+                'approved' => self::approveDocument($user, $document),
+                'unapproved' => self::unapproveDocument($user, $document),
+                default => throw new DocumentServiceException('Invalid status'),
+            };
         });
     }
 }

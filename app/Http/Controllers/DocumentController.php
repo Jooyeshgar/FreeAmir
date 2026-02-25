@@ -317,7 +317,8 @@ class DocumentController extends Controller
 
     public function changeStatus(Document $document, Request $request)
     {
-        DocumentService::changeDocumentStatus($document, $request->user());
+        $status = $document->approved_at ? 'unapproved' : 'approved';
+        DocumentService::changeDocumentStatus($document, $request->user(), $status);
 
         return redirect()->route('documents.index')->with('success', __('Document status changed successfully.'));
     }

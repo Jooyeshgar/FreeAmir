@@ -38,7 +38,7 @@
                                 <form action="{{ route('companies.close-fiscal-year', $company) }}" method="POST" class="inline-block"
                                     onsubmit="return confirm('{{ __('Are you sure you want to close the fiscal year for this company?') }}');">
                                     @csrf
-                                    <button type="submit" class="btn btn-sm btn-warning {{ $company->closed_at ? 'btn-disabled' : '' }}">{{ __('Close Fiscal Year') }}</button>
+                                    <button type="submit" class="btn btn-sm btn-warning {{ $company->closed_at ? 'btn-disabled' : '' }}" @disabled($company->closed_at)>{{ __('Close Fiscal Year') }}</button>
                                 </form>
                                 <form action="{{ route('companies.destroy', $company) }}" method="POST" class="inline-block" 
                                     onsubmit="return confirm('{{ __('Are you sure you want to delete this company?') }}');">

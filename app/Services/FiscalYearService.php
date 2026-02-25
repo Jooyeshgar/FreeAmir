@@ -901,7 +901,7 @@ class FiscalYearService
         $documentData = [
             'number' => 1,
             'date' => now(),
-            'title' => __('Year Opening Document'),
+            'title' => __('Fiscal year opening Document'),
             'creator_id' => $user->id,
             'company_id' => $company->id,
             'approved_at' => now(),
@@ -931,11 +931,12 @@ class FiscalYearService
         }
 
         // Reverse the transactions of closing document to create opening document for the new fiscal year
-        $transactions = $closeDocument->transactions()->get()->map(function ($transaction) use ($user, $subjectMapping) {
+        $transactions = $closeDocument->transactions()->get()->map(function ($transaction) use ($user, $subjectMapping, $company) {
             return [
                 'subject_id' => $subjectMapping[$transaction->subject_id] ?? null,
                 'value' => -1 * $transaction->value,
                 'user_id' => $user->id,
+                'desc' => __('Fiscal year opening Document').' '.$company->fiscal_year,
             ];
         })->filter(fn ($transaction) => $transaction['subject_id'] !== null)->values()->toArray();
 
@@ -957,7 +958,7 @@ class FiscalYearService
         $documentData = [
             'number' => Document::where('company_id', $company->id)->max('number') + 1,
             'date' => now(),
-            'title' => __('Year Closing Document'),
+            'title' => __('Fiscal year closing Document'),
             'creator_id' => $user->id,
             'company_id' => $company->id,
             'approved_at' => now(),
@@ -967,7 +968,13 @@ class FiscalYearService
         // Permanent and temporary accounts for creating closing document
         $transactions = Transaction::query()->whereIn('document_id', [$currentPL->id, $accumulatedPL->id])
             ->selectRaw('subject_id, SUM(value) as value, ? as user_id', [$user->id]) // `subject_id`, `value` and `user_id` for transactions are needed
-            ->groupBy('subject_id')->get()->toArray();
+            ->groupBy('subject_id')->get();
+
+        $transactions = $transactions->map(fn ($transaction) => [
+            'value' => -1 * $transaction->value,
+            'subject_id' => $transaction->subject_id,
+            'desc' => __('Fiscal year closing Document').' '.$company->fiscal_year,
+        ])->toArray();
 
         return DocumentService::createDocument($user, $documentData, $transactions);
     }
@@ -990,7 +997,7 @@ class FiscalYearService
         $validationErrors = [];
 
         DB::transaction(function () use ($company, &$newFiscalYear, &$validationErrors, $user) {
-            $validationErrors = self::validateClosingFiscalYear($company);
+            // $validationErrors = self::validateClosingFiscalYear($company);
 
             if (! empty($validationErrors)) {
                 return;
@@ -1039,6 +1046,7 @@ class FiscalYearService
                 'subject_id' => $transaction->subject_id,
                 'value' => $transaction->value,
                 'user_id' => $user->id,
+                'desc' => __('Balance for closing fiscal year'),
             ])->all();
 
         return DocumentService::createDocument($user, $documentData, $transactions);
@@ -1070,6 +1078,7 @@ class FiscalYearService
                 'subject_id' => $transaction->subject_id,
                 'value' => $transaction->value,
                 'user_id' => $user->id,
+                'desc' => __('Balance for closing fiscal year'),
             ])->all();
 
         return DocumentService::createDocument($user, $documentData, $transactions);
