@@ -42,6 +42,9 @@
                         <th class="p-2">{{ __('Title') }}</th>
                         <th class="p-2 w-40">{{ __('Sum') }}</th>
                         <th class="p-2 w-40">{{ __('Date') }}</th>
+                        <th class="p-2 w-40">{{ __('Relation') }}</th>
+                        <th class="p-2 w-40">{{ __('Approve date') }}</th>
+                        <th class="p-2 w-40">{{ __('Approver') }}</th>
                         <th class="p-2 w-60">{{ __('Action') }}</th>
                     </tr>
                 </thead>
@@ -66,6 +69,38 @@
                                 {{ formatDate($document->date) }}
                             </td>
 
+                            <td class="p-2">
+                                @php
+                                    $documentableRoute = match (true) {
+                                        $document->documentable instanceof \App\Models\Invoice => [
+                                            'name' => 'invoices.show',
+                                            'params' => $document->documentable,
+                                        ],
+                                        $document->documentable instanceof \App\Models\AncillaryCost => [
+                                            'name' => 'invoices.ancillary-costs.show',
+                                            'params' => [
+                                                $document->documentable->invoice_id ?? $document->documentable->invoice?->id,
+                                                $document->documentable,
+                                            ],
+                                        ],
+                                        default => null,
+                                    };
+                                @endphp
+                                @if ($document->documentable && $documentableRoute)
+                                    <a href="{{ route($documentableRoute['name'], $documentableRoute['params']) }}" class="link link-hover"> 
+                                        {{ __(class_basename($document->documentable_type)) }} {{ $document->documentable->number }}
+                                    </a>
+                                @endif
+                            </td>
+
+                            <td class="p-2">
+                                {{ formatDate($document->approved_at) }}
+                            </td>
+
+                            <td class="p-2">
+                                {{ $document->approver?->name }}
+                            </td>
+                            
                             <td class="p-2">
                                 <div class="flex gap-2">
                                     <a href="{{ route('documents.show', $document->id) }}" class="btn btn-sm btn-info btn-square" title="{{ __('View') }}">
@@ -93,6 +128,13 @@
                                             </svg>
                                         </a>
                                     @endif
+
+                                    <a href="{{ route('documents.change-status', $document->id) }}" class="btn btn-sm btn-square {{ $document->approved_at ? 'btn-error' : 'btn-success' }}" 
+                                        title="{{ $document->approved_at ? __('Unapprove') : __('Approve') }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </a>
                                     
                                     <a href="{{ route('documents.duplicate', $document->id) }}" class="btn btn-sm btn-success btn-square" title="{{ __('Duplicate') }}">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -111,7 +153,7 @@
                                                 </svg>
                                             </button>
                                         </span>
-                                    @else
+                                    @elseif (!$document->approved_at)
                                         <form action="{{ route('documents.destroy', $document) }}" method="POST" class="inline-block delete-form">
                                             @csrf
                                             @method('DELETE')
@@ -122,8 +164,17 @@
                                                 </svg>
                                             </button>
                                         </form>
+                                    @else 
+                                        <span class="tooltip" data-tip="{{ __('Cannot delete this document because it is approved'). ' ' . __(class_basename($document->documentable_type)).'.' }}">
+                                            <button class="btn btn-sm btn-error btn-square btn-disabled cursor-not-allowed" disabled
+                                                title="{{ __('Cannot delete this document because it is approved.') }}">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </span>
                                     @endif
-                                    
                                 </div>
                             </td>
                         </tr>

@@ -37,7 +37,7 @@ class DocumentService
             $data['number'] = Document::max('number') + 1;
         }
 
-        $data['company_id'] = getActiveCompany();
+        $data['company_id'] = isset($data['company_id']) ? $data['company_id'] : getActiveCompany();
 
         $document = null;
         DB::transaction(function () use ($data, $transactions, $user, &$document) {
@@ -59,7 +59,7 @@ class DocumentService
     {
         $sum = $document->transactions()->sum('value');
 
-        if ($sum !== 0) {
+        if ($sum != 0) {
             throw ValidationException::withMessages([
                 'transactions' => ['The sum of transactions must be zero'],
             ]);
@@ -200,6 +200,17 @@ class DocumentService
 
             Transaction::where('document_id', $documentId)->delete();
             Document::where('id', $documentId)->delete();
+        });
+    }
+
+    public static function changeDocumentStatus(Document $document, User $user, string $status): void
+    {
+        DB::transaction(function () use ($document, $user, $status) {
+            match ($status) {
+                'approved' => self::approveDocument($user, $document),
+                'unapproved' => self::unapproveDocument($user, $document),
+                default => throw new DocumentServiceException('Invalid status'),
+            };
         });
     }
 }
