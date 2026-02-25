@@ -11,6 +11,7 @@ enum FiscalYearSection: string
 	case BANK_ACCOUNTS = 'bank_accounts';
 	case CUSTOMERS = 'customers'; // Represents both customer_groups + customers
 	case PRODUCTS = 'products'; // Represents both product_groups + products
+	case SERVICES = 'services'; // Represents both service_groups + services
 	case SUBJECTS = 'subjects';
 	case DOCUMENTS = 'documents'; // Represents both documents + transactions
 
@@ -34,6 +35,7 @@ enum FiscalYearSection: string
 			self::BANKS->value => self::BANKS->label(),
 			self::CUSTOMERS->value => self::CUSTOMERS->label(),
 			self::PRODUCTS->value => self::PRODUCTS->label(),
+			self::SERVICES->value => self::SERVICES->label(),
 			self::SUBJECTS->value => self::SUBJECTS->label(),
 		];
 	}

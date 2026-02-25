@@ -131,6 +131,7 @@ class FiscalYearService
                 'banks' => [],
                 'customer_groups' => [],
                 'product_groups' => [],
+                'service_groups' => [],
                 'documents' => [],
             ];
 
@@ -154,8 +155,8 @@ class FiscalYearService
                     if (isset($importData['customer_groups'])) {
                         $idMappings['customer_groups'] = self::_importCustomerGroups($importData['customer_groups'], $targetYearId, $idMappings['subjects']);
                     }
-                    if (isset($importData['customers']) && ! empty($idMappings['customer_groups'])) {
-                        $idMappings['customers'] = self::_importCustomers($importData['customers'], $targetYearId, $idMappings['customer_groups'], $idMappings['subjects']);
+                    if (isset($importData['customers'])) {
+                        self::_importCustomers($importData['customers'], $targetYearId, $idMappings['customer_groups'], $idMappings['subjects']);
                     }
                 }
                 if (in_array('products', $sectionsToImport)) {
@@ -164,6 +165,14 @@ class FiscalYearService
                     }
                     if (isset($importData['products']) && ! empty($idMappings['product_groups'])) {
                         self::_importProducts($importData['products'], $targetYearId, $idMappings['product_groups']);
+                    }
+                }
+                if (in_array('services', $sectionsToImport)) {
+                    if (isset($importData['service_groups'])) {
+                        $idMappings['service_groups'] = self::_importServiceGroups($importData['service_groups'], $targetYearId, $idMappings['subjects']);
+                    }
+                    if (isset($importData['services']) && ! empty($idMappings['service_groups'])) {
+                        self::_importServices($importData['services'], $targetYearId, $idMappings['service_groups'], $idMappings['subjects']);
                     }
                 }
                 if (in_array('documents', $sectionsToImport)) {
@@ -229,15 +238,6 @@ class FiscalYearService
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
         }
-        if (in_array('services', $sections)) {
-            $sourceData['service_groups'] = ServiceGroup::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
-                ->where('company_id', $sourceYearId)
-                ->get()->toArray();
-
-            $sourceData['services'] = Service::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
-                ->where('company_id', $sourceYearId)
-                ->get()->toArray();
-        }
         if (in_array('customers', $sections)) {
             $sourceData['customer_groups'] = CustomerGroup::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
                 ->where('company_id', $sourceYearId)
@@ -262,6 +262,15 @@ class FiscalYearService
 
             $sourceData['product_websites'] = ProductWebsite::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
                 ->whereIn('product_id', collect($sourceData['products'])->pluck('id')->toArray())
+                ->get()->toArray();
+        }
+        if (in_array('services', $sections)) {
+            $sourceData['service_groups'] = ServiceGroup::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+                ->where('company_id', $sourceYearId)
+                ->get()->toArray();
+
+            $sourceData['services'] = Service::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+                ->where('company_id', $sourceYearId)
                 ->get()->toArray();
         }
         if (in_array('documents', $sections)) {
@@ -430,17 +439,16 @@ class FiscalYearService
      */
     protected static function _importCustomers(array $customersData, int $targetYearId, array $groupMapping, array $subjectMapping): void
     {
+        $subjectService = new SubjectService;
+        $mappedGroupIds = array_values($groupMapping);
+        $groupSubjectMap = empty($mappedGroupIds) ? [] : CustomerGroup::withoutGlobalScope('App\\Models\\Scopes\\FiscalYearScope')
+            ->where('company_id', $targetYearId)->whereIn('id', $mappedGroupIds)
+            ->pluck('subject_id', 'id')->toArray();
+
         foreach ($customersData as $customerData) {
             $oldGroupId = $customerData['group_id'] ?? null;
-            if ($oldGroupId === null || ! isset($groupMapping[$oldGroupId])) {
+            if ($oldGroupId !== null && ! isset($groupMapping[$oldGroupId])) {
                 Log::warning('Skipping customer import due to missing group mapping.', ['old_customer_id' => $customerData['id'] ?? 'N/A', 'old_group_id' => $oldGroupId, 'target_year_id' => $targetYearId]);
-
-                continue;
-            }
-
-            $oldSubjectId = $customerData['subject_id'] ?? null;
-            if ($oldSubjectId === null || ! isset($subjectMapping[$oldSubjectId])) {
-                Log::warning('Skipping customer import due to missing subject mapping.', ['old_customer_id' => $customerData['id'] ?? 'N/A', 'old_subject_id' => $oldSubjectId, 'target_year_id' => $targetYearId]);
 
                 continue;
             }
@@ -448,9 +456,32 @@ class FiscalYearService
             $newCustomer = new Customer;
             $newCustomer->fill(collect($customerData)->except(['id', 'group_id', 'subject_id', 'company_id', 'introducer_id'])->toArray());
             $newCustomer->company_id = $targetYearId;
-            $newCustomer->group_id = $groupMapping[$oldGroupId];
-            $newCustomer->subject_id = $subjectMapping[$oldSubjectId];
+            $newCustomer->group_id = $oldGroupId !== null ? ($groupMapping[$oldGroupId] ?? null) : null;
             $newCustomer->saveQuietly();
+
+            $parentSubjectId = $newCustomer->group_id ? ($groupSubjectMap[$newCustomer->group_id] ?? null) : null;
+            $oldSubjectId = $customerData['subject_id'] ?? null;
+
+            $subject = null;
+            if ($oldSubjectId && isset($subjectMapping[$oldSubjectId])) {
+                $subject = Subject::withoutGlobalScope('App\\Models\\Scopes\\FiscalYearScope')
+                    ->where('company_id', $targetYearId)
+                    ->find($subjectMapping[$oldSubjectId]);
+            }
+
+            if (! $subject) {
+                $subject = $subjectService->createSubject([
+                    'name' => $newCustomer->name,
+                    'parent_id' => $parentSubjectId,
+                    'company_id' => $targetYearId,
+                ]);
+            } else {
+                $subject->name = $newCustomer->name;
+                $subject->parent_id = $parentSubjectId;
+            }
+
+            $subject->subjectable()->associate($newCustomer);
+            $subject->save();
         }
     }
 
@@ -463,18 +494,70 @@ class FiscalYearService
     protected static function _importProductGroups(array $groupsData, int $targetYearId, array $subjectMapping): array
     {
         $mapping = [];
+        $subjectService = new SubjectService;
+
         foreach ($groupsData as $groupData) {
             $newGroup = new ProductGroup;
-            $newGroup->fill(collect($groupData)->except(['id'])->toArray());
+            $newGroup->fill(collect($groupData)->except([
+                'id',
+                'income_subject_id',
+                'sales_returns_subject_id',
+                'cogs_subject_id',
+                'inventory_subject_id',
+                'buyId',
+                'sellId',
+            ])->toArray());
             $newGroup->company_id = $targetYearId;
-
-            $oldBuyId = $groupData['buyId'] ?? null;
-            $newGroup->buyId = ($oldBuyId && isset($subjectMapping[$oldBuyId])) ? $subjectMapping[$oldBuyId] : null;
-
-            $oldSellId = $groupData['sellId'] ?? null;
-            $newGroup->sellId = ($oldSellId && isset($subjectMapping[$oldSellId])) ? $subjectMapping[$oldSellId] : null;
-
             $newGroup->save();
+
+            $subjectColumns = [
+                'income_subject_id' => [
+                    'old_value' => $groupData['income_subject_id'] ?? $groupData['sellId'] ?? null,
+                    'parent_id' => config('amir.sales_revenue'),
+                ],
+                'sales_returns_subject_id' => [
+                    'old_value' => $groupData['sales_returns_subject_id'] ?? null,
+                    'parent_id' => config('amir.sales_returns'),
+                ],
+                'cogs_subject_id' => [
+                    'old_value' => $groupData['cogs_subject_id'] ?? $groupData['buyId'] ?? null,
+                    'parent_id' => config('amir.cost_of_goods_sold'),
+                ],
+                'inventory_subject_id' => [
+                    'old_value' => $groupData['inventory_subject_id'] ?? null,
+                    'parent_id' => config('amir.inventory'),
+                ],
+            ];
+
+            foreach ($subjectColumns as $column => $config) {
+                $oldSubjectId = $config['old_value'];
+                $parentSubjectId = $config['parent_id'] ?: null;
+
+                $subject = null;
+                if ($oldSubjectId && isset($subjectMapping[$oldSubjectId])) {
+                    $subject = Subject::withoutGlobalScope('App\\Models\\Scopes\\FiscalYearScope')
+                        ->where('company_id', $targetYearId)
+                        ->find($subjectMapping[$oldSubjectId]);
+                }
+
+                if (! $subject) {
+                    $subject = $subjectService->createSubject([
+                        'name' => $newGroup->name,
+                        'parent_id' => $parentSubjectId,
+                        'company_id' => $targetYearId,
+                    ]);
+                } else {
+                    $subject->name = $newGroup->name;
+                    $subject->parent_id = $parentSubjectId;
+                }
+
+                $subject->subjectable()->associate($newGroup);
+                $subject->save();
+
+                $newGroup->{$column} = $subject->id;
+            }
+
+            $newGroup->saveQuietly();
             $mapping[$groupData['id']] = $newGroup->id;
         }
 
@@ -488,6 +571,14 @@ class FiscalYearService
      */
     protected static function _importProducts(array $productsData, int $targetYearId, array $groupMapping): void
     {
+        $subjectService = new SubjectService;
+        $mappedGroupIds = array_values($groupMapping);
+        $groupsById = empty($mappedGroupIds) ? collect() : ProductGroup::withoutGlobalScope('App\\Models\\Scopes\\FiscalYearScope')
+            ->where('company_id', $targetYearId)
+            ->whereIn('id', $mappedGroupIds)
+            ->get(['id', 'income_subject_id', 'sales_returns_subject_id', 'cogs_subject_id', 'inventory_subject_id'])
+            ->keyBy('id');
+
         foreach ($productsData as $productData) {
             // Assuming 'group' column holds the group ID in Product model
             $oldGroupId = $productData['group'] ?? null;
@@ -498,10 +589,208 @@ class FiscalYearService
             }
 
             $newProduct = new Product;
-            $newProduct->fill(collect($productData)->except(['id'])->toArray());
+            $newProduct->fill(collect($productData)->except([
+                'id',
+                'income_subject_id',
+                'sales_returns_subject_id',
+                'cogs_subject_id',
+                'inventory_subject_id',
+                'subject_id',
+            ])->toArray());
             $newProduct->group = $groupMapping[$oldGroupId]; // Use the new group ID
             $newProduct->company_id = $targetYearId;
             $newProduct->save();
+
+            $group = $groupsById->get($newProduct->group);
+            $subjectColumns = [
+                'income_subject_id' => [
+                    'old_value' => $productData['income_subject_id'] ?? $productData['subject_id'] ?? null,
+                    'parent_id' => $group?->income_subject_id,
+                ],
+                'sales_returns_subject_id' => [
+                    'old_value' => $productData['sales_returns_subject_id'] ?? null,
+                    'parent_id' => $group?->sales_returns_subject_id,
+                ],
+                'cogs_subject_id' => [
+                    'old_value' => $productData['cogs_subject_id'] ?? null,
+                    'parent_id' => $group?->cogs_subject_id,
+                ],
+                'inventory_subject_id' => [
+                    'old_value' => $productData['inventory_subject_id'] ?? null,
+                    'parent_id' => $group?->inventory_subject_id,
+                ],
+            ];
+
+            foreach ($subjectColumns as $column => $config) {
+                $parentSubjectId = $config['parent_id'] ?: null;
+
+                $subject = $subjectService->createSubject([
+                    'name' => $newProduct->name,
+                    'parent_id' => $parentSubjectId,
+                    'company_id' => $targetYearId,
+                ]);
+
+                $subject->subjectable()->associate($newProduct);
+                $subject->save();
+
+                $newProduct->{$column} = $subject->id;
+            }
+
+            $newProduct->saveQuietly();
+        }
+    }
+
+    /**
+     * Import Service Groups.
+     *
+     * @param  array  $subjectMapping  Mapping of old subject ID to new subject ID.
+     * @return array<int, int> Mapping of old group ID to new group ID.
+     */
+    protected static function _importServiceGroups(array $groupsData, int $targetYearId, array $subjectMapping): array
+    {
+        $mapping = [];
+        $subjectService = new SubjectService;
+
+        foreach ($groupsData as $groupData) {
+            $newGroup = new ServiceGroup;
+            $newGroup->fill(collect($groupData)->except([
+                'id',
+                'subject_id',
+                'cogs_subject_id',
+                'sales_returns_subject_id',
+            ])->toArray());
+            $newGroup->company_id = $targetYearId;
+            $newGroup->save();
+
+            $subjectColumns = [
+                'subject_id' => [
+                    'old_value' => $groupData['subject_id'] ?? null,
+                    'parent_id' => config('amir.service_revenue'),
+                ],
+                'cogs_subject_id' => [
+                    'old_value' => $groupData['cogs_subject_id'] ?? null,
+                    'parent_id' => config('amir.cogs_service'),
+                ],
+                'sales_returns_subject_id' => [
+                    'old_value' => $groupData['sales_returns_subject_id'] ?? null,
+                    'parent_id' => config('amir.sales_returns'),
+                ],
+            ];
+
+            foreach ($subjectColumns as $column => $config) {
+                $oldSubjectId = $config['old_value'];
+                $parentSubjectId = $config['parent_id'] ?: null;
+
+                $subject = null;
+                if ($oldSubjectId && isset($subjectMapping[$oldSubjectId])) {
+                    $subject = Subject::withoutGlobalScope('App\\Models\\Scopes\\FiscalYearScope')
+                        ->where('company_id', $targetYearId)
+                        ->find($subjectMapping[$oldSubjectId]);
+                }
+
+                if (! $subject) {
+                    $subject = $subjectService->createSubject([
+                        'name' => $newGroup->name,
+                        'parent_id' => $parentSubjectId,
+                        'company_id' => $targetYearId,
+                    ]);
+                } else {
+                    $subject->name = $newGroup->name;
+                    $subject->parent_id = $parentSubjectId;
+                }
+
+                $subject->subjectable()->associate($newGroup);
+                $subject->save();
+
+                $newGroup->{$column} = $subject->id;
+            }
+
+            $newGroup->saveQuietly();
+            $mapping[$groupData['id']] = $newGroup->id;
+        }
+
+        return $mapping;
+    }
+
+    /**
+     * Import Services.
+     *
+     * @param  array  $groupMapping  Mapping of old service group ID to new group ID.
+     * @param  array  $subjectMapping  Mapping of old subject ID to new subject ID.
+     */
+    protected static function _importServices(array $servicesData, int $targetYearId, array $groupMapping, array $subjectMapping): void
+    {
+        $subjectService = new SubjectService;
+        $mappedGroupIds = array_values($groupMapping);
+        $groupsById = empty($mappedGroupIds) ? collect() : ServiceGroup::withoutGlobalScope('App\\Models\\Scopes\\FiscalYearScope')
+            ->where('company_id', $targetYearId)
+            ->whereIn('id', $mappedGroupIds)
+            ->get(['id', 'subject_id', 'cogs_subject_id', 'sales_returns_subject_id'])
+            ->keyBy('id');
+
+        foreach ($servicesData as $serviceData) {
+            $oldGroupId = $serviceData['group'] ?? null;
+            if ($oldGroupId === null || ! isset($groupMapping[$oldGroupId])) {
+                Log::warning('Skipping service import due to missing group mapping.', ['old_service_id' => $serviceData['id'] ?? 'N/A', 'old_group_id' => $oldGroupId, 'target_year_id' => $targetYearId]);
+
+                continue;
+            }
+
+            $newService = new Service;
+            $newService->fill(collect($serviceData)->except(['id', 'group', 'subject_id', 'cogs_subject_id', 'sales_returns_subject_id', 'company_id'])->toArray());
+            $newService->company_id = $targetYearId;
+            $newService->group = $groupMapping[$oldGroupId];
+            $newService->save();
+
+            $group = $groupsById->get($newService->group);
+            $subjectColumns = [
+                'subject_id' => [
+                    'old_value' => $serviceData['subject_id'] ?? null,
+                    'parent_id' => $group?->subject_id,
+                ],
+                'cogs_subject_id' => [
+                    'old_value' => $serviceData['cogs_subject_id'] ?? null,
+                    'parent_id' => $group?->cogs_subject_id,
+                ],
+                'sales_returns_subject_id' => [
+                    'old_value' => $serviceData['sales_returns_subject_id'] ?? null,
+                    'parent_id' => $group?->sales_returns_subject_id,
+                ],
+            ];
+
+            foreach ($subjectColumns as $column => $config) {
+                $oldSubjectId = $config['old_value'];
+                $parentSubjectId = $config['parent_id'] ?: null;
+
+                $subject = null;
+                if ($oldSubjectId && isset($subjectMapping[$oldSubjectId])) {
+                    $subject = Subject::withoutGlobalScope('App\\Models\\Scopes\\FiscalYearScope')
+                        ->where('company_id', $targetYearId)
+                        ->find($subjectMapping[$oldSubjectId]);
+
+                    if ($subject && $subject->subjectable_id && ($subject->subjectable_id !== $newService->id || $subject->subjectable_type !== $newService->getMorphClass())) {
+                        $subject = null;
+                    }
+                }
+
+                if (! $subject) {
+                    $subject = $subjectService->createSubject([
+                        'name' => $newService->name,
+                        'parent_id' => $parentSubjectId,
+                        'company_id' => $targetYearId,
+                    ]);
+                } else {
+                    $subject->name = $newService->name;
+                    $subject->parent_id = $parentSubjectId;
+                }
+
+                $subject->subjectable()->associate($newService);
+                $subject->save();
+
+                $newService->{$column} = $subject->id;
+            }
+
+            $newService->saveQuietly();
         }
     }
 
@@ -600,7 +889,7 @@ class FiscalYearService
             }
 
             $document->transactions()->create([
-                'subject_id' => $subject->id, // برای تراز حساب افتتاحیه
+                'subject_id' => $subject->id, // For balancing the opening account
                 'value' => -1 * $difference,
                 'user_id' => $user->id,
             ]);
@@ -609,7 +898,6 @@ class FiscalYearService
 
     protected static function createOpeningDocument(Company $company, Document $closeDocument, User $user): void
     {
-        // سند افتتاحیه: دقیقا برعکس سند اختتامیه (سند خلاصه سود و ضرر جاری + حسابهای دائمی)
         $documentData = [
             'number' => 1,
             'date' => now(),
@@ -618,6 +906,7 @@ class FiscalYearService
             'company_id' => $company->id,
         ];
 
+        // Reverse the transactions of closing document to create opening document for the new fiscal year
         $transactions = $closeDocument->transactions()->get()->map(function ($transaction) use ($user) {
             return [
                 'subject_id' => $transaction->subject_id,
@@ -631,7 +920,6 @@ class FiscalYearService
 
     protected static function createClosingDocument(Company $company, Document $currentPL, Document $accumulatedPL, User $user): Document
     {
-        // سند اختتامیه: سند خلاصه سود و ضرر جاری + حسابهای دائمی
         $documentData = [
             'number' => Document::where('company_id', $company->id)->max('number') + 1,
             'date' => now(),
@@ -640,6 +928,7 @@ class FiscalYearService
             'company_id' => $company->id,
         ];
 
+        // Permanent and temporary accounts for creating closing document
         $transactions = Transaction::query()->whereIn('document_id', [$currentPL->id, $accumulatedPL->id])
             ->selectRaw('subject_id, SUM(value) as value, ? as user_id', [$user->id]) // `subject_id`, `value` and `user_id` for transactions are needed
             ->groupBy('subject_id')->get()->toArray();
@@ -671,13 +960,10 @@ class FiscalYearService
                 return;
             }
 
-            // خلاصه سود و ضرر جاری
             $currentProfitAndLoss = self::currentProfitAndLoss($company, $user);
-
-            // خلاصه سود و زیان
             $accumulatedProfitAndLoss = self::accumulatedProfitAndLoss($company, $user);
 
-            // در صورت وجود مانده در موارد سند خلاصه سود و ضرر جاری، این مانده به حساب خلاصه سود و زیان منتقل میشود (برای تراز شدن).
+            // Move any remaining balance in current profit and loss to accumulated profit and loss to balance them
             self::balanceCurrentProfitAndLoss($company, $currentProfitAndLoss, $user);
 
             $closeDocument = self::createClosingDocument($company, $currentProfitAndLoss, $accumulatedProfitAndLoss, $user);
@@ -696,7 +982,6 @@ class FiscalYearService
 
     protected static function accumulatedProfitAndLoss(Company $company, User $user): Document
     {
-        // حسابهای دائمی: تمامی حسابهای دارایی، بدهی و سرمایه بسته نمیشوند و مانده آنها به سال بعد منتقل میشود. در صورت وجود مانده، این مانده به حساب تراز افتتاحیه منتقل میشود.
         $documentData = [
             'number' => Document::where('company_id', $company->id)->max('number') + 1,
             'date' => now(),
@@ -705,11 +990,12 @@ class FiscalYearService
             'company_id' => $company->id,
         ];
 
+        // Permanent accounts
         $transactions = Transaction::query()
             ->whereHas('document', fn ($document) => $document->where('company_id', $company->id))
             ->whereHas('subject', fn ($subject) => $subject->where('company_id', $company->id)->where('is_permanent', true))
             ->selectRaw('subject_id, SUM(value) as value')->groupBy('subject_id')
-            ->havingRaw('SUM(value) != 0') // حذف مانده‌های صفر
+            ->havingRaw('SUM(value) != 0') // Remove zero balances
             ->get()
             ->map(fn ($transaction) => [
                 'subject_id' => $transaction->subject_id,
@@ -722,8 +1008,6 @@ class FiscalYearService
 
     protected static function currentProfitAndLoss(Company $company, User $user): Document
     {
-        // حسابهای موقت: تمامی درآمد ها به عنوان سود و تمامی هزینه ها به عنوان زیان در نظر گرفته میشوند و بسته میشوند. در نتیجه مانده این حسابها صفر میشود.
-        // both نوعی از حساب است که هم میتواند درآمد باشد و هم هزینه. برای همین در هر دو دسته قرار میگیرد و مانده آن به هر دو حساب خلاصه سود و زیان جاری و تراز افتتاحیه منتقل میشود.
         $documentData = [
             'number' => Document::where('company_id', $company->id)->max('number') + 1,
             'date' => now(),
@@ -732,6 +1016,7 @@ class FiscalYearService
             'company_id' => $company->id,
         ];
 
+        // Temporary income and expense accounts
         $temporarySubjects = Subject::where('company_id', $company->id)
             ->where('is_permanent', false)->pluck('id')->toArray();
 
@@ -739,7 +1024,7 @@ class FiscalYearService
             ->whereHas('document', fn ($document) => $document->where('company_id', $company->id))
             ->whereIn('subject_id', $temporarySubjects)
             ->selectRaw('subject_id, SUM(value) as value')->groupBy('subject_id')
-            ->havingRaw('SUM(value) != 0') // حذف مانده‌های صفر
+            ->havingRaw('SUM(value) != 0') // Remove zero balances
             ->get()
             ->map(fn ($transaction) => [
                 'subject_id' => $transaction->subject_id,
