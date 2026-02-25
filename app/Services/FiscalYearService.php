@@ -908,14 +908,46 @@ class FiscalYearService
             'approver_id' => $user->id,
         ];
 
+        $sourceSubjectIds = $closeDocument->transactions()->pluck('subject_id')->filter()->unique()->values();
+
+        $sourceSubjectsById = Subject::withoutGlobalScope('App\\Models\\Scopes\\FiscalYearScope')
+            ->where('company_id', $closeDocument->company_id)
+            ->whereIn('id', $sourceSubjectIds)
+            ->get(['id', 'code'])
+            ->keyBy('id');
+
+        $targetSubjectsByCode = Subject::withoutGlobalScope('App\\Models\\Scopes\\FiscalYearScope')
+            ->where('company_id', $company->id)
+            ->whereIn('code', $sourceSubjectsById->pluck('code')->filter()->unique()->values())
+            ->pluck('id', 'code')
+            ->toArray();
+
+        $subjectMapping = [];
+        foreach ($sourceSubjectsById as $oldSubjectId => $sourceSubject) {
+            $code = $sourceSubject->code;
+            if ($code !== null && isset($targetSubjectsByCode[$code])) {
+                $subjectMapping[$oldSubjectId] = $targetSubjectsByCode[$code];
+            }
+        }
+
         // Reverse the transactions of closing document to create opening document for the new fiscal year
-        $transactions = $closeDocument->transactions()->get()->map(function ($transaction) use ($user) {
+        $transactions = $closeDocument->transactions()->get()->map(function ($transaction) use ($user, $subjectMapping) {
             return [
                 'subject_id' => $subjectMapping[$transaction->subject_id] ?? null,
                 'value' => -1 * $transaction->value,
                 'user_id' => $user->id,
             ];
-        })->toArray();
+        })->filter(fn ($transaction) => $transaction['subject_id'] !== null)->values()->toArray();
+
+        if (empty($transactions)) {
+            Log::warning('Skipping opening document creation due to missing subject mappings.', [
+                'source_company_id' => $closeDocument->company_id,
+                'target_company_id' => $company->id,
+                'close_document_id' => $closeDocument->id,
+            ]);
+
+            return;
+        }
 
         DocumentService::createDocument($user, $documentData, $transactions);
     }
