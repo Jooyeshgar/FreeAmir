@@ -24,15 +24,20 @@
                             <td class="px-4 py-2">{{ $user->name }}</td>
                             <td class="px-4 py-2">{{ $user->email }}</td>
                             <td class="px-4 py-2">
-                                <a href="{{ route('users.show', $user) }}"
-                                    class="btn text-blue-600 hover:text-blue-900">{{ __('View') }}</a>
-                                <a href="{{ route('users.edit', $user) }}"
-                                    class="btn text-yellow-600 hover:text-yellow-900">{{ __('Edit') }}</a>
+                                <a href="{{ route('users.show', $user) }}" class="btn btn-sm btn-ghost text-blue-600 hover:text-blue-900">{{ __('View') }}</a>
+                                <a href="{{ route('users.edit', $user) }}" class="btn btn-sm btn-ghost text-yellow-600 hover:text-yellow-900">{{ __('Edit') }}</a>
+                                @if ($user->employee)
+                                    <a href="{{ route('employees.show', $user->employee) }}" class="btn btn-sm btn-outline btn-success">{{ __('View Employee') }}</a>
+                                @else
+                                    <form action="{{ route('users.create-employee', $user) }}" method="post" class="inline">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-outline btn-primary">{{ __('Create Employee') }}</button>
+                                    </form>
+                                @endif
                                 <form action="{{ route('users.destroy', $user) }}" method="post" class="inline">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit"
-                                        class="btn text-red-600 hover:text-red-900">{{ __('Delete') }}</button>
+                                    <button type="submit" class="btn btn-sm btn-ghost text-red-600 hover:text-red-900">{{ __('Delete') }}</button>
                                 </form>
                             </td>
                         </tr>

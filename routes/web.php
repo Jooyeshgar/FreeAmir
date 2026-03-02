@@ -62,6 +62,8 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('invoices/{invoice}/print', [Controllers\InvoiceController::class, 'print'])->name('invoices.print');
     Route::get('invoices/{invoice}/change-status/{status}', [Controllers\InvoiceController::class, 'changeStatus'])->name('invoices.change-status')->middleware('can:invoices.approve');
     Route::group(['prefix' => 'management'], function () {
+        Route::post('users/{user}/create-employee', [Controllers\Management\UserController::class, 'createEmployee'])
+            ->name('users.create-employee');
         Route::resource('users', Controllers\Management\UserController::class);
         Route::resource('permissions', Controllers\Management\PermissionController::class)->except(['show']);
         Route::resource('roles', Controllers\Management\RoleController::class)->except(['show']);
