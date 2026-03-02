@@ -28,17 +28,18 @@
                         @else
                             <span class="badge badge-lg badge-error gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                                 {{ __('Inactive') }}
                             </span>
                         @endif
 
                         @if ($employee->workSite)
-                            <a href="{{ route('work-sites.edit', $employee->workSite) }}"
-                                class="badge badge-lg badge-primary gap-2 hover:brightness-110 transition-all">
+                            <a href="{{ route('work-sites.edit', $employee->workSite) }}" class="badge badge-lg badge-primary gap-2 hover:brightness-110 transition-all">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                                 </svg>
                                 {{ $employee->workSite->name }}
                             </a>
@@ -48,17 +49,18 @@
                             <a href="{{ route('org-charts.show', $employee->orgChart) }}"
                                 class="badge badge-lg badge-secondary gap-2 hover:brightness-110 transition-all">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                                 </svg>
                                 {{ $employee->orgChart->title }}
                             </a>
                         @endif
 
                         @if ($employee->user)
-                            <a href="{{ route('users.show', $employee->user) }}"
-                                class="badge badge-lg badge-info gap-2 hover:brightness-110 transition-all">
+                            <a href="{{ route('users.show', $employee->user) }}" class="badge badge-lg badge-info gap-2 hover:brightness-110 transition-all">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                 </svg>
                                 {{ $employee->user->name }}
                             </a>
@@ -70,7 +72,8 @@
                     @can('hr.employees.edit')
                         <a href="{{ route('employees.edit', $employee) }}" class="btn btn-info btn-sm gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                             {{ __('Edit') }}
                         </a>
@@ -138,8 +141,7 @@
                 <div class="bg-base-200 rounded-lg px-4 py-3">
                     <div class="text-xs text-gray-500 mb-1">{{ __('Work Site') }}</div>
                     @if ($employee->workSite)
-                        <a href="{{ route('work-sites.edit', $employee->workSite) }}"
-                            class="font-semibold link link-primary hover:link-hover">
+                        <a href="{{ route('work-sites.edit', $employee->workSite) }}" class="font-semibold link link-primary hover:link-hover">
                             {{ $employee->workSite->name }}
                         </a>
                     @else
@@ -149,8 +151,7 @@
                 <div class="bg-base-200 rounded-lg px-4 py-3">
                     <div class="text-xs text-gray-500 mb-1">{{ __('Org Chart Position') }}</div>
                     @if ($employee->orgChart)
-                        <a href="{{ route('org-charts.show', $employee->orgChart) }}"
-                            class="font-semibold link link-primary hover:link-hover">
+                        <a href="{{ route('org-charts.show', $employee->orgChart) }}" class="font-semibold link link-primary hover:link-hover">
                             {{ $employee->orgChart->title }}
                         </a>
                     @else
@@ -160,8 +161,7 @@
                 <div class="bg-base-200 rounded-lg px-4 py-3">
                     <div class="text-xs text-gray-500 mb-1">{{ __('Contract Framework') }}</div>
                     @if ($employee->workSiteContract)
-                        <a href="{{ route('work-site-contracts.edit', $employee->workSiteContract) }}"
-                            class="font-semibold link link-primary hover:link-hover">
+                        <a href="{{ route('work-site-contracts.edit', $employee->workSiteContract) }}" class="font-semibold link link-primary hover:link-hover">
                             {{ $employee->workSiteContract->name }}
                         </a>
                     @else
@@ -171,8 +171,7 @@
                 <div class="bg-base-200 rounded-lg px-4 py-3">
                     <div class="text-xs text-gray-500 mb-1">{{ __('Work Shift') }}</div>
                     @if ($employee->workShift)
-                        <a href="{{ route('work-shifts.edit', $employee->workShift) }}"
-                            class="font-semibold link link-primary hover:link-hover">
+                        <a href="{{ route('work-shifts.edit', $employee->workShift) }}" class="font-semibold link link-primary hover:link-hover">
                             {{ $employee->workShift->name }}
                         </a>
                     @else
@@ -277,8 +276,7 @@
                     </div>
                     <div>
                         <div class="text-xs text-gray-500 mb-0.5">{{ __('Linked User Account') }}</div>
-                        <a href="{{ route('users.show', $employee->user) }}"
-                            class="font-semibold link link-primary hover:link-hover">
+                        <a href="{{ route('users.show', $employee->user) }}" class="font-semibold link link-primary hover:link-hover">
                             {{ $employee->user->name }}
                         </a>
                         <span class="text-gray-400 text-xs ms-2">{{ $employee->user->email }}</span>
@@ -297,7 +295,8 @@
                 @can('hr.employees.edit')
                     <a href="{{ route('employees.edit', $employee) }}" class="btn btn-primary gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                         {{ __('Edit') }}
                     </a>
