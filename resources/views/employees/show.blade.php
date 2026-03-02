@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-app-layout title="{{ $employee->code }} - {{ $employee->first_name }} {{ $employee->last_name }}">
     <div class="card bg-base-100 shadow-xl">
 
         {{-- Header --}}
