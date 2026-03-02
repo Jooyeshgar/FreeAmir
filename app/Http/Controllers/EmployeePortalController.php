@@ -190,7 +190,7 @@ class EmployeePortalController extends Controller
         $employee = $this->currentEmployee();
 
         $validated = $request->validate([
-            'request_type' => ['required', 'string', 'in:' . implode(',', array_column(PersonnelRequestType::cases(), 'value'))],
+            'request_type' => ['required', 'string', 'in:'.implode(',', array_column(PersonnelRequestType::cases(), 'value'))],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'duration_minutes' => ['nullable', 'integer', 'min:0'],

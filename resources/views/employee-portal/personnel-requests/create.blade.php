@@ -40,10 +40,8 @@
                             <div class="label">
                                 <span class="label-text">{{ __('Start Date & Time') }}</span>
                             </div>
-                            <input type="datetime-local" name="start_date" id="start_date"
-                                value="{{ old('start_date') }}"
-                                class="input input-bordered @error('start_date') input-error @enderror"
-                                required />
+                            <input type="datetime-local" name="start_date" id="start_date" value="{{ old('start_date') }}"
+                                class="input input-bordered @error('start_date') input-error @enderror" required />
                             @error('start_date')
                                 <div class="label">
                                     <span class="label-text-alt text-error">{{ $message }}</span>
@@ -57,10 +55,8 @@
                             <div class="label">
                                 <span class="label-text">{{ __('End Date & Time') }}</span>
                             </div>
-                            <input type="datetime-local" name="end_date" id="end_date"
-                                value="{{ old('end_date') }}"
-                                class="input input-bordered @error('end_date') input-error @enderror"
-                                required />
+                            <input type="datetime-local" name="end_date" id="end_date" value="{{ old('end_date') }}"
+                                class="input input-bordered @error('end_date') input-error @enderror" required />
                             @error('end_date')
                                 <div class="label">
                                     <span class="label-text-alt text-error">{{ $message }}</span>
@@ -74,11 +70,8 @@
                             <div class="label">
                                 <span class="label-text">{{ __('Duration (minutes)') }}</span>
                             </div>
-                            <input type="number" name="duration_minutes" id="duration_minutes"
-                                value="{{ old('duration_minutes', 0) }}"
-                                min="0"
-                                class="input input-bordered @error('duration_minutes') input-error @enderror"
-                                placeholder="0" />
+                            <input type="number" name="duration_minutes" id="duration_minutes" value="{{ old('duration_minutes', 0) }}" min="0"
+                                class="input input-bordered @error('duration_minutes') input-error @enderror" placeholder="0" />
                             @error('duration_minutes')
                                 <div class="label">
                                     <span class="label-text-alt text-error">{{ $message }}</span>
@@ -92,8 +85,7 @@
                             <div class="label">
                                 <span class="label-text">{{ __('Reason') }}</span>
                             </div>
-                            <textarea name="reason" id="reason" rows="3"
-                                class="textarea textarea-bordered @error('reason') textarea-error @enderror"
+                            <textarea name="reason" id="reason" rows="3" class="textarea textarea-bordered @error('reason') textarea-error @enderror"
                                 placeholder="{{ __('Optional description…') }}">{{ old('reason') }}</textarea>
                             @error('reason')
                                 <div class="label">
