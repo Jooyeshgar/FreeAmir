@@ -7,6 +7,17 @@ Route::get('/login', [Controllers\Auth\LoginController::class, 'showLoginForm'])
 Route::post('/login', [Controllers\Auth\LoginController::class, 'login']);
 Route::get('/logout', [Controllers\Auth\LoginController::class, 'logout'])->name('logout');
 
+Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee-portal', 'as' => 'employee-portal.'], function () {
+    Route::get('/', [Controllers\EmployeePortalController::class, 'dashboard'])->name('dashboard');
+    Route::get('/attendance-logs', [Controllers\EmployeePortalController::class, 'attendanceLogs'])->name('attendance-logs');
+    Route::get('/monthly-attendances', [Controllers\EmployeePortalController::class, 'monthlyAttendances'])->name('monthly-attendances');
+    Route::get('/monthly-attendances/{monthly_attendance}', [Controllers\EmployeePortalController::class, 'monthlyAttendanceShow'])->name('monthly-attendances.show');
+    Route::get('/payrolls', [Controllers\EmployeePortalController::class, 'payrolls'])->name('payrolls');
+    Route::get('/personnel-requests', [Controllers\EmployeePortalController::class, 'personnelRequests'])->name('personnel-requests.index');
+    Route::get('/personnel-requests/create', [Controllers\EmployeePortalController::class, 'createPersonnelRequest'])->name('personnel-requests.create');
+    Route::post('/personnel-requests', [Controllers\EmployeePortalController::class, 'storePersonnelRequest'])->name('personnel-requests.store');
+});
+
 Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('/', [Controllers\HomeController::class, 'index'])->name('home');
     Route::get('/home/cash-banks', [Controllers\HomeController::class, 'cashAndBanksBalances'])->name('home.cash-banks');

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
@@ -179,6 +180,15 @@ class RolesAndPermissionsSeeder extends Seeder
             'org-charts.edit',
             'org-charts.update',
             'org-charts.destroy',
+
+            'employee-portal.dashboard',
+            'employee-portal.attendance-logs',
+            'employee-portal.monthly-attendances',
+            'employee-portal.monthly-attendances.show',
+            'employee-portal.payrolls',
+            'employee-portal.personnel-requests.index',
+            'employee-portal.personnel-requests.create',
+            'employee-portal.personnel-requests.store',
         ];
 
         foreach ($permissions as $permission) {
@@ -220,6 +230,11 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $seller->syncPermissions($sellerPermissions);
 
+        $employeeRole = Role::firstOrCreate(['name' => 'Employee']);
+        $employeeRole->syncPermissions(
+            Permission::where('name', 'LIKE', 'employee-portal.%')->pluck('name')->toArray()
+        );
+
         $users = [
             'admin' => 'Super-Admin',
             'accountant' => 'Accountant',
@@ -227,6 +242,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'warehouse' => 'Warehousekeeper',
             'seller-warehouse' => ['Seller', 'Warehousekeeper'],
             'accountant-seller-warehouse' => ['Accountant', 'Seller', 'Warehousekeeper'],
+            'employee' => 'Employee',
         ];
 
         foreach ($users as $name => $role) {
@@ -239,6 +255,19 @@ class RolesAndPermissionsSeeder extends Seeder
             );
             $user->companies()->sync([1]);
             $user->assignRole($role);
+        }
+
+        // Create a demo employee record linked to the employee user
+        $employeeUser = User::where('email', 'employee@example.com')->first();
+        if ($employeeUser && ! $employeeUser->employee) {
+            Employee::create([
+                'first_name' => 'Demo',
+                'last_name' => 'Employee',
+                'national_code' => '0000000001',
+                'user_id' => $employeeUser->id,
+                'company_id' => 1,
+                'is_active' => true,
+            ]);
         }
     }
 }
