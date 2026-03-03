@@ -36,6 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'check-permission' => \App\Http\Middleware\CheckPermission::class,
+            'ensure-employee' => \App\Http\Middleware\EnsureEmployee::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

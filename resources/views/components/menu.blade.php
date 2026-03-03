@@ -1,6 +1,19 @@
 @can('home.*')
     <li><a href="/" class="hover:rounded-xl">{{ __('Home') }}</a></li>
 @endcan
+
+@role('Employee')
+    <li class="dropdown dropdown-hover">
+        <div tabindex="0" role="button">{{ __('My Portal') }}</div>
+        <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
+            <li><a href="{{ route('employee-portal.dashboard') }}">{{ __('Dashboard') }}</a></li>
+            <li><a href="{{ route('employee-portal.attendance-logs') }}">{{ __('My Attendance') }}</a></li>
+            <li><a href="{{ route('employee-portal.monthly-attendances') }}">{{ __('Monthly Attendance') }}</a></li>
+            <li><a href="{{ route('employee-portal.payrolls') }}">{{ __('My Payrolls') }}</a></li>
+            <li><a href="{{ route('employee-portal.personnel-requests.index') }}">{{ __('My Requests') }}</a></li>
+        </ul>
+    </li>
+@endrole
 @can('invoices.create')
     <li class="dropdown dropdown-hover">
         <div tabindex="0" role="button">{{ __('Operation') }}</div>
