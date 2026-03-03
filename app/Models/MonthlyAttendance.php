@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class MonthlyAttendance extends Model
 {
@@ -67,6 +68,11 @@ class MonthlyAttendance extends Model
     public function logs(): HasMany
     {
         return $this->hasMany(AttendanceLog::class, 'monthly_attendance_id');
+    }
+
+    public function payroll(): HasOne
+    {
+        return $this->hasOne(Payroll::class, 'monthly_attendance_id');
     }
 
     /** Human-readable Jalali month label */
