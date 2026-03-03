@@ -73,7 +73,7 @@ class MonthlyAttendanceController extends Controller
 
     public function show(MonthlyAttendance $monthlyAttendance): View
     {
-        $monthlyAttendance->load(['employee', 'logs' => fn ($q) => $q->orderBy('log_date')]);
+        $monthlyAttendance->load(['employee.workShift', 'logs' => fn ($q) => $q->orderBy('log_date')]);
 
         return view('monthly-attendances.show', compact('monthlyAttendance'));
     }
@@ -116,19 +116,25 @@ class MonthlyAttendanceController extends Controller
     public function recalculate(Request $request, MonthlyAttendance $monthlyAttendance): RedirectResponse
     {
         $validated = $request->validate([
-            'start_date' => ['required', 'date'],
+            'start_date' => ['required'],
             'duration' => ['required', 'integer', 'min:28', 'max:31'],
         ]);
 
         $startDate = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($validated['start_date']));
 
-        $this->attendanceService->calculateAndStore(
-            employeeId: $monthlyAttendance->employee_id,
+        $employeeId = $monthlyAttendance->employee_id;
+        $jalaliYear = $monthlyAttendance->year;
+        $jalaliMonth = $monthlyAttendance->month;
+
+        $monthlyAttendance->delete();
+
+        $monthlyAttendance = $this->attendanceService->calculateAndStore(
+            employeeId: $employeeId,
             companyId: (int) getActiveCompany(),
             startDate: $startDate,
             durationDays: (int) $validated['duration'],
-            jalaliYear: $monthlyAttendance->year,
-            jalaliMonth: $monthlyAttendance->month,
+            jalaliYear: $jalaliYear,
+            jalaliMonth: $jalaliMonth,
         );
 
         return redirect()->route('monthly-attendances.show', $monthlyAttendance)

@@ -18,6 +18,15 @@ class AttendanceLog extends Model
         'log_date',
         'entry_time',
         'exit_time',
+        'worked',
+        'delay',
+        'early_leave',
+        'overtime',
+        'mission',
+        'paid_leave',
+        'unpaid_leave',
+        'is_friday',
+        'is_holiday',
         'log_type',
         'is_manual',
         'description',
@@ -26,6 +35,15 @@ class AttendanceLog extends Model
     protected $casts = [
         'log_date' => 'date',
         'is_manual' => 'boolean',
+        'is_friday' => 'boolean',
+        'is_holiday' => 'boolean',
+        'worked' => 'integer',
+        'delay' => 'integer',
+        'early_leave' => 'integer',
+        'overtime' => 'integer',
+        'mission' => 'integer',
+        'paid_leave' => 'integer',
+        'unpaid_leave' => 'integer',
     ];
 
     public static function booted(): void

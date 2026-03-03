@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AttendanceLog;
 use App\Models\Employee;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -19,11 +20,11 @@ class AttendanceLogController extends Controller
         }
 
         if ($request->filled('date_from')) {
-            $query->whereDate('log_date', '>=', $request->date_from);
+            $query->whereDate('log_date', '>=', Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($request->date_from))->format('Y-m-d'));
         }
 
         if ($request->filled('date_to')) {
-            $query->whereDate('log_date', '<=', $request->date_to);
+            $query->whereDate('log_date', '<=', Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($request->date_to))->format('Y-m-d'));
         }
 
         if ($request->filled('is_manual')) {
@@ -45,6 +46,10 @@ class AttendanceLogController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $request->merge([
+            'log_date' => Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($request->input('log_date')))->format('Y-m-d'),
+        ]);
+
         $validated = $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
             'log_date' => ['required', 'date'],
@@ -70,11 +75,22 @@ class AttendanceLogController extends Controller
     {
         $employees = Employee::orderBy('first_name')->get();
 
+        $attendanceLog->entry_time = $attendanceLog->entry_time
+            ? substr($attendanceLog->entry_time, 0, 5)
+            : null;
+        $attendanceLog->exit_time = $attendanceLog->exit_time
+            ? substr($attendanceLog->exit_time, 0, 5)
+            : null;
+
         return view('attendance-logs.edit', compact('attendanceLog', 'employees'));
     }
 
     public function update(Request $request, AttendanceLog $attendanceLog): RedirectResponse
     {
+        $request->merge([
+            'log_date' => Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($request->input('log_date')))->format('Y-m-d'),
+        ]);
+
         $validated = $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
             'log_date' => ['required', 'date'],

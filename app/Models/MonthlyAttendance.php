@@ -17,6 +17,8 @@ class MonthlyAttendance extends Model
         'employee_id',
         'year',
         'month',
+        'start_date',
+        'duration',
         'work_days',
         'present_days',
         'absent_days',
@@ -31,6 +33,8 @@ class MonthlyAttendance extends Model
     protected $casts = [
         'year' => 'integer',
         'month' => 'integer',
+        'start_date' => 'date',
+        'duration' => 'integer',
         'work_days' => 'integer',
         'present_days' => 'integer',
         'absent_days' => 'integer',

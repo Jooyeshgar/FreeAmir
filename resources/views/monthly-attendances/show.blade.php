@@ -9,7 +9,7 @@
 
     {{-- Summary card --}}
     <div class="card bg-base-100 shadow-xl mb-6">
-        <div class="card-body">
+        <div class="card-header bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 px-6 py-4 rounded-t-2xl border-b-2 border-primary/20">
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
                     <h2 class="card-title text-lg">
@@ -19,10 +19,19 @@
                         {{ $monthlyAttendance->month_name }} {{ $monthlyAttendance->year }}
                     </h2>
                     <p class="text-sm text-gray-500">
-                        {{ __('Fixed shift') }}:
-                        {{ \App\Services\AttendanceService::SHIFT_START }}
-                        &ndash;
-                        {{ \App\Services\AttendanceService::SHIFT_END }}
+                        @php
+                            $shift = $monthlyAttendance->employee?->workShift;
+                            $shiftStart = $shift ? substr($shift->start_time, 0, 5) : \App\Services\AttendanceService::DEFAULT_SHIFT_START;
+                            $shiftEnd = $shift ? substr($shift->end_time, 0, 5) : \App\Services\AttendanceService::DEFAULT_SHIFT_END;
+                            $shiftName = $shift?->name;
+                        @endphp
+                        {{ __('Shift') }}:
+                        @if ($shiftName)
+                            <span class="font-medium">{{ $shiftName }}</span>
+                            ({{ $shiftStart }} &ndash; {{ $shiftEnd }})
+                        @else
+                            {{ $shiftStart }} &ndash; {{ $shiftEnd }}
+                        @endif
                     </p>
                 </div>
 
@@ -47,7 +56,9 @@
                     </a>
                 </div>
             </div>
+        </div>
 
+        <div class="card-body">
             {{-- Stats grid --}}
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-4">
                 <div class="stat bg-base-200 rounded-box p-3">
@@ -94,23 +105,18 @@
                 <form action="{{ route('monthly-attendances.recalculate', $monthlyAttendance) }}" method="POST" class="flex flex-wrap items-end gap-4">
                     @csrf
                     <div class="w-44">
-                        <x-date-picker name="start_date" id="start_date" title="{{ __('Start Date') }}" :value="old('start_date')" required />
+                        <x-date-picker name="start_date" id="start_date" title="{{ __('Start Date') }}" :value="old('start_date') ?? formatDate($monthlyAttendance->start_date)" required />
                     </div>
                     <div class="w-44">
-                        <x-input name="duration" id="duration" type="number" title="{{ __('Duration (days)') }}" :value="old('duration', 30)" required />
+                        <x-input name="duration" id="duration" type="number" title="{{ __('Duration (days)') }}" :value="old('duration') ?? $monthlyAttendance->duration" required />
                     </div>
                     <button type="submit" class="btn btn-sm btn-accent self-end">
                         {{ __('Recalculate') }}
                     </button>
                 </form>
             @endcan
-        </div>
-    </div>
 
-    {{-- Daily log table --}}
-    <div class="card bg-base-100 shadow-xl">
-        <div class="card-body">
-            <h3 class="font-semibold text-base mb-2">{{ __('Daily Attendance Logs') }}</h3>
+            <div class="divider">{{ __('Daily Attendance Logs') }}</div>
 
             <div class="overflow-x-auto">
                 <table class="table table-sm w-full">

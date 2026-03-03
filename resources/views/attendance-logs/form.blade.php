@@ -7,24 +7,28 @@
     </div>
 
     <div>
-        <x-date-picker name="log_date" id="log_date" title="{{ __('Date') }}" :value="old('log_date', isset($attendanceLog) ? $attendanceLog->log_date?->format('Y-m-d') : '')" required />
+        <x-date-picker name="log_date" id="log_date" title="{{ __('Date') }}" :value="old('log_date', isset($attendanceLog) ? convertToJalali($attendanceLog->log_date) : '')" required />
     </div>
 
     <div>{{-- spacer on desktop --}}</div>
 
     <div>
-        <x-input name="entry_time" id="entry_time" type="time" title="{{ __('Entry Time') }}" :value="old('entry_time', $attendanceLog->entry_time ?? '')" />
+        <x-input name="entry_time" id="entry_time" placeholder="08:00" type="text" title="{{ __('Entry Time') }}" :value="old('entry_time', $attendanceLog->entry_time ?? '')" />
     </div>
 
     <div>
-        <x-input name="exit_time" id="exit_time" type="time" title="{{ __('Exit Time') }}" :value="old('exit_time', $attendanceLog->exit_time ?? '')" />
+        <x-input name="exit_time" placeholder="16:00" id="exit_time" type="text" title="{{ __('Exit Time') }}" :value="old('exit_time', $attendanceLog->exit_time ?? '')" />
     </div>
 
     <div class="md:col-span-2 flex items-center gap-3 mt-1">
         <label class="label cursor-pointer gap-2">
             <input type="hidden" name="is_manual" value="0" />
             <input type="checkbox" name="is_manual" id="is_manual" value="1" class="checkbox checkbox-warning"
-                {{ old('is_manual', $attendanceLog->is_manual ?? false) ? 'checked' : '' }} />
+                @php
+$isManualChecked = old('is_manual') !== null
+                        ? old('is_manual')
+                        : ($attendanceLog->is_manual ?? false); @endphp
+                {{ $isManualChecked ? 'checked' : '' }} />
             <span class="label-text">{{ __('Manually Corrected') }}</span>
         </label>
     </div>

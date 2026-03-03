@@ -21,7 +21,7 @@
 
                     {{-- Start Date (beginning of the previous Jalali month) --}}
                     <div>
-                        <x-date-picker name="start_date" id="start_date" title="{{ __('Start Date') }}" :value="old('start_date')" :hint="__('First day of the Jalali month (e.g. 1403/10/01)')" required />
+                        <x-date-picker name="start_date" id="start_date" title="{{ __('Start Date') }}" :value="old('start_date')" :hint="__('First day of the Jalali month (e.g. 1404/01/01)')" required />
                     </div>
 
                     {{-- Duration in days --}}
@@ -38,11 +38,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <span>
-                        {{ __('Fixed working shift: :start – :end (:hours hours/day). Fridays and public holidays are excluded from work days.', [
-                            'start' => \App\Services\AttendanceService::SHIFT_START,
-                            'end' => \App\Services\AttendanceService::SHIFT_END,
-                            'hours' => \App\Services\AttendanceService::WORK_MINUTES_PER_DAY / 60,
-                        ]) }}
+                        {{ __('The working shift and daily hours are determined by the shift assigned to the selected employee. Fridays and public holidays are excluded from work days.') }}
                     </span>
                 </div>
 
