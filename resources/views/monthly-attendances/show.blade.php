@@ -9,7 +9,7 @@
 
     {{-- Summary card --}}
     <div class="card bg-base-100 shadow-xl mb-6">
-        <div class="card-body">
+        <div class="card-header bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 px-6 py-4 rounded-t-2xl border-b-2 border-primary/20">
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
                     <h2 class="card-title text-lg">
@@ -56,7 +56,9 @@
                     </a>
                 </div>
             </div>
+        </div>
 
+        <div class="card-body">
             {{-- Stats grid --}}
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-4">
                 <div class="stat bg-base-200 rounded-box p-3">
@@ -113,13 +115,8 @@
                     </button>
                 </form>
             @endcan
-        </div>
-    </div>
 
-    {{-- Daily log table --}}
-    <div class="card bg-base-100 shadow-xl">
-        <div class="card-body">
-            <h3 class="font-semibold text-base mb-2">{{ __('Daily Attendance Logs') }}</h3>
+            <div class="divider">{{ __('Daily Attendance Logs') }}</div>
 
             <div class="overflow-x-auto">
                 <table class="table table-sm w-full">
