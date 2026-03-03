@@ -84,7 +84,7 @@
                             <th>{{ __('Entry Time') }}</th>
                             <th>{{ __('Exit Time') }}</th>
                             <th>{{ __('Manual') }}</th>
-                            <th>{{ __('Description') }}</th>
+                            <th>{{ __('Monthly Attendance') }}</th>
                             <th>{{ __('Action') }}</th>
                         </tr>
                     </thead>
@@ -94,7 +94,7 @@
                                 <td>
                                     {{ $log->employee?->first_name }} {{ $log->employee?->last_name }}
                                 </td>
-                                <td>{{ $log->log_date->format('Y-m-d') }}</td>
+                                <td>{{ formatDate($log->log_date) }}</td>
                                 <td>{{ $log->entry_time ?? '—' }}</td>
                                 <td>{{ $log->exit_time ?? '—' }}</td>
                                 <td>
@@ -104,8 +104,13 @@
                                         <span class="badge badge-ghost badge-sm">{{ __('Auto') }}</span>
                                     @endif
                                 </td>
-                                <td class="max-w-xs truncate" title="{{ $log->description }}">
-                                    {{ $log->description ?? '—' }}
+                                <td class="max-w-xs">
+                                    @if ($log->monthly_attendance_id)
+                                        <a href="{{ route('monthly-attendances.show', $log->monthly_attendance_id) }}"
+                                            class="badge badge-info badge-sm mt-1 hover:badge-accent" title="{{ __('View Monthly Attendance') }}">
+                                            {{ __('Monthly Attendance') }}
+                                        </a>
+                                    @endif
                                 </td>
                                 <td class="flex gap-2">
                                     @can('attendance.attendance-logs.edit')

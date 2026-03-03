@@ -19,10 +19,19 @@
                         {{ $monthlyAttendance->month_name }} {{ $monthlyAttendance->year }}
                     </h2>
                     <p class="text-sm text-gray-500">
-                        {{ __('Fixed shift') }}:
-                        {{ \App\Services\AttendanceService::SHIFT_START }}
-                        &ndash;
-                        {{ \App\Services\AttendanceService::SHIFT_END }}
+                        @php
+                            $shift = $monthlyAttendance->employee?->workShift;
+                            $shiftStart = $shift ? substr($shift->start_time, 0, 5) : \App\Services\AttendanceService::DEFAULT_SHIFT_START;
+                            $shiftEnd = $shift ? substr($shift->end_time, 0, 5) : \App\Services\AttendanceService::DEFAULT_SHIFT_END;
+                            $shiftName = $shift?->name;
+                        @endphp
+                        {{ __('Shift') }}:
+                        @if ($shiftName)
+                            <span class="font-medium">{{ $shiftName }}</span>
+                            ({{ $shiftStart }} &ndash; {{ $shiftEnd }})
+                        @else
+                            {{ $shiftStart }} &ndash; {{ $shiftEnd }}
+                        @endif
                     </p>
                 </div>
 
@@ -94,10 +103,10 @@
                 <form action="{{ route('monthly-attendances.recalculate', $monthlyAttendance) }}" method="POST" class="flex flex-wrap items-end gap-4">
                     @csrf
                     <div class="w-44">
-                        <x-date-picker name="start_date" id="start_date" title="{{ __('Start Date') }}" :value="old('start_date')" required />
+                        <x-date-picker name="start_date" id="start_date" title="{{ __('Start Date') }}" :value="old('start_date') ?? formatDate($monthlyAttendance->start_date)" required />
                     </div>
                     <div class="w-44">
-                        <x-input name="duration" id="duration" type="number" title="{{ __('Duration (days)') }}" :value="old('duration', 30)" required />
+                        <x-input name="duration" id="duration" type="number" title="{{ __('Duration (days)') }}" :value="old('duration') ?? $monthlyAttendance->duration" required />
                     </div>
                     <button type="submit" class="btn btn-sm btn-accent self-end">
                         {{ __('Recalculate') }}

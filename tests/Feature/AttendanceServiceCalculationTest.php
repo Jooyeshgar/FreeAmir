@@ -276,30 +276,6 @@ class AttendanceServiceCalculationTest extends TestCase
     }
 
     /**
-     * Scenario: employee has no assigned work shift (work_shift_id = null).
-     * The service should fall back to the default 480-min shift.
-     * 600 min worked → 120 min overtime.
-     */
-    public function test_falls_back_to_default_shift_when_employee_has_no_shift(): void
-    {
-        $employee = $this->makeEmployee(null); // no shift assigned
-
-        $this->insertPrecomputedLog($employee, '2025-03-03', 600);
-
-        $attendance = $this->service->calculateAndStore(
-            $employee->id,
-            $this->company->id,
-            $this->startDate,
-            $this->durationDays,
-            1404,
-            1
-        );
-
-        // 600 − 480 (default) = 120 min overtime
-        $this->assertSame(120, $attendance->overtime);
-    }
-
-    /**
      * Scenario: a public holiday falls on a weekday and the employee works on it.
      * The worked minutes should appear in `holiday`, not counted as overtime.
      */

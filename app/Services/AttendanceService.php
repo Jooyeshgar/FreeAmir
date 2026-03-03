@@ -91,6 +91,8 @@ class AttendanceService
                     'employee_id' => $employeeId,
                     'year' => $jalaliYear,
                     'month' => $jalaliMonth,
+                    'start_date' => $startDate->toDateString(),
+                    'duration' => $durationDays,
                 ])
             );
 
@@ -105,23 +107,26 @@ class AttendanceService
     }
 
     /**
-     * Compute aggregated totals from logs and calendar info.
+     * Compute aggregated totals from logs and calendar info,
+     * then persist per-day calculated fields back to the database.
      *
-     * @param  array  $holidayDates  Gregorian date strings
-     * @param  WorkShift|null  $workShift  Employee's assigned shift (null = use default)
+     * @param  Carbon  $startDate  Period start (inclusive)
+     * @param  int  $durationDays  Number of days to evaluate
+     * @param  Collection  $logs  Attendance log records
+     * @param  array  $holidayDates  Gregorian date strings  e.g. ['2025-01-01']
+     * @param  WorkShift|null  $workShift  Employee's shift (null = default shift)
+     * @return array Aggregated period totals
      */
-    public function computeTotals(
-        Carbon $startDate,
-        int $durationDays,
-        Collection $logs,
-        array $holidayDates,
-        ?WorkShift $workShift = null
-    ): array {
+    public function computeTotals(Carbon $startDate, int $durationDays, Collection $logs, array $holidayDates, ?WorkShift $workShift = null): array
+    {
+
         $workMinutesPerDay = $this->shiftWorkMinutes($workShift);
 
-        $logsByDate = $logs->keyBy(fn ($l) => $l->log_date instanceof Carbon
-            ? $l->log_date->toDateString()
-            : (string) $l->log_date
+        /** @var array<string, mixed> Key = 'Y-m-d' date string */
+        $logsByDate = $logs->keyBy(
+            fn ($log) => $log->log_date instanceof Carbon
+                ? $log->log_date->toDateString()
+                : (string) $log->log_date
         );
 
         $workDays = 0;
@@ -134,27 +139,38 @@ class AttendanceService
         $fridayMin = 0;
         $holidayMin = 0;
 
+        // ── Day loop ──────────────────────────────────────────────────────────
         for ($i = 0; $i < $durationDays; $i++) {
+
             $day = $startDate->copy()->addDays($i);
             $dateStr = $day->toDateString();
+
             $isFriday = $day->dayOfWeek === Carbon::FRIDAY;
             $isHoliday = in_array($dateStr, $holidayDates, true);
 
-            // Fridays and public holidays do not count as regular work days
+            // ── Off-day (Friday / public holiday) ────────────────────────────
             if ($isFriday || $isHoliday) {
-                // If the employee still worked on that day, count overtime minutes
                 if (isset($logsByDate[$dateStr])) {
                     $workedMin = $this->workedMinutes($logsByDate[$dateStr], $workShift);
-                    if ($isFriday) {
-                        $fridayMin += $workedMin;
-                    } else {
-                        $holidayMin += $workedMin;
-                    }
+
+                    $isFriday
+                        ? $fridayMin += $workedMin
+                        : $holidayMin += $workedMin;
+
+                    // Persist off-day overtime to the log record
+                    $logsByDate[$dateStr]->update([
+                        'worked' => $workedMin,
+                        'delay' => 0,
+                        'early_leave' => 0,
+                        'overtime' => $workedMin,   // every minute is overtime on an off-day
+                        'mission' => 0,
+                    ]);
                 }
 
                 continue;
             }
 
+            // ── Regular work day ──────────────────────────────────────────────
             $workDays++;
 
             if (! isset($logsByDate[$dateStr])) {
@@ -165,39 +181,56 @@ class AttendanceService
 
             $log = $logsByDate[$dateStr];
             $workedMin = $this->workedMinutes($log, $workShift);
+            $logWorked = 0;
+            $logDelay = 0;
+            $logEarlyLeave = 0;
+            $logOvertime = 0;
+            $logMission = 0;
 
-            // Mission day: no entry/exit but still "present"
-            if ($log->mission > 0 || ($log->entry_time === null && $log->mission > 0)) {
+            if ($log->mission > 0) {
                 $missionDays++;
                 $presentDays++;
 
-                continue;
-            }
-
-            // Paid / unpaid leave
-            if ($log->paid_leave > 0) {
+                $logMission = $log->mission;
+                $logWorked = $workMinutesPerDay;   // treat full shift as worked
+            } elseif ($log->paid_leave > 0) {
                 $paidLeaveDays++;
                 $presentDays++;
 
-                continue;
-            }
-            if ($log->unpaid_leave > 0) {
+                $logWorked = $workMinutesPerDay;    // counts as a full day worked
+            } elseif ($log->unpaid_leave > 0) {
                 $unpaidLeaveDays++;
-
-                continue;
-            }
-
-            if ($workedMin > 0) {
+                // unpaid leave is neither present nor absent in the period totals
+            } elseif ($workedMin > 0) {
                 $presentDays++;
 
-                // Overtime: minutes worked beyond the shift's standard duration
+                $logWorked = $workedMin;
+
                 $extra = $workedMin - $workMinutesPerDay;
                 if ($extra > 0) {
                     $overtimeMin += $extra;
+                    $logOvertime = $extra;
                 }
-            } else {
+
+                // Delay  : clocked in late  → negative "extra" on the opening side
+                // Early leave: clocked out early → computed inside workedMinutes helper;
+                // expose them here if your helper or log model carries those values.
+                $logDelay = max(0, $log->delay ?? 0);
+                $logEarlyLeave = max(0, $log->early_leave ?? 0);
+            }
+
+            // ── Absent (log exists but no minutes recorded) ───────────────────
+            else {
                 $absentDays++;
             }
+
+            $log->update([
+                'worked' => $logWorked,
+                'delay' => $logDelay,
+                'early_leave' => $logEarlyLeave,
+                'overtime' => $logOvertime,
+                'mission' => $logMission,
+            ]);
         }
 
         return [
