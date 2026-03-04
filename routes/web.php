@@ -88,6 +88,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::group(['prefix' => 'attendance'], function () {
         Route::resource('attendance-logs', Controllers\AttendanceLogController::class)->except(['show']);
         Route::post('monthly-attendances/{monthly_attendance}/recalculate', [Controllers\MonthlyAttendanceController::class, 'recalculate'])->name('monthly-attendances.recalculate');
+        Route::post('monthly-attendances/{monthly_attendance}/payroll', [Controllers\PayrollController::class, 'store'])->name('monthly-attendances.payroll.store');
         Route::resource('monthly-attendances', Controllers\MonthlyAttendanceController::class);
         Route::resource('work-shifts', Controllers\WorkShiftController::class)->except(['show']);
     });
@@ -99,6 +100,8 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::resource('public-holidays', Controllers\PublicHolidayController::class)->except(['show']);
         Route::resource('payroll-elements', Controllers\PayrollElementController::class)->except(['show']);
         Route::resource('salary-decrees', Controllers\SalaryDecreeController::class)->except(['show']);
+        Route::get('payrolls/{payroll}', [Controllers\PayrollController::class, 'show'])->name('payrolls.show');
+        Route::delete('payrolls/{payroll}', [Controllers\PayrollController::class, 'destroy'])->name('payrolls.destroy');
     });
     Route::group(['prefix' => 'reports', 'as' => 'reports.'], function () {
         Route::get('ledger', [Controllers\ReportsController::class, 'ledger'])->name('ledger');

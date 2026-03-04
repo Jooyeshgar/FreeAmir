@@ -116,6 +116,55 @@
                 </form>
             @endcan
 
+            {{-- Payroll section --}}
+            <div class="divider">{{ __('Payroll') }}</div>
+            @if ($monthlyAttendance->payroll)
+                <div class="flex items-center gap-4 flex-wrap">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm text-gray-600">{{ __('Payroll exists for this period.') }}</span>
+                        @if ($monthlyAttendance->payroll->status === 'draft')
+                            <span class="badge badge-warning badge-sm">{{ __('Draft') }}</span>
+                        @elseif ($monthlyAttendance->payroll->status === 'approved')
+                            <span class="badge badge-success badge-sm">{{ __('Approved') }}</span>
+                        @else
+                            <span class="badge badge-info badge-sm">{{ __('Paid') }}</span>
+                        @endif
+                    </div>
+                    <a href="{{ route('payrolls.show', $monthlyAttendance->payroll) }}" class="btn btn-sm btn-primary">
+                        {{ __('View Payroll') }}
+                    </a>
+                </div>
+            @else
+                @can('salary.payrolls.create')
+                    @if ($decrees->isEmpty())
+                        <p class="text-sm text-warning">{{ __('No active salary decrees found for this employee. Please create one first.') }}</p>
+                    @else
+                        <form action="{{ route('monthly-attendances.payroll.store', $monthlyAttendance) }}" method="POST" class="flex flex-wrap items-end gap-4">
+                            @csrf
+                            <div class="w-64">
+                                <label class="form-control w-full">
+                                    <div class="label">
+                                        <span class="label-text">{{ __('Salary Decree') }}</span>
+                                    </div>
+                                    <select name="decree_id" class="select select-bordered select-sm" required>
+                                        <option value="">{{ __('Select Decree') }}</option>
+                                        @foreach ($decrees as $decree)
+                                            <option value="{{ $decree->id }}">
+                                                {{ $decree->name ?? __('Decree') . ' #' . $decree->id }}
+                                                ({{ formatDate($decree->start_date) }})
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </label>
+                            </div>
+                            <button type="submit" class="btn btn-sm btn-success self-end">
+                                {{ __('Create Payroll') }}
+                            </button>
+                        </form>
+                    @endif
+                @endcan
+            @endif
+
             <div class="divider">{{ __('Daily Attendance Logs') }}</div>
 
             <div class="overflow-x-auto">

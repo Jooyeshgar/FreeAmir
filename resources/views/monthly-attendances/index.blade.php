@@ -116,6 +116,17 @@
                                             </button>
                                         </form>
                                     @endcan
+                                    @if ($attendance->payroll)
+                                        <a href="{{ route('payrolls.show', $attendance->payroll) }}" class="btn btn-sm btn-success">
+                                            {{ __('Payroll') }}
+                                        </a>
+                                    @else
+                                        @can('salary.payrolls.create')
+                                            <a href="{{ route('monthly-attendances.show', $attendance) }}" class="btn btn-sm btn-ghost btn-outline">
+                                                {{ __('Create Payroll') }}
+                                            </a>
+                                        @endcan
+                                    @endif
                                 </td>
                             </tr>
                         @empty

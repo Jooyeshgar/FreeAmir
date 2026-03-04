@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Employee;
 use App\Models\MonthlyAttendance;
+use App\Models\SalaryDecree;
 use App\Services\AttendanceService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -16,7 +17,7 @@ class MonthlyAttendanceController extends Controller
 
     public function index(Request $request): View
     {
-        $query = MonthlyAttendance::with('employee')
+        $query = MonthlyAttendance::with(['employee', 'payroll'])
             ->orderBy('year', 'desc')
             ->orderBy('month', 'desc');
 
@@ -73,9 +74,19 @@ class MonthlyAttendanceController extends Controller
 
     public function show(MonthlyAttendance $monthlyAttendance): View
     {
-        $monthlyAttendance->load(['employee.workShift', 'logs' => fn ($q) => $q->orderBy('log_date')]);
+        $monthlyAttendance->load([
+            'employee.workShift',
+            'logs' => fn ($q) => $q->orderBy('log_date'),
+            'payroll',
+        ]);
 
-        return view('monthly-attendances.show', compact('monthlyAttendance'));
+        $decrees = SalaryDecree::withoutGlobalScopes()
+            ->where('employee_id', $monthlyAttendance->employee_id)
+            ->where('is_active', true)
+            ->orderBy('start_date', 'desc')
+            ->get();
+
+        return view('monthly-attendances.show', compact('monthlyAttendance', 'decrees'));
     }
 
     public function edit(MonthlyAttendance $monthlyAttendance): View

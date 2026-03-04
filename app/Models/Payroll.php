@@ -13,8 +13,10 @@ class Payroll extends Model
     use HasFactory;
 
     protected $fillable = [
+        'company_id',
         'employee_id',
         'decree_id',
+        'monthly_attendance_id',
         'year',
         'month',
         'total_earnings',
@@ -45,6 +47,11 @@ class Payroll extends Model
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'employee_id');
+    }
+
+    public function monthlyAttendance(): BelongsTo
+    {
+        return $this->belongsTo(MonthlyAttendance::class, 'monthly_attendance_id');
     }
 
     public function decree(): BelongsTo
