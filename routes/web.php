@@ -84,6 +84,8 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::resource('employees', Controllers\EmployeeController::class);
     Route::resource('org-charts', Controllers\OrgChartController::class);
     Route::resource('personnel-requests', Controllers\PersonnelRequestController::class);
+    Route::patch('personnel-requests/{personnel_request}/approve', [Controllers\PersonnelRequestController::class, 'approve'])->name('personnel-requests.approve');
+    Route::patch('personnel-requests/{personnel_request}/reject', [Controllers\PersonnelRequestController::class, 'reject'])->name('personnel-requests.reject');
 
     Route::group(['prefix' => 'attendance'], function () {
         Route::resource('attendance-logs', Controllers\AttendanceLogController::class)->except(['show']);

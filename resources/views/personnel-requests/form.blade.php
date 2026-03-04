@@ -1,4 +1,4 @@
-{{-- Shared form fields for PersonnelRequest create / edit --}}
+{{-- Shared form fields for PersonnelRequest edit --}}
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
@@ -19,10 +19,6 @@
     </div>
 
     <div>
-        <x-input name="duration_minutes" id="duration_minutes" type="number" title="{{ __('Duration (minutes)') }}" :value="old('duration_minutes', $personnelRequest->duration_minutes ?? 0)" placeholder="0" />
-    </div>
-
-    <div>
         <x-select name="status" id="status" title="{{ __('Status') }}" :options="[
             'pending' => __('Pending'),
             'approved' => __('Approved'),
@@ -31,7 +27,13 @@
     </div>
 
     <div>
-        <x-select name="approved_by" id="approved_by" title="{{ __('Approved By') }}" :options="['' => __('— None —')] + $employees->mapWithKeys(fn($e) => [$e->id => $e->first_name . ' ' . $e->last_name])->toArray()" :selected="old('approved_by', $personnelRequest->approved_by ?? '')" />
+        <label class="form-control w-full">
+            <div class="label">
+                <span class="label-text">{{ __('Approved By') }}</span>
+            </div>
+            <input type="text" class="input input-bordered w-full bg-base-200" disabled
+                value="{{ $personnelRequest->approvedBy ? $personnelRequest->approvedBy->first_name . ' ' . $personnelRequest->approvedBy->last_name : '—' }}">
+        </label>
     </div>
 
     <div class="md:col-span-2">
