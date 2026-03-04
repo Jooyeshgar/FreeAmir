@@ -89,6 +89,9 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
 
     Route::group(['prefix' => 'attendance'], function () {
         Route::resource('attendance-logs', Controllers\AttendanceLogController::class)->except(['show']);
+        Route::get('attendance-logs-import', [Controllers\AttendanceLogController::class, 'importForm'])->name('attendance-logs.import');
+        Route::post('attendance-logs-import/preview', [Controllers\AttendanceLogController::class, 'importPreview'])->name('attendance-logs.import.preview');
+        Route::post('attendance-logs-import', [Controllers\AttendanceLogController::class, 'importStore'])->name('attendance-logs.import.store');
         Route::post('monthly-attendances/{monthly_attendance}/recalculate', [Controllers\MonthlyAttendanceController::class, 'recalculate'])->name('monthly-attendances.recalculate');
         Route::post('monthly-attendances/{monthly_attendance}/payroll', [Controllers\PayrollController::class, 'store'])->name('monthly-attendances.payroll.store');
         Route::resource('monthly-attendances', Controllers\MonthlyAttendanceController::class);

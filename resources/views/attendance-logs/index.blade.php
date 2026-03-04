@@ -65,8 +65,14 @@
             </form>
 
             {{-- Table header row --}}
-            <div class="flex items-center justify-end">
+            <div class="flex items-center justify-end gap-2">
                 @can('attendance.attendance-logs.create')
+                    <a href="{{ route('attendance-logs.import') }}" class="btn btn-sm btn-outline btn-secondary" title="{{ __('Import Attendance Logs') }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
+                        </svg>
+                        {{ __('Import') }}
+                    </a>
                     <a href="{{ route('attendance-logs.create') }}" class="btn btn-primary btn-circle" title="{{ __('Create Attendance Log') }}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />

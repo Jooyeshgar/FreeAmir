@@ -61,6 +61,7 @@ return new class extends Migration
             $table->unsignedInteger('work_shift_id');
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
 
+            $table->string('device_id', 20)->nullable()->comment('Attendance device identification number');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 

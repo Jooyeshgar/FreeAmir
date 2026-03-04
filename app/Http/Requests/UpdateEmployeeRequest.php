@@ -72,6 +72,7 @@ class UpdateEmployeeRequest extends FormRequest
             'contract_framework_id' => ['nullable', 'integer', 'exists:work_site_contracts,id'],
 
             'is_active' => ['boolean'],
+            'device_id' => ['nullable', 'string', 'max:20'],
         ];
     }
 
