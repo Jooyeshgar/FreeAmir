@@ -60,33 +60,71 @@ class PersonnelRequestController extends Controller
         ));
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
-        $employees = Employee::orderBy('first_name')->get(['id', 'first_name', 'last_name']);
-        $requestTypes = PersonnelRequestType::options();
+        $tab = $request->get('tab', 'leaves');
 
-        return view('personnel-requests.create', compact('employees', 'requestTypes'));
+        $cases = match ($tab) {
+            'missions' => PersonnelRequestType::missionTypes(),
+            'work_orders' => PersonnelRequestType::workOrderTypes(),
+            'other' => PersonnelRequestType::otherTypes(),
+            default => PersonnelRequestType::leaveTypes(),
+        };
+
+        $requestTypes = array_column(
+            array_map(fn ($case) => ['value' => $case->value, 'label' => $case->label()], $cases),
+            'label',
+            'value'
+        );
+
+        $title = match ($tab) {
+            'missions' => __('New Mission Request'),
+            'work_orders' => __('New Work Order Request'),
+            'other' => __('New Other Request'),
+            default => __('New Leave Request'),
+        };
+
+        $employees = Employee::orderBy('first_name')->get(['id', 'first_name', 'last_name']);
+
+        return view('personnel-requests.create', compact('employees', 'requestTypes', 'tab', 'title'));
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
+        $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
             'request_type' => ['required', 'string', 'in:'.implode(',', array_column(PersonnelRequestType::cases(), 'value'))],
-            'start_date' => ['required', 'date'],
-            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
-            'duration_minutes' => ['nullable', 'integer', 'min:0'],
+            'request_date' => ['required', 'string'],
+            'start_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
+            'end_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
             'reason' => ['nullable', 'string', 'max:1000'],
             'status' => ['required', 'string', 'in:pending,approved,rejected'],
-            'approved_by' => ['nullable', 'integer', 'exists:employees,id'],
         ]);
 
-        PersonnelRequest::create(array_merge(
-            $validated,
-            ['company_id' => getActiveCompany()]
-        ));
+        $gregorianDate = str_replace('/', '-', convertToGregorian($request->request_date));
 
-        return redirect()->route('personnel-requests.index')
+        $startDatetime = $gregorianDate.' '.$request->start_time;
+        $endDatetime = $gregorianDate.' '.$request->end_time;
+
+        abort_if(
+            strtotime($endDatetime) < strtotime($startDatetime),
+            422,
+            __('End time must be after or equal to start time.')
+        );
+
+        PersonnelRequest::create([
+            'employee_id' => $request->employee_id,
+            'company_id' => getActiveCompany(),
+            'request_type' => $request->request_type,
+            'start_date' => $startDatetime,
+            'end_date' => $endDatetime,
+            'reason' => $request->reason,
+            'status' => $request->status,
+        ]);
+
+        $tab = $request->get('tab', 'leaves');
+
+        return redirect()->route('personnel-requests.index', ['tab' => $tab])
             ->with('success', __('Personnel request created successfully.'));
     }
 
@@ -112,10 +150,8 @@ class PersonnelRequestController extends Controller
             'request_type' => ['required', 'string', 'in:'.implode(',', array_column(PersonnelRequestType::cases(), 'value'))],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
-            'duration_minutes' => ['nullable', 'integer', 'min:0'],
             'reason' => ['nullable', 'string', 'max:1000'],
             'status' => ['required', 'string', 'in:pending,approved,rejected'],
-            'approved_by' => ['nullable', 'integer', 'exists:employees,id'],
         ]);
 
         $personnelRequest->update($validated);
@@ -130,5 +166,27 @@ class PersonnelRequestController extends Controller
 
         return redirect()->route('personnel-requests.index')
             ->with('success', __('Personnel request deleted successfully.'));
+    }
+
+    public function approve(PersonnelRequest $personnelRequest): RedirectResponse
+    {
+        $personnelRequest->update([
+            'status' => 'approved',
+            'approved_by' => auth()->user()->id,
+        ]);
+
+        return redirect()->back()
+            ->with('success', __('Personnel request approved.'));
+    }
+
+    public function reject(PersonnelRequest $personnelRequest): RedirectResponse
+    {
+        $personnelRequest->update([
+            'status' => 'rejected',
+            'approved_by' => auth()->user()->id,
+        ]);
+
+        return redirect()->back()
+            ->with('success', __('Personnel request rejected.'));
     }
 }

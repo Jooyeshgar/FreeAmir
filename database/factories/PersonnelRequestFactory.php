@@ -23,7 +23,6 @@ class PersonnelRequestFactory extends Factory
             'request_type' => $this->faker->randomElement(PersonnelRequestType::cases())->value,
             'start_date' => $startDate,
             'end_date' => $endDate,
-            'duration_minutes' => $this->faker->numberBetween(0, 480),
             'reason' => $this->faker->optional()->sentence(),
             'status' => $this->faker->randomElement(['pending', 'approved', 'rejected']),
             'approved_by' => null,

@@ -174,12 +174,33 @@ class EmployeePortalController extends Controller
 
     /**
      * Show form to create a new personnel request.
+     * Accepts an optional ?tab= query param to pre-filter available request types.
      */
-    public function createPersonnelRequest(): View
+    public function createPersonnelRequest(Request $request): View
     {
-        $requestTypes = PersonnelRequestType::options();
+        $tab = $request->get('tab', 'leaves');
 
-        return view('employee-portal.personnel-requests.create', compact('requestTypes'));
+        $cases = match ($tab) {
+            'missions' => PersonnelRequestType::missionTypes(),
+            'work_orders' => PersonnelRequestType::workOrderTypes(),
+            'other' => PersonnelRequestType::otherTypes(),
+            default => PersonnelRequestType::leaveTypes(),
+        };
+
+        $requestTypes = array_column(
+            array_map(fn ($case) => ['value' => $case->value, 'label' => $case->label()], $cases),
+            'label',
+            'value'
+        );
+
+        $title = match ($tab) {
+            'missions' => __('New Mission Request'),
+            'work_orders' => __('New Work Order Request'),
+            'other' => __('New Other Request'),
+            default => __('New Leave Request'),
+        };
+
+        return view('employee-portal.personnel-requests.create', compact('requestTypes', 'tab', 'title'));
     }
 
     /**
@@ -189,21 +210,40 @@ class EmployeePortalController extends Controller
     {
         $employee = $this->currentEmployee();
 
-        $validated = $request->validate([
+        $request->validate([
             'request_type' => ['required', 'string', 'in:'.implode(',', array_column(PersonnelRequestType::cases(), 'value'))],
-            'start_date' => ['required', 'date'],
-            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
-            'duration_minutes' => ['nullable', 'integer', 'min:0'],
+            'request_date' => ['required', 'string'],
+            'start_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
+            'end_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
             'reason' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        PersonnelRequest::create(array_merge($validated, [
+        $gregorianDate = convertToGregorian($request->request_date);
+        // convertToGregorian returns Y/m/d; normalise to Y-m-d
+        $gregorianDate = str_replace('/', '-', $gregorianDate);
+
+        $startDatetime = $gregorianDate.' '.$request->start_time;
+        $endDatetime = $gregorianDate.' '.$request->end_time;
+
+        abort_if(
+            strtotime($endDatetime) < strtotime($startDatetime),
+            422,
+            __('End time must be after or equal to start time.')
+        );
+
+        PersonnelRequest::create([
             'employee_id' => $employee->id,
             'company_id' => getActiveCompany(),
+            'request_type' => $request->request_type,
+            'start_date' => $startDatetime,
+            'end_date' => $endDatetime,
+            'reason' => $request->reason,
             'status' => 'pending',
-        ]));
+        ]);
 
-        return redirect()->route('employee-portal.personnel-requests.index')
+        $tab = $request->get('tab', 'leaves');
+
+        return redirect()->route('employee-portal.personnel-requests.index', ['tab' => $tab])
             ->with('success', __('Your request has been submitted successfully.'));
     }
 }

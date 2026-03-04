@@ -49,7 +49,7 @@
 
             {{-- New request button --}}
             <div class="flex justify-end mb-2">
-                <a href="{{ route('employee-portal.personnel-requests.create') }}" class="btn btn-primary btn-circle" title="{{ __('New Request') }}">
+                <a href="{{ route('employee-portal.personnel-requests.create', ['tab' => $tab]) }}" class="btn btn-primary btn-circle" title="{{ __('New Request') }}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                     </svg>
@@ -72,9 +72,20 @@
                         @forelse ($personnelRequests as $req)
                             <tr>
                                 <td>{{ $req->request_type->label() }}</td>
-                                <td>{{ $req->start_date->format('Y-m-d H:i') }}</td>
-                                <td>{{ $req->end_date->format('Y-m-d H:i') }}</td>
-                                <td>{{ $req->duration_minutes ?? '—' }}</td>
+                                <td>{{ formatDateTime($req->start_date) }}</td>
+                                <td>{{ formatDateTime($req->end_date) }}</td>
+                                <td>
+                                    @if ($req->start_date && $req->end_date)
+                                        @php
+                                            $totalMinutes = $req->start_date->diffInMinutes($req->end_date);
+                                            $hours = intdiv($totalMinutes, 60);
+                                            $minutes = $totalMinutes % 60;
+                                        @endphp
+                                        {{ str_pad($hours, 2, '0', STR_PAD_LEFT) }}:{{ str_pad($minutes, 2, '0', STR_PAD_LEFT) }}
+                                    @else
+                                        —
+                                    @endif
+                                </td>
                                 <td>
                                     @if ($req->status === 'approved')
                                         <span class="badge badge-success badge-sm">{{ __('Approved') }}</span>

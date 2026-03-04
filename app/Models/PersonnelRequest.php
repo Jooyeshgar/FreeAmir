@@ -18,7 +18,6 @@ class PersonnelRequest extends Model
         'request_type',
         'start_date',
         'end_date',
-        'duration_minutes',
         'reason',
         'status',
         'approved_by',
@@ -28,7 +27,6 @@ class PersonnelRequest extends Model
     protected $casts = [
         'start_date' => 'datetime',
         'end_date' => 'datetime',
-        'duration_minutes' => 'integer',
         'request_type' => PersonnelRequestType::class,
     ];
 
@@ -44,7 +42,7 @@ class PersonnelRequest extends Model
 
     public function approvedBy(): BelongsTo
     {
-        return $this->belongsTo(Employee::class, 'approved_by');
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
     public function payroll(): BelongsTo
