@@ -53,6 +53,7 @@ class Employee extends Model
         'user_id',
         'is_active',
         'company_id',
+        'device_id',
     ];
 
     protected $casts = [

@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AttendanceImportType;
 use App\Models\AttendanceLog;
 use App\Models\Employee;
+use App\Services\AttendanceLogImportService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class AttendanceLogController extends Controller
@@ -115,5 +118,98 @@ class AttendanceLogController extends Controller
 
         return redirect()->route('attendance-logs.index')
             ->with('success', __('Attendance log deleted successfully.'));
+    }
+
+    public function importForm(): View
+    {
+        $importTypes = AttendanceImportType::options();
+
+        return view('attendance-logs.import', compact('importTypes'));
+    }
+
+    public function importPreview(Request $request, AttendanceLogImportService $importService): View
+    {
+        $request->validate([
+            'import_type' => ['required', 'string', new \Illuminate\Validation\Rules\Enum(AttendanceImportType::class)],
+            'file' => ['required', 'file', 'max:10240'],
+            'date_from' => ['nullable', 'string'],
+            'date_to' => ['nullable', 'string'],
+            'duplicate_mode' => ['required', 'string', 'in:ignore,replace'],
+        ]);
+
+        $type = AttendanceImportType::from($request->input('import_type'));
+
+        $dateFrom = null;
+        $dateTo = null;
+
+        if ($request->filled('date_from')) {
+            $dateFrom = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($request->input('date_from')))->format('Y-m-d');
+        }
+        if ($request->filled('date_to')) {
+            $dateTo = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($request->input('date_to')))->format('Y-m-d');
+        }
+
+        // Store the uploaded file temporarily for the confirm step
+        $path = $request->file('file')->store('attendance-import-tmp');
+
+        $duplicateMode = $request->input('duplicate_mode', 'ignore');
+
+        $preview = $importService->preview(
+            $request->file('file'),
+            $type,
+            getActiveCompany(),
+            $dateFrom,
+            $dateTo
+        );
+
+        return view('attendance-logs.import-preview', compact('preview', 'type', 'dateFrom', 'dateTo', 'path', 'duplicateMode'));
+    }
+
+    public function importStore(Request $request, AttendanceLogImportService $importService): RedirectResponse
+    {
+        $request->validate([
+            'import_type' => ['required', 'string', new \Illuminate\Validation\Rules\Enum(AttendanceImportType::class)],
+            'tmp_path' => ['required', 'string'],
+            'date_from_gregorian' => ['nullable', 'string', 'date_format:Y-m-d'],
+            'date_to_gregorian' => ['nullable', 'string', 'date_format:Y-m-d'],
+            'duplicate_mode' => ['required', 'string', 'in:ignore,replace'],
+        ]);
+
+        $type = AttendanceImportType::from($request->input('import_type'));
+        $tmpPath = $request->input('tmp_path');
+
+        // Ensure the path is within the expected directory to prevent path traversal
+        if (! str_starts_with($tmpPath, 'attendance-import-tmp/') || ! Storage::exists($tmpPath)) {
+            return redirect()->route('attendance-logs.import')
+                ->withErrors(['file' => __('Upload session expired. Please upload the file again.')]);
+        }
+
+        $dateFrom = $request->input('date_from_gregorian') ?: null;
+        $dateTo = $request->input('date_to_gregorian') ?: null;
+        $duplicateMode = $request->input('duplicate_mode', 'ignore');
+
+        $result = $importService->import(
+            $tmpPath,
+            $type,
+            getActiveCompany(),
+            $dateFrom,
+            $dateTo,
+            $duplicateMode
+        );
+
+        Storage::delete($tmpPath);
+
+        $message = __('Import complete: :imported records imported, :skipped skipped.', [
+            'imported' => $result['imported'],
+            'skipped' => $result['skipped'],
+        ]);
+
+        if (! empty($result['unknown_devices'])) {
+            $message .= ' '.__('Unknown device IDs (not mapped to any employee): :ids', [
+                'ids' => implode(', ', $result['unknown_devices']),
+            ]);
+        }
+
+        return redirect()->route('attendance-logs.index')->with('success', $message);
     }
 }

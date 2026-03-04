@@ -56,6 +56,10 @@
         <x-select name="duty_status" id="duty_status" title="{{ __('Duty Status') }}" :options="$dutyStatuses" :selected="old('duty_status', $employee->duty_status?->value ?? '')" />
     </div>
 
+    <div>
+        <x-input name="device_id" id="device_id" title="{{ __('Device ID') }}" :value="old('device_id', $employee->device_id ?? '')" placeholder="{{ __('Attendance device ID') }}" />
+    </div>
+
 </div>
 {{-- Section: Organization --}}
 <div class="divider text-sm font-semibold">{{ __('Organization') }}</div>
