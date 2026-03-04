@@ -62,6 +62,26 @@ function formatDate(Carbon|string|null $date)
     return $date->format('Y-m-d');
 }
 
+function formatDateTime(Carbon|string|null $date)
+{
+    if (is_null($date)) {
+        return '';
+    }
+    if (is_string($date)) {
+        $date = Carbon::createFromFormat('Y-m-d H:i:s', $date);
+    }
+
+    $locale = App::getLocale();
+    if ($locale === 'fa' || $locale === 'fa_IR') {
+        $jalaliDate = gregorian_to_jalali_date($date ?? now());
+        $time = ($date ?? now())->format('H:i');
+
+        return convertToFarsi($jalaliDate.' '.$time);
+    }
+
+    return $date->format('Y-m-d H:i');
+}
+
 function formatMinimalDate(?Carbon $date)
 {
     if (is_null($date)) {

@@ -30,11 +30,10 @@ return new class extends Migration
 
             $table->dateTime('start_date');
             $table->dateTime('end_date');
-            $table->unsignedInteger('duration_minutes')->default(0);
 
             $table->text('reason')->nullable();
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
-            $table->unsignedInteger('approved_by')->nullable()->comment('FK به employees');
+            $table->unsignedInteger('approved_by')->nullable()->comment('FK به user');
 
             $table->unsignedInteger('payroll_id')->nullable()->comment('NULL = هنوز در فیش حساب نشده');
 
@@ -44,7 +43,7 @@ return new class extends Migration
                 ->references('id')->on('employees');
 
             $table->foreign('approved_by')
-                ->references('id')->on('employees')
+                ->references('id')->on('users')
                 ->nullOnDelete();
 
             $table->foreign('payroll_id')

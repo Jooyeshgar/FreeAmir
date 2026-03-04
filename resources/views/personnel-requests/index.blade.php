@@ -83,7 +83,7 @@
                 </form>
 
                 @can('hr.personnel-requests.create')
-                    <a href="{{ route('personnel-requests.create') }}" class="btn btn-primary btn-circle" title="{{ __('Create Personnel Request') }}">
+                    <a href="{{ route('personnel-requests.create', ['tab' => $tab]) }}" class="btn btn-primary btn-circle" title="{{ __('Create Personnel Request') }}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
@@ -100,7 +100,7 @@
                             <th>{{ __('Request Type') }}</th>
                             <th>{{ __('Start Date') }}</th>
                             <th>{{ __('End Date') }}</th>
-                            <th>{{ __('Duration (min)') }}</th>
+                            <th>{{ __('Duration (HH:MM)') }}</th>
                             <th>{{ __('Status') }}</th>
                             <th>{{ __('Action') }}</th>
                         </tr>
@@ -113,9 +113,20 @@
                                     {{ $personnelRequest->employee?->last_name }}
                                 </td>
                                 <td>{{ $personnelRequest->request_type->label() }}</td>
-                                <td>{{ $personnelRequest->start_date->format('Y-m-d H:i') }}</td>
-                                <td>{{ $personnelRequest->end_date->format('Y-m-d H:i') }}</td>
-                                <td>{{ $personnelRequest->duration_minutes }}</td>
+                                <td>{{ formatDateTime($personnelRequest->start_date) }}</td>
+                                <td>{{ formatDateTime($personnelRequest->end_date) }}</td>
+                                <td>
+                                    @if ($personnelRequest->start_date && $personnelRequest->end_date)
+                                        @php
+                                            $totalMinutes = $personnelRequest->start_date->diffInMinutes($personnelRequest->end_date);
+                                            $hours = intdiv($totalMinutes, 60);
+                                            $minutes = $totalMinutes % 60;
+                                        @endphp
+                                        {{ str_pad($hours, 2, '0', STR_PAD_LEFT) }}:{{ str_pad($minutes, 2, '0', STR_PAD_LEFT) }}
+                                    @else
+                                        —
+                                    @endif
+                                </td>
                                 <td>
                                     @if ($personnelRequest->status === 'pending')
                                         <span class="badge badge-warning">{{ __('Pending') }}</span>
@@ -124,15 +135,36 @@
                                     @else
                                         <span class="badge badge-error">{{ __('Rejected') }}</span>
                                     @endif
+                                    {{ $personnelRequest->approvedBy ? __('by :name', ['name' => $personnelRequest->approvedBy->name]) : '' }}
                                 </td>
                                 <td class="flex gap-2">
+                                    @can('hr.personnel-requests.approve')
+                                        @if ($personnelRequest->status === 'pending' || $personnelRequest->status === 'rejected')
+                                            <form action="{{ route('personnel-requests.approve', $personnelRequest) }}" method="POST" class="inline-block mb-0">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" title="{{ __('Approve') }}">
+                                                    👍
+                                                </button>
+                                            </form>
+                                        @endif
+                                        @if ($personnelRequest->status === 'pending' || $personnelRequest->status === 'approved')
+                                            <form action="{{ route('personnel-requests.reject', $personnelRequest) }}" method="POST" class="inline-block mb-0">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" class= "text-lg h-8 p-1" title="{{ __('Reject') }}">
+                                                    👎
+                                                </button>
+                                            </form>
+                                        @endif
+                                    @endcan
                                     @can('hr.personnel-requests.edit')
                                         <a href="{{ route('personnel-requests.edit', $personnelRequest) }}" class="btn btn-sm btn-info">
                                             {{ __('Edit') }}
                                         </a>
                                     @endcan
                                     @can('hr.personnel-requests.delete')
-                                        <form action="{{ route('personnel-requests.destroy', $personnelRequest) }}" method="POST" class="inline-block"
+                                        <form action="{{ route('personnel-requests.destroy', $personnelRequest) }}" method="POST" class="inline-block mb-0"
                                             onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                             @csrf
                                             @method('DELETE')

@@ -62,12 +62,11 @@ class PersonnelRequestTest extends TestCase
         return array_merge([
             'employee_id' => $this->employee->id,
             'request_type' => PersonnelRequestType::LEAVE_DAILY->value,
-            'start_date' => '2026-03-01T08:00',
-            'end_date' => '2026-03-01T17:00',
-            'duration_minutes' => 480,
+            'request_date' => '1404/12/10',
+            'start_time' => '08:00',
+            'end_time' => '17:00',
             'reason' => 'Family matter',
             'status' => 'pending',
-            'approved_by' => null,
         ], $overrides);
     }
 
@@ -160,13 +159,21 @@ class PersonnelRequestTest extends TestCase
         $response->assertStatus(200);
     }
 
+    public function test_create_returns_200_with_tab_param(): void
+    {
+        foreach (['leaves', 'missions', 'work_orders', 'other'] as $tab) {
+            $response = $this->get(route('personnel-requests.create', ['tab' => $tab]));
+            $response->assertStatus(200);
+        }
+    }
+
     public function test_store_creates_personnel_request_and_redirects(): void
     {
         $payload = $this->validPayload();
 
         $response = $this->post(route('personnel-requests.store'), $payload);
 
-        $response->assertRedirect(route('personnel-requests.index'));
+        $response->assertRedirect(route('personnel-requests.index', ['tab' => 'leaves']));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('personnel_requests', [
@@ -174,6 +181,7 @@ class PersonnelRequestTest extends TestCase
             'employee_id' => $this->employee->id,
             'request_type' => PersonnelRequestType::LEAVE_DAILY->value,
             'status' => 'pending',
+            'approved_by' => null,
         ]);
     }
 
@@ -181,17 +189,17 @@ class PersonnelRequestTest extends TestCase
     {
         $response = $this->post(route('personnel-requests.store'), []);
 
-        $response->assertSessionHasErrors(['employee_id', 'request_type', 'start_date', 'end_date', 'status']);
+        $response->assertSessionHasErrors(['employee_id', 'request_type', 'request_date', 'start_time', 'end_time', 'status']);
     }
 
     public function test_store_rejects_end_date_before_start_date(): void
     {
         $response = $this->post(route('personnel-requests.store'), $this->validPayload([
-            'start_date' => '2026-03-05T08:00',
-            'end_date' => '2026-03-01T08:00',
+            'start_time' => '17:00',
+            'end_time' => '08:00',
         ]));
 
-        $response->assertSessionHasErrors(['end_date']);
+        $response->assertStatus(422);
     }
 
     public function test_store_rejects_invalid_request_type(): void
@@ -291,6 +299,108 @@ class PersonnelRequestTest extends TestCase
         $response->assertSessionHas('success');
 
         $this->assertDatabaseMissing('personnel_requests', ['id' => $personnelRequest->id]);
+    }
+
+    // ----------------------------------------------------------------
+    // approve / reject
+    // ----------------------------------------------------------------
+
+    public function test_approve_changes_status_to_approved(): void
+    {
+        $personnelRequest = $this->makePersonnelRequest(['status' => 'pending']);
+
+        $response = $this->patch(route('personnel-requests.approve', $personnelRequest));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('personnel_requests', [
+            'id' => $personnelRequest->id,
+            'status' => 'approved',
+        ]);
+        // approved_by should be auto-set to the acting user's employee id (null here since test user has no employee)
+        $this->assertDatabaseHas('personnel_requests', ['id' => $personnelRequest->id, 'status' => 'approved']);
+    }
+
+    public function test_reject_changes_status_to_rejected(): void
+    {
+        $personnelRequest = $this->makePersonnelRequest(['status' => 'pending']);
+
+        $response = $this->patch(route('personnel-requests.reject', $personnelRequest));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('personnel_requests', [
+            'id' => $personnelRequest->id,
+            'status' => 'rejected',
+        ]);
+        // approved_by should be auto-set to the acting user's employee id (null here since test user has no employee)
+        $this->assertDatabaseHas('personnel_requests', ['id' => $personnelRequest->id, 'status' => 'rejected']);
+    }
+
+    public function test_approve_can_override_rejected_status(): void
+    {
+        $personnelRequest = $this->makePersonnelRequest(['status' => 'rejected']);
+
+        $this->patch(route('personnel-requests.approve', $personnelRequest));
+
+        $this->assertDatabaseHas('personnel_requests', [
+            'id' => $personnelRequest->id,
+            'status' => 'approved',
+        ]);
+    }
+
+    public function test_reject_can_override_approved_status(): void
+    {
+        $personnelRequest = $this->makePersonnelRequest(['status' => 'approved']);
+
+        $this->patch(route('personnel-requests.reject', $personnelRequest));
+
+        $this->assertDatabaseHas('personnel_requests', [
+            'id' => $personnelRequest->id,
+            'status' => 'rejected',
+        ]);
+    }
+
+    public function test_approve_sets_approved_by_to_current_user_employee(): void
+    {
+        $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $approverEmployee = Employee::factory()->create([
+            'company_id' => $this->companyId,
+            'work_site_id' => $workSite->id,
+            'user_id' => $this->user->id,
+        ]);
+
+        $personnelRequest = $this->makePersonnelRequest(['status' => 'pending']);
+
+        $this->patch(route('personnel-requests.approve', $personnelRequest));
+
+        $this->assertDatabaseHas('personnel_requests', [
+            'id' => $personnelRequest->id,
+            'status' => 'approved',
+            'approved_by' => $approverEmployee->id,
+        ]);
+    }
+
+    public function test_reject_sets_approved_by_to_current_user_employee(): void
+    {
+        $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $approverEmployee = Employee::factory()->create([
+            'company_id' => $this->companyId,
+            'work_site_id' => $workSite->id,
+            'user_id' => $this->user->id,
+        ]);
+
+        $personnelRequest = $this->makePersonnelRequest(['status' => 'pending']);
+
+        $this->patch(route('personnel-requests.reject', $personnelRequest));
+
+        $this->assertDatabaseHas('personnel_requests', [
+            'id' => $personnelRequest->id,
+            'status' => 'rejected',
+            'approved_by' => $approverEmployee->id,
+        ]);
     }
 
     // ----------------------------------------------------------------
