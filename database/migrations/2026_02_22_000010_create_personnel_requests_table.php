@@ -33,7 +33,7 @@ return new class extends Migration
 
             $table->text('reason')->nullable();
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
-            $table->unsignedInteger('approved_by')->nullable()->comment('FK به user');
+            $table->unsignedBigInteger('approved_by')->nullable()->comment('FK به user');
 
             $table->unsignedInteger('payroll_id')->nullable()->comment('NULL = هنوز در فیش حساب نشده');
 
