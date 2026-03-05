@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\WorkShift;
 use App\Models\WorkSite;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -22,6 +23,7 @@ class EmployeeFactory extends Factory
             'nationality' => 'iranian',
             'gender' => $this->faker->randomElement(['male', 'female']),
             'work_site_id' => WorkSite::factory(),
+            'work_shift_id' => WorkShift::factory(),
             'is_active' => true,
         ];
     }

@@ -49,9 +49,11 @@ class AttendanceLogController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $request->merge([
-            'log_date' => Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($request->input('log_date')))->format('Y-m-d'),
-        ]);
+        if ($request->has('log_date')) {
+            $request->merge([
+                'log_date' => jalaliInputToGregorian($request->input('log_date'), 'log_date'),
+            ]);
+        }
 
         $validated = $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
@@ -90,9 +92,11 @@ class AttendanceLogController extends Controller
 
     public function update(Request $request, AttendanceLog $attendanceLog): RedirectResponse
     {
-        $request->merge([
-            'log_date' => Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($request->input('log_date')))->format('Y-m-d'),
-        ]);
+        if ($request->has('log_date')) {
+            $request->merge([
+                'log_date' => jalaliInputToGregorian($request->input('log_date'), 'log_date'),
+            ]);
+        }
 
         $validated = $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
