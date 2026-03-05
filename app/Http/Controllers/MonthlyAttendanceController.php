@@ -80,8 +80,7 @@ class MonthlyAttendanceController extends Controller
             'payroll',
         ]);
 
-        $decrees = SalaryDecree::withoutGlobalScopes()
-            ->where('employee_id', $monthlyAttendance->employee_id)
+        $decrees = SalaryDecree::where('employee_id', $monthlyAttendance->employee_id)
             ->where('is_active', true)
             ->orderBy('start_date', 'desc')
             ->get();

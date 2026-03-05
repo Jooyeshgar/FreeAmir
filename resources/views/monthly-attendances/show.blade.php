@@ -171,7 +171,7 @@
                 <table class="table table-sm w-full">
                     <thead>
                         <tr>
-                            <th>{{ __('Date') }}</th>
+                            <th colspan="2">{{ __('Date') }}</th>
                             <th>{{ __('Entry') }}</th>
                             <th>{{ __('Exit') }}</th>
                             <th>{{ __('Worked (min)') }}</th>
@@ -184,6 +184,7 @@
                     <tbody>
                         @forelse ($monthlyAttendance->logs as $log)
                             <tr class="{{ $log->is_friday || $log->is_holiday ? 'bg-base-200' : '' }}">
+                                <td>{{ formatDate($log->log_date, 'l') }}</td>
                                 <td>{{ formatDate($log->log_date) }}</td>
                                 <td>{{ $log->entry_time ?? '—' }}</td>
                                 <td>{{ $log->exit_time ?? '—' }}</td>

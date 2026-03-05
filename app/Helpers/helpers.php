@@ -45,7 +45,7 @@ function formatDocumentNumber(float $number)
     return $documentNumber;
 }
 
-function formatDate(Carbon|string|null $date)
+function formatDate(Carbon|string|null $date, $format = 'Y-m-d')
 {
     if (is_null($date)) {
         return '';
@@ -56,10 +56,12 @@ function formatDate(Carbon|string|null $date)
 
     $locale = App::getLocale();
     if ($locale === 'fa' || $locale === 'fa_IR') {
-        return convertToFarsi(gregorian_to_jalali_date($date ?? now()));
+        $timestamp = $date->timestamp ?? now()->timestamp;
+
+        return jdate($format, $timestamp);
     }
 
-    return $date->format('Y-m-d');
+    return $date->format($format);
 }
 
 function formatDateTime(Carbon|string|null $date)
