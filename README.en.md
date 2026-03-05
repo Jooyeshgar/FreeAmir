@@ -15,82 +15,28 @@
     * Track invoices and receipts
     * Generate reports
     * Support for Iranian tax regulations
+* **Warehousing (انبار داری):**
+    * Manage products and inventory
+    * Track stock levels and warehouse movements
+    * Moving weighted average cost flow (perpetual inventory system)
+* **Attendance (حضور و غیاب):**
+    * Record employee check-in / check-out
+    * Track daily and monthly attendance
+    * Import attendance data from external sources
+* **Payroll (حقوق و دستمزد):**
+    * Calculate monthly salaries based on attendance
+    * Manage deductions, bonuses, and benefits
+    * Generate payslips and payroll reports
 * **Open-source:** Free to use, modify, and contribute to.
 
 **Installation:**
 
-Alternatively, you can use **[Laravel Sail](https://laravel.com/docs/sail)** for installation. If you choose Sail:
-*   After step 3 (installing Composer dependencies), run the Composer install command again within Sail (`sail composer install`).
-*   For subsequent steps (5-7, 10), prefix the `php artisan` commands with `sail` (e.g., `sail artisan key:generate`).
-*   Similarly, prefix `npm` commands (8-9) with `sail` (e.g., `sail npm install`).
-*   Refer to the official **[Sail documentation](https://laravel.com/docs/sail)** for more details.
+Full installation instructions are available in **[INSTALLATION.md](INSTALLATION.md)**, with two separate guides:
 
-1.  **Prerequisites:**
-    *   PHP >= 8.1
-    *   Composer
-    *   MySQL database
-    *   Node.js >= 18.0.0
-2. **Clone the repository:**
+*   **[Option 1 — Standard (PHP / Composer / npm)](INSTALLATION.md#option-1-standard-installation-php--composer--npm):** Install directly on your machine using PHP, Composer, and npm.
+*   **[Option 2 — Laravel Sail (Docker)](INSTALLATION.md#option-2-laravel-sail-docker):** Run the full stack in Docker containers using Laravel Sail.
 
-```bash
-git clone https://github.com/Jooyeshgar/FreeAmir.git
-cd FreeAmir
-```
-
-3. **Install dependencies:**
-
-```bash
-composer install
-```
-
-4. **Copy `.env.example` to `.env` and configure database credentials.**
-
-5. **Generate application key:**
-
-```bash
-php artisan key:generate
-```
-
-6. **Migrate the database:**
-
-```bash
-php artisan migrate
-```
-
-7. **Seed the database with sample data:**
-
-```bash
-php artisan db:seed
-```
-
-Optional: Seed demo data
-```bash
-php artisan db:seed --class DemoSeeder
-```
-
-8.  **Install npm packages:**
-
-```bash
-npm install
-```
-
-9.  **Run the Vite development server:**
-
-```bash
-npm run dev
-```
-
-10. **Start the development server:**
-
-```bash
-php artisan serve
-```
-
-**Database Migration:**
-
-If you are migrating from the older version of Amir (based on SQLite), please refer to the [Database Migration Guide](script/README.md) for detailed instructions.
-
-****Usage:**
+**Usage:**
 
 1.  Access the application in your web browser at http://localhost:8000 (or the port specified in your `.env` file).
 2.  Log in with the default credentials (email: `admin@example.com`, password: `password`).
