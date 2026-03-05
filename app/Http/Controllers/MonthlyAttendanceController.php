@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Employee;
 use App\Models\MonthlyAttendance;
+use App\Models\PublicHoliday;
 use App\Models\SalaryDecree;
 use App\Services\AttendanceService;
 use Carbon\Carbon;
@@ -85,7 +86,36 @@ class MonthlyAttendanceController extends Controller
             ->orderBy('start_date', 'desc')
             ->get();
 
-        return view('monthly-attendances.show', compact('monthlyAttendance', 'decrees'));
+        // Load public holidays for the period so placeholders can be marked correctly
+        $start = $monthlyAttendance->start_date->copy();
+        $end = $start->copy()->addDays($monthlyAttendance->duration - 1);
+        $holidayDates = PublicHoliday::withoutGlobalScopes()
+            ->where('company_id', $monthlyAttendance->company_id)
+            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+            ->pluck('date')
+            ->map(fn ($d) => $d instanceof Carbon ? $d->toDateString() : (string) $d)
+            ->flip()
+            ->toArray();
+
+        // Build a full list of every day in the duration so absent days are visible
+        $logsByDate = $monthlyAttendance->logs->keyBy(fn ($log) => $log->log_date->toDateString());
+        $allDays = collect();
+        for ($i = 0; $i < $monthlyAttendance->duration; $i++) {
+            $date = $start->copy()->addDays($i);
+            $dateKey = $date->toDateString();
+            $allDays->push(
+                $logsByDate->has($dateKey)
+                    ? $logsByDate->get($dateKey)
+                    : (object) [
+                        'log_date' => $date,
+                        '_placeholder' => true,
+                        '_is_friday' => $date->dayOfWeek === Carbon::FRIDAY,
+                        '_is_holiday' => isset($holidayDates[$dateKey]),
+                    ]
+            );
+        }
+
+        return view('monthly-attendances.show', compact('monthlyAttendance', 'decrees', 'allDays'));
     }
 
     public function edit(MonthlyAttendance $monthlyAttendance): View

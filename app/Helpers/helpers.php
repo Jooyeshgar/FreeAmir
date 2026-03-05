@@ -130,6 +130,20 @@ function convertToFarsi($number)
 }
 
 /**
+ * Convert a number string to English digits.
+ *
+ * @param  string  $number
+ * @return string
+ */
+function toEnglish($number)
+{
+    $farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+    $englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+    return str_replace($farsiDigits, $englishDigits, $number);
+}
+
+/**
  * Convert a string number from Persian or English to a float.
  *
  * @param  mixed  $number
