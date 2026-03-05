@@ -1,0 +1,43 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Node / frontend build artifacts (Nginx stage handles its own npm install)
+node_modules
+
+# Composer dev dependencies (installed fresh in builder stage)
+vendor
+
+# Laravel runtime / generated files
+storage/framework/cache
+storage/framework/sessions
+storage/framework/views
+storage/logs
+bootstrap/cache
+
+# Docker files (not needed inside the image)
+docker
+!docker/php.ini
+!docker/php-fpm/
+!docker/bootstrap.sh
+!docker/nginx/
+docker-compose.yml
+.dockerignore
+
+# Dev/test tooling
+.env
+.env.*
+!.env.example
+phpunit.xml
+tests
+script
+docs
+
+# IDE / OS noise
+.idea
+.vscode
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
