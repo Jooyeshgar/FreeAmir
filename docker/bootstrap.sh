@@ -3,6 +3,12 @@ set -e
 
 echo "[bootstrap] Starting FreeAmir..."
 
+# Artisan requires a .env file to exist (even if all values come from environment variables)
+if [ ! -f /var/www/html/.env ]; then
+    echo "[bootstrap] Creating .env from environment variables..."
+    cp /var/www/html/.env.example /var/www/html/.env
+fi
+
 # Generate app key if not already set
 if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "base64:CHANGE_ME" ]; then
     echo "[bootstrap] Generating application key..."
@@ -14,7 +20,7 @@ echo "[bootstrap] Running database migrations..."
 php artisan migrate --force
 
 # Seed the database on first run (only if the users table is empty)
-if php artisan tinker --execute="exit(\\App\\Models\\User::count() > 0 ? 0 : 1);" 2>/dev/null; then
+if php artisan tinker --execute="exit(\App\Models\User::count() > 0 ? 0 : 1);" 2>/dev/null; then
     echo "[bootstrap] Database already seeded, skipping."
 else
     echo "[bootstrap] Seeding database..."
@@ -27,5 +33,5 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-echo "[bootstrap] Bootstrap complete. Starting supervisor..."
-exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+echo "[bootstrap] Bootstrap complete. Starting PHP-FPM..."
+exec "$@"

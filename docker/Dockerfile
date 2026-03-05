@@ -1,77 +1,104 @@
-FROM ubuntu:24.04
+# =============================================================================
+# Stage 1: Builder — install Composer deps (no dev) with all build-time tools
+# =============================================================================
+FROM php:8.3-fpm AS builder
 
 LABEL maintainer="FreeAmir"
 
-ARG NODE_VERSION=22
-ARG MYSQL_CLIENT="mariadb-client"
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    unzip \
+    libpng-dev \
+    libonig-dev \
+    libssl-dev \
+    libxml2-dev \
+    libcurl4-openssl-dev \
+    libicu-dev \
+    libzip-dev \
+    && docker-php-ext-install -j$(nproc) \
+        pdo_mysql \
+        gd \
+        intl \
+        zip \
+        bcmath \
+        soap \
+        mbstring \
+        xml \
+    && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 WORKDIR /var/www/html
 
-ENV DEBIAN_FRONTEND=noninteractive
-ENV TZ=UTC
+# Copy full application source so post-autoload-dump Artisan scripts can run
+COPY . /var/www/html
 
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+# Install Composer and production dependencies
+RUN mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs \
+    && chmod -R 775 bootstrap/cache storage \
+    && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
+    && composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist
 
-RUN echo "Acquire::http::Pipeline-Depth 0;" > /etc/apt/apt.conf.d/99custom && \
-    echo "Acquire::http::No-Cache true;" >> /etc/apt/apt.conf.d/99custom && \
-    echo "Acquire::BrokenProxy    true;" >> /etc/apt/apt.conf.d/99custom
+# =============================================================================
+# Stage 2: Production — lean PHP-FPM runtime image
+# =============================================================================
+FROM php:8.3-fpm AS production
 
-RUN apt-get update && apt-get upgrade -y \
-    && mkdir -p /etc/apt/keyrings \
-    && apt-get install -y gnupg gosu curl ca-certificates zip unzip git supervisor libcap2-bin libpng-dev dnsutils librsvg2-bin nano \
-    && curl -sS 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xb8dc7e53946656efbce4c1dd71daeaab4ad4cab6' | gpg --dearmor | tee /etc/apt/keyrings/ppa_ondrej_php.gpg > /dev/null \
-    && echo "deb [signed-by=/etc/apt/keyrings/ppa_ondrej_php.gpg] https://ppa.launchpadcontent.net/ondrej/php/ubuntu noble main" > /etc/apt/sources.list.d/ppa_ondrej_php.list \
-    && apt-get update \
-    && apt-get install -y \
-       libgd3 \
-       php8.3-cli \
-       php8.3-gd \
-       php8.3-curl \
-       php8.3-imap \
-       php8.3-mysql \
-       php8.3-mbstring \
-       php8.3-xml \
-       php8.3-zip \
-       php8.3-bcmath \
-       php8.3-soap \
-       php8.3-intl \
-       php8.3-readline \
-       php8.3-msgpack \
-       php8.3-igbinary \
-    && curl -sLS https://getcomposer.org/installer | php -- --install-dir=/usr/bin/ --filename=composer \
-    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
-    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_VERSION.x nodistro main" > /etc/apt/sources.list.d/nodesource.list \
-    && apt-get update \
-    && apt-get install -y nodejs \
-    && npm install -g npm \
-    && apt-get install -y $MYSQL_CLIENT \
-    && apt-get -y autoremove \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# Runtime-only system libraries + php-fpm-healthcheck dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    libicu-dev \
+    libzip-dev \
+    libfcgi-bin \
+    procps \
+    && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN setcap "cap_net_bind_service=+ep" /usr/bin/php8.3
+# Install php-fpm health-check script
+RUN curl -fsSL https://raw.githubusercontent.com/renatomefi/php-fpm-healthcheck/master/php-fpm-healthcheck \
+    -o /usr/local/bin/php-fpm-healthcheck \
+    && chmod +x /usr/local/bin/php-fpm-healthcheck
 
-RUN groupadd --force -g 1000 freaamir \
-    && useradd -ms /bin/bash --no-user-group -g 1000 -u 1000 freaamir
+# Copy compiled PHP extensions and config from builder
+COPY --from=builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
+COPY --from=builder /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
+COPY --from=builder /usr/local/bin/docker-php-ext-* /usr/local/bin/
 
-# Copy application source
-COPY --chown=freaamir:freaamir . /var/www/html
+# Use PHP's recommended production ini
+RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
-# Install PHP dependencies (no dev)
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# App-specific PHP settings (upload limits, opcache, etc.)
+COPY docker/php.ini $PHP_INI_DIR/conf.d/99-app.ini
 
-# Build frontend assets
-RUN npm ci && npm run build && rm -rf node_modules
+# PHP-FPM pool config (enables /status endpoint for healthcheck)
+COPY docker/php-fpm/php-fpm.conf /usr/local/etc/php-fpm.d/zz-app.conf
 
-# Set permissions
-RUN chown -R freaamir:freaamir /var/www/html/storage /var/www/html/bootstrap/cache \
-    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
-
-COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY docker/php.ini /etc/php/8.3/cli/conf.d/99-app.ini
+# Copy entrypoint
 COPY docker/bootstrap.sh /usr/local/bin/bootstrap.sh
 RUN chmod +x /usr/local/bin/bootstrap.sh
 
-EXPOSE 80/tcp
+# Copy application code + vendor from builder
+COPY --from=builder --chown=www-data:www-data /var/www/html /var/www/html
+
+# Ensure storage and cache dirs exist and are writable
+RUN mkdir -p \
+        /var/www/html/storage/app/public \
+        /var/www/html/storage/framework/cache/data \
+        /var/www/html/storage/framework/sessions \
+        /var/www/html/storage/framework/views \
+        /var/www/html/storage/logs \
+        /var/www/html/bootstrap/cache \
+    && chown -R www-data:www-data \
+        /var/www/html/storage \
+        /var/www/html/bootstrap/cache \
+    && chmod -R 775 \
+        /var/www/html/storage \
+        /var/www/html/bootstrap/cache
+
+WORKDIR /var/www/html
+
+USER www-data
+
+EXPOSE 9000
 
 ENTRYPOINT ["/usr/local/bin/bootstrap.sh"]
+CMD ["php-fpm"]
