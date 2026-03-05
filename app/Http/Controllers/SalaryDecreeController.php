@@ -16,7 +16,7 @@ class SalaryDecreeController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = SalaryDecree::with(['employee', 'orgChart'])
+        $query = SalaryDecree::with(['employee'])
             ->orderBy('start_date', 'desc');
 
         if ($request->filled('search')) {
@@ -46,11 +46,9 @@ class SalaryDecreeController extends Controller
     {
         $validated = $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
-            'org_chart_id' => ['required', 'integer', 'exists:org_charts,id'],
             'name' => ['nullable', 'string', 'max:200'],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'contract_type' => ['nullable', 'in:full_time,part_time,hourly,shift'],
             'daily_wage' => ['nullable', 'numeric', 'min:0'],
             'description' => ['nullable', 'string'],
             'is_active' => ['boolean'],
@@ -63,11 +61,9 @@ class SalaryDecreeController extends Controller
             $decree = SalaryDecree::create([
                 'company_id' => getActiveCompany(),
                 'employee_id' => $validated['employee_id'],
-                'org_chart_id' => $validated['org_chart_id'],
                 'name' => $validated['name'] ?? null,
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'] ?? null,
-                'contract_type' => $validated['contract_type'] ?? null,
                 'daily_wage' => $validated['daily_wage'] ?? null,
                 'description' => $validated['description'] ?? null,
                 'is_active' => $request->boolean('is_active', true),
@@ -101,11 +97,9 @@ class SalaryDecreeController extends Controller
     {
         $validated = $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
-            'org_chart_id' => ['required', 'integer', 'exists:org_charts,id'],
             'name' => ['nullable', 'string', 'max:200'],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'contract_type' => ['nullable', 'in:full_time,part_time,hourly,shift'],
             'daily_wage' => ['nullable', 'numeric', 'min:0'],
             'description' => ['nullable', 'string'],
             'is_active' => ['boolean'],
@@ -117,11 +111,9 @@ class SalaryDecreeController extends Controller
         DB::transaction(function () use ($validated, $request, $salaryDecree) {
             $salaryDecree->update([
                 'employee_id' => $validated['employee_id'],
-                'org_chart_id' => $validated['org_chart_id'],
                 'name' => $validated['name'] ?? null,
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'] ?? null,
-                'contract_type' => $validated['contract_type'] ?? null,
                 'daily_wage' => $validated['daily_wage'] ?? null,
                 'description' => $validated['description'] ?? null,
                 'is_active' => $request->boolean('is_active', true),

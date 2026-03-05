@@ -15,7 +15,7 @@ class EnsureEmployee
     {
         $user = $request->user();
 
-        if (! $user || ! $user->hasRole('Employee') || ! $user->employee) {
+        if (! $user || ! $user->hasPermissionTo('employee-portal.dashboard') || ! $user->employee) {
             abort(403, __('Access denied. You must be a registered employee to access this area.'));
         }
 

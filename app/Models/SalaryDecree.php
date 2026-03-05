@@ -15,11 +15,9 @@ class SalaryDecree extends Model
     protected $fillable = [
         'company_id',
         'employee_id',
-        'org_chart_id',
         'name',
         'start_date',
         'end_date',
-        'contract_type',
         'daily_wage',
         'description',
         'is_active',
@@ -40,11 +38,6 @@ class SalaryDecree extends Model
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'employee_id');
-    }
-
-    public function orgChart(): BelongsTo
-    {
-        return $this->belongsTo(OrgChart::class, 'org_chart_id');
     }
 
     public function benefits(): HasMany

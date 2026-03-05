@@ -15,11 +15,9 @@ return new class extends Migration
             $table->increments('id');
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->unsignedInteger('employee_id');
-            $table->unsignedInteger('org_chart_id');
             $table->string('name', 200)->nullable()->comment('Decree name or number');
             $table->date('start_date');
             $table->date('end_date')->nullable()->comment('NULL = currently active');
-            $table->enum('contract_type', ['full_time', 'part_time', 'hourly', 'shift'])->nullable();
 
             // Base financials — snapshotted at decree issuance for audit integrity
             $table->decimal('daily_wage', 18, 2)->nullable()->comment('مزد روزانه (base_salary / 30)');
@@ -33,8 +31,6 @@ return new class extends Migration
             $table->foreign('employee_id')
                 ->references('id')->on('employees');
 
-            $table->foreign('org_chart_id')
-                ->references('id')->on('org_charts');
         });
 
         Schema::create('decree_benefits', function (Blueprint $table) {

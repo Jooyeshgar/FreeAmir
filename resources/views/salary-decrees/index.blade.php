@@ -42,7 +42,6 @@
                     <tr>
                         <th>{{ __('Employee') }}</th>
                         <th>{{ __('Decree Name') }}</th>
-                        <th>{{ __('Contract Type') }}</th>
                         <th>{{ __('Start Date') }}</th>
                         <th>{{ __('End Date') }}</th>
                         <th>{{ __('Active') }}</th>
@@ -54,7 +53,6 @@
                         <tr>
                             <td>{{ $decree->employee->first_name }} {{ $decree->employee->last_name }}</td>
                             <td>{{ $decree->name ?? '—' }}</td>
-                            <td>{{ $decree->contract_type ? __($decree->contract_type) : '—' }}</td>
                             <td>{{ $decree->start_date->format('Y-m-d') }}</td>
                             <td>{{ $decree->end_date?->format('Y-m-d') ?? '—' }}</td>
                             <td>
@@ -71,7 +69,7 @@
                                     </a>
                                 @endcan
                                 @can('salary.salary-decrees.delete')
-                                    <form action="{{ route('salary-decrees.destroy', $decree) }}" method="POST" class="inline-block"
+                                    <form action="{{ route('salary-decrees.destroy', $decree) }}" method="POST" class="inline-block mb-0"
                                         onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                         @csrf
                                         @method('DELETE')
