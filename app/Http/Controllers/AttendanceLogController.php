@@ -103,13 +103,20 @@ class AttendanceLogController extends Controller
             'log_date' => ['required', 'date'],
             'entry_time' => ['nullable', 'date_format:H:i'],
             'exit_time' => ['nullable', 'date_format:H:i', 'after_or_equal:entry_time'],
-            'is_manual' => ['boolean'],
+            'worked' => ['nullable', 'integer', 'min:0'],
+            'delay' => ['nullable', 'integer', 'min:0'],
+            'early_leave' => ['nullable', 'integer', 'min:0'],
+            'overtime' => ['nullable', 'integer', 'min:0'],
+            'mission' => ['nullable', 'integer', 'min:0'],
+            'paid_leave' => ['nullable', 'integer', 'min:0'],
+            'unpaid_leave' => ['nullable', 'integer', 'min:0'],
             'description' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        // Editing a log always marks it as manually corrected
         $attendanceLog->update(array_merge(
             $validated,
-            ['is_manual' => $request->boolean('is_manual')]
+            ['is_manual' => true]
         ));
 
         return redirect()->route('attendance-logs.index')
