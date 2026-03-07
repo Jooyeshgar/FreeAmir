@@ -10,7 +10,7 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="card-actions">
-                @can('org-charts.create')
+                @can('hr.org-charts.create')
                     <a href="{{ route('hr.org-charts.create') }}" class="btn btn-primary">
                         {{ __('Create Node') }}
                     </a>
@@ -47,17 +47,17 @@
                             <td>{{ $orgChart->parent?->title ?? '-' }}</td>
                             <td>{{ $orgChart->description ?? '-' }}</td>
                             <td class="flex gap-2">
-                                @can('org-charts.show')
+                                @can('hr.org-charts.show')
                                     <a href="{{ route('hr.org-charts.show', $orgChart) }}" class="btn btn-sm btn-ghost">
                                         {{ __('View') }}
                                     </a>
                                 @endcan
-                                @can('org-charts.edit')
+                                @can('hr.org-charts.edit')
                                     <a href="{{ route('hr.org-charts.edit', $orgChart) }}" class="btn btn-sm btn-info">
                                         {{ __('Edit') }}
                                     </a>
                                 @endcan
-                                @can('org-charts.delete')
+                                @can('hr.org-charts.delete')
                                     <form action="{{ route('hr.org-charts.destroy', $orgChart) }}" method="POST" class="inline-block"
                                         onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                         @csrf
