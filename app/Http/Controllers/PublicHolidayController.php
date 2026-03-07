@@ -29,6 +29,12 @@ class PublicHolidayController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        if ($request->has('date')) {
+            $request->merge([
+                'date' => jalaliInputToGregorian($request->input('date'), 'date'),
+            ]);
+        }
+
         $validated = $request->validate([
             'date' => ['required', 'date', 'unique:public_holidays,date'],
             'name' => ['required', 'string', 'max:200'],
@@ -50,6 +56,12 @@ class PublicHolidayController extends Controller
 
     public function update(Request $request, PublicHoliday $publicHoliday): RedirectResponse
     {
+        if ($request->has('date')) {
+            $request->merge([
+                'date' => jalaliInputToGregorian($request->input('date'), 'date'),
+            ]);
+        }
+
         $validated = $request->validate([
             'date' => ['required', 'date', 'unique:public_holidays,date,'.$publicHoliday->id],
             'name' => ['required', 'string', 'max:200'],
