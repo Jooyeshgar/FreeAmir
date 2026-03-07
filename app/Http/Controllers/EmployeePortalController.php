@@ -7,6 +7,7 @@ use App\Models\AttendanceLog;
 use App\Models\MonthlyAttendance;
 use App\Models\Payroll;
 use App\Models\PersonnelRequest;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -51,14 +52,18 @@ class EmployeePortalController extends Controller
             ->orderBy('log_date', 'desc');
 
         if ($request->filled('date_from')) {
-            $query->whereDate('log_date', '>=', $request->date_from);
+            $query->whereDate('log_date', '>=', Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($request->date_from))->format('Y-m-d'));
         }
 
         if ($request->filled('date_to')) {
-            $query->whereDate('log_date', '<=', $request->date_to);
+            $query->whereDate('log_date', '<=', Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($request->date_to))->format('Y-m-d'));
         }
 
-        $attendanceLogs = $query->paginate(15)->withQueryString();
+        if ($request->filled('is_manual')) {
+            $query->where('is_manual', (bool) $request->is_manual);
+        }
+
+        $attendanceLogs = $query->paginate(30)->withQueryString();
 
         return view('employee-portal.attendance-logs', compact('attendanceLogs', 'employee'));
     }
