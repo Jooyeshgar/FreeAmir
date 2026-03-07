@@ -107,13 +107,13 @@ class DocumentController extends Controller
     {
         $stats = $this->documentNumberService->sortStats();
 
-        if ((int) ($stats['unused_document_numbers_count'] ?? 0) === 0) {
-            if ($request->expectsJson()) {
-                return response()->json(['message' => __('No unused document number found to sort.')]);
-            }
+        // if ((int) ($stats['unused_document_numbers_count'] ?? 0) === 0) {
+        //     if ($request->expectsJson()) {
+        //         return response()->json(['message' => __('No unused document number found to sort.')]);
+        //     }
 
-            return redirect()->route('documents.sort-numbers')->with('error', __('No unused document number found to sort.'));
-        }
+        //     return redirect()->route('documents.sort-numbers')->with('error', __('No unused document number found to sort.'));
+        // }
 
         $progress = $this->documentNumberService->initializeSorting($request->user()->id);
 

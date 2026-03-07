@@ -183,7 +183,7 @@
 
         {{-- Finance --}}
         @canany(['bank-accounts.index', 'bank-accounts.create', 'bank-accounts.edit', 'banks.index', 'banks.create', 'banks.edit', 'subjects.index', 'subjects.create',
-            'subjects.edit'])
+            'subjects.edit', 'documents.sort-numbers'])
             <li>
                 <details>
                     <summary>{{ __('Finance') }}</summary>
@@ -197,6 +197,9 @@
                         @canany(['banks.index', 'banks.create', 'banks.edit'])
                             <li><a href="{{ route('banks.index') }}">{{ __('Banks') }}</a></li>
                         @endcanany
+                        @can('documents.sort-numbers')
+                            <li><a href="{{ route('documents.sort-numbers') }}">{{ __('Sort Document Numbers') }}</a></li>
+                        @endcan
                     </ul>
                 </details>
             </li>

@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
-		<h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Sort Documents Number') }}</h2>
-	</x-slot>
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Sort Documents Number') }}</h2>
+    </x-slot>
 
     <x-show-message-bags />
 
@@ -10,7 +10,7 @@
         processUrl: @js(route('documents.sort-numbers.process')),
         csrfToken: @js(csrf_token()),
         initialProgress: @js($progress),
-        canStart: @js((int) ($statistics['unused_document_numbers_count'] ?? 0) > 0),
+        canStart: @js((int) ($statistics['unused_document_numbers_count'] ?? 0) > -1),
         confirmMessage: @js(__('Are you sure you want to start sorting document numbers?')),
         requestFailedMessage: @js(__('Request failed.')),
         statusLabels: {
@@ -77,8 +77,10 @@
                                 {{ __('No need to sort because document numbers are already sorted.') }}
                             </div>
                         </div>
-                        <button type="button" class="px-4 py-2 rounded-lg text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed
-                            transition duration-200" :disabled="isStartDisabled" @click="startSort()">
+                        <button type="button"
+                            class="px-4 py-2 rounded-lg text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed
+                            transition duration-200"
+                            :disabled="isStartDisabled" @click="startSort()">
                             {{ __('Start Sorting Numbers') }}
                         </button>
                     </div>
