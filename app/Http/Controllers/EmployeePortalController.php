@@ -103,7 +103,28 @@ class EmployeePortalController extends Controller
 
         $monthlyAttendance->load(['logs' => fn ($q) => $q->orderBy('log_date')]);
 
-        return view('employee-portal.monthly-attendance-show', compact('monthlyAttendance', 'employee'));
+        // Build allDays so the shared blade can render every day in the period
+        $start = $monthlyAttendance->start_date->copy();
+        $logsByDate = $monthlyAttendance->logs->keyBy(fn ($log) => $log->log_date->toDateString());
+        $allDays = collect();
+        for ($i = 0; $i < $monthlyAttendance->duration; $i++) {
+            $date = $start->copy()->addDays($i);
+            $dateKey = $date->toDateString();
+            $allDays->push(
+                $logsByDate->has($dateKey)
+                    ? $logsByDate->get($dateKey)
+                    : (object) [
+                        'log_date' => $date,
+                        '_placeholder' => true,
+                        '_is_friday' => $date->dayOfWeek === \Carbon\Carbon::FRIDAY,
+                        '_is_holiday' => false,
+                    ]
+            );
+        }
+
+        return view('monthly-attendances.show', compact('monthlyAttendance', 'allDays'))
+            ->with('isAdminView', false)
+            ->with('backRoute', route('employee-portal.monthly-attendances'));
     }
 
     /**
@@ -128,6 +149,21 @@ class EmployeePortalController extends Controller
         $payrolls = $query->paginate(15)->withQueryString();
 
         return view('employee-portal.payrolls', compact('payrolls', 'employee'));
+    }
+
+    /**
+     * Show payroll detail for the current employee.
+     */
+    public function payrollShow(Payroll $payroll): View
+    {
+        $employee = $this->currentEmployee();
+
+        abort_if($payroll->employee_id !== $employee->id, 403);
+
+        $payroll->load(['employee', 'decree.benefits.element', 'monthlyAttendance', 'items.element']);
+
+        return view('payrolls.show', compact('payroll'))
+            ->with('isEmployeeView', true);
     }
 
     /**

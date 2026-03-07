@@ -36,22 +36,24 @@
                 </div>
 
                 <div class="flex gap-2 flex-wrap">
-                    @can('attendance.monthly-attendances.edit')
-                        <a href="{{ route('monthly-attendances.edit', $monthlyAttendance) }}" class="btn btn-sm btn-warning">
-                            {{ __('Edit') }}
-                        </a>
-                    @endcan
-                    @can('attendance.monthly-attendances.delete')
-                        <form action="{{ route('monthly-attendances.destroy', $monthlyAttendance) }}" method="POST" class="inline-block"
-                            onsubmit="return confirm('{{ __('Are you sure?') }}')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-sm btn-error">
-                                {{ __('Delete') }}
-                            </button>
-                        </form>
-                    @endcan
-                    <a href="{{ route('monthly-attendances.index') }}" class="btn btn-sm btn-ghost">
+                    @if ($isAdminView ?? false)
+                        @can('attendance.monthly-attendances.edit')
+                            <a href="{{ route('monthly-attendances.edit', $monthlyAttendance) }}" class="btn btn-sm btn-warning">
+                                {{ __('Edit') }}
+                            </a>
+                        @endcan
+                        @can('attendance.monthly-attendances.delete')
+                            <form action="{{ route('monthly-attendances.destroy', $monthlyAttendance) }}" method="POST" class="inline-block"
+                                onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-error">
+                                    {{ __('Delete') }}
+                                </button>
+                            </form>
+                        @endcan
+                    @endif
+                    <a href="{{ $backRoute ?? route('monthly-attendances.index') }}" class="btn btn-sm btn-ghost">
                         {{ __('Back') }}
                     </a>
                 </div>
@@ -100,65 +102,69 @@
             </div>
 
             {{-- Recalculate sub-form --}}
-            @can('attendance.monthly-attendances.edit')
-                <div class="divider">{{ __('Recalculate from Logs') }}</div>
-                <form action="{{ route('monthly-attendances.recalculate', $monthlyAttendance) }}" method="POST" class="flex flex-wrap items-end gap-4">
-                    @csrf
-                    <div class="w-44">
-                        <x-date-picker name="start_date" id="start_date" title="{{ __('Start Date') }}" :value="old('start_date') ?? formatDate($monthlyAttendance->start_date, 'Y/m/d')" required />
-                    </div>
-                    <div class="w-44">
-                        <x-input name="duration" id="duration" type="number" title="{{ __('Duration (days)') }}" :value="old('duration') ?? $monthlyAttendance->duration" required />
-                    </div>
-                    <button type="submit" class="btn btn-sm btn-accent self-end">
-                        {{ __('Recalculate') }}
-                    </button>
-                </form>
-            @endcan
-
-            {{-- Payroll section --}}
-            <div class="divider">{{ __('Payroll') }}</div>
-            @if ($monthlyAttendance->payroll)
-                <div class="flex items-center gap-4 flex-wrap">
-                    <div class="flex items-center gap-2">
-                        <span class="text-sm text-gray-600">{{ __('Payroll exists for this period.') }}</span>
-                        @if ($monthlyAttendance->payroll->status === 'draft')
-                            <span class="badge badge-warning badge-sm">{{ __('Draft') }}</span>
-                        @elseif ($monthlyAttendance->payroll->status === 'approved')
-                            <span class="badge badge-success badge-sm">{{ __('Approved') }}</span>
-                        @else
-                            <span class="badge badge-info badge-sm">{{ __('Paid') }}</span>
-                        @endif
-                    </div>
-                    <a href="{{ route('payrolls.show', $monthlyAttendance->payroll) }}" class="btn btn-sm btn-primary">
-                        {{ __('View Payroll') }}
-                    </a>
-                </div>
-            @else
-                @can('salary.payrolls.create')
-                    @if ($decrees->isEmpty())
-                        <p class="text-sm text-warning">{{ __('No active salary decrees found for this employee. Please create one first.') }}</p>
-                        <a href="{{ route('salary-decrees.create', ['employee' => $monthlyAttendance->employee]) }}" class="btn btn-sm btn-warning">
-                            {{ __('Create Decree') }}
-                        </a>
-                    @else
-                        <form action="{{ route('monthly-attendances.payroll.store', $monthlyAttendance) }}" method="POST" class="flex flex-wrap items-end gap-4">
-                            @csrf
-                            @php
-                                $decreeOptions = $decrees->mapWithKeys(
-                                    fn($d) => [$d->id => ($d->name ?? __('Decree') . ' #' . $d->id) . ' (' . formatDate($d->start_date) . ')'],
-                                );
-                            @endphp
-                            <div class="w-64">
-                                <x-select name="decree_id" id="decree_id" title="" :options="$decreeOptions" required />
-                            </div>
-                            <button type="submit" class="btn btn-sm btn-success self-end">
-                                {{ __('Create Payroll') }}
-                            </button>
-                        </form>
-                    @endif
+            @if ($isAdminView ?? false)
+                @can('attendance.monthly-attendances.edit')
+                    <div class="divider">{{ __('Recalculate from Logs') }}</div>
+                    <form action="{{ route('monthly-attendances.recalculate', $monthlyAttendance) }}" method="POST" class="flex flex-wrap items-end gap-4">
+                        @csrf
+                        <div class="w-44">
+                            <x-date-picker name="start_date" id="start_date" title="{{ __('Start Date') }}" :value="old('start_date') ?? formatDate($monthlyAttendance->start_date, 'Y/m/d')" required />
+                        </div>
+                        <div class="w-44">
+                            <x-input name="duration" id="duration" type="number" title="{{ __('Duration (days)') }}" :value="old('duration') ?? $monthlyAttendance->duration" required />
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-accent self-end">
+                            {{ __('Recalculate') }}
+                        </button>
+                    </form>
                 @endcan
             @endif
+
+            {{-- Payroll section --}}
+            @if ($isAdminView ?? false)
+                <div class="divider">{{ __('Payroll') }}</div>
+                @if ($monthlyAttendance->payroll)
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-gray-600">{{ __('Payroll exists for this period.') }}</span>
+                            @if ($monthlyAttendance->payroll->status === 'draft')
+                                <span class="badge badge-warning badge-sm">{{ __('Draft') }}</span>
+                            @elseif ($monthlyAttendance->payroll->status === 'approved')
+                                <span class="badge badge-success badge-sm">{{ __('Approved') }}</span>
+                            @else
+                                <span class="badge badge-info badge-sm">{{ __('Paid') }}</span>
+                            @endif
+                        </div>
+                        <a href="{{ route('payrolls.show', $monthlyAttendance->payroll) }}" class="btn btn-sm btn-primary">
+                            {{ __('View Payroll') }}
+                        </a>
+                    </div>
+                @else
+                    @can('salary.payrolls.create')
+                        @if ($decrees->isEmpty())
+                            <p class="text-sm text-warning">{{ __('No active salary decrees found for this employee. Please create one first.') }}</p>
+                            <a href="{{ route('salary-decrees.create', ['employee' => $monthlyAttendance->employee]) }}" class="btn btn-sm btn-warning">
+                                {{ __('Create Decree') }}
+                            </a>
+                        @else
+                            <form action="{{ route('monthly-attendances.payroll.store', $monthlyAttendance) }}" method="POST" class="flex flex-wrap items-end gap-4">
+                                @csrf
+                                @php
+                                    $decreeOptions = $decrees->mapWithKeys(
+                                        fn($d) => [$d->id => ($d->name ?? __('Decree') . ' #' . $d->id) . ' (' . formatDate($d->start_date) . ')'],
+                                    );
+                                @endphp
+                                <div class="w-64">
+                                    <x-select name="decree_id" id="decree_id" title="" :options="$decreeOptions" required />
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-success self-end">
+                                    {{ __('Create Payroll') }}
+                                </button>
+                            </form>
+                        @endif
+                    @endcan
+                @endif
+            @endif {{-- isAdminView --}}
 
             <div class="divider">{{ __('Daily Attendance Logs') }}</div>
 
@@ -173,9 +179,11 @@
                             <th>{{ __('Overtime (min)') }}</th>
                             <th>{{ __('Delay (min)') }}</th>
                             <th>{{ __('Status') }}</th>
-                            @can('attendance.attendance-logs.edit')
-                                <th></th>
-                            @endcan
+                            @if ($isAdminView ?? false)
+                                @can('attendance.attendance-logs.edit')
+                                    <th></th>
+                                @endcan
+                            @endif
                         </tr>
                     </thead>
                     <tbody>
@@ -204,9 +212,11 @@
                                             <span class="badge badge-error badge-sm">{{ __('Absent') }}</span>
                                         @endif
                                     </td>
-                                    @can('attendance.attendance-logs.edit')
-                                        <td></td>
-                                    @endcan
+                                    @if ($isAdminView ?? false)
+                                        @can('attendance.attendance-logs.edit')
+                                            <td></td>
+                                        @endcan
+                                    @endif
                                 @else
                                     <td>{{ $log->entry_time ?? '—' }}</td>
                                     <td>{{ $log->exit_time ?? '—' }}</td>
@@ -233,13 +243,15 @@
                                             <span class="badge badge-ghost badge-sm">{{ __('Manual') }}</span>
                                         @endif
                                     </td>
-                                    @can('attendance.attendance-logs.edit')
-                                        <td>
-                                            <a href="{{ route('attendance-logs.edit', $log) }}" class="btn btn-xs btn-ghost">
-                                                {{ __('Edit') }}
-                                            </a>
-                                        </td>
-                                    @endcan
+                                    @if ($isAdminView ?? false)
+                                        @can('attendance.attendance-logs.edit')
+                                            <td>
+                                                <a href="{{ route('attendance-logs.edit', $log) }}" class="btn btn-xs btn-ghost">
+                                                    {{ __('Edit') }}
+                                                </a>
+                                            </td>
+                                        @endcan
+                                    @endif
                                 @endif
                             </tr>
                         @empty

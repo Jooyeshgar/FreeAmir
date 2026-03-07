@@ -34,25 +34,32 @@
                 </div>
 
                 <div class="flex gap-2 flex-wrap">
-                    @if ($payroll->monthlyAttendance)
-                        <a href="{{ route('monthly-attendances.show', $payroll->monthly_attendance_id) }}" class="btn btn-sm btn-ghost">
-                            {{ __('Back to Attendance') }}
+                    @if ($isEmployeeView ?? false)
+                        <a href="{{ route('employee-portal.payrolls') }}" class="btn btn-sm btn-ghost">
+                            {{ __('Back to Payrolls') }}
                         </a>
                     @else
-                        <a href="{{ route('monthly-attendances.index') }}" class="btn btn-sm btn-ghost">
-                            {{ __('Back') }}
-                        </a>
-                    @endif
+                        @if ($payroll->monthlyAttendance)
+                            <a href="{{ route('monthly-attendances.show', $payroll->monthly_attendance_id) }}" class="btn btn-sm btn-ghost">
+                                {{ __('Back to Attendance') }}
+                            </a>
+                        @else
+                            <a href="{{ route('monthly-attendances.index') }}" class="btn btn-sm btn-ghost">
+                                {{ __('Back') }}
+                            </a>
+                        @endif
 
-                    @can('salary.payrolls.delete')
-                        <form action="{{ route('payrolls.destroy', $payroll) }}" method="POST" class="inline-block" onsubmit="return confirm('{{ __('Are you sure?') }}')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-sm btn-error">
-                                {{ __('Delete') }}
-                            </button>
-                        </form>
-                    @endcan
+                        @can('salary.payrolls.delete')
+                            <form action="{{ route('payrolls.destroy', $payroll) }}" method="POST" class="inline-block"
+                                onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-error">
+                                    {{ __('Delete') }}
+                                </button>
+                            </form>
+                        @endcan
+                    @endif
                 </div>
             </div>
         </div>

@@ -21,7 +21,8 @@ class PayrollController extends Controller
     {
         $payroll->load(['employee', 'decree.benefits.element', 'monthlyAttendance', 'items.element']);
 
-        return view('payrolls.show', compact('payroll'));
+        return view('payrolls.show', compact('payroll'))
+            ->with('isEmployeeView', false);
     }
 
     /**

@@ -115,7 +115,9 @@ class MonthlyAttendanceController extends Controller
             );
         }
 
-        return view('monthly-attendances.show', compact('monthlyAttendance', 'decrees', 'allDays'));
+        return view('monthly-attendances.show', compact('monthlyAttendance', 'decrees', 'allDays'))
+            ->with('isAdminView', true)
+            ->with('backRoute', route('monthly-attendances.index'));
     }
 
     public function edit(MonthlyAttendance $monthlyAttendance): View
