@@ -6,7 +6,7 @@
     </x-slot>
 
     <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('work-site-contracts.update', $workSiteContract) }}" method="POST">
+        <form action="{{ route('salary.work-site-contracts.update', $workSiteContract) }}" method="POST">
             @csrf
             @method('PUT')
             <div class="card-body">
@@ -16,7 +16,7 @@
                 @include('work-site-contracts.form')
 
                 <div class="card-actions justify-end">
-                    <a href="{{ route('work-site-contracts.index') }}" class="btn btn-ghost">{{ __('Cancel') }}</a>
+                    <a href="{{ route('salary.work-site-contracts.index') }}" class="btn btn-ghost">{{ __('Cancel') }}</a>
                     <button type="submit" class="btn btn-primary">{{ __('Update') }}</button>
                 </div>
             </div>

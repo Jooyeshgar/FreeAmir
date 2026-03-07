@@ -65,7 +65,7 @@ class WorkShiftTest extends TestCase
         $this->makeWorkShift(['name' => 'Morning Shift']);
         $this->makeWorkShift(['name' => 'Night Shift']);
 
-        $response = $this->get(route('work-shifts.index'));
+        $response = $this->get(route('attendance.work-shifts.index'));
 
         $response->assertStatus(200);
         $response->assertSee('Morning Shift');
@@ -77,7 +77,7 @@ class WorkShiftTest extends TestCase
         $otherCompany = Company::factory()->create();
         WorkShift::factory()->create(['company_id' => $otherCompany->id, 'name' => 'Other Shift']);
 
-        $response = $this->get(route('work-shifts.index'));
+        $response = $this->get(route('attendance.work-shifts.index'));
 
         $response->assertStatus(200);
         $response->assertDontSee('Other Shift');
@@ -88,7 +88,7 @@ class WorkShiftTest extends TestCase
         $this->makeWorkShift(['name' => 'Morning Shift']);
         $this->makeWorkShift(['name' => 'Night Shift']);
 
-        $response = $this->get(route('work-shifts.index', ['search' => 'Morning']));
+        $response = $this->get(route('attendance.work-shifts.index', ['search' => 'Morning']));
 
         $response->assertStatus(200);
         $response->assertSee('Morning Shift');
@@ -101,7 +101,7 @@ class WorkShiftTest extends TestCase
 
     public function test_create_returns_200(): void
     {
-        $response = $this->get(route('work-shifts.create'));
+        $response = $this->get(route('attendance.work-shifts.create'));
 
         $response->assertStatus(200);
     }
@@ -110,9 +110,9 @@ class WorkShiftTest extends TestCase
     {
         $payload = $this->validPayload();
 
-        $response = $this->post(route('work-shifts.store'), $payload);
+        $response = $this->post(route('attendance.work-shifts.store'), $payload);
 
-        $response->assertRedirect(route('work-shifts.index'));
+        $response->assertRedirect(route('attendance.work-shifts.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('work_shifts', [
@@ -129,14 +129,14 @@ class WorkShiftTest extends TestCase
 
     public function test_store_validates_required_fields(): void
     {
-        $response = $this->post(route('work-shifts.store'), []);
+        $response = $this->post(route('attendance.work-shifts.store'), []);
 
         $response->assertSessionHasErrors(['name', 'start_time', 'end_time']);
     }
 
     public function test_store_validates_time_format(): void
     {
-        $response = $this->post(route('work-shifts.store'), $this->validPayload([
+        $response = $this->post(route('attendance.work-shifts.store'), $this->validPayload([
             'start_time' => 'not-a-time',
             'end_time' => '25:99',
         ]));
@@ -146,7 +146,7 @@ class WorkShiftTest extends TestCase
 
     public function test_store_validates_float_and_break_ranges(): void
     {
-        $response = $this->post(route('work-shifts.store'), $this->validPayload([
+        $response = $this->post(route('attendance.work-shifts.store'), $this->validPayload([
             'float_before' => 200,
             'float_after' => -5,
             'break' => 999,
@@ -163,7 +163,7 @@ class WorkShiftTest extends TestCase
     {
         $workShift = $this->makeWorkShift();
 
-        $response = $this->get(route('work-shifts.edit', $workShift));
+        $response = $this->get(route('attendance.work-shifts.edit', $workShift));
 
         $response->assertStatus(200);
         $response->assertSee($workShift->name);
@@ -173,12 +173,12 @@ class WorkShiftTest extends TestCase
     {
         $workShift = $this->makeWorkShift(['name' => 'Old Name', 'break' => 20]);
 
-        $response = $this->put(route('work-shifts.update', $workShift), $this->validPayload([
+        $response = $this->put(route('attendance.work-shifts.update', $workShift), $this->validPayload([
             'name' => 'Updated Shift',
             'break' => 45,
         ]));
 
-        $response->assertRedirect(route('work-shifts.index'));
+        $response->assertRedirect(route('attendance.work-shifts.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('work_shifts', [
@@ -192,7 +192,7 @@ class WorkShiftTest extends TestCase
     {
         $workShift = $this->makeWorkShift();
 
-        $response = $this->put(route('work-shifts.update', $workShift), []);
+        $response = $this->put(route('attendance.work-shifts.update', $workShift), []);
 
         $response->assertSessionHasErrors(['name', 'start_time', 'end_time']);
     }
@@ -202,7 +202,7 @@ class WorkShiftTest extends TestCase
         $otherCompany = Company::factory()->create();
         $otherShift = WorkShift::factory()->create(['company_id' => $otherCompany->id]);
 
-        $response = $this->get(route('work-shifts.edit', $otherShift));
+        $response = $this->get(route('attendance.work-shifts.edit', $otherShift));
 
         $response->assertStatus(404);
     }
@@ -215,9 +215,9 @@ class WorkShiftTest extends TestCase
     {
         $workShift = $this->makeWorkShift(['name' => 'To Delete']);
 
-        $response = $this->delete(route('work-shifts.destroy', $workShift));
+        $response = $this->delete(route('attendance.work-shifts.destroy', $workShift));
 
-        $response->assertRedirect(route('work-shifts.index'));
+        $response->assertRedirect(route('attendance.work-shifts.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseMissing('work_shifts', ['id' => $workShift->id]);
@@ -228,7 +228,7 @@ class WorkShiftTest extends TestCase
         $otherCompany = Company::factory()->create();
         $otherShift = WorkShift::factory()->create(['company_id' => $otherCompany->id]);
 
-        $response = $this->delete(route('work-shifts.destroy', $otherShift));
+        $response = $this->delete(route('attendance.work-shifts.destroy', $otherShift));
 
         $response->assertStatus(404);
         $this->assertDatabaseHas('work_shifts', ['id' => $otherShift->id]);
@@ -240,7 +240,7 @@ class WorkShiftTest extends TestCase
 
     public function test_store_handles_crosses_midnight_flag(): void
     {
-        $this->post(route('work-shifts.store'), $this->validPayload([
+        $this->post(route('attendance.work-shifts.store'), $this->validPayload([
             'start_time' => '22:00',
             'end_time' => '06:00',
             'crosses_midnight' => '1',
@@ -257,7 +257,7 @@ class WorkShiftTest extends TestCase
         $payload = $this->validPayload();
         unset($payload['is_active']);
 
-        $this->post(route('work-shifts.store'), $payload);
+        $this->post(route('attendance.work-shifts.store'), $payload);
 
         $this->assertDatabaseHas('work_shifts', [
             'company_id' => $this->companyId,
@@ -270,7 +270,7 @@ class WorkShiftTest extends TestCase
     {
         $workShift = $this->makeWorkShift(['is_active' => true]);
 
-        $this->put(route('work-shifts.update', $workShift), $this->validPayload(['is_active' => '0']));
+        $this->put(route('attendance.work-shifts.update', $workShift), $this->validPayload(['is_active' => '0']));
 
         $this->assertDatabaseHas('work_shifts', [
             'id' => $workShift->id,

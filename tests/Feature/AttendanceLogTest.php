@@ -78,7 +78,7 @@ class AttendanceLogTest extends TestCase
         $this->makeAttendanceLog(['log_date' => $Date1]);
         $this->makeAttendanceLog(['log_date' => $Date2]);
 
-        $response = $this->get(route('attendance-logs.index'));
+        $response = $this->get(route('attendance.attendance-logs.index'));
 
         $response->assertStatus(200);
         $response->assertSee(formatDate($Date1));
@@ -96,7 +96,7 @@ class AttendanceLogTest extends TestCase
         $this->makeAttendanceLog(['employee_id' => $this->employee->id, 'log_date' => '2026-02-10']);
         $this->makeAttendanceLog(['employee_id' => $other->id, 'log_date' => '2026-02-11']);
 
-        $response = $this->get(route('attendance-logs.index', ['employee_id' => $this->employee->id]));
+        $response = $this->get(route('attendance.attendance-logs.index', ['employee_id' => $this->employee->id]));
 
         $response->assertStatus(200);
         $response->assertSee(formatDate('2026-02-10'));
@@ -109,7 +109,7 @@ class AttendanceLogTest extends TestCase
         $this->makeAttendanceLog(['log_date' => '2026-02-10']);
         $this->makeAttendanceLog(['log_date' => '2026-03-20']);
 
-        $response = $this->get(route('attendance-logs.index', [
+        $response = $this->get(route('attendance.attendance-logs.index', [
             'date_from' => formatDate('2026-02-01'),
             'date_to' => formatDate('2026-02-28'),
         ]));
@@ -125,7 +125,7 @@ class AttendanceLogTest extends TestCase
         $this->makeAttendanceLog(['log_date' => '2026-02-10', 'is_manual' => true]);
         $this->makeAttendanceLog(['log_date' => '2026-02-11', 'is_manual' => false]);
 
-        $response = $this->get(route('attendance-logs.index', ['is_manual' => '1']));
+        $response = $this->get(route('attendance.attendance-logs.index', ['is_manual' => '1']));
 
         $response->assertStatus(200);
         $response->assertSee(formatDate('2026-02-10'));
@@ -138,7 +138,7 @@ class AttendanceLogTest extends TestCase
 
     public function test_create_returns_200(): void
     {
-        $response = $this->get(route('attendance-logs.create'));
+        $response = $this->get(route('attendance.attendance-logs.create'));
 
         $response->assertStatus(200);
     }
@@ -147,9 +147,9 @@ class AttendanceLogTest extends TestCase
     {
         $payload = $this->validPayload();
 
-        $response = $this->post(route('attendance-logs.store'), $payload);
+        $response = $this->post(route('attendance.attendance-logs.store'), $payload);
 
-        $response->assertRedirect(route('attendance-logs.index'));
+        $response->assertRedirect(route('attendance.attendance-logs.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('attendance_logs', [
@@ -163,14 +163,14 @@ class AttendanceLogTest extends TestCase
 
     public function test_store_validates_required_fields(): void
     {
-        $response = $this->post(route('attendance-logs.store'), []);
+        $response = $this->post(route('attendance.attendance-logs.store'), []);
 
         $response->assertSessionHasErrors(['employee_id', 'log_date']);
     }
 
     public function test_store_rejects_invalid_date(): void
     {
-        $response = $this->post(route('attendance-logs.store'), $this->validPayload([
+        $response = $this->post(route('attendance.attendance-logs.store'), $this->validPayload([
             'log_date' => 'not-a-date',
         ]));
 
@@ -179,7 +179,7 @@ class AttendanceLogTest extends TestCase
 
     public function test_store_rejects_exit_time_before_entry_time(): void
     {
-        $response = $this->post(route('attendance-logs.store'), $this->validPayload([
+        $response = $this->post(route('attendance.attendance-logs.store'), $this->validPayload([
             'entry_time' => '17:00',
             'exit_time' => '08:00',
         ]));
@@ -189,7 +189,7 @@ class AttendanceLogTest extends TestCase
 
     public function test_store_rejects_nonexistent_employee(): void
     {
-        $response = $this->post(route('attendance-logs.store'), $this->validPayload([
+        $response = $this->post(route('attendance.attendance-logs.store'), $this->validPayload([
             'employee_id' => 99999,
         ]));
 
@@ -203,9 +203,9 @@ class AttendanceLogTest extends TestCase
             'exit_time' => '',
         ]);
 
-        $response = $this->post(route('attendance-logs.store'), $payload);
+        $response = $this->post(route('attendance.attendance-logs.store'), $payload);
 
-        $response->assertRedirect(route('attendance-logs.index'));
+        $response->assertRedirect(route('attendance.attendance-logs.index'));
         $response->assertSessionHas('success');
     }
 
@@ -217,7 +217,7 @@ class AttendanceLogTest extends TestCase
     {
         $log = $this->makeAttendanceLog();
 
-        $response = $this->get(route('attendance-logs.edit', $log));
+        $response = $this->get(route('attendance.attendance-logs.edit', $log));
 
         $response->assertStatus(200);
         $response->assertSee(convertToJalali($log->log_date));
@@ -227,12 +227,12 @@ class AttendanceLogTest extends TestCase
     {
         $log = $this->makeAttendanceLog(['log_date' => '2026-02-10', 'entry_time' => '08:00']);
 
-        $response = $this->put(route('attendance-logs.update', $log), $this->validPayload([
+        $response = $this->put(route('attendance.attendance-logs.update', $log), $this->validPayload([
             'entry_time' => '09:00',
             'is_manual' => '1',
         ]));
 
-        $response->assertRedirect(route('attendance-logs.index'));
+        $response->assertRedirect(route('attendance.attendance-logs.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('attendance_logs', [
@@ -246,7 +246,7 @@ class AttendanceLogTest extends TestCase
     {
         $log = $this->makeAttendanceLog();
 
-        $response = $this->put(route('attendance-logs.update', $log), []);
+        $response = $this->put(route('attendance.attendance-logs.update', $log), []);
 
         $response->assertSessionHasErrors(['employee_id', 'log_date']);
     }
@@ -259,9 +259,9 @@ class AttendanceLogTest extends TestCase
     {
         $log = $this->makeAttendanceLog();
 
-        $response = $this->delete(route('attendance-logs.destroy', $log));
+        $response = $this->delete(route('attendance.attendance-logs.destroy', $log));
 
-        $response->assertRedirect(route('attendance-logs.index'));
+        $response->assertRedirect(route('attendance.attendance-logs.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseMissing('attendance_logs', ['id' => $log->id]);
@@ -275,7 +275,7 @@ class AttendanceLogTest extends TestCase
     {
         auth()->logout();
 
-        $response = $this->get(route('attendance-logs.index'));
+        $response = $this->get(route('attendance.attendance-logs.index'));
 
         $response->assertRedirect(route('login'));
     }

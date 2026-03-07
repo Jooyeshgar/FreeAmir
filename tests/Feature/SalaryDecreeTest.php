@@ -93,7 +93,7 @@ class SalaryDecreeTest extends TestCase
         $this->makeDecree(['name' => 'Decree Alpha']);
         $this->makeDecree(['name' => 'Decree Beta']);
 
-        $response = $this->get(route('salary-decrees.index'));
+        $response = $this->get(route('salary.salary-decrees.index'));
 
         $response->assertStatus(200);
         $response->assertSee('Decree Alpha');
@@ -105,7 +105,7 @@ class SalaryDecreeTest extends TestCase
         $this->makeDecree(['name' => 'Decree Alpha']);
         $this->makeDecree(['name' => 'Decree Beta']);
 
-        $response = $this->get(route('salary-decrees.index', ['search' => 'Alpha']));
+        $response = $this->get(route('salary.salary-decrees.index', ['search' => 'Alpha']));
 
         $response->assertStatus(200);
         $response->assertSee('Decree Alpha');
@@ -129,7 +129,7 @@ class SalaryDecreeTest extends TestCase
             'name' => 'Foreign Decree',
         ]);
 
-        $response = $this->get(route('salary-decrees.index'));
+        $response = $this->get(route('salary.salary-decrees.index'));
 
         $response->assertStatus(200);
         $response->assertDontSee('Foreign Decree');
@@ -141,7 +141,7 @@ class SalaryDecreeTest extends TestCase
 
     public function test_create_returns_200(): void
     {
-        $response = $this->get(route('salary-decrees.create'));
+        $response = $this->get(route('salary.salary-decrees.create'));
 
         $response->assertStatus(200);
     }
@@ -150,9 +150,9 @@ class SalaryDecreeTest extends TestCase
     {
         $payload = $this->validPayload();
 
-        $response = $this->post(route('salary-decrees.store'), $payload);
+        $response = $this->post(route('salary.salary-decrees.store'), $payload);
 
-        $response->assertRedirect(route('salary-decrees.index'));
+        $response->assertRedirect(route('salary.salary-decrees.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('salary_decrees', [
@@ -171,9 +171,9 @@ class SalaryDecreeTest extends TestCase
             ],
         ]);
 
-        $response = $this->post(route('salary-decrees.store'), $payload);
+        $response = $this->post(route('salary.salary-decrees.store'), $payload);
 
-        $response->assertRedirect(route('salary-decrees.index'));
+        $response->assertRedirect(route('salary.salary-decrees.index'));
 
         $decree = SalaryDecree::where('name', 'Decree-1403-001')->first();
         $this->assertNotNull($decree);
@@ -187,14 +187,14 @@ class SalaryDecreeTest extends TestCase
 
     public function test_store_validates_required_fields(): void
     {
-        $response = $this->post(route('salary-decrees.store'), []);
+        $response = $this->post(route('salary.salary-decrees.store'), []);
 
         $response->assertSessionHasErrors(['employee_id', 'org_chart_id', 'start_date']);
     }
 
     public function test_store_validates_employee_exists(): void
     {
-        $response = $this->post(route('salary-decrees.store'), $this->validPayload([
+        $response = $this->post(route('salary.salary-decrees.store'), $this->validPayload([
             'employee_id' => 99999,
         ]));
 
@@ -203,7 +203,7 @@ class SalaryDecreeTest extends TestCase
 
     public function test_store_validates_end_date_after_start_date(): void
     {
-        $response = $this->post(route('salary-decrees.store'), $this->validPayload([
+        $response = $this->post(route('salary.salary-decrees.store'), $this->validPayload([
             'start_date' => '2026-06-01',
             'end_date' => '2026-01-01',
         ]));
@@ -213,7 +213,7 @@ class SalaryDecreeTest extends TestCase
 
     public function test_store_validates_contract_type_enum(): void
     {
-        $response = $this->post(route('salary-decrees.store'), $this->validPayload([
+        $response = $this->post(route('salary.salary-decrees.store'), $this->validPayload([
             'contract_type' => 'invalid_type',
         ]));
 
@@ -228,7 +228,7 @@ class SalaryDecreeTest extends TestCase
     {
         $decree = $this->makeDecree(['name' => 'Decree-Edit']);
 
-        $response = $this->get(route('salary-decrees.edit', $decree));
+        $response = $this->get(route('salary.salary-decrees.edit', $decree));
 
         $response->assertStatus(200);
         $response->assertSee('Decree-Edit');
@@ -239,11 +239,11 @@ class SalaryDecreeTest extends TestCase
         $decree = $this->makeDecree(['name' => 'Old Name']);
 
         $response = $this->put(
-            route('salary-decrees.update', $decree),
+            route('salary.salary-decrees.update', $decree),
             $this->validPayload(['name' => 'New Name'])
         );
 
-        $response->assertRedirect(route('salary-decrees.index'));
+        $response->assertRedirect(route('salary.salary-decrees.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('salary_decrees', [
@@ -264,7 +264,7 @@ class SalaryDecreeTest extends TestCase
         $newElement = PayrollElement::factory()->create(['company_id' => $this->companyId]);
 
         $response = $this->put(
-            route('salary-decrees.update', $decree),
+            route('salary.salary-decrees.update', $decree),
             $this->validPayload([
                 'benefits' => [
                     ['element_id' => $newElement->id, 'value' => '3000000'],
@@ -272,7 +272,7 @@ class SalaryDecreeTest extends TestCase
             ])
         );
 
-        $response->assertRedirect(route('salary-decrees.index'));
+        $response->assertRedirect(route('salary.salary-decrees.index'));
 
         $this->assertDatabaseMissing('decree_benefits', [
             'decree_id' => $decree->id,
@@ -294,9 +294,9 @@ class SalaryDecreeTest extends TestCase
     {
         $decree = $this->makeDecree();
 
-        $response = $this->delete(route('salary-decrees.destroy', $decree));
+        $response = $this->delete(route('salary.salary-decrees.destroy', $decree));
 
-        $response->assertRedirect(route('salary-decrees.index'));
+        $response->assertRedirect(route('salary.salary-decrees.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseMissing('salary_decrees', ['id' => $decree->id]);
@@ -311,7 +311,7 @@ class SalaryDecreeTest extends TestCase
             'element_value' => 500_000,
         ]);
 
-        $this->delete(route('salary-decrees.destroy', $decree));
+        $this->delete(route('salary.salary-decrees.destroy', $decree));
 
         $this->assertDatabaseMissing('decree_benefits', ['decree_id' => $decree->id]);
     }
@@ -324,7 +324,7 @@ class SalaryDecreeTest extends TestCase
     {
         auth()->logout();
 
-        $response = $this->get(route('salary-decrees.index'));
+        $response = $this->get(route('salary.salary-decrees.index'));
 
         $response->assertRedirect(route('login'));
     }

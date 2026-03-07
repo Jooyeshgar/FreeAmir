@@ -40,17 +40,17 @@
                         </a>
                     @else
                         @if ($payroll->monthlyAttendance)
-                            <a href="{{ route('monthly-attendances.show', $payroll->monthly_attendance_id) }}" class="btn btn-sm btn-ghost">
+                            <a href="{{ route('attendance.monthly-attendances.show', $payroll->monthly_attendance_id) }}" class="btn btn-sm btn-ghost">
                                 {{ __('Back to Attendance') }}
                             </a>
                         @else
-                            <a href="{{ route('monthly-attendances.index') }}" class="btn btn-sm btn-ghost">
+                            <a href="{{ route('attendance.monthly-attendances.index') }}" class="btn btn-sm btn-ghost">
                                 {{ __('Back') }}
                             </a>
                         @endif
 
                         @can('salary.payrolls.delete')
-                            <form action="{{ route('payrolls.destroy', $payroll) }}" method="POST" class="inline-block"
+                            <form action="{{ route('salary.payrolls.destroy', $payroll) }}" method="POST" class="inline-block"
                                 onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                 @csrf
                                 @method('DELETE')

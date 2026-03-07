@@ -45,7 +45,7 @@ class WorkSiteContractController extends Controller
 
         WorkSiteContract::create($validated);
 
-        return redirect()->route('work-site-contracts.index')
+        return redirect()->route('salary.work-site-contracts.index')
             ->with('success', __('Work site contract created successfully.'));
     }
 
@@ -77,7 +77,7 @@ class WorkSiteContractController extends Controller
 
         $workSiteContract->update($validated);
 
-        return redirect()->route('work-site-contracts.index')
+        return redirect()->route('salary.work-site-contracts.index')
             ->with('success', __('Work site contract updated successfully.'));
     }
 
@@ -85,7 +85,7 @@ class WorkSiteContractController extends Controller
     {
         $workSiteContract->delete();
 
-        return redirect()->route('work-site-contracts.index')
+        return redirect()->route('salary.work-site-contracts.index')
             ->with('success', __('Work site contract deleted successfully.'));
     }
 }

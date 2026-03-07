@@ -60,7 +60,7 @@ class OrgChartTest extends TestCase
         $this->makeNode(['title' => 'CEO']);
         $this->makeNode(['title' => 'CTO']);
 
-        $response = $this->get(route('org-charts.index'));
+        $response = $this->get(route('hr.org-charts.index'));
 
         $response->assertStatus(200);
         $response->assertSee('CEO');
@@ -72,7 +72,7 @@ class OrgChartTest extends TestCase
         $this->makeNode(['title' => 'CEO']);
         $this->makeNode(['title' => 'Finance Manager']);
 
-        $response = $this->get(route('org-charts.index', ['search' => 'Finance']));
+        $response = $this->get(route('hr.org-charts.index', ['search' => 'Finance']));
 
         $response->assertStatus(200);
         $response->assertSee('Finance Manager');
@@ -87,7 +87,7 @@ class OrgChartTest extends TestCase
             'title' => 'Foreign Node',
         ]);
 
-        $response = $this->get(route('org-charts.index'));
+        $response = $this->get(route('hr.org-charts.index'));
 
         $response->assertStatus(200);
         $response->assertDontSee('Foreign Node');
@@ -99,7 +99,7 @@ class OrgChartTest extends TestCase
 
     public function test_create_returns_200(): void
     {
-        $response = $this->get(route('org-charts.create'));
+        $response = $this->get(route('hr.org-charts.create'));
 
         $response->assertStatus(200);
     }
@@ -108,9 +108,9 @@ class OrgChartTest extends TestCase
     {
         $payload = $this->validPayload();
 
-        $response = $this->post(route('org-charts.store'), $payload);
+        $response = $this->post(route('hr.org-charts.store'), $payload);
 
-        $response->assertRedirect(route('org-charts.index'));
+        $response->assertRedirect(route('hr.org-charts.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('org_charts', [
@@ -129,9 +129,9 @@ class OrgChartTest extends TestCase
             'parent_id' => $parent->id,
         ]);
 
-        $response = $this->post(route('org-charts.store'), $payload);
+        $response = $this->post(route('hr.org-charts.store'), $payload);
 
-        $response->assertRedirect(route('org-charts.index'));
+        $response->assertRedirect(route('hr.org-charts.index'));
 
         $this->assertDatabaseHas('org_charts', [
             'company_id' => $this->companyId,
@@ -142,14 +142,14 @@ class OrgChartTest extends TestCase
 
     public function test_store_validates_required_fields(): void
     {
-        $response = $this->post(route('org-charts.store'), []);
+        $response = $this->post(route('hr.org-charts.store'), []);
 
         $response->assertSessionHasErrors(['title']);
     }
 
     public function test_store_rejects_title_exceeding_max_length(): void
     {
-        $response = $this->post(route('org-charts.store'), $this->validPayload([
+        $response = $this->post(route('hr.org-charts.store'), $this->validPayload([
             'title' => str_repeat('A', 201),
         ]));
 
@@ -158,7 +158,7 @@ class OrgChartTest extends TestCase
 
     public function test_store_rejects_non_existent_parent_id(): void
     {
-        $response = $this->post(route('org-charts.store'), $this->validPayload([
+        $response = $this->post(route('hr.org-charts.store'), $this->validPayload([
             'parent_id' => 99999,
         ]));
 
@@ -173,7 +173,7 @@ class OrgChartTest extends TestCase
     {
         $node = $this->makeNode(['title' => 'CEO']);
 
-        $response = $this->get(route('org-charts.show', $node));
+        $response = $this->get(route('hr.org-charts.show', $node));
 
         $response->assertStatus(200);
         $response->assertSee('CEO');
@@ -184,7 +184,7 @@ class OrgChartTest extends TestCase
         $parent = $this->makeNode(['title' => 'CEO']);
         $this->makeNode(['title' => 'CTO', 'parent_id' => $parent->id]);
 
-        $response = $this->get(route('org-charts.show', $parent));
+        $response = $this->get(route('hr.org-charts.show', $parent));
 
         $response->assertStatus(200);
         $response->assertSee('CTO');
@@ -198,7 +198,7 @@ class OrgChartTest extends TestCase
     {
         $node = $this->makeNode(['title' => 'CEO']);
 
-        $response = $this->get(route('org-charts.edit', $node));
+        $response = $this->get(route('hr.org-charts.edit', $node));
 
         $response->assertStatus(200);
         $response->assertSee('CEO');
@@ -208,11 +208,11 @@ class OrgChartTest extends TestCase
     {
         $node = $this->makeNode(['title' => 'CEO']);
 
-        $response = $this->put(route('org-charts.update', $node), $this->validPayload([
+        $response = $this->put(route('hr.org-charts.update', $node), $this->validPayload([
             'title' => 'Managing Director',
         ]));
 
-        $response->assertRedirect(route('org-charts.index'));
+        $response->assertRedirect(route('hr.org-charts.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('org_charts', [
@@ -225,7 +225,7 @@ class OrgChartTest extends TestCase
     {
         $node = $this->makeNode();
 
-        $response = $this->put(route('org-charts.update', $node), ['title' => '']);
+        $response = $this->put(route('hr.org-charts.update', $node), ['title' => '']);
 
         $response->assertSessionHasErrors(['title']);
     }
@@ -234,7 +234,7 @@ class OrgChartTest extends TestCase
     {
         $node = $this->makeNode();
 
-        $response = $this->put(route('org-charts.update', $node), $this->validPayload([
+        $response = $this->put(route('hr.org-charts.update', $node), $this->validPayload([
             'parent_id' => 99999,
         ]));
 
@@ -249,9 +249,9 @@ class OrgChartTest extends TestCase
     {
         $node = $this->makeNode();
 
-        $response = $this->delete(route('org-charts.destroy', $node));
+        $response = $this->delete(route('hr.org-charts.destroy', $node));
 
-        $response->assertRedirect(route('org-charts.index'));
+        $response->assertRedirect(route('hr.org-charts.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseMissing('org_charts', ['id' => $node->id]);
@@ -265,7 +265,7 @@ class OrgChartTest extends TestCase
     {
         auth()->logout();
 
-        $response = $this->get(route('org-charts.index'));
+        $response = $this->get(route('hr.org-charts.index'));
 
         $response->assertRedirect(route('login'));
     }

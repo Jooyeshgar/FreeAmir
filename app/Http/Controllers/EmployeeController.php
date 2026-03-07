@@ -66,7 +66,7 @@ class EmployeeController extends Controller
             ['company_id' => getActiveCompany()]
         ));
 
-        return redirect()->route('employees.index')
+        return redirect()->route('hr.employees.index')
             ->with('success', __('Employee created successfully.'));
     }
 
@@ -94,7 +94,7 @@ class EmployeeController extends Controller
     {
         $employee->update($request->validated());
 
-        return redirect()->route('employees.index')
+        return redirect()->route('hr.employees.index')
             ->with('success', __('Employee updated successfully.'));
     }
 
@@ -102,7 +102,7 @@ class EmployeeController extends Controller
     {
         $employee->delete();
 
-        return redirect()->route('employees.index')
+        return redirect()->route('hr.employees.index')
             ->with('success', __('Employee deleted successfully.'));
     }
 

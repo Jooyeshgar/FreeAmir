@@ -35,7 +35,7 @@ class TaxSlabController extends Controller
             ['company_id' => getActiveCompany()]
         ));
 
-        return redirect()->route('tax-slabs.index')->with('success', __('Tax slab created successfully.'));
+        return redirect()->route('salary.tax-slabs.index')->with('success', __('Tax slab created successfully.'));
     }
 
     public function show(TaxSlab $taxSlab)
@@ -52,13 +52,13 @@ class TaxSlabController extends Controller
     {
         $taxSlab->update($request->validated());
 
-        return redirect()->route('tax-slabs.index')->with('success', __('Tax slab updated successfully.'));
+        return redirect()->route('salary.tax-slabs.index')->with('success', __('Tax slab updated successfully.'));
     }
 
     public function destroy(TaxSlab $taxSlab)
     {
         $taxSlab->delete();
 
-        return redirect()->route('tax-slabs.index')->with('success', __('Tax slab deleted successfully.'));
+        return redirect()->route('salary.tax-slabs.index')->with('success', __('Tax slab deleted successfully.'));
     }
 }

@@ -62,7 +62,7 @@ class WorkSiteTest extends TestCase
         $this->makeWorkSite(['name' => 'Site Alpha']);
         $this->makeWorkSite(['name' => 'Site Beta', 'code' => 'WS-002']);
 
-        $response = $this->get(route('work-sites.index'));
+        $response = $this->get(route('salary.work-sites.index'));
 
         $response->assertStatus(200);
         $response->assertSee('Site Alpha');
@@ -74,7 +74,7 @@ class WorkSiteTest extends TestCase
         $otherCompany = Company::factory()->create();
         WorkSite::factory()->create(['company_id' => $otherCompany->id, 'name' => 'Other Site']);
 
-        $response = $this->get(route('work-sites.index'));
+        $response = $this->get(route('salary.work-sites.index'));
 
         $response->assertStatus(200);
         $response->assertDontSee('Other Site');
@@ -86,7 +86,7 @@ class WorkSiteTest extends TestCase
 
     public function test_create_returns_200(): void
     {
-        $response = $this->get(route('work-sites.create'));
+        $response = $this->get(route('salary.work-sites.create'));
 
         $response->assertStatus(200);
     }
@@ -95,9 +95,9 @@ class WorkSiteTest extends TestCase
     {
         $payload = $this->validPayload();
 
-        $response = $this->post(route('work-sites.store'), $payload);
+        $response = $this->post(route('salary.work-sites.store'), $payload);
 
-        $response->assertRedirect(route('work-sites.index'));
+        $response->assertRedirect(route('salary.work-sites.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('work_sites', [
@@ -110,7 +110,7 @@ class WorkSiteTest extends TestCase
 
     public function test_store_validates_required_fields(): void
     {
-        $response = $this->post(route('work-sites.store'), []);
+        $response = $this->post(route('salary.work-sites.store'), []);
 
         $response->assertSessionHasErrors(['name', 'code']);
     }
@@ -119,7 +119,7 @@ class WorkSiteTest extends TestCase
     {
         $this->makeWorkSite(['code' => 'WS-001']);
 
-        $response = $this->post(route('work-sites.store'), $this->validPayload(['code' => 'WS-001']));
+        $response = $this->post(route('salary.work-sites.store'), $this->validPayload(['code' => 'WS-001']));
 
         $response->assertSessionHasErrors(['code']);
     }
@@ -128,9 +128,9 @@ class WorkSiteTest extends TestCase
     {
         $payload = $this->validPayload(['address' => null, 'phone' => null]);
 
-        $response = $this->post(route('work-sites.store'), $payload);
+        $response = $this->post(route('salary.work-sites.store'), $payload);
 
-        $response->assertRedirect(route('work-sites.index'));
+        $response->assertRedirect(route('salary.work-sites.index'));
         $this->assertDatabaseHas('work_sites', [
             'company_id' => $this->companyId,
             'code' => 'WS-001',
@@ -147,7 +147,7 @@ class WorkSiteTest extends TestCase
     {
         $workSite = $this->makeWorkSite();
 
-        $response = $this->get(route('work-sites.edit', $workSite));
+        $response = $this->get(route('salary.work-sites.edit', $workSite));
 
         $response->assertStatus(200);
         $response->assertSee($workSite->name);
@@ -157,11 +157,11 @@ class WorkSiteTest extends TestCase
     {
         $workSite = $this->makeWorkSite(['name' => 'Old Name']);
 
-        $response = $this->put(route('work-sites.update', $workSite), $this->validPayload([
+        $response = $this->put(route('salary.work-sites.update', $workSite), $this->validPayload([
             'name' => 'New Name',
         ]));
 
-        $response->assertRedirect(route('work-sites.index'));
+        $response->assertRedirect(route('salary.work-sites.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('work_sites', [
@@ -175,7 +175,7 @@ class WorkSiteTest extends TestCase
         $first = $this->makeWorkSite(['code' => 'WS-001']);
         $second = $this->makeWorkSite(['code' => 'WS-002']);
 
-        $response = $this->put(route('work-sites.update', $second), $this->validPayload([
+        $response = $this->put(route('salary.work-sites.update', $second), $this->validPayload([
             'code' => 'WS-001', // conflicts with $first
         ]));
 
@@ -186,12 +186,12 @@ class WorkSiteTest extends TestCase
     {
         $workSite = $this->makeWorkSite(['code' => 'WS-001', 'name' => 'Old Name']);
 
-        $response = $this->put(route('work-sites.update', $workSite), $this->validPayload([
+        $response = $this->put(route('salary.work-sites.update', $workSite), $this->validPayload([
             'code' => 'WS-001',
             'name' => 'Updated Name',
         ]));
 
-        $response->assertRedirect(route('work-sites.index'));
+        $response->assertRedirect(route('salary.work-sites.index'));
         $this->assertDatabaseHas('work_sites', ['id' => $workSite->id, 'name' => 'Updated Name']);
     }
 
@@ -199,7 +199,7 @@ class WorkSiteTest extends TestCase
     {
         $workSite = $this->makeWorkSite(['is_active' => true]);
 
-        $this->put(route('work-sites.update', $workSite), $this->validPayload(['is_active' => '0']));
+        $this->put(route('salary.work-sites.update', $workSite), $this->validPayload(['is_active' => '0']));
 
         $this->assertDatabaseHas('work_sites', [
             'id' => $workSite->id,
@@ -215,9 +215,9 @@ class WorkSiteTest extends TestCase
     {
         $workSite = $this->makeWorkSite();
 
-        $response = $this->delete(route('work-sites.destroy', $workSite));
+        $response = $this->delete(route('salary.work-sites.destroy', $workSite));
 
-        $response->assertRedirect(route('work-sites.index'));
+        $response->assertRedirect(route('salary.work-sites.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseMissing('work_sites', ['id' => $workSite->id]);
@@ -231,7 +231,7 @@ class WorkSiteTest extends TestCase
     {
         auth()->logout();
 
-        $response = $this->get(route('work-sites.index'));
+        $response = $this->get(route('salary.work-sites.index'));
 
         $response->assertRedirect(route('login'));
     }

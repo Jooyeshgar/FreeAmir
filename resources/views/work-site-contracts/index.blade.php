@@ -11,13 +11,13 @@
         <div class="card-body">
             <div class="card-actions">
                 @can('salary.work-site-contracts.create')
-                    <a href="{{ route('work-site-contracts.create') }}" class="btn btn-primary">
+                    <a href="{{ route('salary.work-site-contracts.create') }}" class="btn btn-primary">
                         {{ __('Create Work Site Contract') }}
                     </a>
                 @endcan
             </div>
 
-            <form action="{{ route('work-site-contracts.index') }}" method="GET">
+            <form action="{{ route('salary.work-site-contracts.index') }}" method="GET">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full md:w-2/5">
                     <div class="relative">
                         <input type="text" name="search" value="{{ $search }}" placeholder="{{ __('Search by name or code') }}"
@@ -56,12 +56,12 @@
                             </td>
                             <td class="flex gap-2">
                                 @can('salary.work-site-contracts.edit')
-                                    <a href="{{ route('work-site-contracts.edit', $contract) }}" class="btn btn-sm btn-info">
+                                    <a href="{{ route('salary.work-site-contracts.edit', $contract) }}" class="btn btn-sm btn-info">
                                         {{ __('Edit') }}
                                     </a>
                                 @endcan
                                 @can('salary.work-site-contracts.delete')
-                                    <form action="{{ route('work-site-contracts.destroy', $contract) }}" method="POST" class="inline-block"
+                                    <form action="{{ route('salary.work-site-contracts.destroy', $contract) }}" method="POST" class="inline-block"
                                         onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                         @csrf
                                         @method('DELETE')

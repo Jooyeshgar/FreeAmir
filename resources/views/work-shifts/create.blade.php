@@ -6,7 +6,7 @@
     </x-slot>
 
     <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('work-shifts.store') }}" method="POST">
+        <form action="{{ route('attendance.work-shifts.store') }}" method="POST">
             @csrf
             <div class="card-body">
                 <h2 class="card-title">{{ __('Add Work Shift') }}</h2>
@@ -15,7 +15,7 @@
                 @include('work-shifts.form')
 
                 <div class="card-actions justify-end">
-                    <a href="{{ route('work-shifts.index') }}" class="btn btn-ghost">{{ __('Cancel') }}</a>
+                    <a href="{{ route('attendance.work-shifts.index') }}" class="btn btn-ghost">{{ __('Cancel') }}</a>
                     <button type="submit" class="btn btn-primary">{{ __('Create') }}</button>
                 </div>
             </div>

@@ -6,7 +6,7 @@
     </x-slot>
 
     <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('personnel-requests.update', $personnelRequest) }}" method="POST">
+        <form action="{{ route('hr.personnel-requests.update', $personnelRequest) }}" method="POST">
             @csrf
             @method('PUT')
             <div class="card-body">
@@ -16,7 +16,7 @@
                 @include('personnel-requests.form')
 
                 <div class="card-actions justify-end mt-4">
-                    <a href="{{ route('personnel-requests.index') }}" class="btn btn-ghost">
+                    <a href="{{ route('hr.personnel-requests.index') }}" class="btn btn-ghost">
                         {{ __('Cancel') }}
                     </a>
                     <button type="submit" class="btn btn-primary">

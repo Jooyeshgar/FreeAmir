@@ -12,7 +12,7 @@
 
             {{-- Filters --}}
             <div class="flex flex-wrap items-end justify-between gap-3">
-                <form action="{{ route('employees.index') }}" method="GET" class="flex flex-wrap items-end gap-2">
+                <form action="{{ route('hr.employees.index') }}" method="GET" class="flex flex-wrap items-end gap-2">
 
                     <input type="text" name="search" value="{{ request('search') }}" placeholder="{{ __('Search by name, code or national code') }}"
                         class="input input-bordered input-sm w-64" />
@@ -24,11 +24,11 @@
                     </select>
 
                     <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
-                    <a href="{{ route('employees.index') }}" class="btn btn-sm btn-ghost">{{ __('Reset') }}</a>
+                    <a href="{{ route('hr.employees.index') }}" class="btn btn-sm btn-ghost">{{ __('Reset') }}</a>
                 </form>
 
                 @can('hr.employees.create')
-                    <a href="{{ route('employees.create') }}" class="btn btn-primary btn-circle" title="{{ __('Create Employee') }}">
+                    <a href="{{ route('hr.employees.create') }}" class="btn btn-primary btn-circle" title="{{ __('Create Employee') }}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
@@ -67,17 +67,17 @@
                                 </td>
                                 <td class="flex gap-2">
                                     @can('hr.employees.show')
-                                        <a href="{{ route('employees.show', $employee) }}" class="btn btn-sm btn-ghost">
+                                        <a href="{{ route('hr.employees.show', $employee) }}" class="btn btn-sm btn-ghost">
                                             {{ __('View') }}
                                         </a>
                                     @endcan
                                     @can('hr.employees.edit')
-                                        <a href="{{ route('employees.edit', $employee) }}" class="btn btn-sm btn-info">
+                                        <a href="{{ route('hr.employees.edit', $employee) }}" class="btn btn-sm btn-info">
                                             {{ __('Edit') }}
                                         </a>
                                     @endcan
                                     @can('hr.employees.delete')
-                                        <form action="{{ route('employees.destroy', $employee) }}" method="POST" class="inline-block"
+                                        <form action="{{ route('hr.employees.destroy', $employee) }}" method="POST" class="inline-block"
                                             onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                             @csrf
                                             @method('DELETE')

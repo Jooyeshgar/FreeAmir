@@ -47,7 +47,7 @@ class PayrollController extends Controller
             companyId: (int) getActiveCompany(),
         );
 
-        return redirect()->route('payrolls.show', $payroll)
+        return redirect()->route('salary.payrolls.show', $payroll)
             ->with('success', __('Payroll created successfully.'));
     }
 
@@ -61,11 +61,11 @@ class PayrollController extends Controller
         $payroll->delete();
 
         if ($attendanceId) {
-            return redirect()->route('monthly-attendances.show', $attendanceId)
+            return redirect()->route('attendance.monthly-attendances.show', $attendanceId)
                 ->with('success', __('Payroll deleted successfully.'));
         }
 
-        return redirect()->route('monthly-attendances.index')
+        return redirect()->route('attendance.monthly-attendances.index')
             ->with('success', __('Payroll deleted successfully.'));
     }
 }

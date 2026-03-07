@@ -6,7 +6,7 @@
     </x-slot>
 
     <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('tax-slabs.store') }}" method="POST">
+        <form action="{{ route('salary.tax-slabs.store') }}" method="POST">
             @csrf
             <div class="card-body">
                 <h2 class="card-title">{{ __('Add Tax Slab') }}</h2>
@@ -15,7 +15,7 @@
                 @include('tax-slabs.form')
 
                 <div class="card-actions justify-end">
-                    <a href="{{ route('tax-slabs.index') }}" class="btn btn-ghost">{{ __('Cancel') }}</a>
+                    <a href="{{ route('salary.tax-slabs.index') }}" class="btn btn-ghost">{{ __('Cancel') }}</a>
                     <button type="submit" class="btn btn-primary">{{ __('Create') }}</button>
                 </div>
             </div>

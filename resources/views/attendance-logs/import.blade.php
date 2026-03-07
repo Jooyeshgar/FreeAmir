@@ -6,7 +6,7 @@
     </x-slot>
 
     <div class="card bg-base-100 shadow-xl max-w-2xl mx-auto">
-        <form action="{{ route('attendance-logs.import.preview') }}" method="POST" enctype="multipart/form-data">
+        <form action="{{ route('attendance.attendance-logs.import.preview') }}" method="POST" enctype="multipart/form-data">
             @csrf
             <div class="card-body">
                 <h2 class="card-title">{{ __('Import Attendance Logs') }}</h2>
@@ -72,7 +72,7 @@
                 </div>
 
                 <div class="card-actions justify-end mt-4">
-                    <a href="{{ route('attendance-logs.index') }}" class="btn btn-ghost">
+                    <a href="{{ route('attendance.attendance-logs.index') }}" class="btn btn-ghost">
                         {{ __('Cancel') }}
                     </a>
                     <button type="submit" class="btn btn-primary">

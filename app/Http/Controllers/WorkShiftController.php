@@ -44,7 +44,7 @@ class WorkShiftController extends Controller
             'is_active' => $request->boolean('is_active', true),
         ]));
 
-        return redirect()->route('work-shifts.index')
+        return redirect()->route('attendance.work-shifts.index')
             ->with('success', __('Work shift created successfully.'));
     }
 
@@ -71,7 +71,7 @@ class WorkShiftController extends Controller
             'is_active' => $request->boolean('is_active'),
         ]));
 
-        return redirect()->route('work-shifts.index')
+        return redirect()->route('attendance.work-shifts.index')
             ->with('success', __('Work shift updated successfully.'));
     }
 
@@ -79,7 +79,7 @@ class WorkShiftController extends Controller
     {
         $workShift->delete();
 
-        return redirect()->route('work-shifts.index')
+        return redirect()->route('attendance.work-shifts.index')
             ->with('success', __('Work shift deleted successfully.'));
     }
 }

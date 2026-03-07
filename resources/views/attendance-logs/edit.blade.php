@@ -6,7 +6,7 @@
     </x-slot>
 
     <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('attendance-logs.update', $attendanceLog) }}" method="POST">
+        <form action="{{ route('attendance.attendance-logs.update', $attendanceLog) }}" method="POST">
             @csrf
             @method('PUT')
             {{-- is_manual is always forced to true when editing a log manually --}}
@@ -77,7 +77,7 @@
                 </div>
 
                 <div class="card-actions justify-end">
-                    <a href="{{ route('attendance-logs.index') }}" class="btn btn-ghost">
+                    <a href="{{ route('attendance.attendance-logs.index') }}" class="btn btn-ghost">
                         {{ __('Cancel') }}
                     </a>
                     <button type="submit" class="btn btn-primary">{{ __('Update') }}</button>

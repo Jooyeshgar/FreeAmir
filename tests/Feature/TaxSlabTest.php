@@ -65,7 +65,7 @@ class TaxSlabTest extends TestCase
         $this->makeTaxSlab(['year' => 1403, 'slab_order' => 1]);
         $this->makeTaxSlab(['year' => 1403, 'slab_order' => 2]);
 
-        $response = $this->get(route('tax-slabs.index'));
+        $response = $this->get(route('salary.tax-slabs.index'));
 
         $response->assertStatus(200);
         $response->assertSee('1403');
@@ -76,7 +76,7 @@ class TaxSlabTest extends TestCase
         $this->makeTaxSlab(['year' => 1403, 'slab_order' => 1]);
         $this->makeTaxSlab(['year' => 1402, 'slab_order' => 1]);
 
-        $response = $this->get(route('tax-slabs.index', ['year' => 1402]));
+        $response = $this->get(route('salary.tax-slabs.index', ['year' => 1402]));
 
         $response->assertStatus(200);
         $response->assertSee('1402');
@@ -88,7 +88,7 @@ class TaxSlabTest extends TestCase
 
     public function test_create_returns_200(): void
     {
-        $response = $this->get(route('tax-slabs.create'));
+        $response = $this->get(route('salary.tax-slabs.create'));
 
         $response->assertStatus(200);
     }
@@ -97,9 +97,9 @@ class TaxSlabTest extends TestCase
     {
         $payload = $this->validPayload();
 
-        $response = $this->post(route('tax-slabs.store'), $payload);
+        $response = $this->post(route('salary.tax-slabs.store'), $payload);
 
-        $response->assertRedirect(route('tax-slabs.index'));
+        $response->assertRedirect(route('salary.tax-slabs.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('tax_slabs', [
@@ -112,7 +112,7 @@ class TaxSlabTest extends TestCase
 
     public function test_store_validates_required_fields(): void
     {
-        $response = $this->post(route('tax-slabs.store'), []);
+        $response = $this->post(route('salary.tax-slabs.store'), []);
 
         $response->assertSessionHasErrors(['year', 'slab_order', 'income_from', 'tax_rate']);
     }
@@ -121,7 +121,7 @@ class TaxSlabTest extends TestCase
     {
         $this->makeTaxSlab(['year' => 1403, 'slab_order' => 1]);
 
-        $response = $this->post(route('tax-slabs.store'), $this->validPayload([
+        $response = $this->post(route('salary.tax-slabs.store'), $this->validPayload([
             'year' => 1403,
             'slab_order' => 1,
         ]));
@@ -131,7 +131,7 @@ class TaxSlabTest extends TestCase
 
     public function test_store_rejects_income_to_less_than_income_from(): void
     {
-        $response = $this->post(route('tax-slabs.store'), $this->validPayload([
+        $response = $this->post(route('salary.tax-slabs.store'), $this->validPayload([
             'income_from' => 500_000_000,
             'income_to' => 100_000_000,
         ]));
@@ -143,9 +143,9 @@ class TaxSlabTest extends TestCase
     {
         $payload = $this->validPayload(['income_to' => null]);
 
-        $response = $this->post(route('tax-slabs.store'), $payload);
+        $response = $this->post(route('salary.tax-slabs.store'), $payload);
 
-        $response->assertRedirect(route('tax-slabs.index'));
+        $response->assertRedirect(route('salary.tax-slabs.index'));
         $this->assertDatabaseHas('tax_slabs', [
             'company_id' => $this->companyId,
             'income_to' => null,
@@ -154,7 +154,7 @@ class TaxSlabTest extends TestCase
 
     public function test_store_rejects_tax_rate_out_of_range(): void
     {
-        $response = $this->post(route('tax-slabs.store'), $this->validPayload(['tax_rate' => 150]));
+        $response = $this->post(route('salary.tax-slabs.store'), $this->validPayload(['tax_rate' => 150]));
 
         $response->assertSessionHasErrors(['tax_rate']);
     }
@@ -167,7 +167,7 @@ class TaxSlabTest extends TestCase
     {
         $taxSlab = $this->makeTaxSlab();
 
-        $response = $this->get(route('tax-slabs.edit', $taxSlab));
+        $response = $this->get(route('salary.tax-slabs.edit', $taxSlab));
 
         $response->assertStatus(200);
         $response->assertSee($taxSlab->year);
@@ -177,11 +177,11 @@ class TaxSlabTest extends TestCase
     {
         $taxSlab = $this->makeTaxSlab(['tax_rate' => 10]);
 
-        $response = $this->put(route('tax-slabs.update', $taxSlab), $this->validPayload([
+        $response = $this->put(route('salary.tax-slabs.update', $taxSlab), $this->validPayload([
             'tax_rate' => 20,
         ]));
 
-        $response->assertRedirect(route('tax-slabs.index'));
+        $response->assertRedirect(route('salary.tax-slabs.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('tax_slabs', [
@@ -195,7 +195,7 @@ class TaxSlabTest extends TestCase
         $first = $this->makeTaxSlab(['year' => 1403, 'slab_order' => 1]);
         $second = $this->makeTaxSlab(['year' => 1403, 'slab_order' => 2]);
 
-        $response = $this->put(route('tax-slabs.update', $second), $this->validPayload([
+        $response = $this->put(route('salary.tax-slabs.update', $second), $this->validPayload([
             'year' => 1403,
             'slab_order' => 1, // conflicts with $first
         ]));
@@ -207,13 +207,13 @@ class TaxSlabTest extends TestCase
     {
         $taxSlab = $this->makeTaxSlab(['year' => 1403, 'slab_order' => 1, 'tax_rate' => 10]);
 
-        $response = $this->put(route('tax-slabs.update', $taxSlab), $this->validPayload([
+        $response = $this->put(route('salary.tax-slabs.update', $taxSlab), $this->validPayload([
             'year' => 1403,
             'slab_order' => 1,
             'tax_rate' => 15,
         ]));
 
-        $response->assertRedirect(route('tax-slabs.index'));
+        $response->assertRedirect(route('salary.tax-slabs.index'));
         $this->assertDatabaseHas('tax_slabs', ['id' => $taxSlab->id, 'tax_rate' => 15]);
     }
 
@@ -225,9 +225,9 @@ class TaxSlabTest extends TestCase
     {
         $taxSlab = $this->makeTaxSlab();
 
-        $response = $this->delete(route('tax-slabs.destroy', $taxSlab));
+        $response = $this->delete(route('salary.tax-slabs.destroy', $taxSlab));
 
-        $response->assertRedirect(route('tax-slabs.index'));
+        $response->assertRedirect(route('salary.tax-slabs.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseMissing('tax_slabs', ['id' => $taxSlab->id]);
@@ -241,7 +241,7 @@ class TaxSlabTest extends TestCase
     {
         auth()->logout();
 
-        $response = $this->get(route('tax-slabs.index'));
+        $response = $this->get(route('salary.tax-slabs.index'));
 
         $response->assertRedirect(route('login'));
     }

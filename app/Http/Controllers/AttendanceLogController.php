@@ -72,7 +72,7 @@ class AttendanceLogController extends Controller
             ]
         ));
 
-        return redirect()->route('attendance-logs.index')
+        return redirect()->route('attendance.attendance-logs.index')
             ->with('success', __('Attendance log created successfully.'));
     }
 
@@ -119,7 +119,7 @@ class AttendanceLogController extends Controller
             ['is_manual' => true]
         ));
 
-        return redirect()->route('attendance-logs.index')
+        return redirect()->route('attendance.attendance-logs.index')
             ->with('success', __('Attendance log updated successfully.'));
     }
 
@@ -127,7 +127,7 @@ class AttendanceLogController extends Controller
     {
         $attendanceLog->delete();
 
-        return redirect()->route('attendance-logs.index')
+        return redirect()->route('attendance.attendance-logs.index')
             ->with('success', __('Attendance log deleted successfully.'));
     }
 
@@ -191,7 +191,7 @@ class AttendanceLogController extends Controller
 
         // Ensure the path is within the expected directory to prevent path traversal
         if (! str_starts_with($tmpPath, 'attendance-import-tmp/') || ! Storage::exists($tmpPath)) {
-            return redirect()->route('attendance-logs.import')
+            return redirect()->route('attendance.attendance-logs.import')
                 ->withErrors(['file' => __('Upload session expired. Please upload the file again.')]);
         }
 
@@ -221,6 +221,6 @@ class AttendanceLogController extends Controller
             ]);
         }
 
-        return redirect()->route('attendance-logs.index')->with('success', $message);
+        return redirect()->route('attendance.attendance-logs.index')->with('success', $message);
     }
 }

@@ -45,7 +45,7 @@ class PublicHolidayController extends Controller
             ['company_id' => getActiveCompany()]
         ));
 
-        return redirect()->route('public-holidays.index')
+        return redirect()->route('salary.public-holidays.index')
             ->with('success', __('Public holiday created successfully.'));
     }
 
@@ -69,7 +69,7 @@ class PublicHolidayController extends Controller
 
         $publicHoliday->update($validated);
 
-        return redirect()->route('public-holidays.index')
+        return redirect()->route('salary.public-holidays.index')
             ->with('success', __('Public holiday updated successfully.'));
     }
 
@@ -77,7 +77,7 @@ class PublicHolidayController extends Controller
     {
         $publicHoliday->delete();
 
-        return redirect()->route('public-holidays.index')
+        return redirect()->route('salary.public-holidays.index')
             ->with('success', __('Public holiday deleted successfully.'));
     }
 }

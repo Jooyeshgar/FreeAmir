@@ -27,7 +27,7 @@
                                 <a href="{{ route('users.show', $user) }}" class="btn btn-sm btn-ghost text-blue-600 hover:text-blue-900">{{ __('View') }}</a>
                                 <a href="{{ route('users.edit', $user) }}" class="btn btn-sm btn-ghost text-yellow-600 hover:text-yellow-900">{{ __('Edit') }}</a>
                                 @if ($user->employee)
-                                    <a href="{{ route('employees.show', $user->employee) }}" class="btn btn-sm btn-outline btn-success">{{ __('View Employee') }}</a>
+                                    <a href="{{ route('hr.employees.show', $user->employee) }}" class="btn btn-sm btn-outline btn-success">{{ __('View Employee') }}</a>
                                 @else
                                     <form action="{{ route('users.create-employee', $user) }}" method="post" class="inline">
                                         @csrf

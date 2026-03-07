@@ -124,7 +124,7 @@ class PersonnelRequestController extends Controller
 
         $tab = $request->get('tab', 'leaves');
 
-        return redirect()->route('personnel-requests.index', ['tab' => $tab])
+        return redirect()->route('hr.personnel-requests.index', ['tab' => $tab])
             ->with('success', __('Personnel request created successfully.'));
     }
 
@@ -156,7 +156,7 @@ class PersonnelRequestController extends Controller
 
         $personnelRequest->update($validated);
 
-        return redirect()->route('personnel-requests.index')
+        return redirect()->route('hr.personnel-requests.index')
             ->with('success', __('Personnel request updated successfully.'));
     }
 
@@ -164,7 +164,7 @@ class PersonnelRequestController extends Controller
     {
         $personnelRequest->delete();
 
-        return redirect()->route('personnel-requests.index')
+        return redirect()->route('hr.personnel-requests.index')
             ->with('success', __('Personnel request deleted successfully.'));
     }
 

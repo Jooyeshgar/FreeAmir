@@ -93,12 +93,12 @@
 
             {{-- Confirm / Go-back actions --}}
             <div class="flex flex-wrap gap-3 justify-end mt-6">
-                <a href="{{ route('attendance-logs.import') }}" class="btn btn-ghost">
+                <a href="{{ route('attendance.attendance-logs.import') }}" class="btn btn-ghost">
                     {{ __('Back') }}
                 </a>
 
                 @if ($preview['total'] > 0)
-                    <form action="{{ route('attendance-logs.import.store') }}" method="POST" enctype="multipart/form-data">
+                    <form action="{{ route('attendance.attendance-logs.import.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         <input type="hidden" name="import_type" value="{{ $type->value }}">
                         @if ($dateFrom)

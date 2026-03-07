@@ -6,7 +6,7 @@
     </x-slot>
 
     <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('monthly-attendances.store') }}" method="POST">
+        <form action="{{ route('attendance.monthly-attendances.store') }}" method="POST">
             @csrf
             <div class="card-body">
                 <h2 class="card-title">{{ __('Calculate Monthly Attendance') }}</h2>
@@ -43,7 +43,7 @@
                 </div>
 
                 <div class="card-actions justify-end mt-4">
-                    <a href="{{ route('monthly-attendances.index') }}" class="btn btn-ghost">
+                    <a href="{{ route('attendance.monthly-attendances.index') }}" class="btn btn-ghost">
                         {{ __('Cancel') }}
                     </a>
                     <button type="submit" class="btn btn-primary">

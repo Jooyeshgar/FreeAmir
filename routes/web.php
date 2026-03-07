@@ -82,13 +82,15 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::resource('configs', Controllers\ConfigController::class);
     });
 
-    Route::resource('employees', Controllers\EmployeeController::class);
-    Route::resource('org-charts', Controllers\OrgChartController::class);
-    Route::resource('personnel-requests', Controllers\PersonnelRequestController::class);
-    Route::patch('personnel-requests/{personnel_request}/approve', [Controllers\PersonnelRequestController::class, 'approve'])->name('personnel-requests.approve');
-    Route::patch('personnel-requests/{personnel_request}/reject', [Controllers\PersonnelRequestController::class, 'reject'])->name('personnel-requests.reject');
+    Route::group(['prefix' => 'hr', 'as' => 'hr.'], function () {
+        Route::resource('employees', Controllers\EmployeeController::class);
+        Route::resource('org-charts', Controllers\OrgChartController::class);
+        Route::resource('personnel-requests', Controllers\PersonnelRequestController::class);
+        Route::patch('personnel-requests/{personnel_request}/approve', [Controllers\PersonnelRequestController::class, 'approve'])->name('personnel-requests.approve');
+        Route::patch('personnel-requests/{personnel_request}/reject', [Controllers\PersonnelRequestController::class, 'reject'])->name('personnel-requests.reject');
+    });
 
-    Route::group(['prefix' => 'attendance'], function () {
+    Route::group(['prefix' => 'attendance', 'as' => 'attendance.'], function () {
         Route::resource('attendance-logs', Controllers\AttendanceLogController::class)->except(['show']);
         Route::get('attendance-logs-import', [Controllers\AttendanceLogController::class, 'importForm'])->name('attendance-logs.import');
         Route::post('attendance-logs-import/preview', [Controllers\AttendanceLogController::class, 'importPreview'])->name('attendance-logs.import.preview');
@@ -99,7 +101,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::resource('work-shifts', Controllers\WorkShiftController::class)->except(['show']);
     });
 
-    Route::group(['prefix' => 'salary'], function () {
+    Route::group(['prefix' => 'salary', 'as' => 'salary.'], function () {
         Route::resource('tax-slabs', Controllers\TaxSlabController::class);
         Route::resource('work-sites', Controllers\WorkSiteController::class)->except(['show']);
         Route::resource('work-site-contracts', Controllers\WorkSiteContractController::class)->except(['show']);

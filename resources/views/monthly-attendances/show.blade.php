@@ -38,12 +38,12 @@
                 <div class="flex gap-2 flex-wrap">
                     @if ($isAdminView ?? false)
                         @can('attendance.monthly-attendances.edit')
-                            <a href="{{ route('monthly-attendances.edit', $monthlyAttendance) }}" class="btn btn-sm btn-warning">
+                            <a href="{{ route('attendance.monthly-attendances.edit', $monthlyAttendance) }}" class="btn btn-sm btn-warning">
                                 {{ __('Edit') }}
                             </a>
                         @endcan
                         @can('attendance.monthly-attendances.delete')
-                            <form action="{{ route('monthly-attendances.destroy', $monthlyAttendance) }}" method="POST" class="inline-block"
+                            <form action="{{ route('attendance.monthly-attendances.destroy', $monthlyAttendance) }}" method="POST" class="inline-block"
                                 onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                 @csrf
                                 @method('DELETE')
@@ -53,7 +53,7 @@
                             </form>
                         @endcan
                     @endif
-                    <a href="{{ $backRoute ?? route('monthly-attendances.index') }}" class="btn btn-sm btn-ghost">
+                    <a href="{{ $backRoute ?? route('attendance.monthly-attendances.index') }}" class="btn btn-sm btn-ghost">
                         {{ __('Back') }}
                     </a>
                 </div>
@@ -105,7 +105,7 @@
             @if ($isAdminView ?? false)
                 @can('attendance.monthly-attendances.edit')
                     <div class="divider">{{ __('Recalculate from Logs') }}</div>
-                    <form action="{{ route('monthly-attendances.recalculate', $monthlyAttendance) }}" method="POST" class="flex flex-wrap items-end gap-4">
+                    <form action="{{ route('attendance.monthly-attendances.recalculate', $monthlyAttendance) }}" method="POST" class="flex flex-wrap items-end gap-4">
                         @csrf
                         <div class="w-44">
                             <x-date-picker name="start_date" id="start_date" title="{{ __('Start Date') }}" :value="old('start_date') ?? formatDate($monthlyAttendance->start_date, 'Y/m/d')" required />
@@ -135,7 +135,7 @@
                                 <span class="badge badge-info badge-sm">{{ __('Paid') }}</span>
                             @endif
                         </div>
-                        <a href="{{ route('payrolls.show', $monthlyAttendance->payroll) }}" class="btn btn-sm btn-primary">
+                        <a href="{{ route('salary.payrolls.show', $monthlyAttendance->payroll) }}" class="btn btn-sm btn-primary">
                             {{ __('View Payroll') }}
                         </a>
                     </div>
@@ -143,11 +143,12 @@
                     @can('salary.payrolls.create')
                         @if ($decrees->isEmpty())
                             <p class="text-sm text-warning">{{ __('No active salary decrees found for this employee. Please create one first.') }}</p>
-                            <a href="{{ route('salary-decrees.create', ['employee' => $monthlyAttendance->employee]) }}" class="btn btn-sm btn-warning">
+                            <a href="{{ route('salary.salary-decrees.create', ['employee' => $monthlyAttendance->employee]) }}" class="btn btn-sm btn-warning">
                                 {{ __('Create Decree') }}
                             </a>
                         @else
-                            <form action="{{ route('monthly-attendances.payroll.store', $monthlyAttendance) }}" method="POST" class="flex flex-wrap items-end gap-4">
+                            <form action="{{ route('attendance.monthly-attendances.payroll.store', $monthlyAttendance) }}" method="POST"
+                                class="flex flex-wrap items-end gap-4">
                                 @csrf
                                 @php
                                     $decreeOptions = $decrees->mapWithKeys(
@@ -246,7 +247,7 @@
                                     @if ($isAdminView ?? false)
                                         @can('attendance.attendance-logs.edit')
                                             <td>
-                                                <a href="{{ route('attendance-logs.edit', $log) }}" class="btn btn-xs btn-ghost">
+                                                <a href="{{ route('attendance.attendance-logs.edit', $log) }}" class="btn btn-xs btn-ghost">
                                                     {{ __('Edit') }}
                                                 </a>
                                             </td>
