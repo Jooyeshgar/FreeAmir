@@ -58,6 +58,7 @@
                             <th>{{ __('Total Deductions') }}</th>
                             <th>{{ __('Net Payment') }}</th>
                             <th>{{ __('Status') }}</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -77,10 +78,15 @@
                                         <span class="badge badge-warning badge-sm">{{ $payroll->status }}</span>
                                     @endif
                                 </td>
+                                <td>
+                                    <a href="{{ route('employee-portal.payrolls.show', $payroll) }}" class="btn btn-xs btn-outline">
+                                        {{ __('View Detail') }}
+                                    </a>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="text-center py-4 text-gray-500">
+                                <td colspan="7" class="text-center py-4 text-gray-500">
                                     {{ __('No payroll records found.') }}
                                 </td>
                             </tr>

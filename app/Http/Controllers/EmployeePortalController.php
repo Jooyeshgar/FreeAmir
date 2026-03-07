@@ -7,6 +7,7 @@ use App\Models\AttendanceLog;
 use App\Models\MonthlyAttendance;
 use App\Models\Payroll;
 use App\Models\PersonnelRequest;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -51,14 +52,18 @@ class EmployeePortalController extends Controller
             ->orderBy('log_date', 'desc');
 
         if ($request->filled('date_from')) {
-            $query->whereDate('log_date', '>=', $request->date_from);
+            $query->whereDate('log_date', '>=', Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($request->date_from))->format('Y-m-d'));
         }
 
         if ($request->filled('date_to')) {
-            $query->whereDate('log_date', '<=', $request->date_to);
+            $query->whereDate('log_date', '<=', Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($request->date_to))->format('Y-m-d'));
         }
 
-        $attendanceLogs = $query->paginate(15)->withQueryString();
+        if ($request->filled('is_manual')) {
+            $query->where('is_manual', (bool) $request->is_manual);
+        }
+
+        $attendanceLogs = $query->paginate(30)->withQueryString();
 
         return view('employee-portal.attendance-logs', compact('attendanceLogs', 'employee'));
     }
@@ -98,7 +103,28 @@ class EmployeePortalController extends Controller
 
         $monthlyAttendance->load(['logs' => fn ($q) => $q->orderBy('log_date')]);
 
-        return view('employee-portal.monthly-attendance-show', compact('monthlyAttendance', 'employee'));
+        // Build allDays so the shared blade can render every day in the period
+        $start = $monthlyAttendance->start_date->copy();
+        $logsByDate = $monthlyAttendance->logs->keyBy(fn ($log) => $log->log_date->toDateString());
+        $allDays = collect();
+        for ($i = 0; $i < $monthlyAttendance->duration; $i++) {
+            $date = $start->copy()->addDays($i);
+            $dateKey = $date->toDateString();
+            $allDays->push(
+                $logsByDate->has($dateKey)
+                    ? $logsByDate->get($dateKey)
+                    : (object) [
+                        'log_date' => $date,
+                        '_placeholder' => true,
+                        '_is_friday' => $date->dayOfWeek === \Carbon\Carbon::FRIDAY,
+                        '_is_holiday' => false,
+                    ]
+            );
+        }
+
+        return view('monthly-attendances.show', compact('monthlyAttendance', 'allDays'))
+            ->with('isAdminView', false)
+            ->with('backRoute', route('employee-portal.monthly-attendances'));
     }
 
     /**
@@ -123,6 +149,21 @@ class EmployeePortalController extends Controller
         $payrolls = $query->paginate(15)->withQueryString();
 
         return view('employee-portal.payrolls', compact('payrolls', 'employee'));
+    }
+
+    /**
+     * Show payroll detail for the current employee.
+     */
+    public function payrollShow(Payroll $payroll): View
+    {
+        $employee = $this->currentEmployee();
+
+        abort_if($payroll->employee_id !== $employee->id, 403);
+
+        $payroll->load(['employee', 'decree.benefits.element', 'monthlyAttendance', 'items.element']);
+
+        return view('payrolls.show', compact('payroll'))
+            ->with('isEmployeeView', true);
     }
 
     /**
