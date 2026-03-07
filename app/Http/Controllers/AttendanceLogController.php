@@ -49,9 +49,11 @@ class AttendanceLogController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $request->merge([
-            'log_date' => Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($request->input('log_date')))->format('Y-m-d'),
-        ]);
+        if ($request->has('log_date')) {
+            $request->merge([
+                'log_date' => jalaliInputToGregorian($request->input('log_date'), 'log_date'),
+            ]);
+        }
 
         $validated = $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
@@ -90,22 +92,31 @@ class AttendanceLogController extends Controller
 
     public function update(Request $request, AttendanceLog $attendanceLog): RedirectResponse
     {
-        $request->merge([
-            'log_date' => Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($request->input('log_date')))->format('Y-m-d'),
-        ]);
+        if ($request->has('log_date')) {
+            $request->merge([
+                'log_date' => jalaliInputToGregorian($request->input('log_date'), 'log_date'),
+            ]);
+        }
 
         $validated = $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
             'log_date' => ['required', 'date'],
             'entry_time' => ['nullable', 'date_format:H:i'],
             'exit_time' => ['nullable', 'date_format:H:i', 'after_or_equal:entry_time'],
-            'is_manual' => ['boolean'],
+            'worked' => ['nullable', 'integer', 'min:0'],
+            'delay' => ['nullable', 'integer', 'min:0'],
+            'early_leave' => ['nullable', 'integer', 'min:0'],
+            'overtime' => ['nullable', 'integer', 'min:0'],
+            'mission' => ['nullable', 'integer', 'min:0'],
+            'paid_leave' => ['nullable', 'integer', 'min:0'],
+            'unpaid_leave' => ['nullable', 'integer', 'min:0'],
             'description' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        // Editing a log always marks it as manually corrected
         $attendanceLog->update(array_merge(
             $validated,
-            ['is_manual' => $request->boolean('is_manual')]
+            ['is_manual' => true]
         ));
 
         return redirect()->route('attendance-logs.index')

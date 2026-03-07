@@ -25,8 +25,7 @@ class EmployeeController extends Controller
     public function index(Request $request): View
     {
         $query = Employee::with(['workSite', 'orgChart'])
-            ->orderBy('last_name')
-            ->orderBy('first_name');
+            ->orderBy('code');
 
         if ($request->filled('search')) {
             $search = $request->search;

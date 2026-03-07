@@ -71,7 +71,7 @@
                                     </a>
                                 @endcan
                                 @can('attendance.work-shifts.delete')
-                                    <form action="{{ route('work-shifts.destroy', $workShift) }}" method="POST" class="inline-block"
+                                    <form action="{{ route('work-shifts.destroy', $workShift) }}" method="POST" class="inline-block mb-0"
                                         onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                         @csrf
                                         @method('DELETE')

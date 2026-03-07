@@ -105,7 +105,7 @@
                 <form action="{{ route('monthly-attendances.recalculate', $monthlyAttendance) }}" method="POST" class="flex flex-wrap items-end gap-4">
                     @csrf
                     <div class="w-44">
-                        <x-date-picker name="start_date" id="start_date" title="{{ __('Start Date') }}" :value="old('start_date') ?? formatDate($monthlyAttendance->start_date)" required />
+                        <x-date-picker name="start_date" id="start_date" title="{{ __('Start Date') }}" :value="old('start_date') ?? formatDate($monthlyAttendance->start_date, 'Y/m/d')" required />
                     </div>
                     <div class="w-44">
                         <x-input name="duration" id="duration" type="number" title="{{ __('Duration (days)') }}" :value="old('duration') ?? $monthlyAttendance->duration" required />
@@ -138,24 +138,19 @@
                 @can('salary.payrolls.create')
                     @if ($decrees->isEmpty())
                         <p class="text-sm text-warning">{{ __('No active salary decrees found for this employee. Please create one first.') }}</p>
+                        <a href="{{ route('salary-decrees.create', ['employee' => $monthlyAttendance->employee]) }}" class="btn btn-sm btn-warning">
+                            {{ __('Create Decree') }}
+                        </a>
                     @else
                         <form action="{{ route('monthly-attendances.payroll.store', $monthlyAttendance) }}" method="POST" class="flex flex-wrap items-end gap-4">
                             @csrf
+                            @php
+                                $decreeOptions = $decrees->mapWithKeys(
+                                    fn($d) => [$d->id => ($d->name ?? __('Decree') . ' #' . $d->id) . ' (' . formatDate($d->start_date) . ')'],
+                                );
+                            @endphp
                             <div class="w-64">
-                                <label class="form-control w-full">
-                                    <div class="label">
-                                        <span class="label-text">{{ __('Salary Decree') }}</span>
-                                    </div>
-                                    <select name="decree_id" class="select select-bordered select-sm" required>
-                                        <option value="">{{ __('Select Decree') }}</option>
-                                        @foreach ($decrees as $decree)
-                                            <option value="{{ $decree->id }}">
-                                                {{ $decree->name ?? __('Decree') . ' #' . $decree->id }}
-                                                ({{ formatDate($decree->start_date) }})
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </label>
+                                <x-select name="decree_id" id="decree_id" title="" :options="$decreeOptions" required />
                             </div>
                             <button type="submit" class="btn btn-sm btn-success self-end">
                                 {{ __('Create Payroll') }}
@@ -171,50 +166,85 @@
                 <table class="table table-sm w-full">
                     <thead>
                         <tr>
-                            <th>{{ __('Date') }}</th>
+                            <th colspan="2">{{ __('Date') }}</th>
                             <th>{{ __('Entry') }}</th>
                             <th>{{ __('Exit') }}</th>
                             <th>{{ __('Worked (min)') }}</th>
                             <th>{{ __('Overtime (min)') }}</th>
                             <th>{{ __('Delay (min)') }}</th>
                             <th>{{ __('Status') }}</th>
-                            <th>{{ __('Note') }}</th>
+                            @can('attendance.attendance-logs.edit')
+                                <th></th>
+                            @endcan
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($monthlyAttendance->logs as $log)
-                            <tr class="{{ $log->is_friday || $log->is_holiday ? 'bg-base-200' : '' }}">
+                        @forelse ($allDays as $log)
+                            @php
+                                $isPlaceholder = isset($log->_placeholder) && $log->_placeholder;
+                                $placeholderIsFriday = $isPlaceholder && !empty($log->_is_friday);
+                                $placeholderIsHoliday = $isPlaceholder && !empty($log->_is_holiday);
+                                $isOffDay = $isPlaceholder ? $placeholderIsFriday || $placeholderIsHoliday : $log->is_friday || $log->is_holiday;
+                            @endphp
+                            <tr class="{{ $isOffDay ? 'bg-base-200' : '' }} {{ $isPlaceholder && !$isOffDay ? 'opacity-50' : '' }}">
+                                <td>{{ formatDate($log->log_date, 'l') }}</td>
                                 <td>{{ formatDate($log->log_date) }}</td>
-                                <td>{{ $log->entry_time ?? '—' }}</td>
-                                <td>{{ $log->exit_time ?? '—' }}</td>
-                                <td>{{ $log->worked }}</td>
-                                <td>{{ $log->overtime }}</td>
-                                <td>{{ $log->delay }}</td>
-                                <td>
-                                    @if ($log->is_holiday)
-                                        <span class="badge badge-warning badge-sm">{{ __('Holiday') }}</span>
-                                    @elseif ($log->is_friday)
-                                        <span class="badge badge-ghost badge-sm">{{ __('Friday') }}</span>
-                                    @elseif ($log->paid_leave > 0)
-                                        <span class="badge badge-info badge-sm">{{ __('Paid Leave') }}</span>
-                                    @elseif ($log->unpaid_leave > 0)
-                                        <span class="badge badge-error badge-sm">{{ __('Unpaid Leave') }}</span>
-                                    @elseif ($log->mission > 0)
-                                        <span class="badge badge-accent badge-sm">{{ __('Mission') }}</span>
-                                    @elseif ($log->worked > 0)
-                                        <span class="badge badge-success badge-sm">{{ __('Present') }}</span>
-                                    @else
-                                        <span class="badge badge-error badge-sm">{{ __('Absent') }}</span>
-                                    @endif
-                                    @if ($log->is_manual)
-                                        <span class="badge badge-ghost badge-sm">{{ __('Manual') }}</span>
-                                    @endif
-                                </td>
-                                <td class="text-xs text-gray-500">{{ $log->description }}</td>
+                                @if ($isPlaceholder)
+                                    <td>—</td>
+                                    <td>—</td>
+                                    <td>—</td>
+                                    <td>—</td>
+                                    <td>—</td>
+                                    <td>
+                                        @if ($placeholderIsHoliday)
+                                            <span class="badge badge-warning badge-sm">{{ __('Holiday') }}</span>
+                                        @elseif ($placeholderIsFriday)
+                                            <span class="badge badge-ghost badge-sm">{{ __('Friday') }}</span>
+                                        @else
+                                            <span class="badge badge-error badge-sm">{{ __('Absent') }}</span>
+                                        @endif
+                                    </td>
+                                    @can('attendance.attendance-logs.edit')
+                                        <td></td>
+                                    @endcan
+                                @else
+                                    <td>{{ $log->entry_time ?? '—' }}</td>
+                                    <td>{{ $log->exit_time ?? '—' }}</td>
+                                    <td>{{ $log->worked }}</td>
+                                    <td>{{ $log->overtime }}</td>
+                                    <td>{{ $log->delay }}</td>
+                                    <td>
+                                        @if ($log->is_holiday)
+                                            <span class="badge badge-warning badge-sm">{{ __('Holiday') }}</span>
+                                        @elseif ($log->is_friday)
+                                            <span class="badge badge-ghost badge-sm">{{ __('Friday') }}</span>
+                                        @elseif ($log->paid_leave > 0)
+                                            <span class="badge badge-info badge-sm">{{ __('Paid Leave') }}</span>
+                                        @elseif ($log->unpaid_leave > 0)
+                                            <span class="badge badge-error badge-sm">{{ __('Unpaid Leave') }}</span>
+                                        @elseif ($log->mission > 0)
+                                            <span class="badge badge-accent badge-sm">{{ __('Mission') }}</span>
+                                        @elseif ($log->worked > 0)
+                                            <span class="badge badge-success badge-sm">{{ __('Present') }}</span>
+                                        @else
+                                            <span class="badge badge-error badge-sm">{{ __('Absent') }}</span>
+                                        @endif
+                                        @if ($log->is_manual)
+                                            <span class="badge badge-ghost badge-sm">{{ __('Manual') }}</span>
+                                        @endif
+                                    </td>
+                                    @can('attendance.attendance-logs.edit')
+                                        <td>
+                                            <a href="{{ route('attendance-logs.edit', $log) }}" class="btn btn-xs btn-ghost">
+                                                {{ __('Edit') }}
+                                            </a>
+                                        </td>
+                                    @endcan
+                                @endif
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="text-center py-4 text-gray-500">
+                                <td colspan="10" class="text-center py-4 text-gray-500">
                                     {{ __('No attendance logs linked to this record.') }}
                                 </td>
                             </tr>

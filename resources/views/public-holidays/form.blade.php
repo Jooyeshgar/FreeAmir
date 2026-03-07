@@ -1,5 +1,5 @@
     <div class="w-40">
-        <x-date-picker name="date" id="date" title="{{ __('Date') }}" :value="old('date', isset($publicHoliday) ? $publicHoliday->date->format('Y-m-d') : '')" required />
+        <x-date-picker name="date" id="date" title="{{ __('Date') }}" :value="old('date', isset($publicHoliday) ? toEnglish(formatDate($publicHoliday->date)) : '')" required />
     </div>
 
     <div class="w-96">

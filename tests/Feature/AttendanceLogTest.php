@@ -58,7 +58,7 @@ class AttendanceLogTest extends TestCase
     {
         return array_merge([
             'employee_id' => $this->employee->id,
-            'log_date' => '2026-02-10',
+            'log_date' => formatDate('2026-02-10'),
             'entry_time' => '08:00',
             'exit_time' => '17:00',
             'is_manual' => '0',
@@ -72,14 +72,17 @@ class AttendanceLogTest extends TestCase
 
     public function test_index_lists_attendance_logs(): void
     {
-        $this->makeAttendanceLog(['log_date' => '2026-02-10']);
-        $this->makeAttendanceLog(['log_date' => '2026-02-11']);
+        $Date1 = '2025-02-10';
+        $Date2 = '2025-02-11';
+
+        $this->makeAttendanceLog(['log_date' => $Date1]);
+        $this->makeAttendanceLog(['log_date' => $Date2]);
 
         $response = $this->get(route('attendance-logs.index'));
 
         $response->assertStatus(200);
-        $response->assertSee('2026-02-10');
-        $response->assertSee('2026-02-11');
+        $response->assertSee(formatDate($Date1));
+        $response->assertSee(formatDate($Date2));
     }
 
     public function test_index_filters_by_employee(): void
@@ -96,8 +99,8 @@ class AttendanceLogTest extends TestCase
         $response = $this->get(route('attendance-logs.index', ['employee_id' => $this->employee->id]));
 
         $response->assertStatus(200);
-        $response->assertSee('2026-02-10');
-        $response->assertDontSee('2026-02-11');
+        $response->assertSee(formatDate('2026-02-10'));
+        $response->assertDontSee(formatDate('2026-02-11'));
     }
 
     public function test_index_filters_by_date_range(): void
@@ -107,14 +110,14 @@ class AttendanceLogTest extends TestCase
         $this->makeAttendanceLog(['log_date' => '2026-03-20']);
 
         $response = $this->get(route('attendance-logs.index', [
-            'date_from' => '2026-02-01',
-            'date_to' => '2026-02-28',
+            'date_from' => formatDate('2026-02-01'),
+            'date_to' => formatDate('2026-02-28'),
         ]));
 
         $response->assertStatus(200);
-        $response->assertSee('2026-02-10');
-        $response->assertDontSee('2026-01-05');
-        $response->assertDontSee('2026-03-20');
+        $response->assertSee(formatDate('2026-02-10'));
+        $response->assertDontSee(formatDate('2026-01-05'));
+        $response->assertDontSee(formatDate('2026-03-20'));
     }
 
     public function test_index_filters_by_is_manual(): void
@@ -125,8 +128,8 @@ class AttendanceLogTest extends TestCase
         $response = $this->get(route('attendance-logs.index', ['is_manual' => '1']));
 
         $response->assertStatus(200);
-        $response->assertSee('2026-02-10');
-        $response->assertDontSee('2026-02-11');
+        $response->assertSee(formatDate('2026-02-10'));
+        $response->assertDontSee(formatDate('2026-02-11'));
     }
 
     // ----------------------------------------------------------------
@@ -217,7 +220,7 @@ class AttendanceLogTest extends TestCase
         $response = $this->get(route('attendance-logs.edit', $log));
 
         $response->assertStatus(200);
-        $response->assertSee($log->log_date->format('Y-m-d'));
+        $response->assertSee(convertToJalali($log->log_date));
     }
 
     public function test_update_modifies_log_and_redirects(): void

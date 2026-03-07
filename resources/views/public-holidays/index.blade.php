@@ -38,7 +38,7 @@
                 <tbody>
                     @forelse ($publicHolidays as $publicHoliday)
                         <tr>
-                            <td>{{ $publicHoliday->date->format('Y-m-d') }}</td>
+                            <td>{{ formatDate($publicHoliday->date) }}</td>
                             <td>{{ $publicHoliday->name }}</td>
                             <td class="flex gap-2">
                                 @can('salary.public-holidays.edit')

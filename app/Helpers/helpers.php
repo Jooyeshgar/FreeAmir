@@ -45,7 +45,7 @@ function formatDocumentNumber(float $number)
     return $documentNumber;
 }
 
-function formatDate(Carbon|string|null $date)
+function formatDate(Carbon|string|null $date, $format = 'Y/m/d')
 {
     if (is_null($date)) {
         return '';
@@ -56,10 +56,12 @@ function formatDate(Carbon|string|null $date)
 
     $locale = App::getLocale();
     if ($locale === 'fa' || $locale === 'fa_IR') {
-        return convertToFarsi(gregorian_to_jalali_date($date ?? now()));
+        $timestamp = $date->timestamp ?? now()->timestamp;
+
+        return jdate($format, $timestamp);
     }
 
-    return $date->format('Y-m-d');
+    return $date->format($format);
 }
 
 function formatDateTime(Carbon|string|null $date)
@@ -128,6 +130,20 @@ function convertToFarsi($number)
 }
 
 /**
+ * Convert a number string to English digits.
+ *
+ * @param  string  $number
+ * @return string
+ */
+function toEnglish($number)
+{
+    $farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+    $englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+    return str_replace($farsiDigits, $englishDigits, $number);
+}
+
+/**
  * Convert a string number from Persian or English to a float.
  *
  * @param  mixed  $number
@@ -182,6 +198,52 @@ function convertToGregorian($date)
     }
 
     return $date;
+}
+
+/**
+ * Parse a Jalali (or Gregorian) date input from a form field and return a 'Y-m-d' Gregorian string.
+ *
+ * Converts a Jalali date string (e.g. '1403/06/15') to Gregorian. When the locale is not
+ * Persian the input is treated as already Gregorian. Throws a ValidationException when the
+ * input is empty or cannot be parsed, so the error is surfaced as a standard form error.
+ *
+ * @param  string|null  $date  Raw input value (Jalali 'YYYY/MM/DD' or Gregorian 'YYYY-MM-DD').
+ * @param  string  $field  The request field name used in the validation error bag.
+ * @return string Gregorian date in 'Y-m-d' format.
+ *
+ * @throws \Illuminate\Validation\ValidationException
+ */
+function jalaliInputToGregorian(?string $date, string $field = 'date'): string
+{
+    if (empty($date)) {
+        throw \Illuminate\Validation\ValidationException::withMessages([
+            $field => [__('validation.required', ['attribute' => $field])],
+        ]);
+    }
+
+    $normalized = toEnglish(str_replace('-', '/', trim($date)));
+
+    if (! preg_match('/^\d{4}\/\d{1,2}\/\d{1,2}$/', $normalized)) {
+        throw \Illuminate\Validation\ValidationException::withMessages([
+            $field => [__('validation.date', ['attribute' => $field])],
+        ]);
+    }
+
+    $gregorian = convertToGregorian($normalized);
+
+    if (empty($gregorian)) {
+        throw \Illuminate\Validation\ValidationException::withMessages([
+            $field => [__('validation.date', ['attribute' => $field])],
+        ]);
+    }
+
+    try {
+        return Carbon::createFromFormat('Y/m/d', $gregorian)->format('Y-m-d');
+    } catch (\Exception) {
+        throw \Illuminate\Validation\ValidationException::withMessages([
+            $field => [__('validation.date', ['attribute' => $field])],
+        ]);
+    }
 }
 
 /**

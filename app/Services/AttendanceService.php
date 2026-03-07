@@ -49,9 +49,6 @@ class AttendanceService
     ): MonthlyAttendance {
         $endDate = $startDate->copy()->addDays($durationDays - 1);
 
-        // Load the employee's work shift to determine daily expected minutes.
-        // withoutGlobalScopes is used on the relation to bypass FiscalYearScope
-        // so the shift is always resolved regardless of the active session context.
         $employee = Employee::withoutGlobalScopes()
             ->with(['workShift' => fn ($q) => $q->withoutGlobalScopes()])
             ->where('id', $employeeId)
@@ -60,14 +57,12 @@ class AttendanceService
 
         $workShift = $employee?->workShift;
 
-        // Load logs for this period
         $logs = AttendanceLog::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->where('employee_id', $employeeId)
             ->whereBetween('log_date', [$startDate->toDateString(), $endDate->toDateString()])
             ->get();
 
-        // Load public holidays for this period
         $holidays = PublicHoliday::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])

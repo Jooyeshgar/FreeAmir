@@ -92,7 +92,7 @@
                         <tr>
                             <td class="p-2">{{ formatDate($transaction->document->date) }}</td>
                             <td class="p-2">
-                                <a href="{{ route('documents.edit', $transaction->document->id) }}" class="text-blue-600 hover:text-blue-800">
+                                <a href="{{ route('documents.show', $transaction->document->id) }}" class="text-blue-600 hover:text-blue-800">
                                     {{ formatDocumentNumber($transaction->document->number) }}
                                 </a>
                             </td>

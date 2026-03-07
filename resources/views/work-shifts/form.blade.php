@@ -5,11 +5,11 @@
         </div>
 
         <div>
-            <x-input name="start_time" id="start_time" type="time" title="{{ __('Start Time') }}" :value="old('start_time', isset($workShift) ? substr($workShift->start_time, 0, 5) : '')" required />
+            <x-input name="start_time" id="start_time" type="text" placeholder="08:00" title="{{ __('Start Time') }}" :value="old('start_time', isset($workShift) ? substr($workShift->start_time, 0, 5) : '')" required />
         </div>
 
         <div>
-            <x-input name="end_time" id="end_time" type="time" title="{{ __('End Time') }}" :value="old('end_time', isset($workShift) ? substr($workShift->end_time, 0, 5) : '')" required />
+            <x-input name="end_time" id="end_time" type="text" placeholder="17:00" title="{{ __('End Time') }}" :value="old('end_time', isset($workShift) ? substr($workShift->end_time, 0, 5) : '')" required />
         </div>
 
         <div>

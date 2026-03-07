@@ -2,7 +2,7 @@
     <li><a href="/" class="hover:rounded-xl">{{ __('Home') }}</a></li>
 @endcan
 
-@role('Employee')
+@can('employee-portal.dashboard')
     <li class="dropdown dropdown-hover">
         <div tabindex="0" role="button">{{ __('My Portal') }}</div>
         <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
@@ -13,7 +13,7 @@
             <li><a href="{{ route('employee-portal.personnel-requests.index') }}">{{ __('My Requests') }}</a></li>
         </ul>
     </li>
-@endrole
+@endcan
 @can('invoices.create')
     <li class="dropdown dropdown-hover">
         <div tabindex="0" role="button">{{ __('Operation') }}</div>

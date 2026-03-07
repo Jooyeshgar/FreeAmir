@@ -21,9 +21,7 @@ class PermissionController extends Controller
 
     public $messages = [];
 
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * Display a listing of the resource.
@@ -36,8 +34,7 @@ class PermissionController extends Controller
 
         $query = Permission::orderBy('id', 'desc');
         if (isset($validated['search']) and $search = $validated['search']) {
-            $query->where('name', 'like', "%{$search}%")
-                ->orWhere('description', 'like', "%{$search}%");
+            $query->where('name', 'like', "%{$search}%");
         }
         $permissions = $query->paginate(20);
 

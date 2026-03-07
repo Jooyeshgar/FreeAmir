@@ -19,7 +19,7 @@
             @can('documents.show')
                 @include('home.income')
                 @include('home.profit')
-            @else
+            @elsecan('products.index')
                 @include('home.sell')
                 @include('home.sold-amount')
                 @include('home.quick-access')

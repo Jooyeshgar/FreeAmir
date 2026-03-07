@@ -16,7 +16,7 @@ class SalaryDecreeController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = SalaryDecree::with(['employee', 'orgChart'])
+        $query = SalaryDecree::with(['employee'])
             ->orderBy('start_date', 'desc');
 
         if ($request->filled('search')) {
@@ -44,13 +44,23 @@ class SalaryDecreeController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        if ($request->has('start_date')) {
+            $request->merge([
+                'start_date' => jalaliInputToGregorian($request->input('start_date'), 'start_date'),
+            ]);
+        }
+
+        if ($request->has('end_date') && $request->filled('end_date')) {
+            $request->merge([
+                'end_date' => jalaliInputToGregorian($request->input('end_date'), 'end_date'),
+            ]);
+        }
+
         $validated = $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
-            'org_chart_id' => ['required', 'integer', 'exists:org_charts,id'],
             'name' => ['nullable', 'string', 'max:200'],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'contract_type' => ['nullable', 'in:full_time,part_time,hourly,shift'],
             'daily_wage' => ['nullable', 'numeric', 'min:0'],
             'description' => ['nullable', 'string'],
             'is_active' => ['boolean'],
@@ -63,14 +73,12 @@ class SalaryDecreeController extends Controller
             $decree = SalaryDecree::create([
                 'company_id' => getActiveCompany(),
                 'employee_id' => $validated['employee_id'],
-                'org_chart_id' => $validated['org_chart_id'],
                 'name' => $validated['name'] ?? null,
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'] ?? null,
-                'contract_type' => $validated['contract_type'] ?? null,
                 'daily_wage' => $validated['daily_wage'] ?? null,
                 'description' => $validated['description'] ?? null,
-                'is_active' => $request->boolean('is_active', true),
+                'is_active' => $request->boolean('is_active', false),
             ]);
 
             foreach ($validated['benefits'] ?? [] as $benefit) {
@@ -99,13 +107,23 @@ class SalaryDecreeController extends Controller
 
     public function update(Request $request, SalaryDecree $salaryDecree): RedirectResponse
     {
+        if ($request->has('start_date')) {
+            $request->merge([
+                'start_date' => jalaliInputToGregorian($request->input('start_date'), 'start_date'),
+            ]);
+        }
+
+        if ($request->has('end_date') && $request->filled('end_date')) {
+            $request->merge([
+                'end_date' => jalaliInputToGregorian($request->input('end_date'), 'end_date'),
+            ]);
+        }
+
         $validated = $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
-            'org_chart_id' => ['required', 'integer', 'exists:org_charts,id'],
             'name' => ['nullable', 'string', 'max:200'],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'contract_type' => ['nullable', 'in:full_time,part_time,hourly,shift'],
             'daily_wage' => ['nullable', 'numeric', 'min:0'],
             'description' => ['nullable', 'string'],
             'is_active' => ['boolean'],
@@ -117,14 +135,12 @@ class SalaryDecreeController extends Controller
         DB::transaction(function () use ($validated, $request, $salaryDecree) {
             $salaryDecree->update([
                 'employee_id' => $validated['employee_id'],
-                'org_chart_id' => $validated['org_chart_id'],
                 'name' => $validated['name'] ?? null,
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'] ?? null,
-                'contract_type' => $validated['contract_type'] ?? null,
                 'daily_wage' => $validated['daily_wage'] ?? null,
                 'description' => $validated['description'] ?? null,
-                'is_active' => $request->boolean('is_active', true),
+                'is_active' => $request->boolean('is_active', false),
             ]);
 
             $salaryDecree->benefits()->delete();

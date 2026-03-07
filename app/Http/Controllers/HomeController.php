@@ -11,6 +11,13 @@ class HomeController extends Controller
 
     public function index()
     {
+        if (! (auth()->user()->can('documents.show') or auth()->user()->can('products.index'))) {
+            if (auth()->user()->can('employee-portal.dashboard')) {
+                return redirect()->route('employee-portal.dashboard');
+            }
+            abort(403);
+        }
+
         $cashTypes = ['both', 'bank', 'cash_book'];
 
         [$bankAccounts, $topTenBankAccountBalances] = $this->service->topTenBanksAccountBalances();
