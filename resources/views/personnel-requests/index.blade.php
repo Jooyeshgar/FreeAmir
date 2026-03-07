@@ -13,7 +13,7 @@
             {{-- Tabs --}}
             <div role="tablist" class="tabs tabs-lifted tabs-lg mb-4">
 
-                <a role="tab" href="{{ route('personnel-requests.index', array_merge(request()->except('tab', 'page'), ['tab' => 'leaves'])) }}"
+                <a role="tab" href="{{ route('hr.personnel-requests.index', array_merge(request()->except('tab', 'page'), ['tab' => 'leaves'])) }}"
                     class="tab {{ $tab === 'leaves' ? 'tab-active' : '' }}">
                     {{ __('Leaves') }}
                     @if ($pendingCounts['leaves'] > 0)
@@ -21,7 +21,7 @@
                     @endif
                 </a>
 
-                <a role="tab" href="{{ route('personnel-requests.index', array_merge(request()->except('tab', 'page'), ['tab' => 'missions'])) }}"
+                <a role="tab" href="{{ route('hr.personnel-requests.index', array_merge(request()->except('tab', 'page'), ['tab' => 'missions'])) }}"
                     class="tab {{ $tab === 'missions' ? 'tab-active' : '' }}">
                     {{ __('Missions') }}
                     @if ($pendingCounts['missions'] > 0)
@@ -29,7 +29,7 @@
                     @endif
                 </a>
 
-                <a role="tab" href="{{ route('personnel-requests.index', array_merge(request()->except('tab', 'page'), ['tab' => 'work_orders'])) }}"
+                <a role="tab" href="{{ route('hr.personnel-requests.index', array_merge(request()->except('tab', 'page'), ['tab' => 'work_orders'])) }}"
                     class="tab {{ $tab === 'work_orders' ? 'tab-active' : '' }}">
                     {{ __('Work Orders') }}
                     @if ($pendingCounts['work_orders'] > 0)
@@ -37,7 +37,7 @@
                     @endif
                 </a>
 
-                <a role="tab" href="{{ route('personnel-requests.index', array_merge(request()->except('tab', 'page'), ['tab' => 'other'])) }}"
+                <a role="tab" href="{{ route('hr.personnel-requests.index', array_merge(request()->except('tab', 'page'), ['tab' => 'other'])) }}"
                     class="tab {{ $tab === 'other' ? 'tab-active' : '' }}">
                     {{ __('Other') }}
                     @if ($pendingCounts['other'] > 0)
@@ -49,7 +49,7 @@
 
             {{-- Filters --}}
             <div class="flex flex-wrap items-end justify-between gap-3">
-                <form action="{{ route('personnel-requests.index') }}" method="GET" class="flex flex-wrap items-end gap-2">
+                <form action="{{ route('hr.personnel-requests.index') }}" method="GET" class="flex flex-wrap items-end gap-2">
                     <input type="hidden" name="tab" value="{{ $tab }}" />
 
                     <select name="employee_id" class="select select-bordered select-sm">
@@ -77,13 +77,13 @@
                     <button type="submit" class="btn btn-sm btn-neutral">
                         {{ __('Search') }}
                     </button>
-                    <a href="{{ route('personnel-requests.index', ['tab' => $tab]) }}" class="btn btn-sm btn-ghost">
+                    <a href="{{ route('hr.personnel-requests.index', ['tab' => $tab]) }}" class="btn btn-sm btn-ghost">
                         {{ __('Reset') }}
                     </a>
                 </form>
 
                 @can('hr.personnel-requests.create')
-                    <a href="{{ route('personnel-requests.create', ['tab' => $tab]) }}" class="btn btn-primary btn-circle" title="{{ __('Create Personnel Request') }}">
+                    <a href="{{ route('hr.personnel-requests.create', ['tab' => $tab]) }}" class="btn btn-primary btn-circle" title="{{ __('Create Personnel Request') }}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
@@ -140,7 +140,7 @@
                                 <td class="flex gap-2">
                                     @can('hr.personnel-requests.approve')
                                         @if ($personnelRequest->status === 'pending' || $personnelRequest->status === 'rejected')
-                                            <form action="{{ route('personnel-requests.approve', $personnelRequest) }}" method="POST" class="inline-block mb-0">
+                                            <form action="{{ route('hr.personnel-requests.approve', $personnelRequest) }}" method="POST" class="inline-block mb-0">
                                                 @csrf
                                                 @method('PATCH')
                                                 <button type="submit" title="{{ __('Approve') }}">
@@ -149,7 +149,7 @@
                                             </form>
                                         @endif
                                         @if ($personnelRequest->status === 'pending' || $personnelRequest->status === 'approved')
-                                            <form action="{{ route('personnel-requests.reject', $personnelRequest) }}" method="POST" class="inline-block mb-0">
+                                            <form action="{{ route('hr.personnel-requests.reject', $personnelRequest) }}" method="POST" class="inline-block mb-0">
                                                 @csrf
                                                 @method('PATCH')
                                                 <button type="submit" class= "text-lg h-8 p-1" title="{{ __('Reject') }}">
@@ -159,12 +159,12 @@
                                         @endif
                                     @endcan
                                     @can('hr.personnel-requests.edit')
-                                        <a href="{{ route('personnel-requests.edit', $personnelRequest) }}" class="btn btn-sm btn-info">
+                                        <a href="{{ route('hr.personnel-requests.edit', $personnelRequest) }}" class="btn btn-sm btn-info">
                                             {{ __('Edit') }}
                                         </a>
                                     @endcan
                                     @can('hr.personnel-requests.delete')
-                                        <form action="{{ route('personnel-requests.destroy', $personnelRequest) }}" method="POST" class="inline-block mb-0"
+                                        <form action="{{ route('hr.personnel-requests.destroy', $personnelRequest) }}" method="POST" class="inline-block mb-0"
                                             onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                             @csrf
                                             @method('DELETE')

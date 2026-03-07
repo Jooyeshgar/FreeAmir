@@ -11,13 +11,13 @@
         <div class="card-body">
             <div class="card-actions">
                 @can('salary.payroll-elements.create')
-                    <a href="{{ route('payroll-elements.create') }}" class="btn btn-primary">
+                    <a href="{{ route('salary.payroll-elements.create') }}" class="btn btn-primary">
                         {{ __('Create Payroll Element') }}
                     </a>
                 @endcan
             </div>
 
-            <form action="{{ route('payroll-elements.index') }}" method="GET">
+            <form action="{{ route('salary.payroll-elements.index') }}" method="GET">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3 w-full md:w-3/5">
                     <div class="relative">
                         <input type="text" name="title" value="{{ request('title') }}" placeholder="{{ __('Filter by title') }}"
@@ -79,13 +79,13 @@
                             </td>
                             <td class="flex gap-2">
                                 @can('salary.payroll-elements.edit')
-                                    <a href="{{ route('payroll-elements.edit', $element) }}" class="btn btn-sm btn-info">
+                                    <a href="{{ route('salary.payroll-elements.edit', $element) }}" class="btn btn-sm btn-info">
                                         {{ __('Edit') }}
                                     </a>
                                 @endcan
                                 @can('salary.payroll-elements.delete')
                                     @unless ($element->is_system_locked)
-                                        <form action="{{ route('payroll-elements.destroy', $element) }}" method="POST" class="inline-block"
+                                        <form action="{{ route('salary.payroll-elements.destroy', $element) }}" method="POST" class="inline-block"
                                             onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                             @csrf
                                             @method('DELETE')

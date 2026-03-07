@@ -6,7 +6,7 @@
     </x-slot>
 
     <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('employees.store') }}" method="POST">
+        <form action="{{ route('hr.employees.store') }}" method="POST">
             @csrf
             <div class="card-body">
                 <h2 class="card-title">{{ __('Add Employee') }}</h2>
@@ -15,7 +15,7 @@
                 @include('employees.form')
 
                 <div class="card-actions justify-end mt-4">
-                    <a href="{{ route('employees.index') }}" class="btn btn-ghost">{{ __('Cancel') }}</a>
+                    <a href="{{ route('hr.employees.index') }}" class="btn btn-ghost">{{ __('Cancel') }}</a>
                     <button type="submit" class="btn btn-primary">{{ __('Create') }}</button>
                 </div>
             </div>

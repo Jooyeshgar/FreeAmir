@@ -76,7 +76,7 @@ class PersonnelRequestTest extends TestCase
 
     public function test_index_returns_200(): void
     {
-        $response = $this->get(route('personnel-requests.index'));
+        $response = $this->get(route('hr.personnel-requests.index'));
 
         $response->assertStatus(200);
     }
@@ -86,7 +86,7 @@ class PersonnelRequestTest extends TestCase
         $this->makePersonnelRequest(['request_type' => PersonnelRequestType::LEAVE_DAILY->value]);
         $this->makePersonnelRequest(['request_type' => PersonnelRequestType::LEAVE_HOURLY->value]);
 
-        $response = $this->get(route('personnel-requests.index'));
+        $response = $this->get(route('hr.personnel-requests.index'));
 
         $response->assertStatus(200);
         $response->assertSee($this->employee->first_name);
@@ -98,19 +98,19 @@ class PersonnelRequestTest extends TestCase
         $this->makePersonnelRequest(['request_type' => PersonnelRequestType::MISSION_DAILY->value]);
 
         // Leaves tab (default)
-        $response = $this->get(route('personnel-requests.index', ['tab' => 'leaves']));
+        $response = $this->get(route('hr.personnel-requests.index', ['tab' => 'leaves']));
         $response->assertStatus(200);
 
         // Missions tab
-        $response = $this->get(route('personnel-requests.index', ['tab' => 'missions']));
+        $response = $this->get(route('hr.personnel-requests.index', ['tab' => 'missions']));
         $response->assertStatus(200);
 
         // Work orders tab
-        $response = $this->get(route('personnel-requests.index', ['tab' => 'work_orders']));
+        $response = $this->get(route('hr.personnel-requests.index', ['tab' => 'work_orders']));
         $response->assertStatus(200);
 
         // Other tab
-        $response = $this->get(route('personnel-requests.index', ['tab' => 'other']));
+        $response = $this->get(route('hr.personnel-requests.index', ['tab' => 'other']));
         $response->assertStatus(200);
     }
 
@@ -119,7 +119,7 @@ class PersonnelRequestTest extends TestCase
         $this->makePersonnelRequest(['status' => 'pending', 'request_type' => PersonnelRequestType::LEAVE_DAILY->value]);
         $this->makePersonnelRequest(['status' => 'approved', 'request_type' => PersonnelRequestType::LEAVE_DAILY->value]);
 
-        $response = $this->get(route('personnel-requests.index'));
+        $response = $this->get(route('hr.personnel-requests.index'));
 
         $response->assertStatus(200);
         // The pending count badge (1) must appear on the page
@@ -131,7 +131,7 @@ class PersonnelRequestTest extends TestCase
         $this->makePersonnelRequest(['status' => 'pending']);
         $this->makePersonnelRequest(['status' => 'approved']);
 
-        $response = $this->get(route('personnel-requests.index', ['tab' => 'leaves', 'status' => 'pending']));
+        $response = $this->get(route('hr.personnel-requests.index', ['tab' => 'leaves', 'status' => 'pending']));
 
         $response->assertStatus(200);
     }
@@ -140,7 +140,7 @@ class PersonnelRequestTest extends TestCase
     {
         $this->makePersonnelRequest();
 
-        $response = $this->get(route('personnel-requests.index', [
+        $response = $this->get(route('hr.personnel-requests.index', [
             'tab' => 'leaves',
             'employee_id' => $this->employee->id,
         ]));
@@ -154,7 +154,7 @@ class PersonnelRequestTest extends TestCase
 
     public function test_create_returns_200(): void
     {
-        $response = $this->get(route('personnel-requests.create'));
+        $response = $this->get(route('hr.personnel-requests.create'));
 
         $response->assertStatus(200);
     }
@@ -162,7 +162,7 @@ class PersonnelRequestTest extends TestCase
     public function test_create_returns_200_with_tab_param(): void
     {
         foreach (['leaves', 'missions', 'work_orders', 'other'] as $tab) {
-            $response = $this->get(route('personnel-requests.create', ['tab' => $tab]));
+            $response = $this->get(route('hr.personnel-requests.create', ['tab' => $tab]));
             $response->assertStatus(200);
         }
     }
@@ -171,9 +171,9 @@ class PersonnelRequestTest extends TestCase
     {
         $payload = $this->validPayload();
 
-        $response = $this->post(route('personnel-requests.store'), $payload);
+        $response = $this->post(route('hr.personnel-requests.store'), $payload);
 
-        $response->assertRedirect(route('personnel-requests.index', ['tab' => 'leaves']));
+        $response->assertRedirect(route('hr.personnel-requests.index', ['tab' => 'leaves']));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('personnel_requests', [
@@ -187,14 +187,14 @@ class PersonnelRequestTest extends TestCase
 
     public function test_store_validates_required_fields(): void
     {
-        $response = $this->post(route('personnel-requests.store'), []);
+        $response = $this->post(route('hr.personnel-requests.store'), []);
 
         $response->assertSessionHasErrors(['employee_id', 'request_type', 'request_date', 'start_time', 'end_time', 'status']);
     }
 
     public function test_store_rejects_end_date_before_start_date(): void
     {
-        $response = $this->post(route('personnel-requests.store'), $this->validPayload([
+        $response = $this->post(route('hr.personnel-requests.store'), $this->validPayload([
             'start_time' => '17:00',
             'end_time' => '08:00',
         ]));
@@ -204,7 +204,7 @@ class PersonnelRequestTest extends TestCase
 
     public function test_store_rejects_invalid_request_type(): void
     {
-        $response = $this->post(route('personnel-requests.store'), $this->validPayload([
+        $response = $this->post(route('hr.personnel-requests.store'), $this->validPayload([
             'request_type' => 'INVALID_TYPE',
         ]));
 
@@ -213,7 +213,7 @@ class PersonnelRequestTest extends TestCase
 
     public function test_store_rejects_invalid_status(): void
     {
-        $response = $this->post(route('personnel-requests.store'), $this->validPayload([
+        $response = $this->post(route('hr.personnel-requests.store'), $this->validPayload([
             'status' => 'unknown',
         ]));
 
@@ -222,7 +222,7 @@ class PersonnelRequestTest extends TestCase
 
     public function test_store_rejects_nonexistent_employee(): void
     {
-        $response = $this->post(route('personnel-requests.store'), $this->validPayload([
+        $response = $this->post(route('hr.personnel-requests.store'), $this->validPayload([
             'employee_id' => 99999,
         ]));
 
@@ -237,7 +237,7 @@ class PersonnelRequestTest extends TestCase
     {
         $personnelRequest = $this->makePersonnelRequest();
 
-        $response = $this->get(route('personnel-requests.edit', $personnelRequest));
+        $response = $this->get(route('hr.personnel-requests.edit', $personnelRequest));
 
         $response->assertStatus(200);
     }
@@ -247,11 +247,11 @@ class PersonnelRequestTest extends TestCase
         $personnelRequest = $this->makePersonnelRequest();
 
         $response = $this->put(
-            route('personnel-requests.update', $personnelRequest),
+            route('hr.personnel-requests.update', $personnelRequest),
             $this->validPayload(['status' => 'approved', 'reason' => 'Updated reason'])
         );
 
-        $response->assertRedirect(route('personnel-requests.index'));
+        $response->assertRedirect(route('hr.personnel-requests.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('personnel_requests', [
@@ -265,7 +265,7 @@ class PersonnelRequestTest extends TestCase
     {
         $personnelRequest = $this->makePersonnelRequest();
 
-        $response = $this->put(route('personnel-requests.update', $personnelRequest), []);
+        $response = $this->put(route('hr.personnel-requests.update', $personnelRequest), []);
 
         $response->assertSessionHasErrors(['employee_id', 'request_type', 'start_date', 'end_date', 'status']);
     }
@@ -275,7 +275,7 @@ class PersonnelRequestTest extends TestCase
         $personnelRequest = $this->makePersonnelRequest();
 
         $response = $this->put(
-            route('personnel-requests.update', $personnelRequest),
+            route('hr.personnel-requests.update', $personnelRequest),
             $this->validPayload([
                 'start_date' => '2026-03-10T08:00',
                 'end_date' => '2026-03-05T08:00',
@@ -293,9 +293,9 @@ class PersonnelRequestTest extends TestCase
     {
         $personnelRequest = $this->makePersonnelRequest();
 
-        $response = $this->delete(route('personnel-requests.destroy', $personnelRequest));
+        $response = $this->delete(route('hr.personnel-requests.destroy', $personnelRequest));
 
-        $response->assertRedirect(route('personnel-requests.index'));
+        $response->assertRedirect(route('hr.personnel-requests.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseMissing('personnel_requests', ['id' => $personnelRequest->id]);
@@ -309,7 +309,7 @@ class PersonnelRequestTest extends TestCase
     {
         $personnelRequest = $this->makePersonnelRequest(['status' => 'pending']);
 
-        $response = $this->patch(route('personnel-requests.approve', $personnelRequest));
+        $response = $this->patch(route('hr.personnel-requests.approve', $personnelRequest));
 
         $response->assertRedirect();
         $response->assertSessionHas('success');
@@ -326,7 +326,7 @@ class PersonnelRequestTest extends TestCase
     {
         $personnelRequest = $this->makePersonnelRequest(['status' => 'pending']);
 
-        $response = $this->patch(route('personnel-requests.reject', $personnelRequest));
+        $response = $this->patch(route('hr.personnel-requests.reject', $personnelRequest));
 
         $response->assertRedirect();
         $response->assertSessionHas('success');
@@ -343,7 +343,7 @@ class PersonnelRequestTest extends TestCase
     {
         $personnelRequest = $this->makePersonnelRequest(['status' => 'rejected']);
 
-        $this->patch(route('personnel-requests.approve', $personnelRequest));
+        $this->patch(route('hr.personnel-requests.approve', $personnelRequest));
 
         $this->assertDatabaseHas('personnel_requests', [
             'id' => $personnelRequest->id,
@@ -355,7 +355,7 @@ class PersonnelRequestTest extends TestCase
     {
         $personnelRequest = $this->makePersonnelRequest(['status' => 'approved']);
 
-        $this->patch(route('personnel-requests.reject', $personnelRequest));
+        $this->patch(route('hr.personnel-requests.reject', $personnelRequest));
 
         $this->assertDatabaseHas('personnel_requests', [
             'id' => $personnelRequest->id,
@@ -374,7 +374,7 @@ class PersonnelRequestTest extends TestCase
 
         $personnelRequest = $this->makePersonnelRequest(['status' => 'pending']);
 
-        $this->patch(route('personnel-requests.approve', $personnelRequest));
+        $this->patch(route('hr.personnel-requests.approve', $personnelRequest));
 
         $this->assertDatabaseHas('personnel_requests', [
             'id' => $personnelRequest->id,
@@ -394,7 +394,7 @@ class PersonnelRequestTest extends TestCase
 
         $personnelRequest = $this->makePersonnelRequest(['status' => 'pending']);
 
-        $this->patch(route('personnel-requests.reject', $personnelRequest));
+        $this->patch(route('hr.personnel-requests.reject', $personnelRequest));
 
         $this->assertDatabaseHas('personnel_requests', [
             'id' => $personnelRequest->id,
@@ -423,7 +423,7 @@ class PersonnelRequestTest extends TestCase
             'status' => 'pending',
         ]);
 
-        $response = $this->get(route('personnel-requests.index'));
+        $response = $this->get(route('hr.personnel-requests.index'));
 
         // The page renders fine but the other company's record is not visible
         $response->assertStatus(200);
@@ -438,7 +438,7 @@ class PersonnelRequestTest extends TestCase
     {
         auth()->logout();
 
-        $response = $this->get(route('personnel-requests.index'));
+        $response = $this->get(route('hr.personnel-requests.index'));
 
         $response->assertRedirect(route('login'));
     }

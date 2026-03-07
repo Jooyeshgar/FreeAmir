@@ -66,24 +66,24 @@
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 
     <div>
-        <x-select name="work_site_id" id="work_site_id" title="{{ __('Work Site') }}" :title2="'<a href=\'' . route('work-sites.create') . '\' target=\'_blank\' class=\'link link-primary text-xs\'>+ ' . __('New') . '</a>'"
+        <x-select name="work_site_id" id="work_site_id" title="{{ __('Work Site') }}" :title2="'<a href=\'' . route('salary.work-sites.create') . '\' target=\'_blank\' class=\'link link-primary text-xs\'>+ ' . __('New') . '</a>'"
             :options="$workSites->mapWithKeys(fn($ws) => [$ws->id => $ws->name])->toArray()" :selected="old('work_site_id', $employee->work_site_id ?? '')" required />
     </div>
 
     <div>
-        <x-select name="org_chart_id" id="org_chart_id" title="{{ __('Org Chart Position') }}" :title2="'<a href=\'' . route('org-charts.create') . '\' target=\'_blank\' class=\'link link-primary text-xs\'>+ ' . __('New') . '</a>'"
+        <x-select name="org_chart_id" id="org_chart_id" title="{{ __('Org Chart Position') }}" :title2="'<a href=\'' . route('hr.org-charts.create') . '\' target=\'_blank\' class=\'link link-primary text-xs\'>+ ' . __('New') . '</a>'"
             :options="['' => __('— None —')] + $orgCharts->mapWithKeys(fn($oc) => [$oc->id => $oc->title])->toArray()"
             :selected="old('org_chart_id', $employee->org_chart_id ?? '')" />
     </div>
 
     <div>
-        <x-select name="contract_framework_id" id="contract_framework_id" title="{{ __('Contract Framework') }}" :title2="'<a href=\'' . route('work-site-contracts.create') . '\' target=\'_blank\' class=\'link link-primary text-xs\'>+ ' . __('New') . '</a>'"
+        <x-select name="contract_framework_id" id="contract_framework_id" title="{{ __('Contract Framework') }}" :title2="'<a href=\'' . route('salary.work-site-contracts.create') . '\' target=\'_blank\' class=\'link link-primary text-xs\'>+ ' . __('New') . '</a>'"
             :options="['' => __('— None —')] + $workSiteContracts->mapWithKeys(fn($cf) => [$cf->id => $cf->name])->toArray()"
             :selected="old('contract_framework_id', $employee->contract_framework_id ?? '')" />
     </div>
 
     <div>
-        <x-select name="work_shift_id" id="work_shift_id" title="{{ __('Work Shift') }}" :title2="'<a href=\'' . route('work-shifts.create') . '\' target=\'_blank\' class=\'link link-primary text-xs\'>+ ' . __('New') . '</a>'"
+        <x-select name="work_shift_id" id="work_shift_id" title="{{ __('Work Shift') }}" :title2="'<a href=\'' . route('attendance.work-shifts.create') . '\' target=\'_blank\' class=\'link link-primary text-xs\'>+ ' . __('New') . '</a>'"
             :options="['' => __('— None —')] + $workShifts->mapWithKeys(fn($ws) => [$ws->id => $ws->name])->toArray()"
             :selected="old('work_shift_id', $employee->work_shift_id ?? '')" />
     </div>

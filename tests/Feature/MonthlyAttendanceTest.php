@@ -88,7 +88,7 @@ class MonthlyAttendanceTest extends TestCase
 
     public function test_index_returns_200(): void
     {
-        $response = $this->get(route('monthly-attendances.index'));
+        $response = $this->get(route('attendance.monthly-attendances.index'));
 
         $response->assertStatus(200);
     }
@@ -98,7 +98,7 @@ class MonthlyAttendanceTest extends TestCase
         $this->makeMonthlyAttendance(['year' => 1403, 'month' => 7]);
         $this->makeMonthlyAttendance(['year' => 1403, 'month' => 8]);
 
-        $response = $this->get(route('monthly-attendances.index'));
+        $response = $this->get(route('attendance.monthly-attendances.index'));
 
         $response->assertStatus(200);
         $response->assertSee('مهر');
@@ -116,7 +116,7 @@ class MonthlyAttendanceTest extends TestCase
         $this->makeMonthlyAttendance(['employee_id' => $this->employee->id, 'year' => 1403, 'month' => 7]);
         $this->makeMonthlyAttendance(['employee_id' => $other->id, 'year' => 1403, 'month' => 8]);
 
-        $response = $this->get(route('monthly-attendances.index', ['employee_id' => $this->employee->id]));
+        $response = $this->get(route('attendance.monthly-attendances.index', ['employee_id' => $this->employee->id]));
 
         $response->assertStatus(200);
         $response->assertSee('مهر');
@@ -128,7 +128,7 @@ class MonthlyAttendanceTest extends TestCase
         $this->makeMonthlyAttendance(['year' => 1402, 'month' => 1]);
         $this->makeMonthlyAttendance(['year' => 1403, 'month' => 1]);
 
-        $response = $this->get(route('monthly-attendances.index', ['year' => 1402]));
+        $response = $this->get(route('attendance.monthly-attendances.index', ['year' => 1402]));
 
         $response->assertStatus(200);
         $response->assertSee('1402');
@@ -150,7 +150,7 @@ class MonthlyAttendanceTest extends TestCase
             'month' => 7,
         ]);
 
-        $response = $this->get(route('monthly-attendances.index'));
+        $response = $this->get(route('attendance.monthly-attendances.index'));
 
         $response->assertStatus(200);
         $response->assertDontSee($otherEmployee->first_name);
@@ -162,7 +162,7 @@ class MonthlyAttendanceTest extends TestCase
 
     public function test_create_returns_200(): void
     {
-        $response = $this->get(route('monthly-attendances.create'));
+        $response = $this->get(route('attendance.monthly-attendances.create'));
 
         $response->assertStatus(200);
     }
@@ -171,9 +171,9 @@ class MonthlyAttendanceTest extends TestCase
     {
         $payload = $this->validCreatePayload();
 
-        $response = $this->post(route('monthly-attendances.store'), $payload);
+        $response = $this->post(route('attendance.monthly-attendances.store'), $payload);
 
-        $response->assertRedirect(route('monthly-attendances.index'));
+        $response->assertRedirect(route('attendance.monthly-attendances.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('monthly_attendances', [
@@ -184,7 +184,7 @@ class MonthlyAttendanceTest extends TestCase
 
     public function test_store_validates_required_fields(): void
     {
-        $response = $this->post(route('monthly-attendances.store'), []);
+        $response = $this->post(route('attendance.monthly-attendances.store'), []);
 
         $response->assertSessionHasErrors(['employee_id', 'start_date', 'duration']);
     }
@@ -193,7 +193,7 @@ class MonthlyAttendanceTest extends TestCase
     {
         $payload = $this->validCreatePayload(['duration' => 10]);
 
-        $response = $this->post(route('monthly-attendances.store'), $payload);
+        $response = $this->post(route('attendance.monthly-attendances.store'), $payload);
 
         $response->assertSessionHasErrors(['duration']);
     }
@@ -219,7 +219,7 @@ class MonthlyAttendanceTest extends TestCase
             ]);
         }
 
-        $this->post(route('monthly-attendances.store'), $this->validCreatePayload());
+        $this->post(route('attendance.monthly-attendances.store'), $this->validCreatePayload());
 
         $record = MonthlyAttendance::where('company_id', $this->companyId)
             ->where('employee_id', $this->employee->id)
@@ -237,7 +237,7 @@ class MonthlyAttendanceTest extends TestCase
     {
         $attendance = $this->makeMonthlyAttendance(['year' => 1403, 'month' => 7]);
 
-        $response = $this->get(route('monthly-attendances.show', $attendance));
+        $response = $this->get(route('attendance.monthly-attendances.show', $attendance));
 
         $response->assertStatus(200);
         $response->assertSee('مهر');
@@ -251,7 +251,7 @@ class MonthlyAttendanceTest extends TestCase
     {
         $attendance = $this->makeMonthlyAttendance(['year' => 1403, 'month' => 1]);
 
-        $response = $this->get(route('monthly-attendances.edit', $attendance));
+        $response = $this->get(route('attendance.monthly-attendances.edit', $attendance));
 
         $response->assertStatus(200);
     }
@@ -261,9 +261,9 @@ class MonthlyAttendanceTest extends TestCase
         $attendance = $this->makeMonthlyAttendance(['year' => 1403, 'month' => 1]);
         $payload = $this->validUpdatePayload(['present_days' => 18, 'absent_days' => 4]);
 
-        $response = $this->put(route('monthly-attendances.update', $attendance), $payload);
+        $response = $this->put(route('attendance.monthly-attendances.update', $attendance), $payload);
 
-        $response->assertRedirect(route('monthly-attendances.show', $attendance));
+        $response->assertRedirect(route('attendance.monthly-attendances.show', $attendance));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('monthly_attendances', [
@@ -277,7 +277,7 @@ class MonthlyAttendanceTest extends TestCase
     {
         $attendance = $this->makeMonthlyAttendance(['year' => 1403, 'month' => 1]);
 
-        $response = $this->put(route('monthly-attendances.update', $attendance), []);
+        $response = $this->put(route('attendance.monthly-attendances.update', $attendance), []);
 
         $response->assertSessionHasErrors(['work_days', 'present_days', 'absent_days']);
     }
@@ -290,9 +290,9 @@ class MonthlyAttendanceTest extends TestCase
     {
         $attendance = $this->makeMonthlyAttendance(['year' => 1403, 'month' => 1]);
 
-        $response = $this->delete(route('monthly-attendances.destroy', $attendance));
+        $response = $this->delete(route('attendance.monthly-attendances.destroy', $attendance));
 
-        $response->assertRedirect(route('monthly-attendances.index'));
+        $response->assertRedirect(route('attendance.monthly-attendances.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseMissing('monthly_attendances', ['id' => $attendance->id]);
@@ -321,12 +321,12 @@ class MonthlyAttendanceTest extends TestCase
             'worked' => 480,
         ]);
 
-        $response = $this->post(route('monthly-attendances.recalculate', $attendance), [
+        $response = $this->post(route('attendance.monthly-attendances.recalculate', $attendance), [
             'start_date' => '2024-10-22',
             'duration' => 30,
         ]);
 
-        $response->assertRedirect(route('monthly-attendances.show', $attendance));
+        $response->assertRedirect(route('attendance.monthly-attendances.show', $attendance));
         $response->assertSessionHas('success');
     }
 

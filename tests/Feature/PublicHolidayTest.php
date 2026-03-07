@@ -59,7 +59,7 @@ class PublicHolidayTest extends TestCase
         $this->makePublicHoliday(['date' => '2026-03-21', 'name' => 'Nowruz']);
         $this->makePublicHoliday(['date' => '2026-04-01', 'name' => 'Islamic Republic Day']);
 
-        $response = $this->get(route('public-holidays.index'));
+        $response = $this->get(route('salary.public-holidays.index'));
 
         $response->assertStatus(200);
         $response->assertSee('Nowruz');
@@ -71,7 +71,7 @@ class PublicHolidayTest extends TestCase
         $this->makePublicHoliday(['date' => '2026-03-21', 'name' => 'Nowruz']);
         $this->makePublicHoliday(['date' => '2026-04-01', 'name' => 'Islamic Republic Day']);
 
-        $response = $this->get(route('public-holidays.index', ['name' => 'Nowruz']));
+        $response = $this->get(route('salary.public-holidays.index', ['name' => 'Nowruz']));
 
         $response->assertStatus(200);
         $response->assertSee('Nowruz');
@@ -84,7 +84,7 @@ class PublicHolidayTest extends TestCase
 
     public function test_create_returns_200(): void
     {
-        $response = $this->get(route('public-holidays.create'));
+        $response = $this->get(route('salary.public-holidays.create'));
 
         $response->assertStatus(200);
     }
@@ -93,9 +93,9 @@ class PublicHolidayTest extends TestCase
     {
         $payload = $this->validPayload();
 
-        $response = $this->post(route('public-holidays.store'), $payload);
+        $response = $this->post(route('salary.public-holidays.store'), $payload);
 
-        $response->assertRedirect(route('public-holidays.index'));
+        $response->assertRedirect(route('salary.public-holidays.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('public_holidays', [
@@ -107,7 +107,7 @@ class PublicHolidayTest extends TestCase
 
     public function test_store_validates_required_fields(): void
     {
-        $response = $this->post(route('public-holidays.store'), []);
+        $response = $this->post(route('salary.public-holidays.store'), []);
 
         $response->assertSessionHasErrors(['date', 'name']);
     }
@@ -116,7 +116,7 @@ class PublicHolidayTest extends TestCase
     {
         $this->makePublicHoliday(['date' => '2026-03-21', 'name' => 'Nowruz']);
 
-        $response = $this->post(route('public-holidays.store'), $this->validPayload([
+        $response = $this->post(route('salary.public-holidays.store'), $this->validPayload([
             'date' => '2026-03-21',
             'name' => 'Another Holiday',
         ]));
@@ -126,7 +126,7 @@ class PublicHolidayTest extends TestCase
 
     public function test_store_rejects_invalid_date_format(): void
     {
-        $response = $this->post(route('public-holidays.store'), $this->validPayload([
+        $response = $this->post(route('salary.public-holidays.store'), $this->validPayload([
             'date' => 'not-a-date',
         ]));
 
@@ -135,7 +135,7 @@ class PublicHolidayTest extends TestCase
 
     public function test_store_rejects_name_exceeding_max_length(): void
     {
-        $response = $this->post(route('public-holidays.store'), $this->validPayload([
+        $response = $this->post(route('salary.public-holidays.store'), $this->validPayload([
             'name' => str_repeat('a', 201),
         ]));
 
@@ -150,7 +150,7 @@ class PublicHolidayTest extends TestCase
     {
         $publicHoliday = $this->makePublicHoliday();
 
-        $response = $this->get(route('public-holidays.edit', $publicHoliday));
+        $response = $this->get(route('salary.public-holidays.edit', $publicHoliday));
 
         $response->assertStatus(200);
         $response->assertSee($publicHoliday->name);
@@ -160,11 +160,11 @@ class PublicHolidayTest extends TestCase
     {
         $publicHoliday = $this->makePublicHoliday(['date' => '2026-03-21', 'name' => 'Nowruz']);
 
-        $response = $this->put(route('public-holidays.update', $publicHoliday), $this->validPayload([
+        $response = $this->put(route('salary.public-holidays.update', $publicHoliday), $this->validPayload([
             'name' => 'Nowruz - New Year',
         ]));
 
-        $response->assertRedirect(route('public-holidays.index'));
+        $response->assertRedirect(route('salary.public-holidays.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('public_holidays', [
@@ -178,7 +178,7 @@ class PublicHolidayTest extends TestCase
         $first = $this->makePublicHoliday(['date' => '2026-03-21', 'name' => 'Nowruz']);
         $second = $this->makePublicHoliday(['date' => '2026-04-01', 'name' => 'Islamic Republic Day']);
 
-        $response = $this->put(route('public-holidays.update', $second), $this->validPayload([
+        $response = $this->put(route('salary.public-holidays.update', $second), $this->validPayload([
             'date' => '2026-03-21', // conflicts with $first
             'name' => 'Islamic Republic Day',
         ]));
@@ -190,12 +190,12 @@ class PublicHolidayTest extends TestCase
     {
         $publicHoliday = $this->makePublicHoliday(['date' => '2026-03-21', 'name' => 'Nowruz']);
 
-        $response = $this->put(route('public-holidays.update', $publicHoliday), $this->validPayload([
+        $response = $this->put(route('salary.public-holidays.update', $publicHoliday), $this->validPayload([
             'date' => '2026-03-21',
             'name' => 'Nowruz Updated',
         ]));
 
-        $response->assertRedirect(route('public-holidays.index'));
+        $response->assertRedirect(route('salary.public-holidays.index'));
         $this->assertDatabaseHas('public_holidays', [
             'id' => $publicHoliday->id,
             'name' => 'Nowruz Updated',
@@ -210,9 +210,9 @@ class PublicHolidayTest extends TestCase
     {
         $publicHoliday = $this->makePublicHoliday();
 
-        $response = $this->delete(route('public-holidays.destroy', $publicHoliday));
+        $response = $this->delete(route('salary.public-holidays.destroy', $publicHoliday));
 
-        $response->assertRedirect(route('public-holidays.index'));
+        $response->assertRedirect(route('salary.public-holidays.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseMissing('public_holidays', ['id' => $publicHoliday->id]);
@@ -226,7 +226,7 @@ class PublicHolidayTest extends TestCase
     {
         auth()->logout();
 
-        $response = $this->get(route('public-holidays.index'));
+        $response = $this->get(route('salary.public-holidays.index'));
 
         $response->assertRedirect(route('login'));
     }

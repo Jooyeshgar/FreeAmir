@@ -6,7 +6,7 @@
     </x-slot>
 
     <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('org-charts.update', $orgChart) }}" method="POST">
+        <form action="{{ route('hr.org-charts.update', $orgChart) }}" method="POST">
             @csrf
             @method('PUT')
             <div class="card-body">
@@ -16,7 +16,7 @@
                 @include('org-charts.form')
 
                 <div class="card-actions justify-end">
-                    <a href="{{ route('org-charts.index') }}" class="btn btn-ghost">{{ __('Cancel') }}</a>
+                    <a href="{{ route('hr.org-charts.index') }}" class="btn btn-ghost">{{ __('Cancel') }}</a>
                     <button type="submit" class="btn btn-primary">{{ __('Update') }}</button>
                 </div>
             </div>

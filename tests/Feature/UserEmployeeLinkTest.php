@@ -65,7 +65,7 @@ class UserEmployeeLinkTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee(__('View Employee'));
-        $response->assertSee(route('employees.show', $employee));
+        $response->assertSee(route('hr.employees.show', $employee));
     }
 
     public function test_create_employee_from_user(): void
@@ -76,7 +76,7 @@ class UserEmployeeLinkTest extends TestCase
             ->where('user_id', $this->user->id)
             ->first();
 
-        $response->assertRedirect(route('employees.show', $employee));
+        $response->assertRedirect(route('hr.employees.show', $employee));
 
         $this->assertDatabaseHas('employees', [
             'user_id' => $this->user->id,

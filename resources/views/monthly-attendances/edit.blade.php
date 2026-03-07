@@ -6,7 +6,7 @@
     </x-slot>
 
     <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('monthly-attendances.update', $monthlyAttendance) }}" method="POST">
+        <form action="{{ route('attendance.monthly-attendances.update', $monthlyAttendance) }}" method="POST">
             @csrf
             @method('PUT')
             <div class="card-body">
@@ -21,7 +21,7 @@
                 @include('monthly-attendances.form')
 
                 <div class="card-actions justify-end mt-4">
-                    <a href="{{ route('monthly-attendances.show', $monthlyAttendance) }}" class="btn btn-ghost">
+                    <a href="{{ route('attendance.monthly-attendances.show', $monthlyAttendance) }}" class="btn btn-ghost">
                         {{ __('Cancel') }}
                     </a>
                     <button type="submit" class="btn btn-primary">

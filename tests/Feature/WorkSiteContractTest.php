@@ -67,7 +67,7 @@ class WorkSiteContractTest extends TestCase
         $this->makeContract(['name' => 'Contract Alpha', 'code' => 'CA-001']);
         $this->makeContract(['name' => 'Contract Beta', 'code' => 'CB-002']);
 
-        $response = $this->get(route('work-site-contracts.index'));
+        $response = $this->get(route('salary.work-site-contracts.index'));
 
         $response->assertStatus(200);
         $response->assertSee('Contract Alpha');
@@ -79,7 +79,7 @@ class WorkSiteContractTest extends TestCase
         $this->makeContract(['name' => 'Alpha Contract', 'code' => 'CA-001']);
         $this->makeContract(['name' => 'Beta Contract', 'code' => 'CB-002']);
 
-        $response = $this->get(route('work-site-contracts.index', ['search' => 'Alpha']));
+        $response = $this->get(route('salary.work-site-contracts.index', ['search' => 'Alpha']));
 
         $response->assertStatus(200);
         $response->assertSee('Alpha Contract');
@@ -92,7 +92,7 @@ class WorkSiteContractTest extends TestCase
 
     public function test_create_returns_200(): void
     {
-        $response = $this->get(route('work-site-contracts.create'));
+        $response = $this->get(route('salary.work-site-contracts.create'));
 
         $response->assertStatus(200);
     }
@@ -101,9 +101,9 @@ class WorkSiteContractTest extends TestCase
     {
         $payload = $this->validPayload();
 
-        $response = $this->post(route('work-site-contracts.store'), $payload);
+        $response = $this->post(route('salary.work-site-contracts.store'), $payload);
 
-        $response->assertRedirect(route('work-site-contracts.index'));
+        $response->assertRedirect(route('salary.work-site-contracts.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('work_site_contracts', [
@@ -115,7 +115,7 @@ class WorkSiteContractTest extends TestCase
 
     public function test_store_validates_required_fields(): void
     {
-        $response = $this->post(route('work-site-contracts.store'), []);
+        $response = $this->post(route('salary.work-site-contracts.store'), []);
 
         $response->assertSessionHasErrors(['work_site_id', 'name', 'code']);
     }
@@ -124,7 +124,7 @@ class WorkSiteContractTest extends TestCase
     {
         $this->makeContract(['code' => 'DUP-001']);
 
-        $response = $this->post(route('work-site-contracts.store'), $this->validPayload([
+        $response = $this->post(route('salary.work-site-contracts.store'), $this->validPayload([
             'code' => 'DUP-001',
         ]));
 
@@ -133,7 +133,7 @@ class WorkSiteContractTest extends TestCase
 
     public function test_store_rejects_non_existent_work_site(): void
     {
-        $response = $this->post(route('work-site-contracts.store'), $this->validPayload([
+        $response = $this->post(route('salary.work-site-contracts.store'), $this->validPayload([
             'work_site_id' => 99999,
         ]));
 
@@ -142,7 +142,7 @@ class WorkSiteContractTest extends TestCase
 
     public function test_store_rejects_name_exceeding_max_length(): void
     {
-        $response = $this->post(route('work-site-contracts.store'), $this->validPayload([
+        $response = $this->post(route('salary.work-site-contracts.store'), $this->validPayload([
             'name' => str_repeat('A', 201),
         ]));
 
@@ -157,7 +157,7 @@ class WorkSiteContractTest extends TestCase
     {
         $contract = $this->makeContract(['name' => 'Edit Contract', 'code' => 'EC-001']);
 
-        $response = $this->get(route('work-site-contracts.edit', $contract));
+        $response = $this->get(route('salary.work-site-contracts.edit', $contract));
 
         $response->assertStatus(200);
         $response->assertSee('Edit Contract');
@@ -167,12 +167,12 @@ class WorkSiteContractTest extends TestCase
     {
         $contract = $this->makeContract(['name' => 'Old Name', 'code' => 'OLD-001']);
 
-        $response = $this->put(route('work-site-contracts.update', $contract), $this->validPayload([
+        $response = $this->put(route('salary.work-site-contracts.update', $contract), $this->validPayload([
             'name' => 'New Name',
             'code' => 'NEW-001',
         ]));
 
-        $response->assertRedirect(route('work-site-contracts.index'));
+        $response->assertRedirect(route('salary.work-site-contracts.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('work_site_contracts', [
@@ -186,11 +186,11 @@ class WorkSiteContractTest extends TestCase
     {
         $contract = $this->makeContract(['code' => 'SAME-001']);
 
-        $response = $this->put(route('work-site-contracts.update', $contract), $this->validPayload([
+        $response = $this->put(route('salary.work-site-contracts.update', $contract), $this->validPayload([
             'code' => 'SAME-001',
         ]));
 
-        $response->assertRedirect(route('work-site-contracts.index'));
+        $response->assertRedirect(route('salary.work-site-contracts.index'));
         $response->assertSessionHasNoErrors();
     }
 
@@ -198,7 +198,7 @@ class WorkSiteContractTest extends TestCase
     {
         $contract = $this->makeContract();
 
-        $response = $this->put(route('work-site-contracts.update', $contract), [
+        $response = $this->put(route('salary.work-site-contracts.update', $contract), [
             'name' => '',
             'code' => '',
         ]);
@@ -211,7 +211,7 @@ class WorkSiteContractTest extends TestCase
         $this->makeContract(['code' => 'TAKEN-001']);
         $contract = $this->makeContract(['code' => 'MINE-002']);
 
-        $response = $this->put(route('work-site-contracts.update', $contract), $this->validPayload([
+        $response = $this->put(route('salary.work-site-contracts.update', $contract), $this->validPayload([
             'code' => 'TAKEN-001',
         ]));
 
@@ -226,9 +226,9 @@ class WorkSiteContractTest extends TestCase
     {
         $contract = $this->makeContract();
 
-        $response = $this->delete(route('work-site-contracts.destroy', $contract));
+        $response = $this->delete(route('salary.work-site-contracts.destroy', $contract));
 
-        $response->assertRedirect(route('work-site-contracts.index'));
+        $response->assertRedirect(route('salary.work-site-contracts.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseMissing('work_site_contracts', ['id' => $contract->id]);
@@ -242,7 +242,7 @@ class WorkSiteContractTest extends TestCase
     {
         auth()->logout();
 
-        $response = $this->get(route('work-site-contracts.index'));
+        $response = $this->get(route('salary.work-site-contracts.index'));
 
         $response->assertRedirect(route('login'));
     }

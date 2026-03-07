@@ -68,7 +68,7 @@ class PayrollElementTest extends TestCase
         $this->makeElement(['title' => 'Housing Allowance']);
         $this->makeElement(['title' => 'Overtime Pay']);
 
-        $response = $this->get(route('payroll-elements.index'));
+        $response = $this->get(route('salary.payroll-elements.index'));
 
         $response->assertStatus(200);
         $response->assertSee('Housing Allowance');
@@ -80,7 +80,7 @@ class PayrollElementTest extends TestCase
         $this->makeElement(['title' => 'Bonus', 'category' => 'earning']);
         $this->makeElement(['title' => 'Tax Deduction', 'category' => 'deduction']);
 
-        $response = $this->get(route('payroll-elements.index', ['category' => 'deduction']));
+        $response = $this->get(route('salary.payroll-elements.index', ['category' => 'deduction']));
 
         $response->assertStatus(200);
         $response->assertSee('Tax Deduction');
@@ -91,7 +91,7 @@ class PayrollElementTest extends TestCase
         $this->makeElement(['title' => 'Housing Allowance']);
         $this->makeElement(['title' => 'Food Allowance']);
 
-        $response = $this->get(route('payroll-elements.index', ['title' => 'Housing']));
+        $response = $this->get(route('salary.payroll-elements.index', ['title' => 'Housing']));
 
         $response->assertStatus(200);
         $response->assertSee('Housing Allowance');
@@ -103,16 +103,16 @@ class PayrollElementTest extends TestCase
 
     public function test_create_returns_200(): void
     {
-        $response = $this->get(route('payroll-elements.create'));
+        $response = $this->get(route('salary.payroll-elements.create'));
 
         $response->assertStatus(200);
     }
 
     public function test_store_creates_a_payroll_element_and_redirects(): void
     {
-        $response = $this->post(route('payroll-elements.store'), $this->validPayload());
+        $response = $this->post(route('salary.payroll-elements.store'), $this->validPayload());
 
-        $response->assertRedirect(route('payroll-elements.index'));
+        $response->assertRedirect(route('salary.payroll-elements.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('payroll_elements', [
@@ -126,14 +126,14 @@ class PayrollElementTest extends TestCase
 
     public function test_store_validates_required_fields(): void
     {
-        $response = $this->post(route('payroll-elements.store'), []);
+        $response = $this->post(route('salary.payroll-elements.store'), []);
 
         $response->assertSessionHasErrors(['title', 'system_code', 'category', 'calc_type']);
     }
 
     public function test_store_rejects_invalid_system_code(): void
     {
-        $response = $this->post(route('payroll-elements.store'), $this->validPayload([
+        $response = $this->post(route('salary.payroll-elements.store'), $this->validPayload([
             'system_code' => 'INVALID_CODE',
         ]));
 
@@ -142,7 +142,7 @@ class PayrollElementTest extends TestCase
 
     public function test_store_rejects_invalid_category(): void
     {
-        $response = $this->post(route('payroll-elements.store'), $this->validPayload([
+        $response = $this->post(route('salary.payroll-elements.store'), $this->validPayload([
             'category' => 'bonus',
         ]));
 
@@ -151,7 +151,7 @@ class PayrollElementTest extends TestCase
 
     public function test_store_rejects_invalid_calc_type(): void
     {
-        $response = $this->post(route('payroll-elements.store'), $this->validPayload([
+        $response = $this->post(route('salary.payroll-elements.store'), $this->validPayload([
             'calc_type' => 'daily',
         ]));
 
@@ -166,9 +166,9 @@ class PayrollElementTest extends TestCase
             'gl_account_code' => null,
         ]);
 
-        $response = $this->post(route('payroll-elements.store'), $payload);
+        $response = $this->post(route('salary.payroll-elements.store'), $payload);
 
-        $response->assertRedirect(route('payroll-elements.index'));
+        $response->assertRedirect(route('salary.payroll-elements.index'));
         $this->assertDatabaseHas('payroll_elements', [
             'company_id' => $this->companyId,
             'default_amount' => null,
@@ -184,7 +184,7 @@ class PayrollElementTest extends TestCase
     {
         $element = $this->makeElement();
 
-        $response = $this->get(route('payroll-elements.edit', $element));
+        $response = $this->get(route('salary.payroll-elements.edit', $element));
 
         $response->assertStatus(200);
         $response->assertSee($element->title);
@@ -195,11 +195,11 @@ class PayrollElementTest extends TestCase
         $element = $this->makeElement(['title' => 'Old Title', 'calc_type' => 'fixed']);
 
         $response = $this->put(
-            route('payroll-elements.update', $element),
+            route('salary.payroll-elements.update', $element),
             $this->validPayload(['title' => 'New Title', 'calc_type' => 'percentage'])
         );
 
-        $response->assertRedirect(route('payroll-elements.index'));
+        $response->assertRedirect(route('salary.payroll-elements.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('payroll_elements', [
@@ -213,7 +213,7 @@ class PayrollElementTest extends TestCase
     {
         $element = $this->makeElement();
 
-        $response = $this->put(route('payroll-elements.update', $element), []);
+        $response = $this->put(route('salary.payroll-elements.update', $element), []);
 
         $response->assertSessionHasErrors(['title', 'system_code', 'category', 'calc_type']);
     }
@@ -226,9 +226,9 @@ class PayrollElementTest extends TestCase
     {
         $element = $this->makeElement(['is_system_locked' => false]);
 
-        $response = $this->delete(route('payroll-elements.destroy', $element));
+        $response = $this->delete(route('salary.payroll-elements.destroy', $element));
 
-        $response->assertRedirect(route('payroll-elements.index'));
+        $response->assertRedirect(route('salary.payroll-elements.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseMissing('payroll_elements', ['id' => $element->id]);
@@ -238,9 +238,9 @@ class PayrollElementTest extends TestCase
     {
         $element = $this->makeElement(['is_system_locked' => true]);
 
-        $response = $this->delete(route('payroll-elements.destroy', $element));
+        $response = $this->delete(route('salary.payroll-elements.destroy', $element));
 
-        $response->assertRedirect(route('payroll-elements.index'));
+        $response->assertRedirect(route('salary.payroll-elements.index'));
         $response->assertSessionHas('error');
 
         $this->assertDatabaseHas('payroll_elements', ['id' => $element->id]);
@@ -254,7 +254,7 @@ class PayrollElementTest extends TestCase
     {
         auth()->logout();
 
-        $response = $this->get(route('payroll-elements.index'));
+        $response = $this->get(route('salary.payroll-elements.index'));
 
         $response->assertRedirect(route('login'));
     }

@@ -156,7 +156,7 @@ class UserController extends Controller
 
         $existingEmployee = $user->employee()->first();
         if ($existingEmployee) {
-            return redirect()->route('employees.show', $existingEmployee);
+            return redirect()->route('hr.employees.show', $existingEmployee);
         }
 
         $workSite = WorkSite::query()->orderBy('id')->first();
@@ -180,7 +180,7 @@ class UserController extends Controller
             'is_active' => true,
         ]);
 
-        return redirect()->route('employees.show', $employee)
+        return redirect()->route('hr.employees.show', $employee)
             ->with('success', __('Employee created successfully.'));
     }
 

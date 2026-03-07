@@ -42,7 +42,7 @@ class OrgChartController extends Controller
             ['company_id' => getActiveCompany()]
         ));
 
-        return redirect()->route('org-charts.index')
+        return redirect()->route('hr.org-charts.index')
             ->with('success', __('Organization chart node created successfully.'));
     }
 
@@ -72,7 +72,7 @@ class OrgChartController extends Controller
 
         $orgChart->update($validated);
 
-        return redirect()->route('org-charts.index')
+        return redirect()->route('hr.org-charts.index')
             ->with('success', __('Organization chart node updated successfully.'));
     }
 
@@ -80,7 +80,7 @@ class OrgChartController extends Controller
     {
         $orgChart->delete();
 
-        return redirect()->route('org-charts.index')
+        return redirect()->route('hr.org-charts.index')
             ->with('success', __('Organization chart node deleted successfully.'));
     }
 }

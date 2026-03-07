@@ -69,7 +69,7 @@ class MonthlyAttendanceController extends Controller
             jalaliMonth: $jalaliMonth,
         );
 
-        return redirect()->route('monthly-attendances.index')
+        return redirect()->route('attendance.monthly-attendances.index')
             ->with('success', __('Monthly attendance calculated successfully.'));
     }
 
@@ -117,7 +117,7 @@ class MonthlyAttendanceController extends Controller
 
         return view('monthly-attendances.show', compact('monthlyAttendance', 'decrees', 'allDays'))
             ->with('isAdminView', true)
-            ->with('backRoute', route('monthly-attendances.index'));
+            ->with('backRoute', route('attendance.monthly-attendances.index'));
     }
 
     public function edit(MonthlyAttendance $monthlyAttendance): View
@@ -143,7 +143,7 @@ class MonthlyAttendanceController extends Controller
 
         $monthlyAttendance->update($validated);
 
-        return redirect()->route('monthly-attendances.show', $monthlyAttendance)
+        return redirect()->route('attendance.monthly-attendances.show', $monthlyAttendance)
             ->with('success', __('Monthly attendance updated successfully.'));
     }
 
@@ -151,7 +151,7 @@ class MonthlyAttendanceController extends Controller
     {
         $monthlyAttendance->delete();
 
-        return redirect()->route('monthly-attendances.index')
+        return redirect()->route('attendance.monthly-attendances.index')
             ->with('success', __('Monthly attendance deleted successfully.'));
     }
 
@@ -179,7 +179,7 @@ class MonthlyAttendanceController extends Controller
             jalaliMonth: $jalaliMonth,
         );
 
-        return redirect()->route('monthly-attendances.show', $monthlyAttendance)
+        return redirect()->route('attendance.monthly-attendances.show', $monthlyAttendance)
             ->with('success', __('Monthly attendance recalculated successfully.'));
     }
 }

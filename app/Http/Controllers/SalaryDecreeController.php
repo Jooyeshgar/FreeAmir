@@ -90,7 +90,7 @@ class SalaryDecreeController extends Controller
             }
         });
 
-        return redirect()->route('salary-decrees.index')
+        return redirect()->route('salary.salary-decrees.index')
             ->with('success', __('Salary decree created successfully.'));
     }
 
@@ -154,7 +154,7 @@ class SalaryDecreeController extends Controller
             }
         });
 
-        return redirect()->route('salary-decrees.index')
+        return redirect()->route('salary.salary-decrees.index')
             ->with('success', __('Salary decree updated successfully.'));
     }
 
@@ -163,7 +163,7 @@ class SalaryDecreeController extends Controller
         $salaryDecree->benefits()->delete();
         $salaryDecree->delete();
 
-        return redirect()->route('salary-decrees.index')
+        return redirect()->route('salary.salary-decrees.index')
             ->with('success', __('Salary decree deleted successfully.'));
     }
 }

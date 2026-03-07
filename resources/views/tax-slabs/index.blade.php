@@ -11,13 +11,13 @@
         <div class="card-body">
             <div class="card-actions">
                 @can('salary.tax-slabs.create')
-                    <a href="{{ route('tax-slabs.create') }}" class="btn btn-primary">
+                    <a href="{{ route('salary.tax-slabs.create') }}" class="btn btn-primary">
                         {{ __('Create Tax Slab') }}
                     </a>
                 @endcan
             </div>
 
-            <form action="{{ route('tax-slabs.index') }}" method="GET">
+            <form action="{{ route('salary.tax-slabs.index') }}" method="GET">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full md:w-2/5">
                     <div class="relative">
                         <input type="number" name="year" value="{{ request('year') }}" placeholder="{{ __('Filter by year') }}"
@@ -54,12 +54,12 @@
                             <td>{{ $taxSlab->annual_exemption !== null ? formatNumber($taxSlab->annual_exemption) : '-' }}</td>
                             <td class="flex gap-2">
                                 @can('salary.tax-slabs.edit')
-                                    <a href="{{ route('tax-slabs.edit', $taxSlab) }}" class="btn btn-sm btn-info">
+                                    <a href="{{ route('salary.tax-slabs.edit', $taxSlab) }}" class="btn btn-sm btn-info">
                                         {{ __('Edit') }}
                                     </a>
                                 @endcan
                                 @can('salary.tax-slabs.delete')
-                                    <form action="{{ route('tax-slabs.destroy', $taxSlab) }}" method="POST" class="inline-block"
+                                    <form action="{{ route('salary.tax-slabs.destroy', $taxSlab) }}" method="POST" class="inline-block"
                                         onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                         @csrf
                                         @method('DELETE')

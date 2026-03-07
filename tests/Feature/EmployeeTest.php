@@ -69,7 +69,7 @@ class EmployeeTest extends TestCase
 
     public function test_index_returns_200(): void
     {
-        $response = $this->get(route('employees.index'));
+        $response = $this->get(route('hr.employees.index'));
 
         $response->assertStatus(200);
     }
@@ -79,7 +79,7 @@ class EmployeeTest extends TestCase
         $this->makeEmployee(['first_name' => 'Reza', 'last_name' => 'Ahmadi']);
         $this->makeEmployee(['first_name' => 'Sara', 'last_name' => 'Karimi']);
 
-        $response = $this->get(route('employees.index'));
+        $response = $this->get(route('hr.employees.index'));
 
         $response->assertStatus(200);
         $response->assertSee('Ahmadi');
@@ -97,7 +97,7 @@ class EmployeeTest extends TestCase
             'last_name' => 'Employee',
         ]);
 
-        $response = $this->get(route('employees.index'));
+        $response = $this->get(route('hr.employees.index'));
 
         $response->assertStatus(200);
         $response->assertDontSee('Foreign');
@@ -108,7 +108,7 @@ class EmployeeTest extends TestCase
         $this->makeEmployee(['first_name' => 'Reza', 'last_name' => 'Ahmadi', 'code' => 'EMP-001']);
         $this->makeEmployee(['first_name' => 'Sara', 'last_name' => 'Karimi', 'code' => 'EMP-002']);
 
-        $response = $this->get(route('employees.index', ['search' => 'Ahmadi']));
+        $response = $this->get(route('hr.employees.index', ['search' => 'Ahmadi']));
 
         $response->assertStatus(200);
         $response->assertSee('Ahmadi');
@@ -120,7 +120,7 @@ class EmployeeTest extends TestCase
         $this->makeEmployee(['first_name' => 'Active', 'last_name' => 'Worker', 'is_active' => true, 'code' => 'EMP-A01']);
         $this->makeEmployee(['first_name' => 'Inactive', 'last_name' => 'Worker', 'is_active' => false, 'code' => 'EMP-I01']);
 
-        $response = $this->get(route('employees.index', ['is_active' => '1']));
+        $response = $this->get(route('hr.employees.index', ['is_active' => '1']));
 
         $response->assertStatus(200);
         $response->assertSee('Active');
@@ -133,7 +133,7 @@ class EmployeeTest extends TestCase
 
     public function test_create_returns_200(): void
     {
-        $response = $this->get(route('employees.create'));
+        $response = $this->get(route('hr.employees.create'));
 
         $response->assertStatus(200);
     }
@@ -142,9 +142,9 @@ class EmployeeTest extends TestCase
     {
         $payload = $this->validPayload();
 
-        $response = $this->post(route('employees.store'), $payload);
+        $response = $this->post(route('hr.employees.store'), $payload);
 
-        $response->assertRedirect(route('employees.index'));
+        $response->assertRedirect(route('hr.employees.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('employees', [
@@ -157,7 +157,7 @@ class EmployeeTest extends TestCase
 
     public function test_store_validates_required_fields(): void
     {
-        $response = $this->post(route('employees.store'), []);
+        $response = $this->post(route('hr.employees.store'), []);
 
         $response->assertSessionHasErrors(['code', 'first_name', 'last_name', 'nationality', 'work_site_id']);
     }
@@ -166,7 +166,7 @@ class EmployeeTest extends TestCase
     {
         $this->makeEmployee(['code' => 'EMP-0001']);
 
-        $response = $this->post(route('employees.store'), $this->validPayload(['code' => 'EMP-0001']));
+        $response = $this->post(route('hr.employees.store'), $this->validPayload(['code' => 'EMP-0001']));
 
         $response->assertSessionHasErrors(['code']);
     }
@@ -175,7 +175,7 @@ class EmployeeTest extends TestCase
     {
         $this->makeEmployee(['national_code' => '1234567890', 'code' => 'EMP-001']);
 
-        $response = $this->post(route('employees.store'), $this->validPayload([
+        $response = $this->post(route('hr.employees.store'), $this->validPayload([
             'national_code' => '1234567890',
             'code' => 'EMP-002',
         ]));
@@ -185,7 +185,7 @@ class EmployeeTest extends TestCase
 
     public function test_store_validates_national_code_length(): void
     {
-        $response = $this->post(route('employees.store'), $this->validPayload([
+        $response = $this->post(route('hr.employees.store'), $this->validPayload([
             'national_code' => '123',
         ]));
 
@@ -194,7 +194,7 @@ class EmployeeTest extends TestCase
 
     public function test_store_validates_invalid_nationality_enum(): void
     {
-        $response = $this->post(route('employees.store'), $this->validPayload([
+        $response = $this->post(route('hr.employees.store'), $this->validPayload([
             'nationality' => 'alien',
         ]));
 
@@ -209,7 +209,7 @@ class EmployeeTest extends TestCase
     {
         $employee = $this->makeEmployee();
 
-        $response = $this->get(route('employees.show', $employee));
+        $response = $this->get(route('hr.employees.show', $employee));
 
         $response->assertStatus(200);
         $response->assertSee($employee->first_name);
@@ -224,7 +224,7 @@ class EmployeeTest extends TestCase
     {
         $employee = $this->makeEmployee();
 
-        $response = $this->get(route('employees.edit', $employee));
+        $response = $this->get(route('hr.employees.edit', $employee));
 
         $response->assertStatus(200);
         $response->assertSee($employee->first_name);
@@ -240,9 +240,9 @@ class EmployeeTest extends TestCase
             'last_name' => 'Updated',
         ]);
 
-        $response = $this->put(route('employees.update', $employee), $payload);
+        $response = $this->put(route('hr.employees.update', $employee), $payload);
 
-        $response->assertRedirect(route('employees.index'));
+        $response->assertRedirect(route('hr.employees.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('employees', [
@@ -256,7 +256,7 @@ class EmployeeTest extends TestCase
     {
         $employee = $this->makeEmployee();
 
-        $response = $this->put(route('employees.update', $employee), []);
+        $response = $this->put(route('hr.employees.update', $employee), []);
 
         $response->assertSessionHasErrors(['code', 'first_name', 'last_name', 'nationality', 'work_site_id']);
     }
@@ -266,11 +266,11 @@ class EmployeeTest extends TestCase
         $employee = $this->makeEmployee(['code' => 'EMP-SAME']);
 
         $response = $this->put(
-            route('employees.update', $employee),
+            route('hr.employees.update', $employee),
             $this->validPayload(['code' => 'EMP-SAME'])
         );
 
-        $response->assertRedirect(route('employees.index'));
+        $response->assertRedirect(route('hr.employees.index'));
         $response->assertSessionHas('success');
     }
 
@@ -280,7 +280,7 @@ class EmployeeTest extends TestCase
         $employee = $this->makeEmployee(['code' => 'EMP-SELF']);
 
         $response = $this->put(
-            route('employees.update', $employee),
+            route('hr.employees.update', $employee),
             $this->validPayload(['code' => 'EMP-OTHER'])
         );
 
@@ -295,9 +295,9 @@ class EmployeeTest extends TestCase
     {
         $employee = $this->makeEmployee();
 
-        $response = $this->delete(route('employees.destroy', $employee));
+        $response = $this->delete(route('hr.employees.destroy', $employee));
 
-        $response->assertRedirect(route('employees.index'));
+        $response->assertRedirect(route('hr.employees.index'));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseMissing('employees', ['id' => $employee->id]);
@@ -314,9 +314,9 @@ class EmployeeTest extends TestCase
             'employment_type' => EmployeeEmploymentType::PERMANENT->value,
         ]);
 
-        $response = $this->post(route('employees.store'), $payload);
+        $response = $this->post(route('hr.employees.store'), $payload);
 
-        $response->assertRedirect(route('employees.index'));
+        $response->assertRedirect(route('hr.employees.index'));
 
         $this->assertDatabaseHas('employees', [
             'code' => 'EMP-0001',
@@ -327,7 +327,7 @@ class EmployeeTest extends TestCase
 
     public function test_store_rejects_invalid_gender_enum(): void
     {
-        $response = $this->post(route('employees.store'), $this->validPayload([
+        $response = $this->post(route('hr.employees.store'), $this->validPayload([
             'gender' => 'unknown',
         ]));
 
@@ -336,7 +336,7 @@ class EmployeeTest extends TestCase
 
     public function test_store_rejects_contract_end_date_before_start_date(): void
     {
-        $response = $this->post(route('employees.store'), $this->validPayload([
+        $response = $this->post(route('hr.employees.store'), $this->validPayload([
             'contract_start_date' => '2026-06-01',
             'contract_end_date' => '2026-01-01',
         ]));

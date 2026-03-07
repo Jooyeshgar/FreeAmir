@@ -46,7 +46,7 @@ class WorkSiteController extends Controller
             ]
         ));
 
-        return redirect()->route('work-sites.index')
+        return redirect()->route('salary.work-sites.index')
             ->with('success', __('Work site created successfully.'));
     }
 
@@ -75,7 +75,7 @@ class WorkSiteController extends Controller
             ['is_active' => $request->boolean('is_active', false)]
         ));
 
-        return redirect()->route('work-sites.index')
+        return redirect()->route('salary.work-sites.index')
             ->with('success', __('Work site updated successfully.'));
     }
 
@@ -83,7 +83,7 @@ class WorkSiteController extends Controller
     {
         $workSite->delete();
 
-        return redirect()->route('work-sites.index')
+        return redirect()->route('salary.work-sites.index')
             ->with('success', __('Work site deleted successfully.'));
     }
 }

@@ -26,18 +26,13 @@ class CheckPermission
     {
         $routeName = $request->route()->getName();
 
-        $pathSegments = array_filter(
-            explode('/', $request->path()),
-            fn ($segment) => ! is_numeric($segment) && ! preg_match('/^[0-9a-f\-]{36}$/i', $segment)
-        );
-        $permission = implode('.', $pathSegments);
-        $wildcardPermission = "{$permission}.*";
+        $wildcardPermission = "{$routeName}.*";
 
         if (
             ! $request->user()->can($routeName) &&
             ! $request->user()->can($wildcardPermission)
         ) {
-            throw UnauthorizedException::forPermissions([$permission]);
+            throw UnauthorizedException::forPermissions([$wildcardPermission]);
         }
 
         return $next($request);

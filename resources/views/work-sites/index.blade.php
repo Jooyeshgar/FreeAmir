@@ -11,13 +11,13 @@
         <div class="card-body">
             <div class="card-actions">
                 @can('salary.work-sites.create')
-                    <a href="{{ route('work-sites.create') }}" class="btn btn-primary">
+                    <a href="{{ route('salary.work-sites.create') }}" class="btn btn-primary">
                         {{ __('Create Work Site') }}
                     </a>
                 @endcan
             </div>
 
-            <form action="{{ route('work-sites.index') }}" method="GET">
+            <form action="{{ route('salary.work-sites.index') }}" method="GET">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full md:w-2/5">
                     <div class="relative">
                         <input type="text" name="search" value="{{ $search }}" placeholder="{{ __('Search by name or code') }}"
@@ -56,17 +56,17 @@
                             </td>
                             <td class="flex gap-2">
                                 @can('salary.work-sites.edit')
-                                    <a href="{{ route('work-sites.edit', $workSite) }}" class="btn btn-sm btn-info">
+                                    <a href="{{ route('salary.work-sites.edit', $workSite) }}" class="btn btn-sm btn-info">
                                         {{ __('Edit') }}
                                     </a>
                                 @endcan
                                 @can('salary.work-sites.index')
-                                    <a href="{{ route('work-site-contracts.index', ['work_site_id' => $workSite->id]) }}" class="btn btn-sm btn-ghost">
+                                    <a href="{{ route('salary.work-site-contracts.index', ['work_site_id' => $workSite->id]) }}" class="btn btn-sm btn-ghost">
                                         {{ __('Contracts') }}
                                     </a>
                                 @endcan
                                 @can('salary.work-sites.delete')
-                                    <form action="{{ route('work-sites.destroy', $workSite) }}" method="POST" class="inline-block"
+                                    <form action="{{ route('salary.work-sites.destroy', $workSite) }}" method="POST" class="inline-block"
                                         onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                         @csrf
                                         @method('DELETE')
