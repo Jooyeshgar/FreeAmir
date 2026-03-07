@@ -1,47 +1,39 @@
 <div class="grid grid-cols-2 gap-6">
 
-    {{-- Employee --}}
     <div class="col-span-2 md:col-span-1">
-        <x-select name="employee_id" id="employee_id" title="{{ __('Employee') }}" :selected="old('employee_id', $salaryDecree->employee_id ?? '')" :options="$employees
+        <x-select name="employee_id" id="employee_id" title="{{ __('Employee') }}" :selected="old('employee_id', request('employee') ?? $salaryDecree->employee_id)" :options="$employees
             ->mapWithKeys(fn($e) => [$e->id => $e->first_name . ' ' . $e->last_name])
             ->prepend('— ' . __('Select Employee') . ' —', '')
             ->all()" required />
     </div>
 
-    {{-- Decree Name --}}
     <div class="col-span-2 md:col-span-1">
         <x-input name="name" id="name" title="{{ __('Decree Name') }}" :value="old('name', $salaryDecree->name ?? '')" placeholder="{{ __('e.g. Decree-1403-001') }}" />
     </div>
 
-    {{-- Start Date --}}
     <div class="col-span-2 md:col-span-1">
-        <x-date-picker name="start_date" id="start_date" title="{{ __('Start Date') }}" :value="old('start_date', isset($salaryDecree) ? $salaryDecree->start_date->format('Y-m-d') : '')" required />
+        <x-date-picker name="start_date" id="start_date" title="{{ __('Start Date') }}" :value="old('start_date', isset($salaryDecree) ? toEnglish(formatDate($salaryDecree->start_date)) : '')" required />
     </div>
 
-    {{-- End Date --}}
     <div class="col-span-2 md:col-span-1">
-        <x-date-picker name="end_date" id="end_date" title="{{ __('End Date') }}" :value="old('end_date', isset($salaryDecree) && $salaryDecree->end_date ? $salaryDecree->end_date->format('Y-m-d') : '')" />
+        <x-date-picker name="end_date" id="end_date" title="{{ __('End Date') }}" :value="old('end_date', isset($salaryDecree) && $salaryDecree->end_date ? toEnglish(formatDate($salaryDecree->end_date)) : '')" />
         <p class="text-gray-400 text-xs mt-1">{{ __('Leave empty if the decree is currently active.') }}</p>
     </div>
 
-    {{-- Daily Wage --}}
     <div class="col-span-2 md:col-span-1">
         <x-input name="daily_wage" id="daily_wage" type="number" title="{{ __('Daily Wage') }}" :value="old('daily_wage', $salaryDecree->daily_wage ?? '')" placeholder="0" />
     </div>
 
-    {{-- Is Active --}}
     <div class="col-span-2 md:col-span-1">
-        <x-checkbox name="is_active" id="is_active" title="{{ __('Active') }}" :checked="old('is_active', $salaryDecree->is_active ?? true)" />
+        <x-checkbox name="is_active" id="is_active" title="{{ __('Active') }}" value="1" :checked="old('is_active', $salaryDecree->is_active ?? true)" />
     </div>
 
-    {{-- Description --}}
     <div class="col-span-2">
         <x-textarea name="description" id="description" title="{{ __('Description') }}" :value="old('description', $salaryDecree->description ?? '')" placeholder="{{ __('Optional notes about this decree') }}" />
     </div>
 
 </div>
 
-{{-- Payroll Benefits --}}
 <div class="mt-8" x-data="benefitsManager()" x-init="init()">
     <h3 class="text-base font-semibold text-gray-700 mb-3">{{ __('Payroll Benefits') }}</h3>
 

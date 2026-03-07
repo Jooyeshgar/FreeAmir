@@ -53,8 +53,8 @@
                         <tr>
                             <td>{{ $decree->employee->first_name }} {{ $decree->employee->last_name }}</td>
                             <td>{{ $decree->name ?? '—' }}</td>
-                            <td>{{ $decree->start_date->format('Y-m-d') }}</td>
-                            <td>{{ $decree->end_date?->format('Y-m-d') ?? '—' }}</td>
+                            <td>{{ formatDate($decree->start_date) }}</td>
+                            <td>{{ $decree->end_date ? formatDate($decree->end_date) : '—' }}</td>
                             <td>
                                 @if ($decree->is_active)
                                     <span class="badge badge-success">{{ __('Active') }}</span>

@@ -138,24 +138,19 @@
                 @can('salary.payrolls.create')
                     @if ($decrees->isEmpty())
                         <p class="text-sm text-warning">{{ __('No active salary decrees found for this employee. Please create one first.') }}</p>
+                        <a href="{{ route('salary-decrees.create', ['employee' => $monthlyAttendance->employee]) }}" class="btn btn-sm btn-warning">
+                            {{ __('Create Decree') }}
+                        </a>
                     @else
                         <form action="{{ route('monthly-attendances.payroll.store', $monthlyAttendance) }}" method="POST" class="flex flex-wrap items-end gap-4">
                             @csrf
+                            @php
+                                $decreeOptions = $decrees->mapWithKeys(
+                                    fn($d) => [$d->id => ($d->name ?? __('Decree') . ' #' . $d->id) . ' (' . formatDate($d->start_date) . ')'],
+                                );
+                            @endphp
                             <div class="w-64">
-                                <label class="form-control w-full">
-                                    <div class="label">
-                                        <span class="label-text">{{ __('Salary Decree') }}</span>
-                                    </div>
-                                    <select name="decree_id" class="select select-bordered select-sm" required>
-                                        <option value="">{{ __('Select Decree') }}</option>
-                                        @foreach ($decrees as $decree)
-                                            <option value="{{ $decree->id }}">
-                                                {{ $decree->name ?? __('Decree') . ' #' . $decree->id }}
-                                                ({{ formatDate($decree->start_date) }})
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </label>
+                                <x-select name="decree_id" id="decree_id" title="" :options="$decreeOptions" required />
                             </div>
                             <button type="submit" class="btn btn-sm btn-success self-end">
                                 {{ __('Create Payroll') }}
