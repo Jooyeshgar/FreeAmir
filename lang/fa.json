@@ -164,8 +164,6 @@
     "Birth Date": "تاریخ تولد",
     "Birth Place": "محل تولد",
     "Both": "هر دو",
-    "Returned Bought Products Quantity": "تعداد محصولات بازگشتی از خرید",
-    "Returned Sold Products Quantity": "تعداد محصولات بازگشتی از فروش",
     "Returned Sold Services Quantity": "تعداد خدمات بازگشتی از خرید",
     "Bought Products Quantity": "تعداد محصولات خریداری شده",
     "Bought Services Quantity": "تعداد خدمات خریداری شده",
@@ -1455,11 +1453,8 @@
     "unknown reason": "دلیل نامشخص",
     "your specific date": "تاریخ مورد نظر شما",
     "zero": "صفر",
-    "‌Balance": "مانده",
-    "— None —": "— هیچ‌کدام —",
-    "— Select Format —": "- انتخاب فرمت -",
     "Only approved invoices can be returned.": "فقط فاکتورهای تایید شده قابل برگشت هستند.",
-    "— Select —": "— انتخاب کنید —",
-    "… and :remaining more records.": "… و :remaining رکوردهای بیشتر.",
-    "The sum of transactions must be zero.": "مجموع تراکنش ها باید صفر باشد."
+    "Service": "خدمت",
+    "Service Buy": "خرید خدمات",
+    "‌Balance": "تعادل"
 }
