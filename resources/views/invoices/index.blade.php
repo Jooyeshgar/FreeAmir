@@ -208,28 +208,28 @@
 
                                 @can('invoices.approve')
                                     @if ($isSellWorkflow && ($invoice->status->isPreInvoice() || $invoice->status->isRejected()))
-                                        <form action="{{ route('invoices.change-status', [$invoice, 'ready_to_approve']) }}" method="POST" class="inline-block">
+                                        <form action="{{ route('invoices.change-status', [$invoice, 'ready_to_approve']) }}" method="POST" class="inline-block m-0">
                                             @csrf
                                             <button type="submit" class="btn btn-sm btn-success">{{ __('Issue') }}</button>
                                         </form>
                                     @endif
 
                                     @if ($isSellWorkflow && $invoice->status->isPreInvoice())
-                                        <form action="{{ route('invoices.change-status', [$invoice, 'rejected']) }}" method="POST" class="inline-block">
+                                        <form action="{{ route('invoices.change-status', [$invoice, 'rejected']) }}" method="POST" class="inline-block m-0">
                                             @csrf
                                             <button type="submit" class="btn btn-sm btn-error">{{ __('Reject') }}</button>
                                         </form>
                                     @endif
 
                                     @if ($canChangeStatus)
-                                        @if ($canApprove && $invoice->changeStatusValidation->hasErrors())
+                                        @if ($invoice->changeStatusValidation->hasErrors())
                                             <a data-tip="{{ $invoice->changeStatusValidation->toText() }}"
                                                 href="{{ route('invoices.conflicts', $invoice) }}"
                                                 class="btn btn-sm btn-accent inline-flex tooltip">{{ __('Fix Conflict') }}
                                             </a>
                                         @else
                                             <form action="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}{{ $invoice->changeStatusValidation->hasWarning() ? '?confirm=1' : ''}}"
-                                                method="POST" class="inline-block {{ $invoice->changeStatusValidation->hasWarning() ? 'change-status-form' : '' }}">
+                                                method="POST" class="inline-block m-0 {{ $invoice->changeStatusValidation->hasWarning() ? 'change-status-form' : '' }}">
                                                 @csrf
                                                 <button type="submit" x-data="{}"
                                                     data-tip="{{ $invoice->changeStatusValidation->toText() }}"
@@ -245,7 +245,7 @@
                                     <a href="{{ route('invoices.edit', $invoice) }}"
                                         class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                     <form action="{{ route('invoices.destroy', $invoice) }}" method="POST"
-                                        class="inline-block">
+                                        class="inline-block m-0">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit"
@@ -290,7 +290,7 @@
                 form.addEventListener('submit', function(e) {
                     e.preventDefault();
 
-                    if (confirm("{{ 'This invoice has warnings, do you confirm?' }}")) {
+                    if (confirm('{{ __('This invoice has warnings for change its status, are you sure to change status?') }}')) {
                         this.submit();
                     }
                 });

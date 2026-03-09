@@ -521,7 +521,7 @@
                                                 <div class="flex flex-wrap gap-2 items-center">
                                                     @can('ancillary-costs.approve')
                                                         @if ($ancillaryChangeStatusValidation['allowed'] ?? false)
-                                                            <form method="POST" action="{{ route('ancillary-costs.change-status', [$ancillaryCost, $ancillaryCost->status?->isApproved() ? 'unapprove' : 'approve']) }}"                               >
+                                                            <form method="POST" action="{{ route('ancillary-costs.change-status', [$ancillaryCost, $ancillaryCost->status?->isApproved() ? 'unapprove' : 'approve']) }}" class="m-0">
                                                                 @csrf
                                                                 <button type="submit" x-data="{}" class="btn btn-xs {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }}">
                                                                     {{ __($ancillaryCost->status?->isApproved() ? 'Unapprove' : 'Approve') }}
@@ -723,7 +723,7 @@
                 form.addEventListener('submit', function(e) {
                     e.preventDefault();
 
-                    if (confirm("{{ 'This invoice has warnings, do you confirm?' }}")) {
+                    if (confirm('{{ __('This invoice has warnings for change its status, are you sure to change status?') }}')) {
                         this.submit();
                     }
                 });
