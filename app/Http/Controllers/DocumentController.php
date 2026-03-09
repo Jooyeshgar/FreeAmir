@@ -18,7 +18,7 @@ class DocumentController extends Controller
 
     public function index()
     {
-        $query = Document::orderByDesc('date')->orderByDesc('number');
+        $query = Document::orderByDesc('date');
 
         if (request()->has('number') && request('number')) {
             $query->where('number', convertToFloat(request('number')));
@@ -107,13 +107,13 @@ class DocumentController extends Controller
     {
         $stats = $this->documentNumberService->sortStats();
 
-        // if ((int) ($stats['unused_document_numbers_count'] ?? 0) === 0) {
-        //     if ($request->expectsJson()) {
-        //         return response()->json(['message' => __('No unused document number found to sort.')]);
-        //     }
+        if ((int) ($stats['unused_document_numbers_count'] ?? 0) === 0) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => __('No unused document number found to sort.')]);
+            }
 
-        //     return redirect()->route('documents.sort-numbers')->with('error', __('No unused document number found to sort.'));
-        // }
+            return redirect()->route('documents.sort-numbers')->with('error', __('No unused document number found to sort.'));
+        }
 
         $progress = $this->documentNumberService->initializeSorting($request->user()->id);
 
@@ -313,5 +313,13 @@ class DocumentController extends Controller
                 'debit' => $isModel ? ($t->debit ?? 0) : ($t['debit'] ?? 0),
             ];
         });
+    }
+
+    public function changeStatus(Document $document, Request $request)
+    {
+        $status = $document->approved_at ? 'unapproved' : 'approved';
+        DocumentService::changeDocumentStatus($document, $request->user(), $status);
+
+        return redirect()->route('documents.index')->with('success', __('Document status changed successfully.'));
     }
 }
