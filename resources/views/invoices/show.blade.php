@@ -521,10 +521,12 @@
                                                 <div class="flex flex-wrap gap-2 items-center">
                                                     @can('ancillary-costs.approve')
                                                         @if ($ancillaryChangeStatusValidation['allowed'] ?? false)
-                                                            <a href="{{ route('ancillary-costs.change-status', [$ancillaryCost, $ancillaryCost->status?->isApproved() ? 'unapprove' : 'approve']) }}"
-                                                                class="btn btn-xs {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }}">
-                                                                {{ __($ancillaryCost->status?->isApproved() ? 'Unapprove' : 'Approve') }}
-                                                            </a>
+                                                            <form method="POST" action="{{ route('ancillary-costs.change-status', [$ancillaryCost, $ancillaryCost->status?->isApproved() ? 'unapprove' : 'approve']) }}"                               >
+                                                                @csrf
+                                                                <button type="submit" x-data="{}" class="btn btn-xs {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }}">
+                                                                    {{ __($ancillaryCost->status?->isApproved() ? 'Unapprove' : 'Approve') }}
+                                                                </button>
+                                                            </form>
                                                         @else
                                                             <span class="tooltip"
                                                                 data-tip="{{ $ancillaryChangeStatusValidation['reason'] ?? '' }}">
@@ -641,17 +643,17 @@
 
                     @can('invoices.approve')
                         @if ($isSellWorkflow && ($invoice->status->isPreInvoice() || $invoice->status->isRejected()))
-                            <a href="{{ route('invoices.change-status', [$invoice, 'ready_to_approve']) }}"
-                                class="btn btn-success gap-2">
-                                {{ __('Ready to approve') }}
-                            </a>
+                            <form action="{{ route('invoices.change-status', [$invoice, 'ready_to_approve']) }}" method="POST" class="inline-block">
+                                @csrf
+                                <button type="submit" class="btn btn-success">{{ __('Ready to approve') }}</button>
+                            </form>
                         @endif
 
                         @if ($isSellWorkflow && $invoice->status->isPreInvoice())
-                            <a href="{{ route('invoices.change-status', [$invoice, 'rejected']) }}"
-                                class="btn btn-error gap-2">
-                                {{ __('Reject') }}
-                            </a>
+                            <form action="{{ route('invoices.change-status', [$invoice, 'rejected']) }}" method="POST" class="inline-block">
+                                @csrf
+                                <button type="submit" class="btn btn-error gap-2">{{ __('Reject') }}</button>
+                            </form>
                         @endif
 
                         @if ($canChangeStatus)
@@ -662,13 +664,14 @@
                                     {{ __('Fix Conflict') }}
                                 </a>
                             @else
-                                <a x-data="{}"
-                                    @if ($changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js($changeStatusValidation->toText()))) { window.location.href = '{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}?confirm=1' }" @endif
-                                    data-tip="{{ $changeStatusValidation->toText() }}"
-                                    href="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}"
-                                    class="btn btn-primary gap-2 inline-flex tooltip {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
-                                    {{ $canUnapprove ? __('Unapprove') : __('Approve') }}
-                                </a>
+                                <form action="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}{{ $changeStatusValidation->hasWarning() ? '?confirm=1' : ''}}"
+                                    method="POST" class="inline-block {{ $changeStatusValidation->hasWarning() ? 'change-status-form' : '' }}">
+                                    @csrf
+                                    <button type="submit" x-data="{}" data-tip="{{ $changeStatusValidation->toText() }}"
+                                        class="btn inline-flex tooltip {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
+                                        {{ $canUnapprove ? __('Unapprove') : __('Approve') }}
+                                    </button>
+                                </form>
                             @endif
                         @endif
                     @endcan
@@ -711,4 +714,21 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const changeStatusForms = document.querySelectorAll('.change-status-form');
+            
+            changeStatusForms.forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    if (confirm("{{ 'This invoice has warnings, do you confirm?' }}")) {
+                        this.submit();
+                    }
+                });
+            });
+        });
+    </script>
+
 </x-app-layout>
