@@ -198,7 +198,7 @@
                             <li><a href="{{ route('banks.index') }}">{{ __('Banks') }}</a></li>
                         @endcanany
                         @can('documents.sort-numbers')
-                            <li><a href="{{ route('documents.sort-numbers') }}">{{ __('Sort Document Numbers') }}</a></li>
+                            <li><a href="{{ route('documents.sort-numbers') }}">{{ __('Sort Documents Number') }}</a></li>
                         @endcan
                     </ul>
                 </details>

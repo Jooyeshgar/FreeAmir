@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ThursdayStatus;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,15 +17,15 @@ class WorkShift extends Model
         'name',
         'start_time',
         'end_time',
-        'crosses_midnight',
         'float_before',
         'float_after',
         'break',
+        'thursday_status',
         'is_active',
     ];
 
     protected $casts = [
-        'crosses_midnight' => 'boolean',
+        'thursday_status' => ThursdayStatus::class,
         'is_active' => 'boolean',
         'float_before' => 'integer',
         'float_after' => 'integer',
