@@ -1264,6 +1264,8 @@
     "Update at": "Update at",
     "Updated At": "Updated At",
     "Upload session expired. Please upload the file again.": "Upload session expired. Please upload the file again.",
+    "The User must have at least one role.": "The User must have at least one role.",
+    "The User must have at least one company.": "The User must have at least one company.",
     "User Details": "User Details",
     "User Information": "User Information",
     "User created successfully!": "User created successfully!",

@@ -11,6 +11,7 @@ use App\Models\WorkSite;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
@@ -19,8 +20,6 @@ class UserController extends Controller
 
     /**
      * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function index()
     {
@@ -36,8 +35,6 @@ class UserController extends Controller
 
     /**
      * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function create()
     {
@@ -49,8 +46,6 @@ class UserController extends Controller
 
     /**
      * Store a newly created resource in storage.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
     {
@@ -67,31 +62,38 @@ class UserController extends Controller
         $user->password = bcrypt($request->input('password'));
         $user->save();
 
-        $role = [];
-        if ($request->has('role')) {
-            $role = array_values($request->role);
+        if (! $request->has('role')) {
+            throw ValidationException::withMessages([__('The User must have at least one role.')]);
         }
+        $role = array_values($request->role);
+
+        if (! $request->has('company')) {
+            throw ValidationException::withMessages([__('The User must have at least one company.')]);
+        }
+        $company = array_values($request->company);
 
         $user->syncRoles($role);
-        $user->companies()->sync($request->company);
+        $user->companies()->sync($company);
 
         return redirect()->route('users.index')->with('success', __('User created successfully!'));
     }
 
     /**
      * Display the specified resource.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function show(User $user)
     {
+        $companyId = getActiveCompany();
+        if (! $user->companies()->where('companies.id', $companyId)->exists()) {
+            return redirect()->route('users.index')
+                ->with('error', __('User does not have access to this company.'));
+        }
+
         return view('users.show', compact('user'));
     }
 
     /**
      * Show the form for editing the specified resource.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function edit(User $user)
     {
@@ -103,16 +105,14 @@ class UserController extends Controller
 
     /**
      * Update the specified resource in storage.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function update(Request $request, User $user)
     {
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,'.$user->id,
-            'password' => 'nullable|string|min:8|confirmed',
-            'password_confirmation' => 'nullable|string|min:8',
+            'password' => 'required|string|min:8|confirmed',
+            'password_confirmation' => 'required|string|min:8',
         ]);
 
         $user->name = $request->input('name');
@@ -122,24 +122,33 @@ class UserController extends Controller
         }
         $user->save();
 
-        $role = [];
-        if ($request->has('role')) {
-            $role = array_values($request->role);
+        if (! $request->has('role')) {
+            throw ValidationException::withMessages([__('The User must have at least one role.')]);
         }
+        $role = array_values($request->role);
+
+        if (! $request->has('company')) {
+            throw ValidationException::withMessages([__('The User must have at least one company.')]);
+        }
+        $company = array_values($request->company);
 
         $user->syncRoles($role);
-        $user->companies()->sync($request->company);
+        $user->companies()->sync($company);
 
         return redirect()->route('users.index')->with('success', __('User updated successfully!'));
     }
 
     /**
      * Remove the specified resource from storage.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function destroy(User $user)
     {
+        $companyId = getActiveCompany();
+        if (! $user->companies()->where('companies.id', $companyId)->exists()) {
+            return redirect()->route('users.index')
+                ->with('error', __('User does not have access to this company.'));
+        }
+
         $user->delete();
 
         return redirect()->route('users.index')->with('success', __('User deleted successfully!'));

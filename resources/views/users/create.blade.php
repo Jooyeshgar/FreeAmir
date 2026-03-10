@@ -9,6 +9,8 @@
         <div class="card-body">
             <form method="post" action="{{ route('users.store') }}">
                 @csrf
+                <x-show-message-bags />
+
                 <div class="grid grid-cols-2 gap-6">
                     <x-input title="{{ __('Name') }}" name="name" value="{{ old('name') }}" />
                     <x-input title="{{ __('Email') }}" name="email" value="{{ old('email') }}" />
