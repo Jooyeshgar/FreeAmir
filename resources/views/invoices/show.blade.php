@@ -599,18 +599,23 @@
                         </div>
                     @else
                         <div class="alert bg-base-200 shadow-sm">
-                            <div>
-                                <span>{{ __('No ancillary costs are attached to this invoice.') }}</span>
-                            </div>
+                            <span>{{ __('No ancillary costs are attached to this invoice.') }}</span>
                         </div>
                     @endif
                     @can('ancillary-costs.create')
                         <div class="flex mt-2">
-                            <a href="{{ route('invoices.ancillary-costs.create', $invoice) }}" class="btn btn-primary">
-                                {{ __('Create Ancillary Cost') }}
-                            </a>
+                            @if (! $invoice->status->isApproved())
+                                <a href="{{ route('invoices.ancillary-costs.create', $invoice) }}" class="btn btn-primary">
+                                    {{ __('Create Ancillary Cost') }}
+                                </a>
+                            @else
+                                <span class="tooltip" data-tip="{{ __('Cannot add new ancillary cost for approved invoice because of COGS calculations.') }}">
+                                    <button class="btn btn-primary btn-disabled cursor-not-allowed">{{ __('Create Ancillary Cost') }}</button>
+                                </span>
+                            @endif
                         </div>
                     @endcan
+                </div>
             @endif
 
             <div class="card-actions justify-between mt-4">

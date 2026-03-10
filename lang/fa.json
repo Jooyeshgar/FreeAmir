@@ -182,6 +182,7 @@
     "Calculation Type": "نوع محاسبه",
     "Can not change status to rejected or ready to approve of approved invoices.": "تغییر وضعیت فاکتورهای تایید شده به رد شده یا آماده برای تأیید امکان پذیر نیست.",
     "Cancel": "لغو کنید",
+    "Cannot add new ancillary cost for approved invoice because of COGS calculations.": "نمیتوان برای فاکتور تایید شده هزینه جانبی جدیدی ایجاد کرد به علت محاسبات بهای تمام شده.",
     "Cannot change ancillary cost status because there are previous ancillary costs those are not approved for the same invoice products. Please approve those ancillary costs first.": "نمی توان وضعیت هزینه های جانبی را تغییر داد زیرا هزینه های جانبی قبلی وجود دارد که برای همان محصولات فاکتور تأیید نشده اند. لطفاً ابتدا آن هزینه های جانبی را تأیید کنید.",
     "Cannot change ancillary cost status because there are subsequent ancillary costs those are approved for the same invoice products. Please unapprove those ancillary costs first.": "نمی توان وضعیت هزینه های جانبی را تغییر داد زیرا هزینه های جانبی بعدی وجود دارد که برای همان محصولات فاکتور تأیید شده است. لطفاً ابتدا آن هزینه های جانبی را لغو کنید.",
     "Cannot change ancillary cost status because there are subsequent approved ancillary costs those are approved for the same invoice products. Please unapprove those ancillary costs first.": "نمی توان وضعیت هزینه های جانبی را تغییر داد زیرا هزینه های جانبی تأیید شده بعدی وجود دارد که برای همان محصولات فاکتور تأیید شده است. لطفاً ابتدا آن هزینه های جانبی را لغو کنید.",
