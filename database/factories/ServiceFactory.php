@@ -42,13 +42,27 @@ class ServiceFactory extends Factory
 
     public function withGroup(?ServiceGroup $group = null): static
     {
-        return $this->state(function () use ($group) {
-            $groupToUse = $group ?? ServiceGroup::factory()->create([
-                'company_id' => Company::inRandomOrder()->first()->id,
-            ]);
+        return $this->state(function (array $attributes) use ($group) {
+            $companyId = $attributes['company_id'] ?? Company::withoutGlobalScopes()->inRandomOrder()->value('id') ?? Company::factory()->create()->id;
+
+            $groupToUse = $group;
+
+            if (! $groupToUse || $groupToUse->company_id !== $companyId) {
+                $groupToUse = ServiceGroup::withoutGlobalScopes()->where('company_id', $companyId)
+                    ->whereNotNull('subject_id')
+                    ->whereNotNull('cogs_subject_id')
+                    ->whereNotNull('sales_returns_subject_id')
+                    ->inRandomOrder()
+                    ->first();
+            }
+
+            if (! $groupToUse) {
+                $groupToUse = ServiceGroup::factory()->withSubject()->create(['company_id' => $companyId]);
+            }
 
             return [
                 'group' => $groupToUse->id,
+                'company_id' => $companyId,
             ];
         });
     }

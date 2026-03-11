@@ -9,6 +9,7 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\Service;
+use App\Models\ServiceGroup;
 use App\Models\User;
 use App\Services\InvoiceService;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -96,14 +97,18 @@ class InvoiceFactory extends Factory
                 $services = Service::withoutGlobalScopes()->where('company_id', $invoice->company_id)
                     ->whereNotNull('subject_id')
                     ->whereNotNull('cogs_subject_id')
+                    ->whereNotNull('sales_returns_subject_id')
                     ->inRandomOrder()->take($isServicesOnly ? random_int(2, 6) : random_int(0, 2))->get();
 
                 if ($services->isEmpty()) {
-                    $services = collect([
-                        Service::factory()->withGroup()->withSubject()->create([
-                            'company_id' => $invoice->company_id,
-                        ]),
-                    ]);
+                    $serviceGroup = ServiceGroup::withoutGlobalScopes()->where('company_id', $invoice->company_id)
+                        ->whereNotNull('subject_id')
+                        ->whereNotNull('cogs_subject_id')
+                        ->whereNotNull('sales_returns_subject_id')
+                        ->inRandomOrder()
+                        ->first();
+
+                    $services = collect([Service::factory()->withGroup($serviceGroup)->withSubject()->create(['company_id' => $invoice->company_id])]);
                 }
 
                 $serviceItems = $services->map(function (Service $service) {
