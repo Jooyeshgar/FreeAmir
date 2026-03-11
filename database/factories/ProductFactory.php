@@ -18,7 +18,7 @@ class ProductFactory extends Factory
 
         return [
             'code' => $this->faker->unique()->numerify('#####'),
-            'name' => $this->faker->words(3, true),
+            'name' => $this->faker->persianProductName(),
             'sstid' => $this->faker->optional()->word,
             'group' => null,
             'location' => $this->faker->optional()->word,

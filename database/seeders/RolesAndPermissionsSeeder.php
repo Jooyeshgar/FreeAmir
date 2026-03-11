@@ -251,7 +251,7 @@ class RolesAndPermissionsSeeder extends Seeder
             ['code' => 'DEMO-WS-1'],
             [
                 'company_id' => 1,
-                'name' => 'Demo Work Site',
+                'name' => 'کارگاه ۱',
                 'is_active' => true,
             ]
         );
@@ -259,7 +259,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $workShift = WorkShift::firstOrCreate(
             [
                 'company_id' => 1,
-                'name' => 'Demo Shift',
+                'name' => 'شیفت کاری',
             ],
             [
                 'start_time' => '08:00:00',
