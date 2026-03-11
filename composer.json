@@ -1,13 +1,19 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "jooyeshgar/freeamir",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Amir: Free Laravel Accounting Software.",
     "keywords": [
         "laravel",
-        "framework"
+        "framework",
+        "accounting"
     ],
     "license": "MIT",
+    "homepage": "https://github.com/Jooyeshgar/FreeAmir",
+    "support": {
+        "issues": "https://github.com/Jooyeshgar/FreeAmir/issues",
+        "source": "https://github.com/Jooyeshgar/FreeAmir"
+    },
     "require": {
         "php": "^8.2",
         "carlos-meneses/laravel-mpdf": "^2.1",
@@ -90,10 +96,18 @@
             "dont-discover": []
         }
     },
+    "archive": {
+        "exclude": [
+            "*.log",
+            "*.cache"
+        ]
+    },
     "config": {
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,
+        "archive-format": "zip",
+        "vendor-dir": "vendor",
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
