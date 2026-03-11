@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use App\Enums\ThursdayStatus;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -31,6 +32,17 @@ class WorkShift extends Model
         'float_after' => 'integer',
         'break' => 'integer',
     ];
+
+    public function getDurationAttribute(): int
+    {
+        $start = Carbon::createFromFormat('H:i:s', $this->start_time);
+        $end = Carbon::createFromFormat('H:i:s', $this->end_time);
+
+        $duration = $end->diffInMinutes($start);
+        $duration -= $this->break;
+
+        return max(0, $duration);
+    }
 
     public static function booted(): void
     {

@@ -62,7 +62,6 @@ class MonthlyAttendanceController extends Controller
 
         $this->attendanceService->calculateAndStore(
             employeeId: (int) $validated['employee_id'],
-            companyId: (int) getActiveCompany(),
             startDate: $startDate,
             durationDays: (int) $validated['duration'],
             jalaliYear: $jalaliYear,
@@ -172,7 +171,6 @@ class MonthlyAttendanceController extends Controller
 
         $monthlyAttendance = $this->attendanceService->calculateAndStore(
             employeeId: $employeeId,
-            companyId: (int) getActiveCompany(),
             startDate: $startDate,
             durationDays: (int) $validated['duration'],
             jalaliYear: $jalaliYear,

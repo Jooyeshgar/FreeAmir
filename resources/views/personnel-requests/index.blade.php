@@ -143,7 +143,7 @@
                                             <form action="{{ route('hr.personnel-requests.approve', $personnelRequest) }}" method="POST" class="inline-block mb-0">
                                                 @csrf
                                                 @method('PATCH')
-                                                <button type="submit" title="{{ __('Approve') }}">
+                                                <button type="submit" class= "text-lg h-8 p-1" title="{{ __('Approve') }}">
                                                     👍
                                                 </button>
                                             </form>

@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Enums\PersonnelRequestType;
 use App\Models\AttendanceLog;
 use App\Models\Employee;
 use App\Models\MonthlyAttendance;
+use App\Models\PersonnelRequest;
 use App\Models\PublicHoliday;
 use App\Models\WorkShift;
 use Carbon\Carbon;
@@ -39,33 +41,20 @@ class AttendanceService
      * @param  Carbon  $startDate  First day of the period (Gregorian)
      * @param  int  $durationDays  Number of calendar days in the month (28–31)
      */
-    public function calculateAndStore(
-        int $employeeId,
-        int $companyId,
-        Carbon $startDate,
-        int $durationDays,
-        int $jalaliYear,
-        int $jalaliMonth
-    ): MonthlyAttendance {
+    public function calculateAndStore(int $employeeId, Carbon $startDate, int $durationDays, int $jalaliYear, int $jalaliMonth): MonthlyAttendance 
+    {
+        $companyId = getActiveCompany();
         $endDate = $startDate->copy()->addDays($durationDays - 1);
 
-        $employee = Employee::withoutGlobalScopes()
-            ->with(['workShift' => fn ($q) => $q->withoutGlobalScopes()])
-            ->where('id', $employeeId)
-            ->where('company_id', $companyId)
-            ->first();
+        $employee = Employee::with(['workShift'])->where('id', $employeeId)->first();
 
         $workShift = $employee?->workShift;
 
-        $logs = AttendanceLog::withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->where('employee_id', $employeeId)
+        $logs = AttendanceLog::where('employee_id', $employeeId)
             ->whereBetween('log_date', [$startDate->toDateString(), $endDate->toDateString()])
             ->get();
 
-        $holidays = PublicHoliday::withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+        $holidays = PublicHoliday::whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->pluck('date')
             ->map(fn ($d) => $d instanceof Carbon ? $d->toDateString() : (string) $d)
             ->toArray();
@@ -73,8 +62,7 @@ class AttendanceService
         $totals = $this->computeTotals($startDate, $durationDays, $logs, $holidays, $workShift);
 
         /** @var MonthlyAttendance $attendance */
-        $attendance = MonthlyAttendance::withoutGlobalScopes()
-            ->updateOrCreate(
+        $attendance = MonthlyAttendance::updateOrCreate(
                 [
                     'company_id' => $companyId,
                     'employee_id' => $employeeId,
@@ -92,9 +80,7 @@ class AttendanceService
             );
 
         // Link logs to this monthly_attendance record
-        AttendanceLog::withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->where('employee_id', $employeeId)
+        AttendanceLog::where('employee_id', $employeeId)
             ->whereBetween('log_date', [$startDate->toDateString(), $endDate->toDateString()])
             ->update(['monthly_attendance_id' => $attendance->id]);
 
@@ -315,5 +301,90 @@ class AttendanceService
         $rawMinutes = max(0, $rawMinutes - $breakMinutes);
 
         return $rawMinutes;
+    }
+
+    /**
+     * Apply (or reverse) the effect of a personnel request onto AttendanceLog records.
+     *
+     * When $subtract is false (approval): the relevant field is incremented per day.
+     * When $subtract is true  (reverting an approved request): the field is decremented.
+     *
+     * Type → field mapping:
+     *   LEAVE_HOURLY / LEAVE_DAILY / SICK_LEAVE → paid_leave
+     *   LEAVE_WITHOUT_PAY                       → unpaid_leave
+     *   MISSION_HOURLY / MISSION_DAILY          → mission
+     *   OVERTIME_ORDER                          → overtime
+     *   REMOTE_WORK / OTHER                     → no-op
+     */
+    public function syncPersonnelRequestLogs(PersonnelRequest $personnelRequest, bool $subtract = false): void
+    {
+        $field = match ($personnelRequest->request_type) {
+            PersonnelRequestType::LEAVE_HOURLY,
+            PersonnelRequestType::LEAVE_DAILY,
+            PersonnelRequestType::SICK_LEAVE     => 'paid_leave',
+            PersonnelRequestType::LEAVE_WITHOUT_PAY => 'unpaid_leave',
+            PersonnelRequestType::MISSION_HOURLY,
+            PersonnelRequestType::MISSION_DAILY  => 'mission',
+            PersonnelRequestType::OVERTIME_ORDER => 'overtime',
+            default                              => null,
+        };
+
+        if ($field === null) {
+            return;
+        }
+
+        $start = $personnelRequest->start_date;
+        $end   = $personnelRequest->end_date;
+        $companyId  = $personnelRequest->company_id;
+        $employeeId = $personnelRequest->employee_id;
+        $delta      = $subtract ? -1 : 1;
+
+        $isDailyType = in_array($personnelRequest->request_type, [
+            PersonnelRequestType::LEAVE_DAILY,
+            PersonnelRequestType::SICK_LEAVE,
+            PersonnelRequestType::LEAVE_WITHOUT_PAY,
+            PersonnelRequestType::MISSION_DAILY,
+        ], strict: true);
+
+        if ($isDailyType) {
+            $duration = $this->shiftWorkMinutes($personnelRequest->employee->workShift);
+            $current = $start->copy()->startOfDay();
+            $endDay  = $end->copy()->startOfDay();
+            while ($current->lte($endDay)) {
+                $this->applyDeltaToLog($employeeId, $companyId, $current, $field, $delta * $duration);
+                $current->addDay();
+            }
+        } else {
+            // Hourly / overtime: exact minutes, single day
+            $minutes = max(0, (int) $start->diffInMinutes($end));
+            $this->applyDeltaToLog($employeeId, $companyId, $start, $field, $delta * $minutes);
+        }
+    }
+
+    /**
+     * Find (or create) an AttendanceLog for the given employee/date and apply
+     * a signed delta to the specified field. When $subtract is true and no log
+     * exists the operation is skipped silently.
+     */
+    private function applyDeltaToLog(int $employeeId, int $companyId, Carbon $date, string $field, int $minutes): void
+    {
+        $log = AttendanceLog::where('employee_id', $employeeId)
+            ->where('log_date', $date)
+            ->first();
+
+        if ($log === null) {
+            if ($minutes < 0) {
+                return; // nothing to subtract from
+            }
+            $log = AttendanceLog::create([
+                'employee_id' => $employeeId,
+                'company_id'  => $companyId,
+                'log_date'    => $date,
+            ]);
+        }
+
+        $log->update([
+            $field => max(0, $log->{$field} + $minutes),
+        ]);
     }
 }
