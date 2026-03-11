@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Company;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Subject;
@@ -13,6 +14,8 @@ class ProductFactory extends Factory
 
     public function definition(): array
     {
+        $companyId = Company::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveCompany() ?? Company::factory()->create()->id;
+
         return [
             'code' => $this->faker->unique()->numerify('#####'),
             'name' => $this->faker->words(3, true),
@@ -25,14 +28,16 @@ class ProductFactory extends Factory
             'selling_price' => $this->faker->randomFloat(2, 0, 10000),
             'discount_formula' => null,
             'description' => $this->faker->sentence,
-            'company_id' => 1,
+            'company_id' => $companyId,
             'vat' => 0,
             'average_cost' => 0,
         ];
     }
 
-    public function withGroup(ProductGroup $group): static
+    public function withGroup(?ProductGroup $group = null): static
     {
+        $group ??= ProductGroup::factory()->withSubjects()->create();
+
         return $this->state([
             'group' => $group->id,
         ]);

@@ -6,15 +6,12 @@ use App\Enums\AncillaryCostType;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
-use App\Models\AncillaryCostItem;
-use App\Models\Customer;
-use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\Product;
-use App\Models\Subject;
-use App\Models\Transaction;
+use App\Models\User;
 use App\Services\AncillaryCostService;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Carbon;
 
 class AncillaryCostFactory extends Factory
 {
@@ -22,14 +19,27 @@ class AncillaryCostFactory extends Factory
 
     public function definition(): array
     {
-        $invoice = Invoice::withoutGlobalScopes()->where('invoice_type', InvoiceType::BUY)->inRandomOrder()->first();
+        $invoice = Invoice::withoutGlobalScopes()
+            ->where('invoice_type', InvoiceType::BUY)
+            ->where('status', InvoiceStatus::APPROVED)
+            ->whereHas('items', fn ($q) => $q->where('itemable_type', Product::class))
+            ->inRandomOrder()
+            ->first();
+
+        if (! $invoice) {
+            $invoice = Invoice::factory()->create([
+                'invoice_type' => InvoiceType::BUY,
+                'status' => InvoiceStatus::APPROVED,
+            ]);
+            $invoice->refresh();
+        }
 
         return [
             'number' => $this->faker->unique()->numerify('#####'),
             'type' => $this->faker->randomElement(AncillaryCostType::cases()),
             'date' => $invoice->date,
-            'company_id' => getActiveCompany() ?? 1,
-            'customer_id' => Customer::withoutGlobalScopes()->inRandomOrder()->first()->id,
+            'company_id' => $invoice->company_id,
+            'customer_id' => $invoice->customer_id,
             'status' => $this->faker->randomElement([InvoiceStatus::APPROVED, InvoiceStatus::UNAPPROVED]),
             'vat' => 0,
             'invoice_id' => $invoice->id,
@@ -37,67 +47,65 @@ class AncillaryCostFactory extends Factory
         ];
     }
 
-    public function configure()
+    public function configure(): static
     {
         return $this->afterCreating(function (AncillaryCost $ancillaryCost) {
-            foreach ($ancillaryCost->invoice->items as $item) {
-                if ($item->itemable_type === Product::class) {
-                    AncillaryCostItem::factory()->create([
-                        'ancillary_cost_id' => $ancillaryCost->id,
-                        'product_id' => $item->itemable_id,
-                        'type' => $ancillaryCost->type,
-                        'amount' => $this->faker->randomFloat(2, 100000, 1000000),
-                    ]);
-                }
+            $targetApprove = $ancillaryCost->status->isApproved();
+
+            $invoice = $ancillaryCost->invoice;
+            $productItems = $invoice->items->where('itemable_type', Product::class)->values();
+
+            if ($productItems->isEmpty()) {
+                return;
             }
 
-            $amount = $ancillaryCost->items->sum('amount');
-            $ancillaryCost->update(['amount' => $amount]);
+            $ancillaryCosts = $productItems->map(function ($item) {
+                return [
+                    'product_id' => $item->itemable_id,
+                    'amount' => (float) random_int(50_000, 500_000),
+                ];
+            })->values()->all();
 
-            if ($ancillaryCost->status->isApproved()) {
-                $allow = AncillaryCostService::getChangeStatusValidation($ancillaryCost);
+            $amount = (float) collect($ancillaryCosts)->sum('amount');
 
-                if ($allow['allowed'] !== true) {
-                    $ancillaryCost->update(['status' => InvoiceStatus::UNAPPROVED]);
+            $payload = [
+                'invoice_id' => $invoice->id,
+                'customer_id' => $invoice->customer_id,
+                'company_id' => $invoice->company_id,
+                'date' => Carbon::parse($ancillaryCost->date ?? now())->toDateString(),
+                'type' => $ancillaryCost->type->value,
+                'amount' => $amount,
+                'vatPrice' => (float) ($ancillaryCost->vat ?? 0),
+                'ancillaryCosts' => $ancillaryCosts,
+            ];
 
-                    return;
+            $user = User::find($invoice->creator_id) ?? User::factory()->create();
+            auth()->setUser($user);
+
+            $ancillaryCost->updateQuietly(['status' => InvoiceStatus::UNAPPROVED]);
+
+            AncillaryCostService::updateAncillaryCost(
+                $user,
+                $ancillaryCost,
+                $payload,
+                false
+            );
+
+            $ancillaryCost->refresh();
+
+            $ancillaryCostService = new AncillaryCostService;
+
+            if ($targetApprove) {
+                $validation = AncillaryCostService::getChangeStatusValidation($ancillaryCost);
+                if ($validation['allowed'] ?? false) {
+                    $ancillaryCostService->changeAncillaryCostStatus($ancillaryCost, 'approve');
+                    $ancillaryCost->refresh();
                 }
-
-                $document = Document::factory()->create([
-                    'number' => (Document::withoutGlobalScopes()->max('number') ?? 0) + 1,
-                    'company_id' => getActiveCompany() ?? 1,
-                    'date' => $ancillaryCost->date,
-                    'title' => "Invoice Document #{$ancillaryCost->number}",
-                    'documentable_type' => AncillaryCost::class,
-                    'documentable_id' => $ancillaryCost->id,
-                ]);
-
-                $ancillaryCost->update(['document_id' => $document->id]);
-
-                foreach ($ancillaryCost->items as $item) {
-                    // item transaction
-                    $product = Product::withoutGlobalScopes()->find($item->product_id);
-
-                    Transaction::factory()->create([
-                        'document_id' => $document->id,
-                        'subject_id' => $product->inventory_subject_id,
-                        'desc' => __('Ancillary Cost for :item', ['item' => $product->name]).' '.__('On Invoice').' '.$ancillaryCost->invoice->invoice_type->label().' '.formatDocumentNumber($ancillaryCost->invoice->number),
-                        'value' => $item->amount,
-                    ]);
-
-                    // customer transaction
-                    $subject_id = Subject::withoutGlobalScopes()
-                        ->where('subjectable_type', Customer::class)
-                        ->where('subjectable_id', $ancillaryCost->customer_id)
-                        ->first()
-                        ->id;
-
-                    Transaction::factory()->create([
-                        'document_id' => $document->id,
-                        'subject_id' => $subject_id,
-                        'desc' => __('Invoice').' '.$ancillaryCost->invoice->invoice_type->label().' '.__(' with number ').' '.formatDocumentNumber($ancillaryCost->invoice->number),
-                        'value' => -$item->amount,
-                    ]);
+            } elseif ($ancillaryCost->status->isApproved()) {
+                $validation = AncillaryCostService::getChangeStatusValidation($ancillaryCost);
+                if ($validation['allowed'] ?? false) {
+                    $ancillaryCostService->changeAncillaryCostStatus($ancillaryCost, 'unapprove');
+                    $ancillaryCost->refresh();
                 }
             }
         });

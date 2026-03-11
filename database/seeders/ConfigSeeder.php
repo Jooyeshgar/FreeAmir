@@ -34,7 +34,7 @@ class ConfigSeeder extends Seeder
             ['type' => 3, 'category' => 1, 'key' => 'service_revenue', 'value' => '103', 'desc' => 'درآمد خدمات', 'company_id' => 1],
         ];
 
-        Config::insert($configs);
+        Config::upsert($configs, ['key', 'company_id'], ['type', 'category', 'value', 'desc']);
         foreach ($configs as $config) {
             config(['amir.'.$config['key'] => $config['value']]);
         }
