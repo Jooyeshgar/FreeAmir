@@ -25,7 +25,7 @@ class InvoiceFactory extends Factory
 
     public function definition(): array
     {
-        $customer = Customer::withoutGlobalScopes()->inRandomOrder()->first() ?? Customer::factory()->withGroup()->withSubject()->create();
+        $customer = Customer::inRandomOrder()->first() ?? Customer::factory()->withGroup()->withSubject()->create();
         $creator = User::inRandomOrder()->first() ?? User::factory()->create();
 
         return [
