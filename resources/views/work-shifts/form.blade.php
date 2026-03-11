@@ -24,10 +24,12 @@
             <x-input name="break" id="break" type="number" title="{{ __('Break (minutes)') }}" :value="old('break', $workShift->break ?? 0)" placeholder="0" />
         </div>
 
-        <div class="flex flex-col gap-3 pt-2">
-            <x-checkbox name="crosses_midnight" id="crosses_midnight" title="{{ __('Crosses Midnight') }}" :checked="old('crosses_midnight', $workShift->crosses_midnight ?? false)" />
+        <div>
+            <x-select name="thursday_status" id="thursday_status" :title="__('Thursday Status')" :options="$thursdayStatusOptions" :selected="old('thursday_status', $workShift->thursday_status->value ?? 'half_day')" required />
+        </div>
 
-            <x-checkbox name="is_active" id="is_active" title="{{ __('Active') }}" :checked="old('is_active', $workShift->is_active ?? true)" />
+        <div class="flex flex-col gap-3 pt-2">
+            <x-checkbox name="is_active" value="1" id="is_active" title="{{ __('Active') }}" :checked="old('is_active', $workShift->is_active ?? true)" />
         </div>
 
     </div>
