@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Faker\PersianProductProvider;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Gate;
@@ -14,7 +15,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->afterResolving(\Faker\Generator::class, function (\Faker\Generator $faker) {
+            foreach ($faker->getProviders() as $provider) {
+                if ($provider instanceof PersianProductProvider) {
+                    return;
+                }
+            }
+            $faker->addProvider(new PersianProductProvider($faker));
+        });
     }
 
     /**

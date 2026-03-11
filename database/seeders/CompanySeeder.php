@@ -10,15 +10,16 @@ class CompanySeeder extends Seeder
 {
     public function run(): void
     {
-        $company = Company::create([
+        $fiscalYear = jdate("Y", tr_num: 'en');
+        $company = Company::updateOrCreate(['id' => 1], [
             'id' => 1,
             'name' => 'نام شرکت',
-            'fiscal_year' => '1403',
+            'fiscal_year' => $fiscalYear,
         ]);
 
         $users = User::all();
         foreach ($users as $user) {
-            $user->companies()->attach($company->id);
+            $user->companies()->syncWithoutDetaching([$company->id]);
         }
     }
 }

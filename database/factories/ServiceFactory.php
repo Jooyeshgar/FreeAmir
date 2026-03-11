@@ -10,29 +10,59 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 
 class ServiceFactory extends Factory
 {
+    private static array $generatedCodesByCompany = [];
+
     public function definition(): array
     {
+        $companyId = Company::withoutGlobalScopes()->inRandomOrder()->value('id')
+            ?? Company::factory()->create()->id;
+
+        self::$generatedCodesByCompany[$companyId] ??= [];
+
+        do {
+            $code = (int) $this->faker->numerify('#####');
+        } while (
+            in_array($code, self::$generatedCodesByCompany[$companyId], true)
+            || Service::withoutGlobalScopes()->where('company_id', $companyId)->where('code', $code)->exists()
+        );
+
+        self::$generatedCodesByCompany[$companyId][] = $code;
+
         return [
-            'code' => $this->faker->unique()->numerify('#####'),
+            'code' => $code,
             'name' => $this->faker->words(3, true),
             'sstid' => $this->faker->optional()->word,
             'group' => null,
             'selling_price' => $this->faker->randomFloat(2, 0, 10000),
             'description' => $this->faker->sentence,
-            'company_id' => Company::inRandomOrder()->first()->id,
+            'company_id' => $companyId,
             'vat' => 0,
         ];
     }
 
     public function withGroup(?ServiceGroup $group = null): static
     {
-        return $this->state(function () use ($group) {
-            $groupToUse = $group ?? ServiceGroup::factory()->create([
-                'company_id' => Company::inRandomOrder()->first()->id,
-            ]);
+        return $this->state(function (array $attributes) use ($group) {
+            $companyId = $attributes['company_id'] ?? Company::withoutGlobalScopes()->inRandomOrder()->value('id') ?? Company::factory()->create()->id;
+
+            $groupToUse = $group;
+
+            if (! $groupToUse || $groupToUse->company_id !== $companyId) {
+                $groupToUse = ServiceGroup::withoutGlobalScopes()->where('company_id', $companyId)
+                    ->whereNotNull('subject_id')
+                    ->whereNotNull('cogs_subject_id')
+                    ->whereNotNull('sales_returns_subject_id')
+                    ->inRandomOrder()
+                    ->first();
+            }
+
+            if (! $groupToUse) {
+                $groupToUse = ServiceGroup::factory()->withSubject()->create(['company_id' => $companyId]);
+            }
 
             return [
                 'group' => $groupToUse->id,
+                'company_id' => $companyId,
             ];
         });
     }

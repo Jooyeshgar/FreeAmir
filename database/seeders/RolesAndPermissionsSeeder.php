@@ -4,6 +4,8 @@ namespace Database\Seeders;
 
 use App\Models\Employee;
 use App\Models\User;
+use App\Models\WorkShift;
+use App\Models\WorkSite;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -236,14 +238,39 @@ class RolesAndPermissionsSeeder extends Seeder
         );
 
         $users = [
-            'admin' => 'Super-Admin',
-            'accountant' => 'Accountant',
-            'seller' => 'Seller',
-            'warehouse' => 'Warehousekeeper',
-            'seller-warehouse' => ['Seller', 'Warehousekeeper'],
-            'accountant-seller-warehouse' => ['Accountant', 'Seller', 'Warehousekeeper'],
-            'employee' => 'Employee',
+            'admin' => ['Super-Admin', 'Employee'],
+            'accountant' => ['Accountant', 'Employee'],
+            'seller' => ['Seller', 'Employee'],
+            'warehouse' => ['Warehousekeeper', 'Employee'],
+            'seller-warehouse' => ['Seller', 'Warehousekeeper', 'Employee'],
+            'accountant-seller-warehouse' => ['Accountant', 'Seller', 'Warehousekeeper', 'Employee'],
+            'employee' => ['Employee'],
         ];
+
+        $workSite = WorkSite::firstOrCreate(
+            ['code' => 'DEMO-WS-1'],
+            [
+                'company_id' => 1,
+                'name' => 'کارگاه ۱',
+                'is_active' => true,
+            ]
+        );
+
+        $workShift = WorkShift::firstOrCreate(
+            [
+                'company_id' => 1,
+                'name' => 'شیفت کاری',
+            ],
+            [
+                'start_time' => '08:00:00',
+                'end_time' => '16:00:00',
+                'crosses_midnight' => false,
+                'float_before' => 0,
+                'float_after' => 0,
+                'break' => 0,
+                'is_active' => true,
+            ]
+        );
 
         foreach ($users as $name => $role) {
             $user = User::firstOrCreate(
@@ -255,19 +282,32 @@ class RolesAndPermissionsSeeder extends Seeder
             );
             $user->companies()->sync([1]);
             $user->assignRole($role);
-        }
 
-        // Create a demo employee record linked to the employee user
-        $employeeUser = User::where('email', 'employee@example.com')->first();
-        if ($employeeUser && ! $employeeUser->employee) {
-            Employee::create([
-                'first_name' => 'Demo',
-                'last_name' => 'Employee',
-                'national_code' => '0000000001',
-                'user_id' => $employeeUser->id,
-                'company_id' => 1,
-                'is_active' => true,
-            ]);
+            $baseCode = 'EMP-'.$user->id;
+            $employeeCode = $baseCode;
+            $counter = 1;
+
+            while (Employee::withoutGlobalScopes()
+                ->where('code', $employeeCode)
+                ->where('user_id', '!=', $user->id)
+                ->exists()) {
+                $employeeCode = substr($baseCode.'-'.$counter, 0, 20);
+                $counter++;
+            }
+
+            Employee::withoutGlobalScopes()->updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'first_name' => $name,
+                    'last_name' => 'Demo',
+                    'user_id' => $user->id,
+                    'company_id' => 1,
+                    'code' => $employeeCode,
+                    'work_site_id' => $workSite->id,
+                    'work_shift_id' => $workShift->id,
+                    'is_active' => true,
+                ]
+            );
         }
     }
 }

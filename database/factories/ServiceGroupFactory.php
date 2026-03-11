@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Company;
 use App\Models\ServiceGroup;
 use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -10,11 +11,13 @@ class ServiceGroupFactory extends Factory
 {
     public function definition(): array
     {
+        $companyId = Company::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveCompany() ?? Company::factory()->create()->id;
+
         return [
             'name' => $this->faker->name,
             'vat' => 0,
             'sstid' => $this->faker->optional()->word,
-            'company_id' => 1,
+            'company_id' => $companyId,
         ];
     }
 
