@@ -116,7 +116,7 @@ class AttendanceService
         $overtimeMin = 0;
         $missionDays = 0;
         $paidLeaveDays = 0;
-        $unpaidLeaveDays = 0;
+        $unpaidLeaveMin = 0;
         $fridayMin = 0;
         $holidayMin = 0;
 
@@ -132,7 +132,8 @@ class AttendanceService
             // ── Off-day (Friday / public holiday) ────────────────────────────
             if ($isFriday || $isHoliday) {
                 if (isset($logsByDate[$dateStr])) {
-                    $workedMin = $this->workedMinutes($logsByDate[$dateStr], $workShift);
+                    $calc = $this->workedMinutes($logsByDate[$dateStr], $workShift);
+                    $workedMin = $calc['worked'];
 
                     $isFriday
                         ? $fridayMin += $workedMin
@@ -161,7 +162,8 @@ class AttendanceService
             }
 
             $log = $logsByDate[$dateStr];
-            $workedMin = $this->workedMinutes($log, $workShift);
+            $calc = $this->workedMinutes($log, $workShift);
+            $workedMin = $calc['worked'];
             $logWorked = 0;
             $logDelay = 0;
             $logEarlyLeave = 0;
@@ -178,26 +180,22 @@ class AttendanceService
                 $paidLeaveDays++;
                 $presentDays++;
 
-                $logWorked = $workMinutesPerDay;    // counts as a full day worked
+                $logWorked = $log->paid_leave;
             } elseif ($log->unpaid_leave > 0) {
-                $unpaidLeaveDays++;
-                // unpaid leave is neither present nor absent in the period totals
+                $unpaidLeaveMin += $log->unpaid_leave;
             } elseif ($workedMin > 0) {
                 $presentDays++;
 
                 $logWorked = $workedMin;
 
-                $extra = $workedMin - $workMinutesPerDay;
-                if ($extra > 0) {
-                    $overtimeMin += $extra;
-                    $logOvertime = $extra;
+                $approvedOvertime = (int) ($log->overtime ?? 0);
+                $computedOvertime = $calc['overtime'];
+                if ($computedOvertime > 0 && $approvedOvertime > 0) {
+                    $overtimeMin += min($approvedOvertime, $computedOvertime);
                 }
 
-                // Delay  : clocked in late  → negative "extra" on the opening side
-                // Early leave: clocked out early → computed inside workedMinutes helper;
-                // expose them here if your helper or log model carries those values.
-                $logDelay = max(0, $log->delay ?? 0);
-                $logEarlyLeave = max(0, $log->early_leave ?? 0);
+                $logDelay = $calc['delay'];
+                $logEarlyLeave = $calc['early_leave'];
             }
 
             // ── Absent (log exists but no minutes recorded) ───────────────────
@@ -209,7 +207,7 @@ class AttendanceService
                 'worked' => $logWorked,
                 'delay' => $logDelay,
                 'early_leave' => $logEarlyLeave,
-                'overtime' => $logOvertime,
+                // 'overtime' => $logOvertime,
                 'mission' => $logMission,
             ]);
         }
@@ -221,7 +219,7 @@ class AttendanceService
             'overtime' => $overtimeMin,
             'mission_days' => $missionDays,
             'paid_leave_days' => $paidLeaveDays,
-            'unpaid_leave_days' => $unpaidLeaveDays,
+            'unpaid_leave_min' => $unpaidLeaveMin,
             'friday' => $fridayMin,
             'holiday' => $holidayMin,
         ];
@@ -240,10 +238,8 @@ class AttendanceService
             return self::DEFAULT_WORK_MINUTES_PER_DAY;
         }
 
-        $start = Carbon::createFromFormat('H:i:s', $workShift->start_time)
-            ?? Carbon::createFromFormat('H:i', $workShift->start_time);
-        $end = Carbon::createFromFormat('H:i:s', $workShift->end_time)
-            ?? Carbon::createFromFormat('H:i', $workShift->end_time);
+        $start = Carbon::createFromFormat('H:i:s', $workShift->start_time) ?? Carbon::createFromFormat('H:i', $workShift->start_time);
+        $end = Carbon::createFromFormat('H:i:s', $workShift->end_time) ?? Carbon::createFromFormat('H:i', $workShift->end_time);
 
         if ($start === null || $end === null) {
             return self::DEFAULT_WORK_MINUTES_PER_DAY;
@@ -262,45 +258,73 @@ class AttendanceService
     }
 
     /**
-     * Calculate actual worked minutes from an AttendanceLog entry.
+     * Calculate worked minutes, arrival delay, early leave, and overtime from an AttendanceLog.
      *
-     * When the log already stores pre-calculated `worked` minutes those
-     * are used directly. Otherwise the duration is derived from
-     * entry_time / exit_time, capped to the shift's expected minutes to
-     * avoid double-counting the break period in raw clock-in/out data.
+     * Uses the shift's float_after window to determine whether a late arrival incurs a
+     * delay penalty. Within the float window, the shift end extends proportionally so the
+     * employee can leave later without penalty. Beyond the float window, the end is capped
+     * at shift_end + float_after and excess lateness is counted as arrival delay.
+     *
+     * @return array{worked: int, delay: int, early_leave: int, overtime: int}
      */
-    private function workedMinutes(AttendanceLog $log, ?WorkShift $workShift = null): int
+    private function workedMinutes(AttendanceLog $log, ?WorkShift $workShift = null): array
     {
-        if ($log->worked > 0) {
-            return (int) $log->worked;
-        }
+        $empty = ['worked' => 0, 'delay' => 0, 'early_leave' => 0, 'overtime' => 0];
 
         if ($log->entry_time === null || $log->exit_time === null) {
-            return 0;
+            return $empty;
         }
 
-        $entry = Carbon::createFromFormat('H:i:s', $log->entry_time)
-            ?? Carbon::createFromFormat('H:i', $log->entry_time);
-        $exit = Carbon::createFromFormat('H:i:s', $log->exit_time)
-            ?? Carbon::createFromFormat('H:i', $log->exit_time);
+        $entry = Carbon::createFromFormat('H:i:s', $log->entry_time) ?? Carbon::createFromFormat('H:i', $log->entry_time);
+        $exit = Carbon::createFromFormat('H:i:s', $log->exit_time) ?? Carbon::createFromFormat('H:i', $log->exit_time);
 
         if ($entry === null || $exit === null) {
-            return 0;
+            return $empty;
         }
 
-        $rawMinutes = (int) $entry->diffInMinutes($exit, false);
-
-        // Handle cross-midnight exit
-        if ($rawMinutes < 0) {
-            $rawMinutes += 24 * 60;
-        }
-
-        // Subtract break time so raw clock-in/out values are comparable to
-        // the shift's net productive minutes when no pre-computed `worked` exists.
         $breakMinutes = max(0, (int) (($workShift?->break) ?? 0));
-        $rawMinutes = max(0, $rawMinutes - $breakMinutes);
+        $rawMinutes = (int) $entry->diffInMinutes($exit, false);
+        $worked = max(0, $rawMinutes - $breakMinutes);
 
-        return $rawMinutes;
+        if ($workShift === null) {
+            return ['worked' => $worked, 'delay' => 0, 'early_leave' => 0, 'overtime' => 0];
+        }
+
+        $shiftStart = Carbon::createFromFormat('H:i:s', $workShift->start_time) ?? Carbon::createFromFormat('H:i', $workShift->start_time);
+        $shiftEnd = Carbon::createFromFormat('H:i:s', $workShift->end_time) ?? Carbon::createFromFormat('H:i', $workShift->end_time);
+
+        if ($shiftStart === null || $shiftEnd === null) {
+            return ['worked' => $worked, 'delay' => 0, 'early_leave' => 0, 'overtime' => 0];
+        }
+
+        // $floatAfter = max(0, (int) ($workShift->float_after ?? 0));
+        $floatBefore = max(0, (int) ($workShift->float_before ?? 0));
+
+        // Latest allowed arrival without a delay penalty
+        $floatCutoff = $shiftStart->copy()->addMinutes($floatBefore);
+
+        // Minutes past the float cutoff (positive = late beyond grace window)
+        $lateMinutes = (int) $floatCutoff->diffInMinutes($entry, false);
+
+        //No Delay
+        if ($lateMinutes <= 0) {
+            $offset = max(0, (int) $shiftStart->diffInMinutes($entry, false));
+            $adjustedEnd = $shiftEnd->copy()->addMinutes($offset);
+            $arrivalDelay = 0;
+        } else {
+            $arrivalDelay = $lateMinutes;
+            $adjustedEnd = $shiftEnd->copy()->addMinutes($floatBefore); // Max float delay
+        }
+
+        // Positive = left late (overtime), negative = left early
+        $exitOffset = (int) $adjustedEnd->diffInMinutes($exit, false);
+
+        return [
+            'worked'      => $worked,
+            'delay'       => $arrivalDelay,
+            'early_leave' => max(0, -$exitOffset),
+            'overtime'    => max(0, $exitOffset),
+        ];
     }
 
     /**
@@ -369,7 +393,7 @@ class AttendanceService
     private function applyDeltaToLog(int $employeeId, int $companyId, Carbon $date, string $field, int $minutes): void
     {
         $log = AttendanceLog::where('employee_id', $employeeId)
-            ->where('log_date', $date)
+            ->where('log_date', $date->toDateString())
             ->first();
 
         if ($log === null) {
@@ -379,7 +403,7 @@ class AttendanceService
             $log = AttendanceLog::create([
                 'employee_id' => $employeeId,
                 'company_id'  => $companyId,
-                'log_date'    => $date,
+                'log_date'    => $date->toDateString(),
             ]);
         }
 

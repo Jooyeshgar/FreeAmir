@@ -177,6 +177,7 @@
                             <th>{{ __('Entry') }}</th>
                             <th>{{ __('Exit') }}</th>
                             <th>{{ __('Worked (min)') }}</th>
+                            <th>{{ __('Leave (min)') }}</th>
                             <th>{{ __('Overtime (min)') }}</th>
                             <th>{{ __('Delay (min)') }}</th>
                             <th>{{ __('Status') }}</th>
@@ -204,6 +205,7 @@
                                     <td>—</td>
                                     <td>—</td>
                                     <td>—</td>
+                                    <td>—</td>
                                     <td>
                                         @if ($placeholderIsHoliday)
                                             <span class="badge badge-warning badge-sm">{{ __('Holiday') }}</span>
@@ -222,6 +224,7 @@
                                     <td>{{ $log->entry_time ?? '—' }}</td>
                                     <td>{{ $log->exit_time ?? '—' }}</td>
                                     <td>{{ $log->worked }}</td>
+                                    <td>{{ $log->paid_leave }}</td>
                                     <td>{{ $log->overtime }}</td>
                                     <td>{{ $log->delay }}</td>
                                     <td>

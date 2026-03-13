@@ -50,7 +50,7 @@
                             <td>{{ $workShift->break }}</td>
                             <td>{{ $workShift->float_before }}</td>
                             <td>{{ $workShift->float_after }}</td>
-                            <td>{{ $workShift->thursday_status->label() }}</td>
+                            <td>{{ $workShift->thursday_status?->label() }}</td>
                             <td>
                                 @if ($workShift->is_active)
                                     <span class="badge badge-success">{{ __('Active') }}</span>
