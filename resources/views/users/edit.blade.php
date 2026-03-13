@@ -10,6 +10,8 @@
             <form method="post" action="{{ route('users.update', $user) }}">
                 @csrf
                 @method('PUT')
+                <x-show-message-bags />
+
                 <div class="grid grid-cols-2 gap-6">
                     <x-input title="{{ __('Name') }}" name="name" :value="old('name', $user->name ?? '')" type="text" />
                     <x-input title="{{ __('Email') }}" name="email" :value="old('email', $user->email ?? '')" type="email" />
