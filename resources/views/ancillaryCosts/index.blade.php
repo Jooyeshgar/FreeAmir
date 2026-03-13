@@ -80,10 +80,12 @@
 
                                 @can('ancillary-costs.approve')
                                     @if ($ancillaryCost->changeStatusValidation['allowed'])
-                                        <a href="{{ route('ancillary-costs.change-status', [$ancillaryCost, $ancillaryCost->status?->isApproved() ? 'unapprove' : 'approve']) }}"
-                                            class="btn btn-sm {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }}">
-                                            {{ __($ancillaryCost->status?->isApproved() ? 'Unapprove' : 'Approve') }}
-                                        </a>
+                                        <form method="POST" action="{{ route('ancillary-costs.change-status', [$ancillaryCost, $ancillaryCost->status?->isApproved() ? 'unapprove' : 'approve']) }}" class="inline-block m-0">
+                                            @csrf
+                                            <button type="submit" x-data="{}" class="btn btn-sm {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }}">
+                                                {{ __($ancillaryCost->status?->isApproved() ? 'Unapprove' : 'Approve') }}
+                                            </button>
+                                        </form>
                                     @else
                                         <span class="tooltip" data-tip="{{ $ancillaryCost->changeStatusValidation['reason'] }}">
                                             <button class="btn btn-sm {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }} btn-disabled cursor-not-allowed"
@@ -97,7 +99,7 @@
                                         <a href="{{ route('invoices.ancillary-costs.edit', [$ancillaryCost->invoice_id, $ancillaryCost]) }}" class="btn btn-sm btn-info">
                                             {{ __('Edit') }}</a>
                                         <form action="{{ route('invoices.ancillary-costs.destroy', [$ancillaryCost->invoice_id, $ancillaryCost]) }}"
-                                            method="POST" class="inline-block"> 
+                                            method="POST" class="inline-block m-0"> 
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>

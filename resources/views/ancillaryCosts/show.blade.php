@@ -72,10 +72,12 @@
                             <div class="stat">
                                 <div class="stat-title">{{ __('Status') }}</div>
                                 <div class="stat-value">
-                                    <a href="{{ route('ancillary-costs.change-status', [$ancillaryCost, $ancillaryCost->status?->isApproved() ? 'unapprove' : 'approve']) }}"
-                                        class="btn {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }}">
-                                        {{ __($ancillaryCost->status?->isApproved() ? 'Unapprove' : 'Approve') }}
-                                    </a>
+                                    <form method="POST" action="{{ route('ancillary-costs.change-status', [$ancillaryCost, $ancillaryCost->status?->isApproved() ? 'unapprove' : 'approve']) }}" class="inline-block">
+                                        @csrf
+                                        <button type="submit" x-data="{}" class="btn {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }}">
+                                            {{ __($ancillaryCost->status?->isApproved() ? 'Unapprove' : 'Approve') }}
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
                         </div>

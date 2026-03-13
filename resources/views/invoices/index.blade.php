@@ -208,31 +208,35 @@
 
                                 @can('invoices.approve')
                                     @if ($isSellWorkflow && ($invoice->status->isPreInvoice() || $invoice->status->isRejected()))
-                                        <a href="{{ route('invoices.change-status', [$invoice, 'ready_to_approve']) }}"
-                                            class="btn btn-sm btn-success">{{ __('Issue') }}
-                                        </a>
+                                        <form action="{{ route('invoices.change-status', [$invoice, 'ready_to_approve']) }}" method="POST" class="inline-block m-0">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-success">{{ __('Issue') }}</button>
+                                        </form>
                                     @endif
 
                                     @if ($isSellWorkflow && $invoice->status->isPreInvoice())
-                                        <a href="{{ route('invoices.change-status', [$invoice, 'rejected']) }}"
-                                            class="btn btn-sm btn-error">{{ __('Reject') }}
-                                        </a>
+                                        <form action="{{ route('invoices.change-status', [$invoice, 'rejected']) }}" method="POST" class="inline-block m-0">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Reject') }}</button>
+                                        </form>
                                     @endif
 
                                     @if ($canChangeStatus)
-                                        @if ($canApprove && $invoice->changeStatusValidation->hasErrors())
+                                        @if ($invoice->changeStatusValidation->hasErrors())
                                             <a data-tip="{{ $invoice->changeStatusValidation->toText() }}"
                                                 href="{{ route('invoices.conflicts', $invoice) }}"
                                                 class="btn btn-sm btn-accent inline-flex tooltip">{{ __('Fix Conflict') }}
                                             </a>
                                         @else
-                                            <a x-data="{}"
-                                                @if ($invoice->changeStatusValidation->hasWarning()) @click.prevent="if (confirm(@js($invoice->changeStatusValidation->toText()))) { window.location.href = '{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}?confirm=1' }" @endif
-                                                data-tip="{{ $invoice->changeStatusValidation->toText() }}"
-                                                href="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}"
-                                                class="btn btn-sm inline-flex tooltip {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $invoice->changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
-                                                {{ $canUnapprove ? __('Unapprove') : __('Approve') }}
-                                            </a>
+                                            <form action="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}{{ $invoice->changeStatusValidation->hasWarning() ? '?confirm=1' : ''}}"
+                                                method="POST" class="inline-block m-0 {{ $invoice->changeStatusValidation->hasWarning() ? 'change-status-form' : '' }}">
+                                                @csrf
+                                                <button type="submit" x-data="{}"
+                                                    data-tip="{{ $invoice->changeStatusValidation->toText() }}"
+                                                    class="btn btn-sm inline-flex tooltip {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $invoice->changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
+                                                    {{ $canUnapprove ? __('Unapprove') : __('Approve') }}
+                                                </button>
+                                            </form>
                                         @endif
                                     @endif
                                 @endcan
@@ -241,7 +245,7 @@
                                     <a href="{{ route('invoices.edit', $invoice) }}"
                                         class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                     <form action="{{ route('invoices.destroy', $invoice) }}" method="POST"
-                                        class="inline-block">
+                                        class="inline-block m-0">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit"
@@ -278,4 +282,19 @@
         </div>
     </div>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const changeStatusForms = document.querySelectorAll('.change-status-form');
+            
+            changeStatusForms.forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    if (confirm('{{ __('This invoice has warnings for change its status, are you sure to change status?') }}')) {
+                        this.submit();
+                    }
+                });
+            });
+        });
+    </script>
 </x-app-layout>
