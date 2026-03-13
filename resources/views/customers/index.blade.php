@@ -22,6 +22,34 @@
                     <noscript><button type="submit" class="btn btn-sm">{{ __('Filter') }}</button></noscript>
                 </form>
             </div>
+
+            <form action="{{ route('customers.index') }}" method="GET">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full md:w-2/5">
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-2 flex items-center text-gray-400 text-sm">
+                            <i class="fa-solid fa-box"></i>
+                        </span>
+                        <input type="text" name="name" value="{{ request('name') }}" placeholder="{{ __('Customer Name') }}"
+                            class="w-full pl-8 pr-2 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
+                    </div>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-2 flex items-center text-gray-400 text-sm">
+                            <i class="fa-solid fa-box"></i>
+                        </span>
+                        <input type="text" name="subject_code" value="{{ request('subject_code') }}" placeholder="{{ __('Subject Code') }}"
+                            class="w-full pl-8 pr-2 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
+                    </div>
+
+                    <div class="flex items-center">
+                        <button type="submit"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 text-sm rounded-lg shadow transition-all">
+                            <i class="fa-solid fa-magnifying-glass mr-1"></i>
+                            {{ __('Search') }}
+                        </button>
+                    </div>
+                </div>
+            </form>
+
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <tr>

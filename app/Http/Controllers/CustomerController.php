@@ -14,9 +14,24 @@ class CustomerController extends Controller
 
     public function index(Request $request)
     {
-        $groupId = $request->query('group_id');
-
         $query = Models\Customer::with('subject', 'group')->orderBy('id', 'desc');
+
+        if (request()->has('name') && request('name')) {
+            $query->where('name', 'like', '%'.request('name').'%');
+        }
+
+        if (request()->has('subject_code') && request('subject_code')) {
+            $subjectCode = request('subject_code');
+            if (str_contains($subjectCode, '/')) {
+                $subjectCode = str_replace('/', '', $subjectCode);
+            }
+
+            $query->whereHas('subject', function ($subject) use ($subjectCode) {
+                $subject->where('code', 'like', '%'.$subjectCode.'%');
+            });
+        }
+
+        $groupId = $request->query('group_id');
 
         if ($groupId && $groupId !== 'all') {
             $query->where('group_id', $groupId);
