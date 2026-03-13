@@ -105,6 +105,7 @@
     "AncillaryCost": "هزینه جانبی",
     "Annual Exemption": "معافیت سالانه",
     "Approve": "تایید",
+    "Approve date": "تاریخ تایید",
     "Approve All": "تایید همه",
     "Approve Inactive": "تایید غیر فعال",
     "Approved": "تایید شده",
@@ -391,6 +392,7 @@
     "Do you want to proceed with approval?": "آیا می خواهید با تایید ادامه دهید؟",
     "Doc Number": "شماره سند",
     "Document": "سند",
+    "Document status changed successfully.": "وضعیت سند با موفقیت تغییر کرد.",
     "Document #": "سند #",
     "Document Date": "تاریخ سند",
     "Document Files": "فایل‌های سند",
@@ -939,6 +941,7 @@
     "Reject": "رد کردن",
     "Rejected": "رد شد",
     "Related to": "مربوط به",
+    "Relation": "ارتباط",
     "Remaining": "مانده",
     "Remote Work": "دورکاری",
     "Remove": "حذف کنید",
@@ -1451,5 +1454,6 @@
     "— None —": "— هیچ‌کدام —",
     "— Select Format —": "- انتخاب فرمت -",
     "— Select —": "— انتخاب کنید —",
-    "… and :remaining more records.": "… و :remaining رکوردهای بیشتر."
+    "… and :remaining more records.": "… و :remaining رکوردهای بیشتر.",
+    "The sum of transactions must be zero.": "مجموع تراکنش ها باید صفر باشد."
 }

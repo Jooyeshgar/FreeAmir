@@ -26,6 +26,8 @@ class Document extends Model
         'company_id',
         'documentable_id',
         'documentable_type',
+        'approved_at',
+        'approver_id',
     ];
 
     public static function booted(): void
