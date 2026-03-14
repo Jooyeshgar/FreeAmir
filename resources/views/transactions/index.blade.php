@@ -89,7 +89,7 @@
                         </tr>
                     @endif
                     @foreach ($transactions as $transaction)
-                        <tr>
+                        <tr class="{{ $transaction->document->approved_at ? '' : 'text-gray-500' }}">
                             <td class="p-2">{{ formatDate($transaction->document->date) }}</td>
                             <td class="p-2">
                                 <a href="{{ route('documents.show', $transaction->document->id) }}" class="text-blue-600 hover:text-blue-800">
@@ -103,8 +103,8 @@
                                 {{ $transaction->subject?->name }}
                             </td>
                             <td class="p-2">{{ $transaction->desc }}</td>
-                            <td class="p-2 text-red-600">{{ $transaction->debit }}</td>
-                            <td class="p-2 text-green-600">{{ $transaction->credit }}</td>
+                            <td class="p-2 {{ $transaction->document->approved_at ? 'text-red-600' : 'text-red-400' }}">{{ $transaction->debit }}</td>
+                            <td class="p-2 {{ $transaction->document->approved_at ? 'text-green-600' : 'text-green-400' }}">{{ $transaction->credit }}</td>
                             <td class="p-2 ">
                                 {{ formatNumber(abs($transaction->balance)) }} {{ $transaction->balance >= 0 ? __('Cre') : __('Deb') }}
                             </td>

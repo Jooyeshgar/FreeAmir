@@ -39,9 +39,22 @@ class DocumentController extends Controller
             });
         }
 
+        // It would use query instead of Elequent
+        $approvedDocumentsNumber = Document::whereNot('approved_at', null)->count();
+        $unapprovedDocumentsNumber = Document::where('approved_at', null)->count();
+
+        if (request()->has('status') && request('status') && request('status') !== 'all') {
+            $status = request('status');
+            if ($status === 'approved') {
+                $query->whereNotNull('approved_at');
+            } elseif ($status === 'unapproved') {
+                $query->whereNull('approved_at');
+            }
+        }
+
         $documents = $query->paginate(10);
 
-        return view('documents.index', compact('documents'));
+        return view('documents.index', compact('documents', 'approvedDocumentsNumber', 'unapprovedDocumentsNumber'));
     }
 
     public function create()
