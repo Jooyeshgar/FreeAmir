@@ -98,7 +98,7 @@ class ProductController extends Controller
                     );
                 }
             })
-            ->paginate(10);
+            ->paginate(20);
 
         return view('products.show', compact('product', 'historyItems'));
     }
