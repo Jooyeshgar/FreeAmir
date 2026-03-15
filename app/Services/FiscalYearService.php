@@ -3,15 +3,37 @@
 namespace App\Services;
 
 use App\Enums\FiscalYearSection;
+use App\Models\AttendanceLog;
 use App\Models\Bank;
 use App\Models\BankAccount;
+use App\Models\Cheque;
+use App\Models\ChequeHistory;
+use App\Models\Comment;
 use App\Models\Company;
 use App\Models\Config;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\DecreeBenefit;
+use App\Models\Document;
+use App\Models\DocumentFile;
+use App\Models\Employee;
+use App\Models\MonthlyAttendance;
+use App\Models\OrgChart;
+use App\Models\Payroll;
+use App\Models\PayrollElement;
+use App\Models\PayrollItem;
+use App\Models\PersonnelRequest;
 use App\Models\Product;
 use App\Models\ProductGroup;
+use App\Models\SalaryDecree;
+use App\Models\Scopes\FiscalYearScope;
+use App\Models\Service;
+use App\Models\ServiceGroup;
 use App\Models\Subject;
+use App\Models\Transaction;
+use App\Models\WorkShift;
+use App\Models\WorkSite;
+use App\Models\WorkSiteContract;
 use Cookie;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
@@ -202,55 +224,126 @@ class FiscalYearService
         $sourceData = [];
 
         if (in_array('subjects', $sections)) {
-            $sourceData['subjects'] = Subject::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+            $sourceData['subjects'] = Subject::withoutGlobalScope(FiscalYearScope::class)
                 ->where('company_id', $sourceYearId)
                 ->orderBy('parent_id') // Ensure parents likely come before children
                 ->get()->toArray();
         }
         if (in_array('configs', $sections)) {
-            $sourceData['configs'] = Config::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+            $sourceData['configs'] = Config::withoutGlobalScope(FiscalYearScope::class)
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
         }
         if (in_array('banks', $sections)) {
-            $sourceData['banks'] = Bank::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+            $sourceData['banks'] = Bank::withoutGlobalScope(FiscalYearScope::class)
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
 
-            $sourceData['bank_accounts'] = BankAccount::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+            $sourceData['bank_accounts'] = BankAccount::withoutGlobalScope(FiscalYearScope::class)
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
         }
         if (in_array('customers', $sections)) {
-            $sourceData['customer_groups'] = CustomerGroup::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+            $sourceData['customer_groups'] = CustomerGroup::withoutGlobalScope(FiscalYearScope::class)
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
 
-            $sourceData['customers'] = Customer::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+            $sourceData['customers'] = Customer::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
+                ->get()->toArray();
+
+            $customerIds = collect($sourceData['customers'])->pluck('id')->toArray();
+            $sourceData['comments'] = ! empty($customerIds) ? Comment::whereIn('customer_id', $customerIds)->get()->toArray() : [];
+        }
+        if (in_array('products', $sections)) {
+            $sourceData['product_groups'] = ProductGroup::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
+                ->get()->toArray();
+
+            $sourceData['products'] = Product::withoutGlobalScope(FiscalYearScope::class)
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
         }
-        if (in_array('products', $sections)) {
-            $sourceData['product_groups'] = ProductGroup::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+        if (in_array('services', $sections)) {
+            $sourceData['service_groups'] = ServiceGroup::withoutGlobalScope(FiscalYearScope::class)
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
 
-            $sourceData['products'] = Product::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+            $sourceData['services'] = Service::withoutGlobalScope(FiscalYearScope::class)
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
         }
         if (in_array('documents', $sections)) {
-            $sourceData['documents'] = \App\Models\Document::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+            $sourceData['documents'] = Document::withoutGlobalScope(FiscalYearScope::class)
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
 
             $documentIds = collect($sourceData['documents'])->pluck('id')->toArray();
-            if (! empty($documentIds)) {
-                $sourceData['transactions'] = \App\Models\Transaction::whereIn('document_id', $documentIds)
-                    ->get()->toArray();
-            } else {
-                $sourceData['transactions'] = [];
-            }
+            $sourceData['transactions'] = ! empty($documentIds) ? Transaction::whereIn('document_id', $documentIds)->get()->toArray() : [];
+
+            $sourceData['document_files'] = ! empty($documentIds) ? DocumentFile::whereIn('document_id', $documentIds)->get()->toArray() : [];
+        }
+        if (in_array('cheques', $sections)) {
+            $sourceData['cheques'] = Cheque::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
+                ->get()->toArray();
+
+            $sourceData['cheque_histories'] = ChequeHistory::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
+                ->get()->toArray();
+        }
+        if (in_array('employee', $sections)) {
+            $sourceData['employee'] = Employee::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
+                ->get()->toArray();
+
+            $sourceData['org_charts'] = OrgChart::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
+                ->get()->toArray();
+
+            $sourceData['work_sites'] = WorkSite::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
+                ->get()->toArray();
+
+            $workSiteIds = collect($sourceData['work_sites'])->pluck('id')->toArray();
+            $sourceData['work_site_contracts'] = ! empty($workSiteIds) ? WorkSiteContract::whereIn('work_site_id', $workSiteIds)->get()->toArray() : [];
+
+            $sourceData['work_shifts'] = WorkShift::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
+                ->get()->toArray();
+
+            $sourceData['salary_decrees'] = SalaryDecree::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
+                ->get()->toArray();
+
+            $sourceData['monthly_attendances'] = MonthlyAttendance::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
+                ->get()->toArray();
+
+            $sourceData['payrolls'] = Payroll::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
+                ->get()->toArray();
+
+            $sourceData['payroll_elements'] = PayrollElement::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
+                ->get()->toArray();
+
+            $payrollIds = collect($sourceData['payrolls'])->pluck('id')->toArray();
+            $elementIds = collect($sourceData['payroll_elements'])->pluck('id')->toArray();
+            $sourceData['payroll_items'] = ! empty($payrollIds) && ! empty($elementIds) ?
+                PayrollItem::whereIn('payroll_id', $payrollIds)->whereIn('element_id', $elementIds)->get()->toArray() : [];
+
+            $salaryDecreeIds = collect($sourceData['salary_decrees'])->pluck('id')->toArray();
+            $sourceData['decree_benefits'] = ! empty($salaryDecreeIds) && ! empty($elementIds) ?
+                DecreeBenefit::whereIn('decree_id', $salaryDecreeIds)->whereIn('element_id', $elementIds)->get()->toArray() : [];
+
+            $sourceData['attendance_logs'] = AttendanceLog::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
+                ->get()->toArray();
+
+            $sourceData['personnel_requests'] = PersonnelRequest::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
+                ->get()->toArray();
         }
 
         return $sourceData;
@@ -385,9 +478,8 @@ class FiscalYearService
 
             $oldSubjectId = $groupData['subject_id'] ?? null;
             $newGroup->subject_id = ($oldSubjectId && isset($subjectMapping[$oldSubjectId])) ? $subjectMapping[$oldSubjectId] : null;
-
             $newGroup->save();
-            echo '-----------------'.config('amir.cust_subject')."\n";
+
             $mapping[$groupData['id']] = $newGroup->id;
         }
 
@@ -485,7 +577,7 @@ class FiscalYearService
     {
         $mapping = [];
         foreach ($documentsData as $docData) {
-            $newDoc = new \App\Models\Document;
+            $newDoc = new Document;
             $newDoc->fill(collect($docData)->except(['id'])->toArray());
             $newDoc->company_id = $targetYearId;
             $newDoc->save();
@@ -520,7 +612,7 @@ class FiscalYearService
                 continue;
             }
 
-            $newTrans = new \App\Models\Transaction;
+            $newTrans = new Transaction;
             $newTrans->fill(collect($transData)->except(['id'])->toArray());
             $newTrans->document_id = $documentMapping[$oldDocId];
             $newTrans->subject_id = $subjectMapping[$oldSubjectId];
