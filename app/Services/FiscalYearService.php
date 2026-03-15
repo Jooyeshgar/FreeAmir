@@ -9,9 +9,12 @@ use App\Models\Company;
 use App\Models\Config;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\Document;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Subject;
+use App\Models\Transaction;
+use App\Models\User;
 use Cookie;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
@@ -528,5 +531,241 @@ class FiscalYearService
 
             $newTrans->save();
         }
+    }
+
+    protected static function validateClosingFiscalYear(Company $company): array
+    {
+        $errors = [];
+
+        $isCloseYear = $company->closed_at !== null;
+        if ($isCloseYear) {
+            $errors[] = __('Cannot close fiscal year because the year is not open.');
+        }
+
+        $draftDocsCount = Document::where('company_id', $company->id)->whereNull('approved_at')->count();
+        if ($draftDocsCount > 0) {
+            $errors[] = __('Cannot close fiscal year with draft documents. Please approve or delete all draft documents before closing the year.');
+        }
+
+        $unbalancedDocsCount = Document::where('company_id', $company->id)->has('transactions')
+            ->withSum('transactions', 'value')->having('transactions_sum_value', '!=', 0)->count();
+
+        if ($unbalancedDocsCount > 0) {
+            $errors[] = __('Cannot close fiscal year with unbalanced documents. Please ensure all documents are balanced before closing the year.');
+        }
+
+        return $errors;
+    }
+
+    protected static function balanceCurrentProfitAndLoss(Company $company, Document $document, User $user): void
+    {
+        $difference = (float) $document->transactions()->sum('value');
+
+        if ($difference !== 0.0) {
+            $subject = Subject::where('company_id', $company->id)
+                ->where('name', __('Current Profit and Loss Summary'))->first();
+
+            if (! $subject) {
+                $subjectService = new SubjectService;
+                $subject = $subjectService->createSubject([
+                    'name' => __('Current Profit and Loss Summary'),
+                    'company_id' => $company->id,
+                ]);
+            }
+
+            $document->transactions()->create([
+                'subject_id' => $subject->id, // For balancing the opening account
+                'value' => -1 * $difference,
+                'user_id' => $user->id,
+            ]);
+        }
+    }
+
+    protected static function createOpeningDocument(Company $company, Document $closeDocument, User $user): void
+    {
+        $documentData = [
+            'number' => 1,
+            'date' => now(),
+            'title' => __('Fiscal year opening Document'),
+            'creator_id' => $user->id,
+            'company_id' => $company->id,
+            'approved_at' => now(),
+            'approver_id' => $user->id,
+        ];
+
+        $sourceSubjectIds = $closeDocument->transactions()->pluck('subject_id')->filter()->unique()->values();
+
+        $sourceSubjectsById = Subject::withoutGlobalScope('App\\Models\\Scopes\\FiscalYearScope')
+            ->where('company_id', $closeDocument->company_id)
+            ->whereIn('id', $sourceSubjectIds)
+            ->get(['id', 'code'])
+            ->keyBy('id');
+
+        $targetSubjectsByCode = Subject::withoutGlobalScope('App\\Models\\Scopes\\FiscalYearScope')
+            ->where('company_id', $company->id)
+            ->whereIn('code', $sourceSubjectsById->pluck('code')->filter()->unique()->values())
+            ->pluck('id', 'code')
+            ->toArray();
+
+        $subjectMapping = [];
+        foreach ($sourceSubjectsById as $oldSubjectId => $sourceSubject) {
+            $code = $sourceSubject->code;
+            if ($code !== null && isset($targetSubjectsByCode[$code])) {
+                $subjectMapping[$oldSubjectId] = $targetSubjectsByCode[$code];
+            }
+        }
+
+        // Reverse the transactions of closing document to create opening document for the new fiscal year
+        $transactions = $closeDocument->transactions()->get()->map(function ($transaction) use ($user, $subjectMapping, $company) {
+            return [
+                'subject_id' => $subjectMapping[$transaction->subject_id] ?? null,
+                'value' => -1 * $transaction->value,
+                'user_id' => $user->id,
+                'desc' => __('Fiscal year opening Document').' '.$company->fiscal_year,
+            ];
+        })->filter(fn ($transaction) => $transaction['subject_id'] !== null)->values()->toArray();
+
+        if (empty($transactions)) {
+            Log::warning('Skipping opening document creation due to missing subject mappings.', [
+                'source_company_id' => $closeDocument->company_id,
+                'target_company_id' => $company->id,
+                'close_document_id' => $closeDocument->id,
+            ]);
+
+            return;
+        }
+
+        DocumentService::createDocument($user, $documentData, $transactions);
+    }
+
+    protected static function createClosingDocument(Company $company, Document $currentPL, Document $accumulatedPL, User $user): Document
+    {
+        $documentData = [
+            'number' => Document::where('company_id', $company->id)->max('number') + 1,
+            'date' => now(),
+            'title' => __('Fiscal year closing Document'),
+            'creator_id' => $user->id,
+            'company_id' => $company->id,
+            'approved_at' => now(),
+            'approver_id' => $user->id,
+        ];
+
+        // Permanent and temporary accounts for creating closing document
+        $transactions = Transaction::query()->whereIn('document_id', [$currentPL->id, $accumulatedPL->id])
+            ->selectRaw('subject_id, SUM(value) as value, ? as user_id', [$user->id]) // `subject_id`, `value` and `user_id` for transactions are needed
+            ->groupBy('subject_id')->get();
+
+        $transactions = $transactions->map(fn ($transaction) => [
+            'value' => -1 * $transaction->value,
+            'subject_id' => $transaction->subject_id,
+            'desc' => __('Fiscal year closing Document').' '.$company->fiscal_year,
+        ])->toArray();
+
+        return DocumentService::createDocument($user, $documentData, $transactions);
+    }
+
+    protected static function newFiscalYear(Company $company, User $user): Company
+    {
+        $newFiscalYearData = collect($company->getAttributes())->except(['id', 'closed_at', 'fiscal_year'])
+            ->merge(['fiscal_year' => $company->fiscal_year + 1])->toArray();
+
+        $sectionsToCopy = ['subjects', 'configs', 'banks', 'customers', 'products', 'services', 'employees']; // Sections to copy to the new fiscal year
+        $newFiscalYear = self::createWithCopiedData($newFiscalYearData, $company->id, $sectionsToCopy);
+        $newFiscalYear->users()->attach($user->id);
+
+        return $newFiscalYear;
+    }
+
+    public static function closeFiscalYear(Company $company, User $user): array
+    {
+        $newFiscalYear = null;
+        $validationErrors = [];
+
+        DB::transaction(function () use ($company, &$newFiscalYear, &$validationErrors, $user) {
+            $validationErrors = self::validateClosingFiscalYear($company);
+
+            if (! empty($validationErrors)) {
+                return;
+            }
+
+            $currentProfitAndLoss = self::currentProfitAndLoss($company, $user);
+            $accumulatedProfitAndLoss = self::accumulatedProfitAndLoss($company, $user);
+
+            // Move any remaining balance in current profit and loss to accumulated profit and loss to balance them
+            self::balanceCurrentProfitAndLoss($company, $currentProfitAndLoss, $user);
+
+            $closeDocument = self::createClosingDocument($company, $currentProfitAndLoss, $accumulatedProfitAndLoss, $user);
+
+            $newFiscalYear = self::newFiscalYear($company, $user);
+
+            self::createOpeningDocument($newFiscalYear, $closeDocument, $user);
+
+            $company->closed_at = now();
+            $company->closed_by = $user->id;
+            $company->save();
+        });
+
+        return [$newFiscalYear, $validationErrors];
+    }
+
+    protected static function accumulatedProfitAndLoss(Company $company, User $user): Document
+    {
+        $documentData = [
+            'number' => Document::where('company_id', $company->id)->max('number') + 1,
+            'date' => now(),
+            'title' => __('Accumulated Profit and Loss'),
+            'creator_id' => $user->id,
+            'company_id' => $company->id,
+            'approved_at' => now(),
+            'approver_id' => $user->id,
+        ];
+
+        // Permanent accounts
+        $transactions = Transaction::query()
+            ->whereHas('document', fn ($document) => $document->where('company_id', $company->id))
+            ->whereHas('subject', fn ($subject) => $subject->where('company_id', $company->id)->where('is_permanent', true))
+            ->selectRaw('subject_id, SUM(value) as value')->groupBy('subject_id')
+            ->havingRaw('SUM(value) != 0') // Remove zero balances
+            ->get()
+            ->map(fn ($transaction) => [
+                'subject_id' => $transaction->subject_id,
+                'value' => $transaction->value,
+                'user_id' => $user->id,
+                'desc' => __('Balance for closing fiscal year'),
+            ])->all();
+
+        return DocumentService::createDocument($user, $documentData, $transactions);
+    }
+
+    protected static function currentProfitAndLoss(Company $company, User $user): Document
+    {
+        $documentData = [
+            'number' => Document::where('company_id', $company->id)->max('number') + 1,
+            'date' => now(),
+            'title' => __('Current Profit and Loss Summary'),
+            'creator_id' => $user->id,
+            'company_id' => $company->id,
+            'approved_at' => now(),
+            'approver_id' => $user->id,
+        ];
+
+        // Temporary income and expense accounts
+        $temporarySubjects = Subject::where('company_id', $company->id)
+            ->where('is_permanent', false)->pluck('id')->toArray();
+
+        $transactions = Transaction::query()
+            ->whereHas('document', fn ($document) => $document->where('company_id', $company->id))
+            ->whereIn('subject_id', $temporarySubjects)
+            ->selectRaw('subject_id, SUM(value) as value')->groupBy('subject_id')
+            ->havingRaw('SUM(value) != 0') // Remove zero balances
+            ->get()
+            ->map(fn ($transaction) => [
+                'subject_id' => $transaction->subject_id,
+                'value' => $transaction->value,
+                'user_id' => $user->id,
+                'desc' => __('Balance for closing fiscal year'),
+            ])->all();
+
+        return DocumentService::createDocument($user, $documentData, $transactions);
     }
 }
