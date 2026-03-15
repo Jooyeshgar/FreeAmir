@@ -29,9 +29,8 @@ class GroupActionService
                 $decision = $this->invoiceService->getChangeStatusDecision($invoice, 'approved');
 
                 if ($decision->hasErrors()) {
-                    $conflicts = collect($decision->conflictsItems)
-                        ->map(fn ($conflict) => $this->formatConflictForMessage($conflict))
-                        ->implode(', ');
+
+                    $conflicts = $decision->toText();
 
                     throw ValidationException::withMessages([
                         'invoice' => [__('Invoice #:number cannot be approved because it has conflicts with: :conflicts', ['number' => $invoice->number, 'conflicts' => $conflicts])],
@@ -333,34 +332,5 @@ class GroupActionService
             $page,
             ['path' => request()->url(), 'query' => request()->query()]
         );
-    }
-
-    /**
-     * Format a conflict model for display in error messages
-     */
-    private function formatConflictForMessage(mixed $conflict): string
-    {
-        if ($conflict instanceof Invoice) {
-            return __('Invoice #:number', ['number' => $conflict->number]);
-        }
-
-        if ($conflict instanceof AncillaryCost) {
-            return __('Ancillary Cost #:id', ['id' => $conflict->id]);
-        }
-
-        if (is_array($conflict) && isset($conflict['id'])) {
-            $type = $conflict['type'] ?? __('Unknown');
-
-            // Convert enum to string if needed
-            if ($type instanceof \BackedEnum) {
-                $type = $type->value;
-            } elseif ($type instanceof \UnitEnum) {
-                $type = $type->name;
-            }
-
-            return ucfirst((string) $type).' #'.$conflict['id'];
-        }
-
-        return __('Unknown conflict');
     }
 }

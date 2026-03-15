@@ -183,7 +183,7 @@
                                     @if ($item->invoice->status->isApproved())
                                         <span
                                             class="badge {{ $item->remaining < 0 ? 'badge-error' : ($item->remaining < $product->quantity_warning ? 'badge-warning' : 'badge-success') }} font-bold">
-                                            {{ formatNumber($item->quantity_at + $item->quantity) }}</span>
+                                            {{ formatNumber($item->quantity_at) }}</span>
                                         </span>
                                     @else
                                         <span class="text-gray-400">-</span>

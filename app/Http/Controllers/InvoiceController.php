@@ -16,6 +16,7 @@ use App\Models\ServiceGroup;
 use App\Services\AncillaryCostService;
 use App\Services\GroupActionService;
 use App\Services\InvoiceService;
+use DB;
 use Illuminate\Http\Request;
 use PDF;
 
@@ -93,7 +94,7 @@ class InvoiceController extends Controller
 
         $statusCounts = $statsBuilder->reorder()
             ->toBase()
-            ->select('status', \Illuminate\Support\Facades\DB::raw('count(*) as total'))
+            ->select('status', DB::raw('count(*) as total'))
             ->groupBy('status')
             ->pluck('total', 'status');
 
@@ -103,9 +104,17 @@ class InvoiceController extends Controller
             return $invoice;
         });
 
-        $invoices->totalAmount = $invoices->sum('amount');
-        $invoices->totalProductsQuantity = $invoices->sum(fn ($invoice) => $invoice->items->where('itemable_type', Product::class)->sum('quantity'));
-        $invoices->totalServicesQuantity = $invoices->sum(fn ($invoice) => $invoice->items->where('itemable_type', Service::class)->sum('quantity'));
+        $totalsBuilder = $statsBuilder->clone();
+        $invoices->totalAmount = $totalsBuilder->toBase()->sum('amount');
+
+        $itemTotals = DB::table('invoice_items')
+            ->whereIn('invoice_id', $statsBuilder->clone()->toBase()->select('id'))
+            ->selectRaw('itemable_type, SUM(quantity) as total_quantity')
+            ->groupBy('itemable_type')
+            ->pluck('total_quantity', 'itemable_type');
+
+        $invoices->totalProductsQuantity = $itemTotals[Product::class] ?? 0;
+        $invoices->totalServicesQuantity = $itemTotals[Service::class] ?? 0;
 
         return view('invoices.index', compact('invoices', 'statusCounts', 'service_buy'));
     }
