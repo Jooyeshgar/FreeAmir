@@ -421,6 +421,7 @@ class InvoiceService
             'number' => $invoice->number,
             'subtraction' => $invoice->subtraction ?? 0,
             'invoice_id' => $invoice->id ?? null,
+            'returned_invoice_id' => $invoice->returned_invoice_id ?? null,
             'description' => $invoice->description ?? null,
             'title' => $invoice->title,
         ];

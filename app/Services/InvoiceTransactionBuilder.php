@@ -11,6 +11,9 @@ use App\Models\Service;
 /**
  * Helper class to build document transactions from invoice data.
  * Follows separation of concerns by isolating transaction generation logic.
+ *
+ * Each invoice type (BUY, SELL, RETURN_BUY, RETURN_SELL) has its own
+ * dedicated item-transaction builder so accounting rules are clear and isolated.
  */
 class InvoiceTransactionBuilder
 {
@@ -63,7 +66,7 @@ class InvoiceTransactionBuilder
     /**
      * Build all transactions for the invoice.
      *
-     * @return array ['transactions' => array, 'totalVat' => float, 'totalDiscount' => float, 'totalAmount' => float]
+     * @return array ['transactions' => array, 'totalVat' => float, 'totalDiscount' => float, 'totalAmount' => float, 'subtractions' => float]
      */
     public function build(): array
     {
@@ -71,20 +74,19 @@ class InvoiceTransactionBuilder
         $this->totalDiscount = 0;
         $this->totalVat = 0;
         $this->totalAmount = 0;
+        $this->subtractions = floatval($this->invoiceData['subtraction'] ?? 0);
 
-        $this->buildItemsTransactions();
+        match ($this->invoiceType) {
+            InvoiceType::SELL => $this->buildSellItemsTransactions(),
+            InvoiceType::BUY => $this->buildBuyItemsTransactions(),
+            InvoiceType::RETURN_SELL => $this->buildReturnSellItemsTransactions(),
+            InvoiceType::RETURN_BUY => $this->buildReturnBuyItemsTransactions(),
+        };
 
         $this->buildDiscountTransaction();
-
         $this->buildVatTransaction();
-
         $this->buildSubtractionTransaction();
-
         $this->buildCustomerTransaction();
-
-        $this->buildCogsTransaction();
-
-        $this->buildCogsServiceTransaction();
 
         return [
             'transactions' => $this->transactions,
@@ -95,149 +97,309 @@ class InvoiceTransactionBuilder
         ];
     }
 
-    private function buildCogsServiceTransaction(): void
+    // ──────────────────────────────────────────────
+    //  Per-item helpers
+    // ──────────────────────────────────────────────
+
+    /**
+     * Resolve product or service model from an item array.
+     *
+     * @return array{product: Product|null, service: Service|null}|null null when type is missing/unknown
+     */
+    private function resolveItemable(array $item): ?array
     {
-        $isServiceBuy = $this->invoiceType->isBuy() && collect($this->items)->where('itemable_type', 'product')->isEmpty();
+        $type = $item['itemable_type'] ?? null;
 
-        if (! $isServiceBuy) {
-            return;
+        if (! $type) {
+            return null;
         }
 
-        foreach ($this->items as $item) {
-            $type = $item['itemable_type'] ?? null;
+        $product = $type === 'product' ? Product::findOrFail($item['itemable_id']) : null;
+        $service = $type === 'service' ? Service::findOrFail($item['itemable_id']) : null;
 
-            if ($type !== 'service') {
-                continue;
-            }
-
-            $service = Service::find($item['itemable_id']) ?? null;
-
-            $this->transactions[] = [
-                'subject_id' => $service->cogs_subject_id,
-                'desc' => __('Cost of Services').' '.__('Invoice').' '.$this->invoiceType->label().' '.__(' with number ').' '.formatNumber($this->invoiceData['number']),
-                'value' => $this->invoiceType === InvoiceType::RETURN_BUY ? $item['unit'] : -$item['unit'],
-            ];
-        }
-    }
-
-    private function buildCogsTransaction(): void
-    {
-        if ($this->invoiceType->isBuy()) {
-            return;
+        if (! $product && ! $service) {
+            return null;
         }
 
-        foreach ($this->items as $item) {
-            $type = $item['itemable_type'] ?? null;
-
-            if ($type !== 'product') {
-                continue;
-            }
-
-            $product = Product::find($item['itemable_id']) ?? null;
-            $averageCost = $product->average_cost ?? 0;
-
-            $returned_invoice_id = $this->invoiceData['returned_invoice_id'] ?? null;
-            $returnedInvoiceItem = $returned_invoice_id ? InvoiceItem::where('invoice_id', $returned_invoice_id)
-                ->where('itemable_type', Product::class)->where('itemable_id', $product->id)->first() : null;
-
-            // Use the COG after value from the returned invoice item if available, otherwise zero
-            $returnedItemCogsCost = $returnedInvoiceItem?->cog_after ?? 0;
-
-            $quantity = $item['quantity'] ?? 1;
-            $this->transactions[] = [
-                'subject_id' => $product->cogs_subject_id,
-                'desc' => __('Cost of Goods Sold').' '.__('Invoice').' '.$this->invoiceType->label().' '.__(' with number ').' '.formatNumber($this->invoiceData['number']),
-                'value' => $this->invoiceType === InvoiceType::RETURN_SELL ? $returnedItemCogsCost * $quantity : -$averageCost * $quantity,
-            ];
-        }
+        return compact('product', 'service');
     }
 
     /**
-     * Create a transaction for each invoice item.
+     * Extract common numeric values from an item and accumulate totals.
+     *
+     * @return array{quantity: float, unitPrice: float, itemDiscount: float, itemVat: float, itemAmount: float}
      */
-    private function buildItemsTransactions(): void
+    private function extractItemValues(array $item): array
+    {
+        $quantity = $item['quantity'] ?? 1;
+        $unitPrice = $item['unit'];
+        $itemDiscount = $item['unit_discount'] ?? 0;
+        $vatIsValue = $item['vat_is_value'] ?? false;
+        $itemVat = $vatIsValue
+            ? floatval($item['vat'] ?? 0)
+            : (($item['vat'] ?? 0) / 100) * ($quantity * $unitPrice - $itemDiscount);
+        $itemAmount = $quantity * $unitPrice;
+
+        $this->totalDiscount += $itemDiscount;
+        $this->totalVat += $itemVat;
+        $this->totalAmount += $itemAmount - $itemDiscount;
+
+        return compact('quantity', 'unitPrice', 'itemDiscount', 'itemVat', 'itemAmount');
+    }
+
+    /**
+     * Build a standard description for a line item transaction.
+     */
+    private function itemDescription(float $quantity): string
+    {
+        return __('Invoice').' '.$this->invoiceType->label()
+            .' '.__(' with number ').' '.formatNumber($this->invoiceData['number'])
+            .' ('.formatNumber($quantity).' '.__('Number').')';
+    }
+
+    /**
+     * Build a description for COGS or cost-of-services transactions.
+     */
+    private function cogsDescription(string $label): string
+    {
+        return $label.' '.__('Invoice').' '.$this->invoiceType->label()
+            .' '.__(' with number ').' '.formatNumber($this->invoiceData['number']);
+    }
+
+    /**
+     * Look up the cost-of-goods-after value from the original (returned) invoice item.
+     *
+     * For return invoices the cost must come from the original sale/purchase.
+     * Falls back to the product's current average_cost when the original item cannot be found.
+     */
+    private function getReturnedItemCost(Product $product): float
+    {
+        $returnedInvoiceId = $this->invoiceData['returned_invoice_id'] ?? null;
+
+        if ($returnedInvoiceId) {
+            $returnedInvoiceItem = InvoiceItem::where('invoice_id', $returnedInvoiceId)
+                ->where('itemable_type', Product::class)
+                ->where('itemable_id', $product->id)
+                ->first();
+
+            if ($returnedInvoiceItem && $returnedInvoiceItem->cog_after > 0) {
+                return $returnedInvoiceItem->cog_after;
+            }
+        }
+
+        // Fall back to the product's current average cost when no reference invoice is found
+        return $product->average_cost ?? 0;
+    }
+
+    // ──────────────────────────────────────────────
+    //  SELL
+    // ──────────────────────────────────────────────
+
+    /**
+     * Sell:
+     *   Sales revenue  ← credit (positive)
+     *   Inventory      ← credit (positive – decrease in stock)
+     *   Cost of goods  ← debit  (negative)
+     */
+    private function buildSellItemsTransactions(): void
     {
         foreach ($this->items as $item) {
-
-            $type = $item['itemable_type'] ?? null;
-            if (! $type) {
+            $resolved = $this->resolveItemable($item);
+            if (! $resolved) {
                 continue;
             }
 
-            $product = $type === 'product' ? Product::findOrFail($item['itemable_id']) : null;
-            $service = $type === 'service' ? Service::findOrFail($item['itemable_id']) : null;
+            ['product' => $product, 'service' => $service] = $resolved;
+            $vals = $this->extractItemValues($item);
+            $desc = $this->itemDescription($vals['quantity']);
 
-            if (! $product && ! $service) {
-                continue;
-            }
+            // Sales revenue (credit)
+            $subjectId = $product ? $product->income_subject_id : $service->subject_id;
+            $this->transactions[] = [
+                'subject_id' => $subjectId,
+                'desc' => $desc,
+                'value' => $vals['itemAmount'],
+            ];
 
-            $quantity = $item['quantity'] ?? 1;
-            $unitPrice = $item['unit'];
-            $itemDiscount = $item['unit_discount'] ?? 0;
-            $vatIsValue = $item['vat_is_value'] ?? false;
-            $itemVat = $vatIsValue ? floatval($item['vat'] ?? 0) : (($item['vat'] ?? 0) / 100) * ($quantity * $unitPrice - $itemDiscount);
-            $itemAmount = $quantity * $unitPrice;
+            // Inventory and cost of goods (products only)
+            if ($product) {
+                $averageCost = $product->average_cost ?? 0;
 
-            $this->totalDiscount += $itemDiscount;
-            $this->totalVat += $itemVat;
-            $this->totalAmount += $itemAmount - $itemDiscount;
-
-            $desc = __('Invoice').' '.$this->invoiceType->label().' '.__(' with number ').' '.formatNumber($this->invoiceData['number']).' ('.formatNumber($quantity).' '.__('Number').')';
-
-            if ($this->invoiceType === InvoiceType::SELL) {
-                $subjectId = $product ? $product->income_subject_id : $service->subject_id;
-
-                $this->transactions[] = [
-                    'subject_id' => $subjectId,
-                    'desc' => $desc,
-                    'value' => $itemAmount,
-                ];
-            }
-
-            if ($this->invoiceType === InvoiceType::RETURN_SELL) {
-                $subjectId = $product ? $product->sales_returns_subject_id : $service->subject_id;
-
-                $this->transactions[] = [
-                    'subject_id' => $subjectId,
-                    'desc' => $desc,
-                    'value' => -$itemAmount,
-                ];
-
-                if ($product) {
-                    $returned_invoice_id = $this->invoiceData['returned_invoice_id'] ?? null;
-                    $returnedInvoiceItem = $returned_invoice_id ? InvoiceItem::where('invoice_id', $returned_invoice_id)
-                        ->where('itemable_type', Product::class)->where('itemable_id', $product->id)->first() : null;
-
-                    // Use the COG after value from the returned invoice item if available, otherwise zero
-                    $returnedItemCogsCost = $returnedInvoiceItem?->cog_after ?? 0;
-
-                    $this->transactions[] = [
-                        'subject_id' => $product->inventory_subject_id,
-                        'desc' => $desc,
-                        'value' => -$returnedItemCogsCost * $quantity,
-                    ];
-                }
-            } elseif ($this->invoiceType === InvoiceType::RETURN_BUY) {
-                $subjectId = $product ? $product->inventory_subject_id : $service->subject_id;
-
-                $this->transactions[] = [
-                    'subject_id' => $subjectId,
-                    'desc' => $desc,
-                    'value' => $unitPrice * $quantity,
-                ];
-            }
-
-            if (! $this->invoiceType->isReturn() && $product) {
-                $inventoryValue = $this->invoiceType === InvoiceType::SELL ? $product->average_cost * $quantity : -($unitPrice * $quantity);
-
+                // Inventory ← credit (decrease)
                 $this->transactions[] = [
                     'subject_id' => $product->inventory_subject_id,
                     'desc' => $desc,
-                    'value' => $inventoryValue,
+                    'value' => $averageCost * $vals['quantity'],
+                ];
+
+                // Cost of goods sold ← debit
+                $this->transactions[] = [
+                    'subject_id' => $product->cogs_subject_id,
+                    'desc' => $this->cogsDescription(__('Cost of Goods Sold')),
+                    'value' => -$averageCost * $vals['quantity'],
                 ];
             }
         }
     }
+
+    // ──────────────────────────────────────────────
+    //  BUY
+    // ──────────────────────────────────────────────
+
+    /**
+     * Buy:
+     *   Inventory / service expense ← debit (negative)
+     *   Cost of services (only for pure service invoices with no products)
+     */
+    private function buildBuyItemsTransactions(): void
+    {
+        $hasProducts = collect($this->items)->contains(fn ($i) => ($i['itemable_type'] ?? null) === 'product');
+
+        foreach ($this->items as $item) {
+            $resolved = $this->resolveItemable($item);
+            if (! $resolved) {
+                continue;
+            }
+
+            ['product' => $product, 'service' => $service] = $resolved;
+            $vals = $this->extractItemValues($item);
+            $desc = $this->itemDescription($vals['quantity']);
+
+            if ($product) {
+                // Inventory ← debit
+                $this->transactions[] = [
+                    'subject_id' => $product->inventory_subject_id,
+                    'desc' => $desc,
+                    'value' => -($vals['unitPrice'] * $vals['quantity']),
+                ];
+            }
+
+            if ($service) {
+                // Service expense ← debit
+                $this->transactions[] = [
+                    'subject_id' => $service->subject_id,
+                    'desc' => $desc,
+                    'value' => -($vals['unitPrice'] * $vals['quantity']),
+                ];
+
+                // Cost of services (pure service invoice only)
+                if (! $hasProducts) {
+                    $this->transactions[] = [
+                        'subject_id' => $service->cogs_subject_id,
+                        'desc' => $this->cogsDescription(__('Cost of Services')),
+                        'value' => -($vals['unitPrice'] * $vals['quantity']),
+                    ];
+                }
+            }
+        }
+    }
+
+    // ──────────────────────────────────────────────
+    //  RETURN SELL
+    // ──────────────────────────────────────────────
+
+    /**
+     * Return sell:
+     *   Sales returns and allowances ← debit  (negative)
+     *   Inventory                    ← debit  (negative – increase in stock)
+     *   Cost of goods sold           ← credit (positive)
+     */
+    private function buildReturnSellItemsTransactions(): void
+    {
+        foreach ($this->items as $item) {
+            $resolved = $this->resolveItemable($item);
+            if (! $resolved) {
+                continue;
+            }
+
+            ['product' => $product, 'service' => $service] = $resolved;
+            $vals = $this->extractItemValues($item);
+            $desc = $this->itemDescription($vals['quantity']);
+
+            // Sales returns (debit)
+            $subjectId = $product ? $product->sales_returns_subject_id : $service->subject_id;
+            $this->transactions[] = [
+                'subject_id' => $subjectId,
+                'desc' => $desc,
+                'value' => -$vals['itemAmount'],
+            ];
+
+            // Inventory and cost of goods (products only)
+            if ($product) {
+                $returnedCost = $this->getReturnedItemCost($product);
+
+                // Inventory ← debit (increase)
+                $this->transactions[] = [
+                    'subject_id' => $product->inventory_subject_id,
+                    'desc' => $desc,
+                    'value' => -$returnedCost * $vals['quantity'],
+                ];
+
+                // Cost of goods sold ← credit (decrease)
+                $this->transactions[] = [
+                    'subject_id' => $product->cogs_subject_id,
+                    'desc' => $this->cogsDescription(__('Cost of Goods Sold')),
+                    'value' => $returnedCost * $vals['quantity'],
+                ];
+            }
+        }
+    }
+
+    // ──────────────────────────────────────────────
+    //  RETURN BUY
+    // ──────────────────────────────────────────────
+
+    /**
+     * Return buy:
+     *   Inventory    ← credit (positive – decrease in stock)
+     *   Cost of services (only for pure service invoices with no products)
+     */
+    private function buildReturnBuyItemsTransactions(): void
+    {
+        $hasProducts = collect($this->items)->contains(fn ($i) => ($i['itemable_type'] ?? null) === 'product');
+
+        foreach ($this->items as $item) {
+            $resolved = $this->resolveItemable($item);
+            if (! $resolved) {
+                continue;
+            }
+
+            ['product' => $product, 'service' => $service] = $resolved;
+            $vals = $this->extractItemValues($item);
+            $desc = $this->itemDescription($vals['quantity']);
+
+            if ($product) {
+                // Inventory ← credit (decrease)
+                $this->transactions[] = [
+                    'subject_id' => $product->inventory_subject_id,
+                    'desc' => $desc,
+                    'value' => $vals['unitPrice'] * $vals['quantity'],
+                ];
+            }
+
+            if ($service) {
+                // Service ← credit
+                $this->transactions[] = [
+                    'subject_id' => $service->subject_id,
+                    'desc' => $desc,
+                    'value' => $vals['unitPrice'] * $vals['quantity'],
+                ];
+
+                // Cost of services (pure service invoice only)
+                if (! $hasProducts) {
+                    $this->transactions[] = [
+                        'subject_id' => $service->cogs_subject_id,
+                        'desc' => $this->cogsDescription(__('Cost of Services')),
+                        'value' => $vals['unitPrice'] * $vals['quantity'],
+                    ];
+                }
+            }
+        }
+    }
+
+    // ──────────────────────────────────────────────
+    //  Shared transaction builders
+    // ──────────────────────────────────────────────
 
     /**
      * Create transaction for total discount if not zero.
@@ -248,12 +410,15 @@ class InvoiceTransactionBuilder
             return;
         }
 
-        $discountSubjectId = $this->invoiceType->isSell() ? config('amir.sell_discount') : config('amir.buy_discount');
+        $discountSubjectId = $this->invoiceType->isSell()
+            ? config('amir.sell_discount')
+            : config('amir.buy_discount');
 
         $value = match ($this->invoiceType) {
             InvoiceType::SELL => -$this->totalDiscount,
+            InvoiceType::BUY => $this->totalDiscount,
             InvoiceType::RETURN_SELL => $this->totalDiscount,
-            default => $this->invoiceType->isReturn() ? -$this->totalDiscount : $this->totalDiscount,
+            InvoiceType::RETURN_BUY => -$this->totalDiscount,
         };
 
         $this->transactions[] = [
@@ -272,42 +437,19 @@ class InvoiceTransactionBuilder
             return;
         }
 
-        $vatSubjectId = $this->invoiceType->isSell() ? config('amir.sell_vat') : config('amir.buy_vat');
+        $vatSubjectId = $this->invoiceType->isSell()
+            ? config('amir.sell_vat')
+            : config('amir.buy_vat');
 
         $value = match ($this->invoiceType) {
             InvoiceType::SELL => $this->totalVat,
+            InvoiceType::BUY => -$this->totalVat,
             InvoiceType::RETURN_SELL => -$this->totalVat,
-            default => $this->invoiceType->isReturn() ? $this->totalVat : -$this->totalVat,
+            InvoiceType::RETURN_BUY => $this->totalVat,
         };
 
         $this->transactions[] = [
             'subject_id' => $vatSubjectId,
-            'desc' => __('Invoice').' '.$this->invoiceType->label().' '.__(' with number ').' '.formatNumber($this->invoiceData['number']),
-            'value' => $value,
-        ];
-    }
-
-    /**
-     * Create transaction for customer with total amount to pay.
-     */
-    private function buildCustomerTransaction(): void
-    {
-        $customerId = $this->invoiceData['customer_id'];
-
-        $cashPayment = floatval($this->invoiceData['cash_payment'] ?? 0);
-
-        $customerTotal = $this->totalAmount - $this->subtractions - $cashPayment + $this->totalVat;
-
-        $subject_id = Customer::find($customerId)->subject->id;
-
-        $value = match ($this->invoiceType) {
-            InvoiceType::SELL => -$customerTotal,
-            InvoiceType::RETURN_SELL => $customerTotal,
-            default => $this->invoiceType->isReturn() ? -$customerTotal : $customerTotal,
-        };
-
-        $this->transactions[] = [
-            'subject_id' => $subject_id,
             'desc' => __('Invoice').' '.$this->invoiceType->label().' '.__(' with number ').' '.formatNumber($this->invoiceData['number']),
             'value' => $value,
         ];
@@ -322,18 +464,45 @@ class InvoiceTransactionBuilder
             return;
         }
 
-        $this->subtractions = floatval($this->invoiceData['subtraction'] ?? 0);
-        $subtractionSubjectId = $this->invoiceType->isSell() ? config('amir.sell_discount') : config('amir.buy_discount');
+        $subtractionSubjectId = $this->invoiceType->isSell()
+            ? config('amir.sell_discount')
+            : config('amir.buy_discount');
 
         $value = match ($this->invoiceType) {
             InvoiceType::SELL => -$this->subtractions,
+            InvoiceType::BUY => $this->subtractions,
             InvoiceType::RETURN_SELL => $this->subtractions,
-            default => $this->invoiceType->isReturn() ? -$this->subtractions : $this->subtractions,
+            InvoiceType::RETURN_BUY => -$this->subtractions,
         };
 
         $this->transactions[] = [
             'subject_id' => $subtractionSubjectId,
             'desc' => $this->invoiceType->label().' '.__('Invoice subtraction with number').' '.formatNumber($this->invoiceData['number']),
+            'value' => $value,
+        ];
+    }
+
+    /**
+     * Create transaction for customer with total amount to pay.
+     */
+    private function buildCustomerTransaction(): void
+    {
+        $customerId = $this->invoiceData['customer_id'];
+        $cashPayment = floatval($this->invoiceData['cash_payment'] ?? 0);
+        $customerTotal = $this->totalAmount - $this->subtractions - $cashPayment + $this->totalVat;
+
+        $subjectId = Customer::find($customerId)->subject->id;
+
+        $value = match ($this->invoiceType) {
+            InvoiceType::SELL => -$customerTotal,
+            InvoiceType::BUY => $customerTotal,
+            InvoiceType::RETURN_SELL => $customerTotal,
+            InvoiceType::RETURN_BUY => -$customerTotal,
+        };
+
+        $this->transactions[] = [
+            'subject_id' => $subjectId,
+            'desc' => __('Invoice').' '.$this->invoiceType->label().' '.__(' with number ').' '.formatNumber($this->invoiceData['number']),
             'value' => $value,
         ];
     }

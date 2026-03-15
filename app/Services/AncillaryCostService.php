@@ -98,6 +98,7 @@ class AncillaryCostService
                 'type' => AncillaryCostType::from($data['type']),
                 'amount' => $data['amount'],
                 'vat' => $data['vatPrice'] ?? 0,
+                'status' => InvoiceStatus::UNAPPROVED,
             ]);
 
             self::syncAncillaryCostItems($ancillaryCost, $data['ancillaryCosts'] ?? []);
