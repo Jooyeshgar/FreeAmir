@@ -7,8 +7,7 @@ use Illuminate\Support\Facades\Lang;
 enum FiscalYearSection: string
 {
     case CONFIGS = 'configs';
-    case BANKS = 'banks';
-    case BANK_ACCOUNTS = 'bank_accounts';
+    case BANKS = 'banks'; // Represents banks + bank_accounts
     case CUSTOMERS = 'customers'; // Represents customer_groups + customers + comments
     case PRODUCTS = 'products'; // Represents product_groups + products
     case SERVICES = 'services'; // Represents service_groups + services
