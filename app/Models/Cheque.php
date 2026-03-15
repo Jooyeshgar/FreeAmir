@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Cheque extends Model
 {
     protected $fillable = [
+        'company_id',
         'amount',
         'wrt_date',
         'due_date',
@@ -25,7 +26,7 @@ class Cheque extends Model
 
     public static function booted(): void
     {
-        static::addGlobalScope(new FiscalYearScope());
+        static::addGlobalScope(new FiscalYearScope);
     }
 
     public function customer()
