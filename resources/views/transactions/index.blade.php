@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-app-layout title="{{ $currentSubject->formattedCode() }}">
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
             {{ __('Transactions') }}
@@ -14,8 +14,8 @@
                 <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h3 class="text-lg font-medium text-blue-800">{{ __('Filtered by Subject') }}</h3>
-                            <p class="text-blue-600">{{ $currentSubject->formattedCode() }} - {{ $currentSubject->name }}</p>
+                            <h3 class="text-lg font-medium text-blue-800">{{ __('Filtered by Subject') }} - {{ $currentSubject->formattedCode() }} </h3>
+                            <p class="text-blue-600">{{ $currentSubject->fullname() }}</p>
                         </div>
                         <a href="{{ route('transactions.index') }}" class="btn btn-outline btn-sm">
                             {{ __('Clear Filter') }}

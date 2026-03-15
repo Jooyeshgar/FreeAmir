@@ -363,11 +363,39 @@ class AncillaryCostService
 
     public static function getChangeStatusValidation(AncillaryCost $ancillaryCost): array
     {
+        // When unapproving, skip the sync check — the user must be able to unapprove
+        // so they can then edit and re-sync the items.
+        if ($ancillaryCost->status->isApproved()) {
+            return self::getUnapproveValidation($ancillaryCost);
+        }
+
+        return self::getApproveValidation($ancillaryCost);
+    }
+
+    private static function getApproveValidation(AncillaryCost $ancillaryCost): array
+    {
         try {
             $productIds = self::getProductIdsFromAncillaryCost($ancillaryCost);
 
             self::validateAncillaryCostInvoiceApproval($ancillaryCost);
             self::validateAncillaryCostItemsSyncedWithInvoice($ancillaryCost, $productIds);
+            self::validateRelatedAncillaryCostStatus($ancillaryCost, $productIds);
+            self::validateNoApprovedInvoicesAfterAncillaryCostWithSameProducts($ancillaryCost, $productIds);
+
+            return ['allowed' => true, 'reason' => null];
+        } catch (\Throwable $e) {
+            return ['allowed' => false, 'reason' => $e->getMessage()];
+        }
+    }
+
+    private static function getUnapproveValidation(AncillaryCost $ancillaryCost): array
+    {
+        try {
+            $productIds = self::getProductIdsFromAncillaryCost($ancillaryCost);
+
+            // Skip sync check on unapprove — items may be out of sync with the invoice
+            // (e.g. invoice was edited after approval), and that is exactly the reason
+            // the user needs to unapprove: so they can edit and re-sync.
             self::validateRelatedAncillaryCostStatus($ancillaryCost, $productIds);
             self::validateNoApprovedInvoicesAfterAncillaryCostWithSameProducts($ancillaryCost, $productIds);
 

@@ -82,7 +82,7 @@ class ProductController extends Controller
 
     public function show(Product $product)
     {
-        $product->load('productgroup', 'productWebsites');
+        $product->load('productGroup', 'productWebsites');
 
         $product->lastCOG = $this->productService->lastApprovedBuyInvoiceItemCOG($product) ?? 0;
         $product->salesProfit = $this->productService->totalSell($product) + $this->productService->totalCOGS($product);

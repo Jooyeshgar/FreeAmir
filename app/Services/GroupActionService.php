@@ -34,7 +34,7 @@ class GroupActionService
                         ->implode(', ');
 
                     throw ValidationException::withMessages([
-                        'invoice' => [__('Invoice #').$invoice->number.' '.__('cannot be approved because it has conflicts with').': '.$conflicts],
+                        'invoice' => [__('Invoice #:number cannot be approved because it has conflicts with: :conflicts', ['number' => $invoice->number, 'conflicts' => $conflicts])],
                     ]);
                 }
 
@@ -46,7 +46,7 @@ class GroupActionService
                     if (! $validation['allowed']) {
                         $reason = $validation['reason'] ?? __('unknown reason');
                         throw ValidationException::withMessages([
-                            'ancillary_cost' => [__('Invoice #').$invoice->number.': '.__('Ancillary Cost').' #'.$ancillaryCost->id.' '.__('cannot be approved due to').': '.$reason],
+                            'ancillary_cost' => [__('Invoice #:invoice_number: Ancillary Cost #:id cannot be approved due to: :reason', ['invoice_number' => $invoice->number, 'id' => $ancillaryCost->id, 'reason' => $reason])],
                         ]);
                     }
 
@@ -78,7 +78,7 @@ class GroupActionService
                         if (! $validation['allowed']) {
                             $reason = $validation['reason'] ?? __('unknown reason');
                             throw ValidationException::withMessages([
-                                'ancillary_cost' => [__('Cannot unapprove Ancillary Cost #').$ancillaryCost->id.' '.__('of Invoice #').$conflictInvoice->number.' '.__('because of').': '.$reason],
+                                'ancillary_cost' => [__('Cannot unapprove Ancillary Cost #:id of Invoice #:number because of: :reason', ['id' => $ancillaryCost->id, 'number' => $conflictInvoice->number, 'reason' => $reason])],
                             ]);
                         }
 
@@ -341,11 +341,11 @@ class GroupActionService
     private function formatConflictForMessage(mixed $conflict): string
     {
         if ($conflict instanceof Invoice) {
-            return __('Invoice #').$conflict->number;
+            return __('Invoice #:number', ['number' => $conflict->number]);
         }
 
         if ($conflict instanceof AncillaryCost) {
-            return __('Ancillary Cost').' #'.$conflict->id;
+            return __('Ancillary Cost #:id', ['id' => $conflict->id]);
         }
 
         if (is_array($conflict) && isset($conflict['id'])) {

@@ -35,10 +35,7 @@
                         ],
                         $document->documentable instanceof \App\Models\AncillaryCost => [
                             'name' => 'invoices.ancillary-costs.show',
-                            'params' => [
-                                $document->documentable->invoice_id ?? $document->documentable->invoice?->id,
-                                $document->documentable,
-                            ],
+                            'params' => [$document->documentable->invoice_id ?? $document->documentable->invoice?->id, $document->documentable],
                         ],
                         default => null,
                     };
@@ -48,14 +45,13 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m2 8H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2z" />
                         </svg>
-                        <a href="{{ route($documentableRoute['name'], $documentableRoute['params']) }}" class="link link-hover"> 
+                        <a href="{{ route($documentableRoute['name'], $documentableRoute['params']) }}" class="link link-hover">
                             {{ __(class_basename($document->documentable_type)) }}
                         </a>
                     </span>
                 @endif
                 <span class="badge badge-lg {{ $document->approved_at ? 'badge-outline' : 'badge-warning' }} gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     {{ $document->approved_at ? __('Approved') : __('unapproved') }}
@@ -114,7 +110,8 @@
                                 <tr class="hover">
                                     <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
                                     <td class="px-4 py-3">
-                                        <a href="{{ route('transactions.index', ['subject_id' => $transaction->subject_id]) }}" class="link link-hover">
+                                        <a href="{{ route('transactions.index', ['subject_id' => $transaction->subject_id]) }}" class="link link-hover"
+                                            title="{{ $transaction->subject?->fullname() }}">
                                             {{ $transaction->subject?->formattedCode() ?? '—' }}
                                         </a>
                                     </td>
@@ -326,7 +323,8 @@
                                 {{ __('Edit') }}
                             </button>
                         </span>
-                        <span class="tooltip" data-tip="{{ __('Cannot change status of this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
+                        <span class="tooltip"
+                            data-tip="{{ __('Cannot change status of this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
                             <button class="btn btn-primary gap-2 btn-disabled cursor-not-allowed" disabled>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
