@@ -29,12 +29,11 @@ class GroupActionService
                 $decision = $this->invoiceService->getChangeStatusDecision($invoice, 'approved');
 
                 if ($decision->hasErrors()) {
-                    $conflicts = collect($decision->conflictsItems)
-                        ->map(fn ($conflict) => $this->formatConflictForMessage($conflict))
-                        ->implode(', ');
+
+                    $conflicts = $decision->toText();
 
                     throw ValidationException::withMessages([
-                        'invoice' => [__('Invoice #').$invoice->number.' '.__('cannot be approved because it has conflicts with').': '.$conflicts],
+                        'invoice' => [__('Invoice #:number cannot be approved because it has conflicts with: :conflicts', ['number' => $invoice->number, 'conflicts' => $conflicts])],
                     ]);
                 }
 
@@ -46,7 +45,7 @@ class GroupActionService
                     if (! $validation['allowed']) {
                         $reason = $validation['reason'] ?? __('unknown reason');
                         throw ValidationException::withMessages([
-                            'ancillary_cost' => [__('Invoice #').$invoice->number.': '.__('Ancillary Cost').' #'.$ancillaryCost->id.' '.__('cannot be approved due to').': '.$reason],
+                            'ancillary_cost' => [__('Invoice #:invoice_number: Ancillary Cost #:id cannot be approved due to: :reason', ['invoice_number' => $invoice->number, 'id' => $ancillaryCost->id, 'reason' => $reason])],
                         ]);
                     }
 
@@ -78,7 +77,7 @@ class GroupActionService
                         if (! $validation['allowed']) {
                             $reason = $validation['reason'] ?? __('unknown reason');
                             throw ValidationException::withMessages([
-                                'ancillary_cost' => [__('Cannot unapprove Ancillary Cost #').$ancillaryCost->id.' '.__('of Invoice #').$conflictInvoice->number.' '.__('because of').': '.$reason],
+                                'ancillary_cost' => [__('Cannot unapprove Ancillary Cost #:id of Invoice #:number because of: :reason', ['id' => $ancillaryCost->id, 'number' => $conflictInvoice->number, 'reason' => $reason])],
                             ]);
                         }
 
@@ -333,34 +332,5 @@ class GroupActionService
             $page,
             ['path' => request()->url(), 'query' => request()->query()]
         );
-    }
-
-    /**
-     * Format a conflict model for display in error messages
-     */
-    private function formatConflictForMessage(mixed $conflict): string
-    {
-        if ($conflict instanceof Invoice) {
-            return __('Invoice #').$conflict->number;
-        }
-
-        if ($conflict instanceof AncillaryCost) {
-            return __('Ancillary Cost').' #'.$conflict->id;
-        }
-
-        if (is_array($conflict) && isset($conflict['id'])) {
-            $type = $conflict['type'] ?? __('Unknown');
-
-            // Convert enum to string if needed
-            if ($type instanceof \BackedEnum) {
-                $type = $type->value;
-            } elseif ($type instanceof \UnitEnum) {
-                $type = $type->name;
-            }
-
-            return ucfirst((string) $type).' #'.$conflict['id'];
-        }
-
-        return __('Unknown conflict');
     }
 }

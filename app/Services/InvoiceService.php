@@ -247,6 +247,35 @@ class InvoiceService
         return $invoiceData;
     }
 
+    /**
+     * Persist invoice items for the given invoice, creating or updating each row via updateOrCreate.
+     *
+     * Called **after** ProductService::addProductsQuantities / subProductsQuantities has already
+     * adjusted the product's stock level, so `$product->quantity` reflects the post-invoice state.
+     * To recover the pre-invoice stock level (quantity_at) we reverse the effect:
+     *
+     *   - BUY / RETURN_SELL (stock was increased by this invoice):
+     *       quantity_at = product.quantity − item.quantity
+     *
+     *   - SELL / RETURN_BUY (stock was decreased by this invoice):
+     *       quantity_at = product.quantity + item.quantity
+     *
+     * After syncing, items that are no longer present in the new list are deleted,
+     * and CostOfGoodsService::refreshProductCOGAfterItemsDeletion is invoked so that
+     * COG snapshots on surviving items remain consistent.
+     *
+     * @param  Invoice  $invoice  The invoice whose items should be synced.
+     * @param  array  $items  Raw item data from the form / service layer.
+     *                        Each element must contain at minimum:
+     *                        - itemable_type ('product' | 'service')
+     *                        - itemable_id
+     *                        - quantity
+     *                        - unit  (unit price)
+     *                        - unit_discount  (optional, defaults to 0)
+     *                        - vat            (optional, defaults to 0)
+     *                        - vat_is_value   (optional bool – if true, vat is an absolute amount)
+     *                        - description    (optional)
+     */
     private static function syncInvoiceItems(Invoice $invoice, array $items): void
     {
         $itemId = [];
@@ -275,11 +304,21 @@ class InvoiceService
             $itemableType = $type === 'product' ? Product::class : Service::class;
             $itemableId = $item['itemable_id'];
 
+            $quantityAt = 0;
+            if ($product) {
+                $invoiceType = $invoice->invoice_type;
+                if (in_array($invoiceType, [InvoiceType::BUY, InvoiceType::RETURN_SELL], true)) {
+                    $quantityAt = max(0, $product->quantity - $quantity);
+                } elseif (in_array($invoiceType, [InvoiceType::SELL, InvoiceType::RETURN_BUY], true)) {
+                    $quantityAt = $product->quantity + $quantity;
+                }
+            }
+
             $invoiceItemData = [
                 'invoice_id' => $invoice->id,
                 'quantity' => $quantity,
                 'cog_after' => $product?->average_cost ?? $unitPrice,                                            // must be updated after creating invoice
-                'quantity_at' => $product ? ($product->quantity > $quantity ? $product->quantity - $quantity : 0) : 0,         // quantity before this invoice
+                'quantity_at' => $quantityAt,                                                                    // stock level before this invoice was applied
                 'unit_price' => $unitPrice,
                 'unit_discount' => $unitDiscount,
                 'vat' => $itemVat,
@@ -382,6 +421,7 @@ class InvoiceService
             'number' => $invoice->number,
             'subtraction' => $invoice->subtraction ?? 0,
             'invoice_id' => $invoice->id ?? null,
+            'returned_invoice_id' => $invoice->returned_invoice_id ?? null,
             'description' => $invoice->description ?? null,
             'title' => $invoice->title,
         ];

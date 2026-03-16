@@ -10,8 +10,7 @@
             <div class="card-actions flex items-center gap-3">
                 @if (request('invoice_type') === 'buy')
                     @if ($service_buy)
-                        <a href="{{ route('invoices.create', ['invoice_type' => 'buy', 'service_buy' => '1']) }}"
-                            class="btn btn-primary">
+                        <a href="{{ route('invoices.create', ['invoice_type' => 'buy', 'service_buy' => '1']) }}" class="btn btn-primary">
                             {{ __('Service Buy Invoice') }}
                         </a>
                     @else
@@ -24,62 +23,58 @@
                         {{ __('Create sell invoice') }}
                     </a>
                 @elseif (request('invoice_type') === 'return_buy')
-                    <a href="{{ route('invoices.create', ['invoice_type' => 'return_buy']) }}" class="btn btn-primary">
-                        {{ __('Create return buy invoice') }}
-                    </a>
+                    @if ($service_buy)
+                        <a href="{{ route('invoices.create', ['invoice_type' => 'return_buy', 'service_buy' => '1']) }}" class="btn btn-primary">
+                            {{ __('Create return service buy invoice') }}
+                        </a>
+                    @else
+                        <a href="{{ route('invoices.create', ['invoice_type' => 'return_buy']) }}" class="btn btn-primary">
+                            {{ __('Create return buy invoice') }}
+                        </a>
+                    @endif
                 @elseif (request('invoice_type') === 'return_sell')
                     <a href="{{ route('invoices.create', ['invoice_type' => 'return_sell']) }}" class="btn btn-primary">
                         {{ __('Create return sell invoice') }}
                     </a>
                 @endif
 
-                <a href="{{ route('invoices.inactive') }}" class="btn btn-primary">{{ __('Approve Inactive') }}</a>
-
                 <form action="{{ route('invoices.index') }}" method="GET" class="ml-auto">
                     <div class="mt-4 mb-4 grid grid-cols-8 gap-6">
 
                         <div class="col-span-2 md:col-span-1" hidden>
-                            <x-input name="invoice_type" value="{{ request('invoice_type') }}"
-                                placeholder="{{ __('Invoice Type') }}" />
-                            <x-input name="service_buy" value="{{ request('service_buy') }}"
-                                placeholder="{{ __('Service Buy') }}" />
+                            <x-input name="invoice_type" value="{{ request('invoice_type') }}" placeholder="{{ __('Invoice Type') }}" />
+                            <x-input name="service_buy" value="{{ request('service_buy') }}" placeholder="{{ __('Service Buy') }}" />
                         </div>
                         <div class="col-span-2 md:col-span-1">
-                            <x-input name="number" value="{{ request('number') }}"
-                                placeholder="{{ __('Invoice Number') }}" />
+                            <x-input name="number" value="{{ request('number') }}" placeholder="{{ __('Invoice Number') }}" />
                         </div>
                         <div class="col-span-6 md:col-span-3">
-                            <x-input name="text" value="{{ request('text') }}"
-                                placeholder="{{ __('Search by customer name or transaction description') }}" />
+                            <x-input name="text" value="{{ request('text') }}" placeholder="{{ __('Search by customer name or transaction description') }}" />
                         </div>
                         <div class="col-span-2 md:col-span-1">
-                            <x-date-picker name="start_date" class="w-40" placeholder="{{ __('Start date') }}"
-                                value="{{ request('start_date') }}"></x-date-picker>
+                            <x-date-picker name="start_date" class="w-40" placeholder="{{ __('Start date') }}" value="{{ request('start_date') }}"></x-date-picker>
                         </div>
                         <div class="col-span-2 md:col-span-1">
-                            <x-date-picker name="end_date" class="w-40" placeholder="{{ __('End date') }}"
-                                value="{{ request('end_date') }}"></x-date-picker>
+                            <x-date-picker name="end_date" class="w-40" placeholder="{{ __('End date') }}" value="{{ request('end_date') }}"></x-date-picker>
                         </div>
                         <div class="col-span-2 md:col-span-1">
                             @php
                                 $invoiceType = request('invoice_type');
                                 $isSellWorkflow = $invoiceType === 'sell';
                                 $skipIfSell = fn($status) => $status->isPending();
-                                $skipIfNotSell = fn($status) => $status->isReadyToApprove() ||
-                                    $status->isPreInvoice() ||
-                                    $status->isRejected();
+                                $skipIfNotSell = fn($status) => $status->isReadyToApprove() || $status->isPreInvoice() || $status->isRejected();
                                 $shouldSkip = $isSellWorkflow ? $skipIfSell : $skipIfNotSell;
                             @endphp
                             <select name="status" id="status"
                                 class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
                                 <option value="all">{{ __('All Invoices') }}</option>
-                                    @foreach (\App\Enums\InvoiceStatus::cases() as $status)
-                                        @if ($shouldSkip($status))
-                                            @continue
-                                        @endif
-                                        <option value="{{ $status->value }}" @selected($status != 'all' && $status->value == request('status'))>
-                                            {{ $status->label() }}</option>
-                                    @endforeach
+                                @foreach (\App\Enums\InvoiceStatus::cases() as $status)
+                                    @if ($shouldSkip($status))
+                                        @continue
+                                    @endif
+                                    <option value="{{ $status->value }}" @selected($status != 'all' && $status->value == request('status'))>
+                                        {{ $status->label() }}</option>
+                                @endforeach
                             </select>
                         </div>
                         <div class="col-span-2 md:col-span-1 text-center">
@@ -97,9 +92,7 @@
                     $isSellWorkflow = $invoiceType === 'sell';
 
                     $skipIfSell = fn($status) => $status->isPending();
-                    $skipIfNotSell = fn($status) => $status->isReadyToApprove() ||
-                        $status->isPreInvoice() ||
-                        $status->isRejected();
+                    $skipIfNotSell = fn($status) => $status->isReadyToApprove() || $status->isPreInvoice() || $status->isRejected();
                     $shouldSkip = $isSellWorkflow ? $skipIfSell : $skipIfNotSell;
 
                     $statusTypes = [
@@ -128,18 +121,23 @@
                             $quantityTitle = request('service_buy') == '1' ? __('Bought Services Quantity') : __('Bought Products Quantity');
                         } elseif ($invoiceType === 'sell') {
                             $quantityTitle = __('Sold Products Quantity');
-                        }elseif ($invoiceType === 'return_buy') {
+                        } elseif ($invoiceType === 'return_buy' && !request('service_buy') == '1') {
                             $quantityTitle = __('Returned Bought Products Quantity');
-                        }elseif ($invoiceType === 'return_sell') {
+                        } elseif ($invoiceType === 'return_sell') {
                             $quantityTitle = __('Returned Sold Products Quantity');
+                        } elseif ($invoiceType === 'return_buy' && request('service_buy') == '1') {
+                            $quantityTitle = __('Returned Sold Services Quantity');
                         }
                     @endphp
-                    <a href="{{ $url }}"
-                        class="block transition-transform hover:scale-105 {{ $isActive ? 'ring-2 ring-primary rounded-xl' : '' }}">
+                    <a href="{{ $url }}" class="block transition-transform hover:scale-105 {{ $isActive ? 'ring-2 ring-primary rounded-xl' : '' }}">
                         <x-stat-card :title="$status->label()" :value="convertToFarsi($count)" :type="$type" />
                     </a>
                 @endforeach
-                <x-stat-card :title="$quantityTitle" :value="formatNumber($invoices->totalProductsQuantity)" />
+                @if (request('service_buy') == '1')
+                    <x-stat-card :title="$quantityTitle" :value="formatNumber($invoices->totalServicesQuantity)" />
+                @else
+                    <x-stat-card :title="$quantityTitle" :value="formatNumber($invoices->totalProductsQuantity)" />
+                @endif
                 <x-stat-card :title="__('Invoices Amount')" :value="formatNumber($invoices->totalAmount)" />
             </div>
 
@@ -164,8 +162,7 @@
                                 </a>
                             </td>
                             <td class="px-4 py-2">
-                                <a
-                                    href="{{ route('customers.show', $invoice->customer) }}">{{ $invoice->customer->name ?? '' }}</a>
+                                <a href="{{ route('customers.show', $invoice->customer) }}">{{ $invoice->customer->name ?? '' }}</a>
                                 <br>
                                 <span class="text-xs text-gray-500">{{ $invoice->title ?? '' }}</span>
                             </td>
@@ -173,8 +170,7 @@
                                 @if ($invoice->document_id)
                                     @can('documents.show')
                                         <a href="{{ route('documents.show', $invoice->document_id) }}">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none"
-                                                viewBox="0 0 24 24" stroke="currentColor">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                             </svg>
@@ -199,12 +195,15 @@
                             <td class="px-4 py-2">
                                 @php
                                     $isSellWorkflow = $invoice->invoice_type === \App\Enums\InvoiceType::SELL;
-                                    $canApprove = ($isSellWorkflow ? false : $invoice->status->isPending()) || $invoice->status->isReadyToApprove() || $invoice->status->isUnapproved() || $invoice->status->isApprovedInactive();
+                                    $canApprove =
+                                        ($isSellWorkflow ? false : $invoice->status->isPending()) ||
+                                        $invoice->status->isReadyToApprove() ||
+                                        $invoice->status->isUnapproved() ||
+                                        $invoice->status->isApprovedInactive();
                                     $canUnapprove = $invoice->status->isApproved();
                                     $canChangeStatus = $canApprove || $canUnapprove;
                                 @endphp
-                                <a href="{{ route('invoices.show', $invoice) }}" target="_blank"
-                                    rel="noopener" class="btn btn-sm btn-info">{{ __('Show') }}</a>
+                                <a href="{{ route('invoices.show', $invoice) }}" target="_blank" rel="noopener" class="btn btn-sm btn-info">{{ __('Show') }}</a>
 
                                 @can('invoices.approve')
                                     @if ($isSellWorkflow && ($invoice->status->isPreInvoice() || $invoice->status->isRejected()))
@@ -223,16 +222,15 @@
 
                                     @if ($canChangeStatus)
                                         @if ($invoice->changeStatusValidation->hasErrors())
-                                            <a data-tip="{{ $invoice->changeStatusValidation->toText() }}"
-                                                href="{{ route('invoices.conflicts', $invoice) }}"
+                                            <a data-tip="{{ $invoice->changeStatusValidation->toText() }}" href="{{ route('invoices.conflicts', $invoice) }}"
                                                 class="btn btn-sm btn-accent inline-flex tooltip">{{ __('Fix Conflict') }}
                                             </a>
                                         @else
-                                            <form action="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}{{ $invoice->changeStatusValidation->hasWarning() ? '?confirm=1' : ''}}"
+                                            <form
+                                                action="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}{{ $invoice->changeStatusValidation->hasWarning() ? '?confirm=1' : '' }}"
                                                 method="POST" class="inline-block m-0 {{ $invoice->changeStatusValidation->hasWarning() ? 'change-status-form' : '' }}">
                                                 @csrf
-                                                <button type="submit" x-data="{}"
-                                                    data-tip="{{ $invoice->changeStatusValidation->toText() }}"
+                                                <button type="submit" x-data="{}" data-tip="{{ $invoice->changeStatusValidation->toText() }}"
                                                     class="btn btn-sm inline-flex tooltip {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $invoice->changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
                                                     {{ $canUnapprove ? __('Unapprove') : __('Approve') }}
                                                 </button>
@@ -242,23 +240,18 @@
                                 @endcan
 
                                 @if (!$invoice->status->isApproved())
-                                    <a href="{{ route('invoices.edit', $invoice) }}"
-                                        class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                    <form action="{{ route('invoices.destroy', $invoice) }}" method="POST"
-                                        class="inline-block m-0">
+                                    <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                    <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" class="inline-block m-0">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit"
-                                            class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                        <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
                                     </form>
                                 @else
-                                    <span class="tooltip"
-                                        data-tip="{{ __('Unapprove the invoice first to edit') }}">
+                                    <span class="tooltip" data-tip="{{ __('Unapprove the invoice first to edit') }}">
                                         <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
                                             title="{{ __('Unapprove the invoice first to edit') }}">{{ __('Edit') }}</button>
                                     </span>
-                                    <span class="tooltip"
-                                        data-tip="{{ __('Unapprove the invoice first to delete') }}">
+                                    <span class="tooltip" data-tip="{{ __('Unapprove the invoice first to delete') }}">
                                         <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
                                             title="{{ __('Unapprove the invoice first to delete') }}">{{ __('Delete') }}</button>
                                     </span>
@@ -285,12 +278,14 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const changeStatusForms = document.querySelectorAll('.change-status-form');
-            
+
             changeStatusForms.forEach(form => {
                 form.addEventListener('submit', function(e) {
                     e.preventDefault();
 
-                    if (confirm('{{ __('This invoice has warnings for change its status, are you sure to change status?') }}')) {
+                    if (confirm(
+                            '{{ __('This invoice has warnings for change its status, are you sure to change status?') }}'
+                        )) {
                         this.submit();
                     }
                 });

@@ -82,7 +82,7 @@ class ProductController extends Controller
 
     public function show(Product $product)
     {
-        $product->load('productgroup', 'productWebsites');
+        $product->load('productGroup', 'productWebsites');
 
         $product->lastCOG = $this->productService->lastApprovedBuyInvoiceItemCOG($product) ?? 0;
         $product->salesProfit = $this->productService->totalSell($product) + $this->productService->totalCOGS($product);
@@ -98,7 +98,7 @@ class ProductController extends Controller
                     );
                 }
             })
-            ->paginate(10);
+            ->paginate(20);
 
         return view('products.show', compact('product', 'historyItems'));
     }

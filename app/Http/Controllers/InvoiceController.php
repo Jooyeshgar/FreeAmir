@@ -16,6 +16,7 @@ use App\Models\ServiceGroup;
 use App\Services\AncillaryCostService;
 use App\Services\GroupActionService;
 use App\Services\InvoiceService;
+use DB;
 use Illuminate\Http\Request;
 use PDF;
 
@@ -71,7 +72,8 @@ class InvoiceController extends Controller
             })
         );
 
-        $service_buy = $request->filled('invoice_type') && $request->invoice_type === InvoiceType::BUY->value && $request->filled('service_buy') && $request->service_buy == '1';
+        $service_buy = $request->filled('invoice_type') && in_array($request->invoice_type, [InvoiceType::BUY->value, InvoiceType::RETURN_BUY->value])
+            && $request->filled('service_buy') && $request->service_buy == '1';
 
         $builder->when($service_buy, fn ($q) => $q->whereHas('items', function ($item) {
             $item->where('itemable_type', Service::class);
@@ -92,7 +94,7 @@ class InvoiceController extends Controller
 
         $statusCounts = $statsBuilder->reorder()
             ->toBase()
-            ->select('status', \Illuminate\Support\Facades\DB::raw('count(*) as total'))
+            ->select('status', DB::raw('count(*) as total'))
             ->groupBy('status')
             ->pluck('total', 'status');
 
@@ -102,8 +104,17 @@ class InvoiceController extends Controller
             return $invoice;
         });
 
-        $invoices->totalAmount = $invoices->sum('amount');
-        $invoices->totalProductsQuantity = $invoices->sum(fn ($invoice) => $invoice->items->where('itemable_type', Product::class)->sum('quantity'));
+        $totalsBuilder = $statsBuilder->clone();
+        $invoices->totalAmount = $totalsBuilder->toBase()->sum('amount');
+
+        $itemTotals = DB::table('invoice_items')
+            ->whereIn('invoice_id', $statsBuilder->clone()->toBase()->select('id'))
+            ->selectRaw('itemable_type, SUM(quantity) as total_quantity')
+            ->groupBy('itemable_type')
+            ->pluck('total_quantity', 'itemable_type');
+
+        $invoices->totalProductsQuantity = $itemTotals[Product::class] ?? 0;
+        $invoices->totalServicesQuantity = $itemTotals[Service::class] ?? 0;
 
         return view('invoices.index', compact('invoices', 'statusCounts', 'service_buy'));
     }
@@ -142,6 +153,12 @@ class InvoiceController extends Controller
                 return ! $invoice->getReturnInvoice();
             });
 
+            if ($request->filled('service_buy')) {
+                $returnInvoices = $returnInvoices->filter(function ($invoice) {
+                    return $invoice->items->where('itemable_type', Product::class)->isEmpty();
+                });
+            }
+
             if ($returnInvoices->isNotEmpty()) {
                 $productIds = $returnInvoices->flatMap(function ($invoice) {
                     return $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id');
@@ -178,14 +195,28 @@ class InvoiceController extends Controller
         $transactions = InvoiceService::prepareTransactions();
 
         $isServiceBuy = $request->invoice_type === 'buy' && $request->service_buy == '1';
+        $isReturnServiceBuy = $request->invoice_type === 'return_buy' && $request->service_buy == '1';
 
         $total = count($transactions);
 
         $invoice_type = in_array($request->invoice_type, ['buy', 'sell', 'return_buy', 'return_sell']) ? $request->invoice_type : 'sell';
         $isReturnInvoice = in_array($invoice_type, ['return_buy', 'return_sell'], true);
+        $prefilledReturnedInvoiceId = null;
+        $lockReturnedInvoiceSelection = false;
+
+        if ($isReturnInvoice && $request->filled('returned_invoice_id')) {
+            $requestedReturnedInvoiceId = (int) $request->returned_invoice_id;
+            $isValidReturnInvoice = collect($returnInvoices)->contains(fn ($returnInvoice) => (int) ($returnInvoice['id'] ?? 0) === $requestedReturnedInvoiceId);
+
+            if ($isValidReturnInvoice) {
+                $prefilledReturnedInvoiceId = $requestedReturnedInvoiceId;
+                $lockReturnedInvoiceSelection = true;
+            }
+        }
+
         $previousInvoiceNumber = floor(Invoice::where('invoice_type', $invoice_type)->max('number') ?? 0);
 
-        return view('invoices.create', compact('returnInvoices', 'products', 'services', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type', 'isServiceBuy', 'isReturnInvoice'));
+        return view('invoices.create', compact('returnInvoices', 'products', 'services', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type', 'isServiceBuy', 'isReturnServiceBuy', 'isReturnInvoice', 'prefilledReturnedInvoiceId', 'lockReturnedInvoiceSelection'));
     }
 
     /**
@@ -209,7 +240,7 @@ class InvoiceController extends Controller
 
         [$msgType, $msg] = $this->invoiceMessage($result, 'created', $approved);
 
-        $isServiceBuy = $result['invoice']->invoice_type === InvoiceType::BUY && $result['invoice']->items->where('itemable_type', Product::class)->isEmpty();
+        $isServiceBuy = in_array($result['invoice']->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_BUY]) && $result['invoice']->items->where('itemable_type', Product::class)->isEmpty();
 
         return redirect()
             ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type, 'service_buy' => $isServiceBuy ? '1' : null])
@@ -221,6 +252,7 @@ class InvoiceController extends Controller
         $changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
 
         $isServiceBuy = $invoice->invoice_type === InvoiceType::BUY && $invoice->items->where('itemable_type', Product::class)->isEmpty();
+        $isReturnServiceBuy = $invoice->invoice_type === InvoiceType::RETURN_BUY && $invoice->items->where('itemable_type', Product::class)->isEmpty();
 
         $invoice->load([
             'customer',
@@ -233,7 +265,7 @@ class InvoiceController extends Controller
             'ancillaryCosts.items',
         ]);
 
-        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy'));
+        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy'));
     }
 
     public function print(Invoice $invoice)
@@ -301,6 +333,7 @@ class InvoiceController extends Controller
         $isReturnInvoice = in_array($invoice_type, [InvoiceType::RETURN_BUY, InvoiceType::RETURN_SELL], true);
 
         $isServiceBuy = $invoice->invoice_type === InvoiceType::BUY && $invoice->items->where('itemable_type', Product::class)->isEmpty();
+        $isReturnServiceBuy = $invoice->invoice_type === InvoiceType::RETURN_BUY && $invoice->items->where('itemable_type', Product::class)->isEmpty();
 
         return view('invoices.edit', compact(
             'invoice',
@@ -313,6 +346,7 @@ class InvoiceController extends Controller
             'invoice_type',
             'previousDocumentNumber',
             'isServiceBuy',
+            'isReturnServiceBuy',
             'isReturnInvoice'
         ));
     }
@@ -342,7 +376,7 @@ class InvoiceController extends Controller
 
         [$msgType, $msg] = $this->invoiceMessage($result, 'updated', $approved);
 
-        $isServiceBuy = $result['invoice']->invoice_type === InvoiceType::BUY && $result['invoice']->items->where('itemable_type', Product::class)->isEmpty();
+        $isServiceBuy = in_array($result['invoice']->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_BUY]) && $result['invoice']->items->where('itemable_type', Product::class)->isEmpty();
 
         return redirect()
             ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type, 'service_buy' => $isServiceBuy ? '1' : null])

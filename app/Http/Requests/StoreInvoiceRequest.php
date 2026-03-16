@@ -65,9 +65,14 @@ class StoreInvoiceRequest extends FormRequest
                         'unit' => isset($t['unit']) ? convertToFloat($t['unit']) : null,
                         'total' => isset($t['total']) ? convertToFloat($t['total']) : null,
                     ];
-                })
-                ->toArray();
-            $this->merge(['transactions' => $transactions]);
+                });
+
+            $invoiceType = $this->input('invoice_type');
+            if (in_array($invoiceType, ['return_sell', 'return_buy'])) {
+                $transactions = $transactions->filter(fn ($t) => ($t['quantity'] ?? 0) > 0);
+            }
+
+            $this->merge(['transactions' => $transactions->values()->toArray()]);
         }
     }
 
@@ -117,6 +122,7 @@ class StoreInvoiceRequest extends FormRequest
                         __('The invoice date must be after or equal to the returned invoice date: :date.', ['date' => $returnedInvoice->date->format('Y-m-d')])
                     );
                 }
+
                 foreach ($transactions as $index => $transaction) {
                     // Original item is the item in the returned invoice that matches the current transaction item
                     $originalItem = $returnedInvoice->items()
@@ -195,6 +201,7 @@ class StoreInvoiceRequest extends FormRequest
                             }
                         }
                     }
+
                     if ($transaction['quantity'] > $availableQuantity && $invoiceType === 'sell' && ! $product->oversell) {
                         $validator->errors()->add(
                             "transactions.{$index}.quantity",
@@ -276,7 +283,7 @@ class StoreInvoiceRequest extends FormRequest
             'transactions.*.item_type' => 'required|string|in:product,service',
             'transactions.*.vat' => $isReturnInvoice || $isEditing ? 'required|numeric|min:0' : 'required|numeric|min:0|max:100',
             'transactions.*.desc' => 'nullable|string|max:500',
-            'transactions.*.quantity' => 'required|numeric|min:1',
+            'transactions.*.quantity' => $isReturnInvoice ? 'required|numeric|min:0' : 'required|numeric|min:1',
             'transactions.*.unit_discount' => 'required|numeric|min:0',
             'transactions.*.unit' => 'required|numeric|min:0',
             'transactions.*.total' => 'required|numeric|min:0',

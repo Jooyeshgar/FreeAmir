@@ -91,9 +91,9 @@
             @endif
 
             <div class="divider text-lg font-semibold">{{ __('Transaction History') }}</div>
-            <div class="overflow-x-auto shadow-lg rounded-lg">
-                <table class="table table-zebra w-full">
-                    <thead class="bg-base-300">
+            <div class="overflow-x-auto ">
+                <table class="table w-full mt-4 overflow-auto">
+                    <thead>
                         <tr>
                             <th class="px-4 py-3">{{ __('Date') }}</th>
                             <th class="px-4 py-3 text-center">{{ __('Buy') }}</th>
@@ -109,9 +109,7 @@
                         @forelse ($historyItems as $item)
                             <tr class="hover {{ !$item->invoice->status->isApproved() ? 'opacity-50' : '' }}">
                                 <td class="px-4 py-3">
-                                    <span class="badge badge-ghost">
-                                        {{ formatDate($item->invoice->date) }}
-                                    </span>
+                                    {{ formatDate($item->invoice->date) }}
                                 </td>
 
                                 <td class="px-4 py-3 text-center">
@@ -181,9 +179,15 @@
 
                                 <td class="px-4 py-3 text-center">
                                     @if ($item->invoice->status->isApproved())
+                                        @php
+                                            $invoiceType = $item->invoice->invoice_type;
+                                            $quantityAfter = in_array($invoiceType, [\App\Enums\InvoiceType::BUY, \App\Enums\InvoiceType::RETURN_SELL])
+                                                ? $item->quantity_at + $item->quantity
+                                                : $item->quantity_at - $item->quantity;
+                                        @endphp
                                         <span
-                                            class="badge {{ $item->remaining < 0 ? 'badge-error' : ($item->remaining < $product->quantity_warning ? 'badge-warning' : 'badge-success') }} font-bold">
-                                            {{ formatNumber($item->quantity_at + $item->quantity) }}</span>
+                                            class="badge {{ $quantityAfter < 0 ? 'badge-error' : ($quantityAfter < $product->quantity_warning ? 'badge-warning' : 'badge-success') }} font-bold">
+                                            {{ formatNumber($quantityAfter) }}
                                         </span>
                                     @else
                                         <span class="text-gray-400">-</span>
@@ -197,29 +201,6 @@
                                 </td>
                             </tr>
                         @endforelse
-                        @if ($historyItems->hasPages())
-                            <tr class="bg-base-300 font-semibold">
-                                <td colspan="7" class="px-4 py-3 text-right">
-                                    {{ __('Balance from previous page') }}
-                                <td class="px-4 py-3 text-center">
-                                    @php
-                                        $balanceFromPrevious = 0;
-                                        if ($historyItems->currentPage() < $historyItems->lastPage() && $historyItems->isNotEmpty()) {
-                                            $lastItem = $historyItems->last();
-                                            $balanceFromPrevious = $lastItem->quantity;
-                                        }
-                                        if ($historyItems->currentPage() == 1) {
-                                            $balanceFromPrevious = $product->quantity;
-                                        }
-                                    @endphp
-                                    <span
-                                        class="badge {{ $balanceFromPrevious < 0 ? 'badge-error' : ($balanceFromPrevious < $product->quantity_warning ? 'badge-warning' : 'badge-success') }} font-bold">
-                                        {{ formatNumber($balanceFromPrevious) }}
-                                    </span>
-                                </td>
-                                </td>
-                            </tr>
-                        @endif
                     </tbody>
                 </table>
             </div>

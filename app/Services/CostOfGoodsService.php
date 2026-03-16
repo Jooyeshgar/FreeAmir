@@ -112,17 +112,19 @@ class CostOfGoodsService
                     $query->where('itemable_id', $invoiceItem->itemable_id)
                         ->where('itemable_type', Product::class);
                 })
-                ->with('items')
+                ->with(['items' => function ($query) use ($invoiceItem) {
+                    $query->where('itemable_id', $invoiceItem->itemable_id)
+                        ->where('itemable_type', Product::class);
+                }])
                 ->get()
                 ->flatMap->items
-                ->where('itemable_id', $invoiceItem->itemable_id)
                 ->sum('quantity');
         };
 
-            $totalIncomingQuantity = (float) $buildQuery([InvoiceType::BUY, InvoiceType::RETURN_SELL]);
-            $totalOutgoingQuantity = (float) $buildQuery([InvoiceType::SELL, InvoiceType::RETURN_BUY]);
+        $totalIncomingQuantity = (float) $buildQuery([InvoiceType::BUY, InvoiceType::RETURN_SELL]);
+        $totalOutgoingQuantity = (float) $buildQuery([InvoiceType::SELL, InvoiceType::RETURN_BUY]);
 
-            return $totalIncomingQuantity - $totalOutgoingQuantity;
+        return $totalIncomingQuantity - $totalOutgoingQuantity;
     }
 
     private static function sumApprovedAncillaryCostsForProduct($ancillaryCosts, int $productId): float
