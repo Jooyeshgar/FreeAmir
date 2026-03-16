@@ -16,12 +16,12 @@
             </div>
 
             <form action="{{ route('documents.index') }}" method="GET">
-                <div class="mt-4 mb-4 grid grid-cols-6 gap-6">
-                    <div class="col-span-2 md:col-span-1">
+                <div class="mt-4 mb-4 grid grid-cols-8 gap-6">
+                    <div class="col-span-4 md:col-span-1">
                         <x-input name="number" value="{{ request('number') }}" placeholder="{{ __('Doc Number') }}" />
                     </div>
 
-                    <div class="col-span-2 md:col-span-1">
+                    <div class="col-span-4 md:col-span-1">
                         <x-date-picker name="date" placeholder="{{ __('date') }}" value="{{ request('date') }}" class="datePicker" />
                     </div>
 
@@ -29,11 +29,35 @@
                         <x-input name="text" value="{{ request('text') }}" placeholder="{{ __('Search by document title or transaction description') }}" />
                     </div>
 
+                    <div class="col-span-4 md:col-span-1">
+                        @php
+                            $status = request('status') ?? 'all';
+                        @endphp
+                        <select name="status" id="status"
+                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
+                            <option value="all" @selected($status === 'all')>{{ __('All Documents') }}</option>
+                            <option value="approved" @selected($status === 'approved')>{{ __('Approved') }}</option>
+                            <option value="unapproved" @selected($status === 'unapproved')>{{ __('Not approved') }}</option>
+                        </select>
+                    </div>
+
                     <div class="col-span-2 md:col-span-1 text-center">
                         <input type="submit" value="{{ __('Search') }}" class="btn btn-primary" />
                     </div>
                 </div>
             </form>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <a href="{{ route('documents.index', array_merge(request()->except('page'), ['status' => 'approved'])) }}"
+                    class="block transition-transform hover:scale-105 {{ $status === 'approved' ? 'ring-2 ring-primary rounded-xl' : '' }}">
+                    <x-stat-card title="{{ __('Approved documents number') }}" :value="formatNumber($approvedDocumentsNumber)" />
+                </a>
+
+                <a href="{{ route('documents.index', array_merge(request()->except('page'), ['status' => 'unapproved'])) }}"
+                    class="block transition-transform hover:scale-105 {{ $status === 'unapproved' ? 'ring-2 ring-primary rounded-xl' : '' }}">
+                    <x-stat-card title="{{ __('Unapproved documents number') }}" :value="formatNumber($unapprovedDocumentsNumber)" />
+                </a>
+            </div>
 
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
@@ -50,7 +74,7 @@
                 </thead>
                 <tbody>
                     @foreach ($documents as $document)
-                        <tr>
+                        <tr class="{{ $document->approved_at ? '' : 'text-gray-500' }}">
                             <td class="p-2">
                                 <a href="{{ route('documents.show', $document->id) }}">
                                     {{ formatDocumentNumber($document->number) }}
