@@ -138,9 +138,9 @@ class MonthlyAttendanceController extends Controller
             'present_days' => ['required', 'integer', 'min:0', 'max:31'],
             'absent_days' => ['required', 'integer', 'min:0', 'max:31'],
             'overtime' => ['required', 'integer', 'min:0'],
-            'mission_days' => ['required', 'integer', 'min:0', 'max:31'],
-            'paid_leave_days' => ['required', 'integer', 'min:0', 'max:31'],
-            'unpaid_leave_days' => ['required', 'integer', 'min:0', 'max:31'],
+            'mission' => ['required', 'integer', 'min:0', 'max:1500'],
+            'paid_leave' => ['required', 'integer', 'min:0', 'max:1500'],
+            'unpaid_leave' => ['required', 'integer', 'min:0', 'max:1500'],
             'friday' => ['required', 'integer', 'min:0'],
             'holiday' => ['required', 'integer', 'min:0'],
         ]);

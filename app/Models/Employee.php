@@ -54,6 +54,7 @@ class Employee extends Model
         'is_active',
         'company_id',
         'device_id',
+        'leave_remain',
     ];
 
     protected $casts = [
@@ -62,6 +63,7 @@ class Employee extends Model
         'contract_end_date' => 'date',
         'is_active' => 'boolean',
         'children_count' => 'integer',
+        'leave_remain' => 'integer',
         'nationality' => EmployeeNationality::class,
         'gender' => EmployeeGender::class,
         'marital_status' => EmployeeMaritalStatus::class,

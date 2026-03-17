@@ -74,9 +74,9 @@ class MonthlyAttendanceTest extends TestCase
             'present_days' => 20,
             'absent_days' => 2,
             'overtime' => 120,
-            'mission_days' => 1,
-            'paid_leave_days' => 1,
-            'unpaid_leave_days' => 0,
+            'mission' => 1,
+            'paid_leave' => 1,
+            'unpaid_leave' => 0,
             'friday' => 0,
             'holiday' => 0,
         ], $overrides);

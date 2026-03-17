@@ -81,15 +81,15 @@
                 </div>
                 <div class="stat bg-info/20 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Mission Days') }}</div>
-                    <div class="stat-value text-base text-info">{{ $monthlyAttendance->mission_days }}</div>
+                    <div class="stat-value text-base text-info">{{ $monthlyAttendance->mission }}</div>
                 </div>
                 <div class="stat bg-base-200 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Paid Leave') }}</div>
-                    <div class="stat-value text-base">{{ $monthlyAttendance->paid_leave_days }}</div>
+                    <div class="stat-value text-base">{{ $monthlyAttendance->paid_leave }}</div>
                 </div>
                 <div class="stat bg-base-200 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Unpaid Leave') }}</div>
-                    <div class="stat-value text-base">{{ $monthlyAttendance->unpaid_leave_days }}</div>
+                    <div class="stat-value text-base">{{ $monthlyAttendance->unpaid_leave }}</div>
                 </div>
                 <div class="stat bg-base-200 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Friday Work (min)') }}</div>
@@ -198,8 +198,10 @@
                             @endphp
                             <tr class="{{ $isOffDay ? 'bg-base-200' : '' }} {{ $isPlaceholder && !$isOffDay ? 'opacity-50' : '' }}">
                                 <td>{{ formatDate($log->log_date, 'l') }}</td>
-                                <td>{{ formatDate($log->log_date) }}</td>
                                 @if ($isPlaceholder)
+                                    <td>
+                                        {{ formatDate($log->log_date) }}
+                                    </td>
                                     <td>—</td>
                                     <td>—</td>
                                     <td>—</td>
@@ -221,6 +223,9 @@
                                         @endcan
                                     @endif
                                 @else
+                                    <td>
+                                        <a href="{{ route('attendance.attendance-logs.show', $log) }}">{{ formatDate($log->log_date) }}</a>
+                                    </td>
                                     <td>{{ $log->entry_time ?? '—' }}</td>
                                     <td>{{ $log->exit_time ?? '—' }}</td>
                                     <td>{{ $log->worked }}</td>

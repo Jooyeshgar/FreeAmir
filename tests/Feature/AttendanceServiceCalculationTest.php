@@ -365,7 +365,7 @@ class AttendanceServiceCalculationTest extends TestCase
             1
         );
 
-        $this->assertSame(1, $attendance->mission_days);
+        $this->assertSame(1, $attendance->mission);
         $this->assertSame(1, $attendance->present_days);
     }
 
