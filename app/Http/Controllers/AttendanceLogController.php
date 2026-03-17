@@ -6,6 +6,7 @@ use App\Enums\AttendanceImportType;
 use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
 use App\Models\Employee;
+use App\Models\PersonnelRequest;
 use App\Models\PublicHoliday;
 use App\Services\AttendanceLogImportService;
 use App\Services\AttendanceService;
@@ -122,8 +123,7 @@ class AttendanceLogController extends Controller
             ['is_manual' => true]
         ));
 
-        return redirect()->route('attendance.attendance-logs.index')
-            ->with('success', __('Attendance log updated successfully.'));
+        return redirect()->back()->with('success', __('Attendance log updated successfully.'));
     }
 
     public function destroy(AttendanceLog $attendanceLog): RedirectResponse
@@ -140,6 +140,18 @@ class AttendanceLogController extends Controller
 
         $employee = $attendanceLog->employee;
         $workShift = $employee?->workShift;
+
+        // Load personnel requests for this employee on this date (affects calculation)
+        $personnelRequests = $employee
+            ? PersonnelRequest::where('employee_id', $employee->id)
+                ->where(function ($q) use ($attendanceLog) {
+                    $dateStr = $attendanceLog->log_date->toDateString();
+                    $q->whereDate('start_date', '<=', $dateStr)
+                        ->whereDate('end_date', '>=', $dateStr);
+                })
+                ->orderBy('start_date')
+                ->get()
+            : collect();
 
         $logDate = $attendanceLog->log_date;
         $isFriday = $logDate->dayOfWeek === Carbon::FRIDAY;
@@ -174,8 +186,7 @@ class AttendanceLogController extends Controller
         $diffExit = null;
         if ($workShift && $attendanceLog->entry_time) {
             $shiftStartCarbon = Carbon::createFromFormat('H:i:s', $workShift->start_time);
-            $entryCarbon = Carbon::createFromFormat('H:i:s', $attendanceLog->entry_time)
-                ?? Carbon::createFromFormat('H:i', $attendanceLog->entry_time);
+            $entryCarbon = Carbon::createFromFormat('H:i:s', $attendanceLog->entry_time) ?? Carbon::createFromFormat('H:i', $attendanceLog->entry_time);
             if ($shiftStartCarbon && $entryCarbon) {
                 $diffEntry = (int) $shiftStartCarbon->diffInMinutes($entryCarbon, false);
             }
@@ -185,9 +196,27 @@ class AttendanceLogController extends Controller
                 ? $workShift->thursday_exit_time
                 : $workShift->end_time;
             $shiftEndCarbon = Carbon::createFromFormat('H:i:s', $effectiveEndTime);
-            $exitCarbon = Carbon::createFromFormat('H:i:s', $attendanceLog->exit_time)
-                ?? Carbon::createFromFormat('H:i', $attendanceLog->exit_time);
+            $exitCarbon = Carbon::createFromFormat('H:i:s', $attendanceLog->exit_time) ?? Carbon::createFromFormat('H:i', $attendanceLog->exit_time);
             if ($shiftEndCarbon && $exitCarbon) {
+                // Adjust effective end time to mirror the float logic in AttendanceService::shiftDelayEarlyLeave():
+                // if the user arrived within the float grace window the shift end slides forward by the same offset.
+                if ($workShift->start_time && $attendanceLog->entry_time) {
+                    $float = max(0, (int) ($workShift->float ?? 0));
+                    $shiftStartForFloat = Carbon::createFromFormat('H:i:s', $workShift->start_time);
+                    $entryForFloat = $entryCarbon ?? Carbon::createFromFormat('H:i:s', $attendanceLog->entry_time);
+                    if ($shiftStartForFloat && $entryForFloat) {
+                        $floatCutoff = $shiftStartForFloat->copy()->addMinutes($float);
+                        $lateMinutes = (int) $floatCutoff->diffInMinutes($entryForFloat, false);
+                        if ($lateMinutes <= 0) {
+                            // Within grace window: end slides by actual entry offset
+                            $offset = max(0, (int) $shiftStartForFloat->diffInMinutes($entryForFloat, false));
+                            $shiftEndCarbon->addMinutes($offset);
+                        } else {
+                            // Late beyond float: end slides by the full float amount
+                            $shiftEndCarbon->addMinutes($float);
+                        }
+                    }
+                }
                 $diffExit = (int) $shiftEndCarbon->diffInMinutes($exitCarbon, false);
             }
         }
@@ -206,7 +235,8 @@ class AttendanceLogController extends Controller
             'diffEntry',
             'diffExit',
             'effectiveShiftStart',
-            'shiftMinutes'
+            'shiftMinutes',
+            'personnelRequests'
         ));
     }
 

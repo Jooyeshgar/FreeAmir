@@ -26,8 +26,11 @@ use Illuminate\Support\Collection;
  * ─────────────────────────────
  * • Any hourly leave (start / middle / end of shift) makes
  *   worked = actual_worked + paid_leave_minutes  (≤ shiftMinutes)
- * • delay and early_leave are always measured against the ORIGINAL
- *   shift boundaries (not adjusted for the leave window).
+ * • delay and early_leave are first computed against the ORIGINAL
+ *   shift boundaries, then reduced by the leave/mission minutes
+ *   (leave/mission covers the gap — no penalty).
+ *   Net delay   = max(0, raw_delay − leave_minutes)
+ *   Net early_leave = max(0, raw_early_leave − leave_minutes)
  * • Daily leave / mission → worked = shiftMinutes, delay = 0, early_leave = 0.
  */
 class AttendanceService
@@ -163,7 +166,8 @@ class AttendanceService
 
         // ── Hourly paid leave (any position: start / middle / end) ───────
         // worked = actual + leave_minutes, capped at shiftMinutes
-        // delay / early_leave measured against ORIGINAL shift boundaries
+        // Leave covers the gap: net_delay = max(0, raw_delay − leave_minutes)
+        //                       net_early_leave = max(0, raw_early_leave − leave_minutes)
         $hourlyLeave = (int) $log->paid_leave;   // minutes already stored on the log
         if ($hourlyLeave > 0 && $hourlyLeave < $shiftMinutes) {
             $rawWorked = $this->rawWorkedMinutes($log, $workShift);
@@ -171,28 +175,37 @@ class AttendanceService
 
             $bounds = $this->shiftDelayEarlyLeave($log, $workShift);
 
+            // Leave minutes absorb delay and early-leave — no penalty for covered time
+            $netDelay = max(0, $bounds['delay'] - $hourlyLeave);
+            $netEarlyLeave = max(0, $bounds['early_leave'] - $hourlyLeave);
+
             return [
                 'worked' => $totalWorked,
-                'delay' => $bounds['delay'],
-                'early_leave' => $bounds['early_leave'],
+                'delay' => $netDelay,
+                'early_leave' => $netEarlyLeave,
                 'overtime' => 0,   // leave days don't earn overtime
                 'mission' => (int) ($log->mission ?? 0),
             ];
         }
 
         // ── Hourly mission ────────────────────────────────────────────────
+        // Mission minutes absorb delay and early-leave — same rule as hourly leave
         if ($log->mission > 0 && $log->mission < $shiftMinutes) {
             $rawWorked = $this->rawWorkedMinutes($log, $workShift);
-            $totalWorked = min($shiftMinutes, $rawWorked + (int) $log->mission);
+            $missionMin = (int) $log->mission;
+            $totalWorked = min($shiftMinutes, $rawWorked + $missionMin);
 
             $bounds = $this->shiftDelayEarlyLeave($log, $workShift);
 
+            $netDelay = max(0, $bounds['delay'] - $missionMin);
+            $netEarlyLeave = max(0, $bounds['early_leave'] - $missionMin);
+
             return [
                 'worked' => $totalWorked,
-                'delay' => $bounds['delay'],
-                'early_leave' => $bounds['early_leave'],
+                'delay' => $netDelay,
+                'early_leave' => $netEarlyLeave,
                 'overtime' => 0,
-                'mission' => (int) $log->mission,
+                'mission' => $missionMin,
             ];
         }
 

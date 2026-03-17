@@ -209,13 +209,23 @@
                                 {{ $attendanceLog->entry_time ? substr($attendanceLog->entry_time, 0, 5) : '—' }}
                             </div>
                             @if ($workShift && $attendanceLog->entry_time && $diffEntry !== null)
-                                <div class="stat-desc {{ $computed['delay'] > 0 ? 'text-error' : 'text-emerald-400' }}">
-                                    @if ($diffEntry <= 0)
-                                        {{ __(':min min early', ['min' => abs($diffEntry)]) }}
-                                    @elseif ($computed['delay'] === 0)
-                                        {{ __(':min min late (within grace)', ['min' => $diffEntry]) }}
+                                @php
+                                    $grossDelay = $diffEntry; // signed: positive = late
+                                    $netDelay = $computed['delay'];
+                                    $leaveCover = max(0, (int) $attendanceLog->paid_leave + (int) $attendanceLog->mission);
+                                @endphp
+                                <div class="stat-desc {{ $netDelay > 0 ? 'text-error' : 'text-emerald-400' }}">
+                                    @if ($grossDelay <= 0)
+                                        {{ __(':min min early', ['min' => abs($grossDelay)]) }}
+                                    @elseif ($netDelay === 0 && $grossDelay <= (int) ($workShift->float ?? 0))
+                                        {{ __(':min min late (within grace)', ['min' => $grossDelay]) }}
+                                    @elseif ($netDelay === 0 && $leaveCover > 0)
+                                        <span class="text-warning">{{ __(':min min late → covered by leave/mission', ['min' => $grossDelay]) }}</span>
                                     @else
-                                        {{ __(':min min late', ['min' => $computed['delay']]) }}
+                                        {{ __(':min min late', ['min' => $netDelay]) }}
+                                        @if ($leaveCover > 0)
+                                            <span class="opacity-60">({{ __('gross: :min min', ['min' => $grossDelay]) }})</span>
+                                        @endif
                                     @endif
                                 </div>
                             @endif
@@ -374,6 +384,68 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {{-- ══ Section 5: Personnel Requests ════════════════════════════════ --}}
+            <div>
+                <div class="divider text-lg font-semibold">{{ __('Personnel Requests') }}</div>
+                <p class="text-sm text-gray-500 mb-4">
+                    {{ __('Approved requests for this date are applied to the calculation: leave and mission minutes reduce delay and early-leave penalties.') }}
+                </p>
+                @if ($personnelRequests->isEmpty())
+                    <div class="alert alert-ghost border border-base-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" />
+                        </svg>
+                        <span class="text-gray-500">{{ __('No personnel requests found.') }}</span>
+                    </div>
+                @else
+                    <div class="overflow-x-auto">
+                        <table class="table w-full">
+                            <thead>
+                                <tr>
+                                    <th class="px-4 py-3">{{ __('Type') }}</th>
+                                    <th class="px-4 py-3">{{ __('Start') }}</th>
+                                    <th class="px-4 py-3">{{ __('End') }}</th>
+                                    <th class="px-4 py-3 text-center">{{ __('Duration (min)') }}</th>
+                                    <th class="px-4 py-3 text-center">{{ __('Status') }}</th>
+                                    <th class="px-4 py-3">{{ __('Reason') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($personnelRequests as $pr)
+                                    @php
+                                        $statusClass = match ($pr->status) {
+                                            'approved' => 'badge-success',
+                                            'rejected' => 'badge-error',
+                                            default => 'badge-warning',
+                                        };
+                                        $typeClass = match (true) {
+                                            in_array($pr->request_type, \App\Enums\PersonnelRequestType::leaveTypes()) => 'badge-info',
+                                            in_array($pr->request_type, \App\Enums\PersonnelRequestType::missionTypes()) => 'badge-accent',
+                                            default => 'badge-ghost',
+                                        };
+                                        $durationMin = (int) $pr->start_date->diffInMinutes($pr->end_date);
+                                    @endphp
+                                    <tr class="hover {{ $pr->status === 'approved' ? '' : 'opacity-60' }}">
+                                        <td class="px-4 py-3">
+                                            <span class="badge badge-sm {{ $typeClass }}">{{ $pr->request_type->label() }}</span>
+                                        </td>
+                                        <td class="px-4 py-3 font-mono text-sm">{{ formatDate($pr->start_date, 'Y/m/d H:i') }}</td>
+                                        <td class="px-4 py-3 font-mono text-sm">{{ formatDate($pr->end_date, 'Y/m/d H:i') }}</td>
+                                        <td class="px-4 py-3 text-center font-mono">{{ $durationMin }}</td>
+                                        <td class="px-4 py-3 text-center">
+                                            <span class="badge badge-sm {{ $statusClass }}">
+                                                {{ ucfirst($pr->status) }}
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3 text-sm text-gray-500">{{ $pr->reason ?? '—' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
             </div>
 
             {{-- ══ Actions ═══════════════════════════════════════════════════════ --}}
