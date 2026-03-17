@@ -9,13 +9,15 @@ enum FiscalYearSection: string
     case CONFIGS = 'configs';
     case BANKS = 'banks'; // Represents banks + bank_accounts
     case CUSTOMERS = 'customers'; // Represents customer_groups + customers + comments
-    case PRODUCTS = 'products'; // Represents product_groups + products
+    case PRODUCTS = 'products'; // Represents product_groups + products + product_websites
     case SERVICES = 'services'; // Represents service_groups + services
     case SUBJECTS = 'subjects';
     case DOCUMENTS = 'documents'; // Represents documents + transactions + document_files
     case INVOICES = 'invoices'; // Represents invoices + ancillary_costs
     case CHEQUES = 'cheques'; //  Represents cheques + cheque_histories
-    case EMPLOYEE = 'employee'; // Represents employees + org_charts + work_sites + work_site_contracts + work_shifts + salary_decrees + monthly_attendances + attendance_logs + payrolls + personnel_requests
+    case EMPLOYEES = 'employees'; // Represents employees + org_charts + work_sites + work_site_contracts + work_shifts + salary_decrees + monthly_attendances + attendance_logs + payrolls + personnel_requests
+    case PUBLIC_HOLIDAYS = 'public_holidays';
+    case TAX_SLABS = 'tax_slabs';
 
     public function label(): string
     {
@@ -40,7 +42,9 @@ enum FiscalYearSection: string
             self::PRODUCTS->value => self::PRODUCTS->label(),
             self::SERVICES->value => self::SERVICES->label(),
             self::SUBJECTS->value => self::SUBJECTS->label(),
-            self::EMPLOYEE->value => self::EMPLOYEE->label(),
+            self::EMPLOYEES->value => self::EMPLOYEES->label(),
+            self::PUBLIC_HOLIDAYS->value => self::PUBLIC_HOLIDAYS->label(),
+            self::TAX_SLABS->value => self::TAX_SLABS->label(),
         ];
     }
 }
