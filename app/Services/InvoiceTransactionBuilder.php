@@ -253,8 +253,6 @@ class InvoiceTransactionBuilder
      */
     private function buildBuyItemsTransactions(): void
     {
-        $hasProducts = collect($this->items)->contains(fn ($i) => ($i['itemable_type'] ?? null) === 'product');
-
         foreach ($this->items as $item) {
             $resolved = $this->resolveItemable($item);
             if (! $resolved) {
@@ -275,21 +273,12 @@ class InvoiceTransactionBuilder
             }
 
             if ($service) {
-                // Service expense ← debit
+                // Cost of services (pure service invoice only)
                 $this->transactions[] = [
-                    'subject_id' => $service->subject_id,
-                    'desc' => $desc,
+                    'subject_id' => $service->cogs_subject_id,
+                    'desc' => $this->cogsDescription(__('Cost of Services')),
                     'value' => -($vals['unitPrice'] * $vals['quantity']),
                 ];
-
-                // Cost of services (pure service invoice only)
-                if (! $hasProducts) {
-                    $this->transactions[] = [
-                        'subject_id' => $service->cogs_subject_id,
-                        'desc' => $this->cogsDescription(__('Cost of Services')),
-                        'value' => -($vals['unitPrice'] * $vals['quantity']),
-                    ];
-                }
             }
         }
     }
@@ -317,7 +306,7 @@ class InvoiceTransactionBuilder
             $desc = $this->itemDescription($vals['quantity']);
 
             // Sales returns (debit)
-            $subjectId = $product ? $product->sales_returns_subject_id : $service->subject_id;
+            $subjectId = $product ? $product->sales_returns_subject_id : $service->return_sales_subject_id;
             $this->transactions[] = [
                 'subject_id' => $subjectId,
                 'desc' => $desc,
@@ -356,8 +345,6 @@ class InvoiceTransactionBuilder
      */
     private function buildReturnBuyItemsTransactions(): void
     {
-        $hasProducts = collect($this->items)->contains(fn ($i) => ($i['itemable_type'] ?? null) === 'product');
-
         foreach ($this->items as $item) {
             $resolved = $this->resolveItemable($item);
             if (! $resolved) {
@@ -378,21 +365,12 @@ class InvoiceTransactionBuilder
             }
 
             if ($service) {
-                // Service ← credit
+                // Cost of services (pure service invoice only)
                 $this->transactions[] = [
-                    'subject_id' => $service->subject_id,
-                    'desc' => $desc,
+                    'subject_id' => $service->cogs_subject_id,
+                    'desc' => $this->cogsDescription(__('Cost of Services')),
                     'value' => $vals['unitPrice'] * $vals['quantity'],
                 ];
-
-                // Cost of services (pure service invoice only)
-                if (! $hasProducts) {
-                    $this->transactions[] = [
-                        'subject_id' => $service->cogs_subject_id,
-                        'desc' => $this->cogsDescription(__('Cost of Services')),
-                        'value' => $vals['unitPrice'] * $vals['quantity'],
-                    ];
-                }
             }
         }
     }
