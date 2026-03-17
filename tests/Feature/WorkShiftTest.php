@@ -49,8 +49,7 @@ class WorkShiftTest extends TestCase
             'start_time' => '08:00',
             'end_time' => '17:00',
             'crosses_midnight' => '0',
-            'float_before' => '10',
-            'float_after' => '10',
+            'float' => '10',
             'break' => '30',
             'is_active' => '1',
         ], $overrides);
@@ -121,8 +120,7 @@ class WorkShiftTest extends TestCase
             'start_time' => '08:00:00',
             'end_time' => '17:00:00',
             'break' => 30,
-            'float_before' => 10,
-            'float_after' => 10,
+            'float' => 10,
             'is_active' => true,
         ]);
     }
@@ -147,12 +145,11 @@ class WorkShiftTest extends TestCase
     public function test_store_validates_float_and_break_ranges(): void
     {
         $response = $this->post(route('attendance.work-shifts.store'), $this->validPayload([
-            'float_before' => 200,
-            'float_after' => -5,
+            'float' => 200,
             'break' => 999,
         ]));
 
-        $response->assertSessionHasErrors(['float_before', 'float_after', 'break']);
+        $response->assertSessionHasErrors(['float', 'break']);
     }
 
     // ----------------------------------------------------------------

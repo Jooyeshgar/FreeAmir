@@ -486,7 +486,7 @@ class AttendanceService
 
     /**
      * Compute delay, early_leave, and raw overtime relative to the
-     * ORIGINAL shift boundaries (float_before grace window applied).
+     * ORIGINAL shift boundaries (float grace window applied).
      *
      * @return array{delay: int, early_leave: int, overtime: int}
      */
@@ -498,22 +498,18 @@ class AttendanceService
             return $empty;
         }
 
-        $entry = Carbon::createFromFormat('H:i:s', $log->entry_time)
-            ?? Carbon::createFromFormat('H:i', $log->entry_time);
-        $exit = Carbon::createFromFormat('H:i:s', $log->exit_time)
-            ?? Carbon::createFromFormat('H:i', $log->exit_time);
+        $entry = Carbon::createFromFormat('H:i:s', $log->entry_time) ?? Carbon::createFromFormat('H:i', $log->entry_time);
+        $exit = Carbon::createFromFormat('H:i:s', $log->exit_time) ?? Carbon::createFromFormat('H:i', $log->exit_time);
 
-        $shiftStart = Carbon::createFromFormat('H:i:s', $workShift->start_time)
-            ?? Carbon::createFromFormat('H:i', $workShift->start_time);
-        $shiftEnd = Carbon::createFromFormat('H:i:s', $workShift->end_time)
-            ?? Carbon::createFromFormat('H:i', $workShift->end_time);
+        $shiftStart = Carbon::createFromFormat('H:i:s', $workShift->start_time) ?? Carbon::createFromFormat('H:i', $workShift->start_time);
+        $shiftEnd = Carbon::createFromFormat('H:i:s', $workShift->end_time) ?? Carbon::createFromFormat('H:i', $workShift->end_time);
 
         if ($entry === null || $exit === null || $shiftStart === null || $shiftEnd === null) {
             return $empty;
         }
 
-        $floatBefore = max(0, (int) ($workShift->float_before ?? 0));
-        $floatCutoff = $shiftStart->copy()->addMinutes($floatBefore);
+        $float = max(0, (int) ($workShift->float ?? 0));
+        $floatCutoff = $shiftStart->copy()->addMinutes($float);
         $lateMinutes = (int) $floatCutoff->diffInMinutes($entry, false);
 
         if ($lateMinutes <= 0) {
@@ -523,7 +519,7 @@ class AttendanceService
             $arrivalDelay = 0;
         } else {
             $arrivalDelay = $lateMinutes;
-            $adjustedEnd = $shiftEnd->copy()->addMinutes($floatBefore);
+            $adjustedEnd = $shiftEnd->copy()->addMinutes($float);
         }
 
         $exitOffset = (int) $adjustedEnd->diffInMinutes($exit, false);

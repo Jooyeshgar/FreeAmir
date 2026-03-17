@@ -266,8 +266,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'start_time' => '08:00:00',
                 'end_time' => '16:00:00',
                 'crosses_midnight' => false,
-                'float_before' => 0,
-                'float_after' => 0,
+                'float' => 0,
                 'break' => 0,
                 'is_active' => true,
             ]

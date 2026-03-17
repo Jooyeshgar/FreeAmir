@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ThursdayStatus;
 use App\Models\Employee;
 use App\Models\MonthlyAttendance;
 use App\Models\PublicHoliday;
@@ -97,6 +98,9 @@ class MonthlyAttendanceController extends Controller
             ->toArray();
 
         // Build a full list of every day in the duration so absent days are visible
+        $workShift = $monthlyAttendance->employee?->workShift;
+        $thursdayIsHoliday = $workShift?->thursday_status === ThursdayStatus::HOLIDAY;
+
         $logsByDate = $monthlyAttendance->logs->keyBy(fn ($log) => $log->log_date->toDateString());
         $allDays = collect();
         for ($i = 0; $i < $monthlyAttendance->duration; $i++) {
@@ -109,7 +113,8 @@ class MonthlyAttendanceController extends Controller
                         'log_date' => $date,
                         '_placeholder' => true,
                         '_is_friday' => $date->dayOfWeek === Carbon::FRIDAY,
-                        '_is_holiday' => isset($holidayDates[$dateKey]),
+                        '_is_holiday' => isset($holidayDates[$dateKey])
+                            || ($thursdayIsHoliday && $date->dayOfWeek === Carbon::THURSDAY),
                     ]
             );
         }

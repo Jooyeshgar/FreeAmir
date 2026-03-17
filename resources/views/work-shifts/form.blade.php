@@ -13,15 +13,21 @@
         </div>
 
         <div>
-            <x-input name="float_before" id="float_before" type="number" title="{{ __('Float Before (minutes)') }}" :value="old('float_before', $workShift->float_before ?? 0)" placeholder="0" />
-        </div>
-
-        <div>
-            <x-input name="float_after" id="float_after" type="number" title="{{ __('Float After (minutes)') }}" :value="old('float_after', $workShift->float_after ?? 0)" placeholder="0" />
+            <x-input name="float" id="float" type="number" step="0.5" title="{{ __('Float (minutes)') }}" :value="old('float', $workShift->float ?? 0)" placeholder="0" />
         </div>
 
         <div>
             <x-input name="break" id="break" type="number" title="{{ __('Break (minutes)') }}" :value="old('break', $workShift->break ?? 0)" placeholder="0" />
+        </div>
+
+        <div>
+            <x-input name="holiday_coefficient" id="holiday_coefficient" type="number" step="0.01" title="{{ __('Holiday Coefficient') }}" :value="old('holiday_coefficient', $workShift->holiday_coefficient ?? 1.4)"
+                placeholder="1.40" />
+        </div>
+
+        <div>
+            <x-input name="overtime_coefficient" id="overtime_coefficient" type="number" step="0.01" title="{{ __('Overtime Coefficient') }}" :value="old('overtime_coefficient', $workShift->overtime_coefficient ?? 1.4)"
+                placeholder="1.40" />
         </div>
 
         <div>

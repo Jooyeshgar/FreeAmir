@@ -156,11 +156,11 @@ class AttendanceLogController extends Controller
         // Compute what the service WOULD calculate right now (without saving)
         $computed = $attendanceService->computeLogColumns($attendanceLog, $workShift, $isFriday, $isHoliday, $isThursday);
 
-        // Effective (real) shift start accounting for float_before grace window
+        // Effective (real) shift start accounting for float grace window
         $effectiveShiftStart = null;
         if ($workShift) {
             $effectiveShiftStart = Carbon::createFromFormat('H:i:s', $workShift->start_time)
-                ->addMinutes((int) ($workShift->float_before ?? 0))
+                ->addMinutes((int) ($workShift->float ?? 0))
                 ->format('H:i');
         }
 

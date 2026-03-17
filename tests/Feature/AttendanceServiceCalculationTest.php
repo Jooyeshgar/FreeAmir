@@ -65,8 +65,7 @@ class AttendanceServiceCalculationTest extends TestCase
             'end_time' => '17:00:00',
             'crosses_midnight' => false,
             'break' => 0,
-            'float_before' => 0,
-            'float_after' => 0,
+            'float' => 0,
             'is_active' => true,
         ], $overrides));
     }

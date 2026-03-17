@@ -36,9 +36,10 @@ class WorkShiftController extends Controller
             'end_time' => ['required', 'date_format:H:i'],
             'thursday_status' => ['required', 'in:holiday,full_day,half_day'],
             'thursday_exit_time' => ['nullable', 'required_if:thursday_status,half_day', 'date_format:H:i'],
-            'float_before' => ['nullable', 'integer', 'min:0', 'max:120'],
-            'float_after' => ['nullable', 'integer', 'min:0', 'max:120'],
+            'float' => ['nullable', 'numeric', 'min:0', 'max:120'],
             'break' => ['nullable', 'integer', 'min:0', 'max:480'],
+            'holiday_coefficient' => ['nullable', 'numeric', 'min:1', 'max:10'],
+            'overtime_coefficient' => ['nullable', 'numeric', 'min:1', 'max:10'],
             'is_active' => ['boolean'],
         ]);
 
@@ -66,9 +67,10 @@ class WorkShiftController extends Controller
             'end_time' => ['required', 'date_format:H:i'],
             'thursday_status' => ['required', 'in:holiday,full_day,half_day'],
             'thursday_exit_time' => ['nullable', 'required_if:thursday_status,half_day', 'date_format:H:i'],
-            'float_before' => ['nullable', 'integer', 'min:0', 'max:120'],
-            'float_after' => ['nullable', 'integer', 'min:0', 'max:120'],
+            'float' => ['nullable', 'numeric', 'min:0', 'max:120'],
             'break' => ['nullable', 'integer', 'min:0', 'max:480'],
+            'holiday_coefficient' => ['nullable', 'numeric', 'min:1', 'max:10'],
+            'overtime_coefficient' => ['nullable', 'numeric', 'min:1', 'max:10'],
             'is_active' => ['boolean'],
         ]);
 

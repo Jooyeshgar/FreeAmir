@@ -156,8 +156,7 @@
                                     <th class="px-4 py-3">{{ __('Shift Start') }}</th>
                                     <th class="px-4 py-3">{{ __('Shift End') }}</th>
                                     <th class="px-4 py-3">{{ __('Real Cutoff (Start + Float Before)') }}</th>
-                                    <th class="px-4 py-3">{{ __('Float Before (grace)') }}</th>
-                                    <th class="px-4 py-3">{{ __('Float After') }}</th>
+                                    <th class="px-4 py-3">{{ __('Float') }}</th>
                                     <th class="px-4 py-3">{{ __('Break') }}</th>
                                     <th class="px-4 py-3">{{ __('Thursday') }}</th>
                                     <th class="px-4 py-3">{{ __('Thursday Exit') }}</th>
@@ -173,12 +172,11 @@
                                     </td>
                                     <td class="px-4 py-3 font-mono font-semibold text-warning">
                                         {{ $effectiveShiftStart ?? '—' }}
-                                        @if ($workShift->float_before)
-                                            <span class="badge badge-warning badge-xs ms-1">+{{ $workShift->float_before }} {{ __('min') }}</span>
+                                        @if ($workShift->float)
+                                            <span class="badge badge-warning badge-xs ms-1">+{{ $workShift->float }} {{ __('min') }}</span>
                                         @endif
                                     </td>
-                                    <td class="px-4 py-3">{{ $workShift->float_before ?? 0 }} {{ __('min') }}</td>
-                                    <td class="px-4 py-3">{{ $workShift->float_after ?? 0 }} {{ __('min') }}</td>
+                                    <td class="px-4 py-3">{{ $workShift->float ?? 0 }} {{ __('min') }}</td>
                                     <td class="px-4 py-3">{{ $workShift->break ?? 0 }} {{ __('min') }}</td>
                                     <td class="px-4 py-3">{{ $workShift->thursday_status?->label() ?? '—' }}</td>
                                     <td

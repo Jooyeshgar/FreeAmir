@@ -18,20 +18,22 @@ class WorkShift extends Model
         'name',
         'start_time',
         'end_time',
-        'float_before',
-        'float_after',
+        'float',
         'break',
         'thursday_status',
         'thursday_exit_time',
+        'holiday_coefficient',
+        'overtime_coefficient',
         'is_active',
     ];
 
     protected $casts = [
         'thursday_status' => ThursdayStatus::class,
         'is_active' => 'boolean',
-        'float_before' => 'integer',
-        'float_after' => 'integer',
+        'float' => 'float',
         'break' => 'integer',
+        'holiday_coefficient' => 'float',
+        'overtime_coefficient' => 'float',
     ];
 
     public function getDurationAttribute(): int

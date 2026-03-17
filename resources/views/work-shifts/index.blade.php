@@ -34,8 +34,7 @@
                         <th>{{ __('Start Time') }}</th>
                         <th>{{ __('End Time') }}</th>
                         <th>{{ __('Break (min)') }}</th>
-                        <th>{{ __('Float Before') }}</th>
-                        <th>{{ __('Float After') }}</th>
+                        <th>{{ __('Float') }}</th>
                         <th>{{ __('Thursday Status') }}</th>
                         <th>{{ __('Active') }}</th>
                         <th>{{ __('Action') }}</th>
@@ -48,8 +47,7 @@
                             <td>{{ substr($workShift->start_time, 0, 5) }}</td>
                             <td>{{ substr($workShift->end_time, 0, 5) }}</td>
                             <td>{{ $workShift->break }}</td>
-                            <td>{{ $workShift->float_before }}</td>
-                            <td>{{ $workShift->float_after }}</td>
+                            <td>{{ $workShift->float }}</td>
                             <td>{{ $workShift->thursday_status?->label() }}</td>
                             <td>
                                 @if ($workShift->is_active)
