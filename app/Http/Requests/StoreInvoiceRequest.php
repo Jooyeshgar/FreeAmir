@@ -123,20 +123,33 @@ class StoreInvoiceRequest extends FormRequest
                     );
                 }
 
+                $lastReturnedInvoicesQuery = Invoice::where('returned_invoice_id', $returnedInvoiceId);
+                if ($invoice) {
+                    $lastReturnedInvoicesQuery->whereNot('id', $invoice->id);
+                }
+                $lastReturnedInvoices = $lastReturnedInvoicesQuery->get();
+
                 foreach ($transactions as $index => $transaction) {
-                    // Original item is the item in the returned invoice that matches the current transaction item
                     $originalItem = $returnedInvoice->items()
                         ->where('itemable_type', $transaction['item_type'] === 'product' ? Product::class : Service::class)
                         ->where('itemable_id', $transaction['item_id'])->first();
 
                     if (! $originalItem) {
-                        continue; // No matching item in original invoice, skip validation for this item because this item is an unreturned item, not effect on original item
+                        continue;
                     }
 
-                    if ($transaction['quantity'] > $originalItem->quantity) {
+                    $sumLastReturnedInvoiceItems = 0;
+                    foreach ($lastReturnedInvoices as $lastReturnedInvoice) {
+                        $returnedInvoiceItem = $lastReturnedInvoice->items()
+                            ->where('itemable_type', $transaction['item_type'] === 'product' ? Product::class : Service::class)
+                            ->where('itemable_id', $transaction['item_id'])->first();
+
+                        $sumLastReturnedInvoiceItems += $returnedInvoiceItem?->quantity ?? 0;
+                    }
+                    if ($originalItem->quantity < $transaction['quantity'] + $sumLastReturnedInvoiceItems) {
                         $validator->errors()->add(
                             "transactions.{$index}.quantity",
-                            __('The quantity for this item cannot exceed the original invoice quantity of :quantity.', ['quantity' => $originalItem->quantity])
+                            __('The addition quantity for this item and its last returned invoice items cannot exceed the original invoice quantity of :quantity.', ['quantity' => $originalItem->quantity])
                         );
                     }
                 }

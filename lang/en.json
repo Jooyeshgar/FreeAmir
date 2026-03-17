@@ -1194,7 +1194,7 @@
     "The product must be an integer.": "The product must be an integer.",
     "The product must be unique for each row.": "The product must be unique for each row.",
     "The provided credentials do not match our records.": "The provided credentials do not match our records.",
-    "The quantity for this item cannot exceed the original invoice quantity of :quantity.": "The quantity for this item cannot exceed the original invoice quantity of :quantity.",
+    "The addition quantity for this item and its last returned invoice items cannot exceed the original invoice quantity of :quantity.": "The addition quantity for this item and its last returned invoice items cannot exceed the original invoice quantity of :quantity.",
     "The returned invoice ID is invalid.": "The returned invoice ID is invalid.",
     "The returned invoice must be a buy invoice for a return buy type.": "The returned invoice must be a buy invoice for a return buy type.",
     "The returned invoice must be a sell invoice for a return sell type.": "The returned invoice must be a sell invoice for a return sell type.",

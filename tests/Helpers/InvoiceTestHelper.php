@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Services\InvoiceService;
+use Exception;
 
 trait InvoiceTestHelper
 {
@@ -16,7 +17,7 @@ trait InvoiceTestHelper
             ->where('company_id', $this->companyId)
             ->firstOrFail();
 
-        return \App\Models\Product::factory()
+        return Product::factory()
             ->withGroup($group)
             ->withSubjects()
             ->create(array_merge(['company_id' => $this->companyId], $overrides));
@@ -41,8 +42,11 @@ trait InvoiceTestHelper
         ?int $number = null,
         ?string $date = null,
         ?int $returnedInvoiceId = null
-    ): array {
+    ): array|Exception {
         $number ??= ++$this->nextInvoiceNumber;
+        if ($returnedInvoiceId) {
+            $this->validateInvoiceItemsQuantity($returnedInvoiceId, $items);
+        }
 
         $result = InvoiceService::createInvoice(
             $this->user,
@@ -72,6 +76,34 @@ trait InvoiceTestHelper
         ];
     }
 
+    private function validateInvoiceItemsQuantity(int $returnedInvoiceId, array $items): void
+    {
+        $returnedInvoice = $this->findInvoice($returnedInvoiceId);
+
+        foreach ($items as $index => $item) {
+            $product = $item['itemable_type'] === 'product' ? $this->findProduct($item['itemable_id']) : null;
+            if (! $product) {
+                continue;
+            }
+
+            $originalItem = $this->findInvoiceItem($returnedInvoice, $product);
+            if (! $originalItem) {
+                continue;
+            }
+
+            $lastReturnedInvoices = Invoice::where('returned_invoice_id', $returnedInvoiceId)->get();
+
+            $sumLastReturnedInvoiceItems = 0;
+            foreach ($lastReturnedInvoices as $lastReturnedInvoice) {
+                $sumLastReturnedInvoiceItems += $this->findInvoiceItem($lastReturnedInvoice, $product)?->quantity ?? 0;
+            }
+
+            if ($originalItem->quantity < $item['quantity'] + $sumLastReturnedInvoiceItems) {
+                throw new Exception;
+            }
+        }
+    }
+
     private function buy(array $items, bool $approved = true, ?int $number = null, ?string $date = null): array
     {
         return $this->createInvoice(InvoiceType::BUY, $items, $approved, $number, $date);
@@ -82,12 +114,12 @@ trait InvoiceTestHelper
         return $this->createInvoice(InvoiceType::SELL, $items, $approved, $number, $date);
     }
 
-    private function returnBuy(array $items, int $returnedInvoiceId, bool $approved = true, ?int $number = null, ?string $date = null): array
+    private function returnBuy(array $items, int $returnedInvoiceId, bool $approved = true, ?int $number = null, ?string $date = null): array|Exception
     {
         return $this->createInvoice(InvoiceType::RETURN_BUY, $items, $approved, $number, $date, $returnedInvoiceId);
     }
 
-    private function returnSell(array $items, int $returnedInvoiceId, bool $approved = true, ?int $number = null, ?string $date = null): array
+    private function returnSell(array $items, int $returnedInvoiceId, bool $approved = true, ?int $number = null, ?string $date = null): array|Exception
     {
         return $this->createInvoice(InvoiceType::RETURN_SELL, $items, $approved, $number, $date, $returnedInvoiceId);
     }

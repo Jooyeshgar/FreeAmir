@@ -1197,7 +1197,7 @@
     "The product must be an integer.": "محصول باید یک عدد صحیح باشد.",
     "The product must be unique for each row.": "محصول باید برای هر ردیف منحصر به فرد باشد.",
     "The provided credentials do not match our records.": "کاربری با این مشخصات یافت نشد.",
-    "The quantity for this item cannot exceed the original invoice quantity of :quantity.": "تعداد این آیتم نمی‌تواند از تعداد فاکتور اصلی (:quantity) بیشتر باشد.",
+    "The addition quantity for this item and its last returned invoice items cannot exceed the original invoice quantity of :quantity.": " جمع تعداد این آیتم و آیتم های بقیه فاکتورهای بازگشتی مرتبط نمی‌تواند از تعداد فاکتور اصلی (:quantity) بیشتر باشد.",
     "The returned invoice ID is invalid.": "شناسه فاکتور مرجع برگشتی نامعتبر است.",
     "The returned invoice must be a buy invoice for a return buy type.": "برای نوع برگشت از خرید، فاکتور مرجع باید از نوع خرید باشد.",
     "The returned invoice must be a sell invoice for a return sell type.": "برای نوع برگشت از فروش، فاکتور مرجع باید از نوع فروش باشد.",
