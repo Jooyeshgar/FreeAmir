@@ -987,7 +987,7 @@
     "Return from": "بازگشت از",
     "Return from Buy": "بازگشت از خرید",
     "Return from Sell": "بازگشت از فروش",
-    "Return invoice is linked to original invoice (:invoice).": "این فاکتور برگشتی به فاکتور اصلی (:invoice) مرتبط است.",
+    "Return invoice is linked to original invoice (:invoice)": "این فاکتور برگشتی به فاکتور اصلی (:invoice) مرتبط است",
     "Returned Bought Products Quantity": "تعداد محصولات بازگشتی از خرید",
     "Returned Invoice": "فاکتور بازگشتی",
     "Returned Items": "موارد بازگشتی",
