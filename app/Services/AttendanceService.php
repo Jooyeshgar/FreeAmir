@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\PersonnelRequestType;
+use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
 use App\Models\Employee;
 use App\Models\MonthlyAttendance;
@@ -56,14 +57,15 @@ class AttendanceService
      */
     public function recalculateLog(AttendanceLog $log): AttendanceLog
     {
-        $employee  = Employee::with('workShift')->find($log->employee_id);
+        $employee = Employee::with('workShift')->find($log->employee_id);
         $workShift = $employee?->workShift;
 
         $logDate = $log->log_date;
-        $isFriday  = $logDate->dayOfWeek === Carbon::FRIDAY;
+        $isFriday = $logDate->dayOfWeek === Carbon::FRIDAY;
+        $isThursday = $logDate->dayOfWeek === Carbon::THURSDAY;
         $isHoliday = PublicHoliday::where('date', $logDate->toDateString())->exists();
 
-        $columns = $this->computeLogColumns($log, $workShift, $isFriday, $isHoliday);
+        $columns = $this->computeLogColumns($log, $workShift, $isFriday, $isHoliday, $isThursday);
 
         $log->update($columns);
 
@@ -76,39 +78,64 @@ class AttendanceService
      *
      * @return array{worked: int, delay: int, early_leave: int, overtime: int, mission: int}
      */
-    public function computeLogColumns(AttendanceLog $log, ?WorkShift    $workShift, bool $isFriday = false, bool $isHoliday = false): array 
+    public function computeLogColumns(AttendanceLog $log, ?WorkShift $workShift, bool $isFriday = false, bool $isHoliday = false, bool $isThursday = false): array
     {
+        // ── Thursday status ───────────────────────────────────────────────
+        $thursdayStatus = $isThursday ? ($workShift?->thursday_status ?? ThursdayStatus::FULL_DAY) : null;
+
+        // Thursday holiday: treat exactly like a Friday/public holiday
+        if ($isThursday && $thursdayStatus === ThursdayStatus::HOLIDAY) {
+            $workedMin = $this->rawWorkedMinutes($log, $workShift);
+
+            return [
+                'worked' => $workedMin,
+                'delay' => 0,
+                'early_leave' => 0,
+                'overtime' => 0,
+                'mission' => 0,
+                'is_friday' => $isFriday,
+                'is_holiday' => true,  // Thursday-holiday counts as a holiday day
+            ];
+        }
+
+        // Thursday half-day: use thursday_exit_time as the effective shift end
+        if ($isThursday && $thursdayStatus === ThursdayStatus::HALF_DAY && $workShift?->thursday_exit_time) {
+            $workShift = clone $workShift;
+            $workShift->end_time = $workShift->thursday_exit_time;
+        }
+
         $shiftMinutes = $this->shiftWorkMinutes($workShift);
 
         // ── Off-day (Friday / public holiday) ────────────────────────────
         if ($isFriday || $isHoliday) {
             $workedMin = $this->rawWorkedMinutes($log, $workShift);
+
             return [
-                'worked'      => $workedMin,
-                'delay'       => 0,
-                'is_friday'   => $isFriday,
-                'is_holiday'  => $isHoliday,
+                'worked' => $workedMin,
+                'delay' => 0,
+                'is_friday' => $isFriday,
+                'is_holiday' => $isHoliday,
             ];
         }
 
         // ── Daily leave / sick leave ──────────────────────────────────────
         if ($log->paid_leave >= $shiftMinutes) {
             return [
-                'worked'      => $shiftMinutes,
-                'delay'       => 0,
-                'is_friday'   => $isFriday,
-                'is_holiday'  => $isHoliday,
+                'worked' => $shiftMinutes,
+                'delay' => 0,
+                'is_friday' => $isFriday,
+                'is_holiday' => $isHoliday,
             ];
         }
 
         // ── Mission (daily) ───────────────────────────────────────────────
         if ($log->mission > 0 && $log->mission >= $shiftMinutes) {
             return [
-                'worked'      => $shiftMinutes,
-                'delay'       => 0,
+                'worked' => $shiftMinutes,
+                'delay' => 0,
                 'early_leave' => 0,
-                'overtime'    => 0,
-                'mission'     => $log->mission,
+                'overtime' => 0,
+                'mission' => $log->mission,
             ];
         }
 
@@ -117,20 +144,20 @@ class AttendanceService
             // Unpaid leave: no clock-in required
             if ($log->unpaid_leave > 0) {
                 return [
-                    'worked'      => 0,
-                    'delay'       => 0,
+                    'worked' => 0,
+                    'delay' => 0,
                     'early_leave' => 0,
-                    'overtime'    => 0,
-                    'mission'     => 0,
+                    'overtime' => 0,
+                    'mission' => 0,
                 ];
             }
 
             return [
-                'worked'      => 0,
-                'delay'       => 0,
+                'worked' => 0,
+                'delay' => 0,
                 'early_leave' => 0,
-                'overtime'    => 0,
-                'mission'     => 0,
+                'overtime' => 0,
+                'mission' => 0,
             ];
         }
 
@@ -139,53 +166,53 @@ class AttendanceService
         // delay / early_leave measured against ORIGINAL shift boundaries
         $hourlyLeave = (int) $log->paid_leave;   // minutes already stored on the log
         if ($hourlyLeave > 0 && $hourlyLeave < $shiftMinutes) {
-            $rawWorked   = $this->rawWorkedMinutes($log, $workShift);
+            $rawWorked = $this->rawWorkedMinutes($log, $workShift);
             $totalWorked = min($shiftMinutes, $rawWorked + $hourlyLeave);
 
             $bounds = $this->shiftDelayEarlyLeave($log, $workShift);
 
             return [
-                'worked'      => $totalWorked,
-                'delay'       => $bounds['delay'],
+                'worked' => $totalWorked,
+                'delay' => $bounds['delay'],
                 'early_leave' => $bounds['early_leave'],
-                'overtime'    => 0,   // leave days don't earn overtime
-                'mission'     => (int) ($log->mission ?? 0),
+                'overtime' => 0,   // leave days don't earn overtime
+                'mission' => (int) ($log->mission ?? 0),
             ];
         }
 
         // ── Hourly mission ────────────────────────────────────────────────
         if ($log->mission > 0 && $log->mission < $shiftMinutes) {
-            $rawWorked   = $this->rawWorkedMinutes($log, $workShift);
+            $rawWorked = $this->rawWorkedMinutes($log, $workShift);
             $totalWorked = min($shiftMinutes, $rawWorked + (int) $log->mission);
 
             $bounds = $this->shiftDelayEarlyLeave($log, $workShift);
 
             return [
-                'worked'      => $totalWorked,
-                'delay'       => $bounds['delay'],
+                'worked' => $totalWorked,
+                'delay' => $bounds['delay'],
                 'early_leave' => $bounds['early_leave'],
-                'overtime'    => 0,
-                'mission'     => (int) $log->mission,
+                'overtime' => 0,
+                'mission' => (int) $log->mission,
             ];
         }
 
         // ── Plain attendance (no leave, no mission) ───────────────────────
-        $rawWorked    = $this->rawWorkedMinutes($log, $workShift);
-        $bounds       = $this->shiftDelayEarlyLeave($log, $workShift);
+        $rawWorked = $this->rawWorkedMinutes($log, $workShift);
+        $bounds = $this->shiftDelayEarlyLeave($log, $workShift);
 
         // Overtime: only count up to the manager-approved amount
-        $computedOvertime  = $bounds['overtime'];
-        $approvedOvertime  = (int) ($log->overtime ?? 0);
-        $earnedOvertime    = ($computedOvertime > 0 && $approvedOvertime > 0)
+        $computedOvertime = $bounds['overtime'];
+        $approvedOvertime = (int) ($log->overtime ?? 0);
+        $earnedOvertime = ($computedOvertime > 0 && $approvedOvertime > 0)
             ? min($approvedOvertime, $computedOvertime)
             : 0;
 
         return [
-            'worked'      => $rawWorked,
-            'delay'       => $bounds['delay'],
+            'worked' => $rawWorked,
+            'delay' => $bounds['delay'],
             'early_leave' => $bounds['early_leave'],
-            'overtime'    => $earnedOvertime,
-            'mission'     => 0,
+            'overtime' => $earnedOvertime,
+            'mission' => 0,
         ];
     }
 
@@ -201,14 +228,14 @@ class AttendanceService
      * (i.e. recalculateLog() has been called for each log that changed).
      */
     public function calculateAndStore(
-        int    $employeeId,
+        int $employeeId,
         Carbon $startDate,
-        int    $durationDays,
-        int    $jalaliYear,
-        int    $jalaliMonth
+        int $durationDays,
+        int $jalaliYear,
+        int $jalaliMonth
     ): MonthlyAttendance {
         $companyId = getActiveCompany();
-        $endDate   = $startDate->copy()->addDays($durationDays - 1);
+        $endDate = $startDate->copy()->addDays($durationDays - 1);
 
         $logs = AttendanceLog::where('employee_id', $employeeId)
             ->whereBetween('log_date', [$startDate->toDateString(), $endDate->toDateString()])
@@ -216,7 +243,7 @@ class AttendanceService
 
         $holidays = PublicHoliday::whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->pluck('date')
-            ->map(fn($d) => $d instanceof Carbon ? $d->toDateString() : (string) $d)
+            ->map(fn ($d) => $d instanceof Carbon ? $d->toDateString() : (string) $d)
             ->toArray();
 
         $totals = $this->computeTotals($startDate, $durationDays, $logs, $holidays);
@@ -224,18 +251,18 @@ class AttendanceService
         /** @var MonthlyAttendance $attendance */
         $attendance = MonthlyAttendance::updateOrCreate(
             [
-                'company_id'  => $companyId,
+                'company_id' => $companyId,
                 'employee_id' => $employeeId,
-                'year'        => $jalaliYear,
-                'month'       => $jalaliMonth,
+                'year' => $jalaliYear,
+                'month' => $jalaliMonth,
             ],
             array_merge($totals, [
-                'company_id'  => $companyId,
+                'company_id' => $companyId,
                 'employee_id' => $employeeId,
-                'year'        => $jalaliYear,
-                'month'       => $jalaliMonth,
-                'start_date'  => $startDate->toDateString(),
-                'duration'    => $durationDays,
+                'year' => $jalaliYear,
+                'month' => $jalaliMonth,
+                'start_date' => $startDate->toDateString(),
+                'duration' => $durationDays,
             ])
         );
 
@@ -252,36 +279,36 @@ class AttendanceService
      * This method contains NO business logic — it only counts days and
      * sums minutes that are already stored on each log row.
      *
-     * @param  Collection  $logs        AttendanceLog records (already recalculated)
-     * @param  array       $holidayDates  Gregorian date strings e.g. ['2025-03-21']
+     * @param  Collection  $logs  AttendanceLog records (already recalculated)
+     * @param  array  $holidayDates  Gregorian date strings e.g. ['2025-03-21']
      */
     public function computeTotals(
-        Carbon     $startDate,
-        int        $durationDays,
+        Carbon $startDate,
+        int $durationDays,
         Collection $logs,
-        array      $holidayDates
+        array $holidayDates
     ): array {
         $logsByDate = $logs->keyBy(
-            fn($log) => $log->log_date instanceof Carbon
+            fn ($log) => $log->log_date instanceof Carbon
                 ? $log->log_date->toDateString()
                 : (string) $log->log_date
         );
 
-        $workDays      = 0;
-        $presentDays   = 0;
-        $absentDays    = 0;
-        $overtimeMin   = 0;
-        $missionDays   = 0;
+        $workDays = 0;
+        $presentDays = 0;
+        $absentDays = 0;
+        $overtimeMin = 0;
+        $missionDays = 0;
         $paidLeaveDays = 0;
         $unpaidLeaveMin = 0;
-        $fridayMin     = 0;
-        $holidayMin    = 0;
+        $fridayMin = 0;
+        $holidayMin = 0;
 
         for ($i = 0; $i < $durationDays; $i++) {
-            $day     = $startDate->copy()->addDays($i);
+            $day = $startDate->copy()->addDays($i);
             $dateStr = $day->toDateString();
 
-            $isFriday  = $day->dayOfWeek === Carbon::FRIDAY;
+            $isFriday = $day->dayOfWeek === Carbon::FRIDAY;
             $isHoliday = in_array($dateStr, $holidayDates, true);
 
             // ── Off-day ───────────────────────────────────────────────────
@@ -289,9 +316,10 @@ class AttendanceService
                 if (isset($logsByDate[$dateStr])) {
                     $log = $logsByDate[$dateStr];
                     $isFriday
-                        ? $fridayMin  += (int) $log->overtime
+                        ? $fridayMin += (int) $log->overtime
                         : $holidayMin += (int) $log->overtime;
                 }
+
                 continue;
             }
 
@@ -300,6 +328,7 @@ class AttendanceService
 
             if (! isset($logsByDate[$dateStr])) {
                 $absentDays++;
+
                 continue;
             }
 
@@ -325,15 +354,15 @@ class AttendanceService
         }
 
         return [
-            'work_days'       => $workDays,
-            'present_days'    => $presentDays,
-            'absent_days'     => $absentDays,
-            'overtime'        => $overtimeMin,
-            'mission_days'    => $missionDays,
+            'work_days' => $workDays,
+            'present_days' => $presentDays,
+            'absent_days' => $absentDays,
+            'overtime' => $overtimeMin,
+            'mission_days' => $missionDays,
             'paid_leave_days' => $paidLeaveDays,
-            'unpaid_leave_min'=> $unpaidLeaveMin,
-            'friday'          => $fridayMin,
-            'holiday'         => $holidayMin,
+            'unpaid_leave_min' => $unpaidLeaveMin,
+            'friday' => $fridayMin,
+            'holiday' => $holidayMin,
         ];
     }
 
@@ -353,23 +382,23 @@ class AttendanceService
         $field = match ($personnelRequest->request_type) {
             PersonnelRequestType::LEAVE_HOURLY,
             PersonnelRequestType::LEAVE_DAILY,
-            PersonnelRequestType::SICK_LEAVE       => 'paid_leave',
+            PersonnelRequestType::SICK_LEAVE => 'paid_leave',
             PersonnelRequestType::LEAVE_WITHOUT_PAY => 'unpaid_leave',
             PersonnelRequestType::MISSION_HOURLY,
-            PersonnelRequestType::MISSION_DAILY    => 'mission',
-            PersonnelRequestType::OVERTIME_ORDER   => 'overtime',
-            default                                => null,
+            PersonnelRequestType::MISSION_DAILY => 'mission',
+            PersonnelRequestType::OVERTIME_ORDER => 'overtime',
+            default => null,
         };
 
         if ($field === null) {
             return;
         }
 
-        $start      = $personnelRequest->start_date;
-        $end        = $personnelRequest->end_date;
-        $companyId  = $personnelRequest->company_id;
+        $start = $personnelRequest->start_date;
+        $end = $personnelRequest->end_date;
+        $companyId = $personnelRequest->company_id;
         $employeeId = $personnelRequest->employee_id;
-        $delta      = $subtract ? -1 : 1;
+        $delta = $subtract ? -1 : 1;
 
         $isDailyType = in_array($personnelRequest->request_type, [
             PersonnelRequestType::LEAVE_DAILY,
@@ -380,8 +409,8 @@ class AttendanceService
 
         if ($isDailyType) {
             $duration = $this->shiftWorkMinutes($personnelRequest->employee->workShift);
-            $current  = $start->copy()->startOfDay();
-            $endDay   = $end->copy()->startOfDay();
+            $current = $start->copy()->startOfDay();
+            $endDay = $end->copy()->startOfDay();
 
             while ($current->lte($endDay)) {
                 $log = $this->applyDeltaToLog($employeeId, $companyId, $current, $field, $delta * $duration);
@@ -393,7 +422,7 @@ class AttendanceService
         } else {
             // Hourly / overtime: exact minutes, single day
             $minutes = max(0, (int) $start->diffInMinutes($end));
-            $log     = $this->applyDeltaToLog($employeeId, $companyId, $start, $field, $delta * $minutes);
+            $log = $this->applyDeltaToLog($employeeId, $companyId, $start, $field, $delta * $minutes);
             if ($log) {
                 $this->recalculateLog($log);
             }
@@ -417,7 +446,7 @@ class AttendanceService
 
         $start = Carbon::createFromFormat('H:i:s', $workShift->start_time)
             ?? Carbon::createFromFormat('H:i', $workShift->start_time);
-        $end   = Carbon::createFromFormat('H:i:s', $workShift->end_time)
+        $end = Carbon::createFromFormat('H:i:s', $workShift->end_time)
             ?? Carbon::createFromFormat('H:i', $workShift->end_time);
 
         if ($start === null || $end === null) {
@@ -442,19 +471,17 @@ class AttendanceService
             return 0;
         }
 
-        $entry = Carbon::createFromFormat('H:i:s', $log->entry_time)
-            ?? Carbon::createFromFormat('H:i', $log->entry_time);
-        $exit  = Carbon::createFromFormat('H:i:s', $log->exit_time)
-            ?? Carbon::createFromFormat('H:i', $log->exit_time);
+        $entry = Carbon::createFromFormat('H:i:s', $log->entry_time) ?? Carbon::createFromFormat('H:i', $log->entry_time);
+        $exit = Carbon::createFromFormat('H:i:s', $log->exit_time) ?? Carbon::createFromFormat('H:i', $log->exit_time);
 
         if ($entry === null || $exit === null) {
             return 0;
         }
 
-        $breakMin  = max(0, (int) ($workShift?->break ?? 0));
-        $rawMin    = (int) $entry->diffInMinutes($exit, false);
+        // $breakMin = max(0, (int) ($workShift?->break ?? 0));
+        $rawMin = (int) $entry->diffInMinutes($exit, false);
 
-        return max(0, $rawMin - $breakMin);
+        return max(0, $rawMin); // - $breakMin);
     }
 
     /**
@@ -473,38 +500,38 @@ class AttendanceService
 
         $entry = Carbon::createFromFormat('H:i:s', $log->entry_time)
             ?? Carbon::createFromFormat('H:i', $log->entry_time);
-        $exit  = Carbon::createFromFormat('H:i:s', $log->exit_time)
+        $exit = Carbon::createFromFormat('H:i:s', $log->exit_time)
             ?? Carbon::createFromFormat('H:i', $log->exit_time);
 
         $shiftStart = Carbon::createFromFormat('H:i:s', $workShift->start_time)
             ?? Carbon::createFromFormat('H:i', $workShift->start_time);
-        $shiftEnd   = Carbon::createFromFormat('H:i:s', $workShift->end_time)
+        $shiftEnd = Carbon::createFromFormat('H:i:s', $workShift->end_time)
             ?? Carbon::createFromFormat('H:i', $workShift->end_time);
 
         if ($entry === null || $exit === null || $shiftStart === null || $shiftEnd === null) {
             return $empty;
         }
 
-        $floatBefore  = max(0, (int) ($workShift->float_before ?? 0));
-        $floatCutoff  = $shiftStart->copy()->addMinutes($floatBefore);
-        $lateMinutes  = (int) $floatCutoff->diffInMinutes($entry, false);
+        $floatBefore = max(0, (int) ($workShift->float_before ?? 0));
+        $floatCutoff = $shiftStart->copy()->addMinutes($floatBefore);
+        $lateMinutes = (int) $floatCutoff->diffInMinutes($entry, false);
 
         if ($lateMinutes <= 0) {
             // Within grace window: shift end extends proportionally
-            $offset      = max(0, (int) $shiftStart->diffInMinutes($entry, false));
+            $offset = max(0, (int) $shiftStart->diffInMinutes($entry, false));
             $adjustedEnd = $shiftEnd->copy()->addMinutes($offset);
             $arrivalDelay = 0;
         } else {
             $arrivalDelay = $lateMinutes;
-            $adjustedEnd  = $shiftEnd->copy()->addMinutes($floatBefore);
+            $adjustedEnd = $shiftEnd->copy()->addMinutes($floatBefore);
         }
 
         $exitOffset = (int) $adjustedEnd->diffInMinutes($exit, false);
 
         return [
-            'delay'       => $arrivalDelay,
+            'delay' => $arrivalDelay,
             'early_leave' => max(0, -$exitOffset),
-            'overtime'    => max(0,  $exitOffset),
+            'overtime' => max(0, $exitOffset),
         ];
     }
 
@@ -519,6 +546,7 @@ class AttendanceService
         // otherwise fall back to the default so computeTotals() stays a pure
         // aggregator with no extra queries.
         $shift = $log->employee?->workShift ?? null;
+
         return $this->shiftWorkMinutes($shift);
     }
 
@@ -528,11 +556,11 @@ class AttendanceService
      * Returns the log (or null if nothing was changed).
      */
     private function applyDeltaToLog(
-        int    $employeeId,
-        int    $companyId,
+        int $employeeId,
+        int $companyId,
         Carbon $date,
         string $field,
-        int    $minutes
+        int $minutes
     ): ?AttendanceLog {
         $log = AttendanceLog::where('employee_id', $employeeId)
             ->where('log_date', $date->toDateString())
@@ -544,8 +572,8 @@ class AttendanceService
             }
             $log = AttendanceLog::create([
                 'employee_id' => $employeeId,
-                'company_id'  => $companyId,
-                'log_date'    => $date->toDateString(),
+                'company_id' => $companyId,
+                'log_date' => $date->toDateString(),
             ]);
         }
 

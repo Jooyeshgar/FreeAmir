@@ -253,6 +253,13 @@
                                                 <a href="{{ route('attendance.attendance-logs.edit', $log) }}" class="btn btn-xs btn-ghost">
                                                     {{ __('Edit') }}
                                                 </a>
+                                                <form action="{{ route('attendance.attendance-logs.recalculate', $log) }}" method="POST" class="inline-block mb-0"
+                                                    onsubmit="return confirm('{{ __('Recalculate this attendance log? Stored values will be overwritten with the computed values.') }}')">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-xs btn-ghost">
+                                                        {{ __('Recalculate') }}
+                                                    </button>
+                                                </form>
                                             </td>
                                         @endcan
                                     @endif

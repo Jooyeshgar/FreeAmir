@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AttendanceImportType;
+use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
 use App\Models\Employee;
 use App\Models\PublicHoliday;
@@ -142,10 +143,18 @@ class AttendanceLogController extends Controller
 
         $logDate = $attendanceLog->log_date;
         $isFriday = $logDate->dayOfWeek === Carbon::FRIDAY;
-        $isHoliday = PublicHoliday::where('date', $logDate->toDateString())->exists();
+        $isThursday = $logDate->dayOfWeek === Carbon::THURSDAY;
+        $isPublicHoliday = PublicHoliday::where('date', $logDate->toDateString())->exists();
+
+        // Determine effective Thursday status and whether it acts as a holiday
+        $thursdayStatus = $isThursday ? ($workShift?->thursday_status ?? ThursdayStatus::FULL_DAY) : null;
+        $isThursdayHoliday = $isThursday && $thursdayStatus === ThursdayStatus::HOLIDAY;
+
+        // A day is effectively a holiday if it is a public holiday OR a Thursday-holiday
+        $isHoliday = $isPublicHoliday || $isThursdayHoliday;
 
         // Compute what the service WOULD calculate right now (without saving)
-        $computed = $attendanceService->computeLogColumns($attendanceLog, $workShift, $isFriday, $isHoliday);
+        $computed = $attendanceService->computeLogColumns($attendanceLog, $workShift, $isFriday, $isHoliday, $isThursday);
 
         // Effective (real) shift start accounting for float_before grace window
         $effectiveShiftStart = null;
@@ -157,13 +166,45 @@ class AttendanceLogController extends Controller
 
         $shiftMinutes = $attendanceService->shiftWorkMinutes($workShift);
 
+        // Compute signed diff (minutes) between entry/exit and effective shift boundaries.
+        // For Thursday half-day the effective end is thursday_exit_time, not end_time.
+        // Positive diffEntry  → arrived after shift start (late).
+        // Positive diffExit   → left after shift end (overtime). Negative → early leave.
+        $diffEntry = null;
+        $diffExit = null;
+        if ($workShift && $attendanceLog->entry_time) {
+            $shiftStartCarbon = Carbon::createFromFormat('H:i:s', $workShift->start_time);
+            $entryCarbon = Carbon::createFromFormat('H:i:s', $attendanceLog->entry_time)
+                ?? Carbon::createFromFormat('H:i', $attendanceLog->entry_time);
+            if ($shiftStartCarbon && $entryCarbon) {
+                $diffEntry = (int) $shiftStartCarbon->diffInMinutes($entryCarbon, false);
+            }
+        }
+        if ($workShift && $attendanceLog->exit_time) {
+            $effectiveEndTime = ($isThursday && $thursdayStatus === ThursdayStatus::HALF_DAY && $workShift->thursday_exit_time)
+                ? $workShift->thursday_exit_time
+                : $workShift->end_time;
+            $shiftEndCarbon = Carbon::createFromFormat('H:i:s', $effectiveEndTime);
+            $exitCarbon = Carbon::createFromFormat('H:i:s', $attendanceLog->exit_time)
+                ?? Carbon::createFromFormat('H:i', $attendanceLog->exit_time);
+            if ($shiftEndCarbon && $exitCarbon) {
+                $diffExit = (int) $shiftEndCarbon->diffInMinutes($exitCarbon, false);
+            }
+        }
+
         return view('attendance-logs.show', compact(
             'attendanceLog',
             'employee',
             'workShift',
             'isFriday',
+            'isThursday',
+            'isPublicHoliday',
             'isHoliday',
+            'isThursdayHoliday',
+            'thursdayStatus',
             'computed',
+            'diffEntry',
+            'diffExit',
             'effectiveShiftStart',
             'shiftMinutes'
         ));
@@ -173,8 +214,7 @@ class AttendanceLogController extends Controller
     {
         $attendanceService->recalculateLog($attendanceLog);
 
-        return redirect()->route('attendance.attendance-logs.show', $attendanceLog)
-            ->with('success', __('Attendance log recalculated successfully.'));
+        return redirect()->back()->with('success', __('Attendance log recalculated successfully.'));
     }
 
     public function importForm(): View

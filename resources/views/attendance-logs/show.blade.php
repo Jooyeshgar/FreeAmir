@@ -44,13 +44,30 @@
                     </span>
                 @endif
 
-                @if ($isHoliday)
+                @if ($isPublicHoliday)
                     <span class="badge badge-lg badge-error gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                         </svg>
                         {{ __('Public Holiday') }}
+                    </span>
+                @endif
+
+                @if ($isThursday && $thursdayStatus)
+                    @php
+                        $thursdayBadgeClass = match ($thursdayStatus) {
+                            \App\Enums\ThursdayStatus::HOLIDAY => 'badge-error',
+                            \App\Enums\ThursdayStatus::HALF_DAY => 'badge-warning',
+                            default => 'badge-info',
+                        };
+                    @endphp
+                    <span class="badge badge-lg {{ $thursdayBadgeClass }} gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        {{ __('Thursday') }}: {{ $thursdayStatus->label() }}
                     </span>
                 @endif
 
@@ -113,8 +130,15 @@
                             <div class="stat-desc text-purple-400">
                                 @if ($isFriday)
                                     {{ __('Friday — Off Day') }}
-                                @elseif ($isHoliday)
+                                @elseif ($isThursdayHoliday)
+                                    {{ __('Thursday') }}: {{ $thursdayStatus->label() }} — {{ __('Off Day') }}
+                                @elseif ($isPublicHoliday)
                                     {{ __('Public Holiday — Off Day') }}
+                                @elseif ($isThursday && $thursdayStatus)
+                                    {{ __('Thursday') }}: {{ $thursdayStatus->label() }}
+                                    @if ($thursdayStatus === \App\Enums\ThursdayStatus::HALF_DAY && $workShift?->thursday_exit_time)
+                                        — {{ __('Exit') }}: {{ substr($workShift->thursday_exit_time, 0, 5) }}
+                                    @endif
                                 @else
                                     {{ __('Working Day') }}
                                 @endif
@@ -136,12 +160,17 @@
                                     <th class="px-4 py-3">{{ __('Float After') }}</th>
                                     <th class="px-4 py-3">{{ __('Break') }}</th>
                                     <th class="px-4 py-3">{{ __('Thursday') }}</th>
+                                    <th class="px-4 py-3">{{ __('Thursday Exit') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr class="hover">
                                     <td class="px-4 py-3 font-mono">{{ substr($workShift->start_time, 0, 5) }}</td>
-                                    <td class="px-4 py-3 font-mono">{{ substr($workShift->end_time, 0, 5) }}</td>
+                                    <td
+                                        class="px-4 py-3 font-mono
+                                        {{ $isThursday && $thursdayStatus === \App\Enums\ThursdayStatus::HALF_DAY ? 'line-through text-gray-400' : '' }}">
+                                        {{ substr($workShift->end_time, 0, 5) }}
+                                    </td>
                                     <td class="px-4 py-3 font-mono font-semibold text-warning">
                                         {{ $effectiveShiftStart ?? '—' }}
                                         @if ($workShift->float_before)
@@ -152,6 +181,18 @@
                                     <td class="px-4 py-3">{{ $workShift->float_after ?? 0 }} {{ __('min') }}</td>
                                     <td class="px-4 py-3">{{ $workShift->break ?? 0 }} {{ __('min') }}</td>
                                     <td class="px-4 py-3">{{ $workShift->thursday_status?->label() ?? '—' }}</td>
+                                    <td
+                                        class="px-4 py-3 font-mono
+                                        {{ $isThursday && $thursdayStatus === \App\Enums\ThursdayStatus::HALF_DAY ? 'font-semibold text-warning' : '' }}">
+                                        @if ($workShift->thursday_exit_time)
+                                            {{ substr($workShift->thursday_exit_time, 0, 5) }}
+                                            @if ($isThursday && $thursdayStatus === \App\Enums\ThursdayStatus::HALF_DAY)
+                                                <span class="badge badge-warning badge-xs ms-1">{{ __('Active') }}</span>
+                                            @endif
+                                        @else
+                                            —
+                                        @endif
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -169,25 +210,16 @@
                             <div class="stat-value text-emerald-600 text-2xl font-mono">
                                 {{ $attendanceLog->entry_time ? substr($attendanceLog->entry_time, 0, 5) : '—' }}
                             </div>
-                            @if ($workShift && $attendanceLog->entry_time)
-                                @php
-                                    $entryCarbon =
-                                        \Carbon\Carbon::createFromFormat('H:i:s', $attendanceLog->entry_time) ??
-                                        \Carbon\Carbon::createFromFormat('H:i', $attendanceLog->entry_time);
-                                    $shiftStartCarbon = \Carbon\Carbon::createFromFormat('H:i:s', $workShift->start_time);
-                                    $diffEntry = $shiftStartCarbon ? (int) $shiftStartCarbon->diffInMinutes($entryCarbon, false) : null;
-                                @endphp
-                                @if ($diffEntry !== null)
-                                    <div class="stat-desc {{ $diffEntry > ($workShift->float_before ?? 0) ? 'text-error' : 'text-emerald-400' }}">
-                                        @if ($diffEntry <= 0)
-                                            {{ __(':min min early', ['min' => abs($diffEntry)]) }}
-                                        @elseif ($diffEntry <= ($workShift->float_before ?? 0))
-                                            {{ __(':min min late (within grace)', ['min' => $diffEntry]) }}
-                                        @else
-                                            {{ __(':min min late', ['min' => $diffEntry]) }}
-                                        @endif
-                                    </div>
-                                @endif
+                            @if ($workShift && $attendanceLog->entry_time && $diffEntry !== null)
+                                <div class="stat-desc {{ $computed['delay'] > 0 ? 'text-error' : 'text-emerald-400' }}">
+                                    @if ($diffEntry <= 0)
+                                        {{ __(':min min early', ['min' => abs($diffEntry)]) }}
+                                    @elseif ($computed['delay'] === 0)
+                                        {{ __(':min min late (within grace)', ['min' => $diffEntry]) }}
+                                    @else
+                                        {{ __(':min min late', ['min' => $computed['delay']]) }}
+                                    @endif
+                                </div>
                             @endif
                         </div>
                     </div>
@@ -198,23 +230,14 @@
                             <div class="stat-value text-orange-600 text-2xl font-mono">
                                 {{ $attendanceLog->exit_time ? substr($attendanceLog->exit_time, 0, 5) : '—' }}
                             </div>
-                            @if ($workShift && $attendanceLog->exit_time)
-                                @php
-                                    $exitCarbon =
-                                        \Carbon\Carbon::createFromFormat('H:i:s', $attendanceLog->exit_time) ??
-                                        \Carbon\Carbon::createFromFormat('H:i', $attendanceLog->exit_time);
-                                    $shiftEndCarbon = \Carbon\Carbon::createFromFormat('H:i:s', $workShift->end_time);
-                                    $diffExit = $shiftEndCarbon ? (int) $shiftEndCarbon->diffInMinutes($exitCarbon, false) : null;
-                                @endphp
-                                @if ($diffExit !== null)
-                                    <div class="stat-desc {{ $diffExit < 0 ? 'text-error' : 'text-orange-400' }}">
-                                        @if ($diffExit >= 0)
-                                            {{ __(':min min overtime after shift end', ['min' => $diffExit]) }}
-                                        @else
-                                            {{ __(':min min early leave', ['min' => abs($diffExit)]) }}
-                                        @endif
-                                    </div>
-                                @endif
+                            @if ($workShift && $attendanceLog->exit_time && $diffExit !== null)
+                                <div class="stat-desc {{ ($computed['early_leave'] ?? 0) > 0 ? 'text-error' : 'text-orange-400' }}">
+                                    @if ($diffExit >= 0)
+                                        {{ __(':min min overtime after shift end', ['min' => $diffExit]) }}
+                                    @else
+                                        {{ __(':min min early leave', ['min' => $computed['early_leave'] ?? 0]) }}
+                                    @endif
+                                </div>
                             @endif
                         </div>
                     </div>
@@ -294,7 +317,8 @@
                                 </td>
                             </tr>
                             <tr class="hover {{ !$holidayMatch ? 'bg-error/10' : '' }}">
-                                <td class="px-4 py-3 font-medium">{{ __('Is Holiday Flag') }}</td>
+                                <td class="px-4 py-3 font-medium">{{ __('Is Holiday Flag') }} <span
+                                        class="text-xs text-gray-400">({{ __('incl. Thursday holiday') }})</span></td>
                                 <td class="px-4 py-3 text-center">
                                     <span class="badge badge-sm {{ $storedHoliday ? 'badge-error' : 'badge-ghost' }}">
                                         {{ $storedHoliday ? __('Yes') : __('No') }}
