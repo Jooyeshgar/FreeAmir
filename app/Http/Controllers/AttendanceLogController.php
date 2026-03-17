@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Enums\AttendanceImportType;
 use App\Models\AttendanceLog;
 use App\Models\Employee;
+use App\Models\PublicHoliday;
 use App\Services\AttendanceLogImportService;
+use App\Services\AttendanceService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -129,6 +131,50 @@ class AttendanceLogController extends Controller
 
         return redirect()->route('attendance.attendance-logs.index')
             ->with('success', __('Attendance log deleted successfully.'));
+    }
+
+    public function show(AttendanceLog $attendanceLog, AttendanceService $attendanceService): View
+    {
+        $attendanceLog->load(['employee.workShift']);
+
+        $employee = $attendanceLog->employee;
+        $workShift = $employee?->workShift;
+
+        $logDate = $attendanceLog->log_date;
+        $isFriday = $logDate->dayOfWeek === Carbon::FRIDAY;
+        $isHoliday = PublicHoliday::where('date', $logDate->toDateString())->exists();
+
+        // Compute what the service WOULD calculate right now (without saving)
+        $computed = $attendanceService->computeLogColumns($attendanceLog, $workShift, $isFriday, $isHoliday);
+
+        // Effective (real) shift start accounting for float_before grace window
+        $effectiveShiftStart = null;
+        if ($workShift) {
+            $effectiveShiftStart = Carbon::createFromFormat('H:i:s', $workShift->start_time)
+                ->addMinutes((int) ($workShift->float_before ?? 0))
+                ->format('H:i');
+        }
+
+        $shiftMinutes = $attendanceService->shiftWorkMinutes($workShift);
+
+        return view('attendance-logs.show', compact(
+            'attendanceLog',
+            'employee',
+            'workShift',
+            'isFriday',
+            'isHoliday',
+            'computed',
+            'effectiveShiftStart',
+            'shiftMinutes'
+        ));
+    }
+
+    public function recalculate(AttendanceLog $attendanceLog, AttendanceService $attendanceService): RedirectResponse
+    {
+        $attendanceService->recalculateLog($attendanceLog);
+
+        return redirect()->route('attendance.attendance-logs.show', $attendanceLog)
+            ->with('success', __('Attendance log recalculated successfully.'));
     }
 
     public function importForm(): View

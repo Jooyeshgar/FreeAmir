@@ -1,0 +1,407 @@
+<x-app-layout :title="__('Attendance Log') . ' — ' . ($employee ? $employee->first_name . ' ' . $employee->last_name : '') . ' — ' . formatDate($attendanceLog->log_date)">
+    <div class="card bg-base-100 shadow-xl">
+
+        {{-- ══ Header ══════════════════════════════════════════════════════════ --}}
+        <div
+            class="card-header bg-gradient-to-r from-blue-50 to-indigo-50 dark:text-white dark:from-gray-800 dark:to-gray-700 px-6 py-4 rounded-t-2xl border-b-2 border-primary/20">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-white">
+                    {{ __('Attendance Log') }}
+                    @if ($employee)
+                        — {{ $employee->first_name }} {{ $employee->last_name }}
+                    @endif
+                </h2>
+                <p class="mt-1 float-end text-gray-500 dark:text-gray-300">
+                    {{ formatDate($attendanceLog->log_date) }}
+                </p>
+            </div>
+
+            {{-- Badges --}}
+            <div class="flex flex-wrap gap-2 mt-3">
+                @if ($attendanceLog->is_manual)
+                    <span class="badge badge-lg badge-warning gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 0l.172.172a2 2 0 010 2.828L12 16H9v-3z" />
+                        </svg>
+                        {{ __('Manual Entry') }}
+                    </span>
+                @else
+                    <span class="badge badge-lg badge-ghost gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V9l-6-6z" />
+                        </svg>
+                        {{ __('Automatic Entry') }}
+                    </span>
+                @endif
+
+                @if ($isFriday)
+                    <span class="badge badge-lg badge-error gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        {{ __('Friday (Off-day)') }}
+                    </span>
+                @endif
+
+                @if ($isHoliday)
+                    <span class="badge badge-lg badge-error gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                        </svg>
+                        {{ __('Public Holiday') }}
+                    </span>
+                @endif
+
+                @if ($attendanceLog->monthlyAttendance)
+                    <a href="{{ route('attendance.monthly-attendances.show', $attendanceLog->monthly_attendance_id) }}"
+                        class="badge badge-lg badge-info gap-2 hover:badge-accent">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        {{ __('Monthly Attendance') }}
+                    </a>
+                @endif
+            </div>
+        </div>
+
+        <div class="card-body space-y-8">
+            <x-show-message-bags />
+
+            {{-- ══ Section 1: Employee & Shift Info ═══════════════════════════════ --}}
+            <div>
+                <div class="divider text-lg font-semibold">{{ __('Employee & Shift Information') }}</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                    {{-- Employee --}}
+                    <div class="stats shadow bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60">
+                        <div class="stat">
+                            <div class="stat-title text-blue-500">{{ __('Employee') }}</div>
+                            <div class="stat-value text-blue-600 text-xl">
+                                {{ $employee ? $employee->first_name . ' ' . $employee->last_name : '—' }}
+                            </div>
+                            @if ($employee?->code)
+                                <div class="stat-desc text-blue-400">{{ __('Code') }}: {{ $employee->code }}</div>
+                            @endif
+                        </div>
+                    </div>
+
+                    {{-- Shift Name --}}
+                    <div class="stats shadow bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/60">
+                        <div class="stat">
+                            <div class="stat-title text-indigo-500">{{ __('Work Shift') }}</div>
+                            <div class="stat-value text-indigo-600 text-xl">
+                                {{ $workShift?->name ?? __('No Shift Assigned') }}
+                            </div>
+                            <div class="stat-desc text-indigo-400">
+                                @if ($workShift)
+                                    {{ __('Shift duration: :min min', ['min' => $shiftMinutes]) }}
+                                @else
+                                    {{ __('Default: :min min', ['min' => \App\Services\AttendanceService::DEFAULT_WORK_MINUTES_PER_DAY]) }}
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Log Date --}}
+                    <div class="stats shadow bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200/60">
+                        <div class="stat">
+                            <div class="stat-title text-purple-500">{{ __('Log Date') }}</div>
+                            <div class="stat-value text-purple-600 text-xl">{{ formatDate($attendanceLog->log_date, 'Y/m/d l') }}</div>
+                            <div class="stat-desc text-purple-400">
+                                @if ($isFriday)
+                                    {{ __('Friday — Off Day') }}
+                                @elseif ($isHoliday)
+                                    {{ __('Public Holiday — Off Day') }}
+                                @else
+                                    {{ __('Working Day') }}
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Shift Details --}}
+                @if ($workShift)
+                    <div class="mt-4 overflow-x-auto">
+                        <table class="table w-full">
+                            <thead>
+                                <tr>
+                                    <th class="px-4 py-3">{{ __('Shift Start') }}</th>
+                                    <th class="px-4 py-3">{{ __('Shift End') }}</th>
+                                    <th class="px-4 py-3">{{ __('Real Cutoff (Start + Float Before)') }}</th>
+                                    <th class="px-4 py-3">{{ __('Float Before (grace)') }}</th>
+                                    <th class="px-4 py-3">{{ __('Float After') }}</th>
+                                    <th class="px-4 py-3">{{ __('Break') }}</th>
+                                    <th class="px-4 py-3">{{ __('Thursday') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="hover">
+                                    <td class="px-4 py-3 font-mono">{{ substr($workShift->start_time, 0, 5) }}</td>
+                                    <td class="px-4 py-3 font-mono">{{ substr($workShift->end_time, 0, 5) }}</td>
+                                    <td class="px-4 py-3 font-mono font-semibold text-warning">
+                                        {{ $effectiveShiftStart ?? '—' }}
+                                        @if ($workShift->float_before)
+                                            <span class="badge badge-warning badge-xs ms-1">+{{ $workShift->float_before }} {{ __('min') }}</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3">{{ $workShift->float_before ?? 0 }} {{ __('min') }}</td>
+                                    <td class="px-4 py-3">{{ $workShift->float_after ?? 0 }} {{ __('min') }}</td>
+                                    <td class="px-4 py-3">{{ $workShift->break ?? 0 }} {{ __('min') }}</td>
+                                    <td class="px-4 py-3">{{ $workShift->thursday_status?->label() ?? '—' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
+
+            {{-- ══ Section 2: Clock-in / Clock-out ═══════════════════════════════ --}}
+            <div>
+                <div class="divider text-lg font-semibold">{{ __('Clock In / Out') }}</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="stats shadow bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/60">
+                        <div class="stat">
+                            <div class="stat-title text-emerald-500">{{ __('Entry Time') }}</div>
+                            <div class="stat-value text-emerald-600 text-2xl font-mono">
+                                {{ $attendanceLog->entry_time ? substr($attendanceLog->entry_time, 0, 5) : '—' }}
+                            </div>
+                            @if ($workShift && $attendanceLog->entry_time)
+                                @php
+                                    $entryCarbon =
+                                        \Carbon\Carbon::createFromFormat('H:i:s', $attendanceLog->entry_time) ??
+                                        \Carbon\Carbon::createFromFormat('H:i', $attendanceLog->entry_time);
+                                    $shiftStartCarbon = \Carbon\Carbon::createFromFormat('H:i:s', $workShift->start_time);
+                                    $diffEntry = $shiftStartCarbon ? (int) $shiftStartCarbon->diffInMinutes($entryCarbon, false) : null;
+                                @endphp
+                                @if ($diffEntry !== null)
+                                    <div class="stat-desc {{ $diffEntry > ($workShift->float_before ?? 0) ? 'text-error' : 'text-emerald-400' }}">
+                                        @if ($diffEntry <= 0)
+                                            {{ __(':min min early', ['min' => abs($diffEntry)]) }}
+                                        @elseif ($diffEntry <= ($workShift->float_before ?? 0))
+                                            {{ __(':min min late (within grace)', ['min' => $diffEntry]) }}
+                                        @else
+                                            {{ __(':min min late', ['min' => $diffEntry]) }}
+                                        @endif
+                                    </div>
+                                @endif
+                            @endif
+                        </div>
+                    </div>
+
+                    <div class="stats shadow bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200/60">
+                        <div class="stat">
+                            <div class="stat-title text-orange-500">{{ __('Exit Time') }}</div>
+                            <div class="stat-value text-orange-600 text-2xl font-mono">
+                                {{ $attendanceLog->exit_time ? substr($attendanceLog->exit_time, 0, 5) : '—' }}
+                            </div>
+                            @if ($workShift && $attendanceLog->exit_time)
+                                @php
+                                    $exitCarbon =
+                                        \Carbon\Carbon::createFromFormat('H:i:s', $attendanceLog->exit_time) ??
+                                        \Carbon\Carbon::createFromFormat('H:i', $attendanceLog->exit_time);
+                                    $shiftEndCarbon = \Carbon\Carbon::createFromFormat('H:i:s', $workShift->end_time);
+                                    $diffExit = $shiftEndCarbon ? (int) $shiftEndCarbon->diffInMinutes($exitCarbon, false) : null;
+                                @endphp
+                                @if ($diffExit !== null)
+                                    <div class="stat-desc {{ $diffExit < 0 ? 'text-error' : 'text-orange-400' }}">
+                                        @if ($diffExit >= 0)
+                                            {{ __(':min min overtime after shift end', ['min' => $diffExit]) }}
+                                        @else
+                                            {{ __(':min min early leave', ['min' => abs($diffExit)]) }}
+                                        @endif
+                                    </div>
+                                @endif
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- ══ Section 3: Stored vs Computed Comparison ══════════════════════ --}}
+            <div>
+                <div class="divider text-lg font-semibold">{{ __('Calculation Check') }}</div>
+                <p class="text-sm text-gray-500 mb-4">
+                    {{ __('Stored values are what is currently saved in the database. Computed values are what the system would calculate right now. If they differ, use the Recalculate button to update.') }}
+                </p>
+                <div class="overflow-x-auto">
+                    <table class="table w-full">
+                        <thead>
+                            <tr>
+                                <th class="px-4 py-3">{{ __('Field') }}</th>
+                                <th class="px-4 py-3 text-center">{{ __('Stored') }}</th>
+                                <th class="px-4 py-3 text-center">{{ __('Computed') }}</th>
+                                <th class="px-4 py-3 text-center">{{ __('Match?') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @php
+                                $fields = [
+                                    'worked' => __('Worked (min)'),
+                                    'delay' => __('Delay (min)'),
+                                    'early_leave' => __('Early Leave (min)'),
+                                    'overtime' => __('Overtime (min)'),
+                                    'mission' => __('Mission (min)'),
+                                ];
+                            @endphp
+                            @foreach ($fields as $key => $label)
+                                @php
+                                    $stored = (int) ($attendanceLog->{$key} ?? 0);
+                                    $calc = (int) ($computed[$key] ?? 0);
+                                    $matches = $stored === $calc;
+                                @endphp
+                                <tr class="hover {{ !$matches ? 'bg-error/10' : '' }}">
+                                    <td class="px-4 py-3 font-medium">{{ $label }}</td>
+                                    <td class="px-4 py-3 text-center font-mono">{{ $stored }}</td>
+                                    <td class="px-4 py-3 text-center font-mono">{{ $calc }}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        @if ($matches)
+                                            <span class="badge badge-success badge-sm">✓</span>
+                                        @else
+                                            <span class="badge badge-error badge-sm">✗</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                            @php
+                                // Check is_friday and is_holiday flags too
+                                $storedFriday = (bool) $attendanceLog->is_friday;
+                                $storedHoliday = (bool) $attendanceLog->is_holiday;
+                                $fridayMatch = $storedFriday === $isFriday;
+                                $holidayMatch = $storedHoliday === $isHoliday;
+                            @endphp
+                            <tr class="hover {{ !$fridayMatch ? 'bg-error/10' : '' }}">
+                                <td class="px-4 py-3 font-medium">{{ __('Is Friday Flag') }}</td>
+                                <td class="px-4 py-3 text-center">
+                                    <span class="badge badge-sm {{ $storedFriday ? 'badge-error' : 'badge-ghost' }}">
+                                        {{ $storedFriday ? __('Yes') : __('No') }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    <span class="badge badge-sm {{ $isFriday ? 'badge-error' : 'badge-ghost' }}">
+                                        {{ $isFriday ? __('Yes') : __('No') }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    @if ($fridayMatch)
+                                        <span class="badge badge-success badge-sm">✓</span>
+                                    @else
+                                        <span class="badge badge-error badge-sm">✗</span>
+                                    @endif
+                                </td>
+                            </tr>
+                            <tr class="hover {{ !$holidayMatch ? 'bg-error/10' : '' }}">
+                                <td class="px-4 py-3 font-medium">{{ __('Is Holiday Flag') }}</td>
+                                <td class="px-4 py-3 text-center">
+                                    <span class="badge badge-sm {{ $storedHoliday ? 'badge-error' : 'badge-ghost' }}">
+                                        {{ $storedHoliday ? __('Yes') : __('No') }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    <span class="badge badge-sm {{ $isHoliday ? 'badge-error' : 'badge-ghost' }}">
+                                        {{ $isHoliday ? __('Yes') : __('No') }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    @if ($holidayMatch)
+                                        <span class="badge badge-success badge-sm">✓</span>
+                                    @else
+                                        <span class="badge badge-error badge-sm">✗</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {{-- ══ Section 4: Leave / Mission Details ════════════════════════════ --}}
+            <div>
+                <div class="divider text-lg font-semibold">{{ __('Leave & Mission Details') }}</div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="stats shadow border border-base-300">
+                        <div class="stat">
+                            <div class="stat-title">{{ __('Paid Leave') }}</div>
+                            <div class="stat-value text-xl">{{ (int) $attendanceLog->paid_leave }}</div>
+                            <div class="stat-desc">{{ __('minutes') }}</div>
+                        </div>
+                    </div>
+                    <div class="stats shadow border border-base-300">
+                        <div class="stat">
+                            <div class="stat-title">{{ __('Unpaid Leave') }}</div>
+                            <div class="stat-value text-xl">{{ (int) $attendanceLog->unpaid_leave }}</div>
+                            <div class="stat-desc">{{ __('minutes') }}</div>
+                        </div>
+                    </div>
+                    <div class="stats shadow border border-base-300">
+                        <div class="stat">
+                            <div class="stat-title">{{ __('Mission') }}</div>
+                            <div class="stat-value text-xl">{{ (int) $attendanceLog->mission }}</div>
+                            <div class="stat-desc">{{ __('minutes') }}</div>
+                        </div>
+                    </div>
+                    <div class="stats shadow border border-base-300">
+                        <div class="stat">
+                            <div class="stat-title">{{ __('Description') }}</div>
+                            <div class="stat-value text-base font-normal break-words">
+                                {{ $attendanceLog->description ?? '—' }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- ══ Actions ═══════════════════════════════════════════════════════ --}}
+            <div class="card-actions justify-between mt-4">
+                <a href="{{ route('attendance.attendance-logs.index', request()->query()) }}" class="btn btn-ghost gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    {{ __('Back') }}
+                </a>
+
+                <div class="flex flex-wrap gap-2">
+                    @can('attendance.attendance-logs.edit')
+                        <a href="{{ route('attendance.attendance-logs.edit', $attendanceLog) }}" class="btn btn-primary gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 0l.172.172a2 2 0 010 2.828L12 16H9v-3z" />
+                            </svg>
+                            {{ __('Edit') }}
+                        </a>
+
+                        <form action="{{ route('attendance.attendance-logs.recalculate', $attendanceLog) }}" method="POST" class="inline-block"
+                            onsubmit="return confirm('{{ __('Recalculate this attendance log? Stored values will be overwritten with the computed values.') }}')">
+                            @csrf
+                            <button type="submit" class="btn btn-warning gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                {{ __('Recalculate') }}
+                            </button>
+                        </form>
+                    @endcan
+
+                    @can('attendance.attendance-logs.delete')
+                        <form action="{{ route('attendance.attendance-logs.destroy', $attendanceLog) }}" method="POST" class="inline-block"
+                            onsubmit="return confirm('{{ __('Are you sure you want to delete this attendance log?') }}')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-error gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                {{ __('Delete') }}
+                            </button>
+                        </form>
+                    @endcan
+                </div>
+            </div>
+        </div>
+    </div>
+</x-app-layout>
