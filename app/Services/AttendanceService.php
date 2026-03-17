@@ -240,15 +240,13 @@ class AttendanceService
      * Assumes all AttendanceLog rows in the range are already up-to-date
      * (i.e. recalculateLog() has been called for each log that changed).
      */
-    public function calculateAndStore(
-        int $employeeId,
-        Carbon $startDate,
-        int $durationDays,
-        int $jalaliYear,
-        int $jalaliMonth
-    ): MonthlyAttendance {
+    public function calculateAndStore(int $employeeId, Carbon $startDate, int $durationDays, int $jalaliYear, int $jalaliMonth): MonthlyAttendance
+    {
         $companyId = getActiveCompany();
         $endDate = $startDate->copy()->addDays($durationDays - 1);
+
+        $employee = Employee::with('workShift')->find($employeeId);
+        $workShift = $employee?->workShift;
 
         $logs = AttendanceLog::where('employee_id', $employeeId)
             ->whereBetween('log_date', [$startDate->toDateString(), $endDate->toDateString()])
@@ -259,7 +257,7 @@ class AttendanceService
             ->map(fn ($d) => $d instanceof Carbon ? $d->toDateString() : (string) $d)
             ->toArray();
 
-        $totals = $this->computeTotals($startDate, $durationDays, $logs, $holidays);
+        $totals = $this->computeTotals($startDate, $durationDays, $logs, $holidays, $workShift);
 
         /** @var MonthlyAttendance $attendance */
         $attendance = MonthlyAttendance::updateOrCreate(
@@ -289,30 +287,42 @@ class AttendanceService
     /**
      * Aggregate pre-calculated log columns into period totals.
      *
-     * This method contains NO business logic — it only counts days and
-     * sums minutes that are already stored on each log row.
+     * Strategy: every value (worked, overtime, leave, mission …) is already
+     * stored correctly on each AttendanceLog row — this method only SUMs them.
+     * The only thing calculated here is absent_days and work_days, because
+     * an absent day has NO log row in the database.
+     *
+     * Thursday handling: whether Thursday is a work day depends on the
+     * employee's WorkShift thursday_status:
+     *   FULL_DAY  → regular work day
+     *   HALF_DAY  → regular work day (shorter, but still a work day)
+     *   HOLIDAY   → off-day (treated like Friday)
+     * When no WorkShift is provided, Thursday defaults to a full work day.
+     *
+     * Stored units:
+     *   work_days, present_days, absent_days → days (integer count)
+     *   overtime, mission, paid_leave, unpaid_leave, friday, holiday → minutes
      *
      * @param  Collection  $logs  AttendanceLog records (already recalculated)
      * @param  array  $holidayDates  Gregorian date strings e.g. ['2025-03-21']
+     * @param  WorkShift|null  $workShift  Employee's work shift (for Thursday rules)
      */
-    public function computeTotals(
-        Carbon $startDate,
-        int $durationDays,
-        Collection $logs,
-        array $holidayDates
-    ): array {
+    public function computeTotals(Carbon $startDate, int $durationDays, Collection $logs, array $holidayDates, ?WorkShift $workShift = null): array
+    {
         $logsByDate = $logs->keyBy(
             fn ($log) => $log->log_date instanceof Carbon
                 ? $log->log_date->toDateString()
                 : (string) $log->log_date
         );
 
+        $thursdayIsHoliday = ($workShift?->thursday_status ?? ThursdayStatus::FULL_DAY) === ThursdayStatus::HOLIDAY;
+
         $workDays = 0;
         $presentDays = 0;
         $absentDays = 0;
         $overtimeMin = 0;
-        $missionDays = 0;
-        $paidLeaveDays = 0;
+        $missionMin = 0;
+        $paidLeaveMin = 0;
         $unpaidLeaveMin = 0;
         $fridayMin = 0;
         $holidayMin = 0;
@@ -322,15 +332,19 @@ class AttendanceService
             $dateStr = $day->toDateString();
 
             $isFriday = $day->dayOfWeek === Carbon::FRIDAY;
+            $isThursday = $day->dayOfWeek === Carbon::THURSDAY;
             $isHoliday = in_array($dateStr, $holidayDates, true);
+            $isOffDay = $isFriday || $isHoliday || ($isThursday && $thursdayIsHoliday);
 
-            // ── Off-day ───────────────────────────────────────────────────
-            if ($isFriday || $isHoliday) {
+            if ($isOffDay) {
+
                 if (isset($logsByDate[$dateStr])) {
                     $log = $logsByDate[$dateStr];
-                    $isFriday
-                        ? $fridayMin += (int) $log->overtime
-                        : $holidayMin += (int) $log->overtime;
+                    if ($isFriday) {
+                        $fridayMin += (int) $log->worked;
+                    } else {
+                        $holidayMin += (int) $log->worked;
+                    }
                 }
 
                 continue;
@@ -345,25 +359,14 @@ class AttendanceService
                 continue;
             }
 
+            // ── Sum values directly from the pre-calculated log row ───────
             $log = $logsByDate[$dateStr];
 
-            // Determine presence type by what's stored on the log
-            if ((int) $log->mission >= $this->shiftWorkMinutesFromLog($log)) {
-                $missionDays++;
-                $presentDays++;
-            } elseif ((int) $log->paid_leave > 0 && (int) $log->worked > 0) {
-                // Could be daily or hourly leave — count as present
-                $paidLeaveDays++;
-                $presentDays++;
-                $overtimeMin += (int) $log->overtime;
-            } elseif ((int) $log->unpaid_leave > 0) {
-                $unpaidLeaveMin += (int) $log->unpaid_leave;
-            } elseif ((int) $log->worked > 0) {
-                $presentDays++;
-                $overtimeMin += (int) $log->overtime;
-            } else {
-                $absentDays++;
-            }
+            $presentDays++;
+            $overtimeMin += (int) $log->overtime;
+            $missionMin += (int) $log->mission;
+            $paidLeaveMin += (int) $log->paid_leave;
+            $unpaidLeaveMin += (int) $log->unpaid_leave;
         }
 
         return [
@@ -371,9 +374,9 @@ class AttendanceService
             'present_days' => $presentDays,
             'absent_days' => $absentDays,
             'overtime' => $overtimeMin,
-            'mission' => $missionDays,
-            'paid_leave' => $paidLeaveDays,
-            'unpaid_leave_min' => $unpaidLeaveMin,
+            'mission' => $missionMin,
+            'paid_leave' => $paidLeaveMin,
+            'unpaid_leave' => $unpaidLeaveMin,
             'friday' => $fridayMin,
             'holiday' => $holidayMin,
         ];
@@ -542,21 +545,6 @@ class AttendanceService
             'early_leave' => max(0, -$exitOffset),
             'overtime' => max(0, $exitOffset),
         ];
-    }
-
-    /**
-     * Attempt to read the shift minutes directly from a loaded log's
-     * relationship to avoid an extra DB query in computeTotals().
-     * Falls back to DEFAULT_WORK_MINUTES_PER_DAY.
-     */
-    private function shiftWorkMinutesFromLog(AttendanceLog $log): int
-    {
-        // If the employee/shift relation is already loaded use it;
-        // otherwise fall back to the default so computeTotals() stays a pure
-        // aggregator with no extra queries.
-        $shift = $log->employee?->workShift ?? null;
-
-        return $this->shiftWorkMinutes($shift);
     }
 
     /**

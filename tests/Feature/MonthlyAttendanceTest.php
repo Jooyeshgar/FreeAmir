@@ -400,10 +400,10 @@ class MonthlyAttendanceTest extends TestCase
         $service = new AttendanceService;
         $monday = Carbon::create(2025, 1, 6);
 
-        // 600 worked minutes = 480 standard + 120 overtime
+        // 600 worked minutes = 480 standard + 120 overtime (already stored on the log)
         $log = new AttendanceLog([
             'worked' => 600,
-            'overtime' => 0,
+            'overtime' => 120,
             'delay' => 0,
             'mission' => 0,
             'paid_leave' => 0,

@@ -56,18 +56,11 @@ class MonthlyAttendanceController extends Controller
             'duration' => ['required', 'integer', 'min:28', 'max:31'],
         ]);
 
-        // Extract Jalali year/month directly from the input before converting
         [$jalaliYear, $jalaliMonth] = array_map('intval', explode('/', $validated['start_date']));
 
         $startDate = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($validated['start_date']));
 
-        $this->attendanceService->calculateAndStore(
-            employeeId: (int) $validated['employee_id'],
-            startDate: $startDate,
-            durationDays: (int) $validated['duration'],
-            jalaliYear: $jalaliYear,
-            jalaliMonth: $jalaliMonth,
-        );
+        $this->attendanceService->calculateAndStore((int) $validated['employee_id'], $startDate, (int) $validated['duration'], $jalaliYear, $jalaliMonth);
 
         return redirect()->route('attendance.monthly-attendances.index')
             ->with('success', __('Monthly attendance calculated successfully.'));
