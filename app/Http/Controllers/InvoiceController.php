@@ -149,9 +149,6 @@ class InvoiceController extends Controller
             $returnInvoiceType = $returnInvoiceTypeMap[$request->invoice_type];
 
             $returnInvoices = Invoice::where('invoice_type', $returnInvoiceType)->where('status', InvoiceStatus::APPROVED)->with(['customer', 'items'])->get();
-            $returnInvoices = $returnInvoices->filter(function ($invoice) {
-                return ! $invoice->getReturnInvoice();
-            });
 
             if ($request->filled('service_buy')) {
                 $returnInvoices = $returnInvoices->filter(function ($invoice) {
