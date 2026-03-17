@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
 use App\Enums\ThursdayStatus;
 use App\Models\Scopes\FiscalYearScope;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -22,6 +22,7 @@ class WorkShift extends Model
         'float_after',
         'break',
         'thursday_status',
+        'thursday_exit_time',
         'is_active',
     ];
 
