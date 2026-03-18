@@ -10,6 +10,7 @@ enum ConfigTitle: string
     case CASH = 'CASH';
     case INCOME = 'INCOME';
     case COST = 'COST';
+    case SUNDRY_COST = 'SUNDRY_COST';
     case WAGE = 'WAGE';
     case SELL_DISCOUNT = 'SELL_DISCOUNT';
     case BUY_DISCOUNT = 'BUY_DISCOUNT';
@@ -28,6 +29,7 @@ enum ConfigTitle: string
         return match ($this) {
             self::CUST_SUBJECT => __('Customers'),
             self::CASH_BOOK => __('Cash balances'),
+            self::SUNDRY_COST => __('Sundry cost'),
             self::BANK => __('Banks'),
             self::CASH => __('Cash'),
             self::INCOME => __('Income'),
