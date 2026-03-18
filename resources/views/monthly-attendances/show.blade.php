@@ -124,20 +124,44 @@
             @if ($isAdminView ?? false)
                 <div class="divider">{{ __('Payroll') }}</div>
                 @if ($monthlyAttendance->payroll)
-                    <div class="flex items-center gap-4 flex-wrap">
-                        <div class="flex items-center gap-2">
-                            <span class="text-sm text-gray-600">{{ __('Payroll exists for this period.') }}</span>
-                            @if ($monthlyAttendance->payroll->status === 'draft')
-                                <span class="badge badge-warning badge-sm">{{ __('Draft') }}</span>
-                            @elseif ($monthlyAttendance->payroll->status === 'approved')
-                                <span class="badge badge-success badge-sm">{{ __('Approved') }}</span>
-                            @else
-                                <span class="badge badge-info badge-sm">{{ __('Paid') }}</span>
-                            @endif
-                        </div>
-                        <a href="{{ route('salary.payrolls.show', $monthlyAttendance->payroll) }}" class="btn btn-sm btn-primary">
-                            {{ __('View Payroll') }}
-                        </a>
+                    <div class="overflow-x-auto">
+                        <table class="table table-sm w-full">
+                            <thead>
+                                <tr>
+                                    <th>{{ __('Issue Date') }}</th>
+                                    <th class="text-end">{{ __('Total Earnings') }}</th>
+                                    <th class="text-end">{{ __('Total Deductions') }}</th>
+                                    <th class="text-end">{{ __('Employer Insurance') }}</th>
+                                    <th class="text-end">{{ __('Net Payment') }}</th>
+                                    <th>{{ __('Status') }}</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @php $payroll = $monthlyAttendance->payroll; @endphp
+                                <tr>
+                                    <td>{{ formatDate($payroll->issue_date) }}</td>
+                                    <td class="text-end text-success">{{ number_format((float) $payroll->total_earnings) }}</td>
+                                    <td class="text-end text-error">{{ number_format((float) $payroll->total_deductions) }}</td>
+                                    <td class="text-end">{{ number_format((float) $payroll->employer_insurance) }}</td>
+                                    <td class="text-end font-semibold text-primary">{{ number_format((float) $payroll->net_payment) }}</td>
+                                    <td>
+                                        @if ($payroll->status === 'draft')
+                                            <span class="badge badge-warning badge-sm">{{ __('Draft') }}</span>
+                                        @elseif ($payroll->status === 'approved')
+                                            <span class="badge badge-success badge-sm">{{ __('Approved') }}</span>
+                                        @else
+                                            <span class="badge badge-info badge-sm">{{ __('Paid') }}</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <a href="{{ route('salary.payrolls.show', $payroll) }}" class="btn btn-xs btn-primary">
+                                            {{ __('View Payroll') }}
+                                        </a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 @else
                     @can('salary.payrolls.create')

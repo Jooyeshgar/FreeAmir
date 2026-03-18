@@ -336,6 +336,8 @@ class AttendanceService
             $isHoliday = in_array($dateStr, $holidayDates, true);
             $isOffDay = $isFriday || $isHoliday || ($isThursday && $thursdayIsHoliday);
 
+            $workDays++;
+
             if ($isOffDay) {
 
                 if (isset($logsByDate[$dateStr])) {
@@ -351,7 +353,6 @@ class AttendanceService
             }
 
             // ── Regular work day ──────────────────────────────────────────
-            $workDays++;
 
             if (! isset($logsByDate[$dateStr])) {
                 $absentDays++;
