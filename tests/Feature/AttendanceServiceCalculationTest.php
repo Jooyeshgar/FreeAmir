@@ -65,8 +65,7 @@ class AttendanceServiceCalculationTest extends TestCase
             'end_time' => '17:00:00',
             'crosses_midnight' => false,
             'break' => 0,
-            'float_before' => 0,
-            'float_after' => 0,
+            'float' => 0,
             'is_active' => true,
         ], $overrides));
     }
@@ -196,7 +195,6 @@ class AttendanceServiceCalculationTest extends TestCase
 
         $attendance = $this->service->calculateAndStore(
             $employee->id,
-            $this->company->id,
             $this->startDate,
             $this->durationDays,
             1404,
@@ -233,7 +231,6 @@ class AttendanceServiceCalculationTest extends TestCase
 
         $attendance = $this->service->calculateAndStore(
             $employee->id,
-            $this->company->id,
             $this->startDate,
             $this->durationDays,
             1404,
@@ -263,7 +260,6 @@ class AttendanceServiceCalculationTest extends TestCase
 
         $attendance = $this->service->calculateAndStore(
             $employee->id,
-            $this->company->id,
             $this->startDate,
             $this->durationDays,
             1404,
@@ -299,7 +295,6 @@ class AttendanceServiceCalculationTest extends TestCase
 
         $attendance = $this->service->calculateAndStore(
             $employee->id,
-            $this->company->id,
             $this->startDate,
             $this->durationDays,
             1404,
@@ -331,7 +326,6 @@ class AttendanceServiceCalculationTest extends TestCase
 
         $attendance = $this->service->calculateAndStore(
             $employee->id,
-            $this->company->id,
             $this->startDate,
             $this->durationDays,
             1404,
@@ -365,14 +359,13 @@ class AttendanceServiceCalculationTest extends TestCase
 
         $attendance = $this->service->calculateAndStore(
             $employee->id,
-            $this->company->id,
             $this->startDate,
             $this->durationDays,
             1404,
             1
         );
 
-        $this->assertSame(1, $attendance->mission_days);
+        $this->assertSame(1, $attendance->mission);
         $this->assertSame(1, $attendance->present_days);
     }
 
@@ -395,10 +388,10 @@ class AttendanceServiceCalculationTest extends TestCase
         $this->insertPrecomputedLog($employeeB, '2025-03-03', 420);
 
         $attendanceA = $this->service->calculateAndStore(
-            $employeeA->id, $this->company->id, $this->startDate, $this->durationDays, 1404, 1
+            $employeeA->id, $this->startDate, $this->durationDays, 1404, 1
         );
         $attendanceB = $this->service->calculateAndStore(
-            $employeeB->id, $this->company->id, $this->startDate, $this->durationDays, 1404, 1
+            $employeeB->id, $this->startDate, $this->durationDays, 1404, 1
         );
 
         // A: 420 − 360 = 60 min overtime
@@ -427,7 +420,6 @@ class AttendanceServiceCalculationTest extends TestCase
 
         $attendance = $this->service->calculateAndStore(
             $employee->id,
-            $this->company->id,
             $this->startDate,
             $this->durationDays,
             1404,
@@ -451,7 +443,6 @@ class AttendanceServiceCalculationTest extends TestCase
 
         $attendance = $this->service->calculateAndStore(
             $employee->id,
-            $this->company->id,
             $this->startDate,
             $this->durationDays,
             1404,
@@ -481,14 +472,14 @@ class AttendanceServiceCalculationTest extends TestCase
         $this->insertPrecomputedLog($employee, '2025-03-03', 480);
 
         $first = $this->service->calculateAndStore(
-            $employee->id, $this->company->id, $this->startDate, $this->durationDays, 1404, 1
+            $employee->id, $this->startDate, $this->durationDays, 1404, 1
         );
 
         // Add another log and recalculate
         $this->insertPrecomputedLog($employee, '2025-03-04', 480);
 
         $second = $this->service->calculateAndStore(
-            $employee->id, $this->company->id, $this->startDate, $this->durationDays, 1404, 1
+            $employee->id, $this->startDate, $this->durationDays, 1404, 1
         );
 
         // Same DB record, updated values

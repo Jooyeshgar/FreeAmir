@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\PersonnelRequestType;
 use App\Models\Employee;
 use App\Models\PersonnelRequest;
+use App\Services\AttendanceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -168,23 +169,36 @@ class PersonnelRequestController extends Controller
             ->with('success', __('Personnel request deleted successfully.'));
     }
 
-    public function approve(PersonnelRequest $personnelRequest): RedirectResponse
+    public function approve(PersonnelRequest $personnelRequest, AttendanceService $attendanceService): RedirectResponse
     {
+        if ($personnelRequest->status === 'approved') {
+            return redirect()->back()
+                ->with('info', __('Personnel request is already approved.'));
+        }
+
         $personnelRequest->update([
             'status' => 'approved',
             'approved_by' => auth()->user()->id,
         ]);
 
+        $attendanceService->syncPersonnelRequestLogs($personnelRequest);
+
         return redirect()->back()
             ->with('success', __('Personnel request approved.'));
     }
 
-    public function reject(PersonnelRequest $personnelRequest): RedirectResponse
+    public function reject(PersonnelRequest $personnelRequest, AttendanceService $attendanceService): RedirectResponse
     {
+        $wasApproved = $personnelRequest->status === 'approved';
+
         $personnelRequest->update([
             'status' => 'rejected',
             'approved_by' => auth()->user()->id,
         ]);
+
+        if ($wasApproved) {
+            $attendanceService->syncPersonnelRequestLogs($personnelRequest, subtract: true);
+        }
 
         return redirect()->back()
             ->with('success', __('Personnel request rejected.'));

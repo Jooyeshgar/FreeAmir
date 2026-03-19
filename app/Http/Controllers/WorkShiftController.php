@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ThursdayStatus;
 use App\Models\WorkShift;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,7 +23,9 @@ class WorkShiftController extends Controller
 
     public function create(): View
     {
-        return view('work-shifts.create');
+        $thursdayStatusOptions = ThursdayStatus::options();
+
+        return view('work-shifts.create', compact('thursdayStatusOptions'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -31,16 +34,17 @@ class WorkShiftController extends Controller
             'name' => ['required', 'string', 'max:200'],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i'],
-            'crosses_midnight' => ['boolean'],
-            'float_before' => ['nullable', 'integer', 'min:0', 'max:120'],
-            'float_after' => ['nullable', 'integer', 'min:0', 'max:120'],
+            'thursday_status' => ['required', 'in:holiday,full_day,half_day'],
+            'thursday_exit_time' => ['nullable', 'required_if:thursday_status,half_day', 'date_format:H:i'],
+            'float' => ['nullable', 'numeric', 'min:0', 'max:120'],
             'break' => ['nullable', 'integer', 'min:0', 'max:480'],
+            'holiday_coefficient' => ['nullable', 'numeric', 'min:1', 'max:10'],
+            'overtime_coefficient' => ['nullable', 'numeric', 'min:1', 'max:10'],
             'is_active' => ['boolean'],
         ]);
 
         WorkShift::create(array_merge($validated, [
             'company_id' => getActiveCompany(),
-            'crosses_midnight' => $request->boolean('crosses_midnight'),
             'is_active' => $request->boolean('is_active', true),
         ]));
 
@@ -50,7 +54,9 @@ class WorkShiftController extends Controller
 
     public function edit(WorkShift $workShift): View
     {
-        return view('work-shifts.edit', compact('workShift'));
+        $thursdayStatusOptions = ThursdayStatus::options();
+
+        return view('work-shifts.edit', compact('workShift', 'thursdayStatusOptions'));
     }
 
     public function update(Request $request, WorkShift $workShift): RedirectResponse
@@ -59,15 +65,16 @@ class WorkShiftController extends Controller
             'name' => ['required', 'string', 'max:200'],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i'],
-            'crosses_midnight' => ['boolean'],
-            'float_before' => ['nullable', 'integer', 'min:0', 'max:120'],
-            'float_after' => ['nullable', 'integer', 'min:0', 'max:120'],
+            'thursday_status' => ['required', 'in:holiday,full_day,half_day'],
+            'thursday_exit_time' => ['nullable', 'required_if:thursday_status,half_day', 'date_format:H:i'],
+            'float' => ['nullable', 'numeric', 'min:0', 'max:120'],
             'break' => ['nullable', 'integer', 'min:0', 'max:480'],
+            'holiday_coefficient' => ['nullable', 'numeric', 'min:1', 'max:10'],
+            'overtime_coefficient' => ['nullable', 'numeric', 'min:1', 'max:10'],
             'is_active' => ['boolean'],
         ]);
 
         $workShift->update(array_merge($validated, [
-            'crosses_midnight' => $request->boolean('crosses_midnight'),
             'is_active' => $request->boolean('is_active'),
         ]));
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ThursdayStatus;
 use App\Models\Employee;
 use App\Models\MonthlyAttendance;
 use App\Models\PublicHoliday;
@@ -55,19 +56,11 @@ class MonthlyAttendanceController extends Controller
             'duration' => ['required', 'integer', 'min:28', 'max:31'],
         ]);
 
-        // Extract Jalali year/month directly from the input before converting
         [$jalaliYear, $jalaliMonth] = array_map('intval', explode('/', $validated['start_date']));
 
         $startDate = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($validated['start_date']));
 
-        $this->attendanceService->calculateAndStore(
-            employeeId: (int) $validated['employee_id'],
-            companyId: (int) getActiveCompany(),
-            startDate: $startDate,
-            durationDays: (int) $validated['duration'],
-            jalaliYear: $jalaliYear,
-            jalaliMonth: $jalaliMonth,
-        );
+        $this->attendanceService->calculateAndStore((int) $validated['employee_id'], $startDate, (int) $validated['duration'], $jalaliYear, $jalaliMonth);
 
         return redirect()->route('attendance.monthly-attendances.index')
             ->with('success', __('Monthly attendance calculated successfully.'));
@@ -98,6 +91,9 @@ class MonthlyAttendanceController extends Controller
             ->toArray();
 
         // Build a full list of every day in the duration so absent days are visible
+        $workShift = $monthlyAttendance->employee?->workShift;
+        $thursdayIsHoliday = $workShift?->thursday_status === ThursdayStatus::HOLIDAY;
+
         $logsByDate = $monthlyAttendance->logs->keyBy(fn ($log) => $log->log_date->toDateString());
         $allDays = collect();
         for ($i = 0; $i < $monthlyAttendance->duration; $i++) {
@@ -110,7 +106,8 @@ class MonthlyAttendanceController extends Controller
                         'log_date' => $date,
                         '_placeholder' => true,
                         '_is_friday' => $date->dayOfWeek === Carbon::FRIDAY,
-                        '_is_holiday' => isset($holidayDates[$dateKey]),
+                        '_is_holiday' => isset($holidayDates[$dateKey])
+                            || ($thursdayIsHoliday && $date->dayOfWeek === Carbon::THURSDAY),
                     ]
             );
         }
@@ -134,9 +131,9 @@ class MonthlyAttendanceController extends Controller
             'present_days' => ['required', 'integer', 'min:0', 'max:31'],
             'absent_days' => ['required', 'integer', 'min:0', 'max:31'],
             'overtime' => ['required', 'integer', 'min:0'],
-            'mission_days' => ['required', 'integer', 'min:0', 'max:31'],
-            'paid_leave_days' => ['required', 'integer', 'min:0', 'max:31'],
-            'unpaid_leave_days' => ['required', 'integer', 'min:0', 'max:31'],
+            'mission' => ['required', 'integer', 'min:0', 'max:1500'],
+            'paid_leave' => ['required', 'integer', 'min:0', 'max:1500'],
+            'unpaid_leave' => ['required', 'integer', 'min:0', 'max:1500'],
             'friday' => ['required', 'integer', 'min:0'],
             'holiday' => ['required', 'integer', 'min:0'],
         ]);
@@ -172,7 +169,6 @@ class MonthlyAttendanceController extends Controller
 
         $monthlyAttendance = $this->attendanceService->calculateAndStore(
             employeeId: $employeeId,
-            companyId: (int) getActiveCompany(),
             startDate: $startDate,
             durationDays: (int) $validated['duration'],
             jalaliYear: $jalaliYear,

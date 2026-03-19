@@ -26,9 +26,9 @@ class MonthlyAttendanceFactory extends Factory
             'present_days' => $presentDays,
             'absent_days' => $absentDays,
             'overtime' => $this->faker->numberBetween(0, 600),
-            'mission_days' => $this->faker->numberBetween(0, 3),
-            'paid_leave_days' => $this->faker->numberBetween(0, 3),
-            'unpaid_leave_days' => $this->faker->numberBetween(0, 2),
+            'mission' => $this->faker->numberBetween(0, 3),
+            'paid_leave' => $this->faker->numberBetween(0, 3),
+            'unpaid_leave' => $this->faker->numberBetween(0, 2),
             'friday' => $this->faker->numberBetween(0, 480),
             'holiday' => $this->faker->numberBetween(0, 480),
         ];

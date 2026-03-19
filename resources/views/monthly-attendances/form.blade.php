@@ -9,11 +9,11 @@
 
     <x-input name="overtime" id="overtime" type="number" title="{{ __('Overtime (min)') }}" :value="old('overtime', $monthlyAttendance->overtime)" hint="{{ __('Total overtime minutes') }}" required />
 
-    <x-input name="mission_days" id="mission_days" type="number" title="{{ __('Mission Days') }}" :value="old('mission_days', $monthlyAttendance->mission_days)" required />
+    <x-input name="mission" id="mission" type="number" title="{{ __('Mission Days') }}" :value="old('mission', $monthlyAttendance->mission)" required />
 
-    <x-input name="paid_leave_days" id="paid_leave_days" type="number" title="{{ __('Paid Leave Days') }}" :value="old('paid_leave_days', $monthlyAttendance->paid_leave_days)" required />
+    <x-input name="paid_leave" id="paid_leave" type="number" title="{{ __('Paid Leave Days') }}" :value="old('paid_leave', $monthlyAttendance->paid_leave)" required />
 
-    <x-input name="unpaid_leave_days" id="unpaid_leave_days" type="number" title="{{ __('Unpaid Leave Days') }}" :value="old('unpaid_leave_days', $monthlyAttendance->unpaid_leave_days)" required />
+    <x-input name="unpaid_leave" id="unpaid_leave" type="number" title="{{ __('Unpaid Leave Days') }}" :value="old('unpaid_leave', $monthlyAttendance->unpaid_leave)" required />
 
     <x-input name="friday" id="friday" type="number" title="{{ __('Friday Work (min)') }}" :value="old('friday', $monthlyAttendance->friday)" hint="{{ __('Total Friday worked minutes') }}"
         required />

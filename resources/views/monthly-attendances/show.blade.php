@@ -79,17 +79,21 @@
                     <div class="stat-title text-xs">{{ __('Overtime (min)') }}</div>
                     <div class="stat-value text-base text-warning">{{ $monthlyAttendance->overtime }}</div>
                 </div>
+                <div class="stat bg-error/20 rounded-box p-3">
+                    <div class="stat-title text-xs">{{ __('Undertime (min)') }}</div>
+                    <div class="stat-value text-base text-error">{{ $monthlyAttendance->undertime }}</div>
+                </div>
                 <div class="stat bg-info/20 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Mission Days') }}</div>
-                    <div class="stat-value text-base text-info">{{ $monthlyAttendance->mission_days }}</div>
+                    <div class="stat-value text-base text-info">{{ $monthlyAttendance->mission }}</div>
                 </div>
                 <div class="stat bg-base-200 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Paid Leave') }}</div>
-                    <div class="stat-value text-base">{{ $monthlyAttendance->paid_leave_days }}</div>
+                    <div class="stat-value text-base">{{ $monthlyAttendance->paid_leave }}</div>
                 </div>
                 <div class="stat bg-base-200 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Unpaid Leave') }}</div>
-                    <div class="stat-value text-base">{{ $monthlyAttendance->unpaid_leave_days }}</div>
+                    <div class="stat-value text-base">{{ $monthlyAttendance->unpaid_leave }}</div>
                 </div>
                 <div class="stat bg-base-200 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Friday Work (min)') }}</div>
@@ -124,20 +128,46 @@
             @if ($isAdminView ?? false)
                 <div class="divider">{{ __('Payroll') }}</div>
                 @if ($monthlyAttendance->payroll)
-                    <div class="flex items-center gap-4 flex-wrap">
-                        <div class="flex items-center gap-2">
-                            <span class="text-sm text-gray-600">{{ __('Payroll exists for this period.') }}</span>
-                            @if ($monthlyAttendance->payroll->status === 'draft')
-                                <span class="badge badge-warning badge-sm">{{ __('Draft') }}</span>
-                            @elseif ($monthlyAttendance->payroll->status === 'approved')
-                                <span class="badge badge-success badge-sm">{{ __('Approved') }}</span>
-                            @else
-                                <span class="badge badge-info badge-sm">{{ __('Paid') }}</span>
-                            @endif
-                        </div>
-                        <a href="{{ route('salary.payrolls.show', $monthlyAttendance->payroll) }}" class="btn btn-sm btn-primary">
-                            {{ __('View Payroll') }}
-                        </a>
+                    <div class="overflow-x-auto">
+                        <table class="table table-sm w-full">
+                            <thead>
+                                <tr>
+                                    <th>{{ __('Issue Date') }}</th>
+                                    <th>{{ __('Decree') }}</th>
+                                    <th class="text-end">{{ __('Total Earnings') }}</th>
+                                    <th class="text-end">{{ __('Total Deductions') }}</th>
+                                    <th class="text-end">{{ __('Employer Insurance') }}</th>
+                                    <th class="text-end">{{ __('Net Payment') }}</th>
+                                    <th>{{ __('Status') }}</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @php $payroll = $monthlyAttendance->payroll; @endphp
+                                <tr>
+                                    <td>{{ formatDate($payroll->issue_date) }}</td>
+                                    <td><a href="{{ route('salary.salary-decrees.edit', $payroll->decree->id) }}">{{ $payroll->decree->name }}</a></td>
+                                    <td class="text-end text-success">{{ number_format((float) $payroll->total_earnings) }}</td>
+                                    <td class="text-end text-error">{{ number_format((float) $payroll->total_deductions) }}</td>
+                                    <td class="text-end">{{ number_format((float) $payroll->employer_insurance) }}</td>
+                                    <td class="text-end font-semibold text-primary">{{ number_format((float) $payroll->net_payment) }}</td>
+                                    <td>
+                                        @if ($payroll->status === 'draft')
+                                            <span class="badge badge-warning badge-sm">{{ __('Draft') }}</span>
+                                        @elseif ($payroll->status === 'approved')
+                                            <span class="badge badge-success badge-sm">{{ __('Approved') }}</span>
+                                        @else
+                                            <span class="badge badge-info badge-sm">{{ __('Paid') }}</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <a href="{{ route('salary.payrolls.show', $payroll) }}" class="btn btn-xs btn-primary">
+                                            {{ __('View Payroll') }}
+                                        </a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 @else
                     @can('salary.payrolls.create')
@@ -177,8 +207,10 @@
                             <th>{{ __('Entry') }}</th>
                             <th>{{ __('Exit') }}</th>
                             <th>{{ __('Worked (min)') }}</th>
+                            <th>{{ __('Leave (min)') }}</th>
                             <th>{{ __('Overtime (min)') }}</th>
                             <th>{{ __('Delay (min)') }}</th>
+                            <th>{{ __('Early Leave (min)') }}</th>
                             <th>{{ __('Status') }}</th>
                             @if ($isAdminView ?? false)
                                 @can('attendance.attendance-logs.edit')
@@ -197,8 +229,12 @@
                             @endphp
                             <tr class="{{ $isOffDay ? 'bg-base-200' : '' }} {{ $isPlaceholder && !$isOffDay ? 'opacity-50' : '' }}">
                                 <td>{{ formatDate($log->log_date, 'l') }}</td>
-                                <td>{{ formatDate($log->log_date) }}</td>
                                 @if ($isPlaceholder)
+                                    <td>
+                                        {{ formatDate($log->log_date) }}
+                                    </td>
+                                    <td>—</td>
+                                    <td>—</td>
                                     <td>—</td>
                                     <td>—</td>
                                     <td>—</td>
@@ -219,11 +255,16 @@
                                         @endcan
                                     @endif
                                 @else
+                                    <td>
+                                        <a href="{{ route('attendance.attendance-logs.show', $log) }}">{{ formatDate($log->log_date) }}</a>
+                                    </td>
                                     <td>{{ $log->entry_time ?? '—' }}</td>
                                     <td>{{ $log->exit_time ?? '—' }}</td>
                                     <td>{{ $log->worked }}</td>
+                                    <td>{{ $log->paid_leave }}</td>
                                     <td>{{ $log->overtime }}</td>
                                     <td>{{ $log->delay }}</td>
+                                    <td>{{ $log->early_leave }}</td>
                                     <td>
                                         @if ($log->is_holiday)
                                             <span class="badge badge-warning badge-sm">{{ __('Holiday') }}</span>
@@ -250,6 +291,13 @@
                                                 <a href="{{ route('attendance.attendance-logs.edit', $log) }}" class="btn btn-xs btn-ghost">
                                                     {{ __('Edit') }}
                                                 </a>
+                                                <form action="{{ route('attendance.attendance-logs.recalculate', $log) }}" method="POST" class="inline-block mb-0"
+                                                    onsubmit="return confirm('{{ __('Recalculate this attendance log? Stored values will be overwritten with the computed values.') }}')">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-xs btn-ghost">
+                                                        {{ __('Recalculate') }}
+                                                    </button>
+                                                </form>
                                             </td>
                                         @endcan
                                     @endif

@@ -3,9 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AttendanceImportType;
+use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
 use App\Models\Employee;
+use App\Models\PersonnelRequest;
+use App\Models\PublicHoliday;
 use App\Services\AttendanceLogImportService;
+use App\Services\AttendanceService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -103,7 +107,7 @@ class AttendanceLogController extends Controller
             'log_date' => ['required', 'date'],
             'entry_time' => ['nullable', 'date_format:H:i'],
             'exit_time' => ['nullable', 'date_format:H:i', 'after_or_equal:entry_time'],
-            'worked' => ['nullable', 'integer', 'min:0'],
+            'worked' => ['integer', 'min:0'],
             'delay' => ['nullable', 'integer', 'min:0'],
             'early_leave' => ['nullable', 'integer', 'min:0'],
             'overtime' => ['nullable', 'integer', 'min:0'],
@@ -119,8 +123,7 @@ class AttendanceLogController extends Controller
             ['is_manual' => true]
         ));
 
-        return redirect()->route('attendance.attendance-logs.index')
-            ->with('success', __('Attendance log updated successfully.'));
+        return redirect()->back()->with('success', __('Attendance log updated successfully.'));
     }
 
     public function destroy(AttendanceLog $attendanceLog): RedirectResponse
@@ -129,6 +132,119 @@ class AttendanceLogController extends Controller
 
         return redirect()->route('attendance.attendance-logs.index')
             ->with('success', __('Attendance log deleted successfully.'));
+    }
+
+    public function show(AttendanceLog $attendanceLog, AttendanceService $attendanceService): View
+    {
+        $attendanceLog->load(['employee.workShift']);
+
+        $employee = $attendanceLog->employee;
+        $workShift = $employee?->workShift;
+
+        // Load personnel requests for this employee on this date (affects calculation)
+        $personnelRequests = $employee
+            ? PersonnelRequest::where('employee_id', $employee->id)
+                ->where(function ($q) use ($attendanceLog) {
+                    $dateStr = $attendanceLog->log_date->toDateString();
+                    $q->whereDate('start_date', '<=', $dateStr)
+                        ->whereDate('end_date', '>=', $dateStr);
+                })
+                ->orderBy('start_date')
+                ->get()
+            : collect();
+
+        $logDate = $attendanceLog->log_date;
+        $isFriday = $logDate->dayOfWeek === Carbon::FRIDAY;
+        $isThursday = $logDate->dayOfWeek === Carbon::THURSDAY;
+        $isPublicHoliday = PublicHoliday::where('date', $logDate->toDateString())->exists();
+
+        // Determine effective Thursday status and whether it acts as a holiday
+        $thursdayStatus = $isThursday ? ($workShift?->thursday_status ?? ThursdayStatus::FULL_DAY) : null;
+        $isThursdayHoliday = $isThursday && $thursdayStatus === ThursdayStatus::HOLIDAY;
+
+        // A day is effectively a holiday if it is a public holiday OR a Thursday-holiday
+        $isHoliday = $isPublicHoliday || $isThursdayHoliday;
+
+        // Compute what the service WOULD calculate right now (without saving)
+        $computed = $attendanceService->computeLogColumns($attendanceLog, $workShift, $isFriday, $isHoliday, $isThursday);
+
+        // Effective (real) shift start accounting for float grace window
+        $effectiveShiftStart = null;
+        if ($workShift) {
+            $effectiveShiftStart = Carbon::createFromFormat('H:i:s', $workShift->start_time)
+                ->addMinutes((int) ($workShift->float ?? 0))
+                ->format('H:i');
+        }
+
+        $shiftMinutes = $attendanceService->shiftWorkMinutes($workShift);
+
+        // Compute signed diff (minutes) between entry/exit and effective shift boundaries.
+        // For Thursday half-day the effective end is thursday_exit_time, not end_time.
+        // Positive diffEntry  → arrived after shift start (late).
+        // Positive diffExit   → left after shift end (overtime). Negative → early leave.
+        $diffEntry = null;
+        $diffExit = null;
+        if ($workShift && $attendanceLog->entry_time) {
+            $shiftStartCarbon = Carbon::createFromFormat('H:i:s', $workShift->start_time);
+            $entryCarbon = Carbon::createFromFormat('H:i:s', $attendanceLog->entry_time) ?? Carbon::createFromFormat('H:i', $attendanceLog->entry_time);
+            if ($shiftStartCarbon && $entryCarbon) {
+                $diffEntry = (int) $shiftStartCarbon->diffInMinutes($entryCarbon, false);
+            }
+        }
+        if ($workShift && $attendanceLog->exit_time) {
+            $effectiveEndTime = ($isThursday && $thursdayStatus === ThursdayStatus::HALF_DAY && $workShift->thursday_exit_time)
+                ? $workShift->thursday_exit_time
+                : $workShift->end_time;
+            $shiftEndCarbon = Carbon::createFromFormat('H:i:s', $effectiveEndTime);
+            $exitCarbon = Carbon::createFromFormat('H:i:s', $attendanceLog->exit_time) ?? Carbon::createFromFormat('H:i', $attendanceLog->exit_time);
+            if ($shiftEndCarbon && $exitCarbon) {
+                // Adjust effective end time to mirror the float logic in AttendanceService::shiftDelayEarlyLeave():
+                // if the user arrived within the float grace window the shift end slides forward by the same offset.
+                if ($workShift->start_time && $attendanceLog->entry_time) {
+                    $float = max(0, (int) ($workShift->float ?? 0));
+                    $shiftStartForFloat = Carbon::createFromFormat('H:i:s', $workShift->start_time);
+                    $entryForFloat = $entryCarbon ?? Carbon::createFromFormat('H:i:s', $attendanceLog->entry_time);
+                    if ($shiftStartForFloat && $entryForFloat) {
+                        $floatCutoff = $shiftStartForFloat->copy()->addMinutes($float);
+                        $lateMinutes = (int) $floatCutoff->diffInMinutes($entryForFloat, false);
+                        if ($lateMinutes <= 0) {
+                            // Within grace window: end slides by actual entry offset
+                            $offset = max(0, (int) $shiftStartForFloat->diffInMinutes($entryForFloat, false));
+                            $shiftEndCarbon->addMinutes($offset);
+                        } else {
+                            // Late beyond float: end slides by the full float amount
+                            $shiftEndCarbon->addMinutes($float);
+                        }
+                    }
+                }
+                $diffExit = (int) $shiftEndCarbon->diffInMinutes($exitCarbon, false);
+            }
+        }
+
+        return view('attendance-logs.show', compact(
+            'attendanceLog',
+            'employee',
+            'workShift',
+            'isFriday',
+            'isThursday',
+            'isPublicHoliday',
+            'isHoliday',
+            'isThursdayHoliday',
+            'thursdayStatus',
+            'computed',
+            'diffEntry',
+            'diffExit',
+            'effectiveShiftStart',
+            'shiftMinutes',
+            'personnelRequests'
+        ));
+    }
+
+    public function recalculate(AttendanceLog $attendanceLog, AttendanceService $attendanceService): RedirectResponse
+    {
+        $attendanceService->recalculateLog($attendanceLog);
+
+        return redirect()->back()->with('success', __('Attendance log recalculated successfully.'));
     }
 
     public function importForm(): View

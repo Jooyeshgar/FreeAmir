@@ -21,8 +21,7 @@ class WorkShiftFactory extends Factory
             'start_time' => $start,
             'end_time' => $end,
             'crosses_midnight' => false,
-            'float_before' => $this->faker->numberBetween(0, 30),
-            'float_after' => $this->faker->numberBetween(0, 30),
+            'float' => $this->faker->numberBetween(0, 30),
             'break' => $this->faker->numberBetween(0, 60),
             'is_active' => true,
         ];
