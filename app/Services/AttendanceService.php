@@ -321,6 +321,7 @@ class AttendanceService
         $presentDays = 0;
         $absentDays = 0;
         $overtimeMin = 0;
+        $undertimeMin = 0;
         $missionMin = 0;
         $paidLeaveMin = 0;
         $unpaidLeaveMin = 0;
@@ -368,6 +369,7 @@ class AttendanceService
             $missionMin += (int) $log->mission;
             $paidLeaveMin += (int) $log->paid_leave;
             $unpaidLeaveMin += (int) $log->unpaid_leave;
+            $undertimeMin += (int) $log->early_leave + $log->delay;
         }
 
         return [
@@ -375,6 +377,7 @@ class AttendanceService
             'present_days' => $presentDays,
             'absent_days' => $absentDays,
             'overtime' => $overtimeMin,
+            'undertime' => $undertimeMin,
             'mission' => $missionMin,
             'paid_leave' => $paidLeaveMin,
             'unpaid_leave' => $unpaidLeaveMin,

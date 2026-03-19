@@ -24,6 +24,7 @@ class MonthlyAttendance extends Model
         'present_days',
         'absent_days',
         'overtime',
+        'undertime',
         'mission',
         'paid_leave',
         'unpaid_leave',

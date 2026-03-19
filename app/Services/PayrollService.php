@@ -65,6 +65,41 @@ class PayrollService
 
     private const CODE_OVERTIME = 'OVERTIME';
 
+    private const CODE_UNDERTIME = 'UNDERTIME';
+
+    private const CODE_ABSENCE_DEDUCTION = 'ABSENCE_DEDUCTION';
+
+    private const CODE_FRIDAY_PAY = 'FRIDAY_PAY';
+
+    private const CODE_HOLIDAY_PAY = 'HOLIDAY_PAY';
+
+    private const CODE_MISSION_PAY = 'MISSION_PAY';
+
+    // ── Per-calculation state (set once per calculate() call) ─────────────
+    private float $dailyWage = 0.0;
+
+    private float $hourlyWage = 0.0;
+
+    private int $workDays = 1;
+
+    private int $absentDays = 0;
+
+    private int $proratedDays = 0;
+
+    private mixed $workShift = null;
+
+    private iterable $benefits = [];
+
+    private array $earnings = [];
+
+    private array $deductions = [];
+
+    private float $childAllowance = 0.0;
+
+    private float $housingAmount = 0.0;
+
+    private float $groceryAmount = 0.0;
+
     // ─────────────────────────────────────────────────────────────────────
     // Public API
     // ─────────────────────────────────────────────────────────────────────
@@ -74,16 +109,12 @@ class PayrollService
      *
      * @return Payroll The freshly created (or replaced) Payroll model.
      */
-    public function createFromAttendance(
-        MonthlyAttendance $attendance,
-        SalaryDecree $decree,
-        int $companyId,
-    ): Payroll {
+    public function createFromAttendance(MonthlyAttendance $attendance, SalaryDecree $decree, int $companyId): Payroll
+    {
         $attendance->loadMissing(['employee.workShift']);
         $decree->loadMissing('benefits.element');
 
         return DB::transaction(function () use ($attendance, $decree, $companyId) {
-            // Replace any existing draft for the same employee / period
             Payroll::withoutGlobalScopes()
                 ->where('company_id', $companyId)
                 ->where('employee_id', $attendance->employee_id)
@@ -100,61 +131,75 @@ class PayrollService
     /**
      * Return a full salary breakdown without persisting anything.
      * Useful for previews and unit tests.
-     *
-     * @return array{
-     *   prorated_days: float,
-     *   daily_wage: float,
-     *   hourly_wage: float,
-     *   earnings: array<string, array{element_id: int|null, amount: float, unit_count: float|null, unit_rate: float|null, description: string}>,
-     *   gross_salary: float,
-     *   insurance_base: float,
-     *   employee_insurance: float,
-     *   employer_insurance: float,
-     *   tax_base: float,
-     *   income_tax: float,
-     *   total_earnings: float,
-     *   total_deductions: float,
-     *   net_payment: float,
-     *   items: list<array{element_id: int|null, calculated_amount: float, unit_count: float|null, unit_rate: float|null, description: string}>
-     * }
      */
     public function calculate(MonthlyAttendance $attendance, SalaryDecree $decree, int $companyId): array
     {
         $attendance->loadMissing(['employee.workShift']);
         $decree->loadMissing('benefits.element');
 
-        $dailyWage = (float) ($decree->daily_wage ?? 0);
-        $workDays = max(1, (int) $attendance->work_days);   // denominator guard
-        $absentDays = (int) $attendance->absent_days;
-        $proratedDays = max(0, $workDays - $absentDays);
+        $this->initState($attendance, $decree);
 
-        $hourlyWage = $this->resolveHourlyWage($attendance->employee->workShift, $dailyWage);
+        $this->computeBaseSalary();
+        $this->computeDecreeBenefits($decree);
+        $this->computeDynamicEarnings($attendance);
+        $this->computeDynamicDeductions($attendance);
+        $this->computeStatutoryDeductions($attendance, $decree, $companyId);
+        $this->computeCustomDeductions($decree);
 
-        // ── Earnings ──────────────────────────────────────────────────────
-        $earnings = [];
+        return $this->buildResult($attendance, $companyId);
+    }
 
-        // 1. Base salary
-        $basePay = $dailyWage * $proratedDays;
-        $earnings['base_salary'] = [
+    // ─────────────────────────────────────────────────────────────────────
+    // State initialization
+    // ─────────────────────────────────────────────────────────────────────
+
+    private function initState(MonthlyAttendance $attendance, SalaryDecree $decree): void
+    {
+        $this->dailyWage = (float) ($decree->daily_wage ?? 0);
+        $this->workDays = max(1, (int) $attendance->work_days);
+        $this->absentDays = (int) $attendance->absent_days;
+        $this->proratedDays = max(0, $this->workDays - $this->absentDays);
+        $this->workShift = $attendance->employee->workShift;
+        $this->benefits = $decree->benefits;
+        $this->hourlyWage = $this->resolveHourlyWage();
+
+        $this->earnings = [];
+        $this->deductions = [];
+        $this->childAllowance = 0.0;
+        $this->housingAmount = 0.0;
+        $this->groceryAmount = 0.0;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Earning computations
+    // ─────────────────────────────────────────────────────────────────────
+
+    private function computeBaseSalary(): void
+    {
+        $basePay = $this->dailyWage * $this->proratedDays;
+
+        $this->earnings['base_salary'] = [
             'element_id' => null,
             'amount' => $basePay,
-            'unit_count' => $proratedDays,
-            'unit_rate' => $dailyWage,
+            'unit_count' => $this->proratedDays,
+            'unit_rate' => $this->dailyWage,
             'description' => __('Base salary (:days days × :rate/day)', [
-                'days' => $proratedDays,
-                'rate' => number_format($dailyWage),
+                'days' => $this->proratedDays,
+                'rate' => number_format($this->dailyWage),
             ]),
         ];
+    }
 
-        // 2. Decree benefits (earnings)
-        $childAllowance = 0.0;
-        $housingAmount = 0.0;
-        $groceryAmount = 0.0;
-        $overtimeAmount = 0.0;
-
+    private function computeDecreeBenefits(SalaryDecree $decree): void
+    {
         foreach ($decree->benefits as $benefit) {
             $element = $benefit->element;
             if ($element === null || $element->category !== 'earning') {
+                continue;
+            }
+
+            // Skip dynamic types — computed separately from attendance data
+            if (in_array($element->system_code, [self::CODE_OVERTIME, self::CODE_FRIDAY_PAY, self::CODE_HOLIDAY_PAY, self::CODE_MISSION_PAY, self::CODE_ABSENCE_DEDUCTION], true)) {
                 continue;
             }
 
@@ -164,29 +209,21 @@ class PayrollService
                 self::CODE_HOUSING, self::CODE_FOOD => $this->prorateAllowance(
                     $raw,
                     $element->calc_type,
-                    $workDays,
-                    $proratedDays,
                 ),
-                self::CODE_CHILD => $proratedDays > 0
-                    ? $raw * ($attendance->employee->children_count ?? 0)
+                self::CODE_CHILD => $this->proratedDays > 0
+                    ? $raw * ($benefit->element->employee?->children_count ?? 0)
                     : 0.0,
-                self::CODE_OVERTIME => 0.0, // Computed separately below
                 default => $raw,
             };
 
-            // Store component totals for insurance/tax base later
             match ($element->system_code) {
-                self::CODE_HOUSING => $housingAmount = $amount,
-                self::CODE_FOOD => $groceryAmount = $amount,
-                self::CODE_CHILD => $childAllowance = $amount,
+                self::CODE_HOUSING => $this->housingAmount = $amount,
+                self::CODE_FOOD => $this->groceryAmount = $amount,
+                self::CODE_CHILD => $this->childAllowance = $amount,
                 default => null,
             };
 
-            if ($element->system_code === self::CODE_OVERTIME) {
-                continue; // handled after this loop
-            }
-
-            $earnings[$element->system_code.'_'.$element->id] = [
+            $this->earnings[$element->system_code.'_'.$element->id] = [
                 'element_id' => $element->id,
                 'amount' => $amount,
                 'unit_count' => null,
@@ -194,46 +231,62 @@ class PayrollService
                 'description' => $element->title,
             ];
         }
+    }
 
-        // 3. Overtime — driven by attendance minutes, not a fixed decree value
-        $overtimeMinutes = (int) ($attendance->overtime ?? 0);
-        if ($overtimeMinutes > 0) {
-            $overtimeCoeff = $this->resolveOvertimeCoefficient($attendance->employee->workShift);
-            $overtimeHours = $overtimeMinutes / 60;
-            $overtimeAmount = round($overtimeHours * $hourlyWage * $overtimeCoeff, 2);
+    private function computeDynamicEarnings(MonthlyAttendance $attendance): void
+    {
+        $this->addWageBasedItem((int) ($attendance->overtime ?? 0), 'overtime', self::CODE_OVERTIME, 'earning');
+        $this->addWageBasedItem((int) ($attendance->friday_hours ?? 0), 'friday', self::CODE_FRIDAY_PAY, 'earning');
+        $this->addWageBasedItem((int) ($attendance->holiday_hours ?? 0), 'holiday', self::CODE_HOLIDAY_PAY, category: 'earning');
+        $this->addWageBasedItem((int) ($attendance->mission_hours ?? 0), 'mission', self::CODE_MISSION_PAY, category: 'earning');
+    }
 
-            $earnings['overtime'] = [
-                'element_id' => $this->findElementId($decree->benefits, self::CODE_OVERTIME),
-                'amount' => $overtimeAmount,
-                'unit_count' => $overtimeHours,
-                'unit_rate' => round($hourlyWage * $overtimeCoeff, 2),
-                'description' => __('Overtime (:hours hrs × :rate × :coeff)', [
-                    'hours' => number_format($overtimeHours, 2),
-                    'rate' => number_format($hourlyWage),
-                    'coeff' => $overtimeCoeff,
+    // ─────────────────────────────────────────────────────────────────────
+    // Deduction computations
+    // ─────────────────────────────────────────────────────────────────────
+
+    private function computeDynamicDeductions(MonthlyAttendance $attendance): void
+    {
+        // Undertime (delay / early leave)
+        $this->addWageBasedItem(
+            minutes: (int) ($attendance->undertime ?? 0),
+            type: 'undertime',
+            systemCode: self::CODE_UNDERTIME,
+            category: 'deduction',
+        );
+
+        // Absence deduction
+        if ($this->absentDays > 0) {
+            $amount = round($this->absentDays * $this->dailyWage, 2);
+            $this->deductions[self::CODE_ABSENCE_DEDUCTION] = [
+                'element_id' => $this->findElementId(self::CODE_ABSENCE_DEDUCTION),
+                'amount' => $amount,
+                'unit_count' => $this->absentDays,
+                'unit_rate' => $this->dailyWage,
+                'description' => __('Absence deduction (:days days × :rate/day)', [
+                    'days' => $this->absentDays,
+                    'rate' => number_format($this->dailyWage),
                 ]),
             ];
         }
+    }
 
-        // ── Gross & insurance base ────────────────────────────────────────
-        $totalEarnings = array_sum(array_column($earnings, 'amount'));
+    private function computeStatutoryDeductions(MonthlyAttendance $attendance, SalaryDecree $decree, int $companyId): void
+    {
+        $basePay = $this->earnings['base_salary']['amount'] ?? 0.0;
 
-        // Insurance base = base + housing + grocery + overtime (child exempt)
-        $insuranceBase = $basePay + $housingAmount + $groceryAmount + $overtimeAmount;
+        $overtimeAmount = $this->earnings['overtime']['amount'] ?? 0.0;
+        $fridayAmount = $this->earnings['friday']['amount'] ?? 0.0;
+        $holidayAmount = $this->earnings['holiday']['amount'] ?? 0.0;
+        $missionAmount = $this->earnings['mission']['amount'] ?? 0.0;
+
+        $insuranceBase = $basePay + $this->housingAmount + $this->groceryAmount + $overtimeAmount + $fridayAmount + $holidayAmount + $missionAmount;
+
         $employeeInsurance = round($insuranceBase * self::EMPLOYEE_INSURANCE_RATE, 2);
-        $employerInsurance = round($insuranceBase * self::EMPLOYER_INSURANCE_RATE, 2);
-
-        // ── Tax ───────────────────────────────────────────────────────────
-        // Tax base: gross − child allowance − employee insurance deduction
-        $taxBase = max(0.0, $totalEarnings - $childAllowance - $employeeInsurance);
-        $incomeTax = $this->calculateTax($taxBase, $attendance->year, $companyId);
-
-        // ── Build statutory deduction items ───────────────────────────────
-        $deductions = [];
 
         if ($employeeInsurance > 0) {
-            $deductions['employee_insurance'] = [
-                'element_id' => $this->findSystemElementId($decree->benefits, 'INSURANCE_EMP'),
+            $this->deductions['employee_insurance'] = [
+                'element_id' => $this->findElementId('INSURANCE_EMP'),
                 'amount' => $employeeInsurance,
                 'unit_count' => null,
                 'unit_rate' => self::EMPLOYEE_INSURANCE_RATE,
@@ -241,9 +294,14 @@ class PayrollService
             ];
         }
 
+        // Tax base: total earnings − child allowance − employee insurance
+        $totalEarnings = array_sum(array_column($this->earnings, 'amount'));
+        $taxBase = max(0.0, $totalEarnings - $this->childAllowance - $employeeInsurance);
+        $incomeTax = $this->calculateTax($taxBase, $attendance->year, $companyId);
+
         if ($incomeTax > 0) {
-            $deductions['income_tax'] = [
-                'element_id' => $this->findSystemElementId($decree->benefits, 'INCOME_TAX'),
+            $this->deductions['income_tax'] = [
+                'element_id' => $this->findElementId('INCOME_TAX'),
                 'amount' => $incomeTax,
                 'unit_count' => null,
                 'unit_rate' => null,
@@ -251,45 +309,62 @@ class PayrollService
             ];
         }
 
-        // Also include any explicit deduction elements from the decree
+        // Store insurance values for the final result (employer insurance is not a deduction)
+        $this->insuranceBase = $insuranceBase;
+        $this->employeeInsurance = $employeeInsurance;
+        $this->employerInsurance = round($insuranceBase * self::EMPLOYER_INSURANCE_RATE, 2);
+        $this->taxBase = $taxBase;
+        $this->incomeTax = $incomeTax;
+    }
+
+    private function computeCustomDeductions(SalaryDecree $decree): void
+    {
+        $skipCodes = ['INSURANCE_EMP', 'INSURANCE_EMP2', 'INCOME_TAX', self::CODE_UNDERTIME, self::CODE_ABSENCE_DEDUCTION];
+
         foreach ($decree->benefits as $benefit) {
             $element = $benefit->element;
             if ($element === null || $element->category !== 'deduction') {
                 continue;
             }
-            // Skip statutory ones already computed above
-            if (in_array($element->system_code, ['INSURANCE_EMP', 'INSURANCE_EMP2', 'INCOME_TAX'], true)) {
+
+            if (in_array($element->system_code, $skipCodes, true)) {
                 continue;
             }
 
-            $amount = (float) $benefit->element_value;
-            $deductions['deduction_'.$element->id] = [
+            $this->deductions['deduction_'.$element->id] = [
                 'element_id' => $element->id,
-                'amount' => $amount,
+                'amount' => (float) $benefit->element_value,
                 'unit_count' => null,
                 'unit_rate' => null,
                 'description' => $element->title,
             ];
         }
+    }
 
-        $totalDeductions = array_sum(array_column($deductions, 'amount'));
+    // ─────────────────────────────────────────────────────────────────────
+    // Result builder
+    // ─────────────────────────────────────────────────────────────────────
+
+    private function buildResult(MonthlyAttendance $attendance, int $companyId): array
+    {
+        $totalEarnings = array_sum(array_column($this->earnings, 'amount'));
+        $totalDeductions = array_sum(array_column($this->deductions, 'amount'));
         $netPayment = $totalEarnings - $totalDeductions;
 
-        // ── Flatten to PayrollItem-shaped rows ────────────────────────────
-        $items = $this->buildItemRows($earnings, $deductions);
+        $items = $this->buildItemRows();
 
         return [
-            'prorated_days' => $proratedDays,
-            'daily_wage' => $dailyWage,
-            'hourly_wage' => $hourlyWage,
-            'earnings' => $earnings,
-            'deductions' => $deductions,
+            'prorated_days' => $this->proratedDays,
+            'daily_wage' => $this->dailyWage,
+            'hourly_wage' => $this->hourlyWage,
+            'earnings' => $this->earnings,
+            'deductions' => $this->deductions,
             'gross_salary' => $totalEarnings,
-            'insurance_base' => $insuranceBase,
-            'employee_insurance' => $employeeInsurance,
-            'employer_insurance' => $employerInsurance,
-            'tax_base' => $taxBase,
-            'income_tax' => $incomeTax,
+            'insurance_base' => $this->insuranceBase,
+            'employee_insurance' => $this->employeeInsurance,
+            'employer_insurance' => $this->employerInsurance,
+            'tax_base' => $this->taxBase,
+            'income_tax' => $this->incomeTax,
             'total_earnings' => $totalEarnings,
             'total_deductions' => $totalDeductions,
             'net_payment' => $netPayment,
@@ -298,44 +373,91 @@ class PayrollService
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // Private helpers
+    // Shared calculation helpers
     // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Unified method for any time-based wage calculation (overtime, undertime,
+     * friday pay, holiday pay, mission pay). Adds the result to either
+     * $this->earnings or $this->deductions based on category.
+     */
+    private function addWageBasedItem(int $minutes, string $type, string $systemCode, string $category = 'earning'): void
+    {
+        if ($minutes <= 0) {
+            return;
+        }
+
+        $coeff = $this->resolveCoefficient($type);
+        $hours = $minutes / 60;
+        $amount = round($hours * $this->hourlyWage * $coeff, 2);
+
+        $typeLabel = match ($type) {
+            'overtime' => __('Overtime'),
+            'undertime' => __('Undertime'),
+            'friday' => __('Friday Premium'),
+            'holiday' => __('Holiday Premium'),
+            'mission' => __('Mission Pay'),
+            default => __(ucfirst($type)),
+        };
+
+        $entry = [
+            'element_id' => $this->findElementId($systemCode),
+            'amount' => $amount,
+            'unit_count' => $hours,
+            'unit_rate' => round($this->hourlyWage * $coeff, 2),
+            'description' => __(':label (:hours hrs × :rate × :coeff)', [
+                'label' => $typeLabel,
+                'hours' => number_format($hours, 2),
+                'rate' => number_format($this->hourlyWage),
+                'coeff' => $coeff,
+            ]),
+        ];
+
+        if ($category === 'deduction') {
+            $this->deductions[$type] = $entry;
+        } else {
+            $this->earnings[$type] = $entry;
+        }
+    }
 
     /**
      * Derive the hourly wage from the WorkShift's useful-hours definition.
      * Falls back to daily_wage / 8 when no shift is assigned.
      */
-    private function resolveHourlyWage(mixed $workShift, float $dailyWage): float
+    private function resolveHourlyWage(): float
     {
-        $shiftMinutes = $workShift?->duration ?? (8 * 60);
+        $shiftMinutes = $this->workShift?->duration ?? (8 * 60);
 
         if ($shiftMinutes <= 0) {
             $shiftMinutes = 8 * 60;
         }
 
-        return round($dailyWage / ($shiftMinutes / 60), 4);
+        return round($this->dailyWage / ($shiftMinutes / 60), 4);
     }
 
     /**
-     * Fetch the overtime multiplier from the shift, default 1.4 (Iranian law minimum).
+     * Resolve a coefficient value from the WorkShift based on the coefficient type.
      */
-    private function resolveOvertimeCoefficient(mixed $workShift): float
+    private function resolveCoefficient(string $type = 'overtime'): float
     {
-        return (float) ($workShift?->overtime_coefficient ?? 1.4);
+        return match ($type) {
+            'undertime' => (float) ($this->workShift?->undertime_coefficient ?? 2.0),
+            'friday' => (float) ($this->workShift?->friday_coefficient ?? 1.5),
+            'holiday' => (float) ($this->workShift?->holiday_coefficient ?? 2.0),
+            'mission' => (float) ($this->workShift?->mission_coefficient ?? 1.25),
+            'overtime' => (float) ($this->workShift?->overtime_coefficient ?? 1.4),
+            default => 1.0,
+        };
     }
 
     /**
      * Prorate a monthly allowance when calc_type = 'daily'.
      * A 'fixed' or 'percentage' allowance is returned as-is.
      */
-    private function prorateAllowance(
-        float $rawValue,
-        string $calcType,
-        int $workDays,
-        int $proratedDays,
-    ): float {
-        if ($calcType === 'daily' && $workDays > 0) {
-            return round($rawValue / $workDays * $proratedDays, 2);
+    private function prorateAllowance(float $rawValue, string $calcType): float
+    {
+        if ($calcType === 'daily' && $this->workDays > 0) {
+            return round($rawValue / $this->workDays * $this->proratedDays, 2);
         }
 
         return $rawValue;
@@ -364,10 +486,10 @@ class PayrollService
             ->get();
 
         if ($slabs->isEmpty()) {
-            return $this->fallbackTax($annualBase) / 12;
+            return round($this->fallbackTax($annualBase) / 12, 2);
         }
 
-        return $this->progressiveTax($annualBase, $slabs) / 12;
+        return round($this->progressiveTax($annualBase, $slabs) / 12, 2);
     }
 
     /**
@@ -377,7 +499,6 @@ class PayrollService
      */
     private function progressiveTax(float $annualBase, Collection $slabs): float
     {
-        // Honour annual_exemption from the first slab if present
         $exemption = (float) ($slabs->first()?->annual_exemption ?? 0);
         $taxableBase = max(0.0, $annualBase - $exemption);
 
@@ -409,8 +530,6 @@ class PayrollService
 
     /**
      * Simple flat-rate fallback: 10 % on income above an annual exemption.
-     * The exemption figure is taken from the first available TaxSlab row for
-     * any year, or defaults to 0 when the table is completely empty.
      */
     private function fallbackTax(float $annualBase): float
     {
@@ -426,9 +545,9 @@ class PayrollService
     /**
      * Return the element_id for the first benefit whose element has the given system_code.
      */
-    private function findElementId(iterable $benefits, string $systemCode): ?int
+    private function findElementId(string $systemCode): ?int
     {
-        foreach ($benefits as $benefit) {
+        foreach ($this->benefits as $benefit) {
             if ($benefit->element?->system_code === $systemCode) {
                 return $benefit->element->id;
             }
@@ -438,24 +557,14 @@ class PayrollService
     }
 
     /**
-     * Alias kept for clarity at call sites that deal with deduction elements.
-     */
-    private function findSystemElementId(iterable $benefits, string $systemCode): ?int
-    {
-        return $this->findElementId($benefits, $systemCode);
-    }
-
-    /**
      * Convert the earnings and deductions maps into the flat list that maps
      * directly to PayrollItem columns. Deductions have negative calculated_amount.
-     *
-     * @return list<array{element_id: int|null, calculated_amount: float, unit_count: float|null, unit_rate: float|null, description: string}>
      */
-    private function buildItemRows(array $earnings, array $deductions): array
+    private function buildItemRows(): array
     {
         $rows = [];
 
-        foreach ($earnings as $entry) {
+        foreach ($this->earnings as $entry) {
             $rows[] = [
                 'element_id' => $entry['element_id'],
                 'calculated_amount' => $entry['amount'],
@@ -465,7 +574,7 @@ class PayrollService
             ];
         }
 
-        foreach ($deductions as $entry) {
+        foreach ($this->deductions as $entry) {
             $rows[] = [
                 'element_id' => $entry['element_id'],
                 'calculated_amount' => -abs($entry['amount']),
@@ -481,12 +590,8 @@ class PayrollService
     /**
      * Persist the Payroll and its PayrollItem rows inside the current transaction.
      */
-    private function persist(
-        array $breakdown,
-        MonthlyAttendance $attendance,
-        SalaryDecree $decree,
-        int $companyId,
-    ): Payroll {
+    private function persist(array $breakdown, MonthlyAttendance $attendance, SalaryDecree $decree, int $companyId): Payroll
+    {
         $payroll = Payroll::create([
             'company_id' => $companyId,
             'employee_id' => $attendance->employee_id,

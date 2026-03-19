@@ -107,7 +107,7 @@ class AttendanceLogController extends Controller
             'log_date' => ['required', 'date'],
             'entry_time' => ['nullable', 'date_format:H:i'],
             'exit_time' => ['nullable', 'date_format:H:i', 'after_or_equal:entry_time'],
-            'worked' => ['nullable', 'integer', 'min:0'],
+            'worked' => ['integer', 'min:0'],
             'delay' => ['nullable', 'integer', 'min:0'],
             'early_leave' => ['nullable', 'integer', 'min:0'],
             'overtime' => ['nullable', 'integer', 'min:0'],

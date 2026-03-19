@@ -79,6 +79,10 @@
                     <div class="stat-title text-xs">{{ __('Overtime (min)') }}</div>
                     <div class="stat-value text-base text-warning">{{ $monthlyAttendance->overtime }}</div>
                 </div>
+                <div class="stat bg-error/20 rounded-box p-3">
+                    <div class="stat-title text-xs">{{ __('Undertime (min)') }}</div>
+                    <div class="stat-value text-base text-error">{{ $monthlyAttendance->undertime }}</div>
+                </div>
                 <div class="stat bg-info/20 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Mission Days') }}</div>
                     <div class="stat-value text-base text-info">{{ $monthlyAttendance->mission }}</div>
@@ -129,6 +133,7 @@
                             <thead>
                                 <tr>
                                     <th>{{ __('Issue Date') }}</th>
+                                    <th>{{ __('Decree') }}</th>
                                     <th class="text-end">{{ __('Total Earnings') }}</th>
                                     <th class="text-end">{{ __('Total Deductions') }}</th>
                                     <th class="text-end">{{ __('Employer Insurance') }}</th>
@@ -141,6 +146,7 @@
                                 @php $payroll = $monthlyAttendance->payroll; @endphp
                                 <tr>
                                     <td>{{ formatDate($payroll->issue_date) }}</td>
+                                    <td><a href="{{ route('salary.salary-decrees.edit', $payroll->decree->id) }}">{{ $payroll->decree->name }}</a></td>
                                     <td class="text-end text-success">{{ number_format((float) $payroll->total_earnings) }}</td>
                                     <td class="text-end text-error">{{ number_format((float) $payroll->total_deductions) }}</td>
                                     <td class="text-end">{{ number_format((float) $payroll->employer_insurance) }}</td>
@@ -204,6 +210,7 @@
                             <th>{{ __('Leave (min)') }}</th>
                             <th>{{ __('Overtime (min)') }}</th>
                             <th>{{ __('Delay (min)') }}</th>
+                            <th>{{ __('Early Leave (min)') }}</th>
                             <th>{{ __('Status') }}</th>
                             @if ($isAdminView ?? false)
                                 @can('attendance.attendance-logs.edit')
@@ -226,6 +233,7 @@
                                     <td>
                                         {{ formatDate($log->log_date) }}
                                     </td>
+                                    <td>—</td>
                                     <td>—</td>
                                     <td>—</td>
                                     <td>—</td>
@@ -256,6 +264,7 @@
                                     <td>{{ $log->paid_leave }}</td>
                                     <td>{{ $log->overtime }}</td>
                                     <td>{{ $log->delay }}</td>
+                                    <td>{{ $log->early_leave }}</td>
                                     <td>
                                         @if ($log->is_holiday)
                                             <span class="badge badge-warning badge-sm">{{ __('Holiday') }}</span>
