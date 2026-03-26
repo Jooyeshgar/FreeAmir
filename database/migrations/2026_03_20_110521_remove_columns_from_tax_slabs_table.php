@@ -16,6 +16,15 @@ return new class extends Migration
             $table->dropIndex('idx_tax_year');
             $table->dropColumn(['year', 'slab_order', 'income_from', 'annual_exemption']);
         });
+
+        Schema::table('payrolls', function (Blueprint $table) {
+            $table->decimal('tax_base_amount', 18, 2)->default(0)->after('total_deductions');    // Taxable income for this month
+            $table->decimal('income_tax_amount', 18, 2)->default(0)->after('tax_base_amount');   // Calculated income tax for this month
+        });
+
+        Schema::table('payroll_elements', function (Blueprint $table) {
+            $table->enum('calc_type', ['fixed', 'formula', 'percentage', 'daily'])->change();
+        });
     }
 
     /**
@@ -31,6 +40,14 @@ return new class extends Migration
 
             $table->unique(['year', 'slab_order'], 'uq_tax_slab');
             $table->index('year', 'idx_tax_year');
+        });
+
+        Schema::table('payrolls', function (Blueprint $table) {
+            $table->dropColumn(['tax_base_amount', 'income_tax_amount']);
+        });
+
+        Schema::table('payroll_elements', function (Blueprint $table) {
+            $table->enum('calc_type', ['fixed', 'formula', 'percentage'])->change();
         });
     }
 };

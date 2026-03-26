@@ -56,7 +56,7 @@
         <select name="calc_type" id="calc_type" class="select select-bordered w-full" required>
             <option value="">{{ __('Select Calculation Type') }}</option>
             <option value="fixed" @selected(old('calc_type', $payrollElement->calc_type ?? '') === 'fixed')>{{ __('Fixed') }}</option>
-            <option value="formula" @selected(old('calc_type', $payrollElement->calc_type ?? '') === 'formula')>{{ __('Formula') }}</option>
+            <option value="daily" @selected(old('calc_type', $payrollElement->calc_type ?? '') === 'daily')>{{ __('Daily') }}</option>
             <option value="percentage" @selected(old('calc_type', $payrollElement->calc_type ?? '') === 'percentage')>{{ __('Percentage') }}</option>
         </select>
         @error('calc_type')
@@ -64,13 +64,53 @@
         @enderror
     </div>
 
-    <div class="col-span-2">
+    {{-- Formula field: hidden from UI but kept for future use --}}
+    <div style="display: none;">
         <x-input name="formula" id="formula" title="{{ __('Formula') }}" :value="old('formula', $payrollElement->formula ?? '')" placeholder="{{ __('e.g. BASE_SALARY * 0.1') }}" />
     </div>
 
-    <div class="col-span-2 md:col-span-1">
-        <x-input name="default_amount" id="default_amount" type="number" title="{{ __('Default Amount') }}" :value="old('default_amount', $payrollElement->default_amount ?? '')" placeholder="0" />
+    {{-- Default Amount / Percentage — label and attributes change based on calc_type --}}
+    <div class="col-span-2 md:col-span-1" id="default_amount_wrapper">
+        <label class="label" for="default_amount">
+            <span class="label-text font-medium" id="default_amount_label">{{ __('Default Amount') }}</span>
+        </label>
+        <input
+            type="number"
+            name="default_amount"
+            id="default_amount"
+            class="input input-bordered w-full"
+            value="{{ old('default_amount', $payrollElement->default_amount ?? '') }}"
+            placeholder="0"
+            step="0.01"
+            min="0"
+        />
+        @error('default_amount')
+            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+        @enderror
     </div>
+
+    <script>
+    (function () {
+        var calcType = document.getElementById('calc_type');
+        var label = document.getElementById('default_amount_label');
+        var input = document.getElementById('default_amount');
+
+        function updateField() {
+            if (calcType.value === 'percentage') {
+                label.textContent = '{{ __('Percentage (%)') }}';
+                input.placeholder = '{{ __('e.g. 10') }}';
+                input.max = '100';
+            } else {
+                label.textContent = '{{ __('Default Amount') }}';
+                input.placeholder = '0';
+                input.removeAttribute('max');
+            }
+        }
+
+        calcType.addEventListener('change', updateField);
+        updateField();
+    })();
+    </script>
 
     <div class="col-span-2 md:col-span-1">
         <x-input name="gl_account_code" id="gl_account_code" title="{{ __('GL Account Code') }}" :value="old('gl_account_code', $payrollElement->gl_account_code ?? '')" placeholder="{{ __('e.g. 3210') }}" />
