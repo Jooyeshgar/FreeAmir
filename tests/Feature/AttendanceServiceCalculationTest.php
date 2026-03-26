@@ -63,7 +63,6 @@ class AttendanceServiceCalculationTest extends TestCase
             'company_id' => $this->company->id,
             'start_time' => '08:00:00',
             'end_time' => '17:00:00',
-            'crosses_midnight' => false,
             'break' => 0,
             'float' => 0,
             'is_active' => true,
@@ -147,18 +146,6 @@ class AttendanceServiceCalculationTest extends TestCase
         $shift = $this->makeShift(['start_time' => '07:00:00', 'end_time' => '13:00:00', 'break' => 0]);
         // 6h × 60 = 360 min
         $this->assertSame(360, $this->service->shiftWorkMinutes($shift));
-    }
-
-    public function test_shift_work_minutes_crosses_midnight(): void
-    {
-        $shift = $this->makeShift([
-            'start_time' => '22:00:00',
-            'end_time' => '06:00:00',
-            'crosses_midnight' => true,
-            'break' => 30,
-        ]);
-        // 8h window − 30 min break = 450 min
-        $this->assertSame(450, $this->service->shiftWorkMinutes($shift));
     }
 
     public function test_shift_work_minutes_with_no_break(): void

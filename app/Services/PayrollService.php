@@ -386,10 +386,10 @@ class PayrollService
     private function resolveCoefficient(string $type): float
     {
         return match ($type) {
-            'undertime' => (float) ($this->workShift?->undertime_coefficient ?? 2.0),
-            'friday' => (float) ($this->workShift?->friday_coefficient ?? 1.5),
+            'undertime' => (float) (2.0),
+            'friday' => (float) ($this->workShift?->holiday_coefficient ?? 1.5),
             'holiday' => (float) ($this->workShift?->holiday_coefficient ?? 2.0),
-            'mission' => (float) ($this->workShift?->mission_coefficient ?? 1.25),
+            'mission' => (float) ($this->workShift?->holiday_coefficient ?? 1.25),
             'overtime' => (float) ($this->workShift?->overtime_coefficient ?? 1.4),
             default => 1.0,
         };

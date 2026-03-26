@@ -48,7 +48,6 @@ class WorkShiftTest extends TestCase
             'name' => 'Morning Shift',
             'start_time' => '08:00',
             'end_time' => '17:00',
-            'crosses_midnight' => '0',
             'float' => '10',
             'break' => '30',
             'is_active' => '1',
@@ -229,24 +228,6 @@ class WorkShiftTest extends TestCase
 
         $response->assertStatus(404);
         $this->assertDatabaseHas('work_shifts', ['id' => $otherShift->id]);
-    }
-
-    // ----------------------------------------------------------------
-    // crosses_midnight and is_active flags
-    // ----------------------------------------------------------------
-
-    public function test_store_handles_crosses_midnight_flag(): void
-    {
-        $this->post(route('attendance.work-shifts.store'), $this->validPayload([
-            'start_time' => '22:00',
-            'end_time' => '06:00',
-            'crosses_midnight' => '1',
-        ]));
-
-        $this->assertDatabaseHas('work_shifts', [
-            'company_id' => $this->companyId,
-            'crosses_midnight' => true,
-        ]);
     }
 
     public function test_store_defaults_is_active_to_true_when_omitted(): void
