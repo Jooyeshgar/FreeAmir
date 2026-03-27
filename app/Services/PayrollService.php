@@ -185,9 +185,9 @@ class PayrollService
     private function computeDynamicEarnings(MonthlyAttendance $attendance): void
     {
         $this->addWageBasedEarning((int) ($attendance->overtime ?? 0), 'overtime', self::CODE_OVERTIME);
-        $this->addWageBasedEarning((int) ($attendance->friday_hours ?? 0), 'friday', self::CODE_FRIDAY_PAY);
-        $this->addWageBasedEarning((int) ($attendance->holiday_hours ?? 0), 'holiday', self::CODE_HOLIDAY_PAY);
-        $this->addWageBasedEarning((int) ($attendance->mission_hours ?? 0), 'mission', self::CODE_MISSION_PAY);
+        $this->addWageBasedEarning((int) ($attendance->friday ?? 0), 'friday', self::CODE_FRIDAY_PAY);
+        $this->addWageBasedEarning((int) ($attendance->holiday ?? 0), 'holiday', self::CODE_HOLIDAY_PAY);
+        $this->addWageBasedEarning((int) ($attendance->mission ?? 0), 'mission', self::CODE_MISSION_PAY);
     }
 
     private function computeDynamicDeductions(MonthlyAttendance $attendance): void

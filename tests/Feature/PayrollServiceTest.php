@@ -82,7 +82,6 @@ class PayrollServiceTest extends TestCase
         $this->orgChart = OrgChart::factory()->create(['company_id' => $this->companyId]);
 
         $this->shift = $this->makeShift(['company_id' => $this->companyId]);
-        $this->seedTaxSlabs();
 
         $this->employee = Employee::factory()->create([
             'company_id' => $this->companyId,
@@ -111,7 +110,7 @@ class PayrollServiceTest extends TestCase
             'break' => 60,
             'float' => 0,
             'overtime_coefficient' => 1.4,
-            'holiday_coefficient' => 2.0,
+            'holiday_coefficient' => 1.5,
             'mission_coefficient' => 1.4,
             'undertime_coefficient' => 2.0,
             'is_active' => true,
@@ -231,6 +230,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_calculate_returns_correct_base_salary_with_no_absences(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
@@ -248,6 +248,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_calculate_prorates_base_salary_for_absent_days(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         // 26 work days, 2 absent
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 2]);
@@ -270,6 +271,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_calculate_includes_fixed_housing_allowance(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         $housingAmount = 2_000_000.0;
         $this->addBenefit($decree, 'HOUSING_ALLOWANCE', $housingAmount);
@@ -290,6 +292,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_calculate_prorates_daily_food_allowance_on_absence(): void
     {
+        $this->seedTaxSlabs();
         // Set food element to calc_type = 'daily' for proration
         $this->elements['FOOD_ALLOWANCE']->update(['calc_type' => 'daily']);
 
@@ -315,6 +318,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_calculate_computes_overtime_correctly(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         $overtimeMinutes = 120; // 2 hours
         $attendance = $this->makeAttendance(['overtime' => $overtimeMinutes]);
@@ -336,6 +340,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_calculate_computes_friday_premium_correctly(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         $fridayMinutes = 480; // 8 hours
         $attendance = $this->makeAttendance(['friday' => $fridayMinutes]);
@@ -356,6 +361,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_calculate_computes_holiday_premium_correctly(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         $holidayMinutes = 240; // 4 hours
         $attendance = $this->makeAttendance(['holiday' => $holidayMinutes]);
@@ -363,7 +369,7 @@ class PayrollServiceTest extends TestCase
         $result = $this->service->calculate($attendance, $decree, $this->companyId);
 
         $hours = $holidayMinutes / 60;
-        $coeff = 2.0;
+        $coeff = 1.5;
         $expected = round($hours * self::HOURLY_WAGE * $coeff, 2);
 
         $this->assertArrayHasKey('holiday', $result['earnings']);
@@ -376,6 +382,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_calculate_computes_mission_pay_correctly(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         $missionMinutes = 480;
         $attendance = $this->makeAttendance(['mission' => $missionMinutes]);
@@ -383,7 +390,7 @@ class PayrollServiceTest extends TestCase
         $result = $this->service->calculate($attendance, $decree, $this->companyId);
 
         $hours = $missionMinutes / 60;
-        $coeff = 1.25;
+        $coeff = 1.4;
         $expected = round($hours * self::HOURLY_WAGE * $coeff, 2);
 
         $this->assertArrayHasKey('mission', $result['earnings']);
@@ -396,6 +403,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_calculate_computes_undertime_deduction_correctly(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         $undertimeMinutes = 60; // 1 hour late
         $attendance = $this->makeAttendance(['undertime' => $undertimeMinutes]);
@@ -416,6 +424,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_calculate_deducts_employee_insurance_at_7_percent(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
@@ -436,6 +445,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_calculate_returns_correct_employer_insurance(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
@@ -467,7 +477,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_calculate_computes_income_tax_for_first_month(): void
     {
-
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         // Full month, no absences
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0, 'month' => 1]);
@@ -492,6 +502,8 @@ class PayrollServiceTest extends TestCase
 
     public function test_calculate_accumulates_income_tax_across_months(): void
     {
+        $this->seedTaxSlabs();
+
         $decree = $this->makeDecree(['employee_id' => $this->employee->id]);
         $monthBase = self::DAILY_WAGE * 26; // 15,600,000
 
@@ -529,6 +541,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_calculate_net_payment_equals_earnings_minus_deductions(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         $this->addBenefit($decree, 'HOUSING_ALLOWANCE', 1_000_000);
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
@@ -547,6 +560,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_calculate_returns_all_expected_keys(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         $attendance = $this->makeAttendance();
 
@@ -572,6 +586,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_calculate_items_signs_are_correct(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 2, 'overtime' => 120]);
 
@@ -598,6 +613,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_create_from_attendance_persists_payroll_record(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         $attendance = $this->makeAttendance(['year' => 1404, 'month' => 1]);
 
@@ -623,6 +639,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_create_from_attendance_persists_payroll_items(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         $this->addBenefit($decree, 'HOUSING_ALLOWANCE', 1_500_000);
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
@@ -645,6 +662,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_create_from_attendance_replaces_existing_payroll_for_same_month(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         $attendance = $this->makeAttendance(['year' => 1404, 'month' => 3]);
 
@@ -672,6 +690,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_create_from_attendance_stores_correct_net_payment(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
@@ -689,7 +708,9 @@ class PayrollServiceTest extends TestCase
     // -----------------------------------------------------------------------
 
     public function test_calculate_applies_custom_deduction_benefit(): void
-    {        // Create a custom deduction element (not a system-reserved code)
+    {
+        $this->seedTaxSlabs();
+        // Create a custom deduction element (not a system-reserved code)
         $customDeduction = PayrollElement::factory()->create([
             'company_id' => $this->companyId,
             'system_code' => 'LOAN_REPAYMENT',
@@ -719,7 +740,9 @@ class PayrollServiceTest extends TestCase
     // -----------------------------------------------------------------------
 
     public function test_calculate_hourly_wage_uses_shift_duration(): void
-    {        // Shift: 08:00–16:00, 0 break → 480 min / 8 h → hourly = 600,000/8 = 75,000
+    {
+        $this->seedTaxSlabs();
+        // Shift: 08:00–16:00, 0 break → 480 min / 8 h → hourly = 600,000/8 = 75,000
         $shift6h = $this->makeShift([
             'start_time' => '08:00:00',
             'end_time' => '14:00:00',
@@ -768,6 +791,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_calculate_with_zero_daily_wage_produces_zero_earnings(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree(['daily_wage' => 0]);
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
@@ -785,6 +809,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_insurance_base_excludes_non_insurable_benefits(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         // CHILD_ALLOWANCE is_insurable = false in seedElements()
         $this->elements['CHILD_ALLOWANCE']->update(['is_insurable' => false]);
@@ -805,7 +830,9 @@ class PayrollServiceTest extends TestCase
     // -----------------------------------------------------------------------
 
     public function test_calculate_applies_progressive_tax_across_brackets(): void
-    {        // Use a very high daily wage so the projected annual income crosses the first slab
+    {
+        $this->seedTaxSlabs();
+        // Use a very high daily wage so the projected annual income crosses the first slab
         $highDecree = $this->makeDecree(['daily_wage' => 50_000_000]);
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
@@ -833,6 +860,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_payroll_description_contains_jalali_month_name(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         // Month 6 = Shahrivar (شهریور) in Jalali
         $attendance = $this->makeAttendance(['year' => 1404, 'month' => 6]);
@@ -851,6 +879,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_absence_deduction_has_correct_unit_count_and_rate(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 3]);
 
@@ -869,6 +898,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_overtime_earning_is_linked_to_overtime_element(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         $attendance = $this->makeAttendance(['overtime' => 60]);
 
@@ -885,6 +915,7 @@ class PayrollServiceTest extends TestCase
 
     public function test_calculate_combines_multiple_extras_correctly(): void
     {
+        $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         $this->addBenefit($decree, 'HOUSING_ALLOWANCE', 1_000_000);
         $this->addBenefit($decree, 'FOOD_ALLOWANCE', 500_000);
