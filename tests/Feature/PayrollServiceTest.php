@@ -37,12 +37,12 @@ class PayrollServiceTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const DAILY_WAGE = 600_000.0;
+    private const DAILY_WAGE = 600000.0;
 
     // shift: 08:00-17:00 with 60 min break → net 480 min → 8 h/day
     private const SHIFT_MINUTES = 480;
 
-    private const HOURLY_WAGE = self::DAILY_WAGE / (self::SHIFT_MINUTES / 60); // 75_000
+    private const HOURLY_WAGE = self::DAILY_WAGE / (self::SHIFT_MINUTES / 60); // 75000
 
     // insurance rates as in the service
     private const EMP_INS_RATE = 0.07;
@@ -107,11 +107,13 @@ class PayrollServiceTest extends TestCase
             'company_id' => $this->companyId,
             'name' => 'Standard',
             'start_time' => '08:00:00',
-            'end_time' => '17:00:00',
+            'end_time' => '16:00:00',
             'break' => 60,
             'float' => 0,
             'overtime_coefficient' => 1.4,
             'holiday_coefficient' => 2.0,
+            'mission_coefficient' => 1.4,
+            'undertime_coefficient' => 2.0,
             'is_active' => true,
         ], $overrides));
     }
