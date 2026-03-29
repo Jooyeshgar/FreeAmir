@@ -24,6 +24,8 @@ class WorkShift extends Model
         'thursday_exit_time',
         'holiday_coefficient',
         'overtime_coefficient',
+        'mission_coefficient',
+        'undertime_coefficient',
         'is_active',
     ];
 
@@ -34,6 +36,8 @@ class WorkShift extends Model
         'break' => 'integer',
         'holiday_coefficient' => 'float',
         'overtime_coefficient' => 'float',
+        'mission_coefficient' => 'float',
+        'undertime_coefficient' => 'float',
     ];
 
     public function getDurationAttribute(): int
@@ -41,8 +45,8 @@ class WorkShift extends Model
         $start = Carbon::createFromFormat('H:i:s', $this->start_time);
         $end = Carbon::createFromFormat('H:i:s', $this->end_time);
 
-        $duration = $end->diffInMinutes($start);
-        $duration -= $this->break;
+        $duration = $start->diffInMinutes($end);
+        // $duration -= $this->break;
 
         return max(0, $duration);
     }

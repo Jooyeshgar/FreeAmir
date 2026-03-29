@@ -64,7 +64,6 @@ class SalaryDecreeTest extends TestCase
         return SalaryDecree::factory()->create(array_merge([
             'company_id' => $this->companyId,
             'employee_id' => $this->employee->id,
-            'org_chart_id' => $this->orgChart->id,
         ], $overrides));
     }
 
@@ -72,11 +71,9 @@ class SalaryDecreeTest extends TestCase
     {
         return array_merge([
             'employee_id' => $this->employee->id,
-            'org_chart_id' => $this->orgChart->id,
             'name' => 'Decree-1403-001',
             'start_date' => '2026-01-01',
             'end_date' => null,
-            'contract_type' => 'full_time',
             'daily_wage' => '500000',
             'description' => 'Test decree',
             'is_active' => '1',
@@ -189,7 +186,7 @@ class SalaryDecreeTest extends TestCase
     {
         $response = $this->post(route('salary.salary-decrees.store'), []);
 
-        $response->assertSessionHasErrors(['employee_id', 'org_chart_id', 'start_date']);
+        $response->assertSessionHasErrors(['employee_id', 'start_date']);
     }
 
     public function test_store_validates_employee_exists(): void
@@ -209,15 +206,6 @@ class SalaryDecreeTest extends TestCase
         ]));
 
         $response->assertSessionHasErrors(['end_date']);
-    }
-
-    public function test_store_validates_contract_type_enum(): void
-    {
-        $response = $this->post(route('salary.salary-decrees.store'), $this->validPayload([
-            'contract_type' => 'invalid_type',
-        ]));
-
-        $response->assertSessionHasErrors(['contract_type']);
     }
 
     // ----------------------------------------------------------------

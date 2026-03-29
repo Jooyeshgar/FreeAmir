@@ -10,17 +10,9 @@ class TaxSlabController extends Controller
 {
     public function index()
     {
-        $year = request('year');
+        $taxSlabs = TaxSlab::orderBy('income_to')->paginate(15);
 
-        $query = TaxSlab::orderBy('year', 'desc')->orderBy('slab_order');
-
-        if ($year) {
-            $query->where('year', $year);
-        }
-
-        $taxSlabs = $query->paginate(15);
-
-        return view('tax-slabs.index', compact('taxSlabs', 'year'));
+        return view('tax-slabs.index', compact('taxSlabs'));
     }
 
     public function create()

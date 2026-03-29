@@ -20,7 +20,6 @@ class WorkShiftFactory extends Factory
             'name' => $this->faker->words(2, true),
             'start_time' => $start,
             'end_time' => $end,
-            'crosses_midnight' => false,
             'float' => $this->faker->numberBetween(0, 30),
             'break' => $this->faker->numberBetween(0, 60),
             'is_active' => true,
@@ -30,10 +29,5 @@ class WorkShiftFactory extends Factory
     public function inactive(): static
     {
         return $this->state(['is_active' => false]);
-    }
-
-    public function crossesMidnight(): static
-    {
-        return $this->state(['crosses_midnight' => true]);
     }
 }

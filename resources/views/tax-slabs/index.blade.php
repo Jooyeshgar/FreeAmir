@@ -17,41 +17,26 @@
                 @endcan
             </div>
 
-            <form action="{{ route('salary.tax-slabs.index') }}" method="GET">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full md:w-2/5">
-                    <div class="relative">
-                        <input type="number" name="year" value="{{ request('year') }}" placeholder="{{ __('Filter by year') }}"
-                            class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
-                    </div>
-                    <div class="flex items-center">
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 text-sm rounded-lg shadow transition-all">
-                            {{ __('Search') }}
-                        </button>
-                    </div>
-                </div>
-            </form>
-
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <tr>
-                        <th>{{ __('Year') }}</th>
-                        <th>{{ __('Slab Order') }}</th>
+                        <th>{{ __('Row') }}</th>
                         <th>{{ __('Income From') }}</th>
                         <th>{{ __('Income To') }}</th>
                         <th>{{ __('Tax Rate') }} (%)</th>
-                        <th>{{ __('Annual Exemption') }}</th>
                         <th>{{ __('Action') }}</th>
                     </tr>
                 </thead>
                 <tbody>
+                    @php
+                        $incomeFrom = 0;
+                    @endphp
                     @forelse ($taxSlabs as $taxSlab)
                         <tr>
-                            <td>{{ $taxSlab->year }}</td>
-                            <td>{{ $taxSlab->slab_order }}</td>
-                            <td>{{ formatNumber($taxSlab->income_from) }}</td>
+                            <td>{{ formatNumber($loop->index) }}</td>
+                            <td>{{ formatNumber($incomeFrom) }}</td>
                             <td>{{ $taxSlab->income_to !== null ? formatNumber($taxSlab->income_to) : '∞' }}</td>
                             <td>{{ $taxSlab->tax_rate }}</td>
-                            <td>{{ $taxSlab->annual_exemption !== null ? formatNumber($taxSlab->annual_exemption) : '-' }}</td>
                             <td class="flex gap-2">
                                 @can('salary.tax-slabs.edit')
                                     <a href="{{ route('salary.tax-slabs.edit', $taxSlab) }}" class="btn btn-sm btn-info">
@@ -70,9 +55,12 @@
                                 @endcan
                             </td>
                         </tr>
+                        @php
+                            $incomeFrom = $taxSlab->income_to;
+                        @endphp
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center py-4 text-gray-500">
+                            <td colspan="3" class="text-center py-4 text-gray-500">
                                 {{ __('No tax slabs found.') }}
                             </td>
                         </tr>

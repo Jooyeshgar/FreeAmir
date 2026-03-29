@@ -95,7 +95,6 @@ class AttendanceService
                 'delay' => 0,
                 'early_leave' => 0,
                 'overtime' => 0,
-                'mission' => 0,
                 'is_friday' => $isFriday,
                 'is_holiday' => true,  // Thursday-holiday counts as a holiday day
             ];
@@ -145,22 +144,20 @@ class AttendanceService
         // ── No clock data ─────────────────────────────────────────────────
         if ($log->entry_time === null || $log->exit_time === null) {
             // Unpaid leave: no clock-in required
-            if ($log->unpaid_leave > 0) {
-                return [
-                    'worked' => 0,
-                    'delay' => 0,
-                    'early_leave' => 0,
-                    'overtime' => 0,
-                    'mission' => 0,
-                ];
-            }
+            // if ($log->unpaid_leave > 0) {
+            //     return [
+            //         'worked' => 0,
+            //         'delay' => 0,
+            //         'early_leave' => 0,
+            //         'overtime' => 0,
+            //     ];
+            // }
 
             return [
                 'worked' => 0,
                 'delay' => 0,
                 'early_leave' => 0,
                 'overtime' => 0,
-                'mission' => 0,
             ];
         }
 

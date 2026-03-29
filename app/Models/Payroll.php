@@ -23,6 +23,8 @@ class Payroll extends Model
         'total_deductions',
         'net_payment',
         'employer_insurance',
+        'tax_base_amount',
+        'income_tax_amount',
         'issue_date',
         'status',
         'accounting_voucher_id',
