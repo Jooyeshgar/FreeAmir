@@ -32,7 +32,7 @@ class AttendanceLogTest extends TestCase
         $company->users()->attach($this->user);
 
         $this->user->givePermissionTo(
-            Permission::firstOrCreate(['name' => 'attendance-logs.*'])
+            Permission::firstOrCreate(['name' => 'attendance.*'])
         );
 
         $this->actingAs($this->user);
@@ -227,10 +227,12 @@ class AttendanceLogTest extends TestCase
     {
         $log = $this->makeAttendanceLog(['log_date' => '2026-02-10', 'entry_time' => '08:00']);
 
-        $response = $this->put(route('attendance.attendance-logs.update', $log), $this->validPayload([
-            'entry_time' => '09:00',
-            'is_manual' => '1',
-        ]));
+        // Set the previous URL using ->from(...) so redirect()->back() works as expected
+        $response = $this->from(route('attendance.attendance-logs.index'))
+            ->put(route('attendance.attendance-logs.update', $log), $this->validPayload([
+                'entry_time' => '09:00',
+                'is_manual' => '1',
+            ]));
 
         $response->assertRedirect(route('attendance.attendance-logs.index'));
         $response->assertSessionHas('success');
