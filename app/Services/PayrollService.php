@@ -307,7 +307,7 @@ class PayrollService
         $this->deductions[$key] = $data;
 
         if ($data['is_taxable'] ?? false) {
-            $this->taxExemptions -= $data['amount'];
+            $this->taxExemptions += $data['amount'];
         }
 
         if ($data['is_insurable'] ?? false) {

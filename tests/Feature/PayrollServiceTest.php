@@ -479,33 +479,41 @@ class PayrollServiceTest extends TestCase
     {
         $this->seedTaxSlabs();
         $decree = $this->makeDecree();
+
         // Full month, no absences
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0, 'month' => 1]);
 
         $result = $this->service->calculate($attendance, $decree, $this->companyId);
 
-        // Gross = 26 × 600,000 = 15,600,000
-        // thisMonthTaxBase = 15,600,000 (no exemptions for basic decree)
-        // projectedAnnual = 15,600,000 * 12 = 187,200,000
-        // progressive tax on 187,200,000 (below 500M slab at 10%) = 18,720,000
-        // cumulativeTaxDue = (18,720,000 / 12) * 1 = 1,560,000
-        // incomeTax this month = 1,560,000 - 0 (no previous) = 1,560,000
+        // 1. Gross Salary = 26 * 600,000 = 15,600,000
+        // 2. Employee Insurance = 15,600,000 * 0.07 = 1,092,000
+        // 3. Tax Base = 15,600,000 - 1,092,000 = 14,508,000
+        // 4. Projected Annual Base  = 14,508,000 * 12 = 174,096,000
+        // 5. Progressive Tax = 174,096,000 * 0.10 = 17,409,600
+        // 6. Cumulative Tax Due = (17,409,600 / 12) * 1 = 1,450,800
+        // 7. Income Tax this month = 1,450,800 - 0 = 1,450,800
+
+        $taxAmount = $result['income_tax'] ?? $result['deductions']['income_tax']['amount'];
 
         $this->assertArrayHasKey('income_tax', $result['deductions']);
-        $this->assertGreaterThan(0, $result['income_tax']);
-        $this->assertEquals(round(1_560_000), $result['income_tax']);
+        $this->assertGreaterThan(0, $taxAmount);
+        $this->assertEquals(1450800, $taxAmount);
     }
 
     // -----------------------------------------------------------------------
     // 14. Income tax – second month accumulates from first
     // -----------------------------------------------------------------------
-
     public function test_calculate_accumulates_income_tax_across_months(): void
     {
         $this->seedTaxSlabs();
 
         $decree = $this->makeDecree(['employee_id' => $this->employee->id]);
+
         $monthBase = self::DAILY_WAGE * 26; // 15,600,000
+        $insuranceMonth1 = $monthBase * 0.07; // 1,092,000
+        $taxBaseMonth1 = $monthBase - $insuranceMonth1; // 14,508,000
+        $taxAmountMonth1 = 1450800;
+        $totalDeductionsMonth1 = $insuranceMonth1 + $taxAmountMonth1; // 2,542,800
 
         // Persist a payroll for month 1 manually so month 2 picks it up
         Payroll::withoutGlobalScopes()->create([
@@ -516,23 +524,29 @@ class PayrollServiceTest extends TestCase
             'year' => 1404,
             'month' => 1,
             'total_earnings' => $monthBase,
-            'total_deductions' => 1_560_000,
-            'net_payment' => $monthBase - 1_560_000,
+            'total_deductions' => $totalDeductionsMonth1,
+            'net_payment' => $monthBase - $totalDeductionsMonth1,
             'employer_insurance' => 0,
-            'tax_base_amount' => $monthBase,
-            'income_tax_amount' => 1_560_000,
+            'tax_base_amount' => $taxBaseMonth1,
+            'income_tax_amount' => $taxAmountMonth1,
             'status' => 'approved',
         ]);
 
         $attendance2 = $this->makeAttendance(['month' => 2, 'work_days' => 26, 'absent_days' => 0]);
         $result = $this->service->calculate($attendance2, $decree, $this->companyId);
 
-        // cumulativeTaxBase = 15,600,000 + 15,600,000 = 31,200,000
-        // projectedAnnual = (31,200,000 / 2) * 12 = 187,200,000
-        // projectedAnnualTax = 18,720,000
-        // cumulativeTaxDue = (18,720,000 / 12) * 2 = 3,120,000
-        // incomeTax this month = 3,120,000 - 1,560,000 = 1,560,000
-        $this->assertEquals(round(1_560_000), $result['income_tax']);
+        // 1. Month 2 Gross = 15,600,000
+        // 2. Month 2 Employee Insurance = 1,092,000
+        // 3. Month 2 Tax Base = 15,600,000 - 1,092,000 = 14,508,000
+        // 4. Cumulative Tax Base = 14,508,000 (Month 1) + 14,508,000 (Month 2) = 29,016,000
+        // 5. Projected Annual = (29,016,000 / 2) * 12 = 174,096,000
+        // 6. Projected Annual Tax = 174,096,000 * 0.10 = 17,409,600
+        // 7. Cumulative Tax Due = (17,409,600 / 12) * 2 = 2,901,600
+        // 8. Income Tax this month = 2,901,600 - 1,450,800 (Month 1 Paid) = 1,450,800
+
+        $taxAmount = $result['income_tax'] ?? $result['deductions']['income_tax']['amount'];
+
+        $this->assertEquals(1450800, $taxAmount);
     }
 
     // -----------------------------------------------------------------------
@@ -713,7 +727,7 @@ class PayrollServiceTest extends TestCase
         // Create a custom deduction element (not a system-reserved code)
         $customDeduction = PayrollElement::factory()->create([
             'company_id' => $this->companyId,
-            'system_code' => 'LOAN_REPAYMENT',
+            'system_code' => 'OTHER',
             'category' => 'deduction',
             'calc_type' => 'fixed',
             'is_taxable' => false,
@@ -732,7 +746,7 @@ class PayrollServiceTest extends TestCase
         $result = $this->service->calculate($attendance, $decree, $this->companyId);
 
         $this->assertArrayHasKey('deduction_'.$customDeduction->id, $result['deductions']);
-        $this->assertEquals(500_000, $result['deductions']['deduction_'.$customDeduction->id]['amount']);
+        $this->assertEquals(500000, $result['deductions']['deduction_'.$customDeduction->id]['amount']);
     }
 
     // -----------------------------------------------------------------------
@@ -813,7 +827,7 @@ class PayrollServiceTest extends TestCase
         $decree = $this->makeDecree();
         // CHILD_ALLOWANCE is_insurable = false in seedElements()
         $this->elements['CHILD_ALLOWANCE']->update(['is_insurable' => false]);
-        $this->addBenefit($decree, 'CHILD_ALLOWANCE', 500_000);
+        $this->addBenefit($decree, 'CHILD_ALLOWANCE', 500000);
 
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
@@ -833,7 +847,7 @@ class PayrollServiceTest extends TestCase
     {
         $this->seedTaxSlabs();
         // Use a very high daily wage so the projected annual income crosses the first slab
-        $highDecree = $this->makeDecree(['daily_wage' => 50_000_000]);
+        $highDecree = $this->makeDecree(['daily_wage' => 50000000]);
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
         $result = $this->service->calculate($attendance, $highDecree, $this->companyId);
@@ -900,6 +914,9 @@ class PayrollServiceTest extends TestCase
     {
         $this->seedTaxSlabs();
         $decree = $this->makeDecree();
+
+        $this->addBenefit($decree, 'OVERTIME', 0);
+
         $attendance = $this->makeAttendance(['overtime' => 60]);
 
         $result = $this->service->calculate($attendance, $decree, $this->companyId);
@@ -917,8 +934,8 @@ class PayrollServiceTest extends TestCase
     {
         $this->seedTaxSlabs();
         $decree = $this->makeDecree();
-        $this->addBenefit($decree, 'HOUSING_ALLOWANCE', 1_000_000);
-        $this->addBenefit($decree, 'FOOD_ALLOWANCE', 500_000);
+        $this->addBenefit($decree, 'HOUSING_ALLOWANCE', 1000000);
+        $this->addBenefit($decree, 'FOOD_ALLOWANCE', 500000);
 
         $attendance = $this->makeAttendance([
             'work_days' => 26,
@@ -936,7 +953,7 @@ class PayrollServiceTest extends TestCase
 
         // Just verify gross contains base + overtime (housing/food are also included)
         $this->assertEqualsWithDelta(
-            $baseSalary + $overtime + 1_000_000 + 500_000,
+            $baseSalary + $overtime + 1000000 + 500000,
             $result['total_earnings'],
             1.0,
             'Total earnings do not match expected sum'
