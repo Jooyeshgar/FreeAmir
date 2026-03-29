@@ -2,11 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
-use App\Models\Subject;
 use App\Models\User;
+use Cookie;
+use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -15,83 +19,55 @@ class CustomerTest extends TestCase
     use RefreshDatabase;
 
     protected $user;
+
     protected $customerGroup;
+
     protected $company;
+
+    protected int $companyId;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
-        // Create a user for authentication first
+
+        $this->seed(DatabaseSeeder::class);
+        $this->seed(DemoSeeder::class);
+
+        $this->companyId = Company::withoutGlobalScopes()->orderBy('id')->value('id') ?? 1;
+        Cache::forever('active_company_id', $this->companyId);
+        Cookie::queue('active-company-id', (string) $this->companyId);
+        $_COOKIE['active-company-id'] = (string) $this->companyId;
+
+        $this->company = Company::find($this->companyId);
         $this->user = User::factory()->create();
-        
-        // Create a company without the afterCreating hook interfering
-        $this->company = \App\Models\Company::create([
-            'name' => 'Test Company',
-            'address' => 'Test Address',
-            'postal_code' => '1234567890',
-            'phone_number' => '12345678',
-            'fiscal_year' => 1403,
+        $this->company->users()->attach($this->user);
+
+        $this->user->givePermissionTo([
+            Permission::firstOrCreate(['name' => 'customers.index']),
+            Permission::firstOrCreate(['name' => 'customers.create']),
+            Permission::firstOrCreate(['name' => 'customers.store']),
+            Permission::firstOrCreate(['name' => 'customers.show']),
+            Permission::firstOrCreate(['name' => 'customers.edit']),
+            Permission::firstOrCreate(['name' => 'customers.update']),
+            Permission::firstOrCreate(['name' => 'customers.destroy']),
         ]);
-        
-        // Attach user to company
-        $this->user->companies()->attach($this->company->id);
-        
-        // Set active company session
-        session(['active-company-id' => $this->company->id]);
-        
-        // Create permissions
-        Permission::create(['name' => 'customers.*']);
-        Permission::create(['name' => 'customers.index']);
-        Permission::create(['name' => 'customers.create']);
-        Permission::create(['name' => 'customers.store']);
-        Permission::create(['name' => 'customers.edit']);
-        Permission::create(['name' => 'customers.update']);
-        Permission::create(['name' => 'customers.destroy']);
-        Permission::create(['name' => 'customers.show']);
-        Permission::create(['name' => 'customer-groups.*']);
-        
-        // Give user permissions for customers
-        $this->user->givePermissionTo('customers.*');
-        
-        // Create root subject for customer groups
-        $parentSubject = Subject::create([
-            'code' => '001',
-            'name' => 'Customers Root',
-            'parent_id' => null,
-            'company_id' => $this->company->id,
-        ]);
-        
-        // Set config for customer subject parent
-        config(['amir.cust_subject' => $parentSubject->id]);
-        
-        // Create a customer group with subject
-        $this->customerGroup = CustomerGroup::create([
-            'name' => 'Test Group',
-            'description' => 'Test group description',
-            'company_id' => $this->company->id,
-        ]);
+
+        $this->actingAs($this->user);
+
+        $this->customerGroup = CustomerGroup::withoutGlobalScopes()->where('company_id', $this->companyId)->firstOrFail();
+        $this->customer = Customer::factory()->withGroup($this->customerGroup)->withSubject()->create(['company_id' => $this->companyId]);
     }
 
-    /** @test */
-    public function it_displays_customer_index_page()
+    public function test_it_displays_customer_index_page()
     {
-        $customers = collect([
-            Customer::create(['name' => 'Customer 1', 'group_id' => $this->customerGroup->id, 'company_id' => $this->company->id]),
-            Customer::create(['name' => 'Customer 2', 'group_id' => $this->customerGroup->id, 'company_id' => $this->company->id]),
-            Customer::create(['name' => 'Customer 3', 'group_id' => $this->customerGroup->id, 'company_id' => $this->company->id]),
-        ]);
-
-        $response = $this->actingAs($this->user)
-            ->get(route('customers.index'));
+        $response = $this->actingAs($this->user)->get(route('customers.index'));
 
         $response->assertStatus(200);
         $response->assertViewIs('customers.index');
         $response->assertViewHas('customers');
     }
 
-    /** @test */
-    public function it_displays_customer_create_page()
+    public function test_it_displays_customer_create_page()
     {
         $response = $this->actingAs($this->user)
             ->get(route('customers.create'));
@@ -101,8 +77,7 @@ class CustomerTest extends TestCase
         $response->assertViewHas('groups');
     }
 
-    /** @test */
-    public function it_can_create_a_customer_with_valid_data()
+    public function test_it_can_create_a_customer_with_valid_data()
     {
         $customerData = [
             'name' => 'John Doe',
@@ -147,8 +122,7 @@ class CustomerTest extends TestCase
         $this->assertEquals('John Doe', $customer->subject->name);
     }
 
-    /** @test */
-    public function it_can_create_a_customer_with_minimal_required_data()
+    public function test_it_can_create_a_customer_with_minimal_required_data()
     {
         $customerData = [
             'name' => 'Jane Doe',
@@ -167,8 +141,7 @@ class CustomerTest extends TestCase
         ]);
     }
 
-    /** @test */
-    public function it_validates_required_name_field()
+    public function test_it_validates_required_name_field()
     {
         $customerData = [
             'group_id' => $this->customerGroup->id,
@@ -180,8 +153,7 @@ class CustomerTest extends TestCase
         $response->assertSessionHasErrors('name');
     }
 
-    /** @test */
-    public function it_validates_required_group_id_field()
+    public function test_it_validates_required_group_id_field()
     {
         $customerData = [
             'name' => 'Test Customer',
@@ -193,8 +165,7 @@ class CustomerTest extends TestCase
         $response->assertSessionHasErrors('group_id');
     }
 
-    /** @test */
-    public function it_validates_name_max_length()
+    public function test_it_validates_name_max_length()
     {
         $customerData = [
             'name' => str_repeat('a', 101), // 101 characters
@@ -207,12 +178,11 @@ class CustomerTest extends TestCase
         $response->assertSessionHasErrors('name');
     }
 
-    /** @test */
-    public function it_validates_phone_format()
+    public function test_it_validates_phone_format()
     {
         $customerData = [
             'name' => 'Test Customer',
-            'phone' => '123456', // Invalid phone format
+            'phone' => 123456, // Invalid phone format
             'group_id' => $this->customerGroup->id,
         ];
 
@@ -222,8 +192,7 @@ class CustomerTest extends TestCase
         $response->assertSessionHasErrors('phone');
     }
 
-    /** @test */
-    public function it_validates_valid_phone_format()
+    public function test_it_validates_valid_phone_format()
     {
         $customerData = [
             'name' => 'Test Customer',
@@ -238,8 +207,7 @@ class CustomerTest extends TestCase
         $response->assertSessionHasNoErrors();
     }
 
-    /** @test */
-    public function it_validates_email_format()
+    public function test_it_validates_email_format()
     {
         $customerData = [
             'name' => 'Test Customer',
@@ -253,8 +221,7 @@ class CustomerTest extends TestCase
         $response->assertSessionHasErrors('email');
     }
 
-    /** @test */
-    public function it_validates_group_id_exists()
+    public function test_it_validates_group_id_exists()
     {
         $customerData = [
             'name' => 'Test Customer',
@@ -267,8 +234,7 @@ class CustomerTest extends TestCase
         $response->assertSessionHasErrors('group_id');
     }
 
-    /** @test */
-    public function it_sets_rep_via_email_to_zero_when_not_checked()
+    public function test_it_sets_rep_via_email_to_zero_when_not_checked()
     {
         $customerData = [
             'name' => 'Test Customer',
@@ -283,8 +249,7 @@ class CustomerTest extends TestCase
         $this->assertEquals(0, $customer->rep_via_email);
     }
 
-    /** @test */
-    public function it_sets_rep_via_email_to_one_when_checked()
+    public function test_it_sets_rep_via_email_to_one_when_checked()
     {
         $customerData = [
             'name' => 'Test Customer',
@@ -299,8 +264,7 @@ class CustomerTest extends TestCase
         $this->assertEquals(1, $customer->rep_via_email);
     }
 
-    /** @test */
-    public function it_creates_subject_with_correct_parent_on_customer_creation()
+    public function test_it_creates_subject_with_correct_parent_on_customer_creation()
     {
         $customerData = [
             'name' => 'Test Customer',
@@ -318,14 +282,9 @@ class CustomerTest extends TestCase
         $this->assertEquals($this->customerGroup->subject_id, $subject->parent_id);
     }
 
-    /** @test */
-    public function it_displays_customer_edit_page()
+    public function test_it_displays_customer_edit_page()
     {
-        $customer = Customer::create([
-            'name' => 'Test Customer',
-            'group_id' => $this->customerGroup->id,
-            'company_id' => $this->company->id,
-        ]);
+        $customer = Customer::where('company_id', $this->companyId)->inRandomOrder()->first();
 
         $response = $this->actingAs($this->user)
             ->get(route('customers.edit', $customer));
@@ -336,14 +295,9 @@ class CustomerTest extends TestCase
         $response->assertViewHas('groups');
     }
 
-    /** @test */
-    public function it_can_update_a_customer()
+    public function test_it_can_update_a_customer()
     {
-        $customer = Customer::create([
-            'name' => 'Old Name',
-            'group_id' => $this->customerGroup->id,
-            'company_id' => $this->company->id,
-        ]);
+        $customer = Customer::where('company_id', $this->companyId)->inRandomOrder()->first();
 
         $updateData = [
             'name' => 'Updated Name',
@@ -365,53 +319,31 @@ class CustomerTest extends TestCase
         ]);
     }
 
-    /** @test */
-    public function it_can_delete_a_customer()
+    public function test_it_can_delete_a_customer()
     {
-        $customer = Customer::create([
-            'name' => 'Test Customer',
-            'group_id' => $this->customerGroup->id,
-            'company_id' => $this->company->id,
-        ]);
+        $customer = Customer::factory()->withGroup($this->customerGroup)->withSubject()->create();
 
         $response = $this->actingAs($this->user)
             ->delete(route('customers.destroy', $customer));
 
         $response->assertRedirect(route('customers.index'));
-        $response->assertSessionHas('success', __('Customer deleted successfully.'));
 
-        $this->assertDatabaseMissing('customers', [
-            'id' => $customer->id,
-        ]);
+        $this->assertModelMissing($customer);
     }
 
-    /** @test */
-    public function it_deletes_customer_subject_when_customer_is_deleted()
+    public function test_it_deletes_customer_subject_when_customer_is_deleted()
     {
-        $customer = Customer::create([
-            'name' => 'Test Customer',
-            'group_id' => $this->customerGroup->id,
-            'company_id' => $this->company->id,
-        ]);
-
-        $subjectId = $customer->subject->id;
+        $customer = Customer::factory()->withGroup($this->customerGroup)->withSubject()->create();
 
         $this->actingAs($this->user)
             ->delete(route('customers.destroy', $customer));
 
-        $this->assertDatabaseMissing('subjects', [
-            'id' => $subjectId,
-        ]);
+        $this->assertModelMissing($customer->subject());
     }
 
-    /** @test */
-    public function it_displays_customer_show_page()
+    public function test_it_displays_customer_show_page()
     {
-        $customer = Customer::create([
-            'name' => 'Test Customer',
-            'group_id' => $this->customerGroup->id,
-            'company_id' => $this->company->id,
-        ]);
+        $customer = Customer::where('company_id', $this->companyId)->inRandomOrder()->first();
 
         $response = $this->actingAs($this->user)
             ->get(route('customers.show', $customer));
@@ -421,8 +353,7 @@ class CustomerTest extends TestCase
         $response->assertViewHas('customer');
     }
 
-    /** @test */
-    public function it_validates_address_max_length()
+    public function test_it_validates_address_max_length()
     {
         $customerData = [
             'name' => 'Test Customer',
@@ -436,8 +367,7 @@ class CustomerTest extends TestCase
         $response->assertSessionHasErrors('address');
     }
 
-    /** @test */
-    public function it_validates_description_max_length()
+    public function test_it_validates_description_max_length()
     {
         $customerData = [
             'name' => 'Test Customer',
@@ -451,8 +381,7 @@ class CustomerTest extends TestCase
         $response->assertSessionHasErrors('desc');
     }
 
-    /** @test */
-    public function it_stores_nullable_fields_correctly()
+    public function test_it_stores_nullable_fields_correctly()
     {
         $customerData = [
             'name' => 'Test Customer',

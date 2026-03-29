@@ -2,11 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
-use App\Models\Subject;
 use App\Models\User;
+use Cookie;
+use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -15,59 +19,40 @@ class CustomerGroupTest extends TestCase
     use RefreshDatabase;
 
     protected $user;
+
     protected $company;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
-        // Create a user for authentication first
+
+        $this->seed(DatabaseSeeder::class);
+        $this->seed(DemoSeeder::class);
+
+        $companyId = Company::withoutGlobalScopes()->orderBy('id')->value('id') ?? 1;
+        Cache::forever('active_company_id', $companyId);
+        Cookie::queue('active-company-id', (string) $companyId);
+        $_COOKIE['active-company-id'] = (string) $companyId;
+
+        $this->company = Company::find($companyId);
         $this->user = User::factory()->create();
-        
-        // Create a company without the afterCreating hook interfering
-        $this->company = \App\Models\Company::create([
-            'name' => 'Test Company',
-            'address' => 'Test Address',
-            'postal_code' => '1234567890',
-            'phone_number' => '12345678',
-            'fiscal_year' => 1403,
+        $this->company->users()->attach($this->user);
+
+        $this->user->givePermissionTo([
+            Permission::firstOrCreate(['name' => 'customer-groups.index']),
+            Permission::firstOrCreate(['name' => 'customer-groups.create']),
+            Permission::firstOrCreate(['name' => 'customer-groups.store']),
+            Permission::firstOrCreate(['name' => 'customer-groups.show']),
+            Permission::firstOrCreate(['name' => 'customer-groups.edit']),
+            Permission::firstOrCreate(['name' => 'customer-groups.update']),
+            Permission::firstOrCreate(['name' => 'customer-groups.destroy']),
         ]);
-        
-        // Attach user to company
-        $this->user->companies()->attach($this->company->id);
-        
-        // Set active company session
-        session(['active-company-id' => $this->company->id]);
-        
-        // Create permissions
-        Permission::create(['name' => 'customer-groups.*']);
-        Permission::create(['name' => 'customer-groups.index']);
-        Permission::create(['name' => 'customer-groups.create']);
-        Permission::create(['name' => 'customer-groups.store']);
-        Permission::create(['name' => 'customer-groups.edit']);
-        Permission::create(['name' => 'customer-groups.update']);
-        Permission::create(['name' => 'customer-groups.destroy']);
-        
-        // Give user permissions for customer groups
-        $this->user->givePermissionTo('customer-groups.*');
-        
-        // Create root subject for customer groups
-        $parentSubject = Subject::create([
-            'code' => '001',
-            'name' => 'Customers Root',
-            'parent_id' => null,
-            'company_id' => $this->company->id,
-        ]);
-        
-        // Set config for customer subject parent
-        config(['amir.cust_subject' => $parentSubject->id]);
+
+        $this->actingAs($this->user);
     }
 
-    /** @test */
-    public function it_displays_customer_group_index_page()
+    public function test_it_displays_customer_group_index_page()
     {
-        CustomerGroup::factory()->count(3)->create();
-
         $response = $this->actingAs($this->user)
             ->get(route('customer-groups.index'));
 
@@ -76,8 +61,7 @@ class CustomerGroupTest extends TestCase
         $response->assertViewHas('customerGroups');
     }
 
-    /** @test */
-    public function it_displays_customer_group_create_page()
+    public function test_it_displays_customer_group_create_page()
     {
         $response = $this->actingAs($this->user)
             ->get(route('customer-groups.create'));
@@ -87,8 +71,7 @@ class CustomerGroupTest extends TestCase
         $response->assertViewHas('subjects');
     }
 
-    /** @test */
-    public function it_can_create_a_customer_group_with_valid_data()
+    public function test_it_can_create_a_customer_group_with_valid_data()
     {
         $groupData = [
             'name' => 'Wholesale Customers',
@@ -108,8 +91,7 @@ class CustomerGroupTest extends TestCase
         ]);
     }
 
-    /** @test */
-    public function it_can_create_a_customer_group_with_minimal_data()
+    public function test_it_can_create_a_customer_group_with_minimal_data()
     {
         $groupData = [
             'name' => 'Retail Customers',
@@ -126,8 +108,7 @@ class CustomerGroupTest extends TestCase
         ]);
     }
 
-    /** @test */
-    public function it_validates_required_name_field()
+    public function test_it_validates_required_name_field()
     {
         $groupData = [
             'description' => 'Test description',
@@ -139,8 +120,7 @@ class CustomerGroupTest extends TestCase
         $response->assertSessionHasErrors('name');
     }
 
-    /** @test */
-    public function it_validates_name_max_length()
+    public function test_it_validates_name_max_length()
     {
         $groupData = [
             'name' => str_repeat('a', 21), // 21 characters (max is 20)
@@ -152,8 +132,7 @@ class CustomerGroupTest extends TestCase
         $response->assertSessionHasErrors('name');
     }
 
-    /** @test */
-    public function it_validates_description_max_length()
+    public function test_it_validates_description_max_length()
     {
         $groupData = [
             'name' => 'Test Group',
@@ -166,8 +145,7 @@ class CustomerGroupTest extends TestCase
         $response->assertSessionHasErrors('description');
     }
 
-    /** @test */
-    public function it_creates_subject_for_customer_group_on_creation()
+    public function test_it_creates_subject_for_customer_group_on_creation()
     {
         $groupData = [
             'name' => 'Premium Customers',
@@ -179,9 +157,9 @@ class CustomerGroupTest extends TestCase
 
         $response->assertSessionHasNoErrors();
         $response->assertRedirect(route('customer-groups.index'));
-        
+
         $customerGroup = CustomerGroup::where('name', 'Premium Customers')->first();
-        
+
         $this->assertNotNull($customerGroup);
         $this->assertNotNull($customerGroup->subject);
         $this->assertEquals('Premium Customers', $customerGroup->subject->name);
@@ -189,8 +167,7 @@ class CustomerGroupTest extends TestCase
         $this->assertEquals($customerGroup->subject_id, $customerGroup->subject->id);
     }
 
-    /** @test */
-    public function it_displays_customer_group_edit_page()
+    public function test_it_displays_customer_group_edit_page()
     {
         $customerGroup = CustomerGroup::create([
             'name' => 'Test Group',
@@ -206,8 +183,7 @@ class CustomerGroupTest extends TestCase
         $response->assertViewHas('subjects');
     }
 
-    /** @test */
-    public function it_can_update_a_customer_group()
+    public function test_it_can_update_a_customer_group()
     {
         $customerGroup = CustomerGroup::create([
             'name' => 'Old Name',
@@ -232,8 +208,7 @@ class CustomerGroupTest extends TestCase
         ]);
     }
 
-    /** @test */
-    public function it_updates_subject_when_customer_group_name_is_updated()
+    public function test_it_updates_subject_when_customer_group_name_is_updated()
     {
         $customerGroup = CustomerGroup::create([
             'name' => 'Original Name',
@@ -251,13 +226,12 @@ class CustomerGroupTest extends TestCase
             ->put(route('customer-groups.update', $customerGroup), $updateData);
 
         $customerGroup->refresh();
-        
+
         $this->assertEquals('Updated Name', $customerGroup->subject->name);
         $this->assertEquals($originalSubjectId, $customerGroup->subject_id);
     }
 
-    /** @test */
-    public function it_can_delete_a_customer_group()
+    public function test_it_can_delete_a_customer_group()
     {
         $customerGroup = CustomerGroup::create([
             'name' => 'Test Group',
@@ -275,8 +249,7 @@ class CustomerGroupTest extends TestCase
         ]);
     }
 
-    /** @test */
-    public function it_sets_company_id_from_session_on_creation()
+    public function test_it_sets_company_id_from_session_on_creation()
     {
         // This test verifies that company_id is automatically set from session
         // during customer group creation
@@ -288,7 +261,7 @@ class CustomerGroupTest extends TestCase
             ->post(route('customer-groups.store'), $groupData);
 
         $response->assertRedirect(route('customer-groups.index'));
-        
+
         // Should use the company_id from session (set in setUp)
         $this->assertDatabaseHas('customer_groups', [
             'name' => 'Auto Company Group',
@@ -296,8 +269,7 @@ class CustomerGroupTest extends TestCase
         ]);
     }
 
-    /** @test */
-    public function it_accepts_nullable_description()
+    public function test_it_accepts_nullable_description()
     {
         $groupData = [
             'name' => 'Test Group',
@@ -316,8 +288,7 @@ class CustomerGroupTest extends TestCase
         ]);
     }
 
-    /** @test */
-    public function it_validates_name_format_with_regex()
+    public function test_it_validates_name_format_with_regex()
     {
         $groupData = [
             'name' => 'Test@Group!', // Contains special characters not allowed
@@ -329,8 +300,7 @@ class CustomerGroupTest extends TestCase
         $response->assertSessionHasErrors('name');
     }
 
-    /** @test */
-    public function it_accepts_valid_name_format()
+    public function test_it_accepts_valid_name_format()
     {
         $groupData = [
             'name' => 'Test Group 123', // Valid format with letters, spaces, and numbers
@@ -343,8 +313,7 @@ class CustomerGroupTest extends TestCase
         $response->assertSessionHasNoErrors();
     }
 
-    /** @test */
-    public function customer_group_has_relationship_with_customers()
+    public function test_customer_group_has_relationship_with_customers()
     {
         $customerGroup = CustomerGroup::create([
             'name' => 'Test Group',

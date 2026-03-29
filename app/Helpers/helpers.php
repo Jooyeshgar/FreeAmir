@@ -6,7 +6,7 @@ use Illuminate\Support\Str;
 
 function getActiveCompany()
 {
-    return Cookie::get('active-company-id');
+    return Cookie::get('active-company-id') ?? 1; // defualt 'active-company-id' for seeders: 1
 }
 
 /**
