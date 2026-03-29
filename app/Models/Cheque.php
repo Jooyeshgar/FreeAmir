@@ -2,60 +2,57 @@
 
 namespace App\Models;
 
-use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Cheque extends Model
 {
     protected $fillable = [
-        'company_id',
         'amount',
-        'wrt_date',
+        'written_at',
         'due_date',
         'serial',
-        'status',
-        'customer_id',
-        'bank_account_id',
-        'transaction_id',
-        'notebook_id',
+        'cheque_number',
+        'sayad_number',
+        'is_received',
         'desc',
-        'history_id',
-        'bill_id',
-        'order',
+        'customer_id',
+        'transaction_id',
+        'cheque_book_id',
     ];
 
-    public static function booted(): void
-    {
-        static::addGlobalScope(new FiscalYearScope);
-    }
+    protected $casts = [
+        'amount' => 'decimal:2',
+        'written_at' => 'date',
+        'due_date' => 'date',
+        'cheque_number' => 'string',
+        'sayad_number' => 'string',
+        'is_received' => 'boolean',
+    ];
 
-    public function customer()
+    public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
-    public function account()
+    public function chequeBook(): BelongsTo
     {
-        return $this->belongsTo(BankAccount::class);
+        return $this->belongsTo(ChequeBook::class);
     }
 
-    public function transaction()
+    public function transaction(): BelongsTo
     {
         return $this->belongsTo(Transaction::class);
     }
 
-    public function notebook()
+    public function histories(): HasMany
     {
-        return $this->belongsTo(Notebook::class);
+        return $this->hasMany(ChequeHistory::class);
     }
 
-    public function history()
+    public function latestHistory()
     {
-        return $this->belongsTo(ChequeHistory::class, 'history_id');
-    }
-
-    public function bill()
-    {
-        return $this->belongsTo(Bill::class);
+        return $this->hasOne(ChequeHistory::class)->latestOfMany('action_at');
     }
 }

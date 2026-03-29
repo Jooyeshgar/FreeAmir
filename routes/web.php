@@ -20,6 +20,9 @@ Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee
 });
 
 Route::group(['middleware' => ['auth', 'check-permission']], function () {
+    Route::resource('cheque-books', Controllers\ChequeBookController::class);
+    Route::resource('cheques', Controllers\ChequeController::class);
+    Route::resource('cheque-histories', Controllers\ChequeHistoryController::class);
     Route::get('/', [Controllers\HomeController::class, 'index'])->name('home');
     Route::get('/home/cash-banks', [Controllers\HomeController::class, 'cashAndBanksBalances'])->name('home.cash-banks');
     Route::get('/home/bank-account', [Controllers\HomeController::class, 'bankAccount'])->name('home.bank-account');

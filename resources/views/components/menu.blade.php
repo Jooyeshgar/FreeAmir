@@ -199,6 +199,15 @@
                         @canany(['banks.index', 'banks.create', 'banks.edit'])
                             <li><a href="{{ route('banks.index') }}">{{ __('Banks') }}</a></li>
                         @endcanany
+                        @canany(['cheque-books.index', 'cheque-books.create', 'cheque-books.edit'])
+                            <li><a href="{{ route('cheque-books.index') }}">{{ __('Cheque Books') }}</a></li>
+                        @endcanany
+                        @canany(['cheques.index', 'cheques.create', 'cheques.edit'])
+                            <li><a href="{{ route('cheques.index') }}">{{ __('Cheques') }}</a></li>
+                        @endcanany
+                        @canany(['cheque-histories.index', 'cheque-histories.create', 'cheque-histories.edit'])
+                            <li><a href="{{ route('cheque-histories.index') }}">{{ __('Cheque Histories') }}</a></li>
+                        @endcanany
                         @can('documents.sort-numbers')
                             <li><a href="{{ route('documents.sort-numbers') }}">{{ __('Sort Documents Number') }}</a></li>
                         @endcan
