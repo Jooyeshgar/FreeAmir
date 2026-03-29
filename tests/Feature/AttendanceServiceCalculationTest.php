@@ -48,6 +48,9 @@ class AttendanceServiceCalculationTest extends TestCase
         $this->company = Company::factory()->create();
         $this->workSite = WorkSite::factory()->create(['company_id' => $this->company->id]);
 
+        request()->cookies->set('active-company-id', $this->company->id);
+        $this->withCookies(['active-company-id' => $this->company->id]);
+
         // March 2025: 31 days, 4 Fridays (7,14,21,28), 27 non-Friday work days
         $this->startDate = Carbon::create(2025, 3, 1);
         $this->durationDays = 31;
@@ -81,35 +84,33 @@ class AttendanceServiceCalculationTest extends TestCase
     /**
      * Insert a work-day log using raw entry/exit times (no pre-computed `worked`).
      */
-    private function insertLog(
-        Employee $employee,
-        string $date,
-        string $entry,
-        string $exit,
-        array $extra = []
-    ): AttendanceLog {
-        return AttendanceLog::factory()->create(array_merge([
+    private function insertLog(Employee $employee, string $date, string $entry, string $exit, array $extra = []): AttendanceLog
+    {
+        $log = AttendanceLog::factory()->create(array_merge([
             'company_id' => $this->company->id,
             'employee_id' => $employee->id,
             'log_date' => $date,
             'entry_time' => $entry,
             'exit_time' => $exit,
-            'worked' => 0,  // force calculation from entry/exit
+            'worked' => 0,  // will be populated by recalculateLog
             'mission' => 0,
             'paid_leave' => 0,
             'unpaid_leave' => 0,
         ], $extra));
+
+        // Let the service compute worked, delay, early_leave, etc.
+        return $this->service->recalculateLog($log);
     }
 
     /**
      * Insert a log with a pre-computed `worked` value (minutes).
      */
-    private function insertPrecomputedLog(
-        Employee $employee,
-        string $date,
-        int $workedMinutes,
-        array $extra = []
-    ): AttendanceLog {
+    private function insertPrecomputedLog(Employee $employee, string $date, int $workedMinutes, array $extra = []): AttendanceLog
+    {
+        // Compute overtime manually for the mock
+        $shiftMin = $this->service->shiftWorkMinutes($employee->workShift);
+        $overtime = max(0, $workedMinutes - $shiftMin);
+
         return AttendanceLog::factory()->create(array_merge([
             'company_id' => $this->company->id,
             'employee_id' => $employee->id,
@@ -117,6 +118,7 @@ class AttendanceServiceCalculationTest extends TestCase
             'entry_time' => null,
             'exit_time' => null,
             'worked' => $workedMinutes,
+            'overtime' => $overtime,
             'mission' => 0,
             'paid_leave' => 0,
             'unpaid_leave' => 0,
@@ -188,8 +190,8 @@ class AttendanceServiceCalculationTest extends TestCase
             1
         );
 
-        // 31 days − 4 Fridays = 27 work days
-        $this->assertSame(27, $attendance->work_days);
+        // 31 days include 4 Fridays
+        $this->assertSame(31, $attendance->work_days);
         // 4 logs present
         $this->assertSame(4, $attendance->present_days);
         // 27 − 4 = 23 absent
@@ -332,7 +334,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $shift = $this->makeShift();
         $employee = $this->makeEmployee($shift);
 
-        AttendanceLog::factory()->create([
+        $log = AttendanceLog::factory()->create([
             'company_id' => $this->company->id,
             'employee_id' => $employee->id,
             'log_date' => '2025-03-03',
@@ -344,6 +346,8 @@ class AttendanceServiceCalculationTest extends TestCase
             'unpaid_leave' => 0,
         ]);
 
+        $this->service->recalculateLog($log);
+
         $attendance = $this->service->calculateAndStore(
             $employee->id,
             $this->startDate,
@@ -352,7 +356,7 @@ class AttendanceServiceCalculationTest extends TestCase
             1
         );
 
-        $this->assertSame(1, $attendance->mission);
+        $this->assertSame(480, $attendance->mission);
         $this->assertSame(1, $attendance->present_days);
     }
 
