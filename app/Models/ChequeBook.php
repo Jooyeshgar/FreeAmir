@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ChequeBookStatus;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,6 +21,7 @@ class ChequeBook extends Model
     ];
 
     protected $casts = [
+        'status' => ChequeBookStatus::class,
         'is_sayad' => 'boolean',
         'issued_at' => 'date',
     ];
