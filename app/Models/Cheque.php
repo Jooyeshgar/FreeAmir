@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Cheque extends Model
 {
@@ -44,15 +43,5 @@ class Cheque extends Model
     public function transaction(): BelongsTo
     {
         return $this->belongsTo(Transaction::class);
-    }
-
-    public function histories(): HasMany
-    {
-        return $this->hasMany(ChequeHistory::class);
-    }
-
-    public function latestHistory()
-    {
-        return $this->hasOne(ChequeHistory::class)->latestOfMany('action_at');
     }
 }

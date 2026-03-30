@@ -90,14 +90,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'cheque-books.update',
             'cheque-books.destroy',
 
-            'cheque-histories.index',
-            'cheque-histories.create',
-            'cheque-histories.store',
-            'cheque-histories.show',
-            'cheque-histories.edit',
-            'cheque-histories.update',
-            'cheque-histories.destroy',
-
             'customers.index',
             'customers.create',
             'customers.store',
