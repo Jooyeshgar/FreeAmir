@@ -1,0 +1,35 @@
+stages:
+  - test
+  - deploy_develop
+
+cache:
+  paths:
+    - vendor/
+    - node_modules/
+
+before_script:
+  - cp .env.ci .env
+  - cp docker-composeci.yml docker-compose.yml
+  - chmod -R 777 storage/
+  - chmod -R 777 bootstrap/cache/
+  - composer install --no-scripts --ignore-platform-reqs
+  - ./vendor/bin/sail up -d --force-recreate
+  - ./vendor/bin/sail composer dump-autoload
+  - ./vendor/bin/sail npm install
+  - ./vendor/bin/sail npm run build
+  - ./vendor/bin/sail php artisan migrate:fresh --seed
+after_script:
+  - ./vendor/bin/sail down
+
+test:
+  stage: test
+  script:
+    - ./vendor/bin/sail php artisan test --colors=never
+    - echo "Test Exit Code $?"
+
+deploy_develop:
+  when: manual
+  only:
+    - main
+  script:
+    - ./vendor/bin/envoy run deploy
