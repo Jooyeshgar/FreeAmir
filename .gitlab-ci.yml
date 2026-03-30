@@ -12,6 +12,7 @@ before_script:
   - cp docker-composeci.yml docker-compose.yml
   - chmod -R 777 storage/
   - chmod -R 777 bootstrap/cache/
+  - echo "DB_PASSWORD=$DB_PASSWORD" >> .env
   - composer install --no-scripts --ignore-platform-reqs
   - ./vendor/bin/sail up -d --force-recreate
   - ./vendor/bin/sail composer dump-autoload
