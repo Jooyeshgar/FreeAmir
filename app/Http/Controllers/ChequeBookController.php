@@ -10,7 +10,13 @@ use App\Services\ChequeBookService;
 
 class ChequeBookController extends Controller
 {
-    public function __construct(private readonly ChequeBookService $service) {}
+    public function __construct(private readonly ChequeBookService $service)
+    {
+        $this->middleware('permission:cheque-books.index', ['only' => ['index', 'show']]);
+        $this->middleware('permission:cheque-books.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:cheque-books.edit', ['only' => ['edit', 'update']]);
+        $this->middleware('permission:cheque-books.delete', ['only' => ['destroy']]);
+    }
 
     public function index()
     {
@@ -21,10 +27,9 @@ class ChequeBookController extends Controller
 
     public function create()
     {
-        $companies = Company::query()->pluck('name', 'id');
         $bankAccounts = BankAccount::query()->pluck('name', 'id');
 
-        return view('cheque-books.create', compact('companies', 'bankAccounts'));
+        return view('cheque-books.create', compact('bankAccounts'));
     }
 
     public function store(ChequeBookRequest $request)
@@ -44,7 +49,7 @@ class ChequeBookController extends Controller
     public function edit(ChequeBook $chequeBook)
     {
         $companies = Company::query()->pluck('name', 'id');
-        $bankAccounts = BankAccount::query()->pluck('title', 'id');
+        $bankAccounts = BankAccount::query()->pluck('name', 'id');
 
         return view('cheque-books.edit', compact('chequeBook', 'companies', 'bankAccounts'));
     }

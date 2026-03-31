@@ -15,6 +15,10 @@ class ChequeBookService
 
     public function create(array $data): ChequeBook
     {
+        if (! isset($data['company_id']) || $data['company_id'] == null) {
+            $data['company_id'] = getActiveCompany();
+        }
+
         return ChequeBook::create($data);
     }
 

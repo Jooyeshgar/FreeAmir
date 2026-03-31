@@ -7,59 +7,72 @@
 
     <x-show-message-bags />
 
-    <div class="card bg-base-100 shadow-xl">
+    <div class="card bg-base-100">
         <div class="card-body">
             <div class="card-title">{{ __('Cheque Information') }}</div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><strong>{{ __('Amount') }}:</strong> {{ $cheque->amount }}</div>
-                <div><strong>{{ __('Serial') }}:</strong> {{ $cheque->serial ?? '-' }}</div>
-                <div><strong>{{ __('Cheque Number') }}:</strong> {{ $cheque->cheque_number ?? '-' }}</div>
-                <div><strong>{{ __('Sayad Number') }}:</strong> {{ $cheque->sayad_number ?? '-' }}</div>
-                <div><strong>{{ __('Write Date') }}:</strong> {{ $cheque->wrt_date ?? '-' }}</div>
-                <div><strong>{{ __('Due Date') }}:</strong> {{ $cheque->due_date ?? '-' }}</div>
-                <div><strong>{{ __('Customer') }}:</strong> {{ $cheque->customer->name ?? '-' }}</div>
-                <div><strong>{{ __('Cheque Book') }}:</strong> {{ $cheque->chequeBook->title ?? '-' }}</div>
-                <div><strong>{{ __('Transaction') }}:</strong> {{ $cheque->transaction->id ?? '-' }}</div>
-                <div><strong>{{ __('Received') }}:</strong> {{ $cheque->is_received ? __('Yes') : __('No') }}</div>
-                <div class="md:col-span-2"><strong>{{ __('Description') }}:</strong> {{ $cheque->desc ?? '-' }}</div>
-            </div>
-
-            <div class="divider"></div>
-
-            <div class="card-title text-lg">{{ __('Cheque Histories') }}</div>
-
-            <table class="table w-full mt-4">
-                <thead>
-                    <tr>
-                        <th>{{ __('Action Type') }}</th>
-                        <th>{{ __('From Status') }}</th>
-                        <th>{{ __('To Status') }}</th>
-                        <th>{{ __('Action At') }}</th>
-                        <th>{{ __('Created By') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($cheque->histories as $history)
+            <div class="card bg-base-100">
+                <table class="table w-full mt-4">
+                    <thead>
                         <tr>
-                            <td>{{ $history->action_type }}</td>
-                            <td>{{ $history->from_status ?? '-' }}</td>
-                            <td>{{ $history->to_status ?? '-' }}</td>
-                            <td>{{ $history->action_at ?? '-' }}</td>
-                            <td>{{ $history->creator->name ?? '-' }}</td>
+                            <th>{{ __('Serial Number') }}</th>
+                            <th>{{ __('Cheque Number') }}</th>
+                            <th>{{ __('Sayad Number') }}</th>
+                            <th>{{ __('Amount') }}</th>
+                            <th>{{ __('Customer') }}</th>
+                            <th>{{ __('Type') }}</th>
+                            <th>{{ __('Cheque Book') }}</th>
+                            <th>{{ __('Write Date') }}</th>
+                            <th>{{ __('Due Date') }}</th>
                         </tr>
-                    @empty
+                    </thead>
+                    <tbody>
                         <tr>
-                            <td colspan="5" class="text-center text-gray-500">
-                                {{ __('There are no histories for this cheque.') }}
+                            <td>{{ convertToFarsi($cheque->serial) ?? '-' }}</td>
+                            <td>{{ convertToFarsi($cheque->cheque_number) ?? '-' }}</td>
+                            <td>{{ $cheque->sayad_number ?? '-' }}</td>
+                            <td>{{ formatNumber($cheque->amount) }}</td>
+                            <td>
+                                <a
+                                    href="{{ route('customers.show', $cheque->customer) }}">{{ $cheque->customer->name }}</a>
+                            </td>
+                            <td>
+                                {{ $cheque->is_received ? __('Receivable') : __('Payable') }}
+                            </td>
+                            <td>
+                                <a
+                                    href="{{ route('cheque-books.show', $cheque->chequeBook) }}">{{ $cheque->chequeBook->title }}</a>
+                            </td>
+                            <td>{{ formatDate($cheque->written_at) ?? '-' }}</td>
+                            <td>{{ formatDate($cheque->due_date) ?? '-' }}</td>
+                            <td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td>
+                                @if ($cheque->transaction)
+                                    <a href="{{ route('transactions.show', $cheque->transaction) }}">
+                                        <strong>{{ __('Transaction') }}:</strong>
+                                        {{ $cheque->transaction->desc ?? '-' }}
+                                    </a>
+                                @else
+                                    <strong>{{ __('Transaction') }}:</strong>
+                                    {{ $cheque->transaction->desc ?? '-' }}
+                                @endif
                             </td>
                         </tr>
-                    @endforelse
-                </tbody>
-            </table>
-
+                        <tr>
+                            <td>
+                                <strong>{{ __('Description') }}:</strong>
+                                {{ $cheque->desc ?? '-' }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
             <div class="card-actions justify-between mt-4">
-                <a href="{{ route('cheques.index') }}" class="btn btn-ghost">
+                <a href="{{ route('cheques.index', $cheque->chequeBook) }}" class="btn btn-primary">
                     {{ __('Back') }}
                 </a>
             </div>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ChequeStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -15,6 +16,7 @@ class Cheque extends Model
         'cheque_number',
         'sayad_number',
         'is_received',
+        'status',
         'desc',
         'customer_id',
         'transaction_id',
@@ -22,6 +24,7 @@ class Cheque extends Model
     ];
 
     protected $casts = [
+        'status' => ChequeStatus::class,
         'amount' => 'decimal:2',
         'written_at' => 'date',
         'due_date' => 'date',

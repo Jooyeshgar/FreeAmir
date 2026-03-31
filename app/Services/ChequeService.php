@@ -3,14 +3,14 @@
 namespace App\Services;
 
 use App\Models\Cheque;
+use App\Models\ChequeBook;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\DB;
 
 class ChequeService
 {
-    public function paginate(int $perPage = 15): LengthAwarePaginator
+    public function someCheques(ChequeBook $chequeBook, int $perPage = 15): LengthAwarePaginator
     {
-        return Cheque::query()->with(['customer', 'chequeBook', 'transaction'])->latest()->paginate($perPage);
+        return Cheque::query()->with(['customer', 'transaction', 'chequeBook'])->where('cheque_book_id', $chequeBook->id)->latest()->paginate($perPage);
     }
 
     public function create(array $data): Cheque
@@ -22,14 +22,11 @@ class ChequeService
     {
         $cheque->update($data);
 
-        return $cheque->fresh(['customer', 'chequeBook', 'transaction', 'histories']);
+        return $cheque->fresh(['customer', 'chequeBook', 'transaction']);
     }
 
     public function delete(Cheque $cheque): void
     {
-        DB::transaction(function () use ($cheque) {
-            $cheque->histories()->delete();
-            $cheque->delete();
-        });
+        $cheque->delete();
     }
 }
