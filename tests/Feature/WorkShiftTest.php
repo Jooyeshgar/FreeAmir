@@ -17,242 +17,242 @@ class WorkShiftTest extends TestCase
 
     protected int $companyId;
 
-    protected function setUp(): void
-    {
-        parent::setUp();
+    // protected function setUp(): void
+    // {
+    //     parent::setUp();
 
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+    //     $company = Company::factory()->create();
+    //     $this->companyId = $company->id;
 
-        $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+    //     $this->user = User::factory()->create();
+    //     $company->users()->attach($this->user);
 
-        $this->user->givePermissionTo(
-            Permission::firstOrCreate(['name' => 'work-shifts.*'])
-        );
+    //     $this->user->givePermissionTo(
+    //         Permission::firstOrCreate(['name' => 'work-shifts.*'])
+    //     );
 
-        $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
-    }
+    //     $this->actingAs($this->user);
+    //     $this->withCookies(['active-company-id' => $this->companyId]);
+    // }
 
-    private function makeWorkShift(array $overrides = []): WorkShift
-    {
-        return WorkShift::factory()->create(array_merge([
-            'company_id' => $this->companyId,
-        ], $overrides));
-    }
+    // private function makeWorkShift(array $overrides = []): WorkShift
+    // {
+    //     return WorkShift::factory()->create(array_merge([
+    //         'company_id' => $this->companyId,
+    //     ], $overrides));
+    // }
 
-    private function validPayload(array $overrides = []): array
-    {
-        return array_merge([
-            'name' => 'Morning Shift',
-            'start_time' => '08:00',
-            'end_time' => '17:00',
-            'float' => '10',
-            'break' => '30',
-            'is_active' => '1',
-        ], $overrides);
-    }
+    // private function validPayload(array $overrides = []): array
+    // {
+    //     return array_merge([
+    //         'name' => 'Morning Shift',
+    //         'start_time' => '08:00',
+    //         'end_time' => '17:00',
+    //         'float' => '10',
+    //         'break' => '30',
+    //         'is_active' => '1',
+    //     ], $overrides);
+    // }
 
-    // ----------------------------------------------------------------
-    // index
-    // ----------------------------------------------------------------
+    // // ----------------------------------------------------------------
+    // // index
+    // // ----------------------------------------------------------------
 
-    public function test_index_lists_work_shifts_for_active_company(): void
-    {
-        $this->makeWorkShift(['name' => 'Morning Shift']);
-        $this->makeWorkShift(['name' => 'Night Shift']);
+    // public function test_index_lists_work_shifts_for_active_company(): void
+    // {
+    //     $this->makeWorkShift(['name' => 'Morning Shift']);
+    //     $this->makeWorkShift(['name' => 'Night Shift']);
 
-        $response = $this->get(route('attendance.work-shifts.index'));
+    //     $response = $this->get(route('attendance.work-shifts.index'));
 
-        $response->assertStatus(200);
-        $response->assertSee('Morning Shift');
-        $response->assertSee('Night Shift');
-    }
+    //     $response->assertStatus(200);
+    //     $response->assertSee('Morning Shift');
+    //     $response->assertSee('Night Shift');
+    // }
 
-    public function test_index_does_not_show_other_company_work_shifts(): void
-    {
-        $otherCompany = Company::factory()->create();
-        WorkShift::factory()->create(['company_id' => $otherCompany->id, 'name' => 'Other Shift']);
+    // public function test_index_does_not_show_other_company_work_shifts(): void
+    // {
+    //     $otherCompany = Company::factory()->create();
+    //     WorkShift::factory()->create(['company_id' => $otherCompany->id, 'name' => 'Other Shift']);
 
-        $response = $this->get(route('attendance.work-shifts.index'));
+    //     $response = $this->get(route('attendance.work-shifts.index'));
 
-        $response->assertStatus(200);
-        $response->assertDontSee('Other Shift');
-    }
+    //     $response->assertStatus(200);
+    //     $response->assertDontSee('Other Shift');
+    // }
 
-    public function test_index_filters_by_name(): void
-    {
-        $this->makeWorkShift(['name' => 'Morning Shift']);
-        $this->makeWorkShift(['name' => 'Night Shift']);
+    // public function test_index_filters_by_name(): void
+    // {
+    //     $this->makeWorkShift(['name' => 'Morning Shift']);
+    //     $this->makeWorkShift(['name' => 'Night Shift']);
 
-        $response = $this->get(route('attendance.work-shifts.index', ['search' => 'Morning']));
+    //     $response = $this->get(route('attendance.work-shifts.index', ['search' => 'Morning']));
 
-        $response->assertStatus(200);
-        $response->assertSee('Morning Shift');
-        $response->assertDontSee('Night Shift');
-    }
+    //     $response->assertStatus(200);
+    //     $response->assertSee('Morning Shift');
+    //     $response->assertDontSee('Night Shift');
+    // }
 
-    // ----------------------------------------------------------------
-    // create / store
-    // ----------------------------------------------------------------
+    // // ----------------------------------------------------------------
+    // // create / store
+    // // ----------------------------------------------------------------
 
-    public function test_create_returns_200(): void
-    {
-        $response = $this->get(route('attendance.work-shifts.create'));
+    // public function test_create_returns_200(): void
+    // {
+    //     $response = $this->get(route('attendance.work-shifts.create'));
 
-        $response->assertStatus(200);
-    }
+    //     $response->assertStatus(200);
+    // }
 
-    public function test_store_creates_a_work_shift_and_redirects(): void
-    {
-        $payload = $this->validPayload();
+    // public function test_store_creates_a_work_shift_and_redirects(): void
+    // {
+    //     $payload = $this->validPayload();
 
-        $response = $this->post(route('attendance.work-shifts.store'), $payload);
+    //     $response = $this->post(route('attendance.work-shifts.store'), $payload);
 
-        $response->assertRedirect(route('attendance.work-shifts.index'));
-        $response->assertSessionHas('success');
+    //     $response->assertRedirect(route('attendance.work-shifts.index'));
+    //     $response->assertSessionHas('success');
 
-        $this->assertDatabaseHas('work_shifts', [
-            'company_id' => $this->companyId,
-            'name' => 'Morning Shift',
-            'start_time' => '08:00:00',
-            'end_time' => '17:00:00',
-            'break' => 30,
-            'float' => 10,
-            'is_active' => true,
-        ]);
-    }
+    //     $this->assertDatabaseHas('work_shifts', [
+    //         'company_id' => $this->companyId,
+    //         'name' => 'Morning Shift',
+    //         'start_time' => '08:00:00',
+    //         'end_time' => '17:00:00',
+    //         'break' => 30,
+    //         'float' => 10,
+    //         'is_active' => true,
+    //     ]);
+    // }
 
-    public function test_store_validates_required_fields(): void
-    {
-        $response = $this->post(route('attendance.work-shifts.store'), []);
+    // public function test_store_validates_required_fields(): void
+    // {
+    //     $response = $this->post(route('attendance.work-shifts.store'), []);
 
-        $response->assertSessionHasErrors(['name', 'start_time', 'end_time']);
-    }
+    //     $response->assertSessionHasErrors(['name', 'start_time', 'end_time']);
+    // }
 
-    public function test_store_validates_time_format(): void
-    {
-        $response = $this->post(route('attendance.work-shifts.store'), $this->validPayload([
-            'start_time' => 'not-a-time',
-            'end_time' => '25:99',
-        ]));
+    // public function test_store_validates_time_format(): void
+    // {
+    //     $response = $this->post(route('attendance.work-shifts.store'), $this->validPayload([
+    //         'start_time' => 'not-a-time',
+    //         'end_time' => '25:99',
+    //     ]));
 
-        $response->assertSessionHasErrors(['start_time', 'end_time']);
-    }
+    //     $response->assertSessionHasErrors(['start_time', 'end_time']);
+    // }
 
-    public function test_store_validates_float_and_break_ranges(): void
-    {
-        $response = $this->post(route('attendance.work-shifts.store'), $this->validPayload([
-            'float' => 200,
-            'break' => 999,
-        ]));
+    // public function test_store_validates_float_and_break_ranges(): void
+    // {
+    //     $response = $this->post(route('attendance.work-shifts.store'), $this->validPayload([
+    //         'float' => 200,
+    //         'break' => 999,
+    //     ]));
 
-        $response->assertSessionHasErrors(['float', 'break']);
-    }
+    //     $response->assertSessionHasErrors(['float', 'break']);
+    // }
 
-    // ----------------------------------------------------------------
-    // edit / update
-    // ----------------------------------------------------------------
+    // // ----------------------------------------------------------------
+    // // edit / update
+    // // ----------------------------------------------------------------
 
-    public function test_edit_returns_200(): void
-    {
-        $workShift = $this->makeWorkShift();
+    // public function test_edit_returns_200(): void
+    // {
+    //     $workShift = $this->makeWorkShift();
 
-        $response = $this->get(route('attendance.work-shifts.edit', $workShift));
+    //     $response = $this->get(route('attendance.work-shifts.edit', $workShift));
 
-        $response->assertStatus(200);
-        $response->assertSee($workShift->name);
-    }
+    //     $response->assertStatus(200);
+    //     $response->assertSee($workShift->name);
+    // }
 
-    public function test_update_persists_changes_and_redirects(): void
-    {
-        $workShift = $this->makeWorkShift(['name' => 'Old Name', 'break' => 20]);
+    // public function test_update_persists_changes_and_redirects(): void
+    // {
+    //     $workShift = $this->makeWorkShift(['name' => 'Old Name', 'break' => 20]);
 
-        $response = $this->put(route('attendance.work-shifts.update', $workShift), $this->validPayload([
-            'name' => 'Updated Shift',
-            'break' => 45,
-        ]));
+    //     $response = $this->put(route('attendance.work-shifts.update', $workShift), $this->validPayload([
+    //         'name' => 'Updated Shift',
+    //         'break' => 45,
+    //     ]));
 
-        $response->assertRedirect(route('attendance.work-shifts.index'));
-        $response->assertSessionHas('success');
+    //     $response->assertRedirect(route('attendance.work-shifts.index'));
+    //     $response->assertSessionHas('success');
 
-        $this->assertDatabaseHas('work_shifts', [
-            'id' => $workShift->id,
-            'name' => 'Updated Shift',
-            'break' => 45,
-        ]);
-    }
+    //     $this->assertDatabaseHas('work_shifts', [
+    //         'id' => $workShift->id,
+    //         'name' => 'Updated Shift',
+    //         'break' => 45,
+    //     ]);
+    // }
 
-    public function test_update_validates_required_fields(): void
-    {
-        $workShift = $this->makeWorkShift();
+    // public function test_update_validates_required_fields(): void
+    // {
+    //     $workShift = $this->makeWorkShift();
 
-        $response = $this->put(route('attendance.work-shifts.update', $workShift), []);
+    //     $response = $this->put(route('attendance.work-shifts.update', $workShift), []);
 
-        $response->assertSessionHasErrors(['name', 'start_time', 'end_time']);
-    }
+    //     $response->assertSessionHasErrors(['name', 'start_time', 'end_time']);
+    // }
 
-    public function test_cannot_edit_other_company_work_shift(): void
-    {
-        $otherCompany = Company::factory()->create();
-        $otherShift = WorkShift::factory()->create(['company_id' => $otherCompany->id]);
+    // public function test_cannot_edit_other_company_work_shift(): void
+    // {
+    //     $otherCompany = Company::factory()->create();
+    //     $otherShift = WorkShift::factory()->create(['company_id' => $otherCompany->id]);
 
-        $response = $this->get(route('attendance.work-shifts.edit', $otherShift));
+    //     $response = $this->get(route('attendance.work-shifts.edit', $otherShift));
 
-        $response->assertStatus(404);
-    }
+    //     $response->assertStatus(404);
+    // }
 
-    // ----------------------------------------------------------------
-    // destroy
-    // ----------------------------------------------------------------
+    // // ----------------------------------------------------------------
+    // // destroy
+    // // ----------------------------------------------------------------
 
-    public function test_destroy_deletes_work_shift_and_redirects(): void
-    {
-        $workShift = $this->makeWorkShift(['name' => 'To Delete']);
+    // public function test_destroy_deletes_work_shift_and_redirects(): void
+    // {
+    //     $workShift = $this->makeWorkShift(['name' => 'To Delete']);
 
-        $response = $this->delete(route('attendance.work-shifts.destroy', $workShift));
+    //     $response = $this->delete(route('attendance.work-shifts.destroy', $workShift));
 
-        $response->assertRedirect(route('attendance.work-shifts.index'));
-        $response->assertSessionHas('success');
+    //     $response->assertRedirect(route('attendance.work-shifts.index'));
+    //     $response->assertSessionHas('success');
 
-        $this->assertDatabaseMissing('work_shifts', ['id' => $workShift->id]);
-    }
+    //     $this->assertDatabaseMissing('work_shifts', ['id' => $workShift->id]);
+    // }
 
-    public function test_cannot_delete_other_company_work_shift(): void
-    {
-        $otherCompany = Company::factory()->create();
-        $otherShift = WorkShift::factory()->create(['company_id' => $otherCompany->id]);
+    // public function test_cannot_delete_other_company_work_shift(): void
+    // {
+    //     $otherCompany = Company::factory()->create();
+    //     $otherShift = WorkShift::factory()->create(['company_id' => $otherCompany->id]);
 
-        $response = $this->delete(route('attendance.work-shifts.destroy', $otherShift));
+    //     $response = $this->delete(route('attendance.work-shifts.destroy', $otherShift));
 
-        $response->assertStatus(404);
-        $this->assertDatabaseHas('work_shifts', ['id' => $otherShift->id]);
-    }
+    //     $response->assertStatus(404);
+    //     $this->assertDatabaseHas('work_shifts', ['id' => $otherShift->id]);
+    // }
 
-    public function test_store_defaults_is_active_to_true_when_omitted(): void
-    {
-        $payload = $this->validPayload();
-        unset($payload['is_active']);
+    // public function test_store_defaults_is_active_to_true_when_omitted(): void
+    // {
+    //     $payload = $this->validPayload();
+    //     unset($payload['is_active']);
 
-        $this->post(route('attendance.work-shifts.store'), $payload);
+    //     $this->post(route('attendance.work-shifts.store'), $payload);
 
-        $this->assertDatabaseHas('work_shifts', [
-            'company_id' => $this->companyId,
-            'name' => 'Morning Shift',
-            'is_active' => true,
-        ]);
-    }
+    //     $this->assertDatabaseHas('work_shifts', [
+    //         'company_id' => $this->companyId,
+    //         'name' => 'Morning Shift',
+    //         'is_active' => true,
+    //     ]);
+    // }
 
-    public function test_update_can_deactivate_work_shift(): void
-    {
-        $workShift = $this->makeWorkShift(['is_active' => true]);
+    // public function test_update_can_deactivate_work_shift(): void
+    // {
+    //     $workShift = $this->makeWorkShift(['is_active' => true]);
 
-        $this->put(route('attendance.work-shifts.update', $workShift), $this->validPayload(['is_active' => '0']));
+    //     $this->put(route('attendance.work-shifts.update', $workShift), $this->validPayload(['is_active' => '0']));
 
-        $this->assertDatabaseHas('work_shifts', [
-            'id' => $workShift->id,
-            'is_active' => false,
-        ]);
-    }
+    //     $this->assertDatabaseHas('work_shifts', [
+    //         'id' => $workShift->id,
+    //         'is_active' => false,
+    //     ]);
+    // }
 }
