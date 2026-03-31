@@ -17,10 +17,8 @@ use App\Services\CostOfGoodsService;
 use App\Services\InvoiceService;
 use Cookie;
 use Database\Seeders\CompanySeeder;
-use Database\Seeders\ConfigSeeder;
 use Database\Seeders\CustomerGroupSeeder;
 use Database\Seeders\ProductGroupSeeder;
-use Database\Seeders\SubjectSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -43,8 +41,6 @@ class COGSCalculationTest extends TestCase
         parent::setUp();
 
         $this->seed(CompanySeeder::class);
-        $this->seed(SubjectSeeder::class);
-        $this->seed(ConfigSeeder::class);
         $this->seed(CustomerGroupSeeder::class);
         $this->seed(ProductGroupSeeder::class);
 
