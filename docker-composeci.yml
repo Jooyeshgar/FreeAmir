@@ -13,6 +13,7 @@ services:
       - "${APP_PORT:-80}:80"
       - "${VITE_PORT:-5173}:${VITE_PORT:-5173}"
     environment:
+      GIT_CONFIG_GLOBAL: /dev/null
       WWWUSER: "${WWWUSER}"
       LARAVEL_SAIL: 1
       XDEBUG_MODE: "${SAIL_XDEBUG_MODE:-off}"
