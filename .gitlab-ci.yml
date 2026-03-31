@@ -29,7 +29,6 @@ test:
   stage: test
   script:
     - ./vendor/bin/sail php artisan test --colors=never
-    - echo "Test Exit Code $?"
 
 deploy_develop:
   when: manual
