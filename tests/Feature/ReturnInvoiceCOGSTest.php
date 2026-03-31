@@ -16,8 +16,11 @@ use App\Services\AncillaryCostService;
 use App\Services\CostOfGoodsService;
 use App\Services\InvoiceService;
 use Cookie;
-use Database\Seeders\DatabaseSeeder;
-use Database\Seeders\DemoSeeder;
+use Database\Seeders\CompanySeeder;
+use Database\Seeders\ConfigSeeder;
+use Database\Seeders\CustomerGroupSeeder;
+use Database\Seeders\ProductGroupSeeder;
+use Database\Seeders\SubjectSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
@@ -38,8 +41,11 @@ class ReturnInvoiceCOGSTest extends TestCase
     {
         parent::setUp();
 
-        $this->seed(DatabaseSeeder::class);
-        $this->seed(DemoSeeder::class);
+        $this->seed(CompanySeeder::class);
+        $this->seed(SubjectSeeder::class);
+        $this->seed(ConfigSeeder::class);
+        $this->seed(CustomerGroupSeeder::class);
+        $this->seed(ProductGroupSeeder::class);
 
         $this->companyId = Company::withoutGlobalScopes()->orderBy('id')->value('id') ?? 1;
 
