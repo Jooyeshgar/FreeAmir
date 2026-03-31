@@ -6,7 +6,7 @@
     </x-slot>
 
     <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('cheques.store') }}" method="POST">
+        <form action="{{ route('cheques.store', $chequeBook) }}" method="POST">
             @csrf
             <div class="card-body">
                 <div class="card-title">{{ __('Create cheque') }}</div>

@@ -13,11 +13,12 @@ return new class extends Migration
             $table->string('title')->nullable();
             $table->date('issued_at')->nullable();
             $table->boolean('is_sayad')->default(true);
-            $table->enum('status', ['active', 'finished', 'blocked', 'cancelled'])->default('active');
+            $table->boolean('is_active')->default(true);
             $table->text('desc')->nullable();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('bank_account_id')->nullable()->constrained('bank_accounts')->nullOnDelete();
             $table->timestamps();
+            $table->unique('bank_account_id');
         });
     }
 

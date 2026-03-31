@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\ChequeBookStatus;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,14 +13,14 @@ class ChequeBook extends Model
         'title',
         'issued_at',
         'is_sayad',
-        'status',
+        'is_active',
         'desc',
         'company_id',
         'bank_account_id',
     ];
 
     protected $casts = [
-        'status' => ChequeBookStatus::class,
+        'is_active' => 'boolean',
         'is_sayad' => 'boolean',
         'issued_at' => 'date',
     ];

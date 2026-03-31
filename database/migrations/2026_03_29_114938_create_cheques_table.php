@@ -18,6 +18,7 @@ return new class extends Migration
             $table->boolean('is_received');
             $table->string('sayad_number', 100)->nullable();
             $table->text('desc')->nullable();
+            $table->enum('status', ['draft', 'issued', 'returned', 'cancelled', 'checkout'])->default('draft');
 
             $table->foreignId('cheque_book_id')->nullable()->constrained('cheque_books')->nullOnDelete();
             $table->foreignId('customer_id')->nullable()->constrained('customers')->nullOnDelete();

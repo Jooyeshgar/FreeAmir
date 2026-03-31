@@ -20,9 +20,17 @@ Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee
 });
 
 Route::group(['middleware' => ['auth', 'check-permission']], function () {
+    Route::get('cheques/list', [Controllers\ChequeController::class, 'list'])->name('cheques.list');
+    Route::prefix('cheque-books')->group(function () {
+        Route::get('{cheque_book}/cheques', [Controllers\ChequeController::class, 'index'])->name('cheques.index');
+        Route::get('{cheque_book}/cheques/create', [Controllers\ChequeController::class, 'create'])->name('cheques.create');
+        Route::post('{cheque_book}/cheques', [Controllers\ChequeController::class, 'store'])->name('cheques.store');
+        Route::get('{cheque_book}/cheques/{cheque}', [Controllers\ChequeController::class, 'show'])->name('cheques.show');
+        Route::get('cheques/{cheque}/edit', [Controllers\ChequeController::class, 'edit'])->name('cheques.edit');
+        Route::put('cheques/{cheque}', [Controllers\ChequeController::class, 'update'])->name('cheques.update');
+        Route::delete('cheques/{cheque}', [Controllers\ChequeController::class, 'destroy'])->name('cheques.destroy');
+    });
     Route::resource('cheque-books', Controllers\ChequeBookController::class);
-    Route::resource('cheques', Controllers\ChequeController::class);
-    Route::resource('cheque-histories', Controllers\ChequeHistoryController::class);
     Route::get('/', [Controllers\HomeController::class, 'index'])->name('home');
     Route::get('/home/cash-banks', [Controllers\HomeController::class, 'cashAndBanksBalances'])->name('home.cash-banks');
     Route::get('/home/bank-account', [Controllers\HomeController::class, 'bankAccount'])->name('home.bank-account');

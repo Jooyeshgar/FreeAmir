@@ -14,12 +14,11 @@ class ChequeBookRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => ['required', 'string', 'max:255'],
+            'title' => ['nullable', 'string', 'max:255'],
             'issued_at' => ['nullable', 'date'],
             'is_sayad' => ['nullable', 'boolean'],
-            'status' => ['nullable', 'string', 'max:255'],
+            'is_active' => ['nullable', 'boolean'],
             'desc' => ['nullable', 'string'],
-            'company_id' => ['required', 'exists:companies,id'],
             'bank_account_id' => ['required', 'exists:bank_accounts,id'],
         ];
     }
@@ -27,7 +26,9 @@ class ChequeBookRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
+            'issued_at' => convertToGregorian($this->input('issued_at')),
             'is_sayad' => $this->boolean('is_sayad'),
+            'is_active' => $this->boolean('is_active'),
         ]);
     }
 }

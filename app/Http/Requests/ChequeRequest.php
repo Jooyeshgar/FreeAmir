@@ -15,22 +15,23 @@ class ChequeRequest extends FormRequest
     {
         return [
             'amount' => ['required', 'numeric', 'min:0'],
-            'wrt_date' => ['nullable', 'date'],
-            'due_date' => ['nullable', 'date'],
-            'serial' => ['nullable', 'string', 'max:255'],
-            'cheque_number' => ['nullable', 'integer'],
-            'sayad_number' => ['nullable', 'numeric'],
+            'written_at' => ['required', 'date'],
+            'due_date' => ['required', 'date'],
+            'serial' => ['required', 'string', 'max:50'],
+            'cheque_number' => ['required', 'string', 'max:100'],
+            'sayad_number' => ['nullable', 'string', 'max:100'],
             'is_received' => ['nullable', 'boolean'],
             'desc' => ['nullable', 'string'],
             'customer_id' => ['required', 'exists:customers,id'],
             'transaction_id' => ['nullable', 'exists:transactions,id'],
-            'cheque_book_id' => ['required', 'exists:cheque_books,id'],
         ];
     }
 
     protected function prepareForValidation(): void
     {
         $this->merge([
+            'written_at' => convertToGregorian($this->input('written_at')),
+            'due_date' => convertToGregorian($this->input('due_date')),
             'is_received' => $this->boolean('is_received'),
         ]);
     }
