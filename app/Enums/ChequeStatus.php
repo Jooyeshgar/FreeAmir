@@ -7,7 +7,6 @@ enum ChequeStatus: string
     case DRAFT = 'draft';
     case ISSUED = 'issued';
     case RETURNED = 'returned';
-    case CANCELLED = 'cancelled';
     case CHECKOUT = 'checkout';
 
     public function label(): string
@@ -16,7 +15,6 @@ enum ChequeStatus: string
             self::DRAFT => __('Draft'),
             self::ISSUED => __('Issued'),
             self::RETURNED => __('Returned'),
-            self::CANCELLED => __('Cancelled'),
             self::CHECKOUT => __('Checkout'),
         };
     }

@@ -30,7 +30,7 @@
                         <tr>
                             <td>{{ convertToFarsi($cheque->serial) ?? '-' }}</td>
                             <td>{{ convertToFarsi($cheque->cheque_number) ?? '-' }}</td>
-                            <td>{{ $cheque->sayad_number ?? '-' }}</td>
+                            <td>{{ convertToFarsi($cheque->sayad_number) ?? '-' }}</td>
                             <td>{{ formatNumber($cheque->amount) }}</td>
                             <td>
                                 <a

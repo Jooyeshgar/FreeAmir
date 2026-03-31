@@ -1,18 +1,39 @@
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <x-input title="{{ __('Cheque Book') }}" name="cheque_book_id" id="cheque_book_id" :value="$chequeBook->title ?? $cheque->chequeBook?->title" disabled />
 
-    <div>
-        <label class="label">
-            <span class="label-text">{{ __('Customer') }}</span>
-        </label>
-        <select name="customer_id" class="select select-bordered w-full">
-            <option value="">{{ __('Select') }}</option>
-            @foreach ($customers as $id => $name)
-                <option value="{{ $id }}" @selected(old('customer_id', $cheque->customer_id ?? '') == $id)>
-                    {{ $name }}
-                </option>
-            @endforeach
-        </select>
+    @php
+        $initialCustomerId = old('customer_id', $cheque->customer_id ?? null);
+        $initialSelectedValue = $initialCustomerId ? "customer-$initialCustomerId" : null;
+        $hint =
+            '<a class="link text-blue-500 hover:underline" href="' .
+            route('customers.create') .
+            '">' .
+            __('Add Customer') .
+            '</a>';
+    @endphp
+
+    <div class="h-full flex flex-wrap items-end" x-data="{
+        customer_id: '{{ $initialCustomerId }}',
+        selectedValue: '{{ $initialSelectedValue }}',
+    }">
+        <span class="label-text">{{ __('Customer') }}
+            <a href="{{ route('customers.create') }}" class="btn btn-xs btn-ghost text-blue-500 hover:text-blue-700"
+                title="{{ __('Add Customer') }}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M12 14.25c-2.485 0-4.5 1.79-4.5 4s2.015 4 4.5 4 4.5-1.79 4.5-4-2.015-4-4.5-4zm0-2.25a3 3 0 100-6 3 3 0 000 6zm6-1.5h3m-1.5-1.5v3" />
+                </svg>
+            </a>
+        </span>
+
+        <x-select-box url="{{ route('cheques.search-customer') }}" :options="[['headerGroup' => 'customer', 'options' => $customers]]" x-model="selectedValue"
+            x-init="if (!selectedValue && customer_id) {
+                selectedValue = 'customer-' + customer_id;
+            }" placeholder="{{ __('Select Customer') }}" hint='{!! $hint !!}'
+            @selected="customer_id = $event.detail.id;" />
+
+        <input type="hidden" x-bind:value="customer_id" name="customer_id">
     </div>
 
     <div>
@@ -41,18 +62,24 @@
         <x-input title="{{ __('Sayad Number') }}" name="sayad_number" id="sayad_number" :value="old('sayad_number', $cheque->sayad_number ?? '')" />
     </div>
 
-    <div>
-        <label class="label">
-            <span class="label-text">{{ __('Transaction') }}</span>
-        </label>
-        <select name="transaction_id" class="select select-bordered w-full">
-            <option value="">{{ __('Select') }}</option>
-            @foreach ($transactions as $id => $label)
-                <option value="{{ $id }}" @selected(old('transaction_id', $cheque->transaction_id ?? '') == $id)>
-                    {{ $label }}
-                </option>
-            @endforeach
-        </select>
+    @php
+        $initialTransactionId = old('transaction_id', $cheque->transaction_id ?? null);
+        $initialSelectedValue = $initialTransactionId ? "transaction-$initialTransactionId" : null;
+    @endphp
+
+    <div class="h-full flex flex-wrap items-end" x-data="{
+        transaction_id: '{{ $initialTransactionId }}',
+        selectedValue: '{{ $initialSelectedValue }}',
+    }">
+        <span class="label-text">{{ __('Transaction') }}</span>
+
+        <x-select-box url="{{ route('cheques.search-transaction') }}" :options="[['headerGroup' => 'transaction', 'options' => $transactions]]" x-model="selectedValue"
+            x-init="if (!selectedValue && transaction_id) {
+                selectedValue = 'transaction-' + transaction_id;
+            }" placeholder="{{ __('Select transaction') }}"
+            @selected="transaction_id = $event.detail.id;" />
+
+        <input type="hidden" x-bind:value="transaction_id" name="transaction_id">
     </div>
 
     <div class="flex items-center mt-8 gap-3">

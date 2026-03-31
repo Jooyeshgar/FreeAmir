@@ -22,6 +22,8 @@ Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee
 Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('cheques/list', [Controllers\ChequeController::class, 'list'])->name('cheques.list');
     Route::prefix('cheque-books')->group(function () {
+        Route::get('cheques/search-customer', [Controllers\ChequeController::class, 'searchCustomer'])->name('cheques.search-customer');
+        Route::get('cheques/search-transaction', [Controllers\ChequeController::class, 'searchTransaction'])->name('cheques.search-transaction');
         Route::get('{cheque_book}/cheques', [Controllers\ChequeController::class, 'index'])->name('cheques.index');
         Route::get('{cheque_book}/cheques/create', [Controllers\ChequeController::class, 'create'])->name('cheques.create');
         Route::post('{cheque_book}/cheques', [Controllers\ChequeController::class, 'store'])->name('cheques.store');

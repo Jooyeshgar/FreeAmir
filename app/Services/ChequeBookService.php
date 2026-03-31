@@ -32,10 +32,7 @@ class ChequeBookService
     public function delete(ChequeBook $chequeBook): void
     {
         DB::transaction(function () use ($chequeBook) {
-            $chequeBook->load('cheques.histories');
-
             foreach ($chequeBook->cheques as $cheque) {
-                $cheque->histories()->delete();
                 $cheque->delete();
             }
 
