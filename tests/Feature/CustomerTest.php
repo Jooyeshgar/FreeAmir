@@ -6,11 +6,7 @@ use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\User;
-use Cookie;
-use Database\Seeders\DatabaseSeeder;
-use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Cache;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -22,6 +18,8 @@ class CustomerTest extends TestCase
 
     protected $customerGroup;
 
+    protected $customer;
+
     protected $company;
 
     protected int $companyId;
@@ -29,18 +27,11 @@ class CustomerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $company = Company::factory()->create();
+        $this->companyId = $company->id;
 
-        $this->seed(DatabaseSeeder::class);
-        $this->seed(DemoSeeder::class);
-
-        $this->companyId = Company::withoutGlobalScopes()->orderBy('id')->value('id') ?? 1;
-        Cache::forever('active_company_id', $this->companyId);
-        Cookie::queue('active-company-id', (string) $this->companyId);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
-
-        $this->company = Company::find($this->companyId);
         $this->user = User::factory()->create();
-        $this->company->users()->attach($this->user);
+        $company->users()->attach($this->user);
 
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'customers.index']),
@@ -52,9 +43,9 @@ class CustomerTest extends TestCase
             Permission::firstOrCreate(['name' => 'customers.destroy']),
         ]);
 
-        $this->actingAs($this->user);
+        $this->withCookies(['active-company-id' => $this->companyId]);
 
-        $this->customerGroup = CustomerGroup::withoutGlobalScopes()->where('company_id', $this->companyId)->firstOrFail();
+        $this->customerGroup = CustomerGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
         $this->customer = Customer::factory()->withGroup($this->customerGroup)->withSubject()->create(['company_id' => $this->companyId]);
     }
 
@@ -120,6 +111,67 @@ class CustomerTest extends TestCase
         $customer = Customer::where('name', 'John Doe')->first();
         $this->assertNotNull($customer->subject);
         $this->assertEquals('John Doe', $customer->subject->name);
+    }
+
+    public function test_change_subject_name_on_changing_customer_name()
+    {
+        $customerData = [
+            'name' => 'Test Customer',
+            'group_id' => $this->customerGroup->id,
+        ];
+
+        $this->actingAs($this->user)->post(route('customers.store'), $customerData);
+
+        $customer = Customer::where('name', 'Test Customer')->first();
+        $subject = $customer->subject;
+
+        $this->assertNotNull($subject);
+        $this->assertEquals($customer->name, $subject->name);
+
+        $newCustomerData = [
+            'name' => 'new name',
+            'group_id' => $this->customerGroup->id,
+        ];
+
+        $this->actingAs($this->user)->put(route('customers.update', $customer), $newCustomerData);
+
+        $customer = Customer::where('name', 'new name')->first();
+        $subject = $customer->subject;
+
+        $this->assertNotNull($subject);
+        $this->assertEquals($customer->name, $subject->name);
+    }
+
+    public function test_change_subject_code_on_changing_customer_group()
+    {
+        $customerData = [
+            'name' => 'Test Customer',
+            'group_id' => $this->customerGroup->id,
+        ];
+
+        $this->actingAs($this->user)->post(route('customers.store'), $customerData);
+
+        $customer = Customer::where('name', 'Test Customer')->first();
+        $subject = $customer->subject;
+
+        $this->assertNotNull($subject);
+        $this->assertEquals($customer->name, $subject->name);
+
+        $newCustomerGroup = CustomerGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
+
+        $newCustomerData = [
+            'name' => 'new name with new customer group',
+            'group_id' => $newCustomerGroup->id,
+        ];
+
+        $this->actingAs($this->user)->put(route('customers.update', $customer), $newCustomerData);
+
+        $newCustomer = Customer::where('name', 'new name with new customer group')->first();
+        $newSubject = $newCustomer->subject;
+
+        $this->assertNotNull($subject);
+        $this->assertEquals($customer->name, $subject->name);
+        $this->assertNotEquals($subject->code, $newSubject->code);
     }
 
     public function test_it_can_create_a_customer_with_minimal_required_data()
@@ -284,10 +336,7 @@ class CustomerTest extends TestCase
 
     public function test_it_displays_customer_edit_page()
     {
-        $customer = Customer::where('company_id', $this->companyId)->inRandomOrder()->first();
-
-        $response = $this->actingAs($this->user)
-            ->get(route('customers.edit', $customer));
+        $response = $this->actingAs($this->user)->get(route('customers.edit', $this->customer));
 
         $response->assertStatus(200);
         $response->assertViewIs('customers.edit');
@@ -297,8 +346,6 @@ class CustomerTest extends TestCase
 
     public function test_it_can_update_a_customer()
     {
-        $customer = Customer::where('company_id', $this->companyId)->inRandomOrder()->first();
-
         $updateData = [
             'name' => 'Updated Name',
             'phone' => '09123456789',
@@ -306,14 +353,13 @@ class CustomerTest extends TestCase
             'group_id' => $this->customerGroup->id,
         ];
 
-        $response = $this->actingAs($this->user)
-            ->put(route('customers.update', $customer), $updateData);
+        $response = $this->actingAs($this->user)->put(route('customers.update', $this->customer), $updateData);
 
         $response->assertRedirect(route('customers.index'));
         $response->assertSessionHas('success', __('Customer updated successfully.'));
 
         $this->assertDatabaseHas('customers', [
-            'id' => $customer->id,
+            'id' => $this->customer->id,
             'name' => 'Updated Name',
             'email' => 'updated@example.com',
         ]);
@@ -343,10 +389,7 @@ class CustomerTest extends TestCase
 
     public function test_it_displays_customer_show_page()
     {
-        $customer = Customer::where('company_id', $this->companyId)->inRandomOrder()->first();
-
-        $response = $this->actingAs($this->user)
-            ->get(route('customers.show', $customer));
+        $response = $this->actingAs($this->user)->get(route('customers.show', $this->customer));
 
         $response->assertStatus(200);
         $response->assertViewIs('customers.show');
