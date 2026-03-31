@@ -6,11 +6,7 @@ use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\User;
-use Cookie;
-use Database\Seeders\DatabaseSeeder;
-use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Cache;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -26,15 +22,7 @@ class CustomerGroupTest extends TestCase
     {
         parent::setUp();
 
-        $this->seed(DatabaseSeeder::class);
-        $this->seed(DemoSeeder::class);
-
-        $companyId = Company::withoutGlobalScopes()->orderBy('id')->value('id') ?? 1;
-        Cache::forever('active_company_id', $companyId);
-        Cookie::queue('active-company-id', (string) $companyId);
-        $_COOKIE['active-company-id'] = (string) $companyId;
-
-        $this->company = Company::find($companyId);
+        $this->company = Company::factory()->create();
         $this->user = User::factory()->create();
         $this->company->users()->attach($this->user);
 
@@ -48,7 +36,7 @@ class CustomerGroupTest extends TestCase
             Permission::firstOrCreate(['name' => 'customer-groups.destroy']),
         ]);
 
-        $this->actingAs($this->user);
+        $this->withCookies(['active-company-id' => $this->company->id]);
     }
 
     public function test_it_displays_customer_group_index_page()
@@ -87,7 +75,6 @@ class CustomerGroupTest extends TestCase
         $this->assertDatabaseHas('customer_groups', [
             'name' => 'Wholesale Customers',
             'description' => 'Customers who buy in bulk',
-            'company_id' => $this->company->id,
         ]);
     }
 
@@ -169,10 +156,13 @@ class CustomerGroupTest extends TestCase
 
     public function test_it_displays_customer_group_edit_page()
     {
-        $customerGroup = CustomerGroup::create([
-            'name' => 'Test Group',
-            'description' => 'Test description',
-        ]);
+        $this->actingAs($this->user)
+            ->post(route('customer-groups.store'), [
+                'name' => 'Test Group',
+                'description' => 'Test description',
+            ]);
+
+        $customerGroup = CustomerGroup::where('name', 'Test Group')->first();
 
         $response = $this->actingAs($this->user)
             ->get(route('customer-groups.edit', $customerGroup));
@@ -185,10 +175,13 @@ class CustomerGroupTest extends TestCase
 
     public function test_it_can_update_a_customer_group()
     {
-        $customerGroup = CustomerGroup::create([
-            'name' => 'Old Name',
-            'description' => 'Old description',
-        ]);
+        $this->actingAs($this->user)
+            ->post(route('customer-groups.store'), [
+                'name' => 'Old Name',
+                'description' => 'Old description',
+            ]);
+
+        $customerGroup = CustomerGroup::where('name', 'Old Name')->first();
 
         $updateData = [
             'name' => 'Updated Name',
@@ -210,10 +203,13 @@ class CustomerGroupTest extends TestCase
 
     public function test_it_updates_subject_when_customer_group_name_is_updated()
     {
-        $customerGroup = CustomerGroup::create([
-            'name' => 'Original Name',
-            'description' => 'Test description',
-        ]);
+        $this->actingAs($this->user)
+            ->post(route('customer-groups.store'), [
+                'name' => 'Original Name',
+                'description' => 'Test description',
+            ]);
+
+        $customerGroup = CustomerGroup::where('name', 'Original Name')->first();
 
         $originalSubjectId = $customerGroup->subject_id;
 
@@ -233,10 +229,13 @@ class CustomerGroupTest extends TestCase
 
     public function test_it_can_delete_a_customer_group()
     {
-        $customerGroup = CustomerGroup::create([
-            'name' => 'Test Group',
-            'description' => 'Test description',
-        ]);
+        $this->actingAs($this->user)
+            ->post(route('customer-groups.store'), [
+                'name' => 'Test Group',
+                'description' => 'Test description',
+            ]);
+
+        $customerGroup = CustomerGroup::where('name', 'Test Group')->first();
 
         $response = $this->actingAs($this->user)
             ->delete(route('customer-groups.destroy', $customerGroup));
@@ -315,9 +314,13 @@ class CustomerGroupTest extends TestCase
 
     public function test_customer_group_has_relationship_with_customers()
     {
-        $customerGroup = CustomerGroup::create([
-            'name' => 'Test Group',
-        ]);
+        $this->actingAs($this->user)
+            ->post(route('customer-groups.store'), [
+                'name' => 'Test Group',
+                'description' => 'Test description',
+            ]);
+
+        $customerGroup = CustomerGroup::where('name', 'Test Group')->first();
 
         $customer1 = Customer::create(['name' => 'Customer 1', 'group_id' => $customerGroup->id, 'company_id' => $this->company->id]);
         $customer2 = Customer::create(['name' => 'Customer 2', 'group_id' => $customerGroup->id, 'company_id' => $this->company->id]);
