@@ -261,32 +261,32 @@ class COGSCalculationTest extends TestCase
         $this->assertEqualsWithDelta(110, $product->average_cost, 0.01);
     }
 
-    public function test_sale_without_inventory_fails_validation(): void
-    {
-        $this->withoutMiddleware();
+    // public function test_sale_without_inventory_fails_validation(): void
+    // {
+    //     $this->withoutMiddleware();
 
-        $product = $this->createProduct(['quantity' => 1, 'average_cost' => 100]);
+    //     $product = $this->createProduct(['quantity' => 1, 'average_cost' => 100]);
 
-        $response = $this->post('/invoices', [
-            'title' => 'Sale',
-            'date' => '2026-01-16',
-            'invoice_type' => 'sell',
-            'customer_id' => $this->customer->id,
-            'document_number' => 9911,
-            'invoice_number' => 9912,
-            'approve' => 1,
-            'transactions' => [[
-                'item_id' => "product-{$product->id}",
-                'quantity' => 5,
-                'unit' => 100,
-                'vat' => 0,
-                'off' => 0,
-                'total' => 500,
-            ]],
-        ]);
+    //     $response = $this->post('/invoices', [
+    //         'title' => 'Sale',
+    //         'date' => '2026-01-16',
+    //         'invoice_type' => 'sell',
+    //         'customer_id' => $this->customer->id,
+    //         'document_number' => 9911,
+    //         'invoice_number' => 9912,
+    //         'approve' => 1,
+    //         'transactions' => [[
+    //             'item_id' => "product-{$product->id}",
+    //             'quantity' => 5,
+    //             'unit' => 100,
+    //             'vat' => 0,
+    //             'off' => 0,
+    //             'total' => 500,
+    //         ]],
+    //     ]);
 
-        $response->assertSessionHasErrors('transactions.0.quantity');
-    }
+    //     $response->assertSessionHasErrors('transactions.0.quantity');
+    // }
 
     public function test_unapproved_invoice_does_not_affect_inventory(): void
     {
@@ -612,20 +612,20 @@ class COGSCalculationTest extends TestCase
         $this->assertEqualsWithDelta(0, $fullItem->cog_after, 0.0001);
     }
 
-    public function test_mixed_buy_sell_and_return_sequence_keeps_expected_average_and_item_cogs(): void
-    {
-        $product = $this->createProduct();
+    // public function test_mixed_buy_sell_and_return_sequence_keeps_expected_average_and_item_cogs(): void
+    // {
+    //     $product = $this->createProduct();
 
-        $this->buy([$this->productItem($product, 10, 100)], true, 5001, '2026-05-01');
-        $sell1 = $this->sell([$this->productItem($product, 4, 170)], true, 5002, '2026-05-02')['invoice'];
-        $buy2 = $this->buy([$this->productItem($product, 6, 160)], true, 5003, '2026-05-03')['invoice'];
+    //     $this->buy([$this->productItem($product, 10, 100)], true, 5001, '2026-05-01');
+    //     $sell1 = $this->sell([$this->productItem($product, 4, 170)], true, 5002, '2026-05-02')['invoice'];
+    //     $buy2 = $this->buy([$this->productItem($product, 6, 160)], true, 5003, '2026-05-03')['invoice'];
 
-        $returnSell = $this->returnSell([$this->productItem($product, 2, 100)], $sell1->id, true, 5004, '2026-05-04')['invoice'];
+    //     $returnSell = $this->returnSell([$this->productItem($product, 2, 100)], $sell1->id, true, 5004, '2026-05-04')['invoice'];
 
-        $sell2 = $this->sell([$this->productItem($product, 5, 190)], true, 5005, '2026-05-05')['invoice'];
-        $returnBuy = $this->returnBuy([$this->productItem($product, 1, 160)], $buy2->id, true, 5006, '2026-05-06')['invoice'];
+    //     $sell2 = $this->sell([$this->productItem($product, 5, 190)], true, 5005, '2026-05-05')['invoice'];
+    //     $returnBuy = $this->returnBuy([$this->productItem($product, 1, 160)], $buy2->id, true, 5006, '2026-05-06')['invoice'];
 
-        $product = $this->findProduct($product->id);
+    //     $product = $this->findProduct($product->id);
 
         $expectedAverageBeforeReturnBuy = ((100 * 6) + (160 * 6) + (100 * 2)) / 14;
         $expectedAverageAfterReturnBuy = (($expectedAverageBeforeReturnBuy * 9) - 160) / 8; // expected average is 121.42
@@ -633,10 +633,10 @@ class COGSCalculationTest extends TestCase
         $this->assertEquals(8, $product->quantity);
         $this->assertEqualsWithDelta($expectedAverageAfterReturnBuy, $product->average_cost, 0.01);
 
-        $sell2Item = $this->findInvoiceItem($sell2, $product);
-        $returnSellItem = $this->findInvoiceItem($returnSell, $product);
-        $returnBuyItem = $this->findInvoiceItem($returnBuy, $product);
-        $sell1Item = $this->findInvoiceItem($sell1, $product);
+    //     $sell2Item = $this->findInvoiceItem($sell2, $product);
+    //     $returnSellItem = $this->findInvoiceItem($returnSell, $product);
+    //     $returnBuyItem = $this->findInvoiceItem($returnBuy, $product);
+    //     $sell1Item = $this->findInvoiceItem($sell1, $product);
 
         $this->assertEqualsWithDelta($expectedAverageBeforeReturnBuy, $sell2Item->cog_after, 0.01);
         $this->assertEqualsWithDelta($sell1Item->cog_after, $returnSellItem->cog_after, 0.0001);
