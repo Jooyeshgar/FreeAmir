@@ -26,7 +26,8 @@ test:
 
   script:
     # - set +e
-    - ./vendor/bin/sail php artisan test --colors=never
+    # - ./vendor/bin/sail php artisan test --colors=never
+    - docker compose exec -T laravel.test php artisan test --colors=never
     - echo "Test Exit Code $?"
 
   after_script:
