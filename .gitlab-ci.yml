@@ -25,11 +25,13 @@ test:
     # - ./vendor/bin/sail php artisan migrate:fresh
 
   script:
-    # - set +e
-    # - ./vendor/bin/sail php artisan test --colors=never
-    - docker compose exec -T laravel.test php artisan test --colors=never
-    - echo "Test Exit Code $?"
-
+    - set +e
+    - ./vendor/bin/sail php artisan test --colors=never
+    - TEST_EXIT_CODE=$?
+    - echo "Test Exit Code $TEST_EXIT_CODE"
+    - if [ $TEST_EXIT_CODE -ne 0 ]; then exit $TEST_EXIT_CODE; fi
+    - set -e
+    
   after_script:
     - ./vendor/bin/sail down || true
 
