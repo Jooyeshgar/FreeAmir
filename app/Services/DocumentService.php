@@ -213,4 +213,36 @@ class DocumentService
             };
         });
     }
+
+    /**
+     * Approve all unapproved documents that have balanced transactions (sum = 0).
+     *
+     * @return array{approved: int, skipped: int}
+     */
+    public static function approveAll(User $user): array
+    {
+        $approved = 0;
+        $skipped = 0;
+
+        Document::whereNull('approved_at')
+            ->with('transactions')
+            ->each(function (Document $document) use ($user, &$approved, &$skipped) {
+                $sum = $document->transactions->sum('value');
+                if ($sum != 0) {
+                    $skipped++;
+
+                    return;
+                }
+
+                DB::transaction(function () use ($document, $user) {
+                    $document->approved_at = now();
+                    $document->approver_id = $user->id;
+                    $document->save();
+                });
+
+                $approved++;
+            });
+
+        return ['approved' => $approved, 'skipped' => $skipped];
+    }
 }

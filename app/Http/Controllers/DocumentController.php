@@ -335,4 +335,21 @@ class DocumentController extends Controller
 
         return redirect()->route('documents.index')->with('success', __('Document status changed successfully.'));
     }
+
+    public function approveAll(Request $request)
+    {
+        $result = DocumentService::approveAll($request->user());
+
+        $message = trans_choice(
+            ':approved documents approved successfully.|:approved documents approved successfully.',
+            $result['approved'],
+            ['approved' => $result['approved']]
+        );
+
+        if ($result['skipped'] > 0) {
+            $message .= ' '.__(':skipped documents were skipped because their transactions are not balanced.', ['skipped' => $result['skipped']]);
+        }
+
+        return redirect()->route('documents.index')->with('success', $message);
+    }
 }

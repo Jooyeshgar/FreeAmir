@@ -13,6 +13,14 @@
                 <x-button href="{{ route('documents.create') }}" class="btn-primary">
                     {{ __('Create Document') }}
                 </x-button>
+                @can('documents.approve')
+                    <form action="{{ route('documents.approve-all') }}" method="POST" class="inline-block" id="approve-all-form">
+                        @csrf
+                        <button type="submit" class="btn btn-success">
+                            {{ __('Approve All') }}
+                        </button>
+                    </form>
+                @endcan
             </div>
 
             <form action="{{ route('documents.index') }}" method="GET">
@@ -102,16 +110,13 @@
                                         ],
                                         $document->documentable instanceof \App\Models\AncillaryCost => [
                                             'name' => 'invoices.ancillary-costs.show',
-                                            'params' => [
-                                                $document->documentable->invoice_id ?? $document->documentable->invoice?->id,
-                                                $document->documentable,
-                                            ],
+                                            'params' => [$document->documentable->invoice_id ?? $document->documentable->invoice?->id, $document->documentable],
                                         ],
                                         default => null,
                                     };
                                 @endphp
                                 @if ($document->documentable && $documentableRoute)
-                                    <a href="{{ route($documentableRoute['name'], $documentableRoute['params']) }}" class="link link-hover"> 
+                                    <a href="{{ route($documentableRoute['name'], $documentableRoute['params']) }}" class="link link-hover">
                                         {{ __(class_basename($document->documentable_type)) }} {{ $document->documentable->number }}
                                     </a>
                                 @endif
@@ -128,7 +133,8 @@
                                         </svg>
                                     </a>
                                     @if ($document->documentable)
-                                        <span class="tooltip" data-tip="{{ __('Cannot edit this document because it is linked to'). ' ' . __(class_basename($document->documentable_type)).'.' }}">
+                                        <span class="tooltip"
+                                            data-tip="{{ __('Cannot edit this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
                                             <button class="btn btn-sm btn-info btn-square btn-disabled cursor-not-allowed" disabled
                                                 title="{{ __('Cannot edit this document because it is linked to another record.') }}">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -151,7 +157,8 @@
                                             <button class="btn btn-sm btn-error btn-square btn-disabled cursor-not-allowed"
                                                 title="{{ __('Cannot change status of this document because it created automatically.') }}">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                 </svg>
                                             </button>
                                         </span>
@@ -161,13 +168,15 @@
                                             <button type="submit" class="btn btn-sm btn-square {{ $document->approved_at ? 'btn-error' : 'btn-success' }}"
                                                 title="{{ $document->approved_at ? __('Unapprove') : __('Approve') }}">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                 </svg>
                                             </button>
                                         </form>
                                     @endif
-                                    
-                                    <a href="{{ route('documents.duplicate', $document->id) }}" class="btn btn-sm btn-success btn-square" title="{{ __('Duplicate') }}">
+
+                                    <a href="{{ route('documents.duplicate', $document->id) }}" class="btn btn-sm btn-success btn-square"
+                                        title="{{ __('Duplicate') }}">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -175,7 +184,8 @@
                                     </a>
 
                                     @if ($document->documentable)
-                                        <span class="tooltip" data-tip="{{ __('Cannot delete this document because it is linked to'). ' ' . __(class_basename($document->documentable_type)).'.' }}">
+                                        <span class="tooltip"
+                                            data-tip="{{ __('Cannot delete this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
                                             <button class="btn btn-sm btn-error btn-square btn-disabled cursor-not-allowed" disabled
                                                 title="{{ __('Cannot delete this document because it is linked to another record.') }}">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -195,8 +205,9 @@
                                                 </svg>
                                             </button>
                                         </form>
-                                    @else 
-                                        <span class="tooltip" data-tip="{{ __('Cannot delete this document because it is approved'). ' ' . __(class_basename($document->documentable_type)).'.' }}">
+                                    @else
+                                        <span class="tooltip"
+                                            data-tip="{{ __('Cannot delete this document because it is approved') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
                                             <button class="btn btn-sm btn-error btn-square btn-disabled cursor-not-allowed" disabled
                                                 title="{{ __('Cannot delete this document because it is approved.') }}">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -231,6 +242,17 @@
                     }
                 });
             });
+
+            const approveAllForm = document.getElementById('approve-all-form');
+            if (approveAllForm) {
+                approveAllForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    if (confirm('{{ __('Are you sure you want to approve all unapproved documents?') }}')) {
+                        this.submit();
+                    }
+                });
+            }
         });
     </script>
 </x-app-layout>
