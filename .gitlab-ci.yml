@@ -17,7 +17,7 @@ test:
     - echo "DB_PASSWORD=$DB_PASSWORD" >> .env
     - composer install --no-scripts --ignore-platform-reqs
     - chmod -R 777 vendor/
-    - ./vendor/bin/sail up -d --force-recreate
+    - ./vendor/bin/sail up -d --force-recreate --wait
     - ./vendor/bin/sail exec laravel.test git config --global --add safe.directory /var/www/html
     - ./vendor/bin/sail composer install
     # - ./vendor/bin/sail npm install --cache /var/www/html/.npm
