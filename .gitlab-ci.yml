@@ -23,11 +23,16 @@ test:
     # - ./vendor/bin/sail npm install --cache /var/www/html/.npm
     # - ./vendor/bin/sail npm run build
     # - ./vendor/bin/sail php artisan migrate:fresh
+
   script:
+    - set +e  # ← اجازه بده دستورات بعدی اجرا بشن حتی اگه یکی فیل کرد
     - ./vendor/bin/sail test --colors=never
-    - echo "All tests passed with exit code $?"
-  after_script:
-    - ./vendor/bin/sail down || true
+    - TEST_EXIT=$?
+    - ./vendor/bin/sail down
+    - exit $TEST_EXIT
+  after_script: []
+  # after_script:
+  #   - ./vendor/bin/sail down || true
 
 deploy_develop:
   stage: deploy_develop
