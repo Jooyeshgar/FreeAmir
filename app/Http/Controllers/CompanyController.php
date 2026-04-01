@@ -185,4 +185,98 @@ class CompanyController extends Controller
 
         return redirect()->route('companies.index')->with('success', __('Fiscal year closed successfully.'));
     }
+
+    /**
+     * Show the multi-step year-end closing wizard.
+     */
+    public function closingWizard(Company $company, Request $request): \Illuminate\Contracts\View\View
+    {
+        if (! $company->users->contains($request->user()->id)) {
+            abort(403);
+        }
+
+        $validations = FiscalYearService::getWizardValidations($company);
+        $allPass = collect($validations)->every(fn ($v) => $v['pass']);
+
+        $plDocument = $company->pl_document_id ? $company->plDocument : null;
+        $incomeSummaryBalance = $plDocument ? FiscalYearService::getIncomeSummaryBalance($company) : null;
+        $step3Enabled = $plDocument && $incomeSummaryBalance === 0.0;
+
+        return view('companies.closing-wizard', compact(
+            'company',
+            'validations',
+            'allPass',
+            'plDocument',
+            'incomeSummaryBalance',
+            'step3Enabled'
+        ));
+    }
+
+    /**
+     * Execute Step 1: close temporary accounts (generate Income Summary document).
+     */
+    public function closingWizardStep1(Company $company, Request $request): RedirectResponse
+    {
+        if (! $company->users->contains($request->user()->id)) {
+            abort(403);
+        }
+
+        if ($company->closed_at) {
+            return redirect()->route('companies.closing-wizard', $company)
+                ->with('error', __('This fiscal year is already closed.'));
+        }
+
+        if ($company->pl_document_id) {
+            return redirect()->route('companies.closing-wizard', $company)
+                ->with('error', __('Step 1 has already been completed.'));
+        }
+
+        try {
+            FiscalYearService::stepOneCloseTemporaryAccounts($company, $request->user());
+        } catch (\Exception $e) {
+            return redirect()->route('companies.closing-wizard', $company)
+                ->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('companies.closing-wizard', $company)
+            ->with('success', __('Temporary accounts closed successfully. Please review and create a manual adjustment document if needed.'));
+    }
+
+    /**
+     * Execute Step 3: close permanent accounts and open the new fiscal year.
+     */
+    public function closingWizardStep3(Company $company, Request $request): RedirectResponse
+    {
+        if (! $company->users->contains($request->user()->id)) {
+            abort(403);
+        }
+
+        if ($company->closed_at) {
+            return redirect()->route('companies.closing-wizard', $company)
+                ->with('error', __('This fiscal year is already closed.'));
+        }
+
+        if (! $company->pl_document_id) {
+            return redirect()->route('companies.closing-wizard', $company)
+                ->with('error', __('You must complete Step 1 before closing permanent accounts.'));
+        }
+
+        $balance = FiscalYearService::getIncomeSummaryBalance($company);
+        if ($balance !== 0.0) {
+            return redirect()->route('companies.closing-wizard', $company)
+                ->with('error', __('The Income Summary account balance must be zero before closing. Current balance: :balance', ['balance' => formatNumber($balance)]));
+        }
+
+        try {
+            $newFiscalYear = FiscalYearService::stepThreeCloseAndOpenNewYear($company, $request->user());
+        } catch (\Exception $e) {
+            return redirect()->route('companies.closing-wizard', $company)
+                ->with('error', $e->getMessage());
+        }
+
+        $this->setActiveCompany($newFiscalYear);
+
+        return redirect()->route('companies.index')
+            ->with('success', __('Fiscal year closed successfully.'));
+    }
 }

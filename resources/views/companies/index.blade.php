@@ -35,12 +35,13 @@
                             <td class="px-4 py-2">{{ $company->closedBy ? $company->closedBy->name : '' }}</td>
                             <td class="px-4 py-2">
                                 <a href="{{ route('companies.edit', $company) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                <form action="{{ route('companies.close-fiscal-year', $company) }}" method="POST" class="inline-block m-0"
-                                    onsubmit="return confirm('{{ __('Are you sure you want to close the fiscal year for this company?') }}');">
-                                    @csrf
-                                    <button type="submit" class="btn btn-sm btn-warning {{ $company->closed_at ? 'btn-disabled' : '' }}" @disabled($company->closed_at)>{{ __('Close Fiscal Year') }}</button>
-                                </form>
-                                <form action="{{ route('companies.destroy', $company) }}" method="POST" class="inline-block m-0" 
+                                @can('companies.close-fiscal-year')
+                                    <a href="{{ route('companies.closing-wizard', $company) }}"
+                                        class="btn btn-sm btn-warning {{ $company->closed_at ? 'btn-disabled pointer-events-none' : '' }}">
+                                        {{ __('Close Fiscal Year') }}
+                                    </a>
+                                @endcan
+                                <form action="{{ route('companies.destroy', $company) }}" method="POST" class="inline-block m-0"
                                     onsubmit="return confirm('{{ __('Are you sure you want to delete this company?') }}');">
                                     @csrf
                                     @method('DELETE')
