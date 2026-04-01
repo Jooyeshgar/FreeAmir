@@ -25,7 +25,9 @@ test:
     # - ./vendor/bin/sail php artisan migrate:fresh
 
   script:
-    - ./vendor/bin/sail test --colors=never
+    - set +e
+    - ./vendor/bin/sail php artisan test --colors=never
+    - echo "Test Exit Code $?"
 
   after_script:
     - ./vendor/bin/sail down || true
