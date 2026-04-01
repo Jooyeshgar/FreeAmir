@@ -17,4 +17,9 @@ class Company extends Model
     {
         return $this->belongsToMany(User::class);
     }
+
+    public function closedBy()
+    {
+        return $this->belongsTo(User::class, 'closed_by');
+    }
 }
