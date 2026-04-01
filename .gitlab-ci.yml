@@ -19,12 +19,12 @@ test:
     - chmod -R 777 vendor/
     - ./vendor/bin/sail up -d --force-recreate
     - ./vendor/bin/sail exec laravel.test git config --global --add safe.directory /var/www/html
-    - ./vendor/bin/sail composer dump-autoload
-    - ./vendor/bin/sail npm install --cache /var/www/html/.npm
-    - ./vendor/bin/sail npm run build
-    - ./vendor/bin/sail php artisan migrate:fresh
+    - ./vendor/bin/sail composer install
+    # - ./vendor/bin/sail npm install --cache /var/www/html/.npm
+    # - ./vendor/bin/sail npm run build
+    # - ./vendor/bin/sail php artisan migrate:fresh
   script:
-    - ./vendor/bin/sail artisan test --colors=never
+    - ./vendor/bin/sail test --colors=never
     - echo "All tests passed with exit code $?"
   after_script:
     - ./vendor/bin/sail down || true
