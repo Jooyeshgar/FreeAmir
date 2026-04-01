@@ -2081,12 +2081,12 @@ class FiscalYearService
             $errors[] = __('Cannot close fiscal year with draft documents. Please approve or delete all draft documents before closing the year.');
         }
 
-        $unbalancedDocsCount = Document::where('company_id', $company->id)->has('transactions')
-            ->withSum('transactions', 'value')->having('transactions_sum_value', '!=', 0)->count();
+        // $unbalancedDocsCount = Document::where('company_id', $company->id)->has('transactions')
+        //     ->withSum('transactions', 'value')->having('transactions_sum_value', '!=', 0);
 
-        if ($unbalancedDocsCount > 0) {
-            $errors[] = __('Cannot close fiscal year with unbalanced documents. Please ensure all documents are balanced before closing the year.');
-        }
+        // if ($unbalancedDocsCount->count() > 0) {
+        //     $errors[] = __('Cannot close fiscal year with unbalanced documents. Please ensure all documents are balanced before closing the year.');
+        // }
 
         return $errors;
     }

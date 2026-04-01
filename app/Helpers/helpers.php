@@ -51,7 +51,11 @@ function formatDate(Carbon|string|null $date, $format = 'Y/m/d')
         return '';
     }
     if (is_string($date)) {
-        $date = Carbon::createFromFormat('Y-m-d', $date);
+        try {
+            $date = Carbon::parse($date);
+        } catch (\Exception $e) {
+            $date = Carbon::createFromFormat('Y-m-d', $date);
+        }
     }
 
     $locale = App::getLocale();
@@ -70,7 +74,11 @@ function formatDateTime(Carbon|string|null $date)
         return '';
     }
     if (is_string($date)) {
-        $date = Carbon::createFromFormat('Y-m-d H:i:s', $date);
+        try {
+            $date = Carbon::parse($date);
+        } catch (\Exception $e) {
+            $date = Carbon::createFromFormat('Y-m-d H:i:s', $date);
+        }
     }
 
     $locale = App::getLocale();
