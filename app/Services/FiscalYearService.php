@@ -38,12 +38,14 @@ use App\Models\ServiceGroup;
 use App\Models\Subject;
 use App\Models\TaxSlab;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
 use App\Models\WorkSiteContract;
 use Cookie;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -2064,5 +2066,347 @@ class FiscalYearService
             $newAncillaryCostItem->product_id = $productMapping[$oldProductId];
             $newAncillaryCostItem->save();
         }
+    }
+
+    protected static function validateClosingFiscalYear(Company $company): array
+    {
+        $errors = [];
+
+        $isCloseYear = $company->closed_at !== null;
+        if ($isCloseYear) {
+            $errors[] = __('Cannot close fiscal year because the year is not open.');
+        }
+
+        $draftDocsCount = Document::where('company_id', $company->id)->whereNull('approved_at')->count();
+        if ($draftDocsCount > 0) {
+            $errors[] = __('Cannot close fiscal year with draft documents. Please approve or delete all draft documents before closing the year.');
+        }
+
+        // $unbalancedDocsCount = Document::where('company_id', $company->id)->has('transactions')
+        //     ->withSum('transactions', 'value')->having('transactions_sum_value', '!=', 0);
+
+        // if ($unbalancedDocsCount->count() > 0) {
+        //     $errors[] = __('Cannot close fiscal year with unbalanced documents. Please ensure all documents are balanced before closing the year.');
+        // }
+
+        return $errors;
+    }
+
+    protected static function balanceCurrentProfitAndLoss(Company $company, Collection $transactions, User $user): Collection
+    {
+        $difference = (float) $transactions->sum('value');
+
+        if ($difference !== 0.0) {
+            $subject = Subject::where('company_id', $company->id)
+                ->where('name', __('Current Profit and Loss Summary'))->first();
+
+            if (! $subject) {
+                $subjectService = new SubjectService;
+                $subject = $subjectService->createSubject([
+                    'name' => __('Current Profit and Loss Summary'),
+                    'company_id' => $company->id,
+                ]);
+            }
+
+            $transaction = [
+                'subject_id' => $subject->id, // For balancing the opening account
+                'value' => -1 * $difference,
+                'user_id' => $user->id,
+            ];
+
+            $transactions->push($transaction);
+        }
+
+        return $transactions;
+    }
+
+    protected static function createOpeningDocument(Company $company, Document $closeDocument, User $user): void
+    {
+        $documentData = [
+            'number' => 1,
+            'date' => now(),
+            'title' => __('Fiscal year opening Document'),
+            'creator_id' => $user->id,
+            'company_id' => $company->id,
+            'approved_at' => now(),
+            'approver_id' => $user->id,
+        ];
+
+        $sourceSubjectIds = $closeDocument->transactions()->pluck('subject_id')->filter()->unique()->values();
+
+        $sourceSubjectsById = Subject::withoutGlobalScope('App\\Models\\Scopes\\FiscalYearScope')
+            ->where('company_id', $closeDocument->company_id)
+            ->whereIn('id', $sourceSubjectIds)
+            ->get(['id', 'code'])
+            ->keyBy('id');
+
+        $targetSubjectsByCode = Subject::withoutGlobalScope('App\\Models\\Scopes\\FiscalYearScope')
+            ->where('company_id', $company->id)
+            ->whereIn('code', $sourceSubjectsById->pluck('code')->filter()->unique()->values())
+            ->pluck('id', 'code')
+            ->toArray();
+
+        $subjectMapping = [];
+        foreach ($sourceSubjectsById as $oldSubjectId => $sourceSubject) {
+            $code = $sourceSubject->code;
+            if ($code !== null && isset($targetSubjectsByCode[$code])) {
+                $subjectMapping[$oldSubjectId] = $targetSubjectsByCode[$code];
+            }
+        }
+
+        // Reverse the transactions of closing document to create opening document for the new fiscal year
+        $transactions = $closeDocument->transactions()->get()->map(function ($transaction) use ($user, $subjectMapping, $company) {
+            return [
+                'subject_id' => $subjectMapping[$transaction->subject_id] ?? null,
+                'value' => -1 * $transaction->value,
+                'user_id' => $user->id,
+                'desc' => __('Fiscal year opening Document').' '.$company->fiscal_year,
+            ];
+        })->filter(fn ($transaction) => $transaction['subject_id'] !== null)->values()->toArray();
+
+        if (empty($transactions)) {
+            Log::warning('Skipping opening document creation due to missing subject mappings.', [
+                'source_company_id' => $closeDocument->company_id,
+                'target_company_id' => $company->id,
+                'close_document_id' => $closeDocument->id,
+            ]);
+
+            return;
+        }
+
+        DocumentService::createDocument($user, $documentData, $transactions);
+    }
+
+    protected static function createClosingDocument(Company $company, User $user): Document
+    {
+        $documentData = [
+            'number' => Document::where('company_id', $company->id)->max('number') + 1,
+            'date' => now(),
+            'title' => __('Fiscal year closing Document'),
+            'creator_id' => $user->id,
+            'company_id' => $company->id,
+            'approved_at' => now(),
+            'approver_id' => $user->id,
+        ];
+
+        // Gather net balances of all permanent accounts across the entire fiscal year.
+        // Temporary accounts are already zeroed out by Step 1 (currentProfitAndLoss),
+        // so we only need permanent subjects here.
+        $transactions = Transaction::query()
+            ->whereHas('document', fn ($doc) => $doc->where('company_id', $company->id))
+            ->whereHas('subject', fn ($sub) => $sub->where('company_id', $company->id)->where('is_permanent', true))
+            ->selectRaw('subject_id, SUM(value) as value')
+            ->groupBy('subject_id')
+            ->havingRaw('SUM(value) != 0')
+            ->get()
+            ->map(fn ($row) => [
+                'subject_id' => $row->subject_id,
+                'value' => -1 * $row->value,
+                'user_id' => $user->id,
+                'desc' => __('Fiscal year closing Document').' '.$company->fiscal_year,
+            ])->toArray();
+
+        return DocumentService::createDocument($user, $documentData, $transactions);
+    }
+
+    protected static function newFiscalYear(Company $company, User $user): Company
+    {
+        $newFiscalYearData = collect($company->getAttributes())->except(['id', 'closed_at', 'fiscal_year'])
+            ->merge(['fiscal_year' => $company->fiscal_year + 1])->toArray();
+
+        $sectionsToCopy = ['subjects', 'configs', 'banks', 'customers', 'products', 'services', 'employees']; // Sections to copy to the new fiscal year
+        $newFiscalYear = self::createWithCopiedData($newFiscalYearData, $company->id, $sectionsToCopy);
+        $newFiscalYear->users()->attach($user->id);
+
+        return $newFiscalYear;
+    }
+
+    /**
+     * Step 1 – Close temporary (income/expense) accounts into the Income Summary account.
+     * Saves the resulting document ID onto the company as `pl_document_id`.
+     */
+    public static function closeTemporaryAccounts(Company $company, User $user): Document
+    {
+        $document = DB::transaction(function () use ($company, $user) {
+            $doc = self::currentProfitAndLoss($company, $user);
+
+            // Persist the link so the wizard can track progress
+            $company->pl_document_id = $doc->id;
+            $company->save();
+
+            return $doc;
+        });
+
+        return $document;
+    }
+
+    /**
+     * Step 3 – Close permanent accounts, create the new fiscal year, and generate the opening document.
+     * Requires Step 1 to have been completed and the Income Summary balance to be exactly 0.
+     *
+     * @throws \Exception
+     */
+    public static function stepThreeCloseAndOpenNewYear(Company $company, User $user): Company
+    {
+        $newFiscalYear = null;
+
+        DB::transaction(function () use ($company, $user, &$newFiscalYear) {
+            $closeDocument = self::createClosingDocument($company, $user);
+
+            $company->closing_document_id = $closeDocument->id;
+            $company->closed_at = now();
+            $company->closed_by = $user->id;
+            $company->save();
+
+            $newFiscalYear = self::newFiscalYear($company, $user);
+
+            self::createOpeningDocument($newFiscalYear, $closeDocument, $user);
+        });
+
+        return $newFiscalYear;
+    }
+
+    /**
+     * Returns the current balance of the Income Summary (خلاصه سود و زیان جاری) subject.
+     * Used to gate Step 3: balance must be 0 before closing permanent accounts.
+     */
+    public static function getIncomeSummaryBalance(Company $company): float
+    {
+        $subject = Subject::where('company_id', $company->id)
+            ->where('name', __('Current Profit and Loss Summary'))
+            ->first();
+
+        if (! $subject) {
+            return 0.0;
+        }
+
+        return (float) Transaction::query()
+            ->whereHas('document', fn ($q) => $q->where('company_id', $company->id))
+            ->where('subject_id', $subject->id)
+            ->sum('value');
+    }
+
+    /**
+     * Pre-flight validations for initiating the year-end wizard.
+     * Returns an array of validation checks with pass/fail status.
+     *
+     * @return array{draft_docs: array, negative_inventory: array, gaps_in_numbers: array}
+     */
+    public static function getWizardValidations(Company $company): array
+    {
+        // 1. Draft (unapproved) documents
+        $draftCount = Document::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+            ->where('company_id', $company->id)
+            ->whereNull('approved_at')
+            ->count();
+
+        // 2. Negative inventory
+        $negativeInventoryCount = \App\Models\Product::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+            ->where('company_id', $company->id)
+            ->where('quantity', '<', 0)
+            ->count();
+
+        // 3. Gaps in document numbers
+        $numbers = Document::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+            ->where('company_id', $company->id)
+            ->orderBy('number')
+            ->pluck('number')
+            ->map(fn ($n) => (int) $n)
+            ->filter()
+            ->values();
+
+        $gapCount = 0;
+        for ($i = 1; $i < $numbers->count(); $i++) {
+            $gap = $numbers[$i] - $numbers[$i - 1] - 1;
+            if ($gap > 0) {
+                $gapCount += $gap;
+            }
+        }
+
+        return [
+            'draft_docs' => [
+                'label' => __('No unapproved (draft) documents'),
+                'pass' => $draftCount === 0,
+                'detail' => $draftCount > 0 ? __(':count draft document(s) found.', ['count' => $draftCount]) : null,
+            ],
+            'negative_inventory' => [
+                'label' => __('No negative inventory balances'),
+                'pass' => $negativeInventoryCount === 0,
+                'detail' => $negativeInventoryCount > 0 ? __(':count product(s) with negative quantity.', ['count' => $negativeInventoryCount]) : null,
+            ],
+            'gaps_in_numbers' => [
+                'label' => __('Document numbers are sequential without gaps'),
+                'pass' => $gapCount === 0,
+                'detail' => $gapCount > 0 ? __(':count gap(s) in document numbering.', ['count' => $gapCount]) : null,
+            ],
+        ];
+    }
+
+    /**
+     * @deprecated Use stepOneCloseTemporaryAccounts / stepThreeCloseAndOpenNewYear instead.
+     */
+    public static function closeFiscalYear(Company $company, User $user): array
+    {
+        $newFiscalYear = null;
+        $validationErrors = [];
+
+        DB::transaction(function () use ($company, &$newFiscalYear, &$validationErrors, $user) {
+            $validationErrors = self::validateClosingFiscalYear($company);
+
+            if (! empty($validationErrors)) {
+                return;
+            }
+
+            $currentProfitAndLoss = self::currentProfitAndLoss($company, $user);
+            $company->pl_document_id = $currentProfitAndLoss->id;
+
+            $closeDocument = self::createClosingDocument($company, $user);
+            $company->closing_document_id = $closeDocument->id;
+
+            $newFiscalYear = self::newFiscalYear($company, $user);
+
+            self::createOpeningDocument($newFiscalYear, $closeDocument, $user);
+
+            $company->closed_at = now();
+            $company->closed_by = $user->id;
+            $company->save();
+        });
+
+        return [$newFiscalYear, $validationErrors];
+    }
+
+    protected static function currentProfitAndLoss(Company $company, User $user): Document
+    {
+        $documentData = [
+            'number' => Document::where('company_id', $company->id)->max('number') + 1,
+            'date' => now(),
+            'title' => __('Current Profit and Loss Summary'),
+            'creator_id' => $user->id,
+            'company_id' => $company->id,
+            'approved_at' => now(),
+            'approver_id' => $user->id,
+        ];
+
+        // Temporary income and expense accounts
+        $temporarySubjects = Subject::where('company_id', $company->id)
+            ->where('is_permanent', false)->pluck('id')->toArray();
+
+        $transactions = Transaction::query()
+            ->whereHas('document', fn ($document) => $document->where('company_id', $company->id))
+            ->whereIn('subject_id', $temporarySubjects)
+            ->selectRaw('subject_id, SUM(value) as value')->groupBy('subject_id')
+            ->havingRaw('SUM(value) != 0') // Remove zero balances
+            ->get()
+            ->map(fn ($transaction) => [
+                'subject_id' => $transaction->subject_id,
+                'value' => -1 * $transaction->value,
+                'user_id' => $user->id,
+                'desc' => __('Balance for closing fiscal year'),
+            ]);
+
+        // Move any remaining balance in current profit and loss to accumulated profit and loss to balance them
+        $transactions = self::balanceCurrentProfitAndLoss($company, $transactions, $user);
+
+        return DocumentService::createDocument($user, $documentData, $transactions->toArray());
     }
 }

@@ -17,4 +17,25 @@ class Company extends Model
     {
         return $this->belongsToMany(User::class);
     }
+
+    public function closedBy()
+    {
+        return $this->belongsTo(User::class, 'closed_by');
+    }
+
+    /**
+     * The Income Summary / P&L document created in Step 1 (closing temporary accounts).
+     */
+    public function plDocument()
+    {
+        return $this->belongsTo(\App\Models\Document::class, 'pl_document_id');
+    }
+
+    /**
+     * The closing document created in Step 3 (closing permanent accounts).
+     */
+    public function closingDocument()
+    {
+        return $this->belongsTo(\App\Models\Document::class, 'closing_document_id');
+    }
 }

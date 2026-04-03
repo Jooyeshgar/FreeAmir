@@ -20,8 +20,10 @@ function formatNumber($number)
 {
     $locale = App::getLocale();
     $isPersian = $locale === 'fa' || $locale === 'fa_IR';
+    $formattedNumber = number_format(abs($number), 2);
 
-    $formattedNumber = number_format(abs($number));
+    $formattedNumber = rtrim($formattedNumber, '0');
+    $formattedNumber = rtrim($formattedNumber, '.');
 
     if ($isPersian) {
         $formattedNumber = convertToFarsi($formattedNumber);
@@ -51,7 +53,11 @@ function formatDate(Carbon|string|null $date, $format = 'Y/m/d')
         return '';
     }
     if (is_string($date)) {
-        $date = Carbon::createFromFormat('Y-m-d', $date);
+        try {
+            $date = Carbon::parse($date);
+        } catch (\Exception $e) {
+            $date = Carbon::createFromFormat('Y-m-d', $date);
+        }
     }
 
     $locale = App::getLocale();
@@ -70,7 +76,11 @@ function formatDateTime(Carbon|string|null $date)
         return '';
     }
     if (is_string($date)) {
-        $date = Carbon::createFromFormat('Y-m-d H:i:s', $date);
+        try {
+            $date = Carbon::parse($date);
+        } catch (\Exception $e) {
+            $date = Carbon::createFromFormat('Y-m-d H:i:s', $date);
+        }
     }
 
     $locale = App::getLocale();
