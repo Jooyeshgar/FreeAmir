@@ -316,20 +316,20 @@ class FiscalYearService
                         }
                     }
 
-                    if (isset($importData['cheque_histories'])) {
-                        $chequeMapping = $idMappings['cheques'] ?? [];
-                        if (! empty($chequeMapping) && ! empty($customerMapping) && ! empty($transactionMapping) && ! empty($bankAccountMapping)) {
-                            self::_importChequeHistories($importData['cheque_histories'], $targetYearId, $chequeMapping, $customerMapping, $transactionMapping, $bankAccountMapping);
-                        } else {
-                            Log::warning('Skipping cheque histories import due to missing cheque or customer or transaction or bank account mappings.', [
-                                'target_year_id' => $targetYearId,
-                                'has_cheque_mapping' => ! empty($chequeMapping),
-                                'has_customer_mapping' => ! empty($customerMapping),
-                                'has_trasnaction_mapping' => ! empty($transactionMapping),
-                                'has_bank_account_mapping' => ! empty($bankAccountMapping),
-                            ]);
-                        }
-                    }
+                    // if (isset($importData['cheque_histories'])) {
+                    //     $chequeMapping = $idMappings['cheques'] ?? [];
+                    //     if (! empty($chequeMapping) && ! empty($customerMapping) && ! empty($transactionMapping) && ! empty($bankAccountMapping)) {
+                    //         self::_importChequeHistories($importData['cheque_histories'], $targetYearId, $chequeMapping, $customerMapping, $transactionMapping, $bankAccountMapping);
+                    //     } else {
+                    //         Log::warning('Skipping cheque histories import due to missing cheque or customer or transaction or bank account mappings.', [
+                    //             'target_year_id' => $targetYearId,
+                    //             'has_cheque_mapping' => ! empty($chequeMapping),
+                    //             'has_customer_mapping' => ! empty($customerMapping),
+                    //             'has_trasnaction_mapping' => ! empty($transactionMapping),
+                    //             'has_bank_account_mapping' => ! empty($bankAccountMapping),
+                    //         ]);
+                    //     }
+                    // }
                 }
                 if (in_array('invoices', $sectionsToImport)) {
                     $customerMapping = $idMappings['customers'] ?? [];
@@ -634,15 +634,15 @@ class FiscalYearService
             $ancillaryCostIds = collect($sourceData['ancillary_costs'])->pluck('id')->toArray();
             $sourceData['ancillary_cost_items'] = ! empty($ancillaryCostIds) ? AncillaryCostItem::whereIn('ancillary_cost_id', $ancillaryCostIds)->get()->toArray() : [];
         }
-        if (in_array('cheques', $sections)) {
-            $sourceData['cheques'] = Cheque::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
-                ->get()->toArray();
+        // if (in_array('cheques', $sections)) {
+        //     $sourceData['cheques'] = Cheque::withoutGlobalScope(FiscalYearScope::class)
+        //         ->where('company_id', $sourceYearId)
+        //         ->get()->toArray();
 
-            $sourceData['cheque_histories'] = ChequeHistory::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
-                ->get()->toArray();
-        }
+        //     $sourceData['cheque_histories'] = ChequeHistory::withoutGlobalScope(FiscalYearScope::class)
+        //         ->where('company_id', $sourceYearId)
+        //         ->get()->toArray();
+        // }
         if (in_array('employees', $sections)) {
             $sourceData['employees'] = Employee::withoutGlobalScope(FiscalYearScope::class)
                 ->where('company_id', $sourceYearId)
@@ -759,9 +759,11 @@ class FiscalYearService
                 Log::warning('Skipping subject subjectable sync due to missing relation column.',
                     [
                         'subjectable_model_type' => $type,
-                        'subjectable_model_id' => $model->id,
+                        'subjectable_model_id' => $id,
                         'relation_column_name' => $relationColumn,
                     ]);
+
+                continue;
             }
             $subject = Subject::find($model?->{$relationColumn});
             if ($subject->subjectable_type !== get_class($model) && $subject->subjectable_id !== $id) {
@@ -1195,34 +1197,34 @@ class FiscalYearService
             $oldWorkShiftId = $employeeData['work_shift_id'] ?? null;
             $oldContractFrameworkId = $employeeData['contract_framework_id'] ?? null;
 
-            if ($oldOrgChartId === null || ! isset($orgChartMapping[$oldOrgChartId])) {
-                Log::warning('Skipping employee import due to missing org chart mapping.', ['old_employee_id' => $employeeData['id'] ?? 'N/A', 'old_org_chart_id' => $oldOrgChartId, 'target_year_id' => $targetYearId]);
+            // if ($oldOrgChartId === null || ! isset($orgChartMapping[$oldOrgChartId])) {
+            //     Log::warning('Skipping employee import due to missing org chart mapping.', ['old_employee_id' => $employeeData['id'] ?? 'N/A', 'old_org_chart_id' => $oldOrgChartId, 'target_year_id' => $targetYearId]);
 
-                continue;
-            }
-            if ($oldWorkSiteId === null || ! isset($workSiteMapping[$oldWorkSiteId])) {
-                Log::warning('Skipping employee import due to missing work site mapping.', ['old_employee_id' => $employeeData['id'] ?? 'N/A', 'old_work_site_id' => $oldWorkSiteId, 'target_year_id' => $targetYearId]);
+            //     continue;
+            // }
+            // if ($oldWorkSiteId === null || ! isset($workSiteMapping[$oldWorkSiteId])) {
+            //     Log::warning('Skipping employee import due to missing work site mapping.', ['old_employee_id' => $employeeData['id'] ?? 'N/A', 'old_work_site_id' => $oldWorkSiteId, 'target_year_id' => $targetYearId]);
 
-                continue;
-            }
-            if ($oldWorkShiftId === null || ! isset($workShiftMapping[$oldWorkShiftId])) {
-                Log::warning('Skipping employee import due to missing work shift mapping.', ['old_employee_id' => $employeeData['id'] ?? 'N/A', 'old_work_shift_id' => $oldWorkShiftId, 'target_year_id' => $targetYearId]);
+            //     continue;
+            // }
+            // if ($oldWorkShiftId === null || ! isset($workShiftMapping[$oldWorkShiftId])) {
+            //     Log::warning('Skipping employee import due to missing work shift mapping.', ['old_employee_id' => $employeeData['id'] ?? 'N/A', 'old_work_shift_id' => $oldWorkShiftId, 'target_year_id' => $targetYearId]);
 
-                continue;
-            }
-            if ($oldContractFrameworkId === null || ! isset($work_site_contracts[$oldContractFrameworkId])) {
-                Log::warning('Skipping employee import due to missing contract framework mapping.', ['old_employee_id' => $employeeData['id'] ?? 'N/A', 'old_contract_framework_id' => $oldContractFrameworkId, 'target_year_id' => $targetYearId]);
+            //     continue;
+            // }
+            // if ($oldContractFrameworkId === null || ! isset($work_site_contracts[$oldContractFrameworkId])) {
+            //     Log::warning('Skipping employee import due to missing contract framework mapping.', ['old_employee_id' => $employeeData['id'] ?? 'N/A', 'old_contract_framework_id' => $oldContractFrameworkId, 'target_year_id' => $targetYearId]);
 
-                continue;
-            }
+            //     continue;
+            // }
 
             $newEmp = new Employee;
             $newEmp->fill(collect($employeeData)->except(['id', 'org_chart_id', 'work_site_id', 'work_shift_id', 'contract_framework_id'])->toArray());
             $newEmp->company_id = $targetYearId;
-            $newEmp->org_chart_id = $orgChartMapping[$oldOrgChartId];
-            $newEmp->work_site_id = $workSiteMapping[$oldWorkSiteId];
-            $newEmp->work_shift_id = $workShiftMapping[$oldWorkShiftId];
-            $newEmp->contract_framework_id = $work_site_contracts[$oldContractFrameworkId];
+            $newEmp->org_chart_id = $orgChartMapping[$oldOrgChartId] ?? null;
+            $newEmp->work_site_id = $workSiteMapping[$oldWorkSiteId] ?? null;
+            $newEmp->work_shift_id = $workShiftMapping[$oldWorkShiftId] ?? null;
+            $newEmp->contract_framework_id = $work_site_contracts[$oldContractFrameworkId] ?? null;
             $newEmp->save();
 
             $mapping[$employeeData['id']] = $newEmp->id;
