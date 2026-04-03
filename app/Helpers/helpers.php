@@ -20,8 +20,10 @@ function formatNumber($number)
 {
     $locale = App::getLocale();
     $isPersian = $locale === 'fa' || $locale === 'fa_IR';
+    $formattedNumber = number_format(abs($number), 2);
 
-    $formattedNumber = number_format(abs($number));
+    $formattedNumber = rtrim($formattedNumber, '0');
+    $formattedNumber = rtrim($formattedNumber, '.');
 
     if ($isPersian) {
         $formattedNumber = convertToFarsi($formattedNumber);

@@ -74,8 +74,8 @@ class StoreTransactionRequest extends FormRequest
             ],
             'date' => 'required',
             'transactions.*.subject_id' => 'required|exists:subjects,id',
-            'transactions.*.debit' => 'nullable|required_without:transactions.*.credit|integer|min:0',
-            'transactions.*.credit' => 'nullable|required_without:transactions.*.debit|integer|min:0',
+            'transactions.*.debit' => 'nullable|required_without:transactions.*.credit|decimal:0,2|min:0',
+            'transactions.*.credit' => 'nullable|required_without:transactions.*.debit|decimal:0,2|min:0',
             'transactions.*.desc' => 'required|string',
         ];
     }

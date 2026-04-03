@@ -194,13 +194,14 @@
                                 @endif
                             </div>
                         </div>
-
-                        <a href="{{ route('documents.create') }}" class="btn btn-outline btn-primary gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                            </svg>
-                            {{ __('Create Manual Document (Taxes / Dividends)') }}
-                        </a>
+                        @if ($incomeSummaryBalance !== 0.0)
+                            <a href="{{ route('documents.create') }}" class="btn btn-outline btn-primary gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                </svg>
+                                {{ __('Create Manual Document (Taxes / Dividends)') }}
+                            </a>
+                        @endif
                     @else
                         <div class="text-gray-400 italic">{{ __('Complete Step 1 first to unlock this step.') }}</div>
                     @endif

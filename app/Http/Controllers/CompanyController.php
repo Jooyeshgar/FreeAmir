@@ -232,7 +232,7 @@ class CompanyController extends Controller
         }
 
         try {
-            FiscalYearService::stepOneCloseTemporaryAccounts($company, $request->user());
+            FiscalYearService::closeTemporaryAccounts($company, $request->user());
         } catch (\Exception $e) {
             return redirect()->route('companies.closing-wizard', $company)
                 ->with('error', $e->getMessage());

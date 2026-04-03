@@ -2225,7 +2225,7 @@ class FiscalYearService
      * Step 1 – Close temporary (income/expense) accounts into the Income Summary account.
      * Saves the resulting document ID onto the company as `pl_document_id`.
      */
-    public static function stepOneCloseTemporaryAccounts(Company $company, User $user): Document
+    public static function closeTemporaryAccounts(Company $company, User $user): Document
     {
         $document = DB::transaction(function () use ($company, $user) {
             $doc = self::currentProfitAndLoss($company, $user);
@@ -2399,7 +2399,7 @@ class FiscalYearService
             ->get()
             ->map(fn ($transaction) => [
                 'subject_id' => $transaction->subject_id,
-                'value' => $transaction->value,
+                'value' => -1 * $transaction->value,
                 'user_id' => $user->id,
                 'desc' => __('Balance for closing fiscal year'),
             ]);
