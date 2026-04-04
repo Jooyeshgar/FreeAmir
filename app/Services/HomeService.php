@@ -88,6 +88,47 @@ class HomeService
         return [$wagesCost, $productsCogCost, $servicesCogCost];
     }
 
+    /**
+     * Build income and cost chart data from non-permanent (temporary) subjects.
+     *
+     * Fetches all leaf non-permanent subjects that have a non-zero balance.
+     * Subjects with a positive balance are treated as income; negative as cost.
+     *
+     * @return array{incomeData: array<string, int>, costData: array<string, int>, profit: int}
+     */
+    public function profitFromNonPermanentSubjects(): array
+    {
+        // Get all root non-permanent subjects for the current fiscal year (applied via global scope)
+        $nonPermanentSubjects = Subject::where('is_permanent', false)->whereIsRoot()->get();
+
+        $incomeData = [];
+        $costData = [];
+        $profit = 0.0;
+
+        /** @var Subject $subject */
+        foreach ($nonPermanentSubjects as $subject) {
+            $balance = $this->subjectService->sumSubject($subject);
+
+            if ($balance === 0) {
+                continue;
+            }
+
+            $name = $subject->name;
+
+            if ($balance > 0) {
+                $incomeData[$name] = ($incomeData[$name] ?? 0) + $balance;
+                $costData[$name] = 0;
+            } else {
+                $costData[$name] = ($costData[$name] ?? 0) + abs($balance);
+                $incomeData[$name] = 0;
+            }
+
+            $profit += $balance;
+        }
+
+        return compact('incomeData', 'costData', 'profit');
+    }
+
     public function cashAndBanksBalances(string $type, int $duration)
     {
         if ($type === 'cash_book') {
@@ -265,7 +306,7 @@ class HomeService
             $bankAccountBalances[$bankAccount->id] = $bankAccountBalances[$bankAccount->id] ?? 0;
         }
 
-        arsort($bankAccountBalances);
+        asort($bankAccountBalances);
 
         return [$bankAccounts, array_slice($bankAccountBalances, 0, 10, true)];
     }

@@ -125,7 +125,7 @@ class SubjectService
     /**
      * Calculate the total sum of transactions for a subject with all its descendants recursively.
      */
-    public static function sumSubject(string|int|Subject|null $code, bool $both = true, bool $debit = false): int
+    public static function sumSubject(string|int|Subject|null $code, bool $both = true, bool $debit = false): float
     {
         if (is_null($code)) {
             return 0;
@@ -149,9 +149,9 @@ class SubjectService
     /**
      * Recursively sum transactions for a subject and all its descendants
      */
-    private static function sumSubjectRecursively(Subject $subject, bool $both, bool $debit): int
+    private static function sumSubjectRecursively(Subject $subject, bool $both, bool $debit): float
     {
-        $sum = 0;
+        $sum = 0.0;
         if ($both) {
             $sum = $subject->transactions->sum('value');
         } elseif ($debit) {

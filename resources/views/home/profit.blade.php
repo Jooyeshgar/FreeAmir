@@ -7,9 +7,21 @@
         </div>
 
         <div class="p-2">
+            @php
+                // Merge income and cost data keys so both datasets share the same labels
+                $profitLabels = array_unique(array_merge(array_keys($totalIncomesData), array_keys($totalCostsData)));
+                $alignedIncomesData = array_fill_keys($profitLabels, 0);
+                $alignedCostsData = array_fill_keys($profitLabels, 0);
+                foreach ($totalIncomesData as $k => $v) {
+                    $alignedIncomesData[$k] = $v;
+                }
+                foreach ($totalCostsData as $k => $v) {
+                    $alignedCostsData[$k] = $v;
+                }
+            @endphp
             <x-charts.bar-chart chart-id="profitChart" heightClass="h-64" :datasets="[
-                ['data' => $totalIncomesData, 'backgroundColor' => '#4bb946c4', 'borderColor' => '#4bb946'],
-                ['data' => $totalCostsData, 'backgroundColor' => 'red', 'borderColor' => 'red'],
+                ['data' => $alignedIncomesData, 'backgroundColor' => '#4bb946c4', 'borderColor' => '#4bb946'],
+                ['data' => $alignedCostsData, 'backgroundColor' => 'red', 'borderColor' => 'red'],
             ]" />
         </div>
     </div>
