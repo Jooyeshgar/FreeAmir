@@ -64,6 +64,7 @@ class AncillaryCostService
                     $documentData,
                     $transactions
                 );
+                DocumentService::changeDocumentStatus($document, $user, 'approved');
 
                 $ancillaryCost->update([
                     'document_id' => $document->id,
@@ -357,6 +358,7 @@ class AncillaryCostService
             'approver_id' => $user->id,
         ], $transactions);
 
+        DocumentService::changeDocumentStatus($document, $user, 'approved');
         DocumentService::syncDocumentable($document, $ancillaryCost);
 
         return $document;

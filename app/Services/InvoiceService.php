@@ -65,6 +65,7 @@ class InvoiceService
 
             DB::transaction(function () use ($documentData, $user, $transactions, $invoiceData, $items, &$createdDocument, &$createdInvoice) {
                 $createdDocument = DocumentService::createDocument($user, $documentData, $transactions);
+                DocumentService::changeDocumentStatus($createdDocument, $user, 'approved');
 
                 $invoiceData['document_id'] = $createdDocument->id;
                 $invoiceData['status'] = InvoiceStatus::APPROVED;
@@ -437,6 +438,7 @@ class InvoiceService
         ];
 
         $document = DocumentService::createDocument($user, $documentData, $buildResult['transactions']);
+        DocumentService::changeDocumentStatus($document, $user, 'approved');
         DocumentService::syncDocumentable($document, $invoice);
 
         return $document;
