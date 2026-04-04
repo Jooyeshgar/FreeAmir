@@ -32,36 +32,8 @@ class HomeController extends Controller
 
         $sellAmountPerProducts = $this->service->getSellAmountPerProducts();
 
-        [$service_revenue, $sales_revenue] = $this->service->incomeData();
-        $totalIncomes = array_sum($monthlyIncome);
-        $otherIncome = $totalIncomes - ($service_revenue + $sales_revenue);
-
-        [$wagesCost, $productsCogCost, $servicesCogCost] = $this->service->costsData();
-
-        $totalCosts = -1 * array_sum($monthlyCost);
-        $otherCost = $totalCosts - $wagesCost;
-
-        $totalIncomesData = [
-            __('Sales Revenue') => $sales_revenue,
-            __('Service Revenue') => $service_revenue,
-            __('Other Incomes') => $otherIncome,
-            __('Wages') => 0,
-            __('Cost of Goods') => 0,
-            __('Services COG') => 0,
-            __('Other Costs') => 0,
-        ];
-
-        $totalCostsData = [
-            __('Sales Revenue') => 0,
-            __('Service Revenue') => 0,
-            __('Other Incomes') => 0,
-            __('Wages') => abs($wagesCost),
-            __('Cost of Goods') => abs($productsCogCost),
-            __('Services COG') => abs($servicesCogCost),
-            __('Other Costs') => abs($otherCost),
-        ];
-
-        $profit = $totalIncomes + $totalCosts + $productsCogCost + $servicesCogCost;
+        ['incomeData' => $totalIncomesData, 'costData' => $totalCostsData, 'profit' => $profit] =
+            $this->service->profitFromNonPermanentSubjects();
 
         return view('home', compact(
             'cashTypes',
