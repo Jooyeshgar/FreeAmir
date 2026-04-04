@@ -232,7 +232,7 @@
                 },
                 getProductVat(productId) {
                     const product = this.products.find(p => p.id == productId);
-                    const productGroup = product.product_group;
+                    const productGroup = product.productGroup;
 
                     if (!product || !productGroup) return 0;
                     if (product.vat == null) {

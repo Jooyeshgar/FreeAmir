@@ -199,7 +199,7 @@
                     </div>
                     <div class="flex-1 min-w-24 max-w-32">
                         <x-text-input placeholder="0" x-model.number="transaction.quantity" x-bind:name="'transactions[' + index + '][quantity]'"
-                            x-bind:disabled="(!transaction.product_id && !transaction.service_id) || transaction.service_id"
+                            x-bind:disabled="(!transaction.product_id && !transaction.service_id)"
                             label_text_class="text-gray-500" label_class="w-full" input_class="border-white">
                         </x-text-input>
                     </div>
@@ -361,7 +361,7 @@
                 },
                 getProductVat(productId) {
                     const product = this.products.find(p => p.id == productId);
-                    const productGroup = product.product_group;
+                    const productGroup = product.productGroup;
 
                     if (!product || !productGroup) return 0;
                     if (product.vat == null) {
@@ -371,7 +371,7 @@
                 },
                 getServiceVat(serviceId) {
                     const service = this.services.find(s => s.id == serviceId);
-                    const serviceGroup = service.service_group;
+                    const serviceGroup = service.serviceGroup;
 
                     if (!service) return 0;
                     if (service.vat !== null && service.vat !== undefined) {
