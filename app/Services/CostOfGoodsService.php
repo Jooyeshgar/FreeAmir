@@ -28,7 +28,7 @@ class CostOfGoodsService
      */
     public static function updateProductsAverageCost(Invoice $invoice)
     {
-        if (! in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL])) {
+        if ($invoice->invoice_type === InvoiceType::SELL) {
             return;
         }
 
@@ -38,7 +38,8 @@ class CostOfGoodsService
             }
 
             $product = $invoiceItem->itemable;
-            $previousInvoice = self::getPreviousInvoice($invoice, $product->id);
+            $isReturnBuy = $invoice->invoice_type === InvoiceType::RETURN_BUY;
+            $previousInvoice = $isReturnBuy ? $invoice->getReturnedInvoice() : self::getPreviousInvoice($invoice, $product->id);
 
             $inputs = self::resolveCostCalculationInputs($invoice, $invoiceItem, $previousInvoice);
             if ($inputs === null) {
@@ -48,13 +49,18 @@ class CostOfGoodsService
                 continue;
             }
 
-            $baseCost = $inputs['baseCost'];
+            $sign = $isReturnBuy ? -1 : 1;
+
+            $baseCost = $sign * $inputs['baseCost'];
             $availableQuantity = $inputs['availableQuantity'];
-            $newQuantity = $inputs['newQuantity'];
-            $ancillaryCosts = $inputs['ancillaryCosts'];
+            $newQuantity = $sign * $inputs['newQuantity'];
+            $ancillaryCosts = $isReturnBuy ? $invoice->getReturnedInvoice()->ancillaryCosts : $inputs['ancillaryCosts'];
+
+            $sumAncillaryCosts = self::sumApprovedAncillaryCostsForProduct($ancillaryCosts, $product->id);
+            $ancillaryCostsValue = $isReturnBuy ? ($sumAncillaryCosts / $invoiceItem->quantity_at) * $newQuantity : $sumAncillaryCosts;
 
             $totalCosts = $baseCost;
-            $totalCosts += self::sumApprovedAncillaryCostsForProduct($ancillaryCosts, $product->id);
+            $totalCosts += $ancillaryCostsValue;
             $totalCosts += self::sumPreviousCogContribution($invoice, $previousInvoice, $product->id, $availableQuantity);
 
             $denominator = $availableQuantity + $newQuantity;
@@ -174,7 +180,7 @@ class CostOfGoodsService
      */
     public static function refreshProductCOGAfterItemsDeletion(Invoice $invoice, ?array $excludeItemIds = null): void
     {
-        if (! in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL])) {
+        if ($invoice->invoice_type === InvoiceType::SELL) {
             return;
         }
 
@@ -193,7 +199,7 @@ class CostOfGoodsService
 
         foreach ($products as $product) {
             $lastInvoiceItem = InvoiceItem::whereHas('invoice', function ($query) use ($invoice, $product) {
-                $query->where('invoice_type', InvoiceType::BUY)
+                $query->whereIn('invoice_type', [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::RETURN_BUY])
                     ->where('date', '<', $invoice->date)
                     ->whereHas('items', function ($q) use ($product) {
                         $q->where('itemable_type', Product::class)

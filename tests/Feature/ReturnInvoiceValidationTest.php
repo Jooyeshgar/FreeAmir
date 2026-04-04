@@ -107,10 +107,12 @@ class ReturnInvoiceValidationTest extends TestCase
 
         $return = $this->returnBuy([$this->productItem($product, 5, 100)], $buy->id, true, 6022, '2026-06-02')['invoice'];
 
+        //  توی انبار موجودی به مبلغ 100 نداریم چون به تعداد ۵ تا با ارزش ۱۰۰ برگشت از خرید دادیم.
+        // (۵ * ۱۰۰ - ۵ * ۱۰۰) / 0 = 0 تقسیم به صفر نداریم پس صفر در نظر میگیریم
         $product = $this->findProduct($product->id);
 
         $this->assertEquals(0, $product->quantity);
-        $this->assertEqualsWithDelta(100, $product->average_cost, 0.0001);
+        $this->assertEqualsWithDelta(0, $product->average_cost, 0.0001);
     }
 
     // -------------------------------------------------------------------------
@@ -293,7 +295,7 @@ class ReturnInvoiceValidationTest extends TestCase
             'customer_id' => $this->customer->id,
             'company_id' => $this->companyId,
             'date' => '2026-06-02',
-            'type' => 'Freight',
+            'type' => 'Other',
             'amount' => 100,
             'vatPrice' => 0,
             'ancillaryCosts' => [
@@ -310,11 +312,7 @@ class ReturnInvoiceValidationTest extends TestCase
 
         // موجودی: 10 - 3 - 2 = 5
         $this->assertEquals(5, $product->quantity);
-        $this->assertEqualsWithDelta(
-            $product->quantity * $product->average_cost,
-            CostOfGoodsService::getInventoryValue($product),
-            0.01
-        );
+        $this->assertEqualsWithDelta(5 * $product->average_cost, CostOfGoodsService::getInventoryValue($product), 0.01);
     }
 
     // -------------------------------------------------------------------------
@@ -448,7 +446,7 @@ class ReturnInvoiceValidationTest extends TestCase
             'customer_id' => $this->customer->id,
             'company_id' => $this->companyId,
             'date' => '2026-06-02',
-            'type' => 'Customs',
+            'type' => 'Other',
             'amount' => 150,
             'vatPrice' => 0,
             'ancillaryCosts' => [
@@ -465,11 +463,7 @@ class ReturnInvoiceValidationTest extends TestCase
 
         // موجودی: 10 - 5 + 3 = 8
         $this->assertEquals(8, $product->quantity);
-        $this->assertEqualsWithDelta(
-            $product->quantity * $product->average_cost,
-            CostOfGoodsService::getInventoryValue($product),
-            0.01
-        );
+        $this->assertEqualsWithDelta(8 * 115, CostOfGoodsService::getInventoryValue($product), 0.01);
     }
 
     // -------------------------------------------------------------------------
@@ -535,10 +529,6 @@ class ReturnInvoiceValidationTest extends TestCase
         $this->assertEqualsWithDelta($expectedAvgAfterReturnBuy, $product->average_cost, 0.01);
 
         // مرحله ۶: بررسی نهایی ارزش موجودی
-        $this->assertEqualsWithDelta(
-            $product->quantity * $product->average_cost,
-            CostOfGoodsService::getInventoryValue($product),
-            0.01
-        );
+        $this->assertEqualsWithDelta(11 * 110.91, CostOfGoodsService::getInventoryValue($product), 0.01);
     }
 }
