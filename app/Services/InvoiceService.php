@@ -624,12 +624,14 @@ class InvoiceService
     private static function checkReturnInvoiceRelationForStatusChange(Invoice $invoice, InvoiceStatus $nextStatus, InvoiceStatusDecision $decision): void
     {
         if (in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::SELL], true) && $nextStatus->isUnapproved()) {
-            $returnInvoice = $invoice->getReturnInvoice();
-            if ($returnInvoice) {
-                $decision->addMessage('error', __('invoices.status_change.blocked_by_return_invoice', [
-                    'invoice' => $returnInvoice->number,
-                ]));
-                $decision->addConflict($returnInvoice);
+            $returnInvoices = $invoice->getReturnInvoice();
+            foreach ($returnInvoices as $returnInvoice) {
+                if ($returnInvoice) {
+                    $decision->addMessage('error', __('invoices.status_change.blocked_by_return_invoice', [
+                        'invoice' => $returnInvoice->number,
+                    ]));
+                    $decision->addConflict($returnInvoice);
+                }
             }
 
             return;
@@ -641,7 +643,30 @@ class InvoiceService
 
         $originalInvoice = $invoice->getReturnedInvoice();
         if (! $originalInvoice) {
+            $decision->addMessage('error', __('Returned invoice is not linked to any original invoice (:invoice).', [
+                'invoice' => $invoice->number,
+            ]));
+            $decision->addConflict($originalInvoice);
+
             return;
+        }
+
+        $returnedInvoices = Invoice::where('returned_invoice_id', $invoice->id)->whereNot('id', $invoice->id)->with('items')->get();
+        $sumLastReturnedInvoiceItems = 0;
+        foreach ($originalInvoice->first()->items as $item) {
+            $returnedInvoiceItem = null;
+            foreach ($returnedInvoices as $returnedInvoice) {
+                $returnedInvoiceItem = $returnedInvoice->items()
+                    ->where('itemable_type', $item->itemable_type)
+                    ->where('itemable_id', $item->itemable_id)
+                    ->first();
+
+                $sumReturnedInvoiceItem += $returnedInvoiceItem?->quantity ?? 0;
+            }
+            if ($item->quantity < $returnedInvoiceItem?->quantity + $sumLastReturnedInvoiceItems) {
+                $decision->addMessage('error', __('The addition quantity for this item and its last returned invoice items cannot exceed the original invoice quantity of :quantity.', ['quantity' => $item->quantity]));
+                $decision->addConflict($originalInvoice);
+            }
         }
 
         $originalDateIsAfterReturnDate = $originalInvoice->date !== null && $invoice->date !== null
@@ -656,7 +681,7 @@ class InvoiceService
             return;
         }
 
-        $decision->addMessage('warning', __('Return invoice is linked to original invoice (:invoice).', [
+        $decision->addMessage('warning', __('Return invoice is linked to original invoice (:invoice)', [
             'invoice' => $originalInvoice->number,
         ]));
         $decision->addConflict($originalInvoice);

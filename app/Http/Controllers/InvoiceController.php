@@ -79,7 +79,7 @@ class InvoiceController extends Controller
             $item->where('itemable_type', Service::class);
         }));
 
-        $builder->when(! $service_buy, fn ($q) => $q->whereHas('items', function ($item) {
+        $builder->when(! $service_buy && ! in_array($request->invoice_type, [InvoiceType::SELL->value, InvoiceType::RETURN_SELL->value]), fn ($q) => $q->whereHas('items', function ($item) {
             $item->where('itemable_type', Product::class);
         }));
 
@@ -149,13 +149,16 @@ class InvoiceController extends Controller
             $returnInvoiceType = $returnInvoiceTypeMap[$request->invoice_type];
 
             $returnInvoices = Invoice::where('invoice_type', $returnInvoiceType)->where('status', InvoiceStatus::APPROVED)->with(['customer', 'items'])->get();
-            $returnInvoices = $returnInvoices->filter(function ($invoice) {
-                return ! $invoice->getReturnInvoice();
-            });
 
             if ($request->filled('service_buy')) {
                 $returnInvoices = $returnInvoices->filter(function ($invoice) {
                     return $invoice->items->where('itemable_type', Product::class)->isEmpty();
+                });
+            }
+
+            if (! $request->filled('service_buy') && $returnInvoiceType === InvoiceType::BUY) {
+                $returnInvoices = $returnInvoices->filter(function ($invoice) {
+                    return $invoice->items->where('itemable_type', Service::class)->isEmpty();
                 });
             }
 
