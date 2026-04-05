@@ -2,7 +2,7 @@ services:
     nginx:
         build:
             context: ..
-            dockerfile: docker/nginx/Dockerfile
+            dockerfile: docker/production/nginx/Dockerfile
         image: freeamir/nginx:latest
         restart: unless-stopped
         ports:
@@ -19,7 +19,7 @@ services:
     php-fpm:
         build:
             context: ..
-            dockerfile: docker/Dockerfile
+            dockerfile: docker/production/Dockerfile
             target: production
         image: freeamir/app:latest
         restart: unless-stopped

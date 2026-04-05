@@ -67,13 +67,13 @@ COPY --from=builder /usr/local/bin/docker-php-ext-* /usr/local/bin/
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
 # App-specific PHP settings (upload limits, opcache, etc.)
-COPY docker/php.ini $PHP_INI_DIR/conf.d/99-app.ini
+COPY docker/production/php.ini /usr/local/etc/php/conf.d/99-app.ini
 
 # PHP-FPM pool config (enables /status endpoint for healthcheck)
-COPY docker/php-fpm/php-fpm.conf /usr/local/etc/php-fpm.d/zz-app.conf
+COPY docker/production/php-fpm/php-fpm.conf /usr/local/etc/php-fpm.d/zz-app.conf
 
 # Copy entrypoint
-COPY docker/bootstrap.sh /usr/local/bin/bootstrap.sh
+COPY docker/production/bootstrap.sh /usr/local/bin/bootstrap.sh
 RUN chmod +x /usr/local/bin/bootstrap.sh
 
 # Copy application code + vendor from builder

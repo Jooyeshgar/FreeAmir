@@ -18,10 +18,7 @@ bootstrap/cache
 
 # Docker files (not needed inside the image)
 docker
-!docker/php.ini
-!docker/php-fpm/
-!docker/bootstrap.sh
-!docker/nginx/
+!docker/all-in-one/
 docker-compose.yml
 .dockerignore
 
