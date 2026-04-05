@@ -15,8 +15,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcurl4-openssl-dev \
     libicu-dev \
     libzip-dev \
+    libpq-dev \
     && docker-php-ext-install -j$(nproc) \
         pdo_mysql \
+        pdo_pgsql \
         gd \
         intl \
         zip \
@@ -28,58 +30,59 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /var/www/html
 
-# Copy full application source so post-autoload-dump Artisan scripts can run
 COPY . /var/www/html
 
-# Install Composer and production dependencies
 RUN mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs \
     && chmod -R 775 bootstrap/cache storage \
     && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
     && composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist
 
 # =============================================================================
-# Stage 2: Production — lean PHP-FPM runtime image
-# =============================================================================
+#Stage 2: All-in-One — PHP-FPM + Nginx + MySQL + Supervisor
+#=============================================================================
+
 FROM php:8.3-fpm AS production
 
-# Runtime-only system libraries + php-fpm-healthcheck dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    libicu-dev \
-    libzip-dev \
+    libpng16-16 \
+    libonig5 \
+    libxml2 \
+    libicu72 \
+    libzip4 \
+    libpq5 \
     libfcgi-bin \
     procps \
+    nginx \
+    mariadb-server \
+    mariadb-client \
+    supervisor \
+    curl \
     && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Install php-fpm health-check script
 RUN curl -fsSL https://raw.githubusercontent.com/renatomefi/php-fpm-healthcheck/master/php-fpm-healthcheck \
     -o /usr/local/bin/php-fpm-healthcheck \
     && chmod +x /usr/local/bin/php-fpm-healthcheck
 
-# Copy compiled PHP extensions and config from builder
 COPY --from=builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
 COPY --from=builder /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
 COPY --from=builder /usr/local/bin/docker-php-ext-* /usr/local/bin/
 
-# Use PHP's recommended production ini
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
-# App-specific PHP settings (upload limits, opcache, etc.)
-COPY docker/php.ini $PHP_INI_DIR/conf.d/99-app.ini
+COPY docker/all-in-one/php.ini $PHP_INI_DIR/conf.d/99-app.ini
 
-# PHP-FPM pool config (enables /status endpoint for healthcheck)
-COPY docker/php-fpm/php-fpm.conf /usr/local/etc/php-fpm.d/zz-app.conf
+COPY docker/all-in-one/php-fpm/php-fpm.conf /usr/local/etc/php-fpm.d/zz-app.conf
+COPY docker/all-in-one/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY docker/all-in-one/nginx/default.conf /etc/nginx/sites-available/default
+COPY docker/all-in-one/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/all-in-one/init-mysql.sh /usr/local/bin/init-mysql.sh
+COPY docker/all-in-one/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/init-mysql.sh /usr/local/bin/entrypoint.sh
 
-# Copy entrypoint
-COPY docker/bootstrap.sh /usr/local/bin/bootstrap.sh
-RUN chmod +x /usr/local/bin/bootstrap.sh
-
-# Copy application code + vendor from builder
 COPY --from=builder --chown=www-data:www-data /var/www/html /var/www/html
 
-# Ensure storage and cache dirs exist and are writable
+COPY --chown=www-data:www-data .env.example /var/www/html/.env.example
+
 RUN mkdir -p \
         /var/www/html/storage/app/public \
         /var/www/html/storage/framework/cache/data \
@@ -94,11 +97,20 @@ RUN mkdir -p \
         /var/www/html/storage \
         /var/www/html/bootstrap/cache
 
+RUN mkdir -p /var/lib/mysql /run/mysqld \
+    && chown -R mysql:mysql /var/lib/mysql /run/mysqld
+
+# Create sites-enabled symlink for nginx
+RUN mkdir -p /etc/nginx/sites-enabled \
+    && ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+
 WORKDIR /var/www/html
 
-USER www-data
+EXPOSE 80 3306
 
-EXPOSE 9000
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost/health || exit 1
 
-ENTRYPOINT ["/usr/local/bin/bootstrap.sh"]
-CMD ["php-fpm"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
