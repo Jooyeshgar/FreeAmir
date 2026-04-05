@@ -391,10 +391,10 @@ class FiscalYearService
                         }
                     }
                 }
-                if (isset($importData['tax_slabs'])) {
+                if (in_array('tax_slabs', $sectionsToImport) && isset($importData['tax_slabs'])) {
                     self::_importTaxSlabs($importData['tax_slabs'], $targetYearId);
                 }
-                if (isset($importData['public_holidays'])) {
+                if (in_array('public_holidays', $sectionsToImport) && isset($importData['public_holidays'])) {
                     self::_importPublicHolidays($importData['public_holidays'], $targetYearId);
                 }
                 if (in_array('employees', $sectionsToImport)) {
@@ -434,6 +434,8 @@ class FiscalYearService
                                 ]);
                         }
                     }
+                }
+                if (in_array('payrolls', $sectionsToImport)) {
                     if (isset($importData['salary_decrees'])) {
                         $employeeMapping = $idMappings['employees'] ?? [];
                         if (! empty($employeeMapping)) {
@@ -664,7 +666,8 @@ class FiscalYearService
             $sourceData['work_shifts'] = WorkShift::withoutGlobalScope(FiscalYearScope::class)
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
-
+        }
+        if (in_array('payrolls', $sections)) {
             $sourceData['salary_decrees'] = SalaryDecree::withoutGlobalScope(FiscalYearScope::class)
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
