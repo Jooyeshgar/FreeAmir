@@ -23,7 +23,7 @@ class CompanyController extends Controller
         'postal_code' => 'nullable|integer',
         'phone_number' => 'nullable|numeric|regex:/^09\d{9}$/',
         'fiscal_year' => 'required|numeric',
-        'currency' => 'required|string|max:50',
+        'currency' => 'nullable|string|max:50',
     ];
 
     public function __construct() {}
@@ -75,6 +75,8 @@ class CompanyController extends Controller
         unset($data['source_year_id']);
         unset($data['tables_to_copy']);
 
+        $data['currency'] ??= 'Rial'; // default
+
         $company = FiscalYearService::createWithCopiedData(
             $data,
             $validated['source_year_id'],
@@ -107,6 +109,8 @@ class CompanyController extends Controller
             $logo = $this->storeLogo($logo, $company);
             $validated['logo'] = $logo;
         }
+
+        $validated['currency'] ??= 'Rial'; // default
 
         if ($company->update($validated)) {
             return redirect(route('companies.index'))
