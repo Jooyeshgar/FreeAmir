@@ -15,7 +15,8 @@ enum FiscalYearSection: string
     case DOCUMENTS = 'documents'; // Represents documents + transactions + document_files
     case INVOICES = 'invoices'; // Represents invoices + ancillary_costs
     // case CHEQUES = 'cheques'; //  Represents cheques + cheque_histories
-    case EMPLOYEES = 'employees'; // Represents employees + org_charts + work_sites + work_site_contracts + work_shifts + salary_decrees + monthly_attendances + attendance_logs + payrolls + personnel_requests
+    case EMPLOYEES = 'employees'; // Represents employees + org_charts + work_sites + work_site_contracts + work_shifts
+    case PAYROLLS = 'payrolls'; // salary_decrees + monthly_attendances + attendance_logs + payrolls + payroll_elements + personnel_requests
     case PUBLIC_HOLIDAYS = 'public_holidays';
     case TAX_SLABS = 'tax_slabs';
 
@@ -42,7 +43,10 @@ enum FiscalYearSection: string
             self::PRODUCTS->value => self::PRODUCTS->label(),
             self::SERVICES->value => self::SERVICES->label(),
             self::SUBJECTS->value => self::SUBJECTS->label(),
+            self::DOCUMENTS->value => self::DOCUMENTS->label(),
+            self::INVOICES->value => self::INVOICES->label(),
             self::EMPLOYEES->value => self::EMPLOYEES->label(),
+            self::PAYROLLS->value => self::PAYROLLS->label(),
             self::PUBLIC_HOLIDAYS->value => self::PUBLIC_HOLIDAYS->label(),
             self::TAX_SLABS->value => self::TAX_SLABS->label(),
         ];
