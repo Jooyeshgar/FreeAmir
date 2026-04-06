@@ -1,4 +1,7 @@
 {
+    "Backup": "پشتیبان گیری",
+    "Backup from": " پشتیبان گیری از",
+    "Select Tables to backup": "جداول را برای گرفتن پشتیبان انتخاب کنید",
     " with number ": "شماره",
     "(From amount) - (To amount) : Discount amount": "(از مقدار) - (به مبلغ) : مبلغ تخفیف",
     ":approved documents approved successfully.|:approved documents approved successfully.": ":approved سند با موفقیت تأیید شد.|:approved سند با موفقیت تأیید شدند.",
