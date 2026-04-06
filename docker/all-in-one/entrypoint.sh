@@ -4,16 +4,30 @@ set -e
 
 echo "🚀 Starting FreeAmir All-in-One Container..."
 
-if [ ! -d "/var/lib/mysql/mysql" ]; then
+/usr/sbin/mysqld --user=mysql --skip-networking=0 &
+
+MYSQL_PID=$!
+
+echo "Waiting for MariaDB to start..."
+
+for i in {30..0}; do
+    if mysqladmin ping -h localhost --silent; then
+        break
+    fi
+    sleep 1
+done
+
+if [ "$i" = 0 ]; then
+    echo "MariaDB failed to start"
+    kill "$MYSQL_PID" 2>/dev/null || true
+    exit 1
+fi
+
+if [ ! -d "/var/lib/mysql/freeamir" ]; then
     echo "📦 Initializing MySQL database..."
     /usr/local/bin/init-mysql.sh
 fi
 
-echo "⏳ Waiting for MySQL to be ready..."
-
-until mysqladmin ping -h localhost --silent; do
-    sleep 1
-done
 
 echo "✅ MySQL is ready"
 
@@ -77,12 +91,15 @@ if [ ! -L public/storage ]; then
     php artisan storage:link
 fi
 
+echo "🛑 Stopping temporary MySQL..."
+mysqladmin -u root shutdown
+wait $MYSQL_PID
+
 echo "🔒 Setting permissions..."
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 echo "✨ FreeAmir is ready!"
-echo "📍 Access the application at: http://localhost"
-echo "🗄️ MySQL is running on port 3306"
+
 
 # Execute the main command (supervisord)
 exec "$@"

@@ -102,7 +102,7 @@ RUN mkdir -p /var/lib/mysql /run/mysqld \
 
 # Create sites-enabled symlink for nginx
 RUN mkdir -p /etc/nginx/sites-enabled \
-    && ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+    && ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
 WORKDIR /var/www/html
 
