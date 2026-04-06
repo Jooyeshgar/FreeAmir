@@ -126,15 +126,9 @@ class CompanyController extends Controller
      */
     public function destroy(Company $company): RedirectResponse
     {
-        if ($company->delete()) {
-            FiscalYearService::deleteCompanyData($company);
+        FiscalYearService::deleteCompanyData($company);
 
-            return redirect(route('companies.index'))
-                ->with('success', __('Company deleted successfully.'));
-        }
-
-        return redirect(route('companies.index'))
-            ->with('error', 'An error occurred, Try again.');
+        return redirect(route('companies.index'))->with('success', __('Company deleted successfully.'));
     }
 
     /**

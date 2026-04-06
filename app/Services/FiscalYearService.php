@@ -106,13 +106,14 @@ class FiscalYearService
             // 'cheques',
         ];
         $sourceData = self::fetchSourceData($company->id, $sectionsToDelete);
+        $company->delete();
 
         self::deleteData($sourceData);
     }
 
     protected static function deleteData(array $data)
     {
-        return DB::transaction(function ($data) {
+        return DB::transaction(function () use ($data) {
             DB::statement('SET FOREIGN_KEY_CHECKS=0;');
             Model::unguard();
 
