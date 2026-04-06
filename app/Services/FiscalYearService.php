@@ -116,6 +116,10 @@ class FiscalYearService
         foreach ($models as $model) {
             $m = "App\\Models\\{$modelName}"::find($model['id']);
 
+            if (! $m) {
+                continue;
+            }
+
             if ($withService) {
                 $service = app("App\\Services\\{$modelName}Service");
 
@@ -133,10 +137,10 @@ class FiscalYearService
                         $service->delete($m);
                     }
                 } else {
-                    $m?->delete();
+                    $m->delete();
                 }
             } else {
-                $m?->delete();
+                $m->delete();
             }
         }
     }
