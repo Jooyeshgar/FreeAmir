@@ -106,7 +106,6 @@ class FiscalYearService
             // 'cheques',
         ];
         $sourceData = self::fetchSourceData($company->id, $sectionsToDelete);
-        $company->delete();
 
         self::deleteData($sourceData);
     }
