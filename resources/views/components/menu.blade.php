@@ -230,6 +230,9 @@
                         @canany(['management.configs.index', 'management.configs.create', 'management.configs.edit'])
                             <li><a href="{{ route('configs.index') }}">{{ __('Configs') }}</a></li>
                         @endcanany
+                        @can('backups.create')
+                            <li><a href="{{ route('backups.create') }}">{{ __('Backup') }}</a></li>
+                        @endcan
                     </ul>
                 </details>
             </li>
