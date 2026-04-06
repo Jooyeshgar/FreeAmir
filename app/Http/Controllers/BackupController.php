@@ -7,6 +7,7 @@ use App\Models\Company;
 use Artisan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use ZipArchive;
 
 class BackupController extends Controller
 {
@@ -25,6 +26,25 @@ class BackupController extends Controller
     public function download(string $path)
     {
         $fullPath = storage_path("app/$path");
+
+        if (! file_exists($fullPath)) {
+            abort(404, __('File not found'));
+        }
+
+        $zipFileName = 'backup_'.now()->format('Y-m-d_H-i-s').'.zip';
+        $zipPath = storage_path('app/temp/'.$zipFileName);
+
+        if (! file_exists(storage_path('app/temp'))) {
+            mkdir(storage_path('app/temp'), 0755, true);
+        }
+
+        $zip = new ZipArchive;
+        if ($zip->open($zipPath, ZipArchive::CREATE) === true) {
+            $zip->addFile($fullPath, basename($path));
+            $zip->close();
+
+            return response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
+        }
 
         return response()->download($fullPath, 'backup_'.now()->format('Y-m-d_H-i-s').'.json');
     }
