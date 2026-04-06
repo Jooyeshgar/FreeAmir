@@ -99,105 +99,35 @@ class FiscalYearService
      */
     public static function deleteCompanyData(Company $company)
     {
-        $sourceData = self::fetchSourceData($company->id, self::getAvailableSections());
-
-        $sourceData['subjects'] = Subject::withoutGlobalScope(FiscalYearScope::class)
-            ->where('company_id', $company->id)
-            ->orderByDesc('parent_id')
-            ->get()->toArray();
+        $sectionsToDelete = [ // other models will be deleted on cascade when company deleted.
+            'documents',
+            'ancillary_costs',
+            'invoices',
+            // 'cheques',
+        ];
+        $sourceData = self::fetchSourceData($company->id, $sectionsToDelete);
 
         self::deleteData($sourceData);
     }
 
-    protected static function modelToDelete(array $models, string $modelName, bool $withService = false)
-    {
-        $serviceExpectsId = ['Invoice', 'Document'];
-
-        foreach ($models as $model) {
-            $m = "App\\Models\\{$modelName}"::find($model['id']);
-
-            if (! $m) {
-                continue;
-            }
-
-            if ($withService) {
-                $service = app("App\\Services\\{$modelName}Service");
-
-                $specificMethod = "delete{$modelName}";
-                if (method_exists($service, $specificMethod)) {
-                    if (in_array($modelName, $serviceExpectsId)) {
-                        $service->$specificMethod($model['id']);
-                    } else {
-                        $service->$specificMethod($m);
-                    }
-                } elseif (method_exists($service, 'delete')) {
-                    if (in_array($modelName, $serviceExpectsId)) {
-                        $service->delete($model['id']);
-                    } else {
-                        $service->delete($m);
-                    }
-                } else {
-                    $m->delete();
-                }
-            } else {
-                $m->delete();
-            }
-        }
-    }
-
     protected static function deleteData(array $data)
     {
-        $modelMappings = [
-            'personnel_requests' => ['model' => 'PersonnelRequest', 'withService' => false],
-            'decree_benefits' => ['model' => 'DecreeBenefit', 'withService' => false],
-            'payroll_items' => ['model' => 'PayrollItem', 'withService' => false],
-            'payroll_elements' => ['model' => 'PayrollElement', 'withService' => false],
-            'payrolls' => ['model' => 'Payroll', 'withService' => false],
-            'attendance_logs' => ['model' => 'AttendanceLog', 'withService' => false],
-            'monthly_attendances' => ['model' => 'MonthlyAttendance', 'withService' => false],
-            'salary_decrees' => ['model' => 'SalaryDecree', 'withService' => false],
-            'tax_slabs' => ['model' => 'TaxSlab', 'withService' => false],
-            'public_holidays' => ['model' => 'PublicHoliday', 'withService' => false],
-            'org_charts' => ['model' => 'OrgChart', 'withService' => false],
-            'work_sites' => ['model' => 'WorkSite', 'withService' => false],
-            'work_site_contracts' => ['model' => 'WorkSiteContract', 'withService' => false],
-            'work_shifts' => ['model' => 'WorkShift', 'withService' => false],
-            'employees' => ['model' => 'Employee', 'withService' => false],
-            'invoices' => ['model' => 'Invoice', 'withService' => true],
-            'ancillary_costs' => ['model' => 'AncillaryCost', 'withService' => true],
-            'bank_accounts' => ['model' => 'BankAccount', 'withService' => false],
-            'banks' => ['model' => 'Bank', 'withService' => false],
-            'subjects' => ['model' => 'Subject', 'withService' => false],
-            'configs' => ['model' => 'Config', 'withService' => false],
-            'customers' => ['model' => 'Customer', 'withService' => true],
-            'customer_groups' => ['model' => 'CustomerGroup', 'withService' => false],
-            'products' => ['model' => 'Product', 'withService' => true],
-            'product_groups' => ['model' => 'ProductGroup', 'withService' => false],
-            'services' => ['model' => 'Service', 'withService' => true],
-            'service_groups' => ['model' => 'ServiceGroup', 'withService' => false],
-            // 'cheques' => ['model' => 'Cheque', 'withService' => false],
-            // 'cheque_histories' => ['model' => 'ChequeHistoriy', 'withService' => false],
-            'documents' => ['model' => 'Document', 'withService' => true],
-        ];
-
-        $deletionOrder = [
-            'personnel_requests', 'decree_benefits', 'payroll_items', 'payroll_elements', 'payrolls',
-            'attendance_logs', 'monthly_attendances', 'salary_decrees', 'work_site_contracts', 'invoices',
-            'ancillary_costs', 'documents', 'customers', 'customer_groups', 'products', 'product_groups',
-            'services', 'service_groups', 'employees', 'public_holidays', 'org_charts', 'work_sites',
-            'work_shifts', 'tax_slabs', 'bank_accounts', 'banks', 'configs', 'subjects', // 'cheques', 'cheque_histories',
-        ];
-
-        return DB::transaction(function () use ($data, $modelMappings, $deletionOrder) {
+        return DB::transaction(function ($data) {
             DB::statement('SET FOREIGN_KEY_CHECKS=0;');
             Model::unguard();
 
             try {
-                foreach ($deletionOrder as $dataKey) {
-                    if (isset($data[$dataKey]) && ! empty($data[$dataKey])) {
-                        $mapping = $modelMappings[$dataKey] ?? ['model' => str_replace('_', '', ucwords($dataKey, '_')), 'withService' => false];
-                        self::modelToDelete($data[$dataKey], $mapping['model'], $mapping['withService']);
-                    }
+                foreach ($data['invoices'] as $invoice) {
+                    InvoiceService::deleteInvoice($invoice['id']);
+                }
+
+                foreach ($data['ancillary_costs'] as $ancillary_cost) {
+                    $ancillary = AncillaryCost::find($ancillary_cost['id']);
+                    AncillaryCostService::deleteAncillaryCost($ancillary);
+                }
+
+                foreach ($data['documents'] as $document) {
+                    DocumentService::deleteDocument($document['id']);
                 }
             } catch (Exception $e) {
                 Log::error('Fiscal Year delete Failed: '.$e->getMessage(), ['exception' => $e]);
