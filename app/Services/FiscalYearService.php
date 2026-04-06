@@ -300,39 +300,39 @@ class FiscalYearService
                         }
                     }
                 }
-                if (in_array('cheques', $sectionsToImport)) {
-                    $customerMapping = $idMappings['customers'] ?? [];
-                    $transactionMapping = $idMappings['transactions'] ?? [];
-                    $bankAccountMapping = $idMappings['bank_accounts'] ?? [];
+                // if (in_array('cheques', $sectionsToImport)) {
+                // $customerMapping = $idMappings['customers'] ?? [];
+                // $transactionMapping = $idMappings['transactions'] ?? [];
+                // $bankAccountMapping = $idMappings['bank_accounts'] ?? [];
 
-                    if (isset($importData['cheques'])) {
-                        if (! empty($customerMapping) && ! empty($transactionMapping) && ! empty($bankAccountMapping)) {
-                            $idMappings['cheques'] = self::_importCheques($importData['cheques'], $targetYearId, $customerMapping, $transactionMapping, $bankAccountMapping);
-                        } else {
-                            Log::warning('Skipping cheques import due to missing customer or transaction or bank account mappings.', [
-                                'target_year_id' => $targetYearId,
-                                'has_customer_mapping' => ! empty($customerMapping),
-                                'has_trasnaction_mapping' => ! empty($transactionMapping),
-                                'has_bank_account_mapping' => ! empty($bankAccountMapping),
-                            ]);
-                        }
-                    }
+                // if (isset($importData['cheques'])) {
+                //     if (! empty($customerMapping) && ! empty($transactionMapping) && ! empty($bankAccountMapping)) {
+                //         $idMappings['cheques'] = self::_importCheques($importData['cheques'], $targetYearId, $customerMapping, $transactionMapping, $bankAccountMapping);
+                //     } else {
+                //         Log::warning('Skipping cheques import due to missing customer or transaction or bank account mappings.', [
+                //             'target_year_id' => $targetYearId,
+                //             'has_customer_mapping' => ! empty($customerMapping),
+                //             'has_trasnaction_mapping' => ! empty($transactionMapping),
+                //             'has_bank_account_mapping' => ! empty($bankAccountMapping),
+                //         ]);
+                //     }
+                // }
 
-                    // if (isset($importData['cheque_histories'])) {
-                    //     $chequeMapping = $idMappings['cheques'] ?? [];
-                    //     if (! empty($chequeMapping) && ! empty($customerMapping) && ! empty($transactionMapping) && ! empty($bankAccountMapping)) {
-                    //         self::_importChequeHistories($importData['cheque_histories'], $targetYearId, $chequeMapping, $customerMapping, $transactionMapping, $bankAccountMapping);
-                    //     } else {
-                    //         Log::warning('Skipping cheque histories import due to missing cheque or customer or transaction or bank account mappings.', [
-                    //             'target_year_id' => $targetYearId,
-                    //             'has_cheque_mapping' => ! empty($chequeMapping),
-                    //             'has_customer_mapping' => ! empty($customerMapping),
-                    //             'has_trasnaction_mapping' => ! empty($transactionMapping),
-                    //             'has_bank_account_mapping' => ! empty($bankAccountMapping),
-                    //         ]);
-                    //     }
-                    // }
-                }
+                // if (isset($importData['cheque_histories'])) {
+                //     $chequeMapping = $idMappings['cheques'] ?? [];
+                //     if (! empty($chequeMapping) && ! empty($customerMapping) && ! empty($transactionMapping) && ! empty($bankAccountMapping)) {
+                //         self::_importChequeHistories($importData['cheque_histories'], $targetYearId, $chequeMapping, $customerMapping, $transactionMapping, $bankAccountMapping);
+                //     } else {
+                //         Log::warning('Skipping cheque histories import due to missing cheque or customer or transaction or bank account mappings.', [
+                //             'target_year_id' => $targetYearId,
+                //             'has_cheque_mapping' => ! empty($chequeMapping),
+                //             'has_customer_mapping' => ! empty($customerMapping),
+                //             'has_trasnaction_mapping' => ! empty($transactionMapping),
+                //             'has_bank_account_mapping' => ! empty($bankAccountMapping),
+                //         ]);
+                //     }
+                // }
+                // }
                 if (in_array('invoices', $sectionsToImport)) {
                     $customerMapping = $idMappings['customers'] ?? [];
                     $documentMapping = $idMappings['documents'] ?? [];
