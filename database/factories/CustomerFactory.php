@@ -73,13 +73,16 @@ class CustomerFactory extends Factory
         return $this->afterCreating(function (Customer $customer) {
             $group = CustomerGroup::withoutGlobalScopes()->find($customer->group_id);
 
-            Subject::factory()
+            $subject = Subject::factory()
                 ->withParent(Subject::withoutGlobalScopes()->find($group->subject_id))
                 ->for($customer, 'subjectable')
                 ->create([
                     'name' => $customer->name,
                     'company_id' => $customer->company_id,
                 ]);
+
+            $customer->subject_id = $subject->id;
+            $customer->saveQuietly();
         });
     }
 }
