@@ -41,37 +41,54 @@ class CustomerService
 
     protected function syncSubject(Customer $customer): void
     {
-        $companyId = $customer->company_id ?? getActiveCompany();
-        $parentId = $customer->group?->subject_id ?? null;
+        $customer->loadMissing('group', 'subject');
 
-        $subject = $customer->subject;
+        $group = $customer->group;
+        $companyId = $customer->company_id ?? $group?->company_id ?? getActiveCompany();
+
+        if (! $companyId) {
+            throw new \RuntimeException('Unable to determine company for customer subject synchronization.');
+        }
+
+        $relation = 'subject';
+        $subject = $customer->$relation;
+        $parentId = $group?->subject_id ?? null;
+        $targetName = $customer->name;
 
         if (! $subject) {
             $subject = $this->subjectService->createSubject([
-                'name' => $customer->name,
+                'name' => $targetName,
                 'parent_id' => $parentId,
                 'company_id' => $companyId,
             ]);
-
-            // Link polymorphic relation
-            $subject->subjectable()->associate($customer);
-            if ($subject->isDirty(['subjectable_id', 'subjectable_type'])) {
-                $subject->save();
-            }
-        } else {
-            // Use the dedicated editor to handle name/parent changes and code regeneration
-            $subject = $this->subjectService->editSubject($subject, [
-                'name' => $customer->name,
-                'parent_id' => $parentId,
-            ]);
-
-            // Ensure the subject is associated to this customer (in case it wasn't)
-            $subject->subjectable()->associate($customer);
-            if ($subject->isDirty(['subjectable_id', 'subjectable_type'])) {
-                $subject->save();
-            }
         }
 
-        $customer->setRelation('subject', $subject);
+        $needsSave = false;
+
+        if ($subject->name !== $targetName) {
+            $subject->name = $targetName;
+            $needsSave = true;
+        }
+
+        $normalizedParentId = $parentId ?: null;
+        if ($subject->parent_id !== $normalizedParentId) {
+            $subject->parent_id = $normalizedParentId;
+            $needsSave = true;
+        }
+
+        if ($subject->subjectable_id !== $customer->id || $subject->subjectable_type !== $customer->getMorphClass()) {
+            $subject->subjectable()->associate($customer);
+            $needsSave = true;
+        }
+
+        if ($needsSave) {
+            $subject->save();
+        }
+
+        $customer->setRelation($relation, $subject);
+
+        if ($subject->id !== $customer->subject_id) {
+            $customer->updateQuietly(['subject_id' => $subject->id]);
+        }
     }
 }
