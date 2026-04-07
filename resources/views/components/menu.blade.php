@@ -253,6 +253,7 @@
                         @endcanany
                         @can('backups.create')
                             <li><a href="{{ route('backups.create') }}">{{ __('Backup') }}</a></li>
+                            <li><a href="{{ route('backups.upload') }}">{{ __('Upload Backup') }}</a></li>
                         @endcan
                     </ul>
                 </details>

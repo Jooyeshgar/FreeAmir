@@ -13,7 +13,7 @@ class BackupController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:backups.create', ['only' => ['create', 'download', 'export']]);
+        $this->middleware('permission:backups.create', ['only' => ['create', 'download', 'export', 'import']]);
     }
 
     public function create()
@@ -53,7 +53,7 @@ class BackupController extends Controller
     {
         $validated = $request->validate([
             'source_id' => 'required|exists:companies,id',
-            'tables_to_backup' => 'array',
+            'tables_to_backup' => 'required|array',
             'tables_to_backup.*' => 'string|in:'.implode(',', array_map(fn ($case) => $case->value, FiscalYearSection::cases())),
         ]);
 
@@ -71,5 +71,37 @@ class BackupController extends Controller
             'downloadUrl' => route('backups.download', ['path' => $path]),
             'redirectUrl' => route('home'),
         ]);
+    }
+
+    public function upload()
+    {
+        return view('backups.upload');
+    }
+
+    public function import(Request $request)
+    {
+        $validated = $request->validate([
+            // 'file' => 'required|file|mimes:json',
+            'file' => 'required|file',
+            'fiscal_year' => 'required|integer|min:1', // positive integer
+            'company_name' => 'required|max:50|string|regex:/^[\w\d\s]*$/u',
+        ]);
+
+        $path = $validated['file']->store('import-tmp');
+
+        $params = [
+            'file' => $path, // related temp json file
+            'fiscal_year' => $validated['fiscal_year'],
+            '--name' => $validated['company_name'],
+            '--force' => true,
+        ];
+
+        Artisan::call('fiscal-year:import', $params);
+
+        // fix validation for file type
+
+        // remove temp imported file
+
+        return redirect()->route('home')->with('success', __('Company backup file imported successfully.'));
     }
 }

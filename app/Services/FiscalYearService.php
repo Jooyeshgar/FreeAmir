@@ -46,6 +46,7 @@ use Cookie;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -184,6 +185,7 @@ class FiscalYearService
             Model::unguard();
 
             $newFiscalYear = Company::create($newFiscalYearData);
+            $newFiscalYear->users()->attach(Auth::id());
             $targetYearId = $newFiscalYear->id;
 
             $originalCompanyId = getActiveCompany();
@@ -213,11 +215,17 @@ class FiscalYearService
 
                     if (isset($importData['bank_accounts'])) {
                         $bankMapping = $idMappings['banks'] ?? [];
+                        $subjectMapping = $idMappings['subjects'] ?? [];
 
-                        if (empty($bankMapping)) {
-                            Log::warning('Skipping bank accounts import due to missing bank mapping.', ['target_year_id' => $targetYearId]);
+                        if (empty($bankMapping) || empty($subjectMapping)) {
+                            Log::warning('Skipping customers import due to missing bank or subject mapping.', [
+                                'target_year_id' => $targetYearId,
+                                'has_bank_mapping' => ! empty($bankMapping),
+                                'has_subject_mapping' => ! empty($subjectMapping),
+                            ]);
                         } else {
-                            $idMappings['bank_accounts'] = self::_importBankAccounts($importData['bank_accounts'], $targetYearId, $bankMapping);
+                            $subjectMapping = $idMappings['subjects'] ?? [];
+                            $idMappings['bank_accounts'] = self::_importBankAccounts($importData['bank_accounts'], $targetYearId, $bankMapping, $subjectMapping);
                         }
                     }
                 }
@@ -789,45 +797,6 @@ class FiscalYearService
     }
 
     /**
-     * Sync subjects morph relation.
-     *
-     * @param  array  $mapping  Mapping old object ID to new object ID.
-     * @param  string  $type  Type of related object: bankAccount, customerGroup, customer, productGroup, product, serviceGroup, service.
-     * @param  string  $relationColumn  Name of relation column in db.
-     */
-    protected static function _syncSubjectsRelation(array $mapping, string $type, string $relationColumn): void
-    {
-        foreach ($mapping as $id) {
-            $model = match ($type) {
-                'customerGroup' => CustomerGroup::find($id),
-                'customer' => Customer::find($id),
-                'productGroup' => ProductGroup::find($id),
-                'product' => Product::find($id),
-                'serviceGroup' => ServiceGroup::find($id),
-                'service' => Service::find($id),
-                'bankAccount' => BankAccount::find($id),
-            };
-            if ($model?->{$relationColumn} === null) {
-                Log::warning('Skipping subject subjectable sync due to missing relation column.',
-                    [
-                        'subjectable_model_type' => $type,
-                        'subjectable_model_id' => $id,
-                        'relation_column_name' => $relationColumn,
-                    ]);
-
-                continue;
-            }
-            $subject = Subject::find($model?->{$relationColumn});
-            if ($subject->subjectable_type !== get_class($model) && $subject->subjectable_id !== $id) {
-                $subject->subjectable()->associate($model);
-                if ($subject->isDirty(['subjectable_id', 'subjectable_type'])) {
-                    $subject->save();
-                }
-            }
-        }
-    }
-
-    /**
      * Import OrgCharts.
      *
      * @param  array  $orgChartsData  Array of orgCharts data from import.
@@ -1381,7 +1350,7 @@ class FiscalYearService
      * @param  array  $bankMapping  Mapping of old bank ID to new bank ID.
      * @return array<int, int> Mapping of old bank account ID to new bank account ID.
      */
-    protected static function _importBankAccounts(array $bankAccountsData, int $targetYearId, array $bankMapping): array
+    protected static function _importBankAccounts(array $bankAccountsData, int $targetYearId, array $bankMapping, array $subjectMapping): array
     {
         $mapping = [];
         foreach ($bankAccountsData as $accountData) {
@@ -1392,16 +1361,22 @@ class FiscalYearService
                 continue;
             }
 
+            $oldSubjectId = $accountData['subject_id'] ?? null;
+            if ($oldSubjectId === null || ! isset($subjectMapping[$oldSubjectId])) {
+                Log::warning('Skipping bank account import due to missing subject mapping.', ['old_bank_account_id' => $accountData['id'] ?? 'N/A', 'old_subject_id' => $oldSubjectId, 'target_year_id' => $targetYearId]);
+
+                continue;
+            }
+
             $newAccount = new BankAccount;
             $newAccount->fill(collect($accountData)->except(['id'])->toArray());
             $newAccount->bank_id = $bankMapping[$oldBankId];
             $newAccount->company_id = $targetYearId;
+            $newAccount->subject_id = $subjectMapping[$oldSubjectId];
             $newAccount->saveQuietly();
 
             $mapping[$accountData['id']] = $newAccount->id;
         }
-
-        self::_syncSubjectsRelation($mapping, 'bankAccount', 'subject_id');
 
         return $mapping;
     }
@@ -1426,8 +1401,6 @@ class FiscalYearService
 
             $mapping[$groupData['id']] = $newGroup->id;
         }
-
-        self::_syncSubjectsRelation($mapping, 'customerGroup', 'subject_id');
 
         return $mapping;
     }
@@ -1469,8 +1442,6 @@ class FiscalYearService
 
             $mapping[$customerData['id']] = $newCustomer->id;
         }
-
-        self::_syncSubjectsRelation($mapping, 'customer', 'subject_id');
 
         return $mapping;
     }
@@ -1540,11 +1511,6 @@ class FiscalYearService
             $mapping[$groupData['id']] = $newGroup->id;
         }
 
-        $subjectColumns = ['subject_id', 'cogs_subject_id', 'sales_returns_subject_id'];
-        foreach ($subjectColumns as $subjectColumn) {
-            self::_syncSubjectsRelation($mapping, 'serviceGroup', $subjectColumn);
-        }
-
         return $mapping;
     }
 
@@ -1600,11 +1566,6 @@ class FiscalYearService
             $mapping[$serviceData['id']] = $newService->id;
         }
 
-        $subjectColumns = ['subject_id', 'cogs_subject_id', 'sales_returns_subject_id'];
-        foreach ($subjectColumns as $subjectColumn) {
-            self::_syncSubjectsRelation($mapping, 'service', $subjectColumn);
-        }
-
         return $mapping;
     }
 
@@ -1657,11 +1618,6 @@ class FiscalYearService
             $newGroup->save();
 
             $mapping[$groupData['id']] = $newGroup->id;
-        }
-
-        $subjectColumns = ['sales_returns_subject_id', 'income_subject_id', 'cogs_subject_id', 'inventory_subject_id'];
-        foreach ($subjectColumns as $subjectColumn) {
-            self::_syncSubjectsRelation($mapping, 'productGroup', $subjectColumn);
         }
 
         return $mapping;
@@ -1725,11 +1681,6 @@ class FiscalYearService
             $newProduct->save();
 
             $mapping[$productData['id']] = $newProduct->id;
-        }
-
-        $subjectColumns = ['sales_returns_subject_id', 'income_subject_id', 'cogs_subject_id', 'inventory_subject_id'];
-        foreach ($subjectColumns as $subjectColumn) {
-            self::_syncSubjectsRelation($mapping, 'product', $subjectColumn);
         }
 
         return $mapping;
