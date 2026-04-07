@@ -4,11 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\CustomerGroup;
 use App\Models\Subject;
+use App\Services\CustomerGroupService;
 use Illuminate\Http\Request;
 
 class CustomerGroupController extends Controller
 {
-    public function __construct() {}
+    public function __construct(private readonly CustomerGroupService $service) {}
 
     public function index()
     {
@@ -31,7 +32,7 @@ class CustomerGroupController extends Controller
             'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
         ]);
 
-        CustomerGroup::create($validatedData);
+        $this->service->create($validatedData);
 
         return redirect()->route('customer-groups.index')->with('success', __('Customer group created successfully.'));
     }
@@ -55,14 +56,14 @@ class CustomerGroupController extends Controller
             'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
         ]);
 
-        $customerGroup->update($validatedData);
+        $this->service->update($customerGroup, $validatedData);
 
         return redirect()->route('customer-groups.index')->with('success', __('Customer group updated successfully.'));
     }
 
     public function destroy(CustomerGroup $customerGroup)
     {
-        $customerGroup->delete();
+        $this->service->delete($customerGroup);
 
         return redirect()->route('customer-groups.index')->with('success', __('Customer group deleted successfully.'));
     }
