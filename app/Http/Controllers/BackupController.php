@@ -7,6 +7,7 @@ use App\Models\Company;
 use Artisan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Storage;
 use ZipArchive;
 
 class BackupController extends Controller
@@ -32,10 +33,10 @@ class BackupController extends Controller
         }
 
         $zipFileName = 'backup_'.now()->format('Y-m-d_H-i-s').'.zip';
-        $zipPath = storage_path('app/temp/'.$zipFileName);
+        $zipPath = storage_path('app/exports/'.$zipFileName);
 
-        if (! file_exists(storage_path('app/temp'))) {
-            mkdir(storage_path('app/temp'), 0755, true);
+        if (! file_exists(storage_path('app/exports'))) {
+            mkdir(storage_path('app/exports'), 0755, true);
         }
 
         $zip = new ZipArchive;
@@ -81,8 +82,7 @@ class BackupController extends Controller
     public function import(Request $request)
     {
         $validated = $request->validate([
-            // 'file' => 'required|file|mimes:json',
-            'file' => 'required|file',
+            'file' => 'required|file|mimes:json',
             'fiscal_year' => 'required|integer|min:1', // positive integer
             'company_name' => 'required|max:50|string|regex:/^[\w\d\s]*$/u',
         ]);
@@ -97,10 +97,7 @@ class BackupController extends Controller
         ];
 
         Artisan::call('fiscal-year:import', $params);
-
-        // fix validation for file type
-
-        // remove temp imported file
+        Storage::delete($path);
 
         return redirect()->route('home')->with('success', __('Company backup file imported successfully.'));
     }

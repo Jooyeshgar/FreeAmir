@@ -98,7 +98,7 @@ class FiscalYearService
      *
      * @param  Company  $company  data from that company going to delete.
      */
-    public static function deleteCompanyData(Company $company)
+    public static function deleteCompanyData(Company $company): void
     {
         $sectionsToDelete = [ // other models will be deleted on cascade when company deleted.
             'documents',
@@ -108,36 +108,55 @@ class FiscalYearService
         ];
         $sourceData = self::fetchSourceData($company->id, $sectionsToDelete);
 
-        self::deleteData($sourceData);
+        try {
+            self::deleteData($sourceData, $company->id);
+        } catch (Exception $e) {
+            Log::error('Fiscal Year delete Failed: '.$e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
     }
 
-    protected static function deleteData(array $data)
+    protected static function deleteData(array $data, int $companyId): void
     {
-        return DB::transaction(function () use ($data) {
-            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-            Model::unguard();
-
-            try {
-                foreach ($data['invoices'] as $invoice) {
-                    InvoiceService::deleteInvoice($invoice['id']);
-                }
-
-                foreach ($data['ancillary_costs'] as $ancillary_cost) {
-                    $ancillary = AncillaryCost::find($ancillary_cost['id']);
-                    AncillaryCostService::deleteAncillaryCost($ancillary);
-                }
-
-                foreach ($data['documents'] as $document) {
-                    DocumentService::deleteDocument($document['id']);
-                }
-            } catch (Exception $e) {
-                Log::error('Fiscal Year delete Failed: '.$e->getMessage(), ['exception' => $e]);
-                throw $e;
-            } finally {
-                DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-                Model::reguard();
-            }
+        DB::transaction(function () use ($data, $companyId) {
+            self::_deleteInvoices($data['invoices'], $companyId);
+            self::_deleteAncillaryCosts($data['ancillary_costs'], $companyId);
+            self::_deleteDocuments($data['documents'], $companyId);
         });
+    }
+
+    protected static function _deleteInvoices(array $invoicesData, int $companyId): void
+    {
+        foreach ($invoicesData as $invoice) {
+            $invoice = Invoice::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $companyId)->find($invoice['id']);
+
+            $invoice->items()->delete();
+            $invoice->delete();
+        }
+    }
+
+    protected static function _deleteAncillaryCosts(array $ancillaryCostsData, int $companyId): void
+    {
+        foreach ($ancillaryCostsData as $ancillary_cost) {
+            $ancillary = AncillaryCost::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $companyId)->find($ancillary_cost['id']);
+
+            $ancillary->items()->delete();
+            $ancillary->delete();
+        }
+    }
+
+    protected static function _deleteDocuments(array $documentsData, int $companyId): void
+    {
+        foreach ($documentsData as $document) {
+            $document = Document::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $companyId)->find($document['id']);
+
+            $document->documentFiles()->delete();
+            $document->transactions()->delete();
+            $document->delete();
+        }
     }
 
     /**
@@ -476,16 +495,14 @@ class FiscalYearService
                         $workShiftMapping = $idMappings['work_shifts'] ?? [];
                         $work_site_contracts = $idMappings['work_site_contracts'] ?? [];
 
-                        if (! empty($orgChartMapping) && ! empty($workSiteMapping) && ! empty($workShiftMapping) && ! empty($work_site_contracts)) {
+                        if (! empty($workSiteMapping) && ! empty($workShiftMapping)) {
                             $idMappings['employees'] = self::_importEmployees($importData['employees'], $targetYearId, $orgChartMapping, $workSiteMapping, $workShiftMapping, $work_site_contracts);
                         } else {
-                            Log::warning('Skipping employee import due to missing orgChart or work site or work shift or work site contract mappings.',
+                            Log::warning('Skipping employee import due to missing work site or work shift mappings.',
                                 [
                                     'target_year_id' => $targetYearId,
-                                    'has_orgChart_mapping' => ! empty($orgChartMapping),
                                     'has_work_site_mapping' => ! empty($workSiteMapping),
                                     'has_work_shift_mapping' => ! empty($workShiftMapping),
-                                    'has_work_site_contract_mapping' => ! empty($work_site_contracts),
                                 ]);
                         }
                     }
@@ -1917,7 +1934,8 @@ class FiscalYearService
             $newInvoice->fill(collect($invoiceData)->except(['id', 'customer_id', 'document_id'])->toArray());
             $newInvoice->customer_id = $customerMapping[$oldCustomerId];
             $newInvoice->document_id = $oldDocumentId ? $documentMapping[$oldDocumentId] : null;
-            $newInvoice->save();
+            $newInvoice->company_id = $targetYearId;
+            $newInvoice->saveQuietly();
 
             $mapping[$invoiceData['id']] = $newInvoice->id;
         }
@@ -1947,7 +1965,8 @@ class FiscalYearService
             $newInvoice->customer_id = $customerMapping[$oldCustomerId];
             $newInvoice->returned_invoice_id = $mapping[$oldReturnedInvoiceId];
             $newInvoice->document_id = $oldDocumentId ? $documentMapping[$oldDocumentId] : null;
-            $newInvoice->save();
+            $newInvoice->company_id = $targetYearId;
+            $newInvoice->saveQuietly();
 
             $mapping[$invoiceData['id']] = $newInvoice->id;
         }
