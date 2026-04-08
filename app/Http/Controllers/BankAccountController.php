@@ -49,6 +49,9 @@ class BankAccountController extends Controller
 
         $bankAccount->subject()->save($bankSubject);
 
+        $bankAccount->subject_id = $bankSubject->id;
+        $bankAccount->saveQuietly();
+
         return redirect()->route('bank-accounts.index')->with('success', __('Bank Account created successfully.'));
     }
 

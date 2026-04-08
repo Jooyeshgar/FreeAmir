@@ -11,11 +11,19 @@ return new class extends Migration
         Schema::table('customers', function (Blueprint $table) {
             $table->foreignId('subject_id')->nullable()->constrained('subjects')->nullOnDelete();
         });
+
+        Schema::table('bank_accounts', function (Blueprint $table) {
+            $table->foreignId('subject_id')->nullable()->constrained('subjects')->nullOnDelete();
+        });
     }
 
     public function down(): void
     {
         Schema::table('customers', function (Blueprint $table) {
+            $table->dropConstrainedForeignId('subject_id');
+        });
+
+        Schema::table('bank_accounts', function (Blueprint $table) {
             $table->dropConstrainedForeignId('subject_id');
         });
     }

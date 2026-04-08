@@ -22,6 +22,7 @@ class BankAccount extends Model
         'bank_phone',
         'bank_web_page',
         'desc',
+        'subject_id',
     ];
 
     public static function booted(): void
