@@ -9,6 +9,12 @@ class ServiceGroupSeeder extends Seeder
 {
     public function run(): void
     {
-        ServiceGroup::factory()->count(10)->withSubject()->create();
+        ServiceGroup::factory()
+            ->withSubject()
+            ->create([
+                'name' => 'عمومی',
+                'vat' => 10,
+                'company_id' => 1,
+            ]);
     }
 }

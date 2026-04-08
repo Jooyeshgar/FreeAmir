@@ -22,8 +22,8 @@ class CustomerGroupFactory extends Factory
         $companyId = Company::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveCompany() ?? Company::factory()->create()->id;
 
         return [
-            'name' => $this->faker->name,
-            'description' => $this->faker->text,
+            'name' => $this->faker?->name,
+            'description' => $this->faker?->text,
             'company_id' => $companyId,
         ];
     }

@@ -1,4 +1,17 @@
 # =============================================================================
+# Stage 0: Node builder — install Node deps and build frontend assets
+# =============================================================================
+FROM node:22-alpine AS node-builder
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm ci --prefer-offline
+
+COPY . .
+RUN npm run build
+
+# =============================================================================
 # Stage 1: Builder — install Composer deps (no dev) with all build-time tools
 # =============================================================================
 FROM php:8.3-fpm AS builder
@@ -31,6 +44,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /var/www/html
 
 COPY . /var/www/html
+
+# Bring in the compiled frontend assets from the node-builder stage
+COPY --from=node-builder /app/public/build /var/www/html/public/build
 
 RUN mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs \
     && chmod -R 775 bootstrap/cache storage \

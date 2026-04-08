@@ -22,7 +22,7 @@ class ProductGroupFactory extends Factory
         $companyId = Company::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveCompany() ?? Company::factory()->create()->id;
 
         return [
-            'name' => $this->faker->persianProductCategory(),
+            'name' => $this->faker?->persianProductCategory(),
             'vat' => 0,
             'company_id' => $companyId,
         ];
