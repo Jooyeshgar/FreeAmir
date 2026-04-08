@@ -17,8 +17,6 @@ storage/logs
 bootstrap/cache
 
 # Docker files (not needed inside the image)
-docker
-!docker/all-in-one/
 docker-compose.yml
 .dockerignore
 

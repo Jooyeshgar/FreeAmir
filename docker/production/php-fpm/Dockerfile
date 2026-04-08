@@ -1,4 +1,17 @@
 # =============================================================================
+# Stage 0: Node builder — install Node deps and build frontend assets
+# =============================================================================
+FROM node:22-alpine AS node-builder
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm ci --prefer-offline
+
+COPY . .
+RUN npm run build
+
+# =============================================================================
 # Stage 1: Builder — install Composer deps (no dev) with all build-time tools
 # =============================================================================
 FROM php:8.3-fpm AS builder
@@ -15,8 +28,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcurl4-openssl-dev \
     libicu-dev \
     libzip-dev \
+    libpq-dev \
     && docker-php-ext-install -j$(nproc) \
         pdo_mysql \
+        pdo_pgsql \
         gd \
         intl \
         zip \
@@ -24,12 +39,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         soap \
         mbstring \
         xml \
+        opcache \
     && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 WORKDIR /var/www/html
 
 # Copy full application source so post-autoload-dump Artisan scripts can run
 COPY . /var/www/html
+
+# Bring in the compiled frontend assets from the node-builder stage
+COPY --from=node-builder /app/public/build /var/www/html/public/build
 
 # Install Composer and production dependencies
 RUN mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs \
@@ -42,13 +61,14 @@ RUN mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sess
 # =============================================================================
 FROM php:8.3-fpm AS production
 
-# Runtime-only system libraries + php-fpm-healthcheck dependencies
+# Runtime-only system libraries (compiled .so names, not -dev headers)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    libicu-dev \
-    libzip-dev \
+    libpng16-16 \
+    libonig5 \
+    libxml2 \
+    libicu76 \
+    libzip4 \
+    libpq5 \
     libfcgi-bin \
     procps \
     && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -66,14 +86,14 @@ COPY --from=builder /usr/local/bin/docker-php-ext-* /usr/local/bin/
 # Use PHP's recommended production ini
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
-# App-specific PHP settings (upload limits, opcache, etc.)
-COPY docker/production/php.ini /usr/local/etc/php/conf.d/99-app.ini
+# App-specific PHP settings (upload limits, opcache, timezone, etc.)
+COPY docker/production/php-fpm/php.ini /usr/local/etc/php/conf.d/99-app.ini
 
 # PHP-FPM pool config (enables /status endpoint for healthcheck)
 COPY docker/production/php-fpm/php-fpm.conf /usr/local/etc/php-fpm.d/zz-app.conf
 
-# Copy entrypoint
-COPY docker/production/bootstrap.sh /usr/local/bin/bootstrap.sh
+# Copy bootstrap/entrypoint
+COPY docker/production/php-fpm/bootstrap.sh /usr/local/bin/bootstrap.sh
 RUN chmod +x /usr/local/bin/bootstrap.sh
 
 # Copy application code + vendor from builder
@@ -99,6 +119,9 @@ WORKDIR /var/www/html
 USER www-data
 
 EXPOSE 9000
+
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
+    CMD php-fpm-healthcheck || exit 1
 
 ENTRYPOINT ["/usr/local/bin/bootstrap.sh"]
 CMD ["php-fpm"]
