@@ -43,13 +43,16 @@ class BankAccountFactory extends Factory
             $bank = Bank::withoutGlobalScopes()->find($bankAccount->bank_id);
             $parentSubject = Subject::withoutGlobalScopes()->find(config('amir.bank') ?? 1);
 
-            Subject::factory()
+            $subject = Subject::factory()
                 ->withParent($parentSubject)
                 ->for($bankAccount, 'subjectable')
                 ->create([
                     'name' => $bankAccount->name.' - '.$bank->name,
                     'company_id' => $bankAccount->company_id,
                 ]);
+
+            $bankAccount->subject_id = $subject->id;
+            $bankAccount->saveQuietly();
         });
     }
 }
