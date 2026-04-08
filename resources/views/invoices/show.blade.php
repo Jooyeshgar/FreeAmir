@@ -179,7 +179,7 @@
                                     <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
                                     <td class="px-4 py-3">
                                         @if ($item->itemable)
-                                            <a href="{{ route('products.show' ?? 'services.show', $item->itemable) }}" class="link link-hover link-primary">
+                                            <a href="{{ route($item->itemable instanceof App\Models\Product ? 'products.show' : 'services.show', $item->itemable) }}" class="link link-hover link-primary">
                                                 {{ $item->itemable->name }}
                                             </a>
                                         @else

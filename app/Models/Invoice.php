@@ -33,6 +33,7 @@ class Invoice extends Model
         'amount',
         'title',
         'returned_invoice_id',
+        'company_id',
     ];
 
     protected $casts = [
