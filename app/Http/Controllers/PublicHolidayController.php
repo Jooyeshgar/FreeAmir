@@ -51,7 +51,7 @@ class PublicHolidayController extends Controller
 
     public function edit(PublicHoliday $publicHoliday): View
     {
-        return view('public-holicdays.edit', compact('publicHoliday'));
+        return view('public-holidays.edit', compact('publicHoliday'));
     }
 
     public function update(Request $request, PublicHoliday $publicHoliday): RedirectResponse

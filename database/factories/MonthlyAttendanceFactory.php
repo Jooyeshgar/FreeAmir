@@ -31,6 +31,7 @@ class MonthlyAttendanceFactory extends Factory
             'unpaid_leave' => $this->faker->numberBetween(0, 2),
             'friday' => $this->faker->numberBetween(0, 480),
             'holiday' => $this->faker->numberBetween(0, 480),
+            'start_date' => $this->faker->date(),
         ];
     }
 }

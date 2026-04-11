@@ -21,87 +21,87 @@ class AttendanceLogTest extends TestCase
 
     protected Employee $employee;
 
-    // protected function setUp(): void
-    // {
-    //     parent::setUp();
+    protected function setUp(): void
+    {
+        parent::setUp();
 
-    //     $company = Company::factory()->create();
-    //     $this->companyId = $company->id;
+        $company = Company::factory()->create();
+        $this->companyId = $company->id;
 
-    //     $this->user = User::factory()->create();
-    //     $company->users()->attach($this->user);
+        $this->user = User::factory()->create();
+        $company->users()->attach($this->user);
 
-    //     $this->user->givePermissionTo(
-    //         Permission::firstOrCreate(['name' => 'attendance.*'])
-    //     );
+        $this->user->givePermissionTo(
+            Permission::firstOrCreate(['name' => 'attendance.*'])
+        );
 
-    //     $this->actingAs($this->user);
-    //     $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->actingAs($this->user);
+        $this->withCookies(['active-company-id' => $this->companyId]);
 
-    //     $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
 
-    //     $this->employee = Employee::factory()->create([
-    //         'company_id' => $this->companyId,
-    //         'work_site_id' => $workSite->id,
-    //     ]);
-    // }
+        $this->employee = Employee::factory()->create([
+            'company_id' => $this->companyId,
+            'work_site_id' => $workSite->id,
+        ]);
+    }
 
-    // private function makeAttendanceLog(array $overrides = []): AttendanceLog
-    // {
-    //     return AttendanceLog::factory()->create(array_merge([
-    //         'company_id' => $this->companyId,
-    //         'employee_id' => $this->employee->id,
-    //     ], $overrides));
-    // }
+    private function makeAttendanceLog(array $overrides = []): AttendanceLog
+    {
+        return AttendanceLog::factory()->create(array_merge([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+        ], $overrides));
+    }
 
-    // private function validPayload(array $overrides = []): array
-    // {
-    //     return array_merge([
-    //         'employee_id' => $this->employee->id,
-    //         'log_date' => formatDate('2026-02-10'),
-    //         'entry_time' => '08:00',
-    //         'exit_time' => '17:00',
-    //         'is_manual' => '0',
-    //         'description' => null,
-    //     ], $overrides);
-    // }
+    private function validPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'employee_id' => $this->employee->id,
+            'log_date' => formatDate('2026-02-10'),
+            'entry_time' => '08:00',
+            'exit_time' => '17:00',
+            'is_manual' => '0',
+            'description' => null,
+        ], $overrides);
+    }
 
-    // // ----------------------------------------------------------------
-    // // index
-    // // ----------------------------------------------------------------
+    // ----------------------------------------------------------------
+    // index
+    // ----------------------------------------------------------------
 
-    // public function test_index_lists_attendance_logs(): void
-    // {
-    //     $Date1 = '2025-02-10';
-    //     $Date2 = '2025-02-11';
+    public function test_index_lists_attendance_logs(): void
+    {
+        $Date1 = '2025-02-10';
+        $Date2 = '2025-02-11';
 
-    //     $this->makeAttendanceLog(['log_date' => $Date1]);
-    //     $this->makeAttendanceLog(['log_date' => $Date2]);
+        $this->makeAttendanceLog(['log_date' => $Date1]);
+        $this->makeAttendanceLog(['log_date' => $Date2]);
 
-    //     $response = $this->get(route('attendance.attendance-logs.index'));
+        $response = $this->get(route('attendance.attendance-logs.index'));
 
-    //     $response->assertStatus(200);
-    //     $response->assertSee(formatDate($Date1));
-    //     $response->assertSee(formatDate($Date2));
-    // }
+        $response->assertStatus(200);
+        $response->assertSee(formatDate($Date1));
+        $response->assertSee(formatDate($Date2));
+    }
 
-    // public function test_index_filters_by_employee(): void
-    // {
-    //     $workSite2 = WorkSite::factory()->create(['company_id' => $this->companyId]);
-    //     $other = Employee::factory()->create([
-    //         'company_id' => $this->companyId,
-    //         'work_site_id' => $workSite2->id,
-    //     ]);
+    public function test_index_filters_by_employee(): void
+    {
+        $workSite2 = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $other = Employee::factory()->create([
+            'company_id' => $this->companyId,
+            'work_site_id' => $workSite2->id,
+        ]);
 
-    //     $this->makeAttendanceLog(['employee_id' => $this->employee->id, 'log_date' => '2026-02-10']);
-    //     $this->makeAttendanceLog(['employee_id' => $other->id, 'log_date' => '2026-02-11']);
+        $this->makeAttendanceLog(['employee_id' => $this->employee->id, 'log_date' => '2026-02-10']);
+        $this->makeAttendanceLog(['employee_id' => $other->id, 'log_date' => '2026-02-11']);
 
-    //     $response = $this->get(route('attendance.attendance-logs.index', ['employee_id' => $this->employee->id]));
+        $response = $this->get(route('attendance.attendance-logs.index', ['employee_id' => $this->employee->id]));
 
-    //     $response->assertStatus(200);
-    //     $response->assertSee(formatDate('2026-02-10'));
-    //     $response->assertDontSee(formatDate('2026-02-11'));
-    // }
+        $response->assertStatus(200);
+        $response->assertSee(formatDate('2026-02-10'));
+        $response->assertDontSee(formatDate('2026-02-11'));
+    }
 
     public function test_index_filters_by_date_range(): void
     {

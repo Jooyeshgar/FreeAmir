@@ -13,17 +13,17 @@ class ExampleTest extends TestCase
     /**
      * A basic test example.
      */
-    // public function test_the_application_returns_a_successful_response(): void
-    // {
-    //     $response = $this->get('/');
+    public function test_the_application_returns_a_successful_response(): void
+    {
+        $response = $this->get('/');
 
-    //     $response->assertStatus(302);
+        $response->assertStatus(302);
 
-    //     $user = User::factory()->create();
+        $user = User::factory()->create();
 
-    //     $response = $this->actingAs($user)->get('/');
+        $response = $this->actingAs($user)->get('/');
 
-    //     $response->assertStatus(403);
+        $response->assertStatus(403);
 
-    // }
+    }
 }
