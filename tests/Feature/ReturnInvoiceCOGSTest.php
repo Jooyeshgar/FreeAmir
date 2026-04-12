@@ -306,7 +306,7 @@ class ReturnInvoiceCOGSTest extends TestCase
 
         $product = $this->findProduct($product->id);
         $this->assertEquals(0, $product->quantity);
-        $this->assertEqualsWithDelta(75, $product->average_cost, 0.0001);
+        $this->assertEqualsWithDelta(0, $product->average_cost, 0.0001);
     }
 
     // =========================================================================
@@ -493,8 +493,8 @@ class ReturnInvoiceCOGSTest extends TestCase
         $this->returnBuy([$this->productItem($product, 2, 160)], $buy2->id, true, 6305, '2026-06-05');
         $product = $this->findProduct($product->id);
         $this->assertEquals(12, $product->quantity);
-        // میانگین ثابت می‌مونه
-        $this->assertEqualsWithDelta($expectedAvg, $product->average_cost, 0.01);
+        $expectedAvgAfterReturnBuy = (($expectedAvg * 14) - (160 * 2)) / 12;
+        $this->assertEqualsWithDelta($expectedAvgAfterReturnBuy, $product->average_cost, 0.01);
 
         // ارزش انبار در پایان
         $inventoryValue = CostOfGoodsService::getInventoryValue($product);

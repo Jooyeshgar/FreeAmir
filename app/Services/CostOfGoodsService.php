@@ -39,6 +39,13 @@ class CostOfGoodsService
 
             $product = $invoiceItem->itemable;
             $isReturnBuy = $invoice->invoice_type === InvoiceType::RETURN_BUY;
+
+            if ($isReturnBuy && ! $invoice->status->isApproved()) {
+                self::restoreAverageCostAfterUnapprovingReturnBuy($invoice, $invoiceItem, $product);
+
+                continue;
+            }
+
             $previousInvoice = $isReturnBuy ? $invoice->getReturnedInvoice() : self::getPreviousInvoice($invoice, $product->id);
 
             $inputs = self::resolveCostCalculationInputs($invoice, $invoiceItem, $previousInvoice);
@@ -67,6 +74,25 @@ class CostOfGoodsService
             $product->average_cost = $denominator > 0 ? ($totalCosts / $denominator) : 0;
             $product->save();
         }
+    }
+
+    private static function restoreAverageCostAfterUnapprovingReturnBuy(Invoice $invoice, InvoiceItem $invoiceItem, Product $product): void
+    {
+        $restoredQuantity = (float) $product->quantity;
+        $currentQuantity = max(0.0, $restoredQuantity - (float) $invoiceItem->quantity);
+
+        $returnedInvoice = $invoice->getReturnedInvoice();
+        $ancillaryCosts = $returnedInvoice?->ancillaryCosts;
+        $sumAncillaryCosts = self::sumApprovedAncillaryCostsForProduct($ancillaryCosts, $product->id);
+        $quantityBeforeReturn = (float) $invoiceItem->quantity_at;
+        $ancillaryCostPerUnit = $quantityBeforeReturn > 0 ? ($sumAncillaryCosts / $quantityBeforeReturn) : 0.0;
+
+        $restoredValue = ((float) $product->average_cost * $currentQuantity)
+            + ((float) $invoiceItem->amount - (float) ($invoiceItem->vat ?? 0))
+            + ($ancillaryCostPerUnit * (float) $invoiceItem->quantity);
+
+        $product->average_cost = $restoredQuantity > 0 ? ($restoredValue / $restoredQuantity) : 0;
+        $product->save();
     }
 
     /**

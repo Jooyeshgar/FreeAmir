@@ -358,18 +358,18 @@ class InvoiceTransactionBuilder
             $desc = $this->itemDescription($vals['quantity']);
 
             if ($product) {
-                // Inventory ← credit (decrease)
-                $this->transactions[] = [
-                    'subject_id' => $product->inventory_subject_id,
-                    'desc' => $desc,
-                    'value' => $vals['unitPrice'] * $vals['quantity'],
-                ];
-
                 $returnedCost = $this->getReturnedItemCost($product);
                 if ($returnedCost !== $vals['unitPrice']) {
                     $diff_cog_and_unitPrice += abs($returnedCost - $vals['unitPrice']);
                     $invoice_items_quantity_on_irrevocable_ancillary_costs += $vals['quantity'];
                 }
+
+                // Inventory ← credit (decrease)
+                $this->transactions[] = [
+                    'subject_id' => $product->inventory_subject_id,
+                    'desc' => $desc,
+                    'value' => ($vals['unitPrice'] - $diff_cog_and_unitPrice) * $vals['quantity'],
+                ];
             }
 
             if ($service) {

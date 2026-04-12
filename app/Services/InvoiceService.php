@@ -192,7 +192,7 @@ class InvoiceService
 
     public static function syncCOGAfterForInvoiceItems(Invoice $invoice)
     {
-        if (! in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::SELL])) {
+        if (! in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::SELL, InvoiceType::RETURN_BUY], true)) {
             return;
         }
 
