@@ -29,7 +29,6 @@ Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee
 
 Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::group(['prefix' => 'backups', 'as' => 'backups.'], function () {
-        Route::get('/download/{path}', [Controllers\BackupController::class, 'download'])->where('path', '.*')->name('download');
         Route::get('/create', [Controllers\BackupController::class, 'create'])->name('create');
         Route::get('/upload', [Controllers\BackupController::class, 'upload'])->name('upload');
         Route::post('/export', [Controllers\BackupController::class, 'export'])->name('export');

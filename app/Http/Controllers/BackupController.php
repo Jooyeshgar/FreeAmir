@@ -4,17 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Enums\FiscalYearSection;
 use App\Models\Company;
-use Artisan;
+use App\Services\FiscalYearService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Storage;
 use ZipArchive;
 
 class BackupController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:backups.create', ['only' => ['create', 'download', 'export', 'import']]);
+        $this->middleware('permission:backups.create', ['only' => ['create']]);
+        $this->middleware('permission:backups.export', ['only' => ['export']]);
+        $this->middleware('permission:backups.import', ['only' => ['import']]);
     }
 
     public function create()
@@ -22,32 +22,6 @@ class BackupController extends Controller
         $previousYears = Company::all();
 
         return view('backups.create', compact('previousYears'));
-    }
-
-    public function download(string $path)
-    {
-        $fullPath = storage_path("app/$path");
-
-        if (! file_exists($fullPath)) {
-            abort(404, __('File not found'));
-        }
-
-        $zipFileName = 'backup_'.now()->format('Y-m-d_H-i-s').'.zip';
-        $zipPath = storage_path('app/exports/'.$zipFileName);
-
-        if (! file_exists(storage_path('app/exports'))) {
-            mkdir(storage_path('app/exports'), 0755, true);
-        }
-
-        $zip = new ZipArchive;
-        if ($zip->open($zipPath, ZipArchive::CREATE) === true) {
-            $zip->addFile($fullPath, basename($path));
-            $zip->close();
-
-            return response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
-        }
-
-        return response()->download($fullPath, 'backup_'.now()->format('Y-m-d_H-i-s').'.json');
     }
 
     public function export(Request $request)
@@ -58,20 +32,36 @@ class BackupController extends Controller
             'tables_to_backup.*' => 'string|in:'.implode(',', array_map(fn ($case) => $case->value, FiscalYearSection::cases())),
         ]);
 
-        $path = 'exports/fiscal_year_'.$validated['source_id'].'_'.now()->format('YmdHis').'_user_id_'.Auth::id().'.json';
+        $exportData = FiscalYearService::exportData($validated['source_id'], $validated['tables_to_backup']);
+        $fileBaseName = 'company_backup_'.$validated['source_id'].'_'.now()->format('Ymd_His');
 
-        $params = [
-            'source_id' => $validated['source_id'],
-            '--output' => $path,
-            '--sections' => implode(',', $validated['tables_to_backup']),
-        ];
+        $jsonContent = json_encode($exportData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        if ($jsonContent === false) {
+            return redirect()->back()->with('error', __('Failed to encode backup data: :message', ['message' => json_last_error_msg()]));
+        }
 
-        Artisan::call('fiscal-year:export', $params);
+        $zipFilePath = tempnam(sys_get_temp_dir(), 'backup_zip_');
+        if ($zipFilePath === false) {
+            return redirect()->back()->with('error', __('Failed to create temporary file for ZIP.'));
+        }
 
-        return view('backups.download', [
-            'downloadUrl' => route('backups.download', ['path' => $path]),
-            'redirectUrl' => route('home'),
-        ]);
+        $zip = new ZipArchive;
+        if ($zip->open($zipFilePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            @unlink($zipFilePath);
+
+            return redirect()->back()->with('error', __('Failed to open ZIP archive.'));
+        }
+
+        if (! $zip->addFromString($fileBaseName.'.json', $jsonContent)) {
+            $zip->close();
+            @unlink($zipFilePath);
+
+            return redirect()->back()->with('error', __('Failed to add JSON to ZIP.'));
+        }
+
+        $zip->close();
+
+        return response()->download($zipFilePath, $fileBaseName.'.zip', ['Content-Type' => 'application/zip'])->deleteFileAfterSend(true);
     }
 
     public function upload()
@@ -87,17 +77,21 @@ class BackupController extends Controller
             'company_name' => 'required|max:50|string|regex:/^[\w\d\s]*$/u',
         ]);
 
-        $path = $validated['file']->store('import-tmp');
+        $jsonContent = $request->file('file')?->get();
+        if ($jsonContent === null || $jsonContent === false) {
+            return redirect()->back()->with('error', __('Uploaded backup file is invalid.'));
+        }
 
-        $params = [
-            'file' => $path, // related temp json file
-            'fiscal_year' => $validated['fiscal_year'],
-            '--name' => $validated['company_name'],
-            '--force' => true,
+        $importData = json_decode($jsonContent, true);
+        if (json_last_error() !== JSON_ERROR_NONE || ! is_array($importData)) {
+            return redirect()->back()->with('error', __('Invalid JSON file: :message', ['message' => json_last_error_msg()]));
+        }
+
+        $newFiscalYearData = [
+            'name' => $validated['company_name'],
+            'fiscal_year' => (int) $validated['fiscal_year'],
         ];
-
-        Artisan::call('fiscal-year:import', $params);
-        Storage::delete($path);
+        FiscalYearService::importData($importData, $newFiscalYearData);
 
         return redirect()->route('home')->with('success', __('Company backup file imported successfully.'));
     }
