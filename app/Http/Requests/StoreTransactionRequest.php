@@ -45,9 +45,9 @@ class StoreTransactionRequest extends FormRequest
                     'debit' => $transaction['debit'],
                     'credit' => $transaction['credit'],
                     'value' => $transaction['credit'] - $transaction['debit'],
-                    'desc' => $transaction['desc'],
-                    'subject_id' => (int) $transaction['subject_id'],
-                    'transaction_id' => (int) $transaction['transaction_id'] ?? null,
+                    'desc' => isset($transaction['desc']) ? $transaction['desc'] : '',
+                    'subject_id' => isset($transaction['subject_id']) ? (int) $transaction['subject_id'] : null,
+                    'transaction_id' => isset($transaction['transaction_id']) ? (int) $transaction['transaction_id'] : null,
                 ];
             });
             $this->merge(['transactions' => $transactions->toArray()]);
