@@ -67,7 +67,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libonig5 \
     libxml2 \
     libicu76 \
-    libzip4 \
+    libzip5 \
     libpq5 \
     libfcgi-bin \
     procps \
