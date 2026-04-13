@@ -38,16 +38,16 @@ class StoreTransactionRequest extends FormRequest
         // Convert debit and credit values to float for each document entry
         if ($this->has('transactions')) {
             $transactions = collect($this->input('transactions'))->map(function ($transaction) {
-                $transaction['credit'] = isset($transaction['credit']) ? convertToFloat($transaction['credit']) : 0;
-                $transaction['debit'] = isset($transaction['debit']) ? convertToFloat($transaction['debit']) : 0;
+                $transaction['credit'] = convertToFloat($transaction['credit']);
+                $transaction['debit'] = convertToFloat($transaction['debit']);
 
                 return [
                     'debit' => $transaction['debit'],
                     'credit' => $transaction['credit'],
                     'value' => $transaction['credit'] - $transaction['debit'],
-                    'desc' => isset($transaction['desc']) ? $transaction['desc'] : '',
-                    'subject_id' => isset($transaction['subject_id']) ? (int) $transaction['subject_id'] : null,
-                    'transaction_id' => isset($transaction['transaction_id']) ? (int) $transaction['transaction_id'] : null,
+                    'desc' => $transaction['desc'],
+                    'subject_id' => $transaction['subject_id'],
+                    'transaction_id' => (int) $transaction['transaction_id'] ?? null,
                 ];
             });
             $this->merge(['transactions' => $transactions->toArray()]);
