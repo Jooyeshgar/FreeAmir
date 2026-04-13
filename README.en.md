@@ -31,10 +31,11 @@
 
 **Installation:**
 
-Full installation instructions are available in **[INSTALLATION.md](INSTALLATION.md)**, with two separate guides:
+Full installation instructions are available in **[INSTALLATION.md](INSTALLATION.md)**, covering three options:
 
-*   **[Option 1 — Standard (PHP / Composer / npm)](INSTALLATION.md#option-1-standard-installation-php--composer--npm):** Install directly on your machine using PHP, Composer, and npm.
-*   **[Option 2 — Laravel Sail (Docker)](INSTALLATION.md#option-2-laravel-sail-docker):** Run the full stack in Docker containers using Laravel Sail.
+*   **[Option 1 — Production with Docker Compose (Recommended)](INSTALLATION.md#option-1-production--docker-compose-recommended):** Use pre-built images with no source code or build tools required.
+*   **[Option 2 — All-in-One Docker (Testing only)](INSTALLATION.md#option-2-all-in-one--single-docker-command-testing-only):** Spin up everything in a single container for quick evaluation.
+*   **[Option 3 — Standard Installation (PHP + MariaDB)](INSTALLATION.md#option-3-standard-installation--php--mariadb):** Install directly on your server or workstation using PHP, Composer, and npm.
 
 **Usage:**
 

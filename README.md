@@ -33,10 +33,11 @@
 
 ### نصب:
 
-راهنمای کامل نصب در فایل **[INSTALLATION.md](INSTALLATION.md)** موجود است و شامل دو بخش جداگانه می‌شود:
+راهنمای کامل نصب در فایل **[INSTALLATION.md](INSTALLATION.md)** موجود است و شامل سه روش جداگانه می‌شود:
 
-*   **[روش اول — نصب مستقیم (PHP / Composer / npm)](INSTALLATION.md#option-1-standard-installation-php--composer--npm):** نصب مستقیم روی سیستم با استفاده از PHP، Composer و npm.
-*   **[روش دوم — Laravel Sail (Docker)](INSTALLATION.md#option-2-laravel-sail-docker):** اجرای کل محیط در داخل کانتینرهای Docker با استفاده از Laravel Sail.
+*   **[روش اول — محیط عملیاتی با Docker Compose (پیشنهادی)](INSTALLATION.md#روش-۱-محیط-عملیاتی--docker-compose-پیشنهادی):** استفاده از ایمیج‌های از پیش ساخته‌شده بدون نیاز به کد منبع یا ابزارهای Build.
+*   **[روش دوم — همه-در-یک با Docker (فقط برای آزمایش)](INSTALLATION.md#روش-۲-همه-در-یک--دستور-تکی-docker-فقط-برای-آزمایش):** اجرای سریع همه چیز در یک کانتینر تکی برای ارزیابی.
+*   **[روش سوم — نصب استاندارد (PHP + MariaDB)](INSTALLATION.md#روش-۳-نصب-استاندارد--php--mariadb):** نصب مستقیم روی سرور یا سیستم با PHP، Composer و npm.
 
 ### استفاده:
 

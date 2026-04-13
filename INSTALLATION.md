@@ -1,246 +1,192 @@
-# Installation Guide
+# راهنمای نصب
 
-## Option 1: Standard Installation (PHP / Composer / npm)
+## فهرست مطالب
 
-### Prerequisites
+۱. [محیط عملیاتی — Docker Compose (پیشنهادی)](#روش-۱-محیط-عملیاتی--docker-compose-پیشنهادی)
+۲. [همه-در-یک — دستور تکی Docker (فقط برای آزمایش)](#روش-۲-همه-در-یک--دستور-تکی-docker-فقط-برای-آزمایش)
+۳. [نصب استاندارد — PHP + MariaDB](#روش-۳-نصب-استاندارد--php--mariadb)
 
-*   PHP >= 8.2
-*   Composer
-*   MySQL database
-*   Node.js >= 18.0.0
+---
 
-### Steps
+## روش ۱: محیط عملیاتی — Docker Compose (پیشنهادی)
 
-**1. Clone the repository:**
+از ایمیج‌های از پیش ساخته‌شده در GitHub Container Registry استفاده می‌کند. نیازی به کد منبع یا ابزارهای Build نیست — فقط Docker و یک فایل `.env` کافی است.
 
+اسکریپت راه‌اندازی ایمیج برنامه به‌طور خودکار:
+- در صورت عدم تنظیم، `APP_KEY` را تولید می‌کند
+- دستور `php artisan migrate --force` را اجرا می‌کند
+- پایگاه داده را Seed می‌کند (در صورت Seed شدن قبلی، این مرحله نادیده گرفته می‌شود)
+- کش‌های config، route و view را گرم می‌کند
+
+### پیش‌نیازها
+- Docker >= 24
+- Docker Compose >= 2.20
+
+### مراحل
+
+**۱. دانلود فایل Docker Compose و قالب محیط:**
+```bash
+mkdir freeamir && cd freeamir
+curl -O https://raw.githubusercontent.com/Jooyeshgar/FreeAmir/main/docker/production/docker-compose.prebuilt.yml
+curl -O https://raw.githubusercontent.com/Jooyeshgar/FreeAmir/main/docker/production/.env.example
+cp docker-compose.prebuilt.yml docker-compose.yml
+cp .env.example .env
+```
+
+**۲. ویرایش فایل `.env` و تنظیم رمزهای عبور و آدرس:**
+
+| متغیر | توضیح | مقدار پیش‌فرض |
+|---|---|---|
+| `APP_URL` | آدرس عمومی برنامه | `http://localhost` |
+| `APP_PORT` | پورت میزبان برای نمایش برنامه | `80` |
+| `DB_PASSWORD` | رمز عبور کاربر پایگاه داده MariaDB | `change_me_strong_password` |
+| `DB_ROOT_PASSWORD` | رمز عبور root در MariaDB | `change_me_root_password` |
+| `DB_DATABASE` | نام پایگاه داده | `freeamir` |
+| `DB_USERNAME` | نام کاربری پایگاه داده | `freeamir` |
+| `PMA_PORT` | پورت میزبان phpMyAdmin (اختیاری) | `8080` |
+
+**۳. دریافت ایمیج‌ها و راه‌اندازی کانتینرها:**
+```bash
+docker compose up -d
+```
+
+**۴. مشاهده لاگ‌های راه‌اندازی:**
+```bash
+docker compose logs -f php-fpm
+```
+
+پس از راه‌اندازی، برنامه را در آدرسی که در `APP_URL` تنظیم کرده‌اید باز کنید (پیش‌فرض: http://localhost).
+
+**۵. (اختیاری) راه‌اندازی phpMyAdmin برای مدیریت پایگاه داده:**
+```bash
+docker compose --profile tools up -d
+```
+phpMyAdmin در آدرس http://localhost:8080 در دسترس خواهد بود.
+
+**۶. توقف کانتینرها:**
+```bash
+docker compose down
+```
+
+> ⚠️ برای حذف تمام volume‌های داده (غیرقابل بازگشت):
+> ```bash
+> docker compose down -v
+> ```
+
+---
+
+## روش ۲: همه-در-یک — دستور تکی Docker (فقط برای آزمایش)
+
+> ⚠️ **برای محیط عملیاتی توصیه نمی‌شود.** این ایمیج شامل PHP-FPM، Nginx و MariaDB در یک کانتینر است و برای ارزیابی سریع طراحی شده. اگر volume نصب نشود، با حذف کانتینر تمام داده‌ها از بین می‌روند.
+
+### پیش‌نیازها
+- Docker >= 24
+
+### مراحل
+
+**دریافت و اجرا:**
+```bash
+docker run -d --name freeamir -p 80:80 -v freeamir-data:/var/lib/mysql ghcr.io/jooyeshgar/freeamir-all-in-one:latest
+```
+
+پس از اتمام راه‌اندازی، برنامه در آدرس http://localhost در دسترس خواهد بود.
+
+> 💡 برای سفارشی‌سازی آدرس یا اطلاعات پایگاه داده، متغیرهای محیطی را ارسال کنید:
+> ```bash
+> docker run -d --name freeamir -p 80:80 \
+>   -e APP_URL=http://your-domain.com \
+>   -e DB_PASSWORD=secret \
+>   -v freeamir-data:/var/lib/mysql \
+>   ghcr.io/jooyeshgar/freeamir-all-in-one:latest
+> ```
+
+**مشاهده پیشرفت راه‌اندازی:**
+```bash
+docker logs -f freeamir
+```
+
+**توقف و حذف:**
+```bash
+docker stop freeamir && docker rm freeamir
+```
+
+---
+
+## روش ۳: نصب استاندارد — PHP + MariaDB
+
+مستقیماً روی سرور یا سیستم شخصی با PHP، Composer، Node.js و MariaDB نصب کنید.
+
+### پیش‌نیازها
+- PHP >= 8.2 با افزونه‌های: `pdo_mysql`، `gd`، `intl`، `zip`، `bcmath`، `mbstring`، `xml`، `opcache`
+- Composer
+- MariaDB >= 10.6 (یا MySQL >= 8.0)
+- Node.js >= 18.0.0
+
+### مراحل
+
+**۱. Clone کردن مخزن:**
 ```bash
 git clone https://github.com/Jooyeshgar/FreeAmir.git
 cd FreeAmir
 ```
 
-**2. Install PHP dependencies:**
-
+**۲. نصب وابستگی‌های PHP:**
 ```bash
-composer install
+composer install --no-dev --optimize-autoloader
 ```
 
-**3. Configure environment:**
-
-Copy `.env.example` to `.env` and set your database credentials:
-
+**۳. پیکربندی محیط:**
 ```bash
 cp .env.example .env
 ```
+فایل `.env` را ویرایش کنید و مقادیر `DB_HOST`، `DB_DATABASE`، `DB_USERNAME`، `DB_PASSWORD` و `APP_URL` را متناسب با محیط خود تنظیم نمایید.
 
-**4. Generate application key:**
-
+**۴. تولید کلید برنامه:**
 ```bash
 php artisan key:generate
 ```
 
-**5. Run database migrations:**
-
+**۵. اجرای Migration پایگاه داده:**
 ```bash
 php artisan migrate
 ```
 
-**6. Seed the database with sample data:**
-
+**۶. Seed کردن پایگاه داده:**
 ```bash
 php artisan db:seed
 ```
-
-Optional — seed demo data:
-
+اختیاری — Seed با داده‌های نمونه:
 ```bash
 php artisan db:seed --class DemoSeeder
 ```
 
-**7. Install frontend packages:**
+**۷. گرم کردن کش‌های برنامه:**
+```bash
+php artisan optimize
+```
 
+**۸. نصب و ساخت دارایی‌های فرانت‌اند:**
 ```bash
 npm install
+npm run build
 ```
 
-**8. Run the Vite development server:**
-
-```bash
-npm run dev
-```
-
-**9. Start the development server:**
-
+**۹. پیکربندی وب‌سرور** برای سرویس‌دهی از پوشه `public/` و تنظیم document root. برای آزمایش سریع محلی:
 ```bash
 php artisan serve
 ```
-
-Access the application at http://localhost:8000.
-
----
-
-## Option 2: Laravel Sail (Docker)
-
-### Prerequisites
-
-*   Docker & Docker Compose
-*   Composer (for the initial install step only)
-
-### Steps
-
-**1. Clone the repository:**
-
-```bash
-git clone https://github.com/Jooyeshgar/FreeAmir.git
-cd FreeAmir
-```
-
-**2. Install PHP dependencies on the host (first time only):**
-
-```bash
-composer install
-```
-
-**3. Start Sail containers:**
-
-```bash
-sail up -d
-```
-
-**4. Install PHP dependencies inside Sail:**
-
-```bash
-sail composer install
-```
-
-**5. Configure environment:**
-
-```bash
-cp .env.example .env
-```
-
-Update `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` in `.env` to match the Sail defaults (or your own values).
-
-**6. Generate application key:**
-
-```bash
-sail artisan key:generate
-```
-
-**7. Run database migrations:**
-
-```bash
-sail artisan migrate
-```
-
-**8. Seed the database with sample data:**
-
-```bash
-sail artisan db:seed
-```
-
-Optional — seed demo data:
-
-```bash
-sail artisan db:seed --class DemoSeeder
-```
-
-**9. Install frontend packages:**
-
-```bash
-sail npm install
-```
-
-**10. Run the Vite development server:**
-
-```bash
-sail npm run dev
-```
-
-Access the application at http://localhost (Sail default port).
-
-For more details refer to the official **[Sail documentation](https://laravel.com/docs/sail)**.
+برنامه در آدرس http://localhost:8000 در دسترس خواهد بود.
 
 ---
 
-## Option 3: Production Docker Compose
+## ورود پیش‌فرض
 
-This option is intended for self-hosted production deployments. It uses a lean, purpose-built Docker
-image (no dev tools, no Xdebug, no PostgreSQL/MongoDB). The bootstrap script automatically handles
-key generation, migrations, and cache warming on every container start.
-
-### Prerequisites
-
-*   Docker >= 24
-*   Docker Compose >= 2.20
-
-### Steps
-
-**1. Clone the repository:**
-
-```bash
-git clone https://github.com/Jooyeshgar/FreeAmir.git
-cd FreeAmir
-```
-
-**2. Configure environment:**
-
-```bash
-cp docker/.env.example docker/.env
-```
-
-Open `docker/.env` and set strong values for at least these variables:
-
-| Variable | Description |
-|---|---|
-| `APP_URL` | Public URL of the application (e.g. `https://yourdomain.com`) |
-| `DB_PASSWORD` | MariaDB application user password |
-| `DB_ROOT_PASSWORD` | MariaDB root password |
-| `APP_PORT` | Host port to expose the app (default `80`) |
-
-**3. Build and start the containers:**
-
-```bash
-docker compose -f docker/docker-compose.yml --env-file docker/.env up -d --build
-```
-
-The bootstrap script inside the container will automatically:
-- Generate the `APP_KEY` if not already set in the environment
-- Run `php artisan migrate --force`
-- Seed the database (skipped if already seeded)
-- Warm up config, route, and view caches
-
-**4. Check container logs:**
-
-```bash
-docker compose -f docker/docker-compose.yml --env-file docker/.env logs -f app
-```
-
-Access the application at the `APP_URL` you configured (default: http://localhost).
-
-**5. (Optional) Start phpMyAdmin for database management:**
-
-phpMyAdmin is included but disabled by default via a Docker Compose profile. To enable it:
-
-```bash
-docker compose -f docker/docker-compose.yml --env-file docker/.env --profile tools up -d
-```
-
-Access phpMyAdmin at http://localhost:8080 (or the port set in `PMA_PORT`).
-
-**6. Stop the containers:**
-
-```bash
-docker compose -f docker/docker-compose.yml --env-file docker/.env down
-```
-
-To also remove named volumes (⚠️ destroys database data):
-
-```bash
-docker compose -f docker/docker-compose.yml --env-file docker/.env down -v
-```
+پس از Seed شدن، با اطلاعات زیر وارد شوید:
+- **ایمیل:** `admin@example.com`
+- **رمز عبور:** `password`
 
 ---
 
-## Database Migration from Older Version
+## مهاجرت پایگاه داده از نسخه قدیمی
 
-If you are migrating from the older SQLite-based version of Amir, please refer to the [Database Migration Guide](script/README.md) for detailed instructions.
+برای مهاجرت از نسخه قدیمی مبتنی بر SQLite، به [راهنمای مهاجرت پایگاه داده](docs/database-guide.md) مراجعه کنید.

@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
 
 jobs:
   build-and-push:
@@ -21,7 +23,14 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }} 
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # === 1. App ===
+      - name: Extract metadata for App
+        id: meta-app
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/jooyeshgar/freeamir-app
 
       - name: Build and push App image
         uses: docker/build-push-action@v5
@@ -29,7 +38,15 @@ jobs:
           context: .
           file: ./docker/production/php-fpm/Dockerfile
           push: true
-          tags: ghcr.io/jooyeshgar/freeamir-app:latest
+          tags: ${{ steps.meta-app.outputs.tags }}
+          labels: ${{ steps.meta-app.outputs.labels }}
+
+      # === 2. Nginx ===
+      - name: Extract metadata for Nginx
+        id: meta-nginx
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/jooyeshgar/freeamir-nginx
 
       - name: Build and push Nginx image
         uses: docker/build-push-action@v5
@@ -37,7 +54,15 @@ jobs:
           context: .
           file: ./docker/production/nginx/Dockerfile
           push: true
-          tags: ghcr.io/jooyeshgar/freeamir-nginx:latest
+          tags: ${{ steps.meta-nginx.outputs.tags }}
+          labels: ${{ steps.meta-nginx.outputs.labels }}
+
+      # === 3. All in one ===
+      - name: Extract metadata for All in one
+        id: meta-all-in-one
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/jooyeshgar/freeamir-all-in-one
 
       - name: Build and push All in one image
         uses: docker/build-push-action@v5
@@ -45,4 +70,5 @@ jobs:
           context: .
           file: ./docker/all-in-one/Dockerfile
           push: true
-          tags: ghcr.io/jooyeshgar/freeamir-all-in-one:latest
+          tags: ${{ steps.meta-all-in-one.outputs.tags }}
+          labels: ${{ steps.meta-all-in-one.outputs.labels }}
