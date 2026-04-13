@@ -118,6 +118,12 @@
                         </x-text-input>
                     </div>
 
+                    <div class="flex-1 min-w-24 max-w-32" hidden>
+                        <x-text-input placeholder="0" x-model.number="transaction.quantity" x-bind:name="'transactions[' + index + '][quantity]'"
+                            x-bind:disabled="!transaction.service_id" label_text_class="text-gray-500" label_class="w-full" input_class="border-white">
+                        </x-text-input>
+                    </div>
+
                     <div class="flex-1 min-w-24 max-w-32">
                         <x-text-input placeholder="0" x-model.number="transaction.vat" x-bind:name="'transactions[' + index + '][vat]'"
                             x-bind:disabled="!transaction.service_id" label_text_class="text-gray-500" label_class="w-full" input_class="border-white">

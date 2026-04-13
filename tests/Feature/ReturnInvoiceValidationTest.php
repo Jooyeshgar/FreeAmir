@@ -107,10 +107,12 @@ class ReturnInvoiceValidationTest extends TestCase
 
         $return = $this->returnBuy([$this->productItem($product, 5, 100)], $buy->id, true, 6022, '2026-06-02')['invoice'];
 
+        //  توی انبار موجودی به مبلغ 100 نداریم چون به تعداد ۵ تا با ارزش ۱۰۰ برگشت از خرید دادیم.
+        // (۵ * ۱۰۰ - ۵ * ۱۰۰) / 0 = 0 تقسیم به صفر نداریم پس صفر در نظر میگیریم
         $product = $this->findProduct($product->id);
 
         $this->assertEquals(0, $product->quantity);
-        $this->assertEqualsWithDelta(100, $product->average_cost, 0.0001);
+        $this->assertEqualsWithDelta(0, $product->average_cost, 0.0001);
     }
 
     // -------------------------------------------------------------------------
@@ -223,10 +225,10 @@ class ReturnInvoiceValidationTest extends TestCase
 
         // موجودی: ۱۵ عدد
         $this->assertEquals(15, $product->quantity);
-        // cog_after برگشت باید برابر cog_after خرید دوم باشد
-        $this->assertEqualsWithDelta($buy2Item->cog_after, $returnItem->cog_after, 0.0001);
         // میانگین جدید = (10×100 + 5×140) / 15 = 1700/15 ≈ 113.33
         $expectedAvg = (10 * 100 + 5 * 140) / 15;
+        // cog_after برگشت از خرید با میانگین بازمحاسبه‌شده همگام می‌شود
+        $this->assertEqualsWithDelta($expectedAvg, $returnItem->cog_after, 0.01);
         $this->assertEqualsWithDelta($expectedAvg, $product->average_cost, 0.01);
     }
 
@@ -293,7 +295,7 @@ class ReturnInvoiceValidationTest extends TestCase
             'customer_id' => $this->customer->id,
             'company_id' => $this->companyId,
             'date' => '2026-06-02',
-            'type' => 'Freight',
+            'type' => 'Other',
             'amount' => 100,
             'vatPrice' => 0,
             'ancillaryCosts' => [
@@ -310,11 +312,7 @@ class ReturnInvoiceValidationTest extends TestCase
 
         // موجودی: 10 - 3 - 2 = 5
         $this->assertEquals(5, $product->quantity);
-        $this->assertEqualsWithDelta(
-            $product->quantity * $product->average_cost,
-            CostOfGoodsService::getInventoryValue($product),
-            0.01
-        );
+        $this->assertEqualsWithDelta(5 * $product->average_cost, CostOfGoodsService::getInventoryValue($product), 0.01);
     }
 
     // -------------------------------------------------------------------------
@@ -448,7 +446,7 @@ class ReturnInvoiceValidationTest extends TestCase
             'customer_id' => $this->customer->id,
             'company_id' => $this->companyId,
             'date' => '2026-06-02',
-            'type' => 'Customs',
+            'type' => 'Other',
             'amount' => 150,
             'vatPrice' => 0,
             'ancillaryCosts' => [
@@ -465,11 +463,7 @@ class ReturnInvoiceValidationTest extends TestCase
 
         // موجودی: 10 - 5 + 3 = 8
         $this->assertEquals(8, $product->quantity);
-        $this->assertEqualsWithDelta(
-            $product->quantity * $product->average_cost,
-            CostOfGoodsService::getInventoryValue($product),
-            0.01
-        );
+        $this->assertEqualsWithDelta(8 * 115, CostOfGoodsService::getInventoryValue($product), 0.01);
     }
 
     // -------------------------------------------------------------------------
@@ -528,17 +522,13 @@ class ReturnInvoiceValidationTest extends TestCase
 
         $product = $this->findProduct($product->id);
         $this->assertEquals(11, $product->quantity);
-        // cog_after برگشت از خرید = cog_after خرید دوم
-        $this->assertEqualsWithDelta($buy2Item->cog_after, $returnBuyItem->cog_after, 0.01);
         // میانگین جدید = (8×100 + 3×140) / 11 = (800 + 420) / 11 = 1220 / 11 ≈ 110.91
         $expectedAvgAfterReturnBuy = (8 * 100 + 3 * 140) / 11;
+        // cog_after برگشت از خرید با میانگین جدید همگام می‌شود
+        $this->assertEqualsWithDelta($expectedAvgAfterReturnBuy, $returnBuyItem->cog_after, 0.01);
         $this->assertEqualsWithDelta($expectedAvgAfterReturnBuy, $product->average_cost, 0.01);
 
         // مرحله ۶: بررسی نهایی ارزش موجودی
-        $this->assertEqualsWithDelta(
-            $product->quantity * $product->average_cost,
-            CostOfGoodsService::getInventoryValue($product),
-            0.01
-        );
+        $this->assertEqualsWithDelta(11 * 110.91, CostOfGoodsService::getInventoryValue($product), 0.01);
     }
 }

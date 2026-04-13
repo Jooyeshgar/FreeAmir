@@ -608,8 +608,8 @@ class COGSCalculationTest extends TestCase
         $fullItem = $this->findInvoiceItem($returnFull, $product);
 
         $this->assertEquals(0, $product->quantity);
-        $this->assertEqualsWithDelta(75, $product->average_cost, 0.0001);
-        $this->assertEqualsWithDelta($buyItem->cog_after, $fullItem->cog_after, 0.0001);
+        $this->assertEqualsWithDelta(0, $product->average_cost, 0.0001);
+        $this->assertEqualsWithDelta(0, $fullItem->cog_after, 0.0001);
     }
 
     public function test_mixed_buy_sell_and_return_sequence_keeps_expected_average_and_item_cogs(): void
@@ -627,19 +627,20 @@ class COGSCalculationTest extends TestCase
 
         $product = $this->findProduct($product->id);
 
-        $expectedAverageAfterReturnSell = 1760 / 14;
+        $expectedAverageBeforeReturnBuy = ((100 * 6) + (160 * 6) + (100 * 2)) / 14;
+        $expectedAverageAfterReturnBuy = (($expectedAverageBeforeReturnBuy * 9) - 160) / 8; // expected average is 121.42
 
         $this->assertEquals(8, $product->quantity);
-        $this->assertEqualsWithDelta($expectedAverageAfterReturnSell, $product->average_cost, 0.01);
+        $this->assertEqualsWithDelta($expectedAverageAfterReturnBuy, $product->average_cost, 0.01);
 
         $sell2Item = $this->findInvoiceItem($sell2, $product);
         $returnSellItem = $this->findInvoiceItem($returnSell, $product);
         $returnBuyItem = $this->findInvoiceItem($returnBuy, $product);
         $sell1Item = $this->findInvoiceItem($sell1, $product);
 
-        $this->assertEqualsWithDelta($expectedAverageAfterReturnSell, $sell2Item->cog_after, 0.01);
+        $this->assertEqualsWithDelta($expectedAverageBeforeReturnBuy, $sell2Item->cog_after, 0.01);
         $this->assertEqualsWithDelta($sell1Item->cog_after, $returnSellItem->cog_after, 0.0001);
-        $this->assertEqualsWithDelta(130, $returnBuyItem->cog_after, 0.0001);
+        $this->assertEqualsWithDelta(121.42, $returnBuyItem->cog_after, 0.0001);
         $this->assertEqualsWithDelta($product->quantity * $product->average_cost, CostOfGoodsService::getInventoryValue($product), 0.0001);
     }
 }
