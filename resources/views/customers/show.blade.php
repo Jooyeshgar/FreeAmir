@@ -21,7 +21,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                         </svg>
-                        <a href="{{ route('transactions.index', ['subject_id' => $customer->subject->id]) }}">{{ $customer->subject->formattedCode() }}</a>
+                        <a href="{{ route('transactions.index', ['subject_id' => $customer->subject_id]) }}">{{ $customer->subject->formattedCode() }}</a>
                     </span>
                     </a>
                 @endif
@@ -31,7 +31,7 @@
         <div class="card-body">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <a class="stats shadow bg-gradient-to-br from-success/10 to-success/5 border border-success/20"
-                    href="{{ route('transactions.index', ['subject_id' => $customer->subject->id]) }}">
+                    href="{{ route('transactions.index', ['subject_id' => $customer->subject_id]) }}">
                     <div class="stat">
                         <div class="stat-title text-success">{{ __('Subject Balance') }}</div>
                         <div class="stat-value text-success text-2xl">{{ formatNumber($subjectBalance ?? 0) }}</div>

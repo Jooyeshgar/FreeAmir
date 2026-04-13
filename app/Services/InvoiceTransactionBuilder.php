@@ -486,7 +486,7 @@ class InvoiceTransactionBuilder
         $cashPayment = floatval($this->invoiceData['cash_payment'] ?? 0);
         $customerTotal = $this->totalAmount - $this->subtractions - $cashPayment + $this->totalVat;
 
-        $subjectId = Customer::find($customerId)->subject->id;
+        $subjectId = Customer::find($customerId)->subject_id;
 
         $value = match ($this->invoiceType) {
             InvoiceType::SELL => -$customerTotal,
