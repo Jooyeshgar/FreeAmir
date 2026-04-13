@@ -169,9 +169,14 @@ class CustomerTest extends TestCase
         $newCustomer = Customer::where('name', 'new name with new customer group')->first();
         $newSubject = $newCustomer->subject;
 
-        $this->assertNotNull($subject);
-        $this->assertEquals($customer->name, $subject->name);
-        $this->assertNotEquals($subject->code, $newSubject->code);
+        $this->assertNotNull($newSubject);
+        $this->assertEquals($newCustomer->name, $newSubject->name);
+
+        $this->assertDatabaseHas('subjects', ['name' => 'new name with new customer group']);
+        $this->assertDatabaseHas('subjects', ['name' => 'new name with new customer group']);
+
+        $this->assertDatabaseMissing('subjects', ['name' => 'Test Customer']);
+        $this->assertDatabaseMissing('customers', ['name' => 'Test Customer']);
     }
 
     public function test_it_can_create_a_customer_with_minimal_required_data()
