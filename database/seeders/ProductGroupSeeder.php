@@ -9,6 +9,12 @@ class ProductGroupSeeder extends Seeder
 {
     public function run(): void
     {
-        ProductGroup::factory()->count(3)->withSubjects()->create();
+        ProductGroup::factory()
+            ->withSubjects()
+            ->create([
+                'name' => 'عمومی',
+                'vat' => 10,
+                'company_id' => 1,
+            ]);
     }
 }

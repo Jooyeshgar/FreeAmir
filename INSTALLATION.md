@@ -162,6 +162,85 @@ For more details refer to the official **[Sail documentation](https://laravel.co
 
 ---
 
+## Option 3: Production Docker Compose
+
+This option is intended for self-hosted production deployments. It uses a lean, purpose-built Docker
+image (no dev tools, no Xdebug, no PostgreSQL/MongoDB). The bootstrap script automatically handles
+key generation, migrations, and cache warming on every container start.
+
+### Prerequisites
+
+*   Docker >= 24
+*   Docker Compose >= 2.20
+
+### Steps
+
+**1. Clone the repository:**
+
+```bash
+git clone https://github.com/Jooyeshgar/FreeAmir.git
+cd FreeAmir
+```
+
+**2. Configure environment:**
+
+```bash
+cp docker/.env.example docker/.env
+```
+
+Open `docker/.env` and set strong values for at least these variables:
+
+| Variable | Description |
+|---|---|
+| `APP_URL` | Public URL of the application (e.g. `https://yourdomain.com`) |
+| `DB_PASSWORD` | MariaDB application user password |
+| `DB_ROOT_PASSWORD` | MariaDB root password |
+| `APP_PORT` | Host port to expose the app (default `80`) |
+
+**3. Build and start the containers:**
+
+```bash
+docker compose -f docker/docker-compose.yml --env-file docker/.env up -d --build
+```
+
+The bootstrap script inside the container will automatically:
+- Generate the `APP_KEY` if not already set in the environment
+- Run `php artisan migrate --force`
+- Seed the database (skipped if already seeded)
+- Warm up config, route, and view caches
+
+**4. Check container logs:**
+
+```bash
+docker compose -f docker/docker-compose.yml --env-file docker/.env logs -f app
+```
+
+Access the application at the `APP_URL` you configured (default: http://localhost).
+
+**5. (Optional) Start phpMyAdmin for database management:**
+
+phpMyAdmin is included but disabled by default via a Docker Compose profile. To enable it:
+
+```bash
+docker compose -f docker/docker-compose.yml --env-file docker/.env --profile tools up -d
+```
+
+Access phpMyAdmin at http://localhost:8080 (or the port set in `PMA_PORT`).
+
+**6. Stop the containers:**
+
+```bash
+docker compose -f docker/docker-compose.yml --env-file docker/.env down
+```
+
+To also remove named volumes (⚠️ destroys database data):
+
+```bash
+docker compose -f docker/docker-compose.yml --env-file docker/.env down -v
+```
+
+---
+
 ## Database Migration from Older Version
 
 If you are migrating from the older SQLite-based version of Amir, please refer to the [Database Migration Guide](script/README.md) for detailed instructions.

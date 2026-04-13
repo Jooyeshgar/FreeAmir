@@ -16,7 +16,7 @@ class SubjectFactory extends Factory
             'company_id' => $companyId,
             'parent_id' => null,
             'code' => uniqid('tmp', false),
-            'name' => $this->faker->name,
+            'name' => $this->faker?->name,
             'type' => 'both',
         ];
     }

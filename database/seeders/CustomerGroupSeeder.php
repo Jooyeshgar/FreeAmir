@@ -9,6 +9,12 @@ class CustomerGroupSeeder extends Seeder
 {
     public function run()
     {
-        CustomerGroup::factory()->count(5)->withSubject()->create();
+        CustomerGroup::factory()
+            ->withSubject()
+            ->create([
+                'name' => 'عمومی',
+                'description' => 'گروه مشتریان عمومی',
+                'company_id' => 1,
+            ]);
     }
 }
