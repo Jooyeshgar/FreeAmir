@@ -2212,14 +2212,16 @@ class FiscalYearService
         return DocumentService::createDocument($user, $documentData, $transactions);
     }
 
-    protected static function newFiscalYear(Company $company, User $user): Company
+    protected static function newFiscalYear(Company $company): Company
     {
         $newFiscalYearData = collect($company->getAttributes())->except(['id', 'closed_at', 'fiscal_year'])
             ->merge(['fiscal_year' => $company->fiscal_year + 1])->toArray();
 
         $sectionsToCopy = ['subjects', 'configs', 'banks', 'customers', 'products', 'services', 'employees']; // Sections to copy to the new fiscal year
         $newFiscalYear = self::createWithCopiedData($newFiscalYearData, $company->id, $sectionsToCopy);
-        $newFiscalYear->users()->attach($user->id);
+
+        $userIds = $company->users()->pluck('users.id')->toArray();
+        $newFiscalYear->users()->attach($userIds);
 
         return $newFiscalYear;
     }
@@ -2261,7 +2263,7 @@ class FiscalYearService
             $company->closed_by = $user->id;
             $company->save();
 
-            $newFiscalYear = self::newFiscalYear($company, $user);
+            $newFiscalYear = self::newFiscalYear($company);
 
             self::createOpeningDocument($newFiscalYear, $closeDocument, $user);
         });
@@ -2366,7 +2368,7 @@ class FiscalYearService
             $closeDocument = self::createClosingDocument($company, $user);
             $company->closing_document_id = $closeDocument->id;
 
-            $newFiscalYear = self::newFiscalYear($company, $user);
+            $newFiscalYear = self::newFiscalYear($company);
 
             self::createOpeningDocument($newFiscalYear, $closeDocument, $user);
 
