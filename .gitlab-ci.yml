@@ -3,43 +3,49 @@ stages:
   - deploy_develop
 
 cache:
+  key: ${CI_COMMIT_REF_SLUG}
   paths:
     - vendor/
     - node_modules/
 
 test:
   stage: test
+  tags:
+    - docker-runner
+  
+  image: ghcr.io/jooyeshgar/freeamir-app:latest
+  
+  services:
+    - name: mariadb:11
+      alias: mariadb 
+
+  variables:
+    MYSQL_DATABASE: testing_db
+    MYSQL_ROOT_PASSWORD: root_password
+    DB_CONNECTION: mysql
+    DB_HOST: mariadb
+    DB_PORT: 3306
+    DB_DATABASE: testing_db
+    DB_USERNAME: root
+    DB_PASSWORD: root_password
+
   before_script:
     - cp .env.ci .env
-    - cp docker-composeci.yml docker-compose.yml
-    - chmod -R 777 storage/
-    - chmod -R 777 bootstrap/cache/
-    - echo "DB_PASSWORD=$DB_PASSWORD" >> .env
-    - composer install --no-scripts --ignore-platform-reqs
-    - chmod -R 777 vendor/
-    - ./vendor/bin/sail up -d --force-recreate --wait
-    - ./vendor/bin/sail exec laravel.test git config --global --add safe.directory /var/www/html
-    - ./vendor/bin/sail composer install
-    # - ./vendor/bin/sail npm install --cache /var/www/html/.npm
-    # - ./vendor/bin/sail npm run build
-    # - ./vendor/bin/sail php artisan migrate:fresh
+    - chmod -R 777 storage/ bootstrap/cache/
+    - composer install --no-scripts --ignore-platform-reqs --no-interaction
+    
+    - php artisan migrate:fresh
 
   script:
-    - set +e
-    - ./vendor/bin/sail php artisan test --colors=never
-    - TEST_EXIT_CODE=$?
-    - echo "Test Exit Code $TEST_EXIT_CODE"
-    - if [ $TEST_EXIT_CODE -ne 0 ]; then exit $TEST_EXIT_CODE; fi
-    - set -e
-    
-  after_script:
-    - ./vendor/bin/sail down || true
+    - php artisan test --colors=never
+
 
 deploy_develop:
   stage: deploy_develop
   when: manual
   only:
     - main
+
   before_script: []
   after_script: []
   script:
