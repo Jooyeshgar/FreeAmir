@@ -1,7 +1,7 @@
 <div class="grid grid-cols-2 gap-6">
 
     <div class="col-span-2 md:col-span-1">
-        <x-select name="employee_id" id="employee_id" title="{{ __('Employee') }}" :selected="old('employee_id', request('employee') ?? $salaryDecree->employee_id)" :options="$employees
+        <x-select name="employee_id" id="employee_id" title="{{ __('Employee') }}" :selected="old('employee_id', request('employee') ?? $salaryDecree->employee_id ?? null)" :options="$employees
             ->mapWithKeys(fn($e) => [$e->id => $e->first_name . ' ' . $e->last_name])
             ->prepend('— ' . __('Select Employee') . ' —', '')
             ->all()" required />

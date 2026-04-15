@@ -44,18 +44,6 @@ class SalaryDecreeController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        if ($request->has('start_date')) {
-            $request->merge([
-                'start_date' => jalaliInputToGregorian($request->input('start_date'), 'start_date'),
-            ]);
-        }
-
-        if ($request->has('end_date') && $request->filled('end_date')) {
-            $request->merge([
-                'end_date' => jalaliInputToGregorian($request->input('end_date'), 'end_date'),
-            ]);
-        }
-
         $validated = $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
             'name' => ['nullable', 'string', 'max:200'],
@@ -65,17 +53,20 @@ class SalaryDecreeController extends Controller
             'description' => ['nullable', 'string'],
             'is_active' => ['boolean'],
             'benefits' => ['nullable', 'array'],
-            'benefits.*.element_id' => ['required', 'integer', 'exists:payroll_elements,id'],
+            'benefits.*.element_id' => ['required', 'integer', 'exists:payroll_elements,id', 'distinct'],
             'benefits.*.value' => ['required', 'numeric', 'min:0'],
         ]);
 
         DB::transaction(function () use ($validated, $request) {
+            $validated['start_date'] = jalaliInputToGregorian($validated['start_date'], 'start_date');
+            $validated['end_date'] = isset($validated['end_date']) ? jalaliInputToGregorian($validated['end_date'], 'end_date') : null;
+
             $decree = SalaryDecree::create([
                 'company_id' => getActiveCompany(),
                 'employee_id' => $validated['employee_id'],
                 'name' => $validated['name'] ?? null,
                 'start_date' => $validated['start_date'],
-                'end_date' => $validated['end_date'] ?? null,
+                'end_date' => $validated['end_date'],
                 'daily_wage' => $validated['daily_wage'] ?? null,
                 'description' => $validated['description'] ?? null,
                 'is_active' => $request->boolean('is_active', false),
@@ -107,18 +98,6 @@ class SalaryDecreeController extends Controller
 
     public function update(Request $request, SalaryDecree $salaryDecree): RedirectResponse
     {
-        if ($request->has('start_date')) {
-            $request->merge([
-                'start_date' => jalaliInputToGregorian($request->input('start_date'), 'start_date'),
-            ]);
-        }
-
-        if ($request->has('end_date') && $request->filled('end_date')) {
-            $request->merge([
-                'end_date' => jalaliInputToGregorian($request->input('end_date'), 'end_date'),
-            ]);
-        }
-
         $validated = $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
             'name' => ['nullable', 'string', 'max:200'],
@@ -128,16 +107,19 @@ class SalaryDecreeController extends Controller
             'description' => ['nullable', 'string'],
             'is_active' => ['boolean'],
             'benefits' => ['nullable', 'array'],
-            'benefits.*.element_id' => ['required', 'integer', 'exists:payroll_elements,id'],
+            'benefits.*.element_id' => ['required', 'integer', 'exists:payroll_elements,id', 'distinct'],
             'benefits.*.value' => ['required', 'numeric', 'min:0'],
         ]);
 
         DB::transaction(function () use ($validated, $request, $salaryDecree) {
+            $validated['start_date'] = jalaliInputToGregorian($validated['start_date'], 'start_date');
+            $validated['end_date'] = isset($validated['end_date']) ? jalaliInputToGregorian($validated['end_date'], 'end_date') : null;
+
             $salaryDecree->update([
                 'employee_id' => $validated['employee_id'],
                 'name' => $validated['name'] ?? null,
                 'start_date' => $validated['start_date'],
-                'end_date' => $validated['end_date'] ?? null,
+                'end_date' => $validated['end_date'],
                 'daily_wage' => $validated['daily_wage'] ?? null,
                 'description' => $validated['description'] ?? null,
                 'is_active' => $request->boolean('is_active', false),
