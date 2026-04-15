@@ -7,6 +7,8 @@ Route::get('/login', [Controllers\Auth\LoginController::class, 'showLoginForm'])
 Route::post('/login', [Controllers\Auth\LoginController::class, 'login']);
 Route::get('/logout', [Controllers\Auth\LoginController::class, 'logout'])->name('logout');
 
+Route::get('change-company/{company}', [Controllers\CompanyController::class, 'setActiveCompany'])->name('change-company')->middleware('auth');
+
 Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee-portal', 'as' => 'employee-portal.'], function () {
     Route::get('/', [Controllers\EmployeePortalController::class, 'dashboard'])->name('dashboard');
     Route::get('/attendance-logs', [Controllers\EmployeePortalController::class, 'attendanceLogs'])->name('attendance-logs');
@@ -128,7 +130,6 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('documents', [Controllers\ReportsController::class, 'documents'])->name('documents');
         Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
     });
-    Route::get('change-company/{company}', [Controllers\CompanyController::class, 'setActiveCompany'])->name('change-company');
 
     Route::group(['prefix' => 'invoices', 'as' => 'invoices.index'], function () {
         Route::get('', [Controllers\InvoiceController::class, 'index']);
