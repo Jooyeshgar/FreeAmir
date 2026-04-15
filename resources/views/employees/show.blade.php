@@ -46,7 +46,7 @@
                             </a>
                         @endif
 
-                        {{-- @if ($employee->orgChart)
+                        @if ($employee->orgChart)
                             <a href="{{ route('hr.org-charts.show', $employee->orgChart) }}"
                                 class="badge badge-lg badge-secondary gap-2 hover:brightness-110 transition-all">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -55,7 +55,7 @@
                                 </svg>
                                 {{ $employee->orgChart->title }}
                             </a>
-                        @endif --}}
+                        @endif
 
                         @if ($employee->user)
                             <a href="{{ route('users.show', $employee->user) }}" class="badge badge-lg badge-info gap-2 hover:brightness-110 transition-all">
@@ -157,7 +157,7 @@
                         <div class="font-semibold">—</div>
                     @endif
                 </div>
-                {{-- <div class="bg-base-200 rounded-lg px-4 py-3">
+                <div class="bg-base-200 rounded-lg px-4 py-3">
                     <div class="text-xs text-gray-500 mb-1">{{ __('Org Chart Position') }}</div>
                     @if ($employee->orgChart)
                         <a href="{{ route('hr.org-charts.show', $employee->orgChart) }}" class="font-semibold link link-primary hover:link-hover">
@@ -166,7 +166,7 @@
                     @else
                         <div class="font-semibold">—</div>
                     @endif
-                </div> --}}
+                </div>
                 <div class="bg-base-200 rounded-lg px-4 py-3">
                     <div class="text-xs text-gray-500 mb-1">{{ __('Contract Framework') }}</div>
                     @if ($employee->workSiteContract)
