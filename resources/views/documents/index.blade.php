@@ -72,7 +72,6 @@
                     <tr>
                         <th class="p-2 w-12">{{ __('Doc Number') }}</th>
                         <th class="p-2">{{ __('Title') }}</th>
-                        <th class="p-2 w-40">{{ __('Sum') }}</th>
                         <th class="p-2 w-40">{{ __('Date') }}</th>
                         <th class="p-2 w-40">{{ __('Relation') }}</th>
                         <th class="p-2 w-40">{{ __('Approve date') }}</th>
@@ -82,7 +81,11 @@
                 </thead>
                 <tbody>
                     @foreach ($documents as $document)
-                        <tr class="{{ $document->approved_at ? '' : 'text-gray-500' }}">
+                        @php
+                            $isBalance = $document->transactions->sum('value') !== 0.0;
+                        @endphp
+                        <tr class="{{ $isBalance ? 'text-red-500' : ($document->approved_at ? '' : 'text-gray-500') }}"
+                            title="{{ $isBalance ? formatNumber($document->transactions->sum('value')) : '' }}" >
                             <td class="p-2">
                                 <a href="{{ route('documents.show', $document->id) }}">
                                     {{ formatDocumentNumber($document->number) }}
@@ -91,10 +94,6 @@
 
                             <td class="p-2">
                                 {{ $document->title ?? $document->transactions->first()?->desc . ' ...' }}
-                            </td>
-
-                            <td class="p-2">
-                                {{ formatNumber($document->transactions->sum('value')) }}
                             </td>
 
                             <td class="p-2">
