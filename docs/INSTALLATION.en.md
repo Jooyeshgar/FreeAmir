@@ -181,12 +181,20 @@ Access the application at http://localhost:8000.
 
 ## Default Login
 
-After seeding, log in with:
-- **Email:** `admin@example.com`
-- **Password:** `password`
+After seeding, all users share the password **`password`**. Available accounts:
+
+| Email | Roles |
+|---|---|
+| `admin@example.com` | Super-Admin, Employee |
+| `accountant@example.com` | Accountant, Employee |
+| `seller@example.com` | Seller, Employee |
+| `warehouse@example.com` | Warehousekeeper, Employee |
+| `seller-warehouse@example.com` | Seller, Warehousekeeper, Employee |
+| `accountant-seller-warehouse@example.com` | Accountant, Seller, Warehousekeeper, Employee |
+| `employee@example.com` | Employee |
 
 ---
 
 ## Database Migration from Older Version
 
-See [Database Migration Guide](docs/database-guide.md) for migrating from the older SQLite-based version.
+See [Database Migration Guide](database-guide.md) for migrating from the older SQLite-based version.

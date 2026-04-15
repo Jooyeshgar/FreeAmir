@@ -24,7 +24,7 @@
 
 ### مراحل
 
-**۱. دانلود فایل Docker Compose و قالب محیط:**
+**۱. دانلود فایل Docker Compose و متغیرهای محیطی:**
 ```bash
 mkdir freeamir && cd freeamir
 curl -O https://raw.githubusercontent.com/Jooyeshgar/FreeAmir/main/docker/production/docker-compose.prebuilt.yml
@@ -67,11 +67,6 @@ phpMyAdmin در آدرس http://localhost:8080 در دسترس خواهد بود
 ```bash
 docker compose down
 ```
-
-> ⚠️ برای حذف تمام volume‌های داده (غیرقابل بازگشت):
-> ```bash
-> docker compose down -v
-> ```
 
 ---
 
@@ -181,12 +176,20 @@ php artisan serve
 
 ## ورود پیش‌فرض
 
-پس از Seed شدن، با اطلاعات زیر وارد شوید:
-- **ایمیل:** `admin@example.com`
-- **رمز عبور:** `password`
+پس از Seed شدن، رمز عبور همه کاربران **`password`** است. حساب‌های کاربری موجود:
+
+| ایمیل | نقش‌ها |
+|---|---|
+| `admin@example.com` | Super-Admin, Employee |
+| `accountant@example.com` | Accountant, Employee |
+| `seller@example.com` | Seller, Employee |
+| `warehouse@example.com` | Warehousekeeper, Employee |
+| `seller-warehouse@example.com` | Seller, Warehousekeeper, Employee |
+| `accountant-seller-warehouse@example.com` | Accountant, Seller, Warehousekeeper, Employee |
+| `employee@example.com` | Employee |
 
 ---
 
 ## مهاجرت پایگاه داده از نسخه قدیمی
 
-برای مهاجرت از نسخه قدیمی مبتنی بر SQLite، به [راهنمای مهاجرت پایگاه داده](docs/database-guide.md) مراجعه کنید.
+برای مهاجرت از نسخه قدیمی مبتنی بر SQLite، به [راهنمای مهاجرت پایگاه داده](database-guide.md) مراجعه کنید.

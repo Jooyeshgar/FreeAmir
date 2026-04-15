@@ -1,6 +1,8 @@
 ## Amir: Free Laravel Accounting Software
 
-**Important Notice:** Amir is currently under **active development** and is not yet ready for production use. We will announce the official release date soon. Stay tuned!
+**[نسخه فارسی](README.md)**
+
+**Important Note:** "Amir" is currently under development and has not been fully tested yet. Before using it in a production environment, please ensure that the specific features you intend to use are functioning correctly.
 
 **Introduction:**
 
