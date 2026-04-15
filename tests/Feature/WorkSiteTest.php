@@ -28,7 +28,7 @@ class WorkSiteTest extends TestCase
         $company->users()->attach($this->user);
 
         $this->user->givePermissionTo(
-            Permission::firstOrCreate(['name' => 'work-sites.*'])
+            Permission::firstOrCreate(['name' => 'salary.work-sites.*'])
         );
 
         $this->actingAs($this->user);

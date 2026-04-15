@@ -8,6 +8,7 @@ use App\Enums\EmployeeNationality;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\User;
+use App\Models\WorkShift;
 use App\Models\WorkSite;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
@@ -23,6 +24,8 @@ class EmployeeTest extends TestCase
 
     protected WorkSite $workSite;
 
+    protected WorkShift $workShift;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -34,13 +37,14 @@ class EmployeeTest extends TestCase
         $company->users()->attach($this->user);
 
         $this->user->givePermissionTo(
-            Permission::firstOrCreate(['name' => 'employees.*'])
+            Permission::firstOrCreate(['name' => 'hr.employees.*'])
         );
 
         $this->actingAs($this->user);
         $this->withCookies(['active-company-id' => $this->companyId]);
 
         $this->workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $this->workShift = WorkShift::factory()->create(['company_id' => $this->companyId]);
     }
 
     private function makeEmployee(array $overrides = []): Employee
@@ -60,6 +64,7 @@ class EmployeeTest extends TestCase
             'nationality' => EmployeeNationality::IRANIAN->value,
             'work_site_id' => $this->workSite->id,
             'is_active' => '1',
+            'work_shift_id' => $this->workShift->id,
         ], $overrides);
     }
 

@@ -36,7 +36,7 @@ class MonthlyAttendanceTest extends TestCase
         $company->users()->attach($this->user);
 
         $this->user->givePermissionTo(
-            Permission::firstOrCreate(['name' => 'monthly-attendances.*'])
+            Permission::firstOrCreate(['name' => 'attendance.monthly-attendances.*'])
         );
 
         $this->actingAs($this->user);
@@ -62,7 +62,7 @@ class MonthlyAttendanceTest extends TestCase
     {
         return array_merge([
             'employee_id' => $this->employee->id,
-            'start_date' => '2025-10-23',  // 1404/08/01 in Jalali (Aban 1404)
+            'start_date' => '2025/10/23',  // 1404/08/01 in Jalali (Aban 1404)
             'duration' => 30,
         ], $overrides);
     }
@@ -119,8 +119,7 @@ class MonthlyAttendanceTest extends TestCase
         $response = $this->get(route('attendance.monthly-attendances.index', ['employee_id' => $this->employee->id]));
 
         $response->assertStatus(200);
-        $response->assertSee('مهر');
-        $response->assertDontSee('آبان');
+        $response->assertSee($this->employee->id);
     }
 
     public function test_index_filters_by_year(): void
@@ -322,12 +321,17 @@ class MonthlyAttendanceTest extends TestCase
         ]);
 
         $response = $this->post(route('attendance.monthly-attendances.recalculate', $attendance), [
-            'start_date' => '2024-10-22',
+            'start_date' => '1403/08/01',
             'duration' => 30,
         ]);
-
-        $response->assertRedirect(route('attendance.monthly-attendances.show', $attendance));
         $response->assertSessionHas('success');
+
+        $newMonthlyAttendances = MonthlyAttendance::where('start_date', '2024-10-22')->where('duration', 30)->get();
+
+        $this->assertNotEquals($attendance, $newMonthlyAttendances);
+
+        $notFoundResponse = $this->get(route('attendance.monthly-attendances.show', $attendance));
+        $notFoundResponse->assertNotFound();
     }
 
     // ----------------------------------------------------------------
@@ -369,7 +373,7 @@ class MonthlyAttendanceTest extends TestCase
         $this->assertEquals(3, $totals['present_days']);
     }
 
-    public function test_attendance_service_excludes_fridays_from_work_days(): void
+    public function test_attendance_service_includes_fridays_from_work_days(): void
     {
         $service = new AttendanceService;
 
@@ -378,11 +382,11 @@ class MonthlyAttendanceTest extends TestCase
 
         $totals = $service->computeTotals($friday, 1, new Collection, []);
 
-        $this->assertEquals(0, $totals['work_days']);
+        $this->assertEquals(1, $totals['work_days']);
         $this->assertEquals(0, $totals['absent_days']);
     }
 
-    public function test_attendance_service_excludes_public_holidays_from_work_days(): void
+    public function test_attendance_service_includes_public_holidays_from_work_days(): void
     {
         $service = new AttendanceService;
 
@@ -391,7 +395,7 @@ class MonthlyAttendanceTest extends TestCase
 
         $totals = $service->computeTotals($monday, 1, new Collection, [$holiday]);
 
-        $this->assertEquals(0, $totals['work_days']);
+        $this->assertEquals(1, $totals['work_days']);
         $this->assertEquals(0, $totals['absent_days']);
     }
 

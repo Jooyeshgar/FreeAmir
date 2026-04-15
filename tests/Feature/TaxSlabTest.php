@@ -28,7 +28,7 @@ class TaxSlabTest extends TestCase
         $company->users()->attach($this->user);
 
         $this->user->givePermissionTo(
-            Permission::firstOrCreate(['name' => 'tax-slabs.*'])
+            Permission::firstOrCreate(['name' => 'salary.tax-slabs.*'])
         );
 
         $this->actingAs($this->user);
@@ -39,20 +39,14 @@ class TaxSlabTest extends TestCase
     {
         return TaxSlab::factory()->create(array_merge([
             'company_id' => $this->companyId,
-            'year' => 1403,
-            'slab_order' => 1,
         ], $overrides));
     }
 
     private function validPayload(array $overrides = []): array
     {
         return array_merge([
-            'year' => 1403,
-            'slab_order' => 1,
-            'income_from' => 0,
             'income_to' => 500_000_000,
             'tax_rate' => 10,
-            'annual_exemption' => 36_000_000,
         ], $overrides);
     }
 
@@ -62,24 +56,11 @@ class TaxSlabTest extends TestCase
 
     public function test_index_lists_tax_slabs_for_active_company(): void
     {
-        $this->makeTaxSlab(['year' => 1403, 'slab_order' => 1]);
-        $this->makeTaxSlab(['year' => 1403, 'slab_order' => 2]);
+        $this->makeTaxSlab();
 
         $response = $this->get(route('salary.tax-slabs.index'));
 
         $response->assertStatus(200);
-        $response->assertSee('1403');
-    }
-
-    public function test_index_filters_by_year(): void
-    {
-        $this->makeTaxSlab(['year' => 1403, 'slab_order' => 1]);
-        $this->makeTaxSlab(['year' => 1402, 'slab_order' => 1]);
-
-        $response = $this->get(route('salary.tax-slabs.index', ['year' => 1402]));
-
-        $response->assertStatus(200);
-        $response->assertSee('1402');
     }
 
     // ----------------------------------------------------------------
@@ -104,8 +85,6 @@ class TaxSlabTest extends TestCase
 
         $this->assertDatabaseHas('tax_slabs', [
             'company_id' => $this->companyId,
-            'year' => 1403,
-            'slab_order' => 1,
             'tax_rate' => 10,
         ]);
     }
@@ -114,29 +93,7 @@ class TaxSlabTest extends TestCase
     {
         $response = $this->post(route('salary.tax-slabs.store'), []);
 
-        $response->assertSessionHasErrors(['year', 'slab_order', 'income_from', 'tax_rate']);
-    }
-
-    public function test_store_rejects_duplicate_year_slab_order(): void
-    {
-        $this->makeTaxSlab(['year' => 1403, 'slab_order' => 1]);
-
-        $response = $this->post(route('salary.tax-slabs.store'), $this->validPayload([
-            'year' => 1403,
-            'slab_order' => 1,
-        ]));
-
-        $response->assertSessionHasErrors(['slab_order']);
-    }
-
-    public function test_store_rejects_income_to_less_than_income_from(): void
-    {
-        $response = $this->post(route('salary.tax-slabs.store'), $this->validPayload([
-            'income_from' => 500_000_000,
-            'income_to' => 100_000_000,
-        ]));
-
-        $response->assertSessionHasErrors(['income_to']);
+        $response->assertSessionHasErrors(['tax_rate']);
     }
 
     public function test_store_allows_null_income_to_for_unlimited_slab(): void
@@ -170,7 +127,6 @@ class TaxSlabTest extends TestCase
         $response = $this->get(route('salary.tax-slabs.edit', $taxSlab));
 
         $response->assertStatus(200);
-        $response->assertSee($taxSlab->year);
     }
 
     public function test_update_modifies_tax_slab_and_redirects(): void
@@ -189,34 +145,6 @@ class TaxSlabTest extends TestCase
             'tax_rate' => 20,
         ]);
     }
-
-    public function test_update_rejects_duplicate_year_slab_order_for_another_record(): void
-    {
-        $first = $this->makeTaxSlab(['year' => 1403, 'slab_order' => 1]);
-        $second = $this->makeTaxSlab(['year' => 1403, 'slab_order' => 2]);
-
-        $response = $this->put(route('salary.tax-slabs.update', $second), $this->validPayload([
-            'year' => 1403,
-            'slab_order' => 1, // conflicts with $first
-        ]));
-
-        $response->assertSessionHasErrors(['slab_order']);
-    }
-
-    public function test_update_allows_same_year_slab_order_for_same_record(): void
-    {
-        $taxSlab = $this->makeTaxSlab(['year' => 1403, 'slab_order' => 1, 'tax_rate' => 10]);
-
-        $response = $this->put(route('salary.tax-slabs.update', $taxSlab), $this->validPayload([
-            'year' => 1403,
-            'slab_order' => 1,
-            'tax_rate' => 15,
-        ]));
-
-        $response->assertRedirect(route('salary.tax-slabs.index'));
-        $this->assertDatabaseHas('tax_slabs', ['id' => $taxSlab->id, 'tax_rate' => 15]);
-    }
-
     // ----------------------------------------------------------------
     // destroy
     // ----------------------------------------------------------------

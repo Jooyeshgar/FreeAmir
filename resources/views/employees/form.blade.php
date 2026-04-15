@@ -84,7 +84,7 @@
 
     <div>
         <x-select name="work_shift_id" id="work_shift_id" title="{{ __('Work Shift') }}" :title2="'<a href=\'' . route('attendance.work-shifts.create') . '\' target=\'_blank\' class=\'link link-primary text-xs\'>+ ' . __('New') . '</a>'"
-            :options="['' => __('— None —')] + $workShifts->mapWithKeys(fn($ws) => [$ws->id => $ws->name])->toArray()"
+            :options="['' => __('— None —')] + $workShifts->mapWithKeys(fn($ws) => [$ws->id => $ws->name])->toArray()" required 
             :selected="old('work_shift_id', $employee->work_shift_id ?? '')" />
     </div>
 

@@ -28,7 +28,7 @@ class PayrollElementTest extends TestCase
         $company->users()->attach($this->user);
 
         $this->user->givePermissionTo(
-            Permission::firstOrCreate(['name' => 'payroll-elements.*'])
+            Permission::firstOrCreate(['name' => 'salary.payroll-elements.*'])
         );
 
         $this->actingAs($this->user);
@@ -152,7 +152,7 @@ class PayrollElementTest extends TestCase
     public function test_store_rejects_invalid_calc_type(): void
     {
         $response = $this->post(route('salary.payroll-elements.store'), $this->validPayload([
-            'calc_type' => 'daily',
+            'calc_type' => 'monthly',
         ]));
 
         $response->assertSessionHasErrors(['calc_type']);

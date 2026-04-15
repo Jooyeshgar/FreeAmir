@@ -12,8 +12,10 @@ use App\Services\AncillaryCostService;
 use App\Services\CostOfGoodsService;
 use Cookie;
 use Database\Seeders\CompanySeeder;
+use Database\Seeders\ConfigSeeder;
 use Database\Seeders\CustomerGroupSeeder;
 use Database\Seeders\ProductGroupSeeder;
+use Database\Seeders\SubjectSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\Helpers\InvoiceTestHelper;
@@ -37,6 +39,8 @@ class ReturnInvoiceValidationTest extends TestCase
         parent::setUp();
 
         $this->seed(CompanySeeder::class);
+        $this->seed(SubjectSeeder::class);
+        $this->seed(ConfigSeeder::class);
         $this->seed(CustomerGroupSeeder::class);
         $this->seed(ProductGroupSeeder::class);
 
@@ -108,7 +112,7 @@ class ReturnInvoiceValidationTest extends TestCase
         $return = $this->returnBuy([$this->productItem($product, 5, 100)], $buy->id, true, 6022, '2026-06-02')['invoice'];
 
         //  توی انبار موجودی به مبلغ 100 نداریم چون به تعداد ۵ تا با ارزش ۱۰۰ برگشت از خرید دادیم.
-        // (۵ * ۱۰۰ - ۵ * ۱۰۰) / 0 = 0 تقسیم به صفر نداریم پس صفر در نظر میگیریم
+        //  (۵ * ۱۰۰ - ۵ * ۱۰۰) / 0 = 0 تقسیم به صفر نداریم پس صفر در نظر میگیریم
         $product = $this->findProduct($product->id);
 
         $this->assertEquals(0, $product->quantity);

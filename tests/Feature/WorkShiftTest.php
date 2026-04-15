@@ -28,7 +28,7 @@ class WorkShiftTest extends TestCase
         $company->users()->attach($this->user);
 
         $this->user->givePermissionTo(
-            Permission::firstOrCreate(['name' => 'work-shifts.*'])
+            Permission::firstOrCreate(['name' => 'attendance.work-shifts.*'])
         );
 
         $this->actingAs($this->user);
@@ -51,6 +51,7 @@ class WorkShiftTest extends TestCase
             'float' => '10',
             'break' => '30',
             'is_active' => '1',
+            'thursday_status' => 'holiday',
         ], $overrides);
     }
 

@@ -33,7 +33,7 @@ class PersonnelRequestTest extends TestCase
         $company->users()->attach($this->user);
 
         $this->user->givePermissionTo(
-            Permission::firstOrCreate(['name' => 'personnel-requests.*'])
+            Permission::firstOrCreate(['name' => 'hr.personnel-requests.*'])
         );
 
         $this->actingAs($this->user);
@@ -248,7 +248,12 @@ class PersonnelRequestTest extends TestCase
 
         $response = $this->put(
             route('hr.personnel-requests.update', $personnelRequest),
-            $this->validPayload(['status' => 'approved', 'reason' => 'Updated reason'])
+            $this->validPayload([
+                'status' => 'approved',
+                'reason' => 'Updated reason',
+                'start_date' => '2026-03-10T08:00',
+                'end_date' => '2026-03-11T08:00',
+            ])
         );
 
         $response->assertRedirect(route('hr.personnel-requests.index'));
@@ -379,7 +384,7 @@ class PersonnelRequestTest extends TestCase
         $this->assertDatabaseHas('personnel_requests', [
             'id' => $personnelRequest->id,
             'status' => 'approved',
-            'approved_by' => $approverEmployee->id,
+            'approved_by' => $approverEmployee->user->id,
         ]);
     }
 
@@ -399,7 +404,7 @@ class PersonnelRequestTest extends TestCase
         $this->assertDatabaseHas('personnel_requests', [
             'id' => $personnelRequest->id,
             'status' => 'rejected',
-            'approved_by' => $approverEmployee->id,
+            'approved_by' => $approverEmployee->user->id,
         ]);
     }
 

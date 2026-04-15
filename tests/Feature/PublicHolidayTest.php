@@ -28,7 +28,7 @@ class PublicHolidayTest extends TestCase
         $company->users()->attach($this->user);
 
         $this->user->givePermissionTo(
-            Permission::firstOrCreate(['name' => 'public-holidays.*'])
+            Permission::firstOrCreate(['name' => 'salary.public-holidays.*'])
         );
 
         $this->actingAs($this->user);
@@ -100,7 +100,7 @@ class PublicHolidayTest extends TestCase
 
         $this->assertDatabaseHas('public_holidays', [
             'company_id' => $this->companyId,
-            'date' => '2026-03-21',
+            'date' => jalali_to_gregorian_date('2026-03-21', '-', '-'),
             'name' => 'Nowruz',
         ]);
     }
@@ -117,7 +117,7 @@ class PublicHolidayTest extends TestCase
         $this->makePublicHoliday(['date' => '2026-03-21', 'name' => 'Nowruz']);
 
         $response = $this->post(route('salary.public-holidays.store'), $this->validPayload([
-            'date' => '2026-03-21',
+            'date' => gregorian_to_jalali_date('2026-03-21', '-', '-'),
             'name' => 'Another Holiday',
         ]));
 
@@ -179,7 +179,7 @@ class PublicHolidayTest extends TestCase
         $second = $this->makePublicHoliday(['date' => '2026-04-01', 'name' => 'Islamic Republic Day']);
 
         $response = $this->put(route('salary.public-holidays.update', $second), $this->validPayload([
-            'date' => '2026-03-21', // conflicts with $first
+            'date' => gregorian_to_jalali_date('2026-03-21', '-', '-'), // conflicts with $first
             'name' => 'Islamic Republic Day',
         ]));
 

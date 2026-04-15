@@ -39,7 +39,7 @@ class SalaryDecreeTest extends TestCase
         $company->users()->attach($this->user);
 
         $this->user->givePermissionTo(
-            Permission::firstOrCreate(['name' => 'salary-decrees.*'])
+            Permission::firstOrCreate(['name' => 'salary.salary-decrees.*'])
         );
 
         $this->actingAs($this->user);
@@ -72,7 +72,7 @@ class SalaryDecreeTest extends TestCase
         return array_merge([
             'employee_id' => $this->employee->id,
             'name' => 'Decree-1403-001',
-            'start_date' => '2026-01-01',
+            'start_date' => '1403-01-01',
             'end_date' => null,
             'daily_wage' => '500000',
             'description' => 'Test decree',
@@ -113,7 +113,6 @@ class SalaryDecreeTest extends TestCase
     {
         $otherCompany = Company::factory()->create();
         $otherWorkSite = WorkSite::factory()->create(['company_id' => $otherCompany->id]);
-        $otherOrgChart = OrgChart::factory()->create(['company_id' => $otherCompany->id]);
         $otherEmployee = Employee::factory()->create([
             'company_id' => $otherCompany->id,
             'work_site_id' => $otherWorkSite->id,
@@ -122,7 +121,6 @@ class SalaryDecreeTest extends TestCase
         SalaryDecree::factory()->create([
             'company_id' => $otherCompany->id,
             'employee_id' => $otherEmployee->id,
-            'org_chart_id' => $otherOrgChart->id,
             'name' => 'Foreign Decree',
         ]);
 
@@ -156,7 +154,7 @@ class SalaryDecreeTest extends TestCase
             'company_id' => $this->companyId,
             'employee_id' => $this->employee->id,
             'name' => 'Decree-1403-001',
-            'start_date' => '2026-01-01',
+            'start_date' => jalali_to_gregorian_date('1403-01-01', '-', '-'),
         ]);
     }
 
@@ -201,8 +199,8 @@ class SalaryDecreeTest extends TestCase
     public function test_store_validates_end_date_after_start_date(): void
     {
         $response = $this->post(route('salary.salary-decrees.store'), $this->validPayload([
-            'start_date' => '2026-06-01',
-            'end_date' => '2026-01-01',
+            'start_date' => '1403-06-01',
+            'end_date' => '1403-01-01',
         ]));
 
         $response->assertSessionHasErrors(['end_date']);
