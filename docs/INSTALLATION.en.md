@@ -197,4 +197,4 @@ After seeding, all users share the password **`password`**. Available accounts:
 
 ## Database Migration from Older Version
 
-See [Database Migration Guide](database-guide.md) for migrating from the older SQLite-based version.
+See [Database Migration Guide](script/README.md) for migrating from the older SQLite-based version.
