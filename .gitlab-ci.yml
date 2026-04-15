@@ -14,10 +14,12 @@ test:
     - docker-runner
   
   image: ghcr.io/jooyeshgar/freeamir-app:latest
+  pull_policy: if-not-present
   
   services:
     - name: mariadb:11
-      alias: mariadb 
+      alias: mariadb
+      pull_policy: if-not-present
 
   variables:
     MYSQL_DATABASE: testing_db
