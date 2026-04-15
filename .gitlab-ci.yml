@@ -13,8 +13,9 @@ test:
   tags:
     - docker-runner
   
-  image: ghcr.io/jooyeshgar/freeamir-app:latest
-  pull_policy: if-not-present
+  image:
+    name: ghcr.io/jooyeshgar/freeamir-app:latest
+    pull_policy: if-not-present
   
   services:
     - name: mariadb:11
