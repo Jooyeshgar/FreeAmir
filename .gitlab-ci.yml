@@ -25,15 +25,16 @@ test:
 
   variables:
     MARIADB_DATABASE: testing_db
+    MARIADB_USER: test_user
+    MARIADB_PASSWORD: test_password
     MARIADB_ROOT_PASSWORD: root_password
-    MYSQL_DATABASE: testing_db
-    MYSQL_ROOT_PASSWORD: root_password
+    
     DB_CONNECTION: mysql
     DB_HOST: mariadb
     DB_PORT: 3306
     DB_DATABASE: testing_db
-    DB_USERNAME: root
-    DB_PASSWORD: root_password
+    DB_USERNAME: test_user
+    DB_PASSWORD: test_password
 
   before_script:
     - cp .env.ci .env
@@ -50,6 +51,8 @@ test:
     - php composer.phar install --no-scripts --ignore-platform-reqs --no-interaction
     
     - php artisan key:generate --env=ci || true
+    - php artisan config:clear
+    - php artisan cache:clear
     - php artisan migrate:fresh
 
   script:
