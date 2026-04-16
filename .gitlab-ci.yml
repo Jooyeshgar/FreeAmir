@@ -66,9 +66,9 @@ test:
     - export HOME=.
     - php artisan tinker --execute="echo 'DB_PASS=['.config('database.connections.mysql.password').']';"
     - php artisan tinker --execute="
-        \$h = config('database.connections.mysql.host') ?? 'mariadb';
+        \$h = config('database.connections.mysql.host');
         \$u = 'test_user';
-        \$p = 'test_password';
+        \$p = config('database.connections.mysql.password');
         try {
           new PDO('mysql:host=mariadb;port=3306;dbname=testing_db', \$u, \$p);
           echo 'Direct PDO= OK';
