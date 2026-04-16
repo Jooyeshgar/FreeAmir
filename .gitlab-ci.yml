@@ -64,7 +64,7 @@ test:
     - php artisan key:generate --env=ci || true
     - php artisan cache:clear
     - export HOME=.
-    - php artisan tinker --execute="echo 'DB_PASS=['.config('database.connections.mysqlpassword').']';"
+    - php artisan tinker --execute="echo 'DB_PASS=['.config('database.connections.mysql.password').']';"
     - php artisan tinker --execute="
         \$h = config('database.connections.mysql.host') ?? 'mariadb';
         \$u = 'test_user';
