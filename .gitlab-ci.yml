@@ -37,7 +37,7 @@ test:
 
   before_script:
     - cp .env.ci .env
-    - chmod -R 777 storage/ bootstrap/cache/
+    # - chmod -R 777 storage/ bootstrap/cache/
     - composer install --no-scripts --ignore-platform-reqs --no-interaction
     - php artisan migrate:fresh
 
