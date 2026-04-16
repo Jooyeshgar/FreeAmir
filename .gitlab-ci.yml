@@ -71,9 +71,9 @@ test:
         \$p = 'test_password';
         try {
           new PDO('mysql:host=mariadb;port=3306;dbname=testing_db', \$u, \$p);
-          echo 'Direct PDO: OK';
+          echo 'Direct PDO= OK';
         } catch(Exception \$e) {
-          echo 'Direct PDO FAILED: '.\$e->getMessage();
+          echo 'Direct PDO FAILED= '.\$e->getMessage();
         }
       "
 
