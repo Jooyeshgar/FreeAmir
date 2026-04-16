@@ -37,13 +37,12 @@ test:
 
   before_script:
     - cp .env.ci .env
+    - mkdir -p .composer
     
     - |
       if [ ! -f composer.phar ]; then
-        echo "Composer not found in cache. Downloading..."
-        php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
-        php composer-setup.php
-        php -r "unlink('composer-setup.php');"
+        echo "Downloading composer.phar directly..."
+        php -r "copy('https://getcomposer.org/download/latest-stable/composer.phar', 'composer.phar');"
       else
         echo "Using cached composer.phar"
       fi
@@ -51,7 +50,6 @@ test:
     - php composer.phar install --no-scripts --ignore-platform-reqs --no-interaction
     
     - php artisan key:generate --env=ci || true
-    
     - php artisan migrate:fresh
 
   script:
