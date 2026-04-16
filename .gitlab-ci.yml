@@ -16,6 +16,7 @@ test:
   image:
     name: ghcr.io/jooyeshgar/freeamir-app:latest
     pull_policy: if-not-present
+    entrypoint: [""] 
   
   services:
     - name: mariadb:11
@@ -23,6 +24,8 @@ test:
       pull_policy: if-not-present
 
   variables:
+    MARIADB_DATABASE: testing_db
+    MARIADB_ROOT_PASSWORD: root_password
     MYSQL_DATABASE: testing_db
     MYSQL_ROOT_PASSWORD: root_password
     DB_CONNECTION: mysql
@@ -36,7 +39,6 @@ test:
     - cp .env.ci .env
     - chmod -R 777 storage/ bootstrap/cache/
     - composer install --no-scripts --ignore-platform-reqs --no-interaction
-    
     - php artisan migrate:fresh
 
   script:
