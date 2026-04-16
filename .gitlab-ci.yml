@@ -63,7 +63,7 @@ test:
     
     - php artisan key:generate --env=ci || true
     - php artisan cache:clear
-    - php artisan tinker --execute="echo 'DB_HOST= '.config('database.connections.mysql.host').PHP_EOL.'DB_USER= '.config('database.connections.mysql.username').PHP_EOL.'DB_NAME= '.config('database.connections.mysql.database').PHP_EOL;"
+    # - php artisan tinker --execute="echo 'DB_HOST= '.config('database.connections.mysql.host').PHP_EOL.'DB_USER= '.config('database.connections.mysql.username').PHP_EOL.'DB_NAME= '.config('database.connections.mysql.database').PHP_EOL;"
 
     # - php artisan migrate:fresh
 
