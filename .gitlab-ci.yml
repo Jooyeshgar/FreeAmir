@@ -3,10 +3,10 @@ stages:
   - deploy_develop
 
 cache:
-  key: ${CI_COMMIT_REF_SLUG}
   paths:
     - vendor/
     - node_modules/
+    - composer.phar
 
 test:
   stage: test
@@ -37,13 +37,25 @@ test:
 
   before_script:
     - cp .env.ci .env
-    # - chmod -R 777 storage/ bootstrap/cache/
-    - composer install --no-scripts --ignore-platform-reqs --no-interaction
+    
+    - |
+      if [ ! -f composer.phar ]; then
+        echo "Composer not found in cache. Downloading..."
+        php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+        php composer-setup.php
+        php -r "unlink('composer-setup.php');"
+      else
+        echo "Using cached composer.phar"
+      fi
+
+    - php composer.phar install --no-scripts --ignore-platform-reqs --no-interaction
+    
+    - php artisan key:generate --env=ci || true
+    
     - php artisan migrate:fresh
 
   script:
     - php artisan test --colors=never
-
 
 deploy_develop:
   stage: deploy_develop
