@@ -64,7 +64,19 @@ test:
     - php artisan key:generate --env=ci || true
     - php artisan cache:clear
     - export HOME=.
-    - php artisan tinker --execute="echo 'DB_HOST= '.config('database.connections.mysql.host').PHP_EOL.'DB_USER= '.config('database.connections.mysql.username').PHP_EOL.'DB_NAME= '.config('database.connections.mysql.database').PHP_EOL;"
+    - php artisan tinker --execute="echo 'DB_PASS=['.config('database.connections.mysqlpassword').']';"
+    - php artisan tinker --execute="
+        \$h = config('database.connections.mysql.host') ?? 'mariadb';
+        \$u = 'test_user';
+        \$p = 'test_password';
+        try {
+          new PDO('mysql:host=mariadb;port=3306;dbname=testing_db', \$u, \$p);
+          echo 'Direct PDO: OK';
+        } catch(Exception \$e) {
+          echo 'Direct PDO FAILED: '.\$e->getMessage();
+        }
+      "
+
 
     # - php artisan migrate:fresh
 
