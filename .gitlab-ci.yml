@@ -50,8 +50,18 @@ test:
 
     - php composer.phar install --no-scripts --ignore-platform-reqs --no-interaction
     
+    - |
+      echo "Waiting for MariaDB..."
+      for i in $(seq 1 30); do
+        if php -r "try { new PDO('mysql:host=mariadb;port=3306', 'test_user', 'test_password'); echo 'OK'; exit(0); } catch(Exception \$e) { exit(1); }" 2>/dev/null; then
+          echo "MariaDB is ready!"
+          break
+        fi
+        echo "Attempt $i: waiting..."
+        sleep 2
+      done
+    
     - php artisan key:generate --env=ci || true
-    - php artisan config:clear
     - php artisan cache:clear
     - php artisan migrate:fresh
 
