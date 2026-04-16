@@ -63,6 +63,10 @@ test:
     
     - php artisan key:generate || true
     - php artisan migrate:fresh
+    - php artisan config:clear
+    - php artisan route:clear
+    - php artisan cache:clear
+    - php artisan view:clear
 
   script:
     - php artisan test --colors=never
