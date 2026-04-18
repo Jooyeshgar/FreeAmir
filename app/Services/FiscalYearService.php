@@ -177,7 +177,6 @@ class FiscalYearService
                                 'has_subject_mapping' => ! empty($subjectMapping),
                             ]);
                         } else {
-                            $subjectMapping = $idMappings['subjects'] ?? [];
                             $idMappings['bank_accounts'] = self::_importBankAccounts($importData['bank_accounts'], $targetYearId, $bankMapping, $subjectMapping);
                         }
                     }

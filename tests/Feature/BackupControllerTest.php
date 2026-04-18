@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\File;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 use ZipArchive;
@@ -38,6 +39,28 @@ class BackupControllerTest extends TestCase
         $this->withCookies(['active-company-id' => (string) $this->company->id]);
     }
 
+    private function makeZipUpload(array|string $payload, string $archiveName = 'backup.zip', string $entryName = 'backup.json'): UploadedFile
+    {
+        $zipPath = tempnam(sys_get_temp_dir(), 'backup_test_');
+        $this->assertNotFalse($zipPath);
+
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true);
+
+        $entryContent = is_array($payload)
+            ? json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
+            : $payload;
+
+        $this->assertNotFalse($entryContent);
+        $this->assertTrue($zip->addFromString($entryName, $entryContent));
+        $zip->close();
+
+        $archiveContents = File::get($zipPath);
+        @unlink($zipPath);
+
+        return UploadedFile::fake()->createWithContent($archiveName, $archiveContents);
+    }
+
     public function test_export_downloads_zip_with_json_backup_contents(): void
     {
         $response = $this->post(route('backups.export'), [
@@ -46,22 +69,20 @@ class BackupControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertHeader('content-type', 'application/zip');
+        $this->assertStringContainsString('application/zip', $response->headers->get('content-type'));
+        $this->assertInstanceOf(\Symfony\Component\HttpFoundation\BinaryFileResponse::class, $response->baseResponse);
 
         $zipFile = $response->baseResponse->getFile();
         $this->assertNotNull($zipFile);
 
         $zip = new ZipArchive;
-        $opened = $zip->open($zipFile->getPathname());
-
-        $this->assertTrue($opened === true);
+        $this->assertTrue($zip->open($zipFile->getPathname()) === true);
         $this->assertSame(1, $zip->numFiles);
 
         $jsonEntryName = $zip->getNameIndex(0);
         $jsonContent = $zip->getFromIndex(0);
         $zip->close();
 
-        $this->assertNotFalse($jsonEntryName);
         $this->assertStringEndsWith('.json', $jsonEntryName);
         $this->assertNotFalse($jsonContent);
 
@@ -74,22 +95,15 @@ class BackupControllerTest extends TestCase
         $this->assertArrayHasKey(FiscalYearSection::SUBJECTS->value, $decoded);
     }
 
-    public function test_import_uploads_json_and_creates_new_company(): void
+    public function test_import_uploads_zip_and_creates_new_company(): void
     {
-        $payload = [
-            'meta' => [
-                'source_company_id' => $this->company->id,
-                'source_company_name' => $this->company->name,
-            ],
-        ];
-
-        $file = UploadedFile::fake()->createWithContent(
-            'backup.json',
-            json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
-        );
-
         $response = $this->post(route('backups.import'), [
-            'file' => $file,
+            'file' => $this->makeZipUpload([
+                'meta' => [
+                    'source_company_id' => $this->company->id,
+                    'source_company_name' => $this->company->name,
+                ],
+            ]),
             'fiscal_year' => 1410,
             'company_name' => 'Imported Company',
         ]);
@@ -103,17 +117,12 @@ class BackupControllerTest extends TestCase
         ]);
     }
 
-    public function test_import_rejects_invalid_json_upload(): void
+    public function test_import_rejects_invalid_json_inside_zip_upload(): void
     {
         $existingCompanies = Company::count();
 
-        $file = UploadedFile::fake()->createWithContent(
-            'backup.json',
-            '{"meta": invalid json}'
-        );
-
         $response = $this->post(route('backups.import'), [
-            'file' => $file,
+            'file' => $this->makeZipUpload('{"meta": invalid json}'),
             'fiscal_year' => 1411,
             'company_name' => 'Broken Import',
         ]);
@@ -121,5 +130,32 @@ class BackupControllerTest extends TestCase
         $response->assertRedirect();
         $response->assertSessionHas('error');
         $this->assertSame($existingCompanies, Company::count());
+    }
+
+    public function test_import_rejects_zip_upload_without_json_file(): void
+    {
+        $existingCompanies = Company::count();
+
+        $response = $this->post(route('backups.import'), [
+            'file' => $this->makeZipUpload('plain text file', 'backup.zip', 'backup.txt'),
+            'fiscal_year' => 1412,
+            'company_name' => 'Missing Json',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('error');
+        $this->assertSame($existingCompanies, Company::count());
+    }
+
+    public function test_import_rejects_empty_json(): void
+    {
+        $response = $this->post(route('backups.import'), [
+            'file' => $this->makeZipUpload(''),
+            'fiscal_year' => 1414,
+            'company_name' => 'Empty JSON',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('error');
     }
 }

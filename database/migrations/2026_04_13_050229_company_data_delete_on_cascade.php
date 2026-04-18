@@ -62,17 +62,17 @@ return new class extends Migration
 
         Schema::table('salary_decrees', function (Blueprint $table) {
             $table->dropForeign(['employee_id']);
-            $table->foreign('employee_id')->references('id')->on('employees')->nullOnDelete();
+            $table->foreign('employee_id')->references('id')->on('employees');
         });
 
         Schema::table('payrolls', function (Blueprint $table) {
             $table->dropForeign(['employee_id']);
-            $table->foreign('employee_id')->references('id')->on('employees')->nullOnDelete();
+            $table->foreign('employee_id')->references('id')->on('employees');
         });
 
         Schema::table('personnel_requests', function (Blueprint $table) {
             $table->dropForeign(['employee_id']);
-            $table->foreign('employee_id')->references('id')->on('employees')->nullOnDelete();
+            $table->foreign('employee_id')->references('id')->on('employees');
         });
 
         Schema::table('document_files', function (Blueprint $table) {
