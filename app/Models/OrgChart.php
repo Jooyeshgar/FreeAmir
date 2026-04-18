@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 class OrgChart extends Model
 {
@@ -32,5 +33,20 @@ class OrgChart extends Model
     public function children(): HasMany
     {
         return $this->hasMany(OrgChart::class, 'parent_id');
+    }
+
+    public static function getTree(): Collection
+    {
+        $allNodes = self::all();
+
+        $grouped = $allNodes->groupBy('parent_id');
+
+        foreach ($allNodes as $node) {
+            $children = $grouped->get($node->id, collect());
+
+            $node->setRelation('children', $children);
+        }
+
+        return $allNodes->whereNull('parent_id');
     }
 }

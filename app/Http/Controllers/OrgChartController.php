@@ -46,12 +46,12 @@ class OrgChartController extends Controller
             ->with('success', __('Organization chart node created successfully.'));
     }
 
-    // public function show(OrgChart $orgChart)
-    // {
-    //     $orgChart->load('parent', 'children');
+    public function show(OrgChart $orgChart)
+    {
+        $roots = OrgChart::getTree();
 
-    //     return view('org-charts.show', compact('orgChart'));
-    // }
+        return view('org-charts.show', compact('orgChart', 'roots'));
+    }
 
     public function edit(OrgChart $orgChart)
     {

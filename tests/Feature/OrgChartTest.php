@@ -104,6 +104,16 @@ class OrgChartTest extends TestCase
         $response->assertStatus(200);
     }
 
+    public function test_create_prefills_parent_when_parent_id_is_passed(): void
+    {
+        $parent = $this->makeNode(['title' => 'CEO']);
+
+        $response = $this->get(route('hr.org-charts.create', ['parent_id' => $parent->id]));
+
+        $response->assertStatus(200);
+        $response->assertSee('value="'.$parent->id.'" selected', false);
+    }
+
     public function test_store_creates_a_root_node_and_redirects(): void
     {
         $payload = $this->validPayload();
@@ -169,26 +179,37 @@ class OrgChartTest extends TestCase
     // show
     // ----------------------------------------------------------------
 
-    // public function test_show_returns_200_with_node_details(): void
-    // {
-    //     $node = $this->makeNode(['title' => 'CEO']);
+    public function test_show_returns_200_with_node_details(): void
+    {
+        $node = $this->makeNode(['title' => 'CEO']);
 
-    //     $response = $this->get(route('hr.org-charts.show', $node));
+        $response = $this->get(route('hr.org-charts.show', $node));
 
-    //     $response->assertStatus(200);
-    //     $response->assertSee('CEO');
-    // }
+        $response->assertStatus(200);
+        $response->assertSee('CEO');
+        $response->assertSee(route('hr.org-charts.show', $node), false);
+    }
 
-    // public function test_show_displays_children(): void
-    // {
-    //     $parent = $this->makeNode(['title' => 'CEO']);
-    //     $this->makeNode(['title' => 'CTO', 'parent_id' => $parent->id]);
+    public function test_show_displays_children(): void
+    {
+        $parent = $this->makeNode(['title' => 'CEO']);
+        $this->makeNode(['title' => 'CTO', 'parent_id' => $parent->id]);
 
-    //     $response = $this->get(route('hr.org-charts.show', $parent));
+        $response = $this->get(route('hr.org-charts.show', $parent));
 
-    //     $response->assertStatus(200);
-    //     $response->assertSee('CTO');
-    // }
+        $response->assertStatus(200);
+        $response->assertSee('CTO');
+    }
+
+    public function test_show_displays_add_child_link_with_parent_id(): void
+    {
+        $node = $this->makeNode(['title' => 'CEO']);
+
+        $response = $this->get(route('hr.org-charts.show', $node));
+
+        $response->assertStatus(200);
+        $response->assertSee(route('hr.org-charts.create', ['parent_id' => $node->id]), false);
+    }
 
     // ----------------------------------------------------------------
     // edit / update
