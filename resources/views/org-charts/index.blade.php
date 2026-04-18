@@ -43,15 +43,16 @@
                 <tbody>
                     @forelse ($orgCharts as $orgChart)
                         <tr>
-                            <td>{{ $orgChart->title }}</td>
+                            <td>
+                                @can('hr.org-charts.show')
+                                    <a href="{{ route('hr.org-charts.show', $orgChart) }}">{{ $orgChart->title }}</a>
+                                @else
+                                    {{ $orgChart->title }}
+                                @endcan
+                            </td>
                             <td>{{ $orgChart->parent?->title ?? '-' }}</td>
                             <td>{{ $orgChart->description ?? '-' }}</td>
                             <td class="flex gap-2">
-                                @can('hr.org-charts.show')
-                                    <a href="{{ route('hr.org-charts.show', $orgChart) }}" class="btn btn-sm btn-ghost">
-                                        {{ __('View') }}
-                                    </a>
-                                @endcan
                                 @can('hr.org-charts.edit')
                                     <a href="{{ route('hr.org-charts.edit', $orgChart) }}" class="btn btn-sm btn-info">
                                         {{ __('Edit') }}
