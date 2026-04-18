@@ -11,6 +11,7 @@ use App\Services\DocumentService;
 use App\Services\SubjectService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class DocumentController extends Controller
 {
@@ -95,7 +96,29 @@ class DocumentController extends Controller
             $transactions
         );
 
+        if ($request->input('submit_action') === 'create_new') {
+            return redirect()->route('documents.create')->with('success', __('Document created successfully.'));
+        }
+
         return redirect()->route('documents.index')->with('success', __('Document created successfully.'));
+    }
+
+    public function searchAccountBalance(Request $request)
+    {
+        $data = $request->validate([
+            'subject_id' => 'required|integer|exists:subjects,id',
+        ]);
+
+        $subject = Subject::findOrFail($data['subject_id']);
+        $balance = SubjectService::sumSubject($subject);
+
+        return response()->json([
+            'id' => $subject->id,
+            'name' => $subject->name,
+            'code' => $subject->formattedCode(),
+            'balance' => $balance,
+            'formatted_balance' => formatNumber($balance),
+        ]);
     }
 
     public function show(Document $document)
@@ -120,13 +143,11 @@ class DocumentController extends Controller
     {
         $stats = $this->documentNumberService->sortStats();
 
-        // if ((int) ($stats['unused_document_numbers_count'] ?? 0) === 0) {
-        //     if ($request->expectsJson()) {
-        //         return response()->json(['message' => __('No unused document number found to sort.')]);
-        //     }
-
-        //     return redirect()->route('documents.sort-numbers')->with('error', __('No unused document number found to sort.'));
-        // }
+        if ((int) ($stats['unused_document_numbers_count'] ?? 0) === 0) {
+            throw ValidationException::withMessages([
+                'document_numbers' => __('No unused document number found to sort.'),
+            ]);
+        }
 
         $progress = $this->documentNumberService->initializeSorting($request->user()->id);
 

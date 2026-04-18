@@ -40,10 +40,23 @@
         </div>
     </div>
     <div class="min-h-96">
-        <div id="transactions" x-data="{ activeTab: {{ $total }} }">
+        <div id="transactions" x-data="{ activeTab: {{ $total }} }"
+            @click.outside="
+                activeTab = null;
+                $store.account.clear();
+            ">
             <template x-for="(transaction, index) in transactions" :key="transaction.id">
                 <div :class="{ 'active': activeTab === index }" class="transaction flex gap-2 items-center px-4 pb-3"
-                    @click="activeTab = index" x-data="{
+                    @click.stop="
+                        if (activeTab === index) {
+                            activeTab = null;
+                            $store.account.clear();
+                        } else {
+                            activeTab = index;
+                            $store.account.fetch(selectedId);
+                        }
+                    "
+                    x-data="{
                         selectedName: transaction.subject,
                         selectedCode: transaction.code,
                         selectedId: transaction.subject_id,
@@ -53,6 +66,7 @@
                                 this.selectedId = match.id;
                                 this.selectedName = match.name;
                                 this.selectedCode = normalized;
+                                $store.account.fetch(this.selectedId);
                             } else {
                                 this.selectedId = '';
                                 this.selectedName = '';
@@ -157,6 +171,13 @@
             return this.creditTotal - this.debitTotal;
         }
     }">
+        <template class="ml-auto" x-if="$store.account.selected">
+            <div class="text-gray-400 ml-auto">
+                {{ __('Account Balance') }}:
+                <span :class="Number($store.account.selected.balance) < 0 ? 'text-red-400' : 'text-green-400'"
+                        x-text="$store.account.selected.formatted_balance"></span>
+            </div>
+        </template>
         <div class="flex items-center gap-2">
             <span class="text-gray-500">{{ __('Balance') }}:</span>
             <span class="min-w-24 text-center text-gray-500" id="diffSum"
@@ -170,9 +191,11 @@
 <div class="mt-4 flex gap-2 justify-end">
     <a href="{{ route('documents.index') }}" type="submit" class="btn btn-default rounded-md"> {{ __('cancel') }}
     </a>
-    <button id="submitFormPlus" type="button" class="btn btn-default rounded-md">
-        {{ __('save and create new document') }}
-    </button>
+    @if(! $document->exists)
+        <button id="submitFormPlus" type="submit" name="submit_action" value="create_new" class="btn btn-default rounded-md">
+            {{ __('save and create new document') }}
+        </button>
+    @endif
     <button id="submitForm" type="submit" class="btn text-white btn-primary rounded-md">
         {{ __('save and close form') }} </button>
 </div>
@@ -363,6 +386,35 @@
                             console.error(e);
                             return null;
                         }
+                    }
+                });
+
+                Alpine.store('account', {
+                    selected: null,
+                    async fetch(subjectId) {
+                        if (!subjectId) {
+                            this.selected = null;
+                            return;
+                        }
+
+                        try {
+                            const res = await fetch(`{{ route('documents.search-account-balance') }}?subject_id=${subjectId}`, {
+                                method: 'GET',
+                                headers: {
+                                    'Accept': 'application/json'
+                                }
+                            });
+                            if (!res.ok) return;
+
+                            const data = await res.json();
+                            this.selected = data;
+                        } catch (e) {
+                            console.error(e);
+                            this.selected = null;
+                        }
+                    },
+                    clear() {
+                        this.selected = null;
                     }
                 });
             }
