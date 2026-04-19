@@ -62,7 +62,7 @@ test:
       done
     
     - php artisan key:generate || true
-    - php artisan migrate:fresh
+    - php artisan migrate:fresh --seed
     - php artisan config:clear
     - php artisan route:clear
     - php artisan cache:clear
