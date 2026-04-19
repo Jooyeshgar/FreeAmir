@@ -60,7 +60,8 @@ test:
         echo "Attempt $i: waiting..."
         sleep 2
       done
-    
+    - mkdir -p public/build
+    - echo "{}" > public/build/manifest.json
     - php artisan key:generate || true
     - php artisan migrate:fresh --seed
     - php artisan config:clear
@@ -69,7 +70,6 @@ test:
     - php artisan view:clear
 
   script:
-    - php artisan route:list
     - php artisan test --colors=never --filter=test_index_lists_attendance_logs
 
 
