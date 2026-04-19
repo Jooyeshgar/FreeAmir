@@ -70,7 +70,7 @@ test:
 
   script:
     - php artisan route:list
-    # - php artisan test --colors=never --filter=test_index_lists_attendance_logs
+    - php artisan test --colors=never --filter=test_index_lists_attendance_logs
 
 
 deploy_develop:
