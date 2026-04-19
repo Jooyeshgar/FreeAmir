@@ -64,10 +64,16 @@ test:
     - mkdir -p public/build
     - |
       echo '{
-        "resources/css/app.css": {"file": "app.css"},
-        "resources/js/app.js": {"file": "app.js"}
+        "resources/css/app.css": {
+          "file": "app.css",
+          "src": "resources/css/app.css"
+        },
+        "resources/js/app.js": {
+          "file": "app.js",
+          "src": "resources/js/app.js"
+        }
       }' > public/build/manifest.json
-
+      
     - php artisan key:generate || true
     - php artisan migrate:fresh --seed
     - php artisan config:clear
