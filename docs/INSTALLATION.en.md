@@ -12,12 +12,6 @@
 
 Uses pre-built images from GitHub Container Registry. No source code or build tools required — just Docker and a `.env` file.
 
-The app image bootstrap script automatically:
-- Generates `APP_KEY` if not set
-- Runs `php artisan migrate --force`
-- Seeds the database (skipped if already seeded)
-- Warms up config, route, and view caches
-
 ### Prerequisites
 - Docker >= 24
 - Docker Compose >= 2.20
@@ -57,6 +51,11 @@ docker compose logs -f php-fpm
 
 Access the application at the `APP_URL` you configured (default: http://localhost).
 
+> 💡 **(Optional) Seed demo data** after the containers are running:
+> ```bash
+> docker compose exec php-fpm php artisan db:seed --class DemoSeeder
+> ```
+
 **5. (Optional) Start phpMyAdmin for database management:**
 ```bash
 docker compose --profile tools up -d
@@ -90,6 +89,11 @@ docker run -d --name freeamir -p 80:80 -v freeamir-data:/var/lib/mysql ghcr.io/j
 ```
 
 Access the application at http://localhost once startup completes.
+
+> 💡 **(Optional) Seed demo data** after startup:
+> ```bash
+> docker exec freeamir php artisan db:seed --class DemoSeeder
+> ```
 
 > 💡 To customise the URL or database credentials, pass environment variables:
 > ```bash

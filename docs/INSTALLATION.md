@@ -51,6 +51,11 @@ docker compose logs -f php-fpm
 
 پس از راه‌اندازی، برنامه را در آدرسی که در `APP_URL` تنظیم کرده‌اید باز کنید (پیش‌فرض: http://localhost).
 
+> 💡 **(اختیاری) بارگذاری داده‌های نمونه** پس از راه‌اندازی کانتینرها:
+> ```bash
+> docker compose exec php-fpm php artisan db:seed --class DemoSeeder
+> ```
+
 **۵. (اختیاری) راه‌اندازی phpMyAdmin برای مدیریت پایگاه داده:**
 ```bash
 docker compose --profile tools up -d
@@ -79,6 +84,11 @@ docker run -d --name freeamir -p 80:80 -v freeamir-data:/var/lib/mysql ghcr.io/j
 ```
 
 پس از اتمام راه‌اندازی، برنامه در آدرس http://localhost در دسترس خواهد بود.
+
+> 💡 **(اختیاری) بارگذاری داده‌های نمونه** پس از راه‌اندازی:
+> ```bash
+> docker exec freeamir php artisan db:seed --class DemoSeeder
+> ```
 
 > 💡 برای سفارشی‌سازی آدرس یا اطلاعات پایگاه داده، متغیرهای محیطی را ارسال کنید:
 > ```bash
