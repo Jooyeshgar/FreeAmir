@@ -69,7 +69,8 @@ test:
     - php artisan view:clear
 
   script:
-    - php artisan test --colors=never
+    - sail artisan route:list
+    - php artisan test --colors=never --filter=test_index_lists_attendance_logs
 
 
 deploy_develop:
