@@ -73,16 +73,12 @@ test:
           "src": "resources/js/app.js"
         }
       }' > public/build/manifest.json
-      
+
     - php artisan key:generate || true
     - php artisan migrate:fresh --seed
-    - php artisan config:clear
-    - php artisan route:clear
-    - php artisan cache:clear
-    - php artisan view:clear
 
   script:
-    - php artisan test --colors=never --filter=test_index_lists_attendance_logs
+    - php artisan test --colors=never
 
 
 deploy_develop:

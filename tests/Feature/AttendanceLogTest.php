@@ -72,8 +72,6 @@ class AttendanceLogTest extends TestCase
 
     public function test_index_lists_attendance_logs(): void
     {
-        $this->withoutExceptionHandling();
-
         $Date1 = '2025-02-10';
         $Date2 = '2025-02-11';
 
@@ -81,8 +79,6 @@ class AttendanceLogTest extends TestCase
         $this->makeAttendanceLog(['log_date' => $Date2]);
 
         $response = $this->get(route('attendance.attendance-logs.index'));
-
-        $response->dump();
 
         $response->assertStatus(200);
         $response->assertSee(formatDate($Date1));
