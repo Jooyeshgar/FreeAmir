@@ -192,6 +192,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'employee-portal.personnel-requests.index',
             'employee-portal.personnel-requests.create',
             'employee-portal.personnel-requests.store',
+            'employee-portal.personnel-requests.edit',
+            'employee-portal.personnel-requests.update',
+            'employee-portal.personnel-requests.destroy',
         ];
 
         foreach ($permissions as $permission) {

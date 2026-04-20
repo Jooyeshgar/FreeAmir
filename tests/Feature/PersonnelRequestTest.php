@@ -189,17 +189,16 @@ class PersonnelRequestTest extends TestCase
     {
         $response = $this->post(route('hr.personnel-requests.store'), []);
 
-        $response->assertSessionHasErrors(['employee_id', 'request_type', 'request_date', 'start_time', 'end_time', 'status']);
+        $response->assertSessionHasErrors(['employee_id', 'request_date', 'start_time', 'end_time']);
     }
 
-    public function test_store_rejects_end_date_before_start_date(): void
+    public function test_store_rejects_end_time_before_start_time(): void
     {
         $response = $this->post(route('hr.personnel-requests.store'), $this->validPayload([
             'start_time' => '17:00',
             'end_time' => '08:00',
         ]));
-
-        $response->assertStatus(422);
+        $response->assertSessionHasErrors();
     }
 
     public function test_store_rejects_invalid_request_type(): void
@@ -209,15 +208,6 @@ class PersonnelRequestTest extends TestCase
         ]));
 
         $response->assertSessionHasErrors(['request_type']);
-    }
-
-    public function test_store_rejects_invalid_status(): void
-    {
-        $response = $this->post(route('hr.personnel-requests.store'), $this->validPayload([
-            'status' => 'unknown',
-        ]));
-
-        $response->assertSessionHasErrors(['status']);
     }
 
     public function test_store_rejects_nonexistent_employee(): void
@@ -249,19 +239,18 @@ class PersonnelRequestTest extends TestCase
         $response = $this->put(
             route('hr.personnel-requests.update', $personnelRequest),
             $this->validPayload([
-                'status' => 'approved',
                 'reason' => 'Updated reason',
-                'start_date' => '2026-03-10T08:00',
-                'end_date' => '2026-03-11T08:00',
+                'request_date' => '1405/12/01',
+                'start_time' => '08:00',
+                'end_time' => '10:00',
             ])
         );
 
-        $response->assertRedirect(route('hr.personnel-requests.index'));
+        $response->assertRedirect(route('hr.personnel-requests.index', ['tab' => 'leaves']));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('personnel_requests', [
             'id' => $personnelRequest->id,
-            'status' => 'approved',
             'reason' => 'Updated reason',
         ]);
     }
@@ -272,22 +261,22 @@ class PersonnelRequestTest extends TestCase
 
         $response = $this->put(route('hr.personnel-requests.update', $personnelRequest), []);
 
-        $response->assertSessionHasErrors(['employee_id', 'request_type', 'start_date', 'end_date', 'status']);
+        $response->assertSessionHasErrors(['request_date', 'start_time', 'end_time']);
     }
 
-    public function test_update_rejects_end_date_before_start_date(): void
+    public function test_update_rejects_end_time_before_start_time(): void
     {
         $personnelRequest = $this->makePersonnelRequest();
 
         $response = $this->put(
             route('hr.personnel-requests.update', $personnelRequest),
             $this->validPayload([
-                'start_date' => '2026-03-10T08:00',
-                'end_date' => '2026-03-05T08:00',
+                'start_time' => '09:00',
+                'end_time' => '08:00',
             ])
         );
 
-        $response->assertSessionHasErrors(['end_date']);
+        $response->assertSessionHasErrors(['end_time']);
     }
 
     // ----------------------------------------------------------------

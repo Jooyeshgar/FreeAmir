@@ -1,12 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('My Requests') }}
-        </h2>
-    </x-slot>
-
-    <x-show-message-bags />
-
+<x-app-layout :title="__('My Requests')">
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
 
@@ -66,6 +58,7 @@
                             <th>{{ __('Duration (min)') }}</th>
                             <th>{{ __('Status') }}</th>
                             <th>{{ __('Reason') }}</th>
+                            <th>{{ __('Action') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -98,10 +91,26 @@
                                 <td class="max-w-xs truncate" title="{{ $req->reason }}">
                                     {{ $req->reason ?? '—' }}
                                 </td>
+                                <td>
+                                    @if ($req->status === 'pending')
+                                        <a href="{{ route('employee-portal.personnel-requests.edit', $req) }}" class="btn btn-sm btn-info">
+                                            {{ __('Edit') }}
+                                        </a>
+                                        <form action="{{ route('employee-portal.personnel-requests.destroy', $req) }}" method="POST" class="inline-block m-0"
+                                            onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                        </form>
+                                    @else
+                                        <button class="btn btn-sm btn-disabled">{{ __('Edit') }}</button>
+                                        <button class="btn btn-sm btn-disabled">{{ __('Delete') }}</button>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="text-center py-4 text-gray-500">
+                                <td colspan="7" class="text-center py-4 text-gray-500">
                                     {{ __('No requests found.') }}
                                 </td>
                             </tr>

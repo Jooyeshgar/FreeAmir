@@ -6,12 +6,16 @@ use App\Enums\PersonnelRequestType;
 use App\Models\Employee;
 use App\Models\PersonnelRequest;
 use App\Services\AttendanceService;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class PersonnelRequestController extends Controller
 {
+    public function __construct(private readonly AttendanceService $attendanceService) {}
+
     public function index(Request $request): View
     {
         $tab = $request->get('tab', 'leaves');
@@ -92,6 +96,12 @@ class PersonnelRequestController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        if (isset($request['request_type']) && in_array($request['request_type'], ['LEAVE_DAILY', 'MISSION_DAILY']) && isset($request['employee_id'])) {
+            $employee = Employee::find($request['employee_id']);
+            $request['start_time'] = Carbon::createFromTimeString($employee->workShift->start_time)->format('H:i');
+            $request['end_time'] = Carbon::createFromTimeString($employee->workShift->end_time)->format('H:i');
+        }
+
         $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
             'request_type' => ['required', 'string', 'in:'.implode(',', array_column(PersonnelRequestType::cases(), 'value'))],
@@ -99,7 +109,6 @@ class PersonnelRequestController extends Controller
             'start_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
             'end_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
             'reason' => ['nullable', 'string', 'max:1000'],
-            'status' => ['required', 'string', 'in:pending,approved,rejected'],
         ]);
 
         $gregorianDate = str_replace('/', '-', convertToGregorian($request->request_date));
@@ -107,11 +116,11 @@ class PersonnelRequestController extends Controller
         $startDatetime = $gregorianDate.' '.$request->start_time;
         $endDatetime = $gregorianDate.' '.$request->end_time;
 
-        abort_if(
-            strtotime($endDatetime) < strtotime($startDatetime),
-            422,
-            __('End time must be after or equal to start time.')
-        );
+        if (strtotime($endDatetime) < strtotime($startDatetime)) {
+            throw ValidationException::withMessages([
+                'end_time' => __('End time must be after or equal to start time.'),
+            ]);
+        }
 
         PersonnelRequest::create([
             'employee_id' => $request->employee_id,
@@ -120,7 +129,6 @@ class PersonnelRequestController extends Controller
             'start_date' => $startDatetime,
             'end_date' => $endDatetime,
             'reason' => $request->reason,
-            'status' => $request->status,
         ]);
 
         $tab = $request->get('tab', 'leaves');
@@ -136,28 +144,50 @@ class PersonnelRequestController extends Controller
         return view('personnel-requests.show', compact('personnelRequest'));
     }
 
-    public function edit(PersonnelRequest $personnelRequest): View
+    public function edit(Request $request, PersonnelRequest $personnelRequest): View
     {
-        $employees = Employee::orderBy('first_name')->get(['id', 'first_name', 'last_name']);
-        $requestTypes = PersonnelRequestType::options();
+        $tab = $request->get('tab', 'leaves');
 
-        return view('personnel-requests.edit', compact('personnelRequest', 'employees', 'requestTypes'));
+        $title = match ($tab) {
+            'missions' => __('Edit Mission Request'),
+            'work_orders' => __('Edit Work Order Request'),
+            'other' => __('Edit Other Request'),
+            default => __('Edit Leave Request'),
+        };
+
+        return view('personnel-requests.edit', compact('personnelRequest', 'tab', 'title'));
     }
 
     public function update(Request $request, PersonnelRequest $personnelRequest): RedirectResponse
     {
+        if ($personnelRequest->status !== 'pending') {
+            throw ValidationException::withMessages([
+                __('Only pending requests can be edited.'),
+            ]);
+        }
+
         $validated = $request->validate([
-            'employee_id' => ['required', 'integer', 'exists:employees,id'],
-            'request_type' => ['required', 'string', 'in:'.implode(',', array_column(PersonnelRequestType::cases(), 'value'))],
-            'start_date' => ['required', 'date'],
-            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            'request_date' => ['required', 'string'],
+            'start_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
+            'end_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
             'reason' => ['nullable', 'string', 'max:1000'],
-            'status' => ['required', 'string', 'in:pending,approved,rejected'],
         ]);
+
+        $gregorianDate = str_replace('/', '-', convertToGregorian($request->request_date));
+        $validated['start_date'] = $gregorianDate.' '.$request->start_time;
+        $validated['end_date'] = $gregorianDate.' '.$request->end_time;
+
+        if (strtotime($validated['end_date']) < strtotime($validated['start_date'])) {
+            throw ValidationException::withMessages([
+                'end_time' => __('End time must be after or equal to start time.'),
+            ]);
+        }
 
         $personnelRequest->update($validated);
 
-        return redirect()->route('hr.personnel-requests.index')
+        $tab = $request->get('tab', 'leaves');
+
+        return redirect()->route('hr.personnel-requests.index', ['tab' => $tab])
             ->with('success', __('Personnel request updated successfully.'));
     }
 
@@ -169,7 +199,7 @@ class PersonnelRequestController extends Controller
             ->with('success', __('Personnel request deleted successfully.'));
     }
 
-    public function approve(PersonnelRequest $personnelRequest, AttendanceService $attendanceService): RedirectResponse
+    public function approve(PersonnelRequest $personnelRequest): RedirectResponse
     {
         if ($personnelRequest->status === 'approved') {
             return redirect()->back()
@@ -181,13 +211,13 @@ class PersonnelRequestController extends Controller
             'approved_by' => auth()->user()->id,
         ]);
 
-        $attendanceService->syncPersonnelRequestLogs($personnelRequest);
+        $this->attendanceService->syncPersonnelRequestLogs($personnelRequest);
 
         return redirect()->back()
             ->with('success', __('Personnel request approved.'));
     }
 
-    public function reject(PersonnelRequest $personnelRequest, AttendanceService $attendanceService): RedirectResponse
+    public function reject(PersonnelRequest $personnelRequest): RedirectResponse
     {
         $wasApproved = $personnelRequest->status === 'approved';
 
@@ -197,7 +227,7 @@ class PersonnelRequestController extends Controller
         ]);
 
         if ($wasApproved) {
-            $attendanceService->syncPersonnelRequestLogs($personnelRequest, subtract: true);
+            $this->attendanceService->syncPersonnelRequestLogs($personnelRequest, true);
         }
 
         return redirect()->back()
