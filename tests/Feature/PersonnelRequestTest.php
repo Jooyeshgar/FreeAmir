@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Employee;
 use App\Models\PersonnelRequest;
 use App\Models\User;
+use App\Models\WorkShift;
 use App\Models\WorkSite;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
@@ -40,10 +41,12 @@ class PersonnelRequestTest extends TestCase
         $this->withCookies(['active-company-id' => $this->companyId]);
 
         $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $workShift = WorkShift::factory()->create(['company_id' => $this->companyId]);
 
         $this->employee = Employee::factory()->create([
             'company_id' => $this->companyId,
             'work_site_id' => $workSite->id,
+            'work_shift_id' => $workShift->id,
         ]);
     }
 
@@ -61,7 +64,7 @@ class PersonnelRequestTest extends TestCase
     {
         return array_merge([
             'employee_id' => $this->employee->id,
-            'request_type' => PersonnelRequestType::LEAVE_DAILY->value,
+            'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'request_date' => '1404/12/10',
             'start_time' => '08:00',
             'end_time' => '17:00',
@@ -179,7 +182,7 @@ class PersonnelRequestTest extends TestCase
         $this->assertDatabaseHas('personnel_requests', [
             'company_id' => $this->companyId,
             'employee_id' => $this->employee->id,
-            'request_type' => PersonnelRequestType::LEAVE_DAILY->value,
+            'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'status' => 'pending',
             'approved_by' => null,
         ]);
