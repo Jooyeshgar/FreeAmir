@@ -26,6 +26,9 @@
 
                 <div class="grid grid-cols-12 gap-3 items-end">
                     <div class="col-span-2">
+                        <x-input name="subject_name" value="{{ $subject_name }}" class="w-full" placeholder="{{ __('Subject Name') }}" />
+                    </div>
+                    <div class="col-span-2">
                         <x-date-picker name="start_date" value="{{ $start_date }}" class="w-full" placeholder="{{ __('Start date') }}" />
                     </div>
                     <div class="col-span-2">

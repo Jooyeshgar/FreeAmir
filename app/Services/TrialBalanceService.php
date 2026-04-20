@@ -19,9 +19,11 @@ class TrialBalanceService
 
         $includeChildren = $request->boolean('include_children', false);
 
+        $subjectName = $request->input('subject_name');
+
         $filters = $this->normalizeTrialBalanceFilters($request);
 
-        $subjects = $this->buildTrialBalanceSubjects($currentParent, $includeChildren);
+        $subjects = $this->buildTrialBalanceSubjects($currentParent, $includeChildren, $subjectName);
 
         $subjects = $subjects->map(function (Subject $subject) use ($filters) {
             // Opening columns: only documents 1 and 2
@@ -44,6 +46,7 @@ class TrialBalanceService
 
         return [
             'subjects' => $subjects,
+            'subject_name' => $subjectName,
             'currentParent' => $currentParent,
             'include_children' => $includeChildren,
             'start_date' => $request->input('start_date'),
@@ -119,12 +122,18 @@ class TrialBalanceService
         return [$sums->debit_sum ?? 0, $sums->credit_sum ?? 0];
     }
 
-    private function buildTrialBalanceSubjects(?Subject $currentParent, bool $includeChildren): Collection
+    private function buildTrialBalanceSubjects(?Subject $currentParent, bool $includeChildren, ?string $subjectName = null): Collection
     {
+        $nameFilter = function ($query) use ($subjectName) {
+            if ($subjectName) {
+                $query->where('name', 'like', "%{$subjectName}%");
+            }
+        };
+
         if ($currentParent) {
             $currentParent->load([
                 'subjectable',
-                'children' => fn ($query) => $query->with('subjectable')->orderBy('code'),
+                'children' => fn ($query) => $query->with('subjectable')->orderBy('code')->where($nameFilter),
             ]);
 
             if ($includeChildren) {
@@ -145,7 +154,13 @@ class TrialBalanceService
             });
         }
 
-        $roots = Subject::whereIsRoot()->with(['subjectable', 'children' => fn ($query) => $query->with('subjectable')->orderBy('code')])->orderBy('code')->get();
+        $rootsQuery = Subject::whereIsRoot()->with(['subjectable', 'children' => fn ($query) => $query->with('subjectable')->orderBy('code')->where($nameFilter)]);
+
+        if ($subjectName) {
+            $rootsQuery->where('name', 'like', "%{$subjectName}%");
+        }
+
+        $roots = $rootsQuery->orderBy('code')->get();
 
         if (! $includeChildren) {
             return $roots->map(function (Subject $root) {
