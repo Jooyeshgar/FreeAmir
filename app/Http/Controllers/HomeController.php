@@ -26,7 +26,7 @@ class HomeController extends Controller
         $monthlyCost = $this->service->getMonthlyCost();
 
         $monthlySellAmount = $this->service->getMonthlyProductsStat();
-        $monthlyWarehouse = $this->service->getMonthlyWarhouse();
+        $monthlyWarehouse = $this->service->getMonthlyWarehouse();
 
         $popularProductsAndServices = $this->service->popularProductsAndServices();
 

@@ -182,46 +182,33 @@ class HomeService
         return $monthlyIncomes['total'];
     }
 
-    public function getMonthlyWarhouse()
+    public function getMonthlyWarehouse()
     {
         $year = config('active-company-fiscal-year');
-        $monthsEndDay = [
-            1 => 31, 2 => 31, 3 => 31, 4 => 31, 5 => 31, 6 => 31,
-            7 => 30, 8 => 30, 9 => 30, 10 => 30, 11 => 30, 12 => 29,
-        ];
+        $startDate = jalali_to_gregorian($year, 1, 1, '-');
+        $endDate = jalali_to_gregorian($year, 12, 30, '-');
+
+        $invoiceItems = \DB::table('invoice_items')
+            ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
+            ->select('invoices.date', 'invoice_items.itemable_id', 'invoice_items.quantity_at')
+            ->where('invoice_items.itemable_type', Product::class)
+            ->whereBetween('invoices.date', [$startDate, $endDate])
+            ->get();
+
+        $latestMonthlyProductsInvoiceItems = [];
+        foreach ($invoiceItems as $invoiceItem) {
+            $month = (int) toEnglish(jdate('m', strtotime($invoiceItem->date)));
+            $key = $month.'-'.$invoiceItem->itemable_id;
+
+            if (! isset($latestMonthlyProductsInvoiceItems[$key]) || $invoiceItem->date > $latestMonthlyProductsInvoiceItems[$key]->date) {
+                $latestMonthlyProductsInvoiceItems[$key] = $invoiceItem;
+            }
+        }
 
         $monthlyWarehouse = array_fill(1, 12, 0);
-        foreach ($monthsEndDay as $month => $endDay) {
-            $startDate = jalali_to_gregorian($year, $month, 1, '-');
-            $endDate = jalali_to_gregorian($year, $month, $endDay, '-');
-
-            $data = Product::query()
-                ->addSelect(['total_quantity' => function ($query) use ($startDate, $endDate) {
-                    $query->select(\DB::raw('SUM(quantity_at)'))
-                        ->from('invoice_items')
-                        ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
-                        ->whereColumn('invoice_items.itemable_id', 'products.id') // Link to product
-                        ->where('invoice_items.itemable_type', Product::class)
-                        ->whereBetween('invoices.date', [$startDate, $endDate])
-                        ->where('invoices.date', function ($sub) use ($startDate, $endDate) { // This ensures we only sum the items from the latest date found in the range
-                            $sub->select(\DB::raw('MAX(date)'))
-                                ->from('invoices')
-                                ->join('invoice_items', 'invoices.id', '=', 'invoice_items.invoice_id')
-                                ->whereColumn('invoice_items.itemable_id', 'products.id')
-                                ->where('invoice_items.itemable_type', Product::class)
-                                ->whereBetween('date', [$startDate, $endDate]);
-                        });
-                }])->whereExists(function ($query) use ($startDate, $endDate) { // This ensures only products that actually have an invoice in the range are returned
-                    $query->select(\DB::raw(1))
-                        ->from('invoice_items')
-                        ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
-                        ->whereColumn('invoice_items.itemable_id', 'products.id')
-                        ->whereBetween('invoices.date', [$startDate, $endDate]);
-                })->get();
-
-            foreach ($data as $product) {
-                $monthlyWarehouse[$month] += $product->total_quantity;
-            }
+        foreach ($latestMonthlyProductsInvoiceItems as $latestMonthlyProductInvoiceItem) {
+            $month = (int) toEnglish(jdate('m', strtotime($latestMonthlyProductInvoiceItem->date)));
+            $monthlyWarehouse[$month] += $latestMonthlyProductInvoiceItem->quantity_at;
         }
 
         return $this->mapMonths($monthlyWarehouse);
