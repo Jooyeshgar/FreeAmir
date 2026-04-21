@@ -27,6 +27,7 @@ class WorkShift extends Model
         'mission_coefficient',
         'undertime_coefficient',
         'is_active',
+        'paid_leave',
     ];
 
     protected $casts = [
@@ -38,6 +39,7 @@ class WorkShift extends Model
         'overtime_coefficient' => 'float',
         'mission_coefficient' => 'float',
         'undertime_coefficient' => 'float',
+        'paid_leave' => 'integer',
     ];
 
     public function getDurationAttribute(): int

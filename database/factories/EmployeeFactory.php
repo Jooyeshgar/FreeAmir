@@ -25,6 +25,7 @@ class EmployeeFactory extends Factory
             'work_site_id' => WorkSite::factory(),
             'work_shift_id' => WorkShift::factory(),
             'is_active' => true,
+            'leave_remain' => 1200,
         ];
     }
 }

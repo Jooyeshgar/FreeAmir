@@ -88,6 +88,12 @@
             :selected="old('work_shift_id', $employee->work_shift_id ?? '')" />
     </div>
 
+     @if (isset($employee) && $employee->exists)
+        <div>
+            <x-input name="leave_remain" id="leave_remain" title="{{ __('Unpaid Leave (minutes)') }}" :value="old('leave_remain', $employee->leave_remain ?? '')" placeholder="1200" />
+        </div>
+    @endif
+
 </div>
 {{-- Section: Contact --}}
 <div class="divider text-sm font-semibold">{{ __('Contact') }}</div>

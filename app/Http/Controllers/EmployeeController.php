@@ -92,7 +92,24 @@ class EmployeeController extends Controller
 
     public function update(UpdateEmployeeRequest $request, Employee $employee): RedirectResponse
     {
-        $employee->update($request->validated());
+        $validated = $request->validated();
+
+        // TODO: Handle leave_remain changes and adjust current month's attendance if needed.
+        // if ($validated['leave_remain'] !== $employee->leave_remain) {
+        //     $paidLeaveDiff = $validated['leave_remain'] - $employee->workShift->paid_leave;
+
+        //     $currentMonthlyAttendance = $employee->monthlyAttendances()
+        //         ->where('year', jgetdate()['year'])
+        //         ->where('month', jgetdate()['mon'])
+        //         ->first();
+
+        //     if ($currentMonthlyAttendance) {
+        //         $currentMonthlyAttendance->paid_leave -= $paidLeaveDiff;
+        //         $currentMonthlyAttendance->save();
+        //     }
+        // }
+
+        $employee->update($validated);
 
         return redirect()->route('hr.employees.index')
             ->with('success', __('Employee updated successfully.'));
