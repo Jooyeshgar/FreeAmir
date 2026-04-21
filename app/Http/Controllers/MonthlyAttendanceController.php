@@ -163,7 +163,7 @@ class MonthlyAttendanceController extends Controller
 
     public function destroy(MonthlyAttendance $monthlyAttendance): RedirectResponse
     {
-        $monthlyAttendance->employee->leave_remain += $monthlyAttendance->paid_leave;
+        $monthlyAttendance->employee->leave_remain += $monthlyAttendance->paid_leave - $monthlyAttendance->employee->workShift->paid_leave;
         $monthlyAttendance->employee->save();
 
         $monthlyAttendance->delete();
