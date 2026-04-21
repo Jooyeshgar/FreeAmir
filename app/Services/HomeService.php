@@ -144,7 +144,7 @@ class HomeService
             return response()->json([]);
         }
 
-        return $this->balanceForSubjectIds($subjectIds, $duration);
+        return $this->balanceForSubjectIds($subjectIds, $duration, true);
     }
 
     public function getMonthlyCost()
@@ -244,7 +244,7 @@ class HomeService
         return $this->mapMonths($productsStat);
     }
 
-    public function balanceForSubjectIds(array $subjectIds, int $duration)
+    public function balanceForSubjectIds(array $subjectIds, int $duration, bool $inverse = true)
     {
         $year = config('active-company-fiscal-year');
 
@@ -265,7 +265,7 @@ class HomeService
         }
 
         $initialBalance = (int) (clone $transactionQuery)
-            ->whereHas('document', fn ($q) => $q->where('date', '<=', $startDate))
+            ->whereHas('document', fn ($q) => $q->where('date', '<', $startDate))
             ->sum('value');
 
         $dailyTransactions = (clone $transactionQuery)
@@ -287,6 +287,10 @@ class HomeService
 
         $dailyBalances[formatDate($endDate)] = $runningBalance;
         $values = array_values($dailyBalances);
+
+        if ($inverse) {
+            $values = array_map(fn ($value) => $value * -1, $values);
+        }
 
         return response()->json([
             'labels' => array_keys($dailyBalances),
