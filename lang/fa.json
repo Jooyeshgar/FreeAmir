@@ -938,6 +938,8 @@
     "Payroll element created successfully.": "عنصر حقوق و دستمزد با موفقیت ایجاد شد.",
     "Payroll element deleted successfully.": "عنصر حقوق و دستمزد با موفقیت حذف شد.",
     "Payroll element updated successfully.": "عنصر حقوق و دستمزد با موفقیت بروزرسانی شد.",
+    "Payroll item updated successfully.": "قلم فیش حقوقی با موفقیت بروزرسانی شد.",
+    "Edit Payroll Item": "ویرایش قلم فیش حقوقی",
     "Payroll exists for this period.": "فیش حقوقی برای این دوره ثبت شده است.",
     "Payroll for :month :year": "حقوق :month :year",
     "Payrolls": "حقوق و دستمزد",

@@ -541,4 +541,31 @@ class PayrollService
 
         return $payroll;
     }
+
+    /**
+     * Recalculate and persist total_earnings, total_deductions and net_payment
+     * based on the current payroll items.
+     */
+    public function recalculateTotals(Payroll $payroll): void
+    {
+        $payroll->loadMissing('items');
+
+        $totalEarnings = 0.0;
+        $totalDeductions = 0.0;
+
+        foreach ($payroll->items as $item) {
+            $amount = (float) $item->calculated_amount;
+            if ($amount >= 0) {
+                $totalEarnings += $amount;
+            } else {
+                $totalDeductions += abs($amount);
+            }
+        }
+
+        $payroll->update([
+            'total_earnings' => $totalEarnings,
+            'total_deductions' => $totalDeductions,
+            'net_payment' => $totalEarnings - $totalDeductions,
+        ]);
+    }
 }

@@ -124,6 +124,8 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::resource('salary-decrees', Controllers\SalaryDecreeController::class)->except(['show']);
         Route::get('payrolls/{payroll}', [Controllers\PayrollController::class, 'show'])->name('payrolls.show');
         Route::delete('payrolls/{payroll}', [Controllers\PayrollController::class, 'destroy'])->name('payrolls.destroy');
+        Route::get('payroll-items/{payroll_item}/edit', [Controllers\PayrollController::class, 'editItem'])->name('payroll-items.edit');
+        Route::put('payroll-items/{payroll_item}', [Controllers\PayrollController::class, 'updateItem'])->name('payroll-items.update');
     });
     Route::group(['prefix' => 'reports', 'as' => 'reports.'], function () {
         Route::get('ledger', [Controllers\ReportsController::class, 'ledger'])->name('ledger');

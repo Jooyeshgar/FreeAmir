@@ -100,6 +100,9 @@
                             <th class="text-end">{{ __('Unit Count') }}</th>
                             <th class="text-end">{{ __('Unit Rate') }}</th>
                             <th class="text-end">{{ __('Amount') }}</th>
+                            @can('salary.payrolls.edit')
+                                <th></th>
+                            @endcan
                         </tr>
                     </thead>
                     <tbody>
@@ -124,10 +127,22 @@
                                 <td class="text-end {{ $item->calculated_amount >= 0 ? 'text-success' : 'text-error' }}">
                                     {{ number_format(abs((float) $item->calculated_amount)) }}
                                 </td>
+                                @can('salary.payrolls.edit')
+                                    <td class="text-end">
+                                        @if (!($isEmployeeView ?? false))
+                                            <a href="{{ route('salary.payroll-items.edit', $item) }}" class="btn btn-xs btn-ghost" title="{{ __('Edit') }}">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5
+                                                                 m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                            </a>
+                                        @endif
+                                    </td>
+                                @endcan
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="text-center py-4 text-gray-500">
+                                <td colspan="6" class="text-center py-4 text-gray-500">
                                     {{ __('No payroll items found.') }}
                                 </td>
                             </tr>
