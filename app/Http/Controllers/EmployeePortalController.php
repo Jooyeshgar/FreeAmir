@@ -10,6 +10,7 @@ use App\Models\PersonnelRequest;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class EmployeePortalController extends Controller
@@ -99,7 +100,11 @@ class EmployeePortalController extends Controller
     {
         $employee = $this->currentEmployee();
 
-        abort_if($monthlyAttendance->employee_id !== $employee->id, 403);
+        if ($monthlyAttendance->employee_id !== $employee->id) {
+            throw ValidationException::withMessages([
+                'employee_id' => __('Invalid employee_id.'),
+            ]);
+        }
 
         $monthlyAttendance->load(['logs' => fn ($q) => $q->orderBy('log_date')]);
 
@@ -158,7 +163,11 @@ class EmployeePortalController extends Controller
     {
         $employee = $this->currentEmployee();
 
-        abort_if($payroll->employee_id !== $employee->id, 403);
+        if ($payroll->employee_id !== $employee->id) {
+            throw ValidationException::withMessages([
+                'employee_id' => __('Invalid employee_id.'),
+            ]);
+        }
 
         $payroll->load(['employee', 'decree.benefits.element', 'monthlyAttendance', 'items.element']);
 
@@ -251,6 +260,11 @@ class EmployeePortalController extends Controller
     {
         $employee = $this->currentEmployee();
 
+        if (isset($request['request_type']) && in_array($request['request_type'], ['LEAVE_DAILY', 'MISSION_DAILY'])) {
+            $request['start_time'] = Carbon::createFromTimeString($employee->workShift->start_time)->format('H:i');
+            $request['end_time'] = Carbon::createFromTimeString($employee->workShift->end_time)->format('H:i');
+        }
+
         $request->validate([
             'request_type' => ['required', 'string', 'in:'.implode(',', array_column(PersonnelRequestType::cases(), 'value'))],
             'request_date' => ['required', 'string'],
@@ -260,17 +274,16 @@ class EmployeePortalController extends Controller
         ]);
 
         $gregorianDate = convertToGregorian($request->request_date);
-        // convertToGregorian returns Y/m/d; normalise to Y-m-d
         $gregorianDate = str_replace('/', '-', $gregorianDate);
 
         $startDatetime = $gregorianDate.' '.$request->start_time;
         $endDatetime = $gregorianDate.' '.$request->end_time;
 
-        abort_if(
-            strtotime($endDatetime) < strtotime($startDatetime),
-            422,
-            __('End time must be after or equal to start time.')
-        );
+        if (strtotime($endDatetime) < strtotime($startDatetime)) {
+            throw ValidationException::withMessages([
+                'end_time' => __('End time must be after or equal to start time.'),
+            ]);
+        }
 
         PersonnelRequest::create([
             'employee_id' => $employee->id,
@@ -286,5 +299,112 @@ class EmployeePortalController extends Controller
 
         return redirect()->route('employee-portal.personnel-requests.index', ['tab' => $tab])
             ->with('success', __('Your request has been submitted successfully.'));
+    }
+
+    /**
+     * Show form to edit an existing personnel request.
+     * Accepts an optional ?tab= query param to pre-filter available request types.
+     */
+    public function editPersonnelRequest(Request $request, PersonnelRequest $personnelRequest): View
+    {
+        $tab = $request->get('tab', 'leaves');
+
+        $cases = match ($tab) {
+            'missions' => PersonnelRequestType::missionTypes(),
+            'work_orders' => PersonnelRequestType::workOrderTypes(),
+            'other' => PersonnelRequestType::otherTypes(),
+            default => PersonnelRequestType::leaveTypes(),
+        };
+
+        $requestTypes = array_column(
+            array_map(fn ($case) => ['value' => $case->value, 'label' => $case->label()], $cases),
+            'label',
+            'value'
+        );
+
+        $title = match ($tab) {
+            'missions' => __('Edit Mission Request'),
+            'work_orders' => __('Edit Work Order Request'),
+            'other' => __('Edit Other Request'),
+            default => __('Edit Leave Request'),
+        };
+
+        return view('employee-portal.personnel-requests.edit', compact('personnelRequest', 'requestTypes', 'tab', 'title'));
+    }
+
+    /**
+     * Update an existing personnel request submitted by the current employee.
+     */
+    public function updatePersonnelRequest(Request $request, PersonnelRequest $personnelRequest): RedirectResponse
+    {
+        if ($personnelRequest->status !== 'pending') {
+            throw ValidationException::withMessages([
+                'status' => __('Only pending requests can be edited.'),
+            ]);
+        }
+
+        $employee = $this->currentEmployee();
+
+        if ($personnelRequest->employee_id !== $employee->id) {
+            throw ValidationException::withMessages([
+                'employee_id' => __('Invalid employee_id.'),
+            ]);
+        }
+
+        $request->validate([
+            'request_type' => ['required', 'string', 'in:'.implode(',', array_column(PersonnelRequestType::cases(), 'value'))],
+            'request_date' => ['required', 'string'],
+            'start_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
+            'end_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
+            'reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $gregorianDate = convertToGregorian($request->request_date);
+        $gregorianDate = str_replace('/', '-', $gregorianDate);
+
+        $startDatetime = $gregorianDate.' '.$request->start_time;
+        $endDatetime = $gregorianDate.' '.$request->end_time;
+
+        if (strtotime($endDatetime) < strtotime($startDatetime)) {
+            throw ValidationException::withMessages([
+                'end_time' => __('End time must be after or equal to start time.'),
+            ]);
+        }
+
+        $personnelRequest->update([
+            'request_type' => $request->request_type,
+            'start_date' => $startDatetime,
+            'end_date' => $endDatetime,
+            'reason' => $request->reason,
+        ]);
+
+        $tab = $request->get('tab', 'leaves');
+
+        return redirect()->route('employee-portal.personnel-requests.index', ['tab' => $tab])
+            ->with('success', __('Your request has been updated successfully.'));
+    }
+
+    public function destroyPersonnelRequest(Request $request, PersonnelRequest $personnelRequest): RedirectResponse
+    {
+        if ($personnelRequest->status !== 'pending') {
+            throw ValidationException::withMessages([
+                'status' => __('Only pending requests can be deleted.'),
+            ]);
+        }
+
+        $employee = $this->currentEmployee();
+
+        if ($personnelRequest->employee_id !== $employee->id) {
+            throw ValidationException::withMessages([
+                'employee_id' => __('Invalid employee_id.'),
+            ]);
+        }
+
+        $personnelRequest->delete();
+
+        $tab = $request->get('tab', 'leaves');
+
+        return redirect()->route('employee-portal.personnel-requests.index', ['tab' => $tab])
+            ->with('success', __('Your request has been deleted successfully.'));
     }
 }

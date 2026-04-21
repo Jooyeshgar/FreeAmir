@@ -19,6 +19,9 @@ Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee
     Route::get('/personnel-requests', [Controllers\EmployeePortalController::class, 'personnelRequests'])->name('personnel-requests.index');
     Route::get('/personnel-requests/create', [Controllers\EmployeePortalController::class, 'createPersonnelRequest'])->name('personnel-requests.create');
     Route::post('/personnel-requests', [Controllers\EmployeePortalController::class, 'storePersonnelRequest'])->name('personnel-requests.store');
+    Route::get('/personnel-requests/{personnel_request}/edit', [Controllers\EmployeePortalController::class, 'editPersonnelRequest'])->name('personnel-requests.edit');
+    Route::put('/personnel-requests/{personnel_request}', [Controllers\EmployeePortalController::class, 'updatePersonnelRequest'])->name('personnel-requests.update');
+    Route::delete('/personnel-requests/{personnel_request}', [Controllers\EmployeePortalController::class, 'destroyPersonnelRequest'])->name('personnel-requests.destroy');
 });
 
 Route::group(['middleware' => ['auth', 'check-permission']], function () {

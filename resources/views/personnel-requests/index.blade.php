@@ -1,12 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Personnel Requests') }}
-        </h2>
-    </x-slot>
-
-    <x-show-message-bags />
-
+<x-app-layout :title="__('Personnel Requests')">
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
 
@@ -158,21 +150,29 @@
                                             </form>
                                         @endif
                                     @endcan
-                                    @can('hr.personnel-requests.edit')
-                                        <a href="{{ route('hr.personnel-requests.edit', $personnelRequest) }}" class="btn btn-sm btn-info">
-                                            {{ __('Edit') }}
-                                        </a>
-                                    @endcan
-                                    @can('hr.personnel-requests.delete')
-                                        <form action="{{ route('hr.personnel-requests.destroy', $personnelRequest) }}" method="POST" class="inline-block mb-0"
-                                            onsubmit="return confirm('{{ __('Are you sure?') }}')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-error">
-                                                {{ __('Delete') }}
-                                            </button>
-                                        </form>
-                                    @endcan
+                                    @if($personnelRequest->status === 'pending')
+                                        @can('hr.personnel-requests.edit')
+                                            <a href="{{ route('hr.personnel-requests.edit', $personnelRequest) }}" class="btn btn-sm btn-info">
+                                                {{ __('Edit') }}
+                                            </a>
+                                        @endcan
+                                    @else
+                                        <button type="submit" class="btn btn-sm btn-disabled">{{ __('Edit') }}</button>
+                                    @endif
+                                    @if($personnelRequest->status !== 'approved')
+                                        @can('hr.personnel-requests.delete')
+                                            <form action="{{ route('hr.personnel-requests.destroy', $personnelRequest) }}" method="POST" class="inline-block m-0"
+                                                onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-error">
+                                                    {{ __('Delete') }}
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    @else
+                                        <button type="submit" class="btn btn-sm btn-disabled">{{ __('Delete') }}</button>
+                                    @endif
                                 </td>
                             </tr>
                         @empty
