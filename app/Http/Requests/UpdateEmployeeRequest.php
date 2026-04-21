@@ -29,11 +29,11 @@ class UpdateEmployeeRequest extends FormRequest
 
         return [
             // Identity
-            'code' => ['required', 'string', 'max:20', Rule::unique('employees', 'code')->ignore($employee->id)],
+            'code' => ['required', 'string', 'max:20', Rule::unique('employees', 'code')->ignore($employee->id)->where('company_id', getActiveCompany())],
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
             'father_name' => ['nullable', 'string', 'max:100'],
-            'national_code' => ['nullable', 'string', 'size:10', Rule::unique('employees', 'national_code')->ignore($employee->id)],
+            'national_code' => ['nullable', 'string', 'size:10', Rule::unique('employees', 'national_code')->ignore($employee->id)->where('company_id', getActiveCompany())],
             'passport_number' => ['nullable', 'string', 'max:20'],
             'nationality' => ['required', new Enum(EmployeeNationality::class)],
             'gender' => ['nullable', new Enum(EmployeeGender::class)],
