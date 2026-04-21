@@ -182,7 +182,39 @@ class HomeService
         return $monthlyIncomes['total'];
     }
 
-    public function getMonthlyProductsStat($countOnly = false)
+    public function getMonthlyWarehouse()
+    {
+        $year = config('active-company-fiscal-year');
+        $startDate = jalali_to_gregorian($year, 1, 1, '-');
+        $endDate = jalali_to_gregorian($year, 12, 30, '-');
+
+        $invoiceItems = \DB::table('invoice_items')
+            ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
+            ->select('invoices.date', 'invoice_items.itemable_id', 'invoice_items.quantity_at')
+            ->where('invoice_items.itemable_type', Product::class)
+            ->whereBetween('invoices.date', [$startDate, $endDate])
+            ->get();
+
+        $latestMonthlyProductsInvoiceItems = [];
+        foreach ($invoiceItems as $invoiceItem) {
+            $month = (int) toEnglish(jdate('m', strtotime($invoiceItem->date)));
+            $key = $month.'-'.$invoiceItem->itemable_id;
+
+            if (! isset($latestMonthlyProductsInvoiceItems[$key]) || $invoiceItem->date > $latestMonthlyProductsInvoiceItems[$key]->date) {
+                $latestMonthlyProductsInvoiceItems[$key] = $invoiceItem;
+            }
+        }
+
+        $monthlyWarehouse = array_fill(1, 12, 0);
+        foreach ($latestMonthlyProductsInvoiceItems as $latestMonthlyProductInvoiceItem) {
+            $month = (int) toEnglish(jdate('m', strtotime($latestMonthlyProductInvoiceItem->date)));
+            $monthlyWarehouse[$month] += $latestMonthlyProductInvoiceItem->quantity_at;
+        }
+
+        return $this->mapMonths($monthlyWarehouse);
+    }
+
+    public function getMonthlyProductsStat()
     {
         $productInventorySubjectIds = Product::pluck('inventory_subject_id')->all();
         $monthlyProductsStat = [];
@@ -190,7 +222,7 @@ class HomeService
         foreach ($productInventorySubjectIds as $productInventorySubjectId) {
             $productSubject = Subject::find($productInventorySubjectId);
             if (! is_null($productSubject)) {
-                $monthlyProductsStat[] = $this->subjectService->sumSubjectWithDateRange($productSubject, $countOnly);
+                $monthlyProductsStat[] = $this->subjectService->sumSubjectWithDateRange($productSubject);
             }
         }
 
@@ -212,7 +244,7 @@ class HomeService
         return $this->mapMonths($productsStat);
     }
 
-    public function balanceForSubjectIds(array $subjectIds, int $duration, bool $inverse = true)
+    public function balanceForSubjectIds(array $subjectIds, int $duration)
     {
         $year = config('active-company-fiscal-year');
 
@@ -255,10 +287,6 @@ class HomeService
 
         $dailyBalances[formatDate($endDate)] = $runningBalance;
         $values = array_values($dailyBalances);
-
-        if ($inverse) {
-            $values = array_map(fn ($value) => $value * -1, $values);
-        }
 
         return response()->json([
             'labels' => array_keys($dailyBalances),

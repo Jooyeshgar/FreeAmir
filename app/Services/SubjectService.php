@@ -70,7 +70,7 @@ class SubjectService
         return $this->buildSubjectTreeFromCollection($subjects);
     }
 
-    public function sumSubjectWithDateRange(?Subject $subject, bool $countOnly = false)
+    public function sumSubjectWithDateRange(?Subject $subject)
     {
         if (is_null($subject)) {
             return [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0, 8 => 0, 9 => 0, 10 => 0, 11 => 0, 12 => 0];
@@ -97,10 +97,6 @@ class SubjectService
         $transactionQuery = \App\Models\Transaction::query()->whereIn('subject_id', $subjectIds);
         $monthlySum = [];
 
-        $select = $countOnly
-            ? 'COUNT(*) as total'
-            : 'SUM(transactions.value) as total';
-
         foreach ($months as $month => [$startDay, $endDay]) {
             $startDate = jalali_to_gregorian($year, $month, $startDay, '-');
             $endDate = jalali_to_gregorian($year, $month, $endDay, '-');
@@ -108,7 +104,7 @@ class SubjectService
             $transactions = (clone $transactionQuery)
                 ->join('documents', 'documents.id', '=', 'transactions.document_id')
                 ->whereBetween('documents.date', [$startDate, $endDate])
-                ->selectRaw("DATE(documents.date) as date, {$select}")
+                ->selectRaw('DATE(documents.date) as date, SUM(transactions.value) as total')
                 ->groupBy('date')
                 ->orderBy('date')
                 ->pluck('total', 'date')
