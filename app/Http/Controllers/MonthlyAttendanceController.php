@@ -60,7 +60,18 @@ class MonthlyAttendanceController extends Controller
 
         $startDate = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($validated['start_date']));
 
-        $this->attendanceService->calculateAndStore((int) $validated['employee_id'], $startDate, (int) $validated['duration'], $jalaliYear, $jalaliMonth);
+        $monthlyAttendance = $this->attendanceService->calculateAndStore((int) $validated['employee_id'], $startDate, (int) $validated['duration'], $jalaliYear, $jalaliMonth);
+
+        $totalMonthPaidLeave = MonthlyAttendance::where('employee_id', $monthlyAttendance->employee_id)
+            ->where('year', $monthlyAttendance->year)
+            ->where('month', $monthlyAttendance->month)
+            ->sum('paid_leave');
+
+        $totalPaidLeave = $monthlyAttendance->employee->workShift->paid_leave + $monthlyAttendance->employee->leave_remain;
+
+        $monthlyAttendance->employee->leave_remain = $totalPaidLeave - $totalMonthPaidLeave;
+
+        $monthlyAttendance->employee->save();
 
         return redirect()->route('attendance.monthly-attendances.index')
             ->with('success', __('Monthly attendance calculated successfully.'));
@@ -138,11 +149,26 @@ class MonthlyAttendanceController extends Controller
             'holiday' => ['required', 'integer', 'min:0'],
         ]);
 
-        if ($validated['paid_leave'] !== $monthlyAttendance->paid_leave) {
-            $leaveDiff = $validated['paid_leave'] - $monthlyAttendance->paid_leave;
-            $employee = $monthlyAttendance->employee;
-            $employee->leave_remain -= $leaveDiff;
-            $employee->save();
+        if ($validated['paid_leave'] != $monthlyAttendance->paid_leave) {
+            $diffMonthPaidLeave = $validated['paid_leave'] - $monthlyAttendance->paid_leave;
+
+            $totalPaidLeave = $monthlyAttendance->employee->workShift->paid_leave + $monthlyAttendance->employee->leave_remain;
+
+            $totalMonthPaidLeave = MonthlyAttendance::where('employee_id', $monthlyAttendance->employee_id)
+                ->where('year', $monthlyAttendance->year)
+                ->where('month', $monthlyAttendance->month)
+                ->sum('paid_leave');
+
+            $totalPaidLeave = $monthlyAttendance->employee->workShift->paid_leave + $monthlyAttendance->employee->leave_remain;
+
+            $monthlyAttendance->employee->leave_remain = $totalPaidLeave - $diffMonthPaidLeave - $totalMonthPaidLeave;
+            if ($monthlyAttendance->employee->leave_remain < 0) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'paid_leave' => __('The paid leave exceeds the employee\'s remaining leave balance.'),
+                ]);
+            }
+
+            $monthlyAttendance->employee->save();
         }
 
         $monthlyAttendance->update($validated);
@@ -176,6 +202,7 @@ class MonthlyAttendanceController extends Controller
         $jalaliYear = $monthlyAttendance->year;
         $jalaliMonth = $monthlyAttendance->month;
 
+        $oldMonthlyAttendance = $monthlyAttendance;
         $monthlyAttendance->delete();
 
         $monthlyAttendance = $this->attendanceService->calculateAndStore(
@@ -185,6 +212,19 @@ class MonthlyAttendanceController extends Controller
             jalaliYear: $jalaliYear,
             jalaliMonth: $jalaliMonth,
         );
+
+        if ($oldMonthlyAttendance->paid_leave != $monthlyAttendance->paid_leave) {
+            $totalMonthPaidLeave = MonthlyAttendance::where('employee_id', $monthlyAttendance->employee_id)
+                ->where('year', $monthlyAttendance->year)
+                ->where('month', $monthlyAttendance->month)
+                ->sum('paid_leave');
+
+            $totalPaidLeave = $monthlyAttendance->employee->workShift->paid_leave + $monthlyAttendance->employee->leave_remain;
+
+            $monthlyAttendance->employee->leave_remain = $totalPaidLeave - $totalMonthPaidLeave;
+
+            $monthlyAttendance->employee->save();
+        }
 
         return redirect()->route('attendance.monthly-attendances.show', $monthlyAttendance)
             ->with('success', __('Monthly attendance recalculated successfully.'));
