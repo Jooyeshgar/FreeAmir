@@ -24,20 +24,23 @@
                     <input type="hidden" name="parent_id" value="{{ $currentParent->id }}">
                 @endif
 
-                <div class="grid grid-cols-12 gap-3 items-end">
-                    <div class="col-span-2">
+                <div class="grid grid-cols-8 gap-3 items-end">
+                    <div class="col-span-1">
+                        <x-input name="subject_name" value="{{ $subject_name }}" class="w-full" placeholder="{{ __('Subject Name') }}" />
+                    </div>
+                    <div class="col-span-1">
                         <x-date-picker name="start_date" value="{{ $start_date }}" class="w-full" placeholder="{{ __('Start date') }}" />
                     </div>
-                    <div class="col-span-2">
+                    <div class="col-span-1">
                         <x-date-picker name="end_date" value="{{ $end_date }}" class="w-full" placeholder="{{ __('End date') }}" />
                     </div>
-                    <div class="col-span-2">
+                    <div class="col-span-1">
                         <x-input name="start_document_number" value="{{ $start_document_number ?? 3 }}" class="w-full" placeholder="{{ __('Document start number') }}" />
                     </div>
-                    <div class="col-span-2">
+                    <div class="col-span-1">
                         <x-input name="end_document_number" value="{{ $end_document_number }}" class="w-full" placeholder="{{ __('Document end number') }}" />
                     </div>
-                    <div class="col-span-2 flex items-center gap-3">
+                    <div class="col-span-1 flex items-center gap-3">
                         <input type="checkbox" name="include_children" value="1" class="checkbox checkbox-md" {{ $include_children ? 'checked' : '' }}>
                         <span class="text-gray-700">{{ __('Include 2 levels') }}</span>
                     </div>
