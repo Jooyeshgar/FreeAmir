@@ -90,7 +90,7 @@
 
      @if (isset($employee) && $employee->exists)
         <div>
-            <x-input name="leave_remain" id="leave_remain" title="{{ __('Unpaid Leave (minutes)') }}" :value="old('leave_remain', $employee->leave_remain ?? '')" placeholder="1200" />
+            <x-input name="leave_remain" id="leave_remain" title="{{ __('Remaining Paid Leave (minutes)') }}" :value="old('leave_remain', $employee->leave_remain ?? '')" placeholder="1200" />
         </div>
     @endif
 
