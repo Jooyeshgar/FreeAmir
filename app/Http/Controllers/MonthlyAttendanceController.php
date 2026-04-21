@@ -132,11 +132,18 @@ class MonthlyAttendanceController extends Controller
             'absent_days' => ['required', 'integer', 'min:0', 'max:31'],
             'overtime' => ['required', 'integer', 'min:0'],
             'mission' => ['required', 'integer', 'min:0', 'max:1500'],
-            'paid_leave' => ['required', 'integer', 'min:0', 'max:1500'],
+            'paid_leave' => ['required', 'integer', 'max:1500'],
             'unpaid_leave' => ['required', 'integer', 'min:0', 'max:1500'],
             'friday' => ['required', 'integer', 'min:0'],
             'holiday' => ['required', 'integer', 'min:0'],
         ]);
+
+        if ($validated['paid_leave'] !== $monthlyAttendance->paid_leave) {
+            $leaveDiff = $validated['paid_leave'] - $monthlyAttendance->paid_leave;
+            $employee = $monthlyAttendance->employee;
+            $employee->leave_remain -= $leaveDiff;
+            $employee->save();
+        }
 
         $monthlyAttendance->update($validated);
 
@@ -146,6 +153,10 @@ class MonthlyAttendanceController extends Controller
 
     public function destroy(MonthlyAttendance $monthlyAttendance): RedirectResponse
     {
+        $employee = $monthlyAttendance->employee;
+        $employee->leave_remain += $monthlyAttendance->paid_leave;
+        $employee->save();
+
         $monthlyAttendance->delete();
 
         return redirect()->route('attendance.monthly-attendances.index')

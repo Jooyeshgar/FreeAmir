@@ -37,6 +37,10 @@
         <div x-data="{ show: '{{ old('thursday_status', $workShift->thursday_status->value ?? 'half_day') }}' === 'half_day' }" x-on:thursday-status-changed.window="show = $event.detail.value === 'half_day'" x-show="show">
             <x-input name="thursday_exit_time" id="thursday_exit_time" type="text" placeholder="13:00" title="{{ __('Thursday Exit Time') }}" :value="old('thursday_exit_time', isset($workShift) ? substr($workShift->thursday_exit_time ?? '', 0, 5) : '')" />
         </div>
+        <div>
+            <x-input name="paid_leave" id="paid_leave" type="number" title="{{ __('Paid Leave (minutes)') }}" :value="old('paid_leave', $workShift->paid_leave ?? 1200)"
+                placeholder="1200" />
+        </div>
         <div class="flex flex-col gap-3 pt-2">
             <x-checkbox name="is_active" value="1" id="is_active" title="{{ __('Active') }}" :checked="old('is_active', $workShift->is_active ?? true)" />
         </div>

@@ -23,6 +23,7 @@ class WorkShiftFactory extends Factory
             'float' => $this->faker->numberBetween(0, 30),
             'break' => $this->faker->numberBetween(0, 60),
             'is_active' => true,
+            'paid_leave' => 1200,
         ];
     }
 

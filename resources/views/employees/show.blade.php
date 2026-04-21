@@ -66,6 +66,9 @@
                                 {{ $employee->user->name }}
                             </a>
                         @endif
+                        <span class="badge badge-lg badge-emerald gap-2">
+                            {{ formatNumber($employee->leave_remain) }} {{ __('minutes') }} {{ __('Remaining Paid Leave') }}
+                        </span>
                         @if ($employee->device_id)
                             <span class="badge badge-lg badge-neutral gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
