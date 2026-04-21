@@ -143,7 +143,7 @@ class MonthlyAttendanceController extends Controller
             'absent_days' => ['required', 'integer', 'min:0', 'max:31'],
             'overtime' => ['required', 'integer', 'min:0'],
             'mission' => ['required', 'integer', 'min:0', 'max:1500'],
-            'paid_leave' => ['required', 'integer', 'max:1500'],
+            'paid_leave' => ['required', 'integer', 'max:15000'],
             'unpaid_leave' => ['required', 'integer', 'min:0', 'max:1500'],
             'friday' => ['required', 'integer', 'min:0'],
             'holiday' => ['required', 'integer', 'min:0'],
@@ -151,23 +151,7 @@ class MonthlyAttendanceController extends Controller
 
         if ($validated['paid_leave'] != $monthlyAttendance->paid_leave) {
             $diffMonthPaidLeave = $validated['paid_leave'] - $monthlyAttendance->paid_leave;
-
-            $totalPaidLeave = $monthlyAttendance->employee->workShift->paid_leave + $monthlyAttendance->employee->leave_remain;
-
-            $totalMonthPaidLeave = MonthlyAttendance::where('employee_id', $monthlyAttendance->employee_id)
-                ->where('year', $monthlyAttendance->year)
-                ->where('month', $monthlyAttendance->month)
-                ->sum('paid_leave');
-
-            $totalPaidLeave = $monthlyAttendance->employee->workShift->paid_leave + $monthlyAttendance->employee->leave_remain;
-
-            $monthlyAttendance->employee->leave_remain = $totalPaidLeave - $diffMonthPaidLeave - $totalMonthPaidLeave;
-            if ($monthlyAttendance->employee->leave_remain < 0) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'paid_leave' => __('The paid leave exceeds the employee\'s remaining leave balance.'),
-                ]);
-            }
-
+            $monthlyAttendance->employee->leave_remain -= $diffMonthPaidLeave;
             $monthlyAttendance->employee->save();
         }
 
@@ -179,9 +163,8 @@ class MonthlyAttendanceController extends Controller
 
     public function destroy(MonthlyAttendance $monthlyAttendance): RedirectResponse
     {
-        $employee = $monthlyAttendance->employee;
-        $employee->leave_remain += $monthlyAttendance->paid_leave;
-        $employee->save();
+        $monthlyAttendance->employee->leave_remain += $monthlyAttendance->paid_leave;
+        $monthlyAttendance->employee->save();
 
         $monthlyAttendance->delete();
 
@@ -213,13 +196,13 @@ class MonthlyAttendanceController extends Controller
             jalaliMonth: $jalaliMonth,
         );
 
-        if ($oldMonthlyAttendance->paid_leave != $monthlyAttendance->paid_leave) {
+        if ($oldMonthlyAttendance->paid_leave !== $monthlyAttendance->paid_leave) {
             $totalMonthPaidLeave = MonthlyAttendance::where('employee_id', $monthlyAttendance->employee_id)
                 ->where('year', $monthlyAttendance->year)
                 ->where('month', $monthlyAttendance->month)
                 ->sum('paid_leave');
 
-            $totalPaidLeave = $monthlyAttendance->employee->workShift->paid_leave + $monthlyAttendance->employee->leave_remain;
+            $totalPaidLeave = $monthlyAttendance->employee->workShift->paid_leave - $monthlyAttendance->employee->leave_remain;
 
             $monthlyAttendance->employee->leave_remain = $totalPaidLeave - $totalMonthPaidLeave;
 

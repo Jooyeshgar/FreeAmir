@@ -1,14 +1,14 @@
 <div class="grid grid-cols-2 gap-6">
 
     <div class="col-span-2 md:col-span-1">
-        <x-select name="employee_id" id="employee_id" title="{{ __('Employee') }}" :selected="old('employee_id', request('employee') ?? isset($salaryDecree) ? $salaryDecree->employee_id : '')" :options="$employees
+        <x-select name="employee_id" id="employee_id" title="{{ __('Employee') }}" :selected="old('employee_id', isset($salaryDecree) ? $salaryDecree->employee_id : '')" :options="$employees
             ->mapWithKeys(fn($e) => [$e->id => $e->first_name . ' ' . $e->last_name])
             ->prepend('— ' . __('Select Employee') . ' —', '')
             ->all()" required />
     </div>
 
     <div class="col-span-2 md:col-span-1">
-        <x-input name="name" id="name" title="{{ __('Decree Name') }}" :value="old('name', $salaryDecree->name ?? '')" placeholder="{{ __('e.g. Decree-1403-001') }}" />
+        <x-input name="name" id="name" title="{{ __('Decree Name') }}" :value="old('name', isset($salaryDecree->name) ? $salaryDecree->name : '')" placeholder="{{ __('e.g. Decree-1403-001') }}" />
     </div>
 
     <div class="col-span-2 md:col-span-1">
