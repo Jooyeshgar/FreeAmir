@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
 use App\Models\Company;
 use App\Models\Employee;
@@ -367,7 +368,7 @@ class MonthlyAttendanceTest extends TestCase
                 'is_friday' => false,
                 'is_holiday' => false,
             ]);
-            $log->log_date = $day;
+            $log->setAttribute('log_date', $day->toDateString());
             $logs->push($log);
         }
 
@@ -423,5 +424,77 @@ class MonthlyAttendanceTest extends TestCase
         $totals = $service->computeTotals($monday, 1, new Collection([$log]), []);
 
         $this->assertEquals(120, $totals['overtime']);
+    }
+
+    public function test_attendance_service_sums_auto_overtime_and_remote_work_minutes(): void
+    {
+        $service = new AttendanceService;
+        $startDate = Carbon::create(2025, 1, 6); // Monday
+
+        $first = new AttendanceLog([
+            'worked' => 480,
+            'overtime' => 60,
+            'auto_overtime' => 90,
+            'remote_work' => 30,
+            'delay' => 0,
+            'early_leave' => 0,
+            'mission' => 0,
+            'paid_leave' => 0,
+            'unpaid_leave' => 0,
+            'is_friday' => false,
+            'is_holiday' => false,
+        ]);
+        $first->setAttribute('log_date', $startDate->toDateString());
+
+        $second = new AttendanceLog([
+            'worked' => 480,
+            'overtime' => 0,
+            'auto_overtime' => 30,
+            'remote_work' => 120,
+            'delay' => 15,
+            'early_leave' => 45,
+            'mission' => 0,
+            'paid_leave' => 0,
+            'unpaid_leave' => 0,
+            'is_friday' => false,
+            'is_holiday' => false,
+        ]);
+        $second->setAttribute('log_date', $startDate->copy()->addDay()->toDateString());
+
+        $totals = $service->computeTotals($startDate, 2, new Collection([$first, $second]), []);
+
+        $this->assertEquals(2, $totals['present_days']);
+        $this->assertEquals(60, $totals['overtime']);
+        $this->assertEquals(120, $totals['auto_overtime']);
+        $this->assertEquals(150, $totals['remote_work']);
+        $this->assertEquals(60, $totals['undertime']);
+    }
+
+    public function test_attendance_service_does_not_count_thursday_holiday_as_absent(): void
+    {
+        $service = new AttendanceService;
+        $thursday = Carbon::create(2025, 1, 9); // Thursday
+        $workShift = WorkShift::factory()->make([
+            'thursday_status' => ThursdayStatus::HOLIDAY,
+        ]);
+
+        $totals = $service->computeTotals($thursday, 1, new Collection, [], $workShift);
+
+        $this->assertEquals(1, $totals['work_days']);
+        $this->assertEquals(0, $totals['present_days']);
+        $this->assertEquals(0, $totals['absent_days']);
+        $this->assertEquals(0, $totals['holiday']);
+    }
+
+    public function test_attendance_service_counts_regular_missing_day_as_absent(): void
+    {
+        $service = new AttendanceService;
+        $monday = Carbon::create(2025, 1, 6);
+
+        $totals = $service->computeTotals($monday, 1, new Collection, []);
+
+        $this->assertEquals(1, $totals['work_days']);
+        $this->assertEquals(0, $totals['present_days']);
+        $this->assertEquals(1, $totals['absent_days']);
     }
 }

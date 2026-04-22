@@ -137,7 +137,7 @@
                     <summary>{{ __('Salary') }}</summary>
                     <ul>
                         @can('salary.tax-slabs.index')
-                            <li><a href="{{ route('salary.tax-slabs.index') }}">{{ __('Tax Slabs') }}</a></li>
+                            <li><a href="{{ route('salary.tax-slabs.index') }}">{{ __('Yearly Tax Slabs') }}</a></li>
                         @endcan
                         @can('salary.work-sites.index')
                             <li><a href="{{ route('salary.work-sites.index') }}">{{ __('Work Sites') }}</a></li>

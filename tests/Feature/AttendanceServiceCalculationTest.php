@@ -421,6 +421,120 @@ class AttendanceServiceCalculationTest extends TestCase
         $this->assertSame(60, $attendance->overtime);
     }
 
+    public function test_auto_overtime_is_capped_by_work_shift_limit(): void
+    {
+        $shift = $this->makeShift([
+            'start_time' => '08:00:00',
+            'end_time' => '16:00:00',
+            'break' => 0,
+            'max_auto_overtime' => 120,
+        ]);
+        $employee = $this->makeEmployee($shift);
+
+        $log = $this->insertLog($employee, '2025-03-03', '08:00:00', '20:00:00');
+
+        $this->assertSame(0, $log->overtime);
+        $this->assertSame(120, $log->auto_overtime);
+
+        $attendance = $this->service->calculateAndStore(
+            $employee->id,
+            $this->startDate,
+            $this->durationDays,
+            1404,
+            1
+        );
+
+        $this->assertSame(0, $attendance->overtime);
+        $this->assertSame(120, $attendance->auto_overtime);
+    }
+
+    public function test_approved_and_auto_overtime_can_be_combined_on_same_day(): void
+    {
+        $shift = $this->makeShift([
+            'start_time' => '08:00:00',
+            'end_time' => '16:00:00',
+            'break' => 0,
+            'max_auto_overtime' => 120,
+        ]);
+        $employee = $this->makeEmployee($shift);
+
+        $log = $this->insertLog($employee, '2025-03-03', '08:00:00', '20:00:00', [
+            'approved_overtime' => 60,
+        ]);
+
+        $this->assertSame(60, $log->overtime);
+        $this->assertSame(120, $log->auto_overtime);
+
+        $attendance = $this->service->calculateAndStore(
+            $employee->id,
+            $this->startDate,
+            $this->durationDays,
+            1404,
+            1
+        );
+
+        $this->assertSame(60, $attendance->overtime);
+        $this->assertSame(120, $attendance->auto_overtime);
+    }
+
+    public function test_approved_overtime_is_capped_by_actual_extra_work(): void
+    {
+        $shift = $this->makeShift([
+            'start_time' => '08:00:00',
+            'end_time' => '16:00:00',
+            'break' => 0,
+            'max_auto_overtime' => 120,
+        ]);
+        $employee = $this->makeEmployee($shift);
+
+        $log = $this->insertLog($employee, '2025-03-03', '08:00:00', '18:00:00', [
+            'approved_overtime' => 180,
+        ]);
+
+        $this->assertSame(120, $log->overtime);
+        $this->assertSame(0, $log->auto_overtime);
+
+        $attendance = $this->service->calculateAndStore(
+            $employee->id,
+            $this->startDate,
+            $this->durationDays,
+            1404,
+            1
+        );
+
+        $this->assertSame(120, $attendance->overtime);
+        $this->assertSame(0, $attendance->auto_overtime);
+    }
+
+    public function test_overtime_above_approved_and_auto_cap_is_discarded(): void
+    {
+        $shift = $this->makeShift([
+            'start_time' => '08:00:00',
+            'end_time' => '16:00:00',
+            'break' => 0,
+            'max_auto_overtime' => 120,
+        ]);
+        $employee = $this->makeEmployee($shift);
+
+        $log = $this->insertLog($employee, '2025-03-03', '08:00:00', '21:00:00', [
+            'approved_overtime' => 60,
+        ]);
+
+        $this->assertSame(60, $log->overtime);
+        $this->assertSame(120, $log->auto_overtime);
+
+        $attendance = $this->service->calculateAndStore(
+            $employee->id,
+            $this->startDate,
+            $this->durationDays,
+            1404,
+            1
+        );
+
+        $this->assertSame(60, $attendance->overtime);
+        $this->assertSame(120, $attendance->auto_overtime);
+    }
+
     /**
      * Scenario: verify that attendance logs are linked to the monthly_attendance record.
      */

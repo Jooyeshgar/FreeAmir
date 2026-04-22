@@ -38,7 +38,7 @@ class PayrollElementController extends Controller
             'title' => ['required', 'string', 'max:100'],
             'system_code' => ['required', Rule::in([
                 'CHILD_ALLOWANCE', 'HOUSING_ALLOWANCE', 'FOOD_ALLOWANCE', 'MARRIAGE_ALLOWANCE',
-                'OVERTIME', 'FRIDAY_PAY', 'HOLIDAY_PAY', 'MISSION_PAY',
+                'OVERTIME', 'AUTO_OVERTIME', 'FRIDAY_PAY', 'HOLIDAY_PAY', 'MISSION_PAY',
                 'INSURANCE_EMP', 'INSURANCE_EMP2', 'UNEMPLOYMENT_INS',
                 'INCOME_TAX', 'ABSENCE_DEDUCTION', 'OTHER',
             ])],
@@ -76,7 +76,7 @@ class PayrollElementController extends Controller
             'title' => ['required', 'string', 'max:100'],
             'system_code' => ['required', Rule::in([
                 'CHILD_ALLOWANCE', 'HOUSING_ALLOWANCE', 'FOOD_ALLOWANCE', 'MARRIAGE_ALLOWANCE',
-                'OVERTIME', 'FRIDAY_PAY', 'HOLIDAY_PAY', 'MISSION_PAY',
+                'OVERTIME', 'AUTO_OVERTIME', 'FRIDAY_PAY', 'HOLIDAY_PAY', 'MISSION_PAY',
                 'INSURANCE_EMP', 'INSURANCE_EMP2', 'UNEMPLOYMENT_INS',
                 'INCOME_TAX', 'ABSENCE_DEDUCTION', 'OTHER',
             ])],

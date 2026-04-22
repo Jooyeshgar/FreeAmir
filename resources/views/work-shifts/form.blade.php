@@ -22,6 +22,14 @@
             <x-input name="overtime_coefficient" id="overtime_coefficient" type="number" step="0.01" title="{{ __('Overtime Coefficient') }}" :value="old('overtime_coefficient', $workShift->overtime_coefficient ?? 1.4)"
                 placeholder="1.40" />
         </div>
+         <div>
+            <x-input name="auto_overtime_coefficient" id="auto_overtime_coefficient" type="number" step="0.01" title="{{ __('Auto Overtime Coefficient') }}" :value="old('auto_overtime_coefficient', $workShift->auto_overtime_coefficient ?? 1.4)"
+                placeholder="1.40" />
+        </div>
+        <div>
+            <x-input name="max_auto_overtime" id="max_auto_overtime" type="number" step="1" title="{{ __('Maximum Auto Overtime') }}" :value="old('max_auto_overtime', $workShift->max_auto_overtime ?? 300)"
+                placeholder="300" />
+        </div>
         <div>
             <x-input name="mission_coefficient" id="mission_coefficient" type="number" step="0.01" title="{{ __('Mission Coefficient') }}" :value="old('mission_coefficient', $workShift->mission_coefficient ?? 1.4)"
                 placeholder="1.40" />
@@ -35,7 +43,7 @@
                 x-on:change="$dispatch('thursday-status-changed', { value: $event.target.value })" />
         </div>
         <div x-data="{ show: '{{ old('thursday_status', $workShift->thursday_status->value ?? 'half_day') }}' === 'half_day' }" x-on:thursday-status-changed.window="show = $event.detail.value === 'half_day'" x-show="show">
-            <x-input name="thursday_exit_time" id="thursday_exit_time" type="text" placeholder="13:00" title="{{ __('Thursday Exit Time') }}" :value="old('thursday_exit_time', isset($workShift) ? substr($workShift->thursday_exit_time ?? '', 0, 5) : '')" />
+            <x-input name="thursday_exit_time" id="thursday_exit_time" type="text" placeholder="13:00" title="{{ __('Thursday Exit Time') }}" :value="old('thursday_exit_time', isset($workShift) ? substr($workShift->thursday_exit_time ?? '13:00', 0, 5) : '')" />
         </div>
         <div>
             <x-input name="paid_leave" id="paid_leave" type="number" title="{{ __('Paid Leave (minutes)') }}" :value="old('paid_leave', $workShift->paid_leave ?? 1200)"
