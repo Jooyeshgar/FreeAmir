@@ -155,7 +155,42 @@ class AttendanceService
             ];
         }
 
-        // ── No clock data ─────────────────────────────────────────────────
+        // ── Remote work (partial / hourly) ─────────────────────────────
+        // Partial remote work: treat like hourly leave — remote minutes absorb
+        // delay and early_leave, and are added on top of actual clock time.
+        if ($log->remote_work > 0 && $log->remote_work < $shiftMinutes) {
+            $remoteMin = (int) $log->remote_work;
+
+            // No clock data: only remote minutes count — no penalty
+            if ($log->entry_time === null || $log->exit_time === null) {
+                return [
+                    'worked' => $remoteMin,
+                    'delay' => 0,
+                    'early_leave' => 0,
+                    'overtime' => 0,
+                    'remote_work' => $remoteMin,
+                    'mission' => (int) ($log->mission ?? 0),
+                ];
+            }
+
+            $rawWorked = $this->rawWorkedMinutes($log, $workShift);
+            $totalWorked = min($shiftMinutes, $rawWorked + $remoteMin);
+
+            $bounds = $this->shiftDelayEarlyLeave($log, $workShift);
+            $netDelay = max(0, $bounds['delay'] - $remoteMin);
+            $netEarlyLeave = max(0, $bounds['early_leave'] - $remoteMin);
+
+            return [
+                'worked' => $totalWorked,
+                'delay' => $netDelay,
+                'early_leave' => $netEarlyLeave,
+                'overtime' => 0,   // remote work does not earn overtime
+                'remote_work' => $remoteMin,
+                'mission' => (int) ($log->mission ?? 0),
+            ];
+        }
+
+        // ── No clock data ─────────────────────────────────────────────
         if ($log->entry_time === null || $log->exit_time === null) {
             // Unpaid leave: no clock-in required
             // if ($log->unpaid_leave > 0) {
@@ -413,6 +448,7 @@ class AttendanceService
      */
     public function syncPersonnelRequestLogs(PersonnelRequest $personnelRequest, bool $subtract = false): void
     {
+
         $field = match ($personnelRequest->request_type) {
             PersonnelRequestType::LEAVE_HOURLY,
             PersonnelRequestType::LEAVE_DAILY,
@@ -440,7 +476,6 @@ class AttendanceService
             PersonnelRequestType::SICK_LEAVE,
             PersonnelRequestType::LEAVE_WITHOUT_PAY,
             PersonnelRequestType::MISSION_DAILY,
-            PersonnelRequestType::REMOTE_WORK,
         ], strict: true);
 
         if ($isDailyType) {
@@ -572,13 +607,8 @@ class AttendanceService
      * a signed delta to the specified field.
      * Returns the log (or null if nothing was changed).
      */
-    private function applyDeltaToLog(
-        int $employeeId,
-        int $companyId,
-        Carbon $date,
-        string $field,
-        int $minutes
-    ): ?AttendanceLog {
+    private function applyDeltaToLog(int $employeeId, int $companyId, Carbon $date, string $field, int $minutes): ?AttendanceLog
+    {
         $log = AttendanceLog::where('employee_id', $employeeId)
             ->where('log_date', $date->toDateString())
             ->first();

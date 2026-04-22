@@ -19,6 +19,7 @@ class AttendanceLog extends Model
         'entry_time',
         'exit_time',
         'worked',
+        'remote_work',
         'delay',
         'early_leave',
         'overtime',
