@@ -62,14 +62,9 @@ class MonthlyAttendanceController extends Controller
 
         $monthlyAttendance = $this->attendanceService->calculateAndStore((int) $validated['employee_id'], $startDate, (int) $validated['duration'], $jalaliYear, $jalaliMonth);
 
-        $totalMonthPaidLeave = MonthlyAttendance::where('employee_id', $monthlyAttendance->employee_id)
-            ->where('year', $monthlyAttendance->year)
-            ->where('month', $monthlyAttendance->month)
-            ->sum('paid_leave');
-
         $totalPaidLeave = $monthlyAttendance->employee->workShift->paid_leave + $monthlyAttendance->employee->leave_remain;
 
-        $monthlyAttendance->employee->leave_remain = $totalPaidLeave - $totalMonthPaidLeave;
+        $monthlyAttendance->employee->leave_remain = $totalPaidLeave - $monthlyAttendance->paid_leave;
 
         $monthlyAttendance->employee->save();
 
@@ -197,15 +192,8 @@ class MonthlyAttendanceController extends Controller
         );
 
         if ($oldMonthlyAttendance->paid_leave !== $monthlyAttendance->paid_leave) {
-            $totalMonthPaidLeave = MonthlyAttendance::where('employee_id', $monthlyAttendance->employee_id)
-                ->where('year', $monthlyAttendance->year)
-                ->where('month', $monthlyAttendance->month)
-                ->sum('paid_leave');
-
-            $totalPaidLeave = $monthlyAttendance->employee->workShift->paid_leave - $monthlyAttendance->employee->leave_remain;
-
-            $monthlyAttendance->employee->leave_remain = $totalPaidLeave - $totalMonthPaidLeave;
-
+            $diffMonthPaidLeave = $monthlyAttendance->paid_leave - $oldMonthlyAttendance->paid_leave;
+            $monthlyAttendance->employee->leave_remain -= $diffMonthPaidLeave;
             $monthlyAttendance->employee->save();
         }
 
