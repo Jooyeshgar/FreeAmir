@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Employee;
 use App\Models\MonthlyAttendance;
 use App\Models\User;
+use App\Models\WorkShift;
 use App\Models\WorkSite;
 use App\Services\AttendanceService;
 use Carbon\Carbon;
@@ -43,10 +44,12 @@ class MonthlyAttendanceTest extends TestCase
         $this->withCookies(['active-company-id' => $this->companyId]);
 
         $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $workShift = WorkShift::factory()->create(['company_id' => $this->companyId]);
 
         $this->employee = Employee::factory()->create([
             'company_id' => $this->companyId,
             'work_site_id' => $workSite->id,
+            'work_shift_id' => $workShift->id,
         ]);
     }
 

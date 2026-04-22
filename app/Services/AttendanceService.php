@@ -32,6 +32,8 @@ use Illuminate\Support\Collection;
  *   Net delay   = max(0, raw_delay − leave_minutes)
  *   Net early_leave = max(0, raw_early_leave − leave_minutes)
  * • Daily leave / mission → worked = shiftMinutes, delay = 0, early_leave = 0.
+ * • Daily remote work → worked = shiftMinutes, delay = 0, early_leave = 0
+ *   (employee is fully present from home; an AttendanceLog is auto-created).
  */
 class AttendanceService
 {
@@ -138,6 +140,18 @@ class AttendanceService
                 'early_leave' => 0,
                 'overtime' => 0,
                 'mission' => $log->mission,
+            ];
+        }
+
+        // ── Remote work (daily) ───────────────────────────────────────────
+        // Full-day remote work: employee worked from home — count as fully present.
+        if ($log->remote_work > 0 && $log->remote_work >= $shiftMinutes) {
+            return [
+                'worked' => $shiftMinutes,
+                'delay' => 0,
+                'early_leave' => 0,
+                'overtime' => 0,
+                'remote_work' => (int) $log->remote_work,
             ];
         }
 
@@ -324,6 +338,7 @@ class AttendanceService
         $unpaidLeaveMin = 0;
         $fridayMin = 0;
         $holidayMin = 0;
+        $remoteWorkMin = 0;
 
         for ($i = 0; $i < $durationDays; $i++) {
             $day = $startDate->copy()->addDays($i);
@@ -366,6 +381,7 @@ class AttendanceService
             $missionMin += (int) $log->mission;
             $paidLeaveMin += (int) $log->paid_leave;
             $unpaidLeaveMin += (int) $log->unpaid_leave;
+            $remoteWorkMin += (int) $log->remote_work;
             $undertimeMin += (int) $log->early_leave + $log->delay;
         }
 
@@ -378,6 +394,7 @@ class AttendanceService
             'mission' => $missionMin,
             'paid_leave' => $paidLeaveMin,
             'unpaid_leave' => $unpaidLeaveMin,
+            'remote_work' => $remoteWorkMin,
             'friday' => $fridayMin,
             'holiday' => $holidayMin,
         ];
@@ -404,6 +421,7 @@ class AttendanceService
             PersonnelRequestType::MISSION_HOURLY,
             PersonnelRequestType::MISSION_DAILY => 'mission',
             PersonnelRequestType::OVERTIME_ORDER => 'overtime',
+            PersonnelRequestType::REMOTE_WORK => 'remote_work',
             default => null,
         };
 
@@ -422,6 +440,7 @@ class AttendanceService
             PersonnelRequestType::SICK_LEAVE,
             PersonnelRequestType::LEAVE_WITHOUT_PAY,
             PersonnelRequestType::MISSION_DAILY,
+            PersonnelRequestType::REMOTE_WORK,
         ], strict: true);
 
         if ($isDailyType) {

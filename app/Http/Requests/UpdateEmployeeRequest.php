@@ -10,6 +10,7 @@ use App\Enums\EmployeeInsuranceType;
 use App\Enums\EmployeeMaritalStatus;
 use App\Enums\EmployeeNationality;
 use App\Models\Employee;
+use App\Models\WorkShift;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
@@ -28,11 +29,11 @@ class UpdateEmployeeRequest extends FormRequest
 
         return [
             // Identity
-            'code' => ['required', 'string', 'max:20', Rule::unique('employees', 'code')->ignore($employee->id)],
+            'code' => ['required', 'string', 'max:20', Rule::unique('employees', 'code')->ignore($employee->id)->where('company_id', getActiveCompany())],
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
             'father_name' => ['nullable', 'string', 'max:100'],
-            'national_code' => ['nullable', 'string', 'size:10', Rule::unique('employees', 'national_code')->ignore($employee->id)],
+            'national_code' => ['nullable', 'string', 'size:10', Rule::unique('employees', 'national_code')->ignore($employee->id)->where('company_id', getActiveCompany())],
             'passport_number' => ['nullable', 'string', 'max:20'],
             'nationality' => ['required', new Enum(EmployeeNationality::class)],
             'gender' => ['nullable', new Enum(EmployeeGender::class)],
@@ -72,12 +73,20 @@ class UpdateEmployeeRequest extends FormRequest
             'contract_framework_id' => ['nullable', 'integer', 'exists:work_site_contracts,id'],
 
             'is_active' => ['boolean'],
+            'leave_remain' => ['nullable', 'integer', 'min:0', 'max:15000'],
             'device_id' => ['nullable', 'string', 'max:20'],
         ];
     }
 
     protected function prepareForValidation(): void
     {
+        if ($this->has('work_shift_id') && $this->isNotFilled('leave_remain')) {
+            $workShift = WorkShift::find($this->input('work_shift_id'));
+            $this->merge([
+                'leave_remain' => convertToInt($this->input('leave_remain', $workShift->paid_leave ?? 1200)),
+            ]);
+        }
+
         $this->merge([
             'is_active' => $this->has('is_active'),
         ]);

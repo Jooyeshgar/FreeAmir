@@ -377,6 +377,13 @@
                     </div>
                     <div class="stats shadow border border-base-300">
                         <div class="stat">
+                            <div class="stat-title">{{ __('Remote Work') }}</div>
+                            <div class="stat-value text-xl">{{ (int) $attendanceLog->remote_work }}</div>
+                            <div class="stat-desc">{{ __('minutes') }}</div>
+                        </div>
+                    </div>
+                    <div class="stats shadow border border-base-300 col-span-2 md:col-span-4">
+                        <div class="stat">
                             <div class="stat-title">{{ __('Description') }}</div>
                             <div class="stat-value text-base font-normal break-words">
                                 {{ $attendanceLog->description ?? '—' }}

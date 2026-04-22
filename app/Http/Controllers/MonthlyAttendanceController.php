@@ -60,7 +60,13 @@ class MonthlyAttendanceController extends Controller
 
         $startDate = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($validated['start_date']));
 
-        $this->attendanceService->calculateAndStore((int) $validated['employee_id'], $startDate, (int) $validated['duration'], $jalaliYear, $jalaliMonth);
+        $monthlyAttendance = $this->attendanceService->calculateAndStore((int) $validated['employee_id'], $startDate, (int) $validated['duration'], $jalaliYear, $jalaliMonth);
+
+        $totalPaidLeave = $monthlyAttendance->employee->workShift->paid_leave + $monthlyAttendance->employee->leave_remain;
+
+        $monthlyAttendance->employee->leave_remain = $totalPaidLeave - $monthlyAttendance->paid_leave;
+
+        $monthlyAttendance->employee->save();
 
         return redirect()->route('attendance.monthly-attendances.index')
             ->with('success', __('Monthly attendance calculated successfully.'));
@@ -132,11 +138,17 @@ class MonthlyAttendanceController extends Controller
             'absent_days' => ['required', 'integer', 'min:0', 'max:31'],
             'overtime' => ['required', 'integer', 'min:0'],
             'mission' => ['required', 'integer', 'min:0', 'max:1500'],
-            'paid_leave' => ['required', 'integer', 'min:0', 'max:1500'],
+            'paid_leave' => ['required', 'integer', 'max:15000'],
             'unpaid_leave' => ['required', 'integer', 'min:0', 'max:1500'],
             'friday' => ['required', 'integer', 'min:0'],
             'holiday' => ['required', 'integer', 'min:0'],
         ]);
+
+        if ($validated['paid_leave'] != $monthlyAttendance->paid_leave) {
+            $diffMonthPaidLeave = $validated['paid_leave'] - $monthlyAttendance->paid_leave;
+            $monthlyAttendance->employee->leave_remain -= $diffMonthPaidLeave;
+            $monthlyAttendance->employee->save();
+        }
 
         $monthlyAttendance->update($validated);
 
@@ -146,6 +158,9 @@ class MonthlyAttendanceController extends Controller
 
     public function destroy(MonthlyAttendance $monthlyAttendance): RedirectResponse
     {
+        $monthlyAttendance->employee->leave_remain += $monthlyAttendance->paid_leave - $monthlyAttendance->employee->workShift->paid_leave;
+        $monthlyAttendance->employee->save();
+
         $monthlyAttendance->delete();
 
         return redirect()->route('attendance.monthly-attendances.index')
@@ -165,6 +180,7 @@ class MonthlyAttendanceController extends Controller
         $jalaliYear = $monthlyAttendance->year;
         $jalaliMonth = $monthlyAttendance->month;
 
+        $oldMonthlyAttendance = $monthlyAttendance;
         $monthlyAttendance->delete();
 
         $monthlyAttendance = $this->attendanceService->calculateAndStore(
@@ -174,6 +190,12 @@ class MonthlyAttendanceController extends Controller
             jalaliYear: $jalaliYear,
             jalaliMonth: $jalaliMonth,
         );
+
+        if ($oldMonthlyAttendance->paid_leave !== $monthlyAttendance->paid_leave) {
+            $diffMonthPaidLeave = $monthlyAttendance->paid_leave - $oldMonthlyAttendance->paid_leave;
+            $monthlyAttendance->employee->leave_remain -= $diffMonthPaidLeave;
+            $monthlyAttendance->employee->save();
+        }
 
         return redirect()->route('attendance.monthly-attendances.show', $monthlyAttendance)
             ->with('success', __('Monthly attendance recalculated successfully.'));

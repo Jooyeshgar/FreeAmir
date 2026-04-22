@@ -65,7 +65,7 @@
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-4">
                 <div class="stat bg-base-200 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Work Days') }}</div>
-                    <div class="stat-value text-base">{{ $monthlyAttendance->work_days }}</div>
+                    <div class="stat-value text-base">{{ $monthlyAttendance->work_days + $monthlyAttendance->remote_work }}</div>
                 </div>
                 <div class="stat bg-success/20 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Present') }}</div>
@@ -260,7 +260,7 @@
                                     </td>
                                     <td>{{ $log->entry_time ?? '—' }}</td>
                                     <td>{{ $log->exit_time ?? '—' }}</td>
-                                    <td>{{ $log->worked }}</td>
+                                    <td>{{ $log->worked + $log->remote_work }}</td>
                                     <td>{{ $log->paid_leave }}</td>
                                     <td>{{ $log->overtime }}</td>
                                     <td>{{ $log->delay }}</td>
@@ -274,6 +274,8 @@
                                             <span class="badge badge-info badge-sm">{{ __('Paid Leave') }}</span>
                                         @elseif ($log->unpaid_leave > 0)
                                             <span class="badge badge-error badge-sm">{{ __('Unpaid Leave') }}</span>
+                                        @elseif ($log->remote_work > 0)
+                                            <span class="badge badge-primary badge-sm">{{ __('Remote Work') }}</span>
                                         @elseif ($log->mission > 0)
                                             <span class="badge badge-accent badge-sm">{{ __('Mission') }}</span>
                                         @elseif ($log->worked > 0)

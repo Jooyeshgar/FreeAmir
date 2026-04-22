@@ -271,6 +271,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'float' => 0,
                 'break' => 0,
                 'is_active' => true,
+                'paid_leave' => 1200,
             ]
         );
 
@@ -308,6 +309,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'work_site_id' => $workSite->id,
                     'work_shift_id' => $workShift->id,
                     'is_active' => true,
+                    'leave_remain' => 1200,
                 ]
             );
         }

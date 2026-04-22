@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\MonthlyAttendance;
 use App\Models\Payroll;
+use App\Models\PayrollItem;
 use App\Models\SalaryDecree;
 use App\Services\PayrollService;
 use Illuminate\Http\RedirectResponse;
@@ -49,6 +50,35 @@ class PayrollController extends Controller
 
         return redirect()->route('salary.payrolls.show', $payroll)
             ->with('success', __('Payroll created successfully.'));
+    }
+
+    /**
+     * Show the edit form for a single payroll item.
+     */
+    public function editItem(PayrollItem $payrollItem): View
+    {
+        $payrollItem->load(['element', 'payroll']);
+
+        return view('payrolls.edit-item', compact('payrollItem'));
+    }
+
+    /**
+     * Update a single payroll item and recalculate payroll totals.
+     */
+    public function updateItem(Request $request, PayrollItem $payrollItem): RedirectResponse
+    {
+        $validated = $request->validate([
+            'calculated_amount' => ['required', 'numeric'],
+            'unit_count' => ['nullable', 'numeric'],
+            'unit_rate' => ['nullable', 'numeric'],
+            'description' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $payrollItem->update($validated);
+        $this->payrollService->recalculateTotals($payrollItem->payroll);
+
+        return redirect()->route('salary.payrolls.show', $payrollItem->payroll_id)
+            ->with('success', __('Payroll item updated successfully.'));
     }
 
     /**

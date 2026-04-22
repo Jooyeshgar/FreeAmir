@@ -36,6 +36,7 @@
                         <th>{{ __('Break (min)') }}</th>
                         <th>{{ __('Float') }}</th>
                         <th>{{ __('Thursday Status') }}</th>
+                        <th>{{ __('Paid Leave (minutes)') }}</th>
                         <th>{{ __('Active') }}</th>
                         <th>{{ __('Action') }}</th>
                     </tr>
@@ -49,6 +50,7 @@
                             <td>{{ $workShift->break }}</td>
                             <td>{{ $workShift->float }}</td>
                             <td>{{ $workShift->thursday_status?->label() }}</td>
+                            <td>{{ formatNumber($workShift->paid_leave) }}</td>
                             <td>
                                 @if ($workShift->is_active)
                                     <span class="badge badge-success">{{ __('Active') }}</span>
