@@ -64,11 +64,11 @@
                     <tbody>
                         @forelse ($payrolls as $payroll)
                             <tr>
-                                <td>{{ $payroll->year }}</td>
+                                <td>{{ convertToFarsi($payroll->year) }}</td>
                                 <td>{{ \App\Models\MonthlyAttendance::MONTH_NAMES[$payroll->month] ?? $payroll->month }}</td>
-                                <td class="text-success">{{ number_format($payroll->total_earnings) }}</td>
-                                <td class="text-error">{{ number_format($payroll->total_deductions) }}</td>
-                                <td class="font-semibold">{{ number_format($payroll->net_payment) }}</td>
+                                <td class="text-success">{{ formatNumber($payroll->total_earnings) }}</td>
+                                <td class="text-error">{{ formatNumber($payroll->total_deductions) }}</td>
+                                <td class="font-semibold">{{ formatNumber($payroll->net_payment) }}</td>
                                 <td>
                                     @if ($payroll->status === 'paid')
                                         <span class="badge badge-success badge-sm">{{ __('Paid') }}</span>

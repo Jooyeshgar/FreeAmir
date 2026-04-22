@@ -16,7 +16,7 @@
                         {{ $payroll->employee?->last_name }}
                         &mdash;
                         {{ \App\Models\MonthlyAttendance::MONTH_NAMES[$payroll->month] ?? $payroll->month }}
-                        {{ $payroll->year }}
+                        {{ convertToFarsi($payroll->year) }}
                     </h2>
                     <p class="text-sm text-gray-500">
                         {{ __('Decree') }}:
@@ -69,15 +69,15 @@
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-2">
                 <div class="stat bg-success/20 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Total Earnings') }}</div>
-                    <div class="stat-value text-base text-success">{{ number_format((float) $payroll->total_earnings) }}</div>
+                    <div class="stat-value text-base text-success">{{ formatNumber($payroll->total_earnings) }}</div>
                 </div>
                 <div class="stat bg-error/20 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Total Deductions') }}</div>
-                    <div class="stat-value text-base text-error">{{ number_format((float) $payroll->total_deductions) }}</div>
+                    <div class="stat-value text-base text-error">{{ formatNumber($payroll->total_deductions) }}</div>
                 </div>
                 <div class="stat bg-primary/20 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Net Payment') }}</div>
-                    <div class="stat-value text-base text-primary">{{ number_format((float) $payroll->net_payment) }}</div>
+                    <div class="stat-value text-base text-primary">{{ formatNumber($payroll->net_payment) }}</div>
                 </div>
                 <div class="stat bg-base-200 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Issue Date') }}</div>
@@ -122,10 +122,10 @@
                                         <span class="badge badge-error badge-sm">{{ __('Deduction') }}</span>
                                     @endif
                                 </td>
-                                <td class="text-end">{{ $item->unit_count !== null ? number_format((float) $item->unit_count, 2) : '—' }}</td>
-                                <td class="text-end">{{ $item->unit_rate !== null ? number_format((float) $item->unit_rate) : '—' }}</td>
+                                <td class="text-end">{{ $item->unit_count !== null ? formatNumber($item->unit_count) : '—' }}</td>
+                                <td class="text-end">{{ $item->unit_rate !== null ? formatNumber($item->unit_rate) : '—' }}</td>
                                 <td class="text-end {{ $item->calculated_amount >= 0 ? 'text-success' : 'text-error' }}">
-                                    {{ number_format(abs((float) $item->calculated_amount)) }}
+                                    {{ formatNumber(abs((float) $item->calculated_amount)) }}
                                 </td>
                                 @can('salary.payrolls.edit')
                                     <td class="text-end">
@@ -151,7 +151,7 @@
                     <tfoot>
                         <tr class="font-bold border-t-2">
                             <td colspan="4" class="text-end">{{ __('Net Payment') }}</td>
-                            <td class="text-end text-primary">{{ number_format((float) $payroll->net_payment) }}</td>
+                            <td class="text-end text-primary">{{ formatNumber($payroll->net_payment) }}</td>
                         </tr>
                     </tfoot>
                 </table>

@@ -64,16 +64,16 @@
                     <tbody>
                         @forelse ($monthlyAttendances as $ma)
                             <tr>
-                                <td>{{ $ma->year }}</td>
+                                <td>{{ convertToFarsi($ma->year) }}</td>
                                 <td>{{ \App\Models\MonthlyAttendance::MONTH_NAMES[$ma->month] ?? $ma->month }}</td>
-                                <td>{{ $ma->work_days }}</td>
+                                <td>{{ convertToFarsi($ma->work_days) }}</td>
                                 <td>
-                                    <span class="text-success font-medium">{{ $ma->present_days }}</span>
+                                    <span class="text-success font-medium">{{ convertToFarsi($ma->present_days) }}</span>
                                 </td>
                                 <td>
-                                    <span class="{{ $ma->absent_days > 0 ? 'text-error' : '' }}">{{ $ma->absent_days }}</span>
+                                    <span class="{{ $ma->absent_days > 0 ? 'text-error' : '' }}">{{ convertToFarsi($ma->absent_days) }}</span>
                                 </td>
-                                <td>{{ $ma->overtime }}</td>
+                                <td>{{ convertToFarsi($ma->overtime) }}</td>
                                 <td>
                                     <a href="{{ route('employee-portal.monthly-attendances.show', $ma) }}" class="btn btn-sm btn-info">
                                         {{ __('Details') }}

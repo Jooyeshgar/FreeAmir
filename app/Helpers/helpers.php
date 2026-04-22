@@ -126,6 +126,21 @@ function formatCode(?string $code)
 }
 
 /**
+ * Format a minute count as H:i and localize digits for Persian locale.
+ */
+function formatMinutesAsTime($minutes): string
+{
+    $totalMinutes = max(0, (int) $minutes);
+    $formatted = sprintf('%02d:%02d', intdiv($totalMinutes, 60), $totalMinutes % 60);
+
+    if (in_array(App::getLocale(), ['fa', 'fa_IR'])) {
+        return convertToFarsi($formatted);
+    }
+
+    return $formatted;
+}
+
+/**
  * Convert a number string to Farsi digits.
  *
  * @param  string  $number

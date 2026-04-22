@@ -17,12 +17,56 @@ use Illuminate\View\View;
 
 class EmployeePortalController extends Controller
 {
+    private const FLEXIBLE_TIME_REGEX = '/^(\d{1,2}):(\d{1,2})$/';
+
     /**
      * Return the employee record for the currently authenticated user.
      */
     private function currentEmployee()
     {
         return auth()->user()->employee;
+    }
+
+    /**
+     * Validate personnel request payload and normalize flexible H:i inputs.
+     */
+    private function validatePersonnelRequestInput(Request $request): array
+    {
+        $validated = $request->validate([
+            'request_type' => ['required', 'string', 'in:'.implode(',', array_column(PersonnelRequestType::cases(), 'value'))],
+            'request_date' => ['required', 'string'],
+            'start_time' => ['required', 'regex:'.self::FLEXIBLE_TIME_REGEX],
+            'end_time' => ['required', 'regex:'.self::FLEXIBLE_TIME_REGEX],
+            'reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $validated['start_time'] = $this->normalizeFlexibleTime($validated['start_time'], 'start_time');
+        $validated['end_time'] = $this->normalizeFlexibleTime($validated['end_time'], 'end_time');
+
+        return $validated;
+    }
+
+    /**
+     * Normalize flexible time inputs like 7:3 to 07:03.
+     */
+    private function normalizeFlexibleTime(string $time, string $field): string
+    {
+        if (! preg_match(self::FLEXIBLE_TIME_REGEX, $time, $matches)) {
+            throw ValidationException::withMessages([
+                $field => __('The :attribute format is invalid.', ['attribute' => $field]),
+            ]);
+        }
+
+        $hour = (int) $matches[1];
+        $minute = (int) $matches[2];
+
+        if ($hour > 23 || $minute > 59) {
+            throw ValidationException::withMessages([
+                $field => __('The :attribute format is invalid.', ['attribute' => $field]),
+            ]);
+        }
+
+        return sprintf('%02d:%02d', $hour, $minute);
     }
 
     /**
@@ -37,11 +81,14 @@ class EmployeePortalController extends Controller
             ->limit(5)
             ->get();
 
-        $pendingRequests = PersonnelRequest::where('employee_id', $employee->id)
-            ->where('status', 'pending')
-            ->count();
+        $requests = PersonnelRequest::where('employee_id', $employee->id)->count();
 
-        return view('employee-portal.dashboard', compact('employee', 'recentLogs', 'pendingRequests'));
+        $lastMonthlyAttendance = MonthlyAttendance::where('employee_id', $employee->id)
+            ->orderBy('year', 'desc')
+            ->orderBy('month', 'desc')
+            ->first();
+
+        return view('employee-portal.dashboard', compact('employee', 'recentLogs', 'requests', 'lastMonthlyAttendance'));
     }
 
     /**
@@ -279,19 +326,13 @@ class EmployeePortalController extends Controller
             $request['end_time'] = Carbon::createFromTimeString($employee->workShift->end_time)->format('H:i');
         }
 
-        $request->validate([
-            'request_type' => ['required', 'string', 'in:'.implode(',', array_column(PersonnelRequestType::cases(), 'value'))],
-            'request_date' => ['required', 'string'],
-            'start_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
-            'end_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
-            'reason' => ['nullable', 'string', 'max:1000'],
-        ]);
+        $validated = $this->validatePersonnelRequestInput($request);
 
-        $gregorianDate = convertToGregorian($request->request_date);
+        $gregorianDate = convertToGregorian($validated['request_date']);
         $gregorianDate = str_replace('/', '-', $gregorianDate);
 
-        $startDatetime = $gregorianDate.' '.$request->start_time;
-        $endDatetime = $gregorianDate.' '.$request->end_time;
+        $startDatetime = $gregorianDate.' '.$validated['start_time'];
+        $endDatetime = $gregorianDate.' '.$validated['end_time'];
 
         if (strtotime($endDatetime) < strtotime($startDatetime)) {
             throw ValidationException::withMessages([
@@ -302,10 +343,10 @@ class EmployeePortalController extends Controller
         PersonnelRequest::create([
             'employee_id' => $employee->id,
             'company_id' => getActiveCompany(),
-            'request_type' => $request->request_type,
+            'request_type' => $validated['request_type'],
             'start_date' => $startDatetime,
             'end_date' => $endDatetime,
-            'reason' => $request->reason,
+            'reason' => $validated['reason'] ?? null,
             'status' => 'pending',
         ]);
 
@@ -373,19 +414,13 @@ class EmployeePortalController extends Controller
             ]);
         }
 
-        $request->validate([
-            'request_type' => ['required', 'string', 'in:'.implode(',', array_column(PersonnelRequestType::cases(), 'value'))],
-            'request_date' => ['required', 'string'],
-            'start_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
-            'end_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
-            'reason' => ['nullable', 'string', 'max:1000'],
-        ]);
+        $validated = $this->validatePersonnelRequestInput($request);
 
-        $gregorianDate = convertToGregorian($request->request_date);
+        $gregorianDate = convertToGregorian($validated['request_date']);
         $gregorianDate = str_replace('/', '-', $gregorianDate);
 
-        $startDatetime = $gregorianDate.' '.$request->start_time;
-        $endDatetime = $gregorianDate.' '.$request->end_time;
+        $startDatetime = $gregorianDate.' '.$validated['start_time'];
+        $endDatetime = $gregorianDate.' '.$validated['end_time'];
 
         if (strtotime($endDatetime) < strtotime($startDatetime)) {
             throw ValidationException::withMessages([
@@ -394,10 +429,10 @@ class EmployeePortalController extends Controller
         }
 
         $personnelRequest->update([
-            'request_type' => $request->request_type,
+            'request_type' => $validated['request_type'],
             'start_date' => $startDatetime,
             'end_date' => $endDatetime,
-            'reason' => $request->reason,
+            'reason' => $validated['reason'] ?? null,
         ]);
 
         $tab = $request->get('tab', 'leaves');

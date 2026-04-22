@@ -16,13 +16,13 @@
                         {{ $monthlyAttendance->employee?->first_name }}
                         {{ $monthlyAttendance->employee?->last_name }}
                         &mdash;
-                        {{ $monthlyAttendance->month_name }} {{ $monthlyAttendance->year }}
+                        {{ $monthlyAttendance->month_name }} {{ convertToFarsi($monthlyAttendance->year) }}
                     </h2>
                     <p class="text-sm text-gray-500">
                         @php
                             $shift = $monthlyAttendance->employee?->workShift;
-                            $shiftStart = $shift ? substr($shift->start_time, 0, 5) : \App\Services\AttendanceService::DEFAULT_SHIFT_START;
-                            $shiftEnd = $shift ? substr($shift->end_time, 0, 5) : \App\Services\AttendanceService::DEFAULT_SHIFT_END;
+                            $shiftStart = $shift ? convertToFarsi(substr($shift->start_time, 0, 5)) : \App\Services\AttendanceService::DEFAULT_SHIFT_START;
+                            $shiftEnd = $shift ? convertToFarsi(substr($shift->end_time, 0, 5)) : \App\Services\AttendanceService::DEFAULT_SHIFT_END;
                             $shiftName = $shift?->name;
                         @endphp
                         {{ __('Shift') }}:
@@ -65,43 +65,43 @@
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-4">
                 <div class="stat bg-base-200 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Work Days') }}</div>
-                    <div class="stat-value text-base">{{ $monthlyAttendance->work_days }}</div>
+                    <div class="stat-value text-base">{{ convertToFarsi($monthlyAttendance->work_days) }}</div>
                 </div>
                 <div class="stat bg-success/20 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Present') }}</div>
-                    <div class="stat-value text-base text-success">{{ $monthlyAttendance->present_days }}</div>
+                    <div class="stat-value text-base text-success">{{ convertToFarsi($monthlyAttendance->present_days) }}</div>
                 </div>
                 <div class="stat bg-error/20 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Absent') }}</div>
-                    <div class="stat-value text-base text-error">{{ $monthlyAttendance->absent_days }}</div>
+                    <div class="stat-value text-base text-error">{{ convertToFarsi($monthlyAttendance->absent_days) }}</div>
                 </div>
                 <div class="stat bg-warning/20 rounded-box p-3">
-                    <div class="stat-title text-xs">{{ __('Overtime (min)') }}</div>
-                    <div class="stat-value text-base text-warning">{{ $monthlyAttendance->overtime }}</div>
+                    <div class="stat-title text-xs">{{ __('Overtime') }}</div>
+                    <div class="stat-value text-base text-warning">{{ formatMinutesAsTime($monthlyAttendance->overtime) }}</div>
                 </div>
                 <div class="stat bg-error/20 rounded-box p-3">
-                    <div class="stat-title text-xs">{{ __('Undertime (min)') }}</div>
-                    <div class="stat-value text-base text-error">{{ $monthlyAttendance->undertime }}</div>
+                    <div class="stat-title text-xs">{{ __('Undertime') }}</div>
+                    <div class="stat-value text-base text-error">{{ formatMinutesAsTime($monthlyAttendance->undertime) }}</div>
                 </div>
                 <div class="stat bg-info/20 rounded-box p-3">
-                    <div class="stat-title text-xs">{{ __('Mission Days') }}</div>
-                    <div class="stat-value text-base text-info">{{ $monthlyAttendance->mission }}</div>
+                    <div class="stat-title text-xs">{{ __('Mission') }}</div>
+                    <div class="stat-value text-base text-info">{{ formatMinutesAsTime($monthlyAttendance->mission) }}</div>
                 </div>
                 <div class="stat bg-base-200 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Paid Leave') }}</div>
-                    <div class="stat-value text-base">{{ $monthlyAttendance->paid_leave }}</div>
+                    <div class="stat-value text-base">{{ formatMinutesAsTime($monthlyAttendance->paid_leave) }}</div>
                 </div>
                 <div class="stat bg-base-200 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Unpaid Leave') }}</div>
-                    <div class="stat-value text-base">{{ $monthlyAttendance->unpaid_leave }}</div>
+                    <div class="stat-value text-base">{{ formatMinutesAsTime($monthlyAttendance->unpaid_leave) }}</div>
                 </div>
                 <div class="stat bg-base-200 rounded-box p-3">
-                    <div class="stat-title text-xs">{{ __('Friday Work (min)') }}</div>
-                    <div class="stat-value text-base">{{ $monthlyAttendance->friday }}</div>
+                    <div class="stat-title text-xs">{{ __('Friday Work') }}</div>
+                    <div class="stat-value text-base">{{ formatMinutesAsTime($monthlyAttendance->friday) }}</div>
                 </div>
                 <div class="stat bg-base-200 rounded-box p-3">
-                    <div class="stat-title text-xs">{{ __('Holiday Work (min)') }}</div>
-                    <div class="stat-value text-base">{{ $monthlyAttendance->holiday }}</div>
+                    <div class="stat-title text-xs">{{ __('Holiday Work') }}</div>
+                    <div class="stat-value text-base">{{ formatMinutesAsTime($monthlyAttendance->holiday) }}</div>
                 </div>
             </div>
 
@@ -147,10 +147,10 @@
                                 <tr>
                                     <td>{{ formatDate($payroll->issue_date) }}</td>
                                     <td><a href="{{ route('salary.salary-decrees.edit', $payroll->decree->id) }}">{{ $payroll->decree->name }}</a></td>
-                                    <td class="text-end text-success">{{ number_format((float) $payroll->total_earnings) }}</td>
-                                    <td class="text-end text-error">{{ number_format((float) $payroll->total_deductions) }}</td>
-                                    <td class="text-end">{{ number_format((float) $payroll->employer_insurance) }}</td>
-                                    <td class="text-end font-semibold text-primary">{{ number_format((float) $payroll->net_payment) }}</td>
+                                    <td class="text-end text-success">{{ formatNumber($payroll->total_earnings) }}</td>
+                                    <td class="text-end text-error">{{ formatNumber($payroll->total_deductions) }}</td>
+                                    <td class="text-end">{{ formatNumber($payroll->employer_insurance) }}</td>
+                                    <td class="text-end font-semibold text-primary">{{ formatNumber($payroll->net_payment) }}</td>
                                     <td>
                                         @if ($payroll->status === 'draft')
                                             <span class="badge badge-warning badge-sm">{{ __('Draft') }}</span>
@@ -206,11 +206,11 @@
                             <th colspan="2">{{ __('Date') }}</th>
                             <th>{{ __('Entry') }}</th>
                             <th>{{ __('Exit') }}</th>
-                            <th>{{ __('Worked (min)') }}</th>
-                            <th>{{ __('Leave (min)') }}</th>
-                            <th>{{ __('Overtime (min)') }}</th>
-                            <th>{{ __('Delay (min)') }}</th>
-                            <th>{{ __('Early Leave (min)') }}</th>
+                            <th>{{ __('Worked') }}</th>
+                            <th>{{ __('Leave') }}</th>
+                            <th>{{ __('Overtime') }}</th>
+                            <th>{{ __('Delay') }}</th>
+                            <th>{{ __('Early Leave') }}</th>
                             <th>{{ __('Status') }}</th>
                             @if ($isAdminView ?? false)
                                 @can('attendance.attendance-logs.edit')
@@ -258,13 +258,13 @@
                                     <td>
                                         <a href="{{ route('attendance.attendance-logs.show', $log) }}">{{ formatDate($log->log_date) }}</a>
                                     </td>
-                                    <td>{{ $log->entry_time ?? '—' }}</td>
-                                    <td>{{ $log->exit_time ?? '—' }}</td>
-                                    <td>{{ $log->worked }}</td>
-                                    <td>{{ $log->paid_leave }}</td>
-                                    <td>{{ $log->overtime }}</td>
-                                    <td>{{ $log->delay }}</td>
-                                    <td>{{ $log->early_leave }}</td>
+                                    <td>{{ $log->entry_time ? convertToFarsi($log->entry_time) : '—' }}</td>
+                                    <td>{{ $log->exit_time ? convertToFarsi($log->exit_time) : '—' }}</td>
+                                    <td>{{ formatMinutesAsTime($log->worked) }}</td>
+                                    <td>{{ formatMinutesAsTime($log->paid_leave) }}</td>
+                                    <td>{{ formatMinutesAsTime($log->overtime) }}</td>
+                                    <td>{{ formatMinutesAsTime($log->delay) }}</td>
+                                    <td>{{ formatMinutesAsTime($log->early_leave) }}</td>
                                     <td>
                                         @if ($log->is_holiday)
                                             <span class="badge badge-warning badge-sm">{{ __('Holiday') }}</span>
