@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Enums\PersonnelRequestType;
+use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
 use App\Models\MonthlyAttendance;
 use App\Models\Payroll;
 use App\Models\PersonnelRequest;
+use App\Models\PublicHoliday;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -108,8 +110,19 @@ class EmployeePortalController extends Controller
 
         $monthlyAttendance->load(['logs' => fn ($q) => $q->orderBy('log_date')]);
 
-        // Build allDays so the shared blade can render every day in the period
         $start = $monthlyAttendance->start_date->copy();
+        $end = $start->copy()->addDays($monthlyAttendance->duration - 1);
+        $holidayDates = PublicHoliday::withoutGlobalScopes()
+            ->where('company_id', $monthlyAttendance->company_id)
+            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+            ->pluck('date')
+            ->map(fn ($d) => $d instanceof Carbon ? $d->toDateString() : (string) $d)
+            ->flip()
+            ->toArray();
+
+        $workShift = $monthlyAttendance->employee?->workShift;
+        $thursdayIsHoliday = $workShift?->thursday_status === ThursdayStatus::HOLIDAY;
+
         $logsByDate = $monthlyAttendance->logs->keyBy(fn ($log) => $log->log_date->toDateString());
         $allDays = collect();
         for ($i = 0; $i < $monthlyAttendance->duration; $i++) {
@@ -121,8 +134,9 @@ class EmployeePortalController extends Controller
                     : (object) [
                         'log_date' => $date,
                         '_placeholder' => true,
-                        '_is_friday' => $date->dayOfWeek === \Carbon\Carbon::FRIDAY,
-                        '_is_holiday' => false,
+                        '_is_friday' => $date->dayOfWeek === Carbon::FRIDAY,
+                        '_is_holiday' => isset($holidayDates[$dateKey])
+                            || ($thursdayIsHoliday && $date->dayOfWeek === Carbon::THURSDAY),
                     ]
             );
         }
