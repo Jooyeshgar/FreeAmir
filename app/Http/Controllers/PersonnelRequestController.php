@@ -133,6 +133,10 @@ class PersonnelRequestController extends Controller
 
         $tab = $request->get('tab', 'leaves');
 
+        if ($request->input('submit_action') === 'create_new') {
+            return redirect()->route('hr.personnel-requests.create', ['tab' => $tab])->with('success', __('Personnel request created successfully.'));
+        }
+
         return redirect()->route('hr.personnel-requests.index', ['tab' => $tab])
             ->with('success', __('Personnel request created successfully.'));
     }

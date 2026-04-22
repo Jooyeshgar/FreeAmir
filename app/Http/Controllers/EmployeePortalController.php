@@ -311,6 +311,10 @@ class EmployeePortalController extends Controller
 
         $tab = $request->get('tab', 'leaves');
 
+        if ($request->input('submit_action') === 'create_new') {
+            return redirect()->route('employee-portal.personnel-requests.create', ['tab' => $tab])->with('success', __('Personnel request created successfully.'));
+        }
+
         return redirect()->route('employee-portal.personnel-requests.index', ['tab' => $tab])
             ->with('success', __('Your request has been submitted successfully.'));
     }

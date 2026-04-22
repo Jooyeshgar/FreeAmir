@@ -11,6 +11,9 @@
 
                 <div class="card-actions justify-end mt-4">
                     <a href="{{ route('employee-portal.personnel-requests.index', ['tab' => $tab]) }}" class="btn btn-ghost">{{ __('Cancel') }}</a>
+                     <button id="submitFormPlus" type="submit" name="submit_action" value="create_new" class="btn btn-default rounded-md">
+                        {{ __('save and create new request') }}
+                    </button>
                     <button type="submit" class="btn btn-primary">{{ __('Submit Request') }}</button>
                 </div>
             </div>

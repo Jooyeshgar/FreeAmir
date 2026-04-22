@@ -11,7 +11,9 @@
                     x-data="{ requestType: '{{ old('request_type', $personnelRequest->request_type->value ?? 'LEAVE_HOURLY') }}' }">
                     
                     <x-select name="employee_id" id="employee_id" title="{{ __('Employee') }}" :options="$employees->mapWithKeys(fn($e) => [$e->id => $e->first_name . ' ' . $e->last_name])->toArray()" :selected="old('employee_id')" required />
-                    <x-select name="request_type" id="request_type" title="{{ __('Request Type') }}" :options="$requestTypes" :selected="old('request_type', '')" required />
+                    <x-select name="request_type" id="request_type" title="{{ __('Request Type') }}" :options="$requestTypes" 
+                        :selected="old('request_type', $personnelRequest->request_type->value ?? 'LEAVE_HOURLY')" x-model="requestType" required/>
+
                     
                     <x-date-picker name="request_date" id="request_date" :title="__('Date')" :value="old('request_date')" :placeholder="__('Date')" required />
                     
@@ -27,6 +29,9 @@
 
                 <div class="card-actions justify-end mt-4">
                     <a href="{{ route('hr.personnel-requests.index', ['tab' => $tab]) }}" class="btn btn-ghost">{{ __('Cancel') }}</a>
+                     <button id="submitFormPlus" type="submit" name="submit_action" value="create_new" class="btn btn-default rounded-md">
+                        {{ __('save and create new request') }}
+                    </button>
                     <button type="submit" class="btn btn-primary">{{ __('Submit Request') }}</button>
                 </div>
             </div>

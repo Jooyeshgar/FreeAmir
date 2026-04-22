@@ -101,8 +101,8 @@
                                     {{ $log->employee?->first_name }} {{ $log->employee?->last_name }}
                                 </td>
                                 <td>{{ formatDate($log->log_date) }}</td>
-                                <td>{{ $log->entry_time ?? '—' }}</td>
-                                <td>{{ $log->exit_time ?? '—' }}</td>
+                                <td>{{ $log->entry_time ? convertToFarsi($log->entry_time) : '—' }}</td>
+                                <td>{{ $log->exit_time ? convertToFarsi($log->exit_time) : '—' }}</td>
                                 <td>
                                     @if ($log->is_manual)
                                         <span class="badge badge-warning badge-sm">{{ __('Manual') }}</span>
