@@ -307,6 +307,10 @@ class EmployeePortalController extends Controller
      */
     public function editPersonnelRequest(Request $request, PersonnelRequest $personnelRequest): View
     {
+        if ($personnelRequest->status !== 'pending') {
+            abort(403, __('Only pending requests can be edited.'));
+        }
+
         $tab = $request->get('tab', 'leaves');
 
         $cases = match ($tab) {

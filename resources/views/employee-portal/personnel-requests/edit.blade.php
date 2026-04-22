@@ -11,7 +11,7 @@
                 @include('employee-portal.personnel-requests.form')
 
                 <div class="card-actions justify-end mt-4">
-                    <a href="{{ route('employee-portal.personnel-requests.index') }}" class="btn btn-ghost">{{ __('Cancel') }}</a>
+                    <a href="{{ route('employee-portal.personnel-requests.index', ['tab' => $tab]) }}" class="btn btn-ghost">{{ __('Cancel') }}</a>
                     <button type="submit" class="btn btn-primary">{{ __('Update') }}</button>
                 </div>
             </div>

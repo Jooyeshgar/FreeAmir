@@ -1,6 +1,7 @@
 <x-app-layout :title="__('My Requests')">
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
+            <x-show-message-bags />
 
             {{-- Tabs --}}
             <div role="tablist" class="tabs tabs-lifted tabs-lg mb-4">
@@ -53,9 +54,9 @@
                     <thead>
                         <tr>
                             <th>{{ __('Type') }}</th>
-                            <th>{{ __('Start') }}</th>
-                            <th>{{ __('End') }}</th>
-                            <th>{{ __('Duration (min)') }}</th>
+                            <th>{{ __('Entry Time') }}</th>
+                            <th>{{ __('Exit Time') }}</th>
+                            <th>{{ __('Duration') }}</th>
                             <th>{{ __('Status') }}</th>
                             <th>{{ __('Reason') }}</th>
                             <th>{{ __('Action') }}</th>
@@ -65,8 +66,8 @@
                         @forelse ($personnelRequests as $req)
                             <tr>
                                 <td>{{ $req->request_type->label() }}</td>
-                                <td>{{ formatDateTime($req->start_date) }}</td>
-                                <td>{{ formatDateTime($req->end_date) }}</td>
+                                <td dir="ltr">{{ formatDateTime($req->start_date) }}</td>
+                                <td dir="ltr">{{ formatDateTime($req->end_date) }}</td>
                                 <td>
                                     @if ($req->start_date && $req->end_date)
                                         @php
@@ -74,7 +75,7 @@
                                             $hours = intdiv($totalMinutes, 60);
                                             $minutes = $totalMinutes % 60;
                                         @endphp
-                                        {{ str_pad($hours, 2, '0', STR_PAD_LEFT) }}:{{ str_pad($minutes, 2, '0', STR_PAD_LEFT) }}
+                                        {{ convertToFarsi(str_pad($hours, 2, '0', STR_PAD_LEFT)) }}:{{ convertToFarsi(str_pad($minutes, 2, '0', STR_PAD_LEFT)) }}
                                     @else
                                         —
                                     @endif
@@ -93,10 +94,10 @@
                                 </td>
                                 <td>
                                     @if ($req->status === 'pending')
-                                        <a href="{{ route('employee-portal.personnel-requests.edit', $req) }}" class="btn btn-sm btn-info">
+                                        <a href="{{ route('employee-portal.personnel-requests.edit', ['tab' => $tab, 'personnel_request' => $req->id]) }}" class="btn btn-sm btn-info">
                                             {{ __('Edit') }}
                                         </a>
-                                        <form action="{{ route('employee-portal.personnel-requests.destroy', $req) }}" method="POST" class="inline-block m-0"
+                                        <form action="{{ route('employee-portal.personnel-requests.destroy', ['tab' => $tab, 'personnel_request' => $req->id]) }}" method="POST" class="inline-block m-0"
                                             onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                             @csrf
                                             @method('DELETE')
