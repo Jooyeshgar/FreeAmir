@@ -83,7 +83,7 @@ class AttendanceService
      * Compute the derived columns for a log row WITHOUT persisting.
      * Useful for previewing or testing.
      *
-    * @return array{worked: int, delay: int, early_leave: int, overtime: int, auto_overtime: int, mission: int}
+     * @return array{worked: int, delay: int, early_leave: int, overtime: int, auto_overtime: int, mission: int}
      */
     public function computeLogColumns(AttendanceLog $log, ?WorkShift $workShift, bool $isFriday = false, bool $isHoliday = false, bool $isThursday = false): array
     {
@@ -406,14 +406,27 @@ class AttendanceService
 
             $workDays++;
 
+            if (! isset($logsByDate[$dateStr])) {
+                $absentDays++;
+
+                continue;
+            }
+
+            $log = $logsByDate[$dateStr];
+
+            $presentDays++;
+            $missionMin += (int) $log->mission;
+            $remoteWorkMin += (int) $log->remote_work;
+
             if ($isOffDay) {
 
                 if (isset($logsByDate[$dateStr])) {
                     $log = $logsByDate[$dateStr];
+                    $totalWork = (int) $log->worked + (int) $log->remote_work + (int) $log->mission;
                     if ($isFriday) {
-                        $fridayMin += (int) $log->worked;
+                        $fridayMin += $totalWork;
                     } else {
-                        $holidayMin += (int) $log->worked;
+                        $holidayMin += $totalWork;
                     }
                 }
 
@@ -422,22 +435,11 @@ class AttendanceService
 
             // ── Regular work day ──────────────────────────────────────────
 
-            if (! isset($logsByDate[$dateStr])) {
-                $absentDays++;
-
-                continue;
-            }
-
             // ── Sum values directly from the pre-calculated log row ───────
-            $log = $logsByDate[$dateStr];
-
-            $presentDays++;
             $overtimeMin += (int) $log->overtime;
             $autoOvertimeMin += (int) $log->auto_overtime;
-            $missionMin += (int) $log->mission;
             $paidLeaveMin += (int) $log->paid_leave;
             $unpaidLeaveMin += (int) $log->unpaid_leave;
-            $remoteWorkMin += (int) $log->remote_work;
             $undertimeMin += (int) $log->early_leave + $log->delay;
         }
 
