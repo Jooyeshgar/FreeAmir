@@ -100,6 +100,7 @@ class AttendanceService
                 'early_leave' => 0,
                 'overtime' => 0,
                 'auto_overtime' => 0,
+                'mission' => (int) ($log->mission ?? 0),
                 'is_friday' => $isFriday,
                 'is_holiday' => true,  // Thursday-holiday counts as a holiday day
             ];
@@ -123,7 +124,7 @@ class AttendanceService
                 'early_leave' => 0,
                 'overtime' => 0,
                 'auto_overtime' => 0,
-                'mission' => 0,
+                'mission' => (int) ($log->mission ?? 0),
                 'is_friday' => $isFriday,
                 'is_holiday' => $isHoliday,
             ];
@@ -197,7 +198,7 @@ class AttendanceService
                 'worked' => $totalWorked,
                 'delay' => $netDelay,
                 'early_leave' => $netEarlyLeave,
-                'overtime' => 0,   // remote work does not earn overtime
+                'overtime' => (int) ($log->approved_overtime ?? $log->overtime ?? 0),
                 'auto_overtime' => 0,
                 'remote_work' => $remoteMin,
                 'mission' => (int) ($log->mission ?? 0),
@@ -434,8 +435,6 @@ class AttendanceService
             }
 
             // ── Regular work day ──────────────────────────────────────────
-
-            // ── Sum values directly from the pre-calculated log row ───────
             $overtimeMin += (int) $log->overtime;
             $autoOvertimeMin += (int) $log->auto_overtime;
             $paidLeaveMin += (int) $log->paid_leave;
