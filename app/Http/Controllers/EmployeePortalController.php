@@ -69,6 +69,47 @@ class EmployeePortalController extends Controller
         return sprintf('%02d:%02d', $hour, $minute);
     }
 
+    public function changeUserInformation(): View
+    {
+        $employee = $this->currentEmployee();
+
+        return view('employee-portal.change-user-information', compact('employee'));
+    }
+
+    public function updateUserInformation(Request $request): RedirectResponse
+    {
+        $employee = $this->currentEmployee();
+
+        $validated = $request->validate([
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,'.$employee->user->id],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password_confirmation' => ['required', 'string', 'min:8'],
+        ]);
+
+        $employee->update([
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
+        ]);
+
+        if ($validated['password'] !== $validated['password_confirmation']) {
+            throw ValidationException::withMessages([
+                'password_confirmation' => __('The password confirmation does not match.'),
+            ]);
+        }
+
+        unset($validated['password_confirmation']);
+
+        $employee->user->update([
+            'name' => $validated['first_name'],
+            'email' => $validated['email'],
+            'password' => bcrypt($validated['password']),
+        ]);
+
+        return redirect()->route('employee-portal.dashboard')->with('success', __('Your information has been updated successfully.'));
+    }
+
     /**
      * Employee self-service dashboard.
      */

@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-app-layout :title="__('My Portal')">
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
             {{ __('My Portal') }}
@@ -9,16 +9,16 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
 
-        <div class="stat bg-base-100 shadow rounded-box">
+        <a href="{{ route('employee-portal.change-user-information') }}" class="stat bg-base-100 shadow rounded-box hover:bg-base-200 transition">
+            <div class="stat-title">{{ __('Full Name') }}</div>
             <div class="stat-figure text-primary">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
             </div>
-            <div class="stat-title">{{ __('Full Name') }}</div>
             <div class="stat-value text-lg">{{ $employee->first_name }} {{ $employee->last_name }}</div>
             <div class="stat-desc">{{ $employee->national_code }}</div>
-        </div>
+        </a>
 
         <div class="stat bg-base-100 shadow rounded-box">
             <div class="stat-figure text-warning">
