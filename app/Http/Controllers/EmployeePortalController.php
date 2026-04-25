@@ -84,7 +84,7 @@ class EmployeePortalController extends Controller
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,'.$employee->user->id],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ]);
 
         $employee->update([
@@ -93,7 +93,7 @@ class EmployeePortalController extends Controller
         ]);
 
         $employee->user->update([
-            'name' => $validated['first_name'],
+            'name' => $validated['first_name'].' '.$validated['last_name'],
             'email' => $validated['email'],
             'password' => bcrypt($validated['password']),
         ]);
