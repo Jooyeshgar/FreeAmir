@@ -25,7 +25,6 @@ class AttendanceLogFactory extends Factory
             'worked' => 0,
             'delay' => 0,
             'early_leave' => 0,
-            'approved_overtime' => 0,
             'overtime' => 0,
             'auto_overtime' => 0,
             'mission' => 0,

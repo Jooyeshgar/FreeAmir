@@ -198,7 +198,7 @@ class AttendanceService
                 'worked' => $totalWorked,
                 'delay' => $netDelay,
                 'early_leave' => $netEarlyLeave,
-                'overtime' => (int) ($log->approved_overtime ?? $log->overtime ?? 0),
+                'overtime' => (int) ($log->overtime ?? 0),
                 'auto_overtime' => 0,
                 'remote_work' => $remoteMin,
                 'mission' => (int) ($log->mission ?? 0),
@@ -280,7 +280,7 @@ class AttendanceService
         // Split raw overtime between approved overtime requests and the
         // remaining auto overtime bucket capped by the assigned work shift.
         $computedOvertime = $bounds['overtime'];
-        $approvedOvertime = min(max(0, (int) ($log->approved_overtime ?? 0)), $computedOvertime);
+        $approvedOvertime = min(max(0, (int) ($log->overtime ?? 0)), $computedOvertime);
         $remainingOvertime = max(0, $computedOvertime - $approvedOvertime);
         $autoOvertimeCap = max(0, (int) ($workShift?->max_auto_overtime ?? 0));
         $earnedAutoOvertime = min($remainingOvertime, $autoOvertimeCap);
@@ -481,7 +481,7 @@ class AttendanceService
             PersonnelRequestType::LEAVE_WITHOUT_PAY => 'unpaid_leave',
             PersonnelRequestType::MISSION_HOURLY,
             PersonnelRequestType::MISSION_DAILY => 'mission',
-            PersonnelRequestType::OVERTIME_ORDER => 'approved_overtime',
+            PersonnelRequestType::OVERTIME_ORDER => 'overtime',
             PersonnelRequestType::REMOTE_WORK => 'remote_work',
             default => null,
         };
