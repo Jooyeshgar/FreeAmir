@@ -338,6 +338,82 @@ class MonthlyAttendanceTest extends TestCase
         $notFoundResponse->assertNotFound();
     }
 
+    public function test_recalculate_all_recalculates_each_linked_attendance_log(): void
+    {
+        $this->user->givePermissionTo(
+            Permission::firstOrCreate(['name' => 'attendance.attendance-logs.recalculate-all'])
+        );
+
+        $workShift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'break' => 60,
+            'float' => 0,
+            'max_auto_overtime' => 120,
+        ]);
+
+        $this->employee->update(['work_shift_id' => $workShift->id]);
+
+        $attendance = $this->makeMonthlyAttendance([
+            'year' => 1403,
+            'month' => 8,
+            'start_date' => '2024-10-22',
+            'duration' => 30,
+        ]);
+
+        $firstLog = AttendanceLog::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'monthly_attendance_id' => $attendance->id,
+            'log_date' => '2024-10-22',
+            'entry_time' => '08:00:00',
+            'exit_time' => '17:00:00',
+            'worked' => 1,
+            'delay' => 12,
+            'early_leave' => 9,
+            'overtime' => 7,
+            'auto_overtime' => 5,
+        ]);
+
+        $secondLog = AttendanceLog::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'monthly_attendance_id' => $attendance->id,
+            'log_date' => '2024-10-23',
+            'entry_time' => '08:15:00',
+            'exit_time' => '17:00:00',
+            'worked' => 2,
+            'delay' => 0,
+            'early_leave' => 3,
+            'overtime' => 4,
+            'auto_overtime' => 6,
+        ]);
+
+        $response = $this->post(route('attendance.attendance-logs.recalculate-all', $attendance));
+
+        $response->assertRedirect(route('attendance.monthly-attendances.show', $attendance));
+        $response->assertSessionHas('success', __('All monthly Attendance logs recalculated successfully.'));
+
+        $this->assertDatabaseHas('attendance_logs', [
+            'id' => $firstLog->id,
+            'worked' => 540,
+            'delay' => 0,
+            'early_leave' => 0,
+            'overtime' => 0,
+            'auto_overtime' => 0,
+        ]);
+
+        $this->assertDatabaseHas('attendance_logs', [
+            'id' => $secondLog->id,
+            'worked' => 525,
+            'delay' => 15,
+            'early_leave' => 0,
+            'overtime' => 0,
+            'auto_overtime' => 0,
+        ]);
+    }
+
     // ----------------------------------------------------------------
     // AttendanceService unit-style tests
     // ----------------------------------------------------------------

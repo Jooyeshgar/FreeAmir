@@ -214,7 +214,13 @@
                             <th>{{ __('Status') }}</th>
                             @if ($isAdminView ?? false)
                                 @can('attendance.attendance-logs.edit')
-                                    <th></th>
+                                    <th>
+                                        <form action="{{ route('attendance.attendance-logs.recalculate-all', $monthlyAttendance) }}" method="POST" class="inline-block mb-0"
+                                            onsubmit="return confirm('{{ __('Recalculate all attendance logs? Stored values will be overwritten with the computed values.') }}')">
+                                            @csrf
+                                            <button type="submit" class="btn btn-xs btn-primary">{{ __('Recalculate All') }}</button>
+                                        </form>
+                                    </th>
                                 @endcan
                             @endif
                         </tr>
