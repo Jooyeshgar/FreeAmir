@@ -6,6 +6,7 @@ use App\Enums\AttendanceImportType;
 use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
 use App\Models\Employee;
+use App\Models\MonthlyAttendance;
 use App\Models\PersonnelRequest;
 use App\Models\PublicHoliday;
 use App\Services\AttendanceLogImportService;
@@ -19,6 +20,8 @@ use Illuminate\View\View;
 
 class AttendanceLogController extends Controller
 {
+    public function __construct(private readonly AttendanceService $attendanceService) {}
+
     public function index(Request $request): View
     {
         $query = AttendanceLog::with('employee')->orderBy('log_date', 'desc');
@@ -135,7 +138,7 @@ class AttendanceLogController extends Controller
             ->with('success', __('Attendance log deleted successfully.'));
     }
 
-    public function show(AttendanceLog $attendanceLog, AttendanceService $attendanceService): View
+    public function show(AttendanceLog $attendanceLog): View
     {
         $attendanceLog->load(['employee.workShift']);
 
@@ -167,7 +170,7 @@ class AttendanceLogController extends Controller
         $isHoliday = $isPublicHoliday || $isThursdayHoliday;
 
         // Compute what the service WOULD calculate right now (without saving)
-        $computed = $attendanceService->computeLogColumns($attendanceLog, $workShift, $isFriday, $isHoliday, $isThursday);
+        $computed = $this->attendanceService->computeLogColumns($attendanceLog, $workShift, $isFriday, $isHoliday, $isThursday);
 
         // Effective (real) shift start accounting for float grace window
         $effectiveShiftStart = null;
@@ -177,7 +180,7 @@ class AttendanceLogController extends Controller
                 ->format('H:i');
         }
 
-        $shiftMinutes = $attendanceService->shiftWorkMinutes($workShift);
+        $shiftMinutes = $this->attendanceService->shiftWorkMinutes($workShift);
 
         // Compute signed diff (minutes) between entry/exit and effective shift boundaries.
         // For Thursday half-day the effective end is thursday_exit_time, not end_time.
@@ -241,11 +244,20 @@ class AttendanceLogController extends Controller
         ));
     }
 
-    public function recalculate(AttendanceLog $attendanceLog, AttendanceService $attendanceService): RedirectResponse
+    public function recalculate(AttendanceLog $attendanceLog): RedirectResponse
     {
-        $attendanceService->recalculateLog($attendanceLog);
+        $this->attendanceService->recalculateLog($attendanceLog);
 
         return redirect()->back()->with('success', __('Attendance log recalculated successfully.'));
+    }
+
+    public function recalculateAll(MonthlyAttendance $monthlyAttendance): RedirectResponse
+    {
+        foreach ($monthlyAttendance->logs as $log) {
+            $this->attendanceService->recalculateLog($log);
+        }
+
+        return redirect()->route('attendance.monthly-attendances.show', $monthlyAttendance)->with('success', __('All monthly Attendance logs recalculated successfully.'));
     }
 
     public function importForm(): View

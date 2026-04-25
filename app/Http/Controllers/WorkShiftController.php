@@ -40,6 +40,7 @@ class WorkShiftController extends Controller
             'break' => ['nullable', 'integer', 'min:0', 'max:480'],
             'holiday_coefficient' => ['nullable', 'numeric', 'min:0', 'max:10'],
             'overtime_coefficient' => ['nullable', 'numeric', 'min:0', 'max:10'],
+            'auto_overtime_enabled' => ['boolean'],
             'auto_overtime_coefficient' => ['nullable', 'numeric', 'min:0', 'max:10'],
             'max_auto_overtime' => ['nullable', 'integer', 'min:0', 'max:480'],
             'mission_coefficient' => ['nullable', 'numeric', 'min:0', 'max:10'],
@@ -47,6 +48,8 @@ class WorkShiftController extends Controller
             'is_active' => ['boolean'],
             'paid_leave' => ['nullable', 'integer', 'min:0', 'max:15000'],
         ]);
+
+        $validated = $this->normalizeAutoOvertimeSettings($validated, $request);
 
         WorkShift::create(array_merge($validated, [
             'company_id' => getActiveCompany(),
@@ -76,6 +79,7 @@ class WorkShiftController extends Controller
             'break' => ['nullable', 'integer', 'min:0', 'max:480'],
             'holiday_coefficient' => ['nullable', 'numeric', 'min:0', 'max:10'],
             'overtime_coefficient' => ['nullable', 'numeric', 'min:0', 'max:10'],
+            'auto_overtime_enabled' => ['boolean'],
             'auto_overtime_coefficient' => ['nullable', 'numeric', 'min:0', 'max:10'],
             'max_auto_overtime' => ['nullable', 'integer', 'min:0', 'max:480'],
             'mission_coefficient' => ['nullable', 'numeric', 'min:0', 'max:10'],
@@ -83,6 +87,8 @@ class WorkShiftController extends Controller
             'is_active' => ['boolean'],
             'paid_leave' => ['nullable', 'integer', 'min:0', 'max:15000'],
         ]);
+
+        $validated = $this->normalizeAutoOvertimeSettings($validated, $request);
 
         if (isset($validated['paid_leave']) && $validated['paid_leave'] != $workShift->paid_leave) {
             $leaveDiff = $validated['paid_leave'] - $workShift->paid_leave;
@@ -106,5 +112,22 @@ class WorkShiftController extends Controller
 
         return redirect()->route('attendance.work-shifts.index')
             ->with('success', __('Work shift deleted successfully.'));
+    }
+
+    private function normalizeAutoOvertimeSettings(array $validated, Request $request): array
+    {
+        unset($validated['auto_overtime_enabled']);
+
+        if (! $request->boolean('auto_overtime_enabled', true)) {
+            $validated['auto_overtime_coefficient'] = 0;
+            $validated['max_auto_overtime'] = 0;
+
+            return $validated;
+        }
+
+        $validated['auto_overtime_coefficient'] ??= 1.4;
+        $validated['max_auto_overtime'] ??= 300;
+
+        return $validated;
     }
 }

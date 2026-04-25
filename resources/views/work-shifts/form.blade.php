@@ -1,4 +1,10 @@
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4"
+        x-data="{
+            autoOvertimeEnabled: @js((bool) old('auto_overtime_enabled', (($workShift->auto_overtime_coefficient ?? 1.4) > 0 || ($workShift->max_auto_overtime ?? 300) > 0))),
+            autoOvertimeCoefficient: @js((float) old('auto_overtime_coefficient', $workShift->auto_overtime_coefficient ?? 1.4)),
+            maxAutoOvertime: @js((int) old('max_auto_overtime', $workShift->max_auto_overtime ?? 300)),
+        }"
+        x-effect="if (!autoOvertimeEnabled) { autoOvertimeCoefficient = 0; maxAutoOvertime = 0; }">
         <div class="md:col-span-4">
             <x-input name="name" id="name" title="{{ __('Shift Name') }}" :value="old('name', $workShift->name ?? '')" placeholder="{{ __('e.g. Morning Shift') }}" required />
         </div>
@@ -22,14 +28,6 @@
             <x-input name="overtime_coefficient" id="overtime_coefficient" type="number" step="0.01" title="{{ __('Overtime Coefficient') }}" :value="old('overtime_coefficient', $workShift->overtime_coefficient ?? 1.4)"
                 placeholder="1.40" />
         </div>
-         <div>
-            <x-input name="auto_overtime_coefficient" id="auto_overtime_coefficient" type="number" step="0.01" title="{{ __('Auto Overtime Coefficient') }}" :value="old('auto_overtime_coefficient', $workShift->auto_overtime_coefficient ?? 1.4)"
-                placeholder="1.40" />
-        </div>
-        <div>
-            <x-input name="max_auto_overtime" id="max_auto_overtime" type="number" step="1" title="{{ __('Maximum Auto Overtime') }}" :value="old('max_auto_overtime', $workShift->max_auto_overtime ?? 300)"
-                placeholder="300" />
-        </div>
         <div>
             <x-input name="mission_coefficient" id="mission_coefficient" type="number" step="0.01" title="{{ __('Mission Coefficient') }}" :value="old('mission_coefficient', $workShift->mission_coefficient ?? 1.4)"
                 placeholder="1.40" />
@@ -37,6 +35,19 @@
         <div>
             <x-input name="undertime_coefficient" id="undertime_coefficient" type="number" step="0.01" title="{{ __('Undertime Coefficient') }}" :value="old('undertime_coefficient', $workShift->undertime_coefficient ?? 2.0)"
                 placeholder="1.40" />
+        </div>
+        <div>
+            <input type="hidden" name="auto_overtime_enabled" value="0">
+            <x-checkbox name="auto_overtime_enabled" value="1" id="auto_overtime_enabled" title="{{ __('Enable Automatic Overtime') }}" x-model="autoOvertimeEnabled"
+                :checked="old('auto_overtime_enabled', (($workShift->auto_overtime_coefficient ?? 1.4) > 0 || ($workShift->max_auto_overtime ?? 300) > 0))" />
+        </div>
+        <div>
+            <x-input name="auto_overtime_coefficient" id="auto_overtime_coefficient" type="number" step="0.01" title="{{ __('Auto Overtime Coefficient') }}" :value="old('auto_overtime_coefficient', $workShift->auto_overtime_coefficient ?? 1.4)" model_name="autoOvertimeCoefficient" x-bind:disabled="!autoOvertimeEnabled"
+                placeholder="1.40" />
+        </div>
+        <div>
+            <x-input name="max_auto_overtime" id="max_auto_overtime" type="number" step="1" title="{{ __('Maximum Auto Overtime') }}" :value="old('max_auto_overtime', $workShift->max_auto_overtime ?? 300)" model_name="maxAutoOvertime" x-bind:disabled="!autoOvertimeEnabled"
+                placeholder="300" />
         </div>
         <div>
             <x-select name="thursday_status" id="thursday_status" :title="__('Thursday Status')" :options="$thursdayStatusOptions" :selected="old('thursday_status', $workShift->thursday_status->value ?? 'half_day')" required x-data="{}"

@@ -152,6 +152,24 @@ class WorkShiftTest extends TestCase
         $response->assertSessionHasErrors(['float', 'break']);
     }
 
+    public function test_store_sets_auto_overtime_values_to_zero_when_disabled(): void
+    {
+        $response = $this->post(route('attendance.work-shifts.store'), $this->validPayload([
+            'auto_overtime_enabled' => '0',
+            'auto_overtime_coefficient' => '1.9',
+            'max_auto_overtime' => '180',
+        ]));
+
+        $response->assertRedirect(route('attendance.work-shifts.index'));
+
+        $this->assertDatabaseHas('work_shifts', [
+            'company_id' => $this->companyId,
+            'name' => 'Morning Shift',
+            'auto_overtime_coefficient' => 0,
+            'max_auto_overtime' => 0,
+        ]);
+    }
+
     // ----------------------------------------------------------------
     // edit / update
     // ----------------------------------------------------------------
@@ -254,6 +272,28 @@ class WorkShiftTest extends TestCase
         $this->assertDatabaseHas('work_shifts', [
             'id' => $workShift->id,
             'is_active' => false,
+        ]);
+    }
+
+    public function test_update_sets_auto_overtime_values_to_zero_when_disabled(): void
+    {
+        $workShift = $this->makeWorkShift([
+            'auto_overtime_coefficient' => 1.8,
+            'max_auto_overtime' => 240,
+        ]);
+
+        $response = $this->put(route('attendance.work-shifts.update', $workShift), $this->validPayload([
+            'auto_overtime_enabled' => '0',
+            'auto_overtime_coefficient' => '1.9',
+            'max_auto_overtime' => '180',
+        ]));
+
+        $response->assertRedirect(route('attendance.work-shifts.index'));
+
+        $this->assertDatabaseHas('work_shifts', [
+            'id' => $workShift->id,
+            'auto_overtime_coefficient' => 0,
+            'max_auto_overtime' => 0,
         ]);
     }
 }
