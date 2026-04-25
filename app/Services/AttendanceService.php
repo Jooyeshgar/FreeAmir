@@ -80,33 +80,37 @@ class AttendanceService
     }
 
     /**
-     * Compute the derived columns for a log row WITHOUT persisting.
-     * Useful for previewing or testing.
+     * Compute derived attendance columns without persisting.
      *
-     * @return array{worked: int, delay: int, early_leave: int, overtime: int, auto_overtime: int, mission: int}
+     * Rules:
+     * - worked = actual clocked minutes only
+     * - paid_leave + mission + remote_work are coverage minutes, not worked minutes
+     * - coverage absorbs delay and early_leave
+     * - total coverage is capped by shift minutes
+     *
+     * @return array{
+     *     worked:int,
+     *     delay:int,
+     *     early_leave:int,
+     *     overtime:int,
+     *     auto_overtime:int,
+     *     mission:int,
+     *     remote_work?:int,
+     *     is_friday?:bool,
+     *     is_holiday?:bool
+     * }
      */
     public function computeLogColumns(AttendanceLog $log, ?WorkShift $workShift, bool $isFriday = false, bool $isHoliday = false, bool $isThursday = false): array
     {
-        // ── Thursday status ───────────────────────────────────────────────
+        // ── Thursday handling ──────────────────────────────────────────────
         $thursdayStatus = $isThursday ? ($workShift?->thursday_status ?? ThursdayStatus::FULL_DAY) : null;
 
-        // Thursday holiday: treat exactly like a Friday/public holiday
+        // Thursday holiday behaves like holiday
         if ($isThursday && $thursdayStatus === ThursdayStatus::HOLIDAY) {
-            $workedMin = $this->rawWorkedMinutes($log, $workShift);
-
-            return [
-                'worked' => $workedMin,
-                'delay' => 0,
-                'early_leave' => 0,
-                'overtime' => 0,
-                'auto_overtime' => 0,
-                'mission' => (int) ($log->mission ?? 0),
-                'is_friday' => $isFriday,
-                'is_holiday' => true,  // Thursday-holiday counts as a holiday day
-            ];
+            $isHoliday = true;
         }
 
-        // Thursday half-day: use thursday_exit_time as the effective shift end
+        // Thursday half-day uses special exit time
         if ($isThursday && $thursdayStatus === ThursdayStatus::HALF_DAY && $workShift?->thursday_exit_time) {
             $workShift = clone $workShift;
             $workShift->end_time = $workShift->thursday_exit_time;
@@ -114,184 +118,83 @@ class AttendanceService
 
         $shiftMinutes = $this->shiftWorkMinutes($workShift);
 
-        // ── Off-day (Friday / public holiday) ────────────────────────────
+        // Base values
+        $paidLeave = max(0, (int) ($log->paid_leave ?? 0));
+        $mission = max(0, (int) ($log->mission ?? 0));
+        $remoteWork = max(0, (int) ($log->remote_work ?? 0));
+        $approvedOvertimeInput = max(0, (int) ($log->overtime ?? 0));
+
+        $hasClockData = $log->entry_time !== null && $log->exit_time !== null;
+        $rawWorked = $hasClockData ? $this->rawWorkedMinutes($log, $workShift) : 0;
+
+        // ── Off-day (Friday / holiday) ─────────────────────────────────────
         if ($isFriday || $isHoliday) {
-            $workedMin = $this->rawWorkedMinutes($log, $workShift);
-
             return [
-                'worked' => $workedMin,
+                'worked' => $rawWorked,
                 'delay' => 0,
                 'early_leave' => 0,
                 'overtime' => 0,
                 'auto_overtime' => 0,
-                'mission' => (int) ($log->mission ?? 0),
+                'mission' => $mission,
+                'remote_work' => $remoteWork,
                 'is_friday' => $isFriday,
                 'is_holiday' => $isHoliday,
             ];
         }
 
-        // ── Daily leave / sick leave ──────────────────────────────────────
-        if ($log->paid_leave >= $shiftMinutes) {
-            return [
-                'worked' => $shiftMinutes,
-                'delay' => 0,
-                'early_leave' => 0,
-                'overtime' => 0,
-                'auto_overtime' => 0,
-                'is_friday' => $isFriday,
-                'is_holiday' => $isHoliday,
-            ];
-        }
-
-        // ── Mission (daily) ───────────────────────────────────────────────
-        if ($log->mission > 0 && $log->mission >= $shiftMinutes) {
-            return [
-                'worked' => $shiftMinutes,
-                'delay' => 0,
-                'early_leave' => 0,
-                'overtime' => 0,
-                'auto_overtime' => 0,
-                'mission' => $log->mission,
-            ];
-        }
-
-        // ── Remote work (daily) ───────────────────────────────────────────
-        // Full-day remote work: employee worked from home — count as fully present.
-        if ($log->remote_work > 0 && $log->remote_work >= $shiftMinutes) {
-            return [
-                'worked' => $shiftMinutes,
-                'delay' => 0,
-                'early_leave' => 0,
-                'overtime' => 0,
-                'auto_overtime' => 0,
-                'remote_work' => (int) $log->remote_work,
-            ];
-        }
-
-        // ── Remote work (partial / hourly) ─────────────────────────────
-        // Partial remote work: treat like hourly leave — remote minutes absorb
-        // delay and early_leave, and are added on top of actual clock time.
-        if ($log->remote_work > 0 && $log->remote_work < $shiftMinutes) {
-            $remoteMin = (int) $log->remote_work;
-
-            // No clock data: only remote minutes count — no penalty
-            if ($log->entry_time === null || $log->exit_time === null) {
-                return [
-                    'worked' => $remoteMin,
-                    'delay' => 0,
-                    'early_leave' => 0,
-                    'overtime' => 0,
-                    'auto_overtime' => 0,
-                    'remote_work' => $remoteMin,
-                    'mission' => (int) ($log->mission ?? 0),
-                ];
-            }
-
-            $rawWorked = $this->rawWorkedMinutes($log, $workShift);
-            $totalWorked = min($shiftMinutes, $rawWorked + $remoteMin);
-
-            $bounds = $this->shiftDelayEarlyLeave($log, $workShift);
-            $netDelay = max(0, $bounds['delay'] - $remoteMin);
-            $netEarlyLeave = max(0, $bounds['early_leave'] - $remoteMin);
-
-            return [
-                'worked' => $totalWorked,
-                'delay' => $netDelay,
-                'early_leave' => $netEarlyLeave,
-                'overtime' => (int) ($log->overtime ?? 0),
-                'auto_overtime' => 0,
-                'remote_work' => $remoteMin,
-                'mission' => (int) ($log->mission ?? 0),
-            ];
-        }
-
-        // ── No clock data ─────────────────────────────────────────────
-        if ($log->entry_time === null || $log->exit_time === null) {
-            // Unpaid leave: no clock-in required
-            // if ($log->unpaid_leave > 0) {
-            //     return [
-            //         'worked' => 0,
-            //         'delay' => 0,
-            //         'early_leave' => 0,
-            //         'overtime' => 0,
-            //     ];
-            // }
+        // ── No clock data ──────────────────────────────────────────────────
+        if (! $hasClockData) {
+            // No attendance, but leave/mission/remote may still cover the day
+            $coveredMinutes = min($shiftMinutes, $paidLeave + $mission + $remoteWork);
 
             return [
                 'worked' => 0,
                 'delay' => 0,
-                'early_leave' => 0,
+                'early_leave' => max(0, $shiftMinutes - $coveredMinutes),
                 'overtime' => 0,
                 'auto_overtime' => 0,
+                'mission' => $mission,
+                'remote_work' => $remoteWork,
             ];
         }
 
-        // ── Hourly paid leave (any position: start / middle / end) ───────
-        // worked = actual + leave_minutes, capped at shiftMinutes
-        // Leave covers the gap: net_delay = max(0, raw_delay − leave_minutes)
-        //                       net_early_leave = max(0, raw_early_leave − leave_minutes)
-        $hourlyLeave = (int) $log->paid_leave;   // minutes already stored on the log
-        if ($hourlyLeave > 0 && $hourlyLeave < $shiftMinutes) {
-            $rawWorked = $this->rawWorkedMinutes($log, $workShift);
-            $totalWorked = min($shiftMinutes, $rawWorked + $hourlyLeave);
-
-            $bounds = $this->shiftDelayEarlyLeave($log, $workShift);
-
-            // Leave minutes absorb delay and early-leave — no penalty for covered time
-            $netDelay = max(0, $bounds['delay'] - $hourlyLeave);
-            $netEarlyLeave = max(0, $bounds['early_leave'] - $hourlyLeave);
-
-            return [
-                'worked' => $totalWorked,
-                'delay' => $netDelay,
-                'early_leave' => $netEarlyLeave,
-                'overtime' => 0,   // leave days don't earn overtime
-                'auto_overtime' => 0,
-                'mission' => (int) ($log->mission ?? 0),
-            ];
-        }
-
-        // ── Hourly mission ────────────────────────────────────────────────
-        // Mission minutes absorb delay and early-leave — same rule as hourly leave
-        if ($log->mission > 0 && $log->mission < $shiftMinutes) {
-            $rawWorked = $this->rawWorkedMinutes($log, $workShift);
-            $missionMin = (int) $log->mission;
-            $totalWorked = min($shiftMinutes, $rawWorked + $missionMin);
-
-            $bounds = $this->shiftDelayEarlyLeave($log, $workShift);
-
-            $netDelay = max(0, $bounds['delay'] - $missionMin);
-            $netEarlyLeave = max(0, $bounds['early_leave'] - $missionMin);
-
-            return [
-                'worked' => $totalWorked,
-                'delay' => $netDelay,
-                'early_leave' => $netEarlyLeave,
-                'overtime' => 0,
-                'auto_overtime' => 0,
-                'mission' => $missionMin,
-            ];
-        }
-
-        // ── Plain attendance (no leave, no mission) ───────────────────────
-        $rawWorked = $this->rawWorkedMinutes($log, $workShift);
+        // ── Normal working day ─────────────────────────────────────────────
         $bounds = $this->shiftDelayEarlyLeave($log, $workShift);
 
-        // Split raw overtime between approved overtime requests and the
-        // remaining auto overtime bucket capped by the assigned work shift.
-        $computedOvertime = $bounds['overtime'];
-        $approvedOvertime = min(max(0, (int) ($log->overtime ?? 0)), $computedOvertime);
-        $remainingOvertime = max(0, $computedOvertime - $approvedOvertime);
+        // Total non-attendance coverage
+        $coveredMinutes = min($shiftMinutes, $paidLeave + $mission + $remoteWork);
+
+        // Coverage absorbs delay and early leave
+        $remainingCoverage = $coveredMinutes;
+
+        $netDelay = max(0, $bounds['delay'] - $remainingCoverage);
+        $remainingCoverage = max(0, $remainingCoverage - $bounds['delay']);
+
+        $netEarlyLeave = max(0, $bounds['early_leave'] - $remainingCoverage);
+
+        // Overtime only for plain attendance with no coverage entries
+        $approvedOvertime = 0;
+        $autoOvertime = 0;
+
+        // if ($coveredMinutes === 0) {
+        $computedOvertime = max(0, (int) ($bounds['overtime'] ?? 0));
+        $approvedOvertime = $approvedOvertimeInput; // min($approvedOvertimeInput, $computedOvertime);
+
+        $remainingOvertime = max(0, $computedOvertime - $approvedOvertime + $remainingCoverage);
         $autoOvertimeCap = max(0, (int) ($workShift?->max_auto_overtime ?? 0));
-        $earnedAutoOvertime = min($remainingOvertime, $autoOvertimeCap);
+        $autoOvertime = min($remainingOvertime, $autoOvertimeCap);
+        // }
 
         return [
             'worked' => $rawWorked,
-            'delay' => $bounds['delay'],
-            'early_leave' => $bounds['early_leave'],
+            'delay' => $netDelay,
+            'early_leave' => $netEarlyLeave,
             'overtime' => $approvedOvertime,
-            'auto_overtime' => $earnedAutoOvertime,
-            'mission' => 0,
+            'auto_overtime' => $autoOvertime,
+            'mission' => $mission,
+            'remote_work' => $remoteWork,
+            'is_friday' => $isFriday,
+            'is_holiday' => $isHoliday,
         ];
     }
 
@@ -551,7 +454,7 @@ class AttendanceService
 
         $total = (int) $start->diffInMinutes($end, false);
 
-        return max(0, $total - max(0, (int) ($workShift->break ?? 0)));
+        return max(0, $total);
     }
 
     // ══════════════════════════════════════════════════════════════════════

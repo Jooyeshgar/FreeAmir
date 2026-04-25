@@ -3,6 +3,7 @@
 use Carbon\Carbon;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 function getActiveCompany()
 {
@@ -55,7 +56,7 @@ function formatDate(Carbon|string|null $date, $format = 'Y/m/d')
     if (is_string($date)) {
         try {
             $date = Carbon::parse($date);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $date = Carbon::createFromFormat('Y-m-d', $date);
         }
     }
@@ -78,7 +79,7 @@ function formatDateTime(Carbon|string|null $date)
     if (is_string($date)) {
         try {
             $date = Carbon::parse($date);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $date = Carbon::createFromFormat('Y-m-d H:i:s', $date);
         }
     }
@@ -131,7 +132,12 @@ function formatCode(?string $code)
 function formatMinutesAsTime($minutes): string
 {
     $totalMinutes = max(0, (int) $minutes);
-    $formatted = sprintf('%02d:%02d', intdiv($totalMinutes, 60), $totalMinutes % 60);
+
+    if ($totalMinutes == 0) {
+        $formatted = '0';
+    } else {
+        $formatted = sprintf('%02d:%02d', intdiv($totalMinutes, 60), $totalMinutes % 60);
+    }
 
     if (in_array(App::getLocale(), ['fa', 'fa_IR'])) {
         return convertToFarsi($formatted);
@@ -236,12 +242,12 @@ function convertToGregorian($date)
  * @param  string  $field  The request field name used in the validation error bag.
  * @return string Gregorian date in 'Y-m-d' format.
  *
- * @throws \Illuminate\Validation\ValidationException
+ * @throws ValidationException
  */
 function jalaliInputToGregorian(?string $date, string $field = 'date'): string
 {
     if (empty($date)) {
-        throw \Illuminate\Validation\ValidationException::withMessages([
+        throw ValidationException::withMessages([
             $field => [__('validation.required', ['attribute' => $field])],
         ]);
     }
@@ -249,7 +255,7 @@ function jalaliInputToGregorian(?string $date, string $field = 'date'): string
     $normalized = toEnglish(str_replace('-', '/', trim($date)));
 
     if (! preg_match('/^\d{4}\/\d{1,2}\/\d{1,2}$/', $normalized)) {
-        throw \Illuminate\Validation\ValidationException::withMessages([
+        throw ValidationException::withMessages([
             $field => [__('validation.date', ['attribute' => $field])],
         ]);
     }
@@ -257,15 +263,15 @@ function jalaliInputToGregorian(?string $date, string $field = 'date'): string
     $gregorian = convertToGregorian($normalized);
 
     if (empty($gregorian)) {
-        throw \Illuminate\Validation\ValidationException::withMessages([
+        throw ValidationException::withMessages([
             $field => [__('validation.date', ['attribute' => $field])],
         ]);
     }
 
     try {
         return Carbon::createFromFormat('Y/m/d', $gregorian)->format('Y-m-d');
-    } catch (\Exception) {
-        throw \Illuminate\Validation\ValidationException::withMessages([
+    } catch (Exception) {
+        throw ValidationException::withMessages([
             $field => [__('validation.date', ['attribute' => $field])],
         ]);
     }
@@ -278,7 +284,7 @@ function jalaliInputToGregorian(?string $date, string $field = 'date'): string
  * When locale is Persian, returns a Jalali date string; otherwise returns the original
  * date (Carbon formatted as 'Y-m-d' if needed).
  *
- * @param  \Carbon\Carbon|string|null  $date
+ * @param  Carbon|string|null  $date
  * @return string
  */
 function convertToJalali($date)

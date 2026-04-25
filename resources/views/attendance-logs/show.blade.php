@@ -217,10 +217,8 @@
                                 <div class="stat-desc {{ $netDelay > 0 ? 'text-error' : 'text-emerald-400' }}">
                                     @if ($grossDelay <= 0)
                                         {{ __(':min min early', ['min' => abs($grossDelay)]) }}
-                                    @elseif ($netDelay === 0 && $grossDelay <= (int) ($workShift->float ?? 0))
-                                        {{ __(':min min late (within grace)', ['min' => $grossDelay]) }}
-                                    @elseif ($netDelay === 0 && $leaveCover > 0)
-                                        <span class="text-warning">{{ __(':min min late → covered by leave/mission', ['min' => $grossDelay]) }}</span>
+                                    @elseif ($netDelay === 0 && $grossDelay > 0)
+                                        {{ __(':min min late (within grace)', ['min' => max(0, $grossDelay - $workShift->float)]) }}
                                     @else
                                         {{ __(':min min late', ['min' => $netDelay]) }}
                                         @if ($leaveCover > 0)
@@ -271,11 +269,12 @@
                         <tbody>
                             @php
                                 $fields = [
-                                    'worked' => __('Worked (min)'),
-                                    'delay' => __('Delay (min)'),
-                                    'early_leave' => __('Early Leave (min)'),
-                                    'overtime' => __('Overtime (min)'),
-                                    'mission' => __('Mission (min)'),
+                                    'worked' => __('Worked'),
+                                    'delay' => __('Delay'),
+                                    'early_leave' => __('Early Leave'),
+                                    'overtime' => __('Overtime'),
+                                    'auto_overtime' => __('Auto overtime'),
+                                    'mission' => __('Mission'),
                                 ];
                             @endphp
                             @foreach ($fields as $key => $label)
@@ -286,8 +285,8 @@
                                 @endphp
                                 <tr class="hover {{ !$matches ? 'bg-error/10' : '' }}">
                                     <td class="px-4 py-3 font-medium">{{ $label }}</td>
-                                    <td class="px-4 py-3 text-center font-mono">{{ $stored }}</td>
-                                    <td class="px-4 py-3 text-center font-mono">{{ $calc }}</td>
+                                    <td class="px-4 py-3 text-center font-mono">{{ formatMinutesAsTime($stored) }}</td>
+                                    <td class="px-4 py-3 text-center font-mono">{{ formatMinutesAsTime($calc) }}</td>
                                     <td class="px-4 py-3 text-center">
                                         @if ($matches)
                                             <span class="badge badge-success badge-sm">✓</span>
@@ -345,6 +344,24 @@
                                     @endif
                                 </td>
                             </tr>
+                            @php
+                                $fields = [
+                                    'paid_leave' => __('Paid Leave'),
+                                    'remote_work' => __('Remote Work'),
+                                    'unpaid_leave' => __('Early Leave'),
+                                ];
+                            @endphp
+                            @foreach ($fields as $key => $label)
+                                @php
+                                    $stored = (int) ($attendanceLog->{$key} ?? 0);
+                                @endphp
+                                <tr class="hover {{ !$matches ? 'bg-error/10' : '' }}">
+                                    <td class="px-4 py-3 font-medium">{{ $label }}</td>
+                                    <td class="px-4 py-3 text-center font-mono">{{ formatMinutesAsTime($stored) }}</td>
+                                    <td class="px-4 py-3 text-center font-mono">-</td>
+                                    <td class="px-4 py-3 text-center"></td>
+                                </tr>
+                            @endforeach
                         </tbody>
                     </table>
                 </div>

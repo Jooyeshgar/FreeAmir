@@ -14,6 +14,7 @@ use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rules\Enum;
 use Illuminate\View\View;
 
 class AttendanceLogController extends Controller
@@ -257,7 +258,7 @@ class AttendanceLogController extends Controller
     public function importPreview(Request $request, AttendanceLogImportService $importService): View
     {
         $request->validate([
-            'import_type' => ['required', 'string', new \Illuminate\Validation\Rules\Enum(AttendanceImportType::class)],
+            'import_type' => ['required', 'string', new Enum(AttendanceImportType::class)],
             'file' => ['required', 'file', 'max:10240'],
             'date_from' => ['nullable', 'string'],
             'date_to' => ['nullable', 'string'],
@@ -295,7 +296,7 @@ class AttendanceLogController extends Controller
     public function importStore(Request $request, AttendanceLogImportService $importService): RedirectResponse
     {
         $request->validate([
-            'import_type' => ['required', 'string', new \Illuminate\Validation\Rules\Enum(AttendanceImportType::class)],
+            'import_type' => ['required', 'string', new Enum(AttendanceImportType::class)],
             'tmp_path' => ['required', 'string'],
             'date_from_gregorian' => ['nullable', 'string', 'date_format:Y-m-d'],
             'date_to_gregorian' => ['nullable', 'string', 'date_format:Y-m-d'],
