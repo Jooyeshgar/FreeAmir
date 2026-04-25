@@ -77,7 +77,7 @@
                 </div>
                 <div class="stat bg-warning/20 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Overtime') }}</div>
-                    <div class="stat-value text-base text-warning">{{ formatMinutesAsTime($monthlyAttendance->overtime) }}</div>
+                    <div class="stat-value text-base text-warning">{{ formatMinutesAsTime($monthlyAttendance->overtime + $monthlyAttendance->auto_overtime) }}</div>
                 </div>
                 <div class="stat bg-error/20 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Undertime') }}</div>
@@ -262,7 +262,7 @@
                                     <td>{{ $log->exit_time ? convertToFarsi($log->exit_time) : '—' }}</td>
                                     <td>{{ formatMinutesAsTime($log->worked) }}</td>
                                     <td>{{ formatMinutesAsTime($log->paid_leave) }}</td>
-                                    <td>{{ formatMinutesAsTime($log->overtime) }}</td>
+                                    <td>{{ formatMinutesAsTime($log->overtime + $log->auto_overtime) }}</td>
                                     <td>{{ formatMinutesAsTime($log->delay) }}</td>
                                     <td>{{ formatMinutesAsTime($log->early_leave) }}</td>
                                     <td>

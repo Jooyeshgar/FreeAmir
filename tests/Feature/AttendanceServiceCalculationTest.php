@@ -122,19 +122,19 @@ class AttendanceServiceCalculationTest extends TestCase
         $this->insertLog($employeeA, '2025-03-03', [
             'entry_time' => '07:00:00',
             'exit_time' => '14:00:00',
-            'approved_overtime' => 60,
+            // 'auto_overtime' => 60,
         ]);
         $this->insertLog($employeeB, '2025-03-03', [
             'entry_time' => '09:00:00',
             'exit_time' => '16:00:00',
-            'approved_overtime' => 60,
+            // 'auto_overtime' => 0,
         ]);
 
         $attendanceA = $this->service->calculateAndStore($employeeA->id, $this->startDate, $this->durationDays, 1404, 1);
         $attendanceB = $this->service->calculateAndStore($employeeB->id, $this->startDate, $this->durationDays, 1404, 1);
 
-        $this->assertSame(60, $attendanceA->overtime); // 420 - 360
-        $this->assertSame(0, $attendanceB->overtime); // 420 < 540
+        $this->assertSame(60, $attendanceA->auto_overtime); // 420 - 360
+        $this->assertSame(0, $attendanceB->auto_overtime); // 420 < 540
     }
 
     // -----------------------------------------------------------------------
@@ -198,7 +198,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $log = $this->insertLog($employee, '2025-03-03', [
             'entry_time' => '08:00:00',
             'exit_time' => '20:00:00',
-            'approved_overtime' => 60,
+            'overtime' => 60,
         ]);
 
         $this->assertSame(60, $log->overtime);
@@ -216,7 +216,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $this->assertSame(120, $attendance->auto_overtime);
     }
 
-    public function test_approved_overtime_is_capped_by_actual_extra_work(): void
+    public function test_auto_overtime_is_capped_by_actual_extra_work(): void
     {
         $shift = $this->makeShift([
             'start_time' => '08:00:00',
@@ -229,7 +229,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $log = $this->insertLog($employee, '2025-03-03', [
             'entry_time' => '08:00:00',
             'exit_time' => '18:00:00',
-            'approved_overtime' => 180,
+            'overtime' => 180,
         ]);
 
         $this->assertSame(120, $log->overtime);
@@ -260,7 +260,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $log = $this->insertLog($employee, '2025-03-03', [
             'entry_time' => '08:00:00',
             'exit_time' => '21:00:00',
-            'approved_overtime' => 60,
+            'overtime' => 60,
         ]);
 
         $this->assertSame(60, $log->overtime);

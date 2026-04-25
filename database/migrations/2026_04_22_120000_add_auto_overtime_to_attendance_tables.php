@@ -9,7 +9,6 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('attendance_logs', function (Blueprint $table) {
-            $table->unsignedSmallInteger('approved_overtime')->default(0)->after('early_leave');
             $table->unsignedSmallInteger('auto_overtime')->default(0)->after('overtime');
         });
 
@@ -42,10 +41,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('attendance_logs', function (Blueprint $table) {
-            $table->dropColumn(['approved_overtime', 'auto_overtime']);
-        });
-
         Schema::table('monthly_attendances', function (Blueprint $table) {
             $table->dropColumn('auto_overtime');
         });
