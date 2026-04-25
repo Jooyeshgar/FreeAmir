@@ -237,9 +237,11 @@ class RolesAndPermissionsSeeder extends Seeder
         $seller->syncPermissions($sellerPermissions);
 
         $employeeRole = Role::firstOrCreate(['name' => 'Employee']);
-        $employeeRole->syncPermissions(
-            Permission::where('name', 'LIKE', 'employee-portal.%')->pluck('name')->toArray()
-        );
+
+        $employeePermissions = Permission::where('name', 'LIKE', 'employee-portal.%')
+            ->orWhere('name', 'home')->pluck('name')->toArray();
+
+        $employeeRole->syncPermissions($employeePermissions);
 
         $users = [
             'admin' => ['Super-Admin', 'Employee'],
