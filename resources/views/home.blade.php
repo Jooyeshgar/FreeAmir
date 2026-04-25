@@ -1,12 +1,20 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Welcome') }}
-        </h2>
-    </x-slot>
+<x-app-layout :title="__('Dashboard')">
     <x-show-message-bags />
 
     <main class="mt-10">
+
+        @hasrole('Super-Admin')
+            @if ($hasDocument)
+                <div class="alert alert-warning">
+                    <p>جدول‌های دیتابیس شما خالی هستند. آیا مایل هستید داده‌های آزمایشی در دیتابیس شما بارگذاری شود؟</p>
+                    <form method="POST" action="{{ route('home.seed-demo-data') }}" class="inline-block m-0">
+                        @csrf
+                        <button type="submit" class="btn btn-ghost">پر کردن دیتابیس</button>
+                    </form>
+                </div>
+            @endif
+        @endhasrole
+
         <div>
             <h1 class="text-[#495057] text-[24px]">
                 {{ __('Dashboard') }}

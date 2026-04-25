@@ -2,12 +2,29 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Document;
 use App\Services\HomeService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 
 class HomeController extends Controller
 {
     public function __construct(private readonly HomeService $service) {}
+
+    public function seedDemoData()
+    {
+        if (Document::count() !== 0) {
+            return redirect()->route('home')->with('error', 'نمیتوان دیتاهای آزمایشی را به دیتابیس پر اضافه کرد.');
+        }
+
+        try {
+            Artisan::call('db:seed', ['--class' => 'DemoSeeder']);
+        } catch (\Exception $e) {
+            return redirect()->route('home')->with('error', 'خطایی در اجرای پر کردن دیتابیس رخ داد.');
+        }
+
+        return redirect()->route('home')->with('success', 'داده های آزمایشی به دیتابیس اضافه شدند.');
+    }
 
     public function index()
     {
@@ -35,7 +52,10 @@ class HomeController extends Controller
         ['incomeData' => $totalIncomesData, 'costData' => $totalCostsData, 'profit' => $profit] =
             $this->service->profitFromNonPermanentSubjects();
 
+        $hasDocument = \App\Models\Document::count() === 0;
+
         return view('home', compact(
+            'hasDocument',
             'cashTypes',
             'bankAccounts',
             'topTenBankAccountBalances',

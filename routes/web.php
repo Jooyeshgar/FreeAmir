@@ -26,6 +26,7 @@ Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee
 
 Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('/', [Controllers\HomeController::class, 'index'])->name('home');
+    Route::post('/seed-demo-data', [Controllers\HomeController::class, 'seedDemoData'])->name('home.seed-demo-data');
     Route::get('/home/cash-banks', [Controllers\HomeController::class, 'cashAndBanksBalances'])->name('home.cash-banks');
     Route::get('/home/bank-account', [Controllers\HomeController::class, 'bankAccount'])->name('home.bank-account');
     Route::get('subjects/search', [Controllers\SubjectController::class, 'search'])->name('subjects.search');
