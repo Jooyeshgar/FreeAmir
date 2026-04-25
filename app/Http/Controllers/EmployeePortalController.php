@@ -85,21 +85,12 @@ class EmployeePortalController extends Controller
             'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,'.$employee->user->id],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'password_confirmation' => ['required', 'string', 'min:8'],
         ]);
 
         $employee->update([
             'first_name' => $validated['first_name'],
             'last_name' => $validated['last_name'],
         ]);
-
-        if ($validated['password'] !== $validated['password_confirmation']) {
-            throw ValidationException::withMessages([
-                'password_confirmation' => __('The password confirmation does not match.'),
-            ]);
-        }
-
-        unset($validated['password_confirmation']);
 
         $employee->user->update([
             'name' => $validated['first_name'],
