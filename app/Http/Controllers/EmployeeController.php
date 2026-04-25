@@ -13,11 +13,14 @@ use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Models\Employee;
 use App\Models\OrgChart;
+use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
 use App\Models\WorkSiteContract;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class EmployeeController extends Controller
@@ -61,10 +64,19 @@ class EmployeeController extends Controller
 
     public function store(StoreEmployeeRequest $request): RedirectResponse
     {
-        Employee::create(array_merge(
-            $request->validated(),
-            ['company_id' => getActiveCompany()]
-        ));
+        $validated = $request->validated();
+
+        DB::transaction(function () use ($validated): void {
+            $user = $this->upsertEmployeeUser(null, $validated);
+
+            Employee::create(array_merge(
+                $this->extractEmployeeData($validated),
+                [
+                    'company_id' => getActiveCompany(),
+                    'user_id' => $user->id,
+                ]
+            ));
+        });
 
         return redirect()->route('hr.employees.index')
             ->with('success', __('Employee created successfully.'));
@@ -92,7 +104,16 @@ class EmployeeController extends Controller
 
     public function update(UpdateEmployeeRequest $request, Employee $employee): RedirectResponse
     {
-        $employee->update($request->validated());
+        $validated = $request->validated();
+
+        DB::transaction(function () use ($employee, $validated): void {
+            $user = $this->upsertEmployeeUser($employee, $validated);
+
+            $employee->update(array_merge(
+                $this->extractEmployeeData($validated),
+                ['user_id' => $user->id]
+            ));
+        });
 
         return redirect()->route('hr.employees.index')
             ->with('success', __('Employee updated successfully.'));
@@ -118,5 +139,34 @@ class EmployeeController extends Controller
             'educationLevels' => array_merge(['' => __('— Select —')], EmployeeEducationLevel::options()),
             'employmentTypes' => array_merge(['' => __('— Select —')], EmployeeEmploymentType::options()),
         ];
+    }
+
+    private function extractEmployeeData(array $validated): array
+    {
+        return Arr::except($validated, ['email', 'password', 'password_confirmation']);
+    }
+
+    private function upsertEmployeeUser(?Employee $employee, array $validated): User
+    {
+        $userData = [
+            'name' => trim($validated['first_name'].' '.$validated['last_name']),
+            'email' => $validated['email'],
+        ];
+
+        if (! empty($validated['password'])) {
+            $userData['password'] = $validated['password'];
+        }
+
+        $user = $employee?->user;
+
+        if ($user) {
+            $user->update($userData);
+        } else {
+            $user = User::create($userData);
+        }
+
+        $user->companies()->syncWithoutDetaching([getActiveCompany()]);
+
+        return $user;
     }
 }

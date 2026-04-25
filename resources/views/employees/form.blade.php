@@ -109,6 +109,24 @@
 
 </div>
 
+{{-- Section: User Account --}}
+<div class="divider text-sm font-semibold">{{ __('User Account') }}</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+    <div>
+        <x-input name="email" id="email" type="email" title="{{ __('Email') }}" :value="old('email', isset($employee) ? $employee->user?->email : '')" required />
+    </div>
+
+    <div>
+        <x-input name="password" id="password" type="password" title="{{ __('Password') }}" />
+    </div>
+
+    <div>
+        <x-input name="password_confirmation" id="password_confirmation" type="password" title="{{ __('Confirm Password') }}" />
+    </div>
+
+</div>
+
 {{-- Section: Insurance --}}
 <div class="divider text-sm font-semibold">{{ __('Insurance') }}</div>
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

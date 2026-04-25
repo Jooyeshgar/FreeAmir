@@ -66,9 +66,24 @@
                             <tr>
                                 <td>{{ convertToFarsi($payroll->year) }}</td>
                                 <td>{{ \App\Models\MonthlyAttendance::MONTH_NAMES[$payroll->month] ?? $payroll->month }}</td>
-                                <td class="text-success">{{ formatNumber($payroll->total_earnings) }}</td>
-                                <td class="text-error">{{ formatNumber($payroll->total_deductions) }}</td>
-                                <td class="font-semibold">{{ formatNumber($payroll->net_payment) }}</td>
+                                <td x-data="{ show: false }" @click="show = !show">
+                                    <span x-show="!show">****</span>
+                                    <span x-show="show" class="text-success">
+                                        {{ formatNumber($payroll->total_earnings) }}
+                                    </span>
+                                </td>
+                                <td x-data="{ show: false }" @click="show = !show">
+                                    <span x-show="!show">****</span>
+                                    <span x-show="show" class="text-error">
+                                        {{ formatNumber($payroll->total_deductions) }}
+                                    </span>
+                                </td>
+                                <td x-data="{ show: false }" @click="show = !show">
+                                    <span x-show="!show">****</span>
+                                    <span x-show="show" class="font-semibold">
+                                        {{ formatNumber($payroll->net_payment) }}
+                                    </span>
+                                </td>
                                 <td>
                                     @if ($payroll->status === 'paid')
                                         <span class="badge badge-success badge-sm">{{ __('Paid') }}</span>
