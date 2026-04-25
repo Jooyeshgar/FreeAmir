@@ -117,6 +117,7 @@ class AttendanceService
         }
 
         $shiftMinutes = $this->shiftWorkMinutes($workShift);
+        $autoOvertimeCap = max(0, (int) ($workShift?->max_auto_overtime ?? 0));
 
         // Base values
         $paidLeave = max(0, (int) ($log->paid_leave ?? 0));
@@ -130,7 +131,7 @@ class AttendanceService
         // ── Off-day (Friday / holiday) ─────────────────────────────────────
         if ($isFriday || $isHoliday) {
             return [
-                'worked' => $rawWorked,
+                'worked' => $rawWorked + $remoteWork,
                 'delay' => 0,
                 'early_leave' => 0,
                 'overtime' => 0,
@@ -144,27 +145,28 @@ class AttendanceService
 
         // ── No clock data ──────────────────────────────────────────────────
         if (! $hasClockData) {
-            // No attendance, but leave/mission/remote may still cover the day
-            $coveredMinutes = min($shiftMinutes, $paidLeave + $mission + $remoteWork);
+            $coveredMinutes = min($shiftMinutes, $paidLeave + $mission + min($remoteWork, $shiftMinutes));
+            $remoteExtra = max(0, $remoteWork - $shiftMinutes);
+            $autoOvertime = min($remoteExtra, $autoOvertimeCap);
 
             return [
-                'worked' => 0,
+                'worked' => $remoteWork,
                 'delay' => 0,
                 'early_leave' => max(0, $shiftMinutes - $coveredMinutes),
                 'overtime' => 0,
-                'auto_overtime' => 0,
+                'auto_overtime' => $autoOvertime,
                 'mission' => $mission,
                 'remote_work' => $remoteWork,
+                'is_friday' => $isFriday,
+                'is_holiday' => $isHoliday,
             ];
         }
 
         // ── Normal working day ─────────────────────────────────────────────
         $bounds = $this->shiftDelayEarlyLeave($log, $workShift);
 
-        // Total non-attendance coverage
-        $coveredMinutes = min($shiftMinutes, $paidLeave + $mission + $remoteWork);
+        $coveredMinutes = min($shiftMinutes, $paidLeave + $mission + min($remoteWork, $shiftMinutes));
 
-        // Coverage absorbs delay and early leave
         $remainingCoverage = $coveredMinutes;
 
         $netDelay = max(0, $bounds['delay'] - $remainingCoverage);
@@ -172,21 +174,18 @@ class AttendanceService
 
         $netEarlyLeave = max(0, $bounds['early_leave'] - $remainingCoverage);
 
-        // Overtime only for plain attendance with no coverage entries
-        $approvedOvertime = 0;
-        $autoOvertime = 0;
-
-        // if ($coveredMinutes === 0) {
         $computedOvertime = max(0, (int) ($bounds['overtime'] ?? 0));
-        $approvedOvertime = $approvedOvertimeInput; // min($approvedOvertimeInput, $computedOvertime);
+        $approvedOvertime = min($approvedOvertimeInput, $computedOvertime);
 
-        $remainingOvertime = max(0, $computedOvertime - $approvedOvertime + $remainingCoverage);
-        $autoOvertimeCap = max(0, (int) ($workShift?->max_auto_overtime ?? 0));
-        $autoOvertime = min($remainingOvertime, $autoOvertimeCap);
-        // }
+        $remainingOvertime = max(0, $computedOvertime - $approvedOvertime);
+
+        // extra remote work beyond shift also contributes to auto overtime
+        $remoteExtra = max(0, $remoteWork - $shiftMinutes);
+
+        $autoOvertime = min($remainingOvertime + $remainingCoverage + $remoteExtra, $autoOvertimeCap);
 
         return [
-            'worked' => $rawWorked,
+            'worked' => $rawWorked + $remoteWork,
             'delay' => $netDelay,
             'early_leave' => $netEarlyLeave,
             'overtime' => $approvedOvertime,
@@ -328,7 +327,7 @@ class AttendanceService
 
                 if (isset($logsByDate[$dateStr])) {
                     $log = $logsByDate[$dateStr];
-                    $totalWork = (int) $log->worked + (int) $log->remote_work + (int) $log->mission;
+                    $totalWork = (int) $log->worked + (int) $log->mission;
                     if ($isFriday) {
                         $fridayMin += $totalWork;
                     } else {

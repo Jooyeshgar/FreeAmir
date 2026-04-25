@@ -146,8 +146,8 @@ class AttendanceServiceCalculationTest extends TestCase
         $shift = $this->makeShift();
         $employee = $this->makeEmployee($shift);
 
-        // Friday 2025-03-07
-        $this->insertLog($employee, '2025-03-07', ['remote_work' => 480]);
+        $friday = $this->startDate->next(Carbon::FRIDAY);
+        $this->insertLog($employee, $friday->toDateString(), ['remote_work' => 480]);
 
         $attendance = $this->service->calculateAndStore($employee->id, $this->startDate, $this->durationDays, 1404, 1);
 
@@ -216,36 +216,38 @@ class AttendanceServiceCalculationTest extends TestCase
         $this->assertSame(120, $attendance->auto_overtime);
     }
 
-    // public function test_auto_overtime_is_capped_by_actual_extra_work(): void
-    // {
-    //     $shift = $this->makeShift([
-    //         'start_time' => '08:00:00',
-    //         'end_time' => '16:00:00',
-    //         'break' => 0,
-    //         'max_auto_overtime' => 120,
-    //     ]);
-    //     $employee = $this->makeEmployee($shift);
+    public function test_remote_work_above_shift_generates_auto_overtime_when_enabled(): void
+    {
+        $shift = $this->makeShift([
+            'start_time' => '08:00:00',
+            'end_time' => '16:00:00',
+            'break' => 0,
+            'max_auto_overtime' => 120,
+        ]);
 
-    //     $log = $this->insertLog($employee, '2025-03-03', [
-    //         'entry_time' => '08:00:00',
-    //         'exit_time' => '18:00:00',
-    //         'overtime' => 180,
-    //     ], false);
+        $employee = $this->makeEmployee($shift);
 
-    //     $this->assertSame(120, $log->overtime);
-    //     $this->assertSame(0, $log->auto_overtime);
+        // Shift time is 480 minutes, remote work is 600 minutes => 120 minutes auto overtime
+        $log = $this->insertLog($employee, '2025-03-10', [
+            'remote_work' => 600,
+        ]);
 
-    //     $attendance = $this->service->calculateAndStore(
-    //         $employee->id,
-    //         $this->startDate,
-    //         $this->durationDays,
-    //         1404,
-    //         1
-    //     );
+        $this->assertSame(600, $log->remote_work);
+        $this->assertSame(0, $log->overtime);
+        $this->assertSame(120, $log->auto_overtime);
 
-    //     $this->assertSame(120, $attendance->overtime);
-    //     $this->assertSame(0, $attendance->auto_overtime);
-    // }
+        $attendance = $this->service->calculateAndStore(
+            $employee->id,
+            $this->startDate,
+            $this->durationDays,
+            1404,
+            1
+        );
+
+        $this->assertSame(600, $attendance->remote_work);
+        $this->assertSame(0, $attendance->overtime);
+        $this->assertSame(120, $attendance->auto_overtime);
+    }
 
     public function test_overtime_above_approved_and_auto_cap_is_discarded(): void
     {
@@ -526,8 +528,9 @@ class AttendanceServiceCalculationTest extends TestCase
         $shift = $this->makeShift(['break' => 0]); // 540 min
         $employee = $this->makeEmployee($shift);
 
+        $friday = $this->startDate->next(Carbon::FRIDAY);
         // Friday: remote work + overtime
-        $this->insertLog($employee, '2025-03-07', [
+        $this->insertLog($employee, $friday, [
             'remote_work' => 540,
             'worked' => 660,
             'overtime' => 120,
@@ -537,7 +540,7 @@ class AttendanceServiceCalculationTest extends TestCase
 
         $this->assertSame(540, $attendance->remote_work);
         $this->assertSame(0, $attendance->overtime); // Overtime should not be recorded on holiday
-        $this->assertSame(1200, $attendance->friday);
+        $this->assertSame(660, $attendance->friday);
     }
 
     public function test_holiday_with_multiple_conditions(): void
@@ -547,8 +550,9 @@ class AttendanceServiceCalculationTest extends TestCase
 
         PublicHoliday::factory()->create(['company_id' => $this->company->id, 'date' => '2025-03-11']);
 
+        $friday = $this->startDate->next(Carbon::FRIDAY);
         // Holiday: remote work + mission + overtime
-        $this->insertLog($employee, '2025-03-11', [
+        $this->insertLog($employee, $friday, [
             'remote_work' => 240,
             'mission' => 240,
             'overtime' => 120,
