@@ -408,7 +408,9 @@ class AttendanceService
             $workDays++;
 
             if (! isset($logsByDate[$dateStr])) {
-                $absentDays++;
+                if (! $isOffDay) {
+                    $absentDays++;
+                }
 
                 continue;
             }
