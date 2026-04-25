@@ -92,11 +92,16 @@ class EmployeePortalController extends Controller
             'last_name' => $validated['last_name'],
         ]);
 
-        $employee->user->update([
+        $userData = [
             'name' => $validated['first_name'].' '.$validated['last_name'],
             'email' => $validated['email'],
-            'password' => bcrypt($validated['password']),
-        ]);
+        ];
+
+        if (! empty($validated['password'])) {
+            $userData['password'] = bcrypt($validated['password']);
+        }
+
+        $employee->user->update($userData);
 
         return redirect()->route('employee-portal.dashboard')->with('success', __('Your information has been updated successfully.'));
     }
