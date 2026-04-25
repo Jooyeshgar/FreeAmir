@@ -110,6 +110,8 @@ class PayrollServiceTest extends TestCase
             'break' => 60,
             'float' => 0,
             'overtime_coefficient' => 1.4,
+            'auto_overtime_coefficient' => 1.2,
+            'max_auto_overtime' => 120,
             'holiday_coefficient' => 1.5,
             'mission_coefficient' => 1.4,
             'undertime_coefficient' => 2.0,
@@ -128,6 +130,7 @@ class PayrollServiceTest extends TestCase
             ['system_code' => 'FOOD_ALLOWANCE',    'category' => 'earning',   'calc_type' => 'fixed',   'is_taxable' => true,  'is_insurable' => true],
             ['system_code' => 'CHILD_ALLOWANCE',   'category' => 'earning',   'calc_type' => 'fixed',   'is_taxable' => false, 'is_insurable' => false],
             ['system_code' => 'OVERTIME',          'category' => 'earning',   'calc_type' => 'formula', 'is_taxable' => true,  'is_insurable' => true],
+            ['system_code' => 'AUTO_OVERTIME',     'category' => 'earning',   'calc_type' => 'formula', 'is_taxable' => true,  'is_insurable' => true],
             ['system_code' => 'FRIDAY_PAY',        'category' => 'earning',   'calc_type' => 'formula', 'is_taxable' => true,  'is_insurable' => true],
             ['system_code' => 'HOLIDAY_PAY',       'category' => 'earning',   'calc_type' => 'formula', 'is_taxable' => true,  'is_insurable' => true],
             ['system_code' => 'MISSION_PAY',       'category' => 'earning',   'calc_type' => 'formula', 'is_taxable' => true,  'is_insurable' => true],
@@ -203,6 +206,7 @@ class PayrollServiceTest extends TestCase
             'present_days' => 26,
             'absent_days' => 0,
             'overtime' => 0,
+            'auto_overtime' => 0,
             'undertime' => 0,
             'mission' => 0,
             'paid_leave' => 0,
@@ -332,6 +336,24 @@ class PayrollServiceTest extends TestCase
         $this->assertArrayHasKey('overtime', $result['earnings']);
         $this->assertEquals($expected, $result['earnings']['overtime']['amount']);
         $this->assertEquals($hours, $result['earnings']['overtime']['unit_count']);
+    }
+
+    public function test_calculate_computes_auto_overtime_correctly(): void
+    {
+        $this->seedTaxSlabs();
+        $decree = $this->makeDecree();
+        $autoOvertimeMinutes = 120; // 2 hours
+        $attendance = $this->makeAttendance(['auto_overtime' => $autoOvertimeMinutes]);
+
+        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+
+        $hours = $autoOvertimeMinutes / 60;
+        $coeff = 1.2;
+        $expected = round($hours * self::HOURLY_WAGE * $coeff, 2);
+
+        $this->assertArrayHasKey('auto_overtime', $result['earnings']);
+        $this->assertEquals($expected, $result['earnings']['auto_overtime']['amount']);
+        $this->assertEquals($hours, $result['earnings']['auto_overtime']['unit_count']);
     }
 
     // -----------------------------------------------------------------------
@@ -924,6 +946,22 @@ class PayrollServiceTest extends TestCase
         $overtimeElementId = $this->elements['OVERTIME']->id;
 
         $this->assertEquals($overtimeElementId, $result['earnings']['overtime']['element_id']);
+    }
+
+    public function test_auto_overtime_earning_is_linked_to_auto_overtime_element(): void
+    {
+        $this->seedTaxSlabs();
+        $decree = $this->makeDecree();
+
+        $this->addBenefit($decree, 'AUTO_OVERTIME', 0);
+
+        $attendance = $this->makeAttendance(['auto_overtime' => 60]);
+
+        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+
+        $autoOvertimeElementId = $this->elements['AUTO_OVERTIME']->id;
+
+        $this->assertEquals($autoOvertimeElementId, $result['earnings']['auto_overtime']['element_id']);
     }
 
     // -----------------------------------------------------------------------

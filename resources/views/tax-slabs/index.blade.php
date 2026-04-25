@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Tax Slabs') }}
+            {{ __('Yearly Tax Slabs') }}
         </h2>
     </x-slot>
 
@@ -12,7 +12,7 @@
             <div class="card-actions">
                 @can('salary.tax-slabs.create')
                     <a href="{{ route('salary.tax-slabs.create') }}" class="btn btn-primary">
-                        {{ __('Create Tax Slab') }}
+                        {{ __('Create Yearly Tax Slab') }}
                     </a>
                 @endcan
             </div>

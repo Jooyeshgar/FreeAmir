@@ -25,6 +25,8 @@ class PayrollService
 
     private const CODE_OVERTIME = 'OVERTIME';
 
+    private const CODE_AUTO_OVERTIME = 'AUTO_OVERTIME';
+
     private const CODE_UNDERTIME = 'UNDERTIME';
 
     private const CODE_ABSENCE_DEDUCTION = 'ABSENCE_DEDUCTION';
@@ -155,7 +157,7 @@ class PayrollService
             }
 
             if (in_array($element->system_code, [
-                self::CODE_OVERTIME, self::CODE_FRIDAY_PAY,
+                self::CODE_OVERTIME, self::CODE_AUTO_OVERTIME, self::CODE_FRIDAY_PAY,
                 self::CODE_HOLIDAY_PAY, self::CODE_MISSION_PAY,
             ], true)) {
                 continue;
@@ -185,6 +187,7 @@ class PayrollService
     private function computeDynamicEarnings(MonthlyAttendance $attendance): void
     {
         $this->addWageBasedEarning((int) ($attendance->overtime ?? 0), 'overtime', self::CODE_OVERTIME);
+        $this->addWageBasedEarning((int) ($attendance->auto_overtime ?? 0), 'auto_overtime', self::CODE_AUTO_OVERTIME);
         $this->addWageBasedEarning((int) ($attendance->friday ?? 0), 'friday', self::CODE_FRIDAY_PAY);
         $this->addWageBasedEarning((int) ($attendance->holiday ?? 0), 'holiday', self::CODE_HOLIDAY_PAY);
         $this->addWageBasedEarning((int) ($attendance->mission ?? 0), 'mission', self::CODE_MISSION_PAY);
@@ -328,6 +331,7 @@ class PayrollService
 
         $typeLabel = match ($type) {
             'overtime' => __('Overtime'),
+            'auto_overtime' => __('Auto Overtime'),
             'friday' => __('Friday Premium'),
             'holiday' => __('Holiday Premium'),
             'mission' => __('Mission Pay'),
@@ -391,6 +395,7 @@ class PayrollService
             'holiday' => (float) ($this->workShift?->holiday_coefficient ?? 2.0),
             'mission' => (float) ($this->workShift?->mission_coefficient ?? 1.25),
             'overtime' => (float) ($this->workShift?->overtime_coefficient ?? 1.4),
+            'auto_overtime' => (float) ($this->workShift?->auto_overtime_coefficient ?? 1.4),
             default => 1.0,
         };
     }

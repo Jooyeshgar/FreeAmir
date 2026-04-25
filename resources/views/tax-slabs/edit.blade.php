@@ -10,7 +10,7 @@
             @csrf
             @method('PUT')
             <div class="card-body">
-                <h2 class="card-title">{{ __('Edit Tax Slab') }}</h2>
+                <h2 class="card-title">{{ __('Edit Yearly Tax Slab') }}</h2>
                 <x-show-message-bags />
 
                 @include('tax-slabs.form')

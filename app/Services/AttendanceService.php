@@ -62,10 +62,12 @@ class AttendanceService
      */
     public function recalculateLog(AttendanceLog $log): AttendanceLog
     {
+        $logDate = $log->log_date instanceof Carbon
+            ? $log->log_date
+            : Carbon::parse($log->log_date);
+
         $employee = Employee::with('workShift')->find($log->employee_id);
         $workShift = $employee?->workShift;
-
-        $logDate = $log->log_date;
         $isFriday = $logDate->dayOfWeek === Carbon::FRIDAY;
         $isThursday = $logDate->dayOfWeek === Carbon::THURSDAY;
         $isHoliday = PublicHoliday::where('date', $logDate->toDateString())->exists();
@@ -81,7 +83,7 @@ class AttendanceService
      * Compute the derived columns for a log row WITHOUT persisting.
      * Useful for previewing or testing.
      *
-     * @return array{worked: int, delay: int, early_leave: int, overtime: int, mission: int}
+     * @return array{worked: int, delay: int, early_leave: int, overtime: int, auto_overtime: int, mission: int}
      */
     public function computeLogColumns(AttendanceLog $log, ?WorkShift $workShift, bool $isFriday = false, bool $isHoliday = false, bool $isThursday = false): array
     {
@@ -97,6 +99,8 @@ class AttendanceService
                 'delay' => 0,
                 'early_leave' => 0,
                 'overtime' => 0,
+                'auto_overtime' => 0,
+                'mission' => (int) ($log->mission ?? 0),
                 'is_friday' => $isFriday,
                 'is_holiday' => true,  // Thursday-holiday counts as a holiday day
             ];
@@ -117,6 +121,10 @@ class AttendanceService
             return [
                 'worked' => $workedMin,
                 'delay' => 0,
+                'early_leave' => 0,
+                'overtime' => 0,
+                'auto_overtime' => 0,
+                'mission' => (int) ($log->mission ?? 0),
                 'is_friday' => $isFriday,
                 'is_holiday' => $isHoliday,
             ];
@@ -127,6 +135,9 @@ class AttendanceService
             return [
                 'worked' => $shiftMinutes,
                 'delay' => 0,
+                'early_leave' => 0,
+                'overtime' => 0,
+                'auto_overtime' => 0,
                 'is_friday' => $isFriday,
                 'is_holiday' => $isHoliday,
             ];
@@ -139,6 +150,7 @@ class AttendanceService
                 'delay' => 0,
                 'early_leave' => 0,
                 'overtime' => 0,
+                'auto_overtime' => 0,
                 'mission' => $log->mission,
             ];
         }
@@ -151,6 +163,7 @@ class AttendanceService
                 'delay' => 0,
                 'early_leave' => 0,
                 'overtime' => 0,
+                'auto_overtime' => 0,
                 'remote_work' => (int) $log->remote_work,
             ];
         }
@@ -168,6 +181,7 @@ class AttendanceService
                     'delay' => 0,
                     'early_leave' => 0,
                     'overtime' => 0,
+                    'auto_overtime' => 0,
                     'remote_work' => $remoteMin,
                     'mission' => (int) ($log->mission ?? 0),
                 ];
@@ -184,7 +198,8 @@ class AttendanceService
                 'worked' => $totalWorked,
                 'delay' => $netDelay,
                 'early_leave' => $netEarlyLeave,
-                'overtime' => 0,   // remote work does not earn overtime
+                'overtime' => (int) ($log->approved_overtime ?? $log->overtime ?? 0),
+                'auto_overtime' => 0,
                 'remote_work' => $remoteMin,
                 'mission' => (int) ($log->mission ?? 0),
             ];
@@ -207,6 +222,7 @@ class AttendanceService
                 'delay' => 0,
                 'early_leave' => 0,
                 'overtime' => 0,
+                'auto_overtime' => 0,
             ];
         }
 
@@ -230,6 +246,7 @@ class AttendanceService
                 'delay' => $netDelay,
                 'early_leave' => $netEarlyLeave,
                 'overtime' => 0,   // leave days don't earn overtime
+                'auto_overtime' => 0,
                 'mission' => (int) ($log->mission ?? 0),
             ];
         }
@@ -251,6 +268,7 @@ class AttendanceService
                 'delay' => $netDelay,
                 'early_leave' => $netEarlyLeave,
                 'overtime' => 0,
+                'auto_overtime' => 0,
                 'mission' => $missionMin,
             ];
         }
@@ -259,18 +277,20 @@ class AttendanceService
         $rawWorked = $this->rawWorkedMinutes($log, $workShift);
         $bounds = $this->shiftDelayEarlyLeave($log, $workShift);
 
-        // Overtime: only count up to the manager-approved amount
+        // Split raw overtime between approved overtime requests and the
+        // remaining auto overtime bucket capped by the assigned work shift.
         $computedOvertime = $bounds['overtime'];
-        $approvedOvertime = (int) ($log->overtime ?? 0);
-        $earnedOvertime = ($computedOvertime > 0 && $approvedOvertime > 0)
-            ? min($approvedOvertime, $computedOvertime)
-            : 0;
+        $approvedOvertime = min(max(0, (int) ($log->approved_overtime ?? 0)), $computedOvertime);
+        $remainingOvertime = max(0, $computedOvertime - $approvedOvertime);
+        $autoOvertimeCap = max(0, (int) ($workShift?->max_auto_overtime ?? 0));
+        $earnedAutoOvertime = min($remainingOvertime, $autoOvertimeCap);
 
         return [
             'worked' => $rawWorked,
             'delay' => $bounds['delay'],
             'early_leave' => $bounds['early_leave'],
-            'overtime' => $earnedOvertime,
+            'overtime' => $approvedOvertime,
+            'auto_overtime' => $earnedAutoOvertime,
             'mission' => 0,
         ];
     }
@@ -367,6 +387,7 @@ class AttendanceService
         $presentDays = 0;
         $absentDays = 0;
         $overtimeMin = 0;
+        $autoOvertimeMin = 0;
         $undertimeMin = 0;
         $missionMin = 0;
         $paidLeaveMin = 0;
@@ -386,14 +407,29 @@ class AttendanceService
 
             $workDays++;
 
+            if (! isset($logsByDate[$dateStr])) {
+                if (! $isOffDay) {
+                    $absentDays++;
+                }
+
+                continue;
+            }
+
+            $log = $logsByDate[$dateStr];
+
+            $presentDays++;
+            $missionMin += (int) $log->mission;
+            $remoteWorkMin += (int) $log->remote_work;
+
             if ($isOffDay) {
 
                 if (isset($logsByDate[$dateStr])) {
                     $log = $logsByDate[$dateStr];
+                    $totalWork = (int) $log->worked + (int) $log->remote_work + (int) $log->mission;
                     if ($isFriday) {
-                        $fridayMin += (int) $log->worked;
+                        $fridayMin += $totalWork;
                     } else {
-                        $holidayMin += (int) $log->worked;
+                        $holidayMin += $totalWork;
                     }
                 }
 
@@ -401,22 +437,10 @@ class AttendanceService
             }
 
             // ── Regular work day ──────────────────────────────────────────
-
-            if (! isset($logsByDate[$dateStr])) {
-                $absentDays++;
-
-                continue;
-            }
-
-            // ── Sum values directly from the pre-calculated log row ───────
-            $log = $logsByDate[$dateStr];
-
-            $presentDays++;
             $overtimeMin += (int) $log->overtime;
-            $missionMin += (int) $log->mission;
+            $autoOvertimeMin += (int) $log->auto_overtime;
             $paidLeaveMin += (int) $log->paid_leave;
             $unpaidLeaveMin += (int) $log->unpaid_leave;
-            $remoteWorkMin += (int) $log->remote_work;
             $undertimeMin += (int) $log->early_leave + $log->delay;
         }
 
@@ -425,6 +449,7 @@ class AttendanceService
             'present_days' => $presentDays,
             'absent_days' => $absentDays,
             'overtime' => $overtimeMin,
+            'auto_overtime' => $autoOvertimeMin,
             'undertime' => $undertimeMin,
             'mission' => $missionMin,
             'paid_leave' => $paidLeaveMin,
@@ -456,7 +481,7 @@ class AttendanceService
             PersonnelRequestType::LEAVE_WITHOUT_PAY => 'unpaid_leave',
             PersonnelRequestType::MISSION_HOURLY,
             PersonnelRequestType::MISSION_DAILY => 'mission',
-            PersonnelRequestType::OVERTIME_ORDER => 'overtime',
+            PersonnelRequestType::OVERTIME_ORDER => 'approved_overtime',
             PersonnelRequestType::REMOTE_WORK => 'remote_work',
             default => null,
         };

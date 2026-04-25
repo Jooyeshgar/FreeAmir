@@ -9,7 +9,7 @@
         <form action="{{ route('salary.tax-slabs.store') }}" method="POST">
             @csrf
             <div class="card-body">
-                <h2 class="card-title">{{ __('Add Tax Slab') }}</h2>
+                <h2 class="card-title">{{ __('Add Yearly Tax Slab') }}</h2>
                 <x-show-message-bags />
 
                 @include('tax-slabs.form')
