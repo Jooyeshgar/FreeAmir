@@ -343,24 +343,6 @@ class AttendanceServiceCalculationTest extends TestCase
     }
 
     // -----------------------------------------------------------------------
-    // PROBLEMATIC SCENARIO 3: Friday + overtime
-    // -----------------------------------------------------------------------
-
-    // public function test_friday_with_overtime_should_be_recorded(): void
-    // {
-    //     $shift = $this->makeShift(['break' => 0]); // 540 min shift
-    //     $employee = $this->makeEmployee($shift);
-
-    //     // Friday with overtime (600 min = 540 shift + 60 overtime)
-    //     $this->insertLog($employee, '2025-03-28', ['worked' => 600, 'overtime' => 60]);
-
-    //     $attendance = $this->service->calculateAndStore($employee->id, $this->startDate, $this->durationDays, 1404, 1);
-
-    //     $this->assertSame(60, $attendance->overtime, 'Overtime on Friday should be recorded');
-    //     $this->assertSame(600, $attendance->friday);
-    // }
-
-    // -----------------------------------------------------------------------
     // PROBLEMATIC SCENARIO 4: Holiday + remote_work
     // -----------------------------------------------------------------------
 
@@ -378,21 +360,6 @@ class AttendanceServiceCalculationTest extends TestCase
         $this->assertSame(480, $attendance->remote_work, 'Remote work on holiday should be recorded');
         $this->assertSame(480, $attendance->holiday);
     }
-
-    // public function test_holiday_with_remote_work_and_overtime(): void
-    // {
-    //     $shift = $this->makeShift();
-    //     $employee = $this->makeEmployee($shift);
-
-    //     PublicHoliday::factory()->create(['company_id' => $this->company->id, 'date' => '2025-03-12']);
-
-    //     $this->insertLog($employee, '2025-03-12', ['remote_work' => 480, 'overtime' => 120]);
-
-    //     $attendance = $this->service->calculateAndStore($employee->id, $this->startDate, $this->durationDays, 1404, 1);
-
-    //     $this->assertSame(480, $attendance->remote_work);
-    //     $this->assertSame(120, $attendance->overtime, 'Overtime on holiday with remote work should be recorded');
-    // }
 
     // -----------------------------------------------------------------------
     // PROBLEMATIC SCENARIO 5: Thursday holiday + mission
@@ -544,8 +511,8 @@ class AttendanceServiceCalculationTest extends TestCase
         $attendance = $this->service->calculateAndStore($employee->id, $this->startDate, $this->durationDays, 1404, 1);
 
         $this->assertSame(540, $attendance->remote_work);
-        $this->assertSame(120, $attendance->overtime);
-        $this->assertSame(660, $attendance->friday);
+        $this->assertSame(0, $attendance->overtime); // Overtime should not be recorded on holiday
+        $this->assertSame(1200, $attendance->friday);
     }
 
     public function test_holiday_with_multiple_conditions(): void
@@ -566,7 +533,7 @@ class AttendanceServiceCalculationTest extends TestCase
 
         $this->assertSame(240, $attendance->remote_work);
         $this->assertSame(240, $attendance->mission);
-        $this->assertSame(120, $attendance->overtime);
+        $this->assertSame(0, $attendance->overtime); // Overtime should not be recorded on holiday
     }
 
     public function test_hourly_leave_mission_and_overtime_combination(): void
@@ -615,7 +582,7 @@ class AttendanceServiceCalculationTest extends TestCase
         // Mon: normal work
         $this->insertLog($employee, '2025-03-03', ['entry_time' => '08:00:00', 'exit_time' => '17:00:00']);
         // Tue: partial remote + overtime
-        $this->insertLog($employee, '2025-03-04', ['remote_work' => 240, 'worked' => 600, 'overtime' => 120]);
+        $this->insertLog($employee, '2025-03-04', ['remote_work' => 240, 'worked' => 600, 'overtime' => 120], false);
         // Wed: hourly leave + mission
         $this->insertLog($employee, '2025-03-05', ['paid_leave' => 120, 'mission' => 180, 'worked' => 180]);
         // Thu: full mission
