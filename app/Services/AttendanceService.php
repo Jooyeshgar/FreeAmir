@@ -173,16 +173,18 @@ class AttendanceService
         $remainingCoverage = max(0, $remainingCoverage - $bounds['delay']);
 
         $netEarlyLeave = max(0, $bounds['early_leave'] - $remainingCoverage);
+        $remainingCoverage = max(0, $remainingCoverage - $bounds['early_leave']);
 
         $computedOvertime = max(0, (int) ($bounds['overtime'] ?? 0));
         $approvedOvertime = min($approvedOvertimeInput, $computedOvertime);
 
         $remainingOvertime = max(0, $computedOvertime - $approvedOvertime);
 
-        // extra remote work beyond shift also contributes to auto overtime
         $remoteExtra = max(0, $remoteWork - $shiftMinutes);
 
-        $autoOvertime = min($remainingOvertime + $remainingCoverage + $remoteExtra, $autoOvertimeCap);
+        $unusedCoverageForOvertime = $computedOvertime > 0 ? $remainingCoverage : 0;
+
+        $autoOvertime = min($remainingOvertime + $unusedCoverageForOvertime + $remoteExtra, $autoOvertimeCap);
 
         return [
             'worked' => $rawWorked + $remoteWork,
