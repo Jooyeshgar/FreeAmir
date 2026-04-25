@@ -368,7 +368,7 @@ class MonthlyAttendanceTest extends TestCase
             'monthly_attendance_id' => $attendance->id,
             'log_date' => '2024-10-22',
             'entry_time' => '08:00:00',
-            'exit_time' => '17:00:00',
+            'exit_time' => '17:07:00',
             'worked' => 1,
             'delay' => 12,
             'early_leave' => 9,
@@ -397,7 +397,7 @@ class MonthlyAttendanceTest extends TestCase
 
         $this->assertDatabaseHas('attendance_logs', [
             'id' => $firstLog->id,
-            'worked' => 540,
+            'worked' => 547,
             'delay' => 0,
             'early_leave' => 0,
             'overtime' => 7,
@@ -409,7 +409,7 @@ class MonthlyAttendanceTest extends TestCase
             'worked' => 525,
             'delay' => 15,
             'early_leave' => 0,
-            'overtime' => 4,
+            'overtime' => 0,
             'auto_overtime' => 0,
         ]);
     }
