@@ -400,7 +400,7 @@ class MonthlyAttendanceTest extends TestCase
             'worked' => 540,
             'delay' => 0,
             'early_leave' => 0,
-            'overtime' => 0,
+            'overtime' => 7,
             'auto_overtime' => 0,
         ]);
 
@@ -409,7 +409,7 @@ class MonthlyAttendanceTest extends TestCase
             'worked' => 525,
             'delay' => 15,
             'early_leave' => 0,
-            'overtime' => 0,
+            'overtime' => 4,
             'auto_overtime' => 0,
         ]);
     }
