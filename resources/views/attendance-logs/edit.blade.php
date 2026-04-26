@@ -70,6 +70,10 @@
                         <x-input name="unpaid_leave" id="unpaid_leave" type="number" min="0" title="{{ __('Unpaid Leave (minutes)') }}" :value="old('unpaid_leave', $attendanceLog->unpaid_leave ?? '')" />
                     </div>
 
+                    <div>
+                        <x-input name="auto_overtime" id="auto_overtime" type="number" min="0" title="{{ __('Auto Overtime (minutes)') }}" :value="old('auto_overtime', $attendanceLog->auto_overtime ?? '')" />
+                    </div>
+
                     <div class="md:col-span-2">
                         <x-textarea name="description" id="description" title="{{ __('Description') }}" :value="old('description', $attendanceLog->description ?? '')" placeholder="{{ __('Optional notes…') }}" />
                     </div>
