@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -61,6 +62,9 @@ class EmployeeTest extends TestCase
             'code' => 'EMP-0001',
             'first_name' => 'Ali',
             'last_name' => 'Hosseini',
+            'email' => 'ali.hosseini@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
             'nationality' => EmployeeNationality::IRANIAN->value,
             'work_site_id' => $this->workSite->id,
             'is_active' => '1',
@@ -158,13 +162,31 @@ class EmployeeTest extends TestCase
             'first_name' => 'Ali',
             'last_name' => 'Hosseini',
         ]);
+
+        $employee = Employee::withoutGlobalScopes()->where('code', 'EMP-0001')->first();
+
+        $this->assertNotNull($employee?->user_id);
+        $this->assertDatabaseHas('users', [
+            'id' => $employee->user_id,
+            'name' => 'Ali Hosseini',
+            'email' => 'ali.hosseini@example.com',
+        ]);
     }
 
     public function test_store_validates_required_fields(): void
     {
         $response = $this->post(route('hr.employees.store'), []);
 
-        $response->assertSessionHasErrors(['code', 'first_name', 'last_name', 'nationality', 'work_site_id']);
+        $response->assertSessionHasErrors(['code', 'first_name', 'last_name', 'email', 'password', 'nationality', 'work_site_id']);
+    }
+
+    public function test_store_rejects_duplicate_user_email(): void
+    {
+        User::factory()->create(['email' => 'ali.hosseini@example.com']);
+
+        $response = $this->post(route('hr.employees.store'), $this->validPayload());
+
+        $response->assertSessionHasErrors(['email']);
     }
 
     public function test_store_rejects_duplicate_code(): void
@@ -237,12 +259,28 @@ class EmployeeTest extends TestCase
 
     public function test_update_saves_changes_and_redirects(): void
     {
-        $employee = $this->makeEmployee(['first_name' => 'OldName', 'code' => 'EMP-OLD']);
+        $linkedUser = User::factory()->create([
+            'name' => 'OldName OldLast',
+            'email' => 'old.employee@example.com',
+            'password' => 'oldpassword123',
+        ]);
+        $linkedUser->companies()->attach($this->companyId);
+
+        $employee = $this->makeEmployee([
+            'first_name' => 'OldName',
+            'last_name' => 'OldLast',
+            'code' => 'EMP-OLD',
+            'user_id' => $linkedUser->id,
+            'work_shift_id' => $this->workShift->id,
+        ]);
 
         $payload = $this->validPayload([
             'code' => 'EMP-OLD',
             'first_name' => 'NewName',
             'last_name' => 'Updated',
+            'email' => 'new.employee@example.com',
+            'password' => 'newpassword123',
+            'password_confirmation' => 'newpassword123',
         ]);
 
         $response = $this->put(route('hr.employees.update', $employee), $payload);
@@ -255,6 +293,11 @@ class EmployeeTest extends TestCase
             'first_name' => 'NewName',
             'last_name' => 'Updated',
         ]);
+
+        $linkedUser->refresh();
+        $this->assertSame('NewName Updated', $linkedUser->name);
+        $this->assertSame('new.employee@example.com', $linkedUser->email);
+        $this->assertTrue(Hash::check('newpassword123', $linkedUser->password));
     }
 
     public function test_update_validates_required_fields(): void
@@ -263,7 +306,35 @@ class EmployeeTest extends TestCase
 
         $response = $this->put(route('hr.employees.update', $employee), []);
 
-        $response->assertSessionHasErrors(['code', 'first_name', 'last_name', 'nationality', 'work_site_id']);
+        $response->assertSessionHasErrors(['code', 'first_name', 'last_name', 'email', 'password', 'nationality', 'work_site_id']);
+    }
+
+    public function test_update_creates_user_when_employee_has_none(): void
+    {
+        $employee = $this->makeEmployee([
+            'code' => 'EMP-NO-USER',
+            'user_id' => null,
+            'work_shift_id' => $this->workShift->id,
+        ]);
+
+        $response = $this->put(route('hr.employees.update', $employee), $this->validPayload([
+            'code' => 'EMP-NO-USER',
+            'first_name' => 'Sara',
+            'last_name' => 'Karimi',
+            'email' => 'sara.karimi@example.com',
+            'password' => 'password456',
+            'password_confirmation' => 'password456',
+        ]));
+
+        $response->assertRedirect(route('hr.employees.index'));
+
+        $employee->refresh();
+        $this->assertNotNull($employee->user_id);
+        $this->assertDatabaseHas('users', [
+            'id' => $employee->user_id,
+            'name' => 'Sara Karimi',
+            'email' => 'sara.karimi@example.com',
+        ]);
     }
 
     public function test_update_allows_same_code_for_self(): void

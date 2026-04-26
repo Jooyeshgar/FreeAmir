@@ -69,6 +69,43 @@ class EmployeePortalController extends Controller
         return sprintf('%02d:%02d', $hour, $minute);
     }
 
+    public function changeUserInformation(): View
+    {
+        $employee = $this->currentEmployee();
+
+        return view('employee-portal.change-user-information', compact('employee'));
+    }
+
+    public function updateUserInformation(Request $request): RedirectResponse
+    {
+        $employee = $this->currentEmployee();
+
+        $validated = $request->validate([
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,'.$employee->user->id],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $employee->update([
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
+        ]);
+
+        $userData = [
+            'name' => $validated['first_name'].' '.$validated['last_name'],
+            'email' => $validated['email'],
+        ];
+
+        if (! empty($validated['password'])) {
+            $userData['password'] = bcrypt($validated['password']);
+        }
+
+        $employee->user->update($userData);
+
+        return redirect()->route('employee-portal.dashboard')->with('success', __('Your information has been updated successfully.'));
+    }
+
     /**
      * Employee self-service dashboard.
      */
