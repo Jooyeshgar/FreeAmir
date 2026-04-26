@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Employee;
 use App\Models\MonthlyAttendance;
 use App\Models\Payroll;
 use App\Models\PayrollItem;
@@ -24,6 +25,34 @@ class PayrollController extends Controller
 
         return view('payrolls.show', compact('payroll'))
             ->with('isEmployeeView', false);
+    }
+
+    /**
+     * Display a list of payrolls.
+     */
+    public function index(Request $request): View
+    {
+        $query = Payroll::query();
+
+        if ($request->filled('employee_id')) {
+            $query->where('employee_id', $request->employee_id);
+        }
+
+        if ($request->filled('year')) {
+            $query->whereYear('issue_date', $request->year);
+        }
+
+        if ($request->filled('month')) {
+            $query->whereMonth('issue_date', $request->month);
+        }
+
+        $payrolls = $query->with(['employee', 'decree'])
+            ->orderBy('issue_date', 'desc')
+            ->paginate(20);
+
+        $employees = Employee::orderBy('code')->get();
+
+        return view('payrolls.index', compact('payrolls', 'employees'));
     }
 
     /**
