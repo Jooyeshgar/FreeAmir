@@ -115,6 +115,7 @@ class AttendanceLogController extends Controller
             'delay' => ['nullable', 'integer', 'min:0'],
             'early_leave' => ['nullable', 'integer', 'min:0'],
             'overtime' => ['nullable', 'integer', 'min:0'],
+            'auto_overtime' => ['nullable', 'integer', 'min:0'],
             'mission' => ['nullable', 'integer', 'min:0'],
             'paid_leave' => ['nullable', 'integer', 'min:0'],
             'unpaid_leave' => ['nullable', 'integer', 'min:0'],
