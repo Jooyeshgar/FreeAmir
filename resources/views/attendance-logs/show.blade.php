@@ -72,9 +72,15 @@
                 @endif
 
                 @if ($attendanceLog->monthlyAttendance)
-                    <a href="{{ route('attendance.monthly-attendances.show', $attendanceLog->monthly_attendance_id) }}"
-                        class="badge badge-lg badge-info gap-2 hover:badge-accent">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    @php
+                        $routeName = auth()->user()->can('attendance.monthly-attendances.show')
+                            ? 'attendance.monthly-attendances.show'
+                            : 'employee-portal.monthly-attendances.show';
+                    @endphp
+
+                    <a href="{{ route($routeName, $attendanceLog->monthly_attendance_id) }}" class="badge badge-lg badge-info gap-2 hover:badge-accent">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
@@ -474,7 +480,7 @@
 
             {{-- ══ Actions ═══════════════════════════════════════════════════════ --}}
             <div class="card-actions justify-between mt-4">
-                <a href="{{ route('attendance.attendance-logs.index', request()->query()) }}" class="btn btn-ghost gap-2">
+                <a href="{{ url()->previous() }}" class="btn btn-ghost gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
