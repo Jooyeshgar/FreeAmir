@@ -118,11 +118,11 @@
     </div>
 
     <div>
-        <x-input name="password" id="password" type="password" title="{{ __('Password') }}" />
+        <x-input name="password" id="password" type="password" title="{{ __('Password') }}" :required="! isset($employee) || ! (isset($employee) && $employee->user)" />
     </div>
 
     <div>
-        <x-input name="password_confirmation" id="password_confirmation" type="password" title="{{ __('Confirm Password') }}" />
+        <x-input name="password_confirmation" id="password_confirmation" type="password" title="{{ __('Confirm Password') }}" :required="! isset($employee) || ! (isset($employee) && $employee->user)" />
     </div>
 
 </div>
