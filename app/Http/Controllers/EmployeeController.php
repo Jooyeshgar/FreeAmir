@@ -154,7 +154,7 @@ class EmployeeController extends Controller
         ];
 
         if (! empty($validated['password'])) {
-            $userData['password'] = $validated['password'];
+            $userData['password'] = bcrypt($validated['password']);
         }
 
         $user = $employee?->user;
