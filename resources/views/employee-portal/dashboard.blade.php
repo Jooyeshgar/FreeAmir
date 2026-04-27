@@ -9,7 +9,7 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
 
-        <a href="{{ route('employee-portal.change-user-information') }}" class="stat bg-base-100 shadow rounded-box hover:bg-base-200 transition">
+        <a href="{{ route('employee-portal.employee.show') }}" class="stat bg-base-100 shadow rounded-box hover:bg-base-200 transition">
             <div class="stat-title">{{ __('Full Name') }}</div>
             <div class="stat-figure text-primary">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">

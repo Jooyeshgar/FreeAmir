@@ -10,8 +10,9 @@ Route::get('/logout', [Controllers\Auth\LoginController::class, 'logout'])->name
 Route::get('change-company/{company}', [Controllers\CompanyController::class, 'setActiveCompany'])->name('change-company')->middleware('auth');
 
 Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee-portal', 'as' => 'employee-portal.'], function () {
-    Route::get('/change-user-information', [Controllers\EmployeePortalController::class, 'changeUserInformation'])->name('change-user-information');
-    Route::put('/change-user-information', [Controllers\EmployeePortalController::class, 'updateUserInformation'])->name('update-user-information');
+    Route::get('/employee', [Controllers\EmployeePortalController::class, 'employeeShow'])->name('employee.show');
+    Route::get('/change-employee-information', [Controllers\EmployeePortalController::class, 'changeEmployeeInformation'])->name('change-employee-information');
+    Route::put('/change-employee-information', [Controllers\EmployeePortalController::class, 'updateEmployeeInformation'])->name('update-employee-information');
     Route::get('/', [Controllers\EmployeePortalController::class, 'dashboard'])->name('dashboard');
     Route::get('/attendance-logs', [Controllers\EmployeePortalController::class, 'attendanceLogs'])->name('attendance-logs');
     Route::get('/monthly-attendances', [Controllers\EmployeePortalController::class, 'monthlyAttendances'])->name('monthly-attendances');

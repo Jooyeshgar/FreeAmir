@@ -27,19 +27,6 @@ class UpdateEmployeeRequest extends FormRequest
         /** @var Employee $employee */
         $employee = $this->route('employee');
 
-        $emailUniqueRule = Rule::unique('users', 'email');
-        if ($employee->user_id) {
-            $emailUniqueRule = $emailUniqueRule->ignore($employee->user_id);
-        }
-
-        $passwordRules = ['nullable', 'string', 'min:8', 'confirmed'];
-        $passwordConfirmationRules = ['nullable', 'string', 'min:8'];
-
-        if (! $employee->user) {
-            array_unshift($passwordRules, 'required');
-            array_unshift($passwordConfirmationRules, 'required');
-        }
-
         return [
             // Identity
             'code' => ['required', 'string', 'max:20', Rule::unique('employees', 'code')->ignore($employee->id)->where('company_id', getActiveCompany())],
@@ -59,11 +46,6 @@ class UpdateEmployeeRequest extends FormRequest
             // Contact
             'phone' => ['nullable', 'string', 'max:20'],
             'address' => ['nullable', 'string'],
-
-            // User account
-            'email' => ['required', 'string', 'email', 'max:255', $emailUniqueRule],
-            'password' => $passwordRules,
-            'password_confirmation' => $passwordConfirmationRules,
 
             // Insurance
             'insurance_number' => ['nullable', 'string', 'max:20'],

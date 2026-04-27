@@ -69,7 +69,10 @@
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-2">
                 <div class="stat bg-success/20 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Total Earnings') }}</div>
-                    <div class="stat-value text-base text-success">{{ formatNumber($payroll->total_earnings) }}</div>
+                    <div x-data="{ show: false }" @click="show = !show">
+                        <span x-show="!show">****</span>
+                        <div x-show="show" class="stat-value text-base text-success">{{ formatNumber($payroll->total_earnings) }}</div>
+                    </div>
                 </div>
                 <div class="stat bg-error/20 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Total Deductions') }}</div>
@@ -77,7 +80,10 @@
                 </div>
                 <div class="stat bg-primary/20 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Net Payment') }}</div>
-                    <div class="stat-value text-base text-primary">{{ formatNumber($payroll->net_payment) }}</div>
+                    <div x-data="{ show: false }" @click="show = !show">
+                        <span x-show="!show">****</span>
+                        <div x-show="show" class="stat-value text-base text-primary">{{ formatNumber($payroll->net_payment) }}</div>
+                    </div>
                 </div>
                 <div class="stat bg-base-200 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Issue Date') }}</div>
@@ -151,7 +157,10 @@
                     <tfoot>
                         <tr class="font-bold border-t-2">
                             <td colspan="4" class="text-end">{{ __('Net Payment') }}</td>
-                            <td class="text-end text-primary">{{ formatNumber($payroll->net_payment) }}</td>
+                            <td class="text-end text-primary" x-data="{ show: false }" @click="show = !show">
+                                <span x-show="!show">****</span>
+                                <div x-show="show" class="stat-value text-xs text-primary">{{ formatNumber($payroll->net_payment) }}</div>
+                            </td>
                         </tr>
                     </tfoot>
                 </table>

@@ -69,16 +69,27 @@ class EmployeePortalController extends Controller
         return sprintf('%02d:%02d', $hour, $minute);
     }
 
-    public function changeUserInformation(): View
+    public function employeeShow(): View
     {
         $employee = $this->currentEmployee();
 
-        return view('employee-portal.change-user-information', compact('employee'));
+        return view('employee-portal.employee', compact('employee'));
     }
 
-    public function updateUserInformation(Request $request): RedirectResponse
+    public function changeEmployeeInformation(): View
     {
         $employee = $this->currentEmployee();
+
+        return view('employee-portal.change-employee-information', compact('employee'));
+    }
+
+    public function updateEmployeeInformation(Request $request): RedirectResponse
+    {
+        $employee = $this->currentEmployee();
+
+        if ($request->integer('employee_id') != auth()->user()->employee->id) {
+            abort(403, __('You do not have access to change this employee information.'));
+        }
 
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'max:255'],
@@ -103,7 +114,7 @@ class EmployeePortalController extends Controller
 
         $employee->user->update($userData);
 
-        return redirect()->route('employee-portal.dashboard')->with('success', __('Your information has been updated successfully.'));
+        return redirect()->route('employee-portal.employee.show')->with('success', __('Your information has been updated successfully.'));
     }
 
     /**
@@ -187,9 +198,7 @@ class EmployeePortalController extends Controller
         $employee = $this->currentEmployee();
 
         if ($monthlyAttendance->employee_id !== $employee->id) {
-            throw ValidationException::withMessages([
-                'employee_id' => __('Invalid employee_id.'),
-            ]);
+            abort(403, __('You do not have access to view this monthly attendance.'));
         }
 
         $monthlyAttendance->load(['logs' => fn ($q) => $q->orderBy('log_date')]);
@@ -262,9 +271,7 @@ class EmployeePortalController extends Controller
         $employee = $this->currentEmployee();
 
         if ($payroll->employee_id !== $employee->id) {
-            throw ValidationException::withMessages([
-                'employee_id' => __('Invalid employee_id.'),
-            ]);
+            abort(403, __('You do not have access to view this payroll.'));
         }
 
         $payroll->load(['employee', 'decree.benefits.element', 'monthlyAttendance', 'items.element']);
