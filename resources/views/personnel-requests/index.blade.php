@@ -92,7 +92,7 @@
                             <th>{{ __('Request Type') }}</th>
                             <th>{{ __('Start Date') }}</th>
                             <th>{{ __('End Date') }}</th>
-                            <th>{{ __('Duration (HH:MM)') }}</th>
+                            <th>{{ __('Duration') }}</th>
                             <th>{{ __('Status') }}</th>
                             <th>{{ __('Action') }}</th>
                         </tr>
@@ -105,8 +105,8 @@
                                     {{ $personnelRequest->employee?->last_name }}
                                 </td>
                                 <td>{{ $personnelRequest->request_type->label() }}</td>
-                                <td>{{ formatDateTime($personnelRequest->start_date) }}</td>
-                                <td>{{ formatDateTime($personnelRequest->end_date) }}</td>
+                                <td dir="ltr">{{ formatDateTime($personnelRequest->start_date) }}</td>
+                                <td dir="ltr">{{ formatDateTime($personnelRequest->end_date) }}</td>
                                 <td>
                                     @if ($personnelRequest->start_date && $personnelRequest->end_date)
                                         @php
@@ -114,7 +114,7 @@
                                             $hours = intdiv($totalMinutes, 60);
                                             $minutes = $totalMinutes % 60;
                                         @endphp
-                                        {{ str_pad($hours, 2, '0', STR_PAD_LEFT) }}:{{ str_pad($minutes, 2, '0', STR_PAD_LEFT) }}
+                                        {{ convertToFarsi(str_pad($hours, 2, '0', STR_PAD_LEFT)) }}:{{ convertToFarsi(str_pad($minutes, 2, '0', STR_PAD_LEFT)) }}
                                     @else
                                         —
                                     @endif
@@ -152,7 +152,7 @@
                                     @endcan
                                     @if($personnelRequest->status === 'pending')
                                         @can('hr.personnel-requests.edit')
-                                            <a href="{{ route('hr.personnel-requests.edit', $personnelRequest) }}" class="btn btn-sm btn-info">
+                                            <a href="{{ route('hr.personnel-requests.edit', ['tab' => $tab, 'personnel_request' => $personnelRequest->id]) }}" class="btn btn-sm btn-info">
                                                 {{ __('Edit') }}
                                             </a>
                                         @endcan
@@ -161,7 +161,7 @@
                                     @endif
                                     @if($personnelRequest->status !== 'approved')
                                         @can('hr.personnel-requests.delete')
-                                            <form action="{{ route('hr.personnel-requests.destroy', $personnelRequest) }}" method="POST" class="inline-block m-0"
+                                            <form action="{{ route('hr.personnel-requests.destroy', ['tab' => $tab, 'personnel_request' => $personnelRequest->id]) }}" method="POST" class="inline-block m-0"
                                                 onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                                 @csrf
                                                 @method('DELETE')

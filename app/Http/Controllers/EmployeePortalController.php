@@ -414,6 +414,12 @@ class EmployeePortalController extends Controller
             abort(403, __('Only pending requests can be edited.'));
         }
 
+        $employee = $this->currentEmployee();
+
+        if ($employee->id !== $personnelRequest->employee_id && ! $employee?->user->can('edit', $personnelRequest)) {
+            abort(403, __('You do not have permission to edit this personnel request.'));
+        }
+
         $tab = $request->get('tab', 'leaves');
 
         $cases = match ($tab) {
