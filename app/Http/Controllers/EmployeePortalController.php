@@ -124,19 +124,25 @@ class EmployeePortalController extends Controller
     {
         $employee = $this->currentEmployee();
 
-        $recentLogs = AttendanceLog::where('employee_id', $employee->id)
-            ->orderBy('log_date', 'desc')
+        $recentLogs = $employee->attendanceLogs()
+            ->orderByDesc('log_date')
             ->limit(5)
             ->get();
 
-        $requests = PersonnelRequest::where('employee_id', $employee->id)->count();
+        $requestsCount = $employee->personnelRequests()
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->toArray();
 
-        $lastMonthlyAttendance = MonthlyAttendance::where('employee_id', $employee->id)
-            ->orderBy('year', 'desc')
-            ->orderBy('month', 'desc')
+        $lastMonthlyAttendance = $employee->monthlyAttendances()
+            ->orderByDesc('year')
+            ->orderByDesc('month')
             ->first();
 
-        return view('employee-portal.dashboard', compact('employee', 'recentLogs', 'requests', 'lastMonthlyAttendance'));
+        $lastPayroll = $employee->payrolls()->orderByDesc('year', 'desc')->orderByDesc('month', 'desc')->first();
+
+        return view('employee-portal.dashboard', compact('employee', 'recentLogs', 'requestsCount', 'lastMonthlyAttendance', 'lastPayroll'));
     }
 
     /**

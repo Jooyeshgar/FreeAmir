@@ -20,47 +20,69 @@
             <div class="stat-desc">{{ $employee->national_code }}</div>
         </a>
 
-        <div class="stat bg-base-100 shadow rounded-box">
+        <a href="{{ route('employee-portal.personnel-requests.index') }}" class="stat bg-base-100 shadow rounded-box">
             <div class="stat-figure text-warning">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
             </div>
             <div class="stat-title">{{ __('Requests') }}</div>
-            <div class="stat-value text-warning">{{ convertToFarsi($requests) }}</div>
-            <div class="stat-desc">
-                <a href="{{ route('employee-portal.personnel-requests.index') }}" class="link link-warning">
-                    {{ __('View Requests') }}
-                </a>
+            <div class="stat-desc flex flex-col">
+                <span class="text-success">{{ convertToFarsi($requestsCount['approved'] ?? 0) }} {{ __('Request')  }} {{ __('Approved') }}</span>
+                <span class="text-error">{{ convertToFarsi($requestsCount['rejected'] ?? 0) }} {{ __('Request')  }} {{ __('rejected') }}</span>
+                <span class="text-warning">{{ convertToFarsi($requestsCount['pending'] ?? 0) }} {{ __('Request')  }} {{ __('In Pending') }}</span>
             </div>
-        </div>
+        </a>
 
         @isset($lastMonthlyAttendance)
             <a href="{{ route('employee-portal.monthly-attendances.show', $lastMonthlyAttendance) }}"
                 class="stat bg-base-100 shadow rounded-box hover:bg-base-200 transition">
-                <div class="stat-figure text-info">...</div>
+                <div class="stat-figure text-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 3v4m8-4v4M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2zm-2 5h18" />
+                    </svg>
+                </div>
                 <div class="stat-title">{{ __('Last Monthly Attendances') }}</div>
-                <div class="stat-desc">{{ \App\Models\MonthlyAttendance::MONTH_NAMES[$lastMonthlyAttendance->month] ?? $lastMonthlyAttendance->month }}</div>
+                <div class="stat-value text-sm">{{ \App\Models\MonthlyAttendance::MONTH_NAMES[$lastMonthlyAttendance->month] ?? $lastMonthlyAttendance->month }}</div>
             </a>
         @else
             <a href="#" class="stat bg-base-100 shadow rounded-box opacity-50 cursor-not-allowed">
-                <div class="stat-figure text-info">...</div>
+                <div class="stat-figure text-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 3v4m8-4v4M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2zm-2 5h18" />
+                    </svg>
+                </div>
                 <div class="stat-title">{{ __('Last Monthly Attendances') }}</div>
-                <div class="stat-desc">{{ __('No monthly attendance records found.') }}</div>
+                <div class="stat-value text-sm">{{ __('No monthly attendance records found.') }}</div>
             </a>
         @endisset
 
-        <a href="{{ route('employee-portal.payrolls') }}" class="stat bg-base-100 shadow rounded-box hover:bg-base-200 transition">
-            <div class="stat-figure text-success">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-            </div>
-            <div class="stat-title">{{ __('Payrolls') }}</div>
-            <div class="stat-value text-success">—</div>
-            <div class="stat-desc">{{ __('View payslips') }}</div>
-        </a>
+        @isset($lastPayroll)
+            <a href="{{ route('employee-portal.payrolls.show', $lastPayroll) }}"
+                class="stat bg-base-100 shadow rounded-box hover:bg-base-200 transition">
+                <div class="stat-figure text-info">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                </div>
+                <div class="stat-title">{{ __('Last payslips') }}</div>
+                <div class="stat-value text-sm">{{ __('Payslips') }} {{ \App\Models\MonthlyAttendance::MONTH_NAMES[$lastPayroll->month] ?? $lastPayroll->month }}</div>
+            </a>
+        @else
+            <a href="#" class="stat bg-base-100 shadow rounded-box opacity-50 cursor-not-allowed">
+                <div class="stat-figure text-info">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                </div>
+                <div class="stat-title">{{ __('Last payslips') }}</div>
+                <div class="stat-value text-sm">{{ __('No payslips records found.') }}</div>
+            </a>
+        @endisset
 
     </div>
 
