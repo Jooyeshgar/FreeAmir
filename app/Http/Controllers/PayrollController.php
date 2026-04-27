@@ -32,23 +32,30 @@ class PayrollController extends Controller
      */
     public function index(Request $request): View
     {
+        $validated = $request->validate([
+            'employee_id' => ['nullable', 'integer', 'exists:employees,id'],
+            'year' => ['nullable', 'integer', 'between:1300,1600'],
+            'month' => ['nullable', 'integer', 'between:1,12'],
+        ]);
+
         $query = Payroll::query();
 
-        if ($request->filled('employee_id')) {
-            $query->where('employee_id', $request->employee_id);
+        if (! empty($validated['employee_id'])) {
+            $query->where('employee_id', $validated['employee_id']);
         }
 
-        if ($request->filled('year')) {
-            $query->whereYear('issue_date', $request->year);
+        if (! empty($validated['year'])) {
+            $query->where('year', $validated['year']);
         }
 
-        if ($request->filled('month')) {
-            $query->whereMonth('issue_date', $request->month);
+        if (! empty($validated['month'])) {
+            $query->where('month', $validated['month']);
         }
 
-        $payrolls = $query->with(['employee', 'decree'])
+        $payrolls = $query->with(['employee', 'decree', 'monthlyAttendance'])
             ->orderBy('issue_date', 'desc')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         $employees = Employee::orderBy('code')->get();
 
