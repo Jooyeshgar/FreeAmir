@@ -25,7 +25,7 @@
                         <tr>
                             <td class="px-4 py-2">
                                 <a
-                                    href="{{ route('transactions.index', ['subject_id' => $customerGroup->subject->id]) }}">{{ $customerGroup->subject?->formattedCode() }}</a>
+                                    href="{{ route('transactions.index', ['subject_id' => $customerGroup->subject?->id]) }}">{{ $customerGroup->subject?->formattedCode() }}</a>
                             </td>
                             <td class="px-4 py-2">
                                 <a href="{{ route('customers.index', ['group_name' => $customerGroup->name]) }}"

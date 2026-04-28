@@ -62,14 +62,27 @@ class HomeSeeder extends Seeder
                     'date' => $date,
                     'title' => 'Seeded cash/bank flow',
                     'creator_id' => $userId,
+                    'approved_at' => $date->addDays(random_int(0, 5)),
+                    'approver_id' => $userId,
                     'company_id' => 1,
                 ]);
+
+                $value = random_int(0, 35000000);
 
                 Transaction::create([
                     'subject_id' => $subject->id,
                     'document_id' => $document->id,
                     'user_id' => $userId,
-                    'value' => random_int(-25000000, 35000000),
+                    'value' => -$value,
+                    'desc' => 'Seeded balance change',
+                ]);
+
+                $randomSubject = Subject::withoutGlobalScopes()->whereNot('id', $subject->id)->orWhereNot('parent_id', $subject->id)->inRandomOrder()->first();
+                Transaction::create([
+                    'subject_id' => $randomSubject->id,
+                    'document_id' => $document->id,
+                    'user_id' => $userId,
+                    'value' => $value,
                     'desc' => 'Seeded balance change',
                 ]);
             }
