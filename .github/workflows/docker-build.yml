@@ -39,6 +39,8 @@ jobs:
           images: |
             ghcr.io/jooyeshgar/freeamir-app
             hadi60/freeamir-app
+          flavor: |
+            latest=auto
 
       - name: Build and push App image
         uses: docker/build-push-action@v5
@@ -57,6 +59,8 @@ jobs:
           images: |
             ghcr.io/jooyeshgar/freeamir-nginx
             hadi60/freeamir-nginx
+          flavor: |
+            latest=auto
 
       - name: Build and push Nginx image
         uses: docker/build-push-action@v5
@@ -75,6 +79,8 @@ jobs:
           images: |
             ghcr.io/jooyeshgar/freeamir-all-in-one
             hadi60/freeamir-all-in-one
+          flavor: |
+            latest=auto
 
       - name: Build and push All in one image
         uses: docker/build-push-action@v5
