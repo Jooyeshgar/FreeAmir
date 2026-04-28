@@ -43,11 +43,6 @@ class StoreEmployeeRequest extends FormRequest
             'phone' => ['nullable', 'string', 'max:20'],
             'address' => ['nullable', 'string'],
 
-            // User account
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'password_confirmation' => ['required', 'string', 'min:8'],
-
             // Insurance
             'insurance_number' => ['nullable', 'string', 'max:20'],
             'insurance_type' => ['nullable', new Enum(EmployeeInsuranceType::class)],

@@ -69,16 +69,27 @@ class EmployeePortalController extends Controller
         return sprintf('%02d:%02d', $hour, $minute);
     }
 
-    public function changeUserInformation(): View
+    public function employeeShow(): View
     {
         $employee = $this->currentEmployee();
 
-        return view('employee-portal.change-user-information', compact('employee'));
+        return view('employee-portal.employee', compact('employee'));
     }
 
-    public function updateUserInformation(Request $request): RedirectResponse
+    public function changeEmployeeInformation(): View
     {
         $employee = $this->currentEmployee();
+
+        return view('employee-portal.change-employee-information', compact('employee'));
+    }
+
+    public function updateEmployeeInformation(Request $request): RedirectResponse
+    {
+        $employee = $this->currentEmployee();
+
+        if ($request->integer('employee_id') != auth()->user()->employee->id) {
+            abort(403, __('You do not have access to change this employee information.'));
+        }
 
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'max:255'],
@@ -103,7 +114,7 @@ class EmployeePortalController extends Controller
 
         $employee->user->update($userData);
 
-        return redirect()->route('employee-portal.dashboard')->with('success', __('Your information has been updated successfully.'));
+        return redirect()->route('employee-portal.employee.show')->with('success', __('Your information has been updated successfully.'));
     }
 
     /**
@@ -113,19 +124,25 @@ class EmployeePortalController extends Controller
     {
         $employee = $this->currentEmployee();
 
-        $recentLogs = AttendanceLog::where('employee_id', $employee->id)
-            ->orderBy('log_date', 'desc')
+        $recentLogs = $employee->attendanceLogs()
+            ->orderByDesc('log_date')
             ->limit(5)
             ->get();
 
-        $requests = PersonnelRequest::where('employee_id', $employee->id)->count();
+        $requestsCount = $employee->personnelRequests()
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->toArray();
 
-        $lastMonthlyAttendance = MonthlyAttendance::where('employee_id', $employee->id)
-            ->orderBy('year', 'desc')
-            ->orderBy('month', 'desc')
+        $lastMonthlyAttendance = $employee->monthlyAttendances()
+            ->orderByDesc('year')
+            ->orderByDesc('month')
             ->first();
 
-        return view('employee-portal.dashboard', compact('employee', 'recentLogs', 'requests', 'lastMonthlyAttendance'));
+        $lastPayroll = $employee->payrolls()->orderByDesc('year', 'desc')->orderByDesc('month', 'desc')->first();
+
+        return view('employee-portal.dashboard', compact('employee', 'recentLogs', 'requestsCount', 'lastMonthlyAttendance', 'lastPayroll'));
     }
 
     /**
@@ -187,9 +204,7 @@ class EmployeePortalController extends Controller
         $employee = $this->currentEmployee();
 
         if ($monthlyAttendance->employee_id !== $employee->id) {
-            throw ValidationException::withMessages([
-                'employee_id' => __('Invalid employee_id.'),
-            ]);
+            abort(403, __('You do not have access to view this monthly attendance.'));
         }
 
         $monthlyAttendance->load(['logs' => fn ($q) => $q->orderBy('log_date')]);
@@ -262,9 +277,7 @@ class EmployeePortalController extends Controller
         $employee = $this->currentEmployee();
 
         if ($payroll->employee_id !== $employee->id) {
-            throw ValidationException::withMessages([
-                'employee_id' => __('Invalid employee_id.'),
-            ]);
+            abort(403, __('You do not have access to view this payroll.'));
         }
 
         $payroll->load(['employee', 'decree.benefits.element', 'monthlyAttendance', 'items.element']);
@@ -405,6 +418,12 @@ class EmployeePortalController extends Controller
     {
         if ($personnelRequest->status !== 'pending') {
             abort(403, __('Only pending requests can be edited.'));
+        }
+
+        $employee = $this->currentEmployee();
+
+        if ($employee->id !== $personnelRequest->employee_id && ! $employee?->user->can('edit', $personnelRequest)) {
+            abort(403, __('You do not have permission to edit this personnel request.'));
         }
 
         $tab = $request->get('tab', 'leaves');

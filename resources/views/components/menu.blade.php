@@ -11,7 +11,7 @@
             <li><a href="{{ route('employee-portal.monthly-attendances') }}">{{ __('Monthly Attendance') }}</a></li>
             <li><a href="{{ route('employee-portal.payrolls') }}">{{ __('My Payrolls') }}</a></li>
             <li><a href="{{ route('employee-portal.personnel-requests.index') }}">{{ __('My Requests') }}</a></li>
-            <li><a href="{{ route('employee-portal.change-user-information') }}">{{ __('My Information') }}</a></li>
+            <li><a href="{{ route('employee-portal.employee.show') }}">{{ __('My Information') }}</a></li>
         </ul>
     </li>
 @endcan

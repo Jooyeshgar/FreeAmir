@@ -152,6 +152,19 @@ class PersonnelRequestController extends Controller
     {
         $tab = $request->get('tab', 'leaves');
 
+        $cases = match ($tab) {
+            'missions' => PersonnelRequestType::missionTypes(),
+            'work_orders' => PersonnelRequestType::workOrderTypes(),
+            'other' => PersonnelRequestType::otherTypes(),
+            default => PersonnelRequestType::leaveTypes(),
+        };
+
+        $requestTypes = array_column(
+            array_map(fn ($case) => ['value' => $case->value, 'label' => $case->label()], $cases),
+            'label',
+            'value'
+        );
+
         $title = match ($tab) {
             'missions' => __('Edit Mission Request'),
             'work_orders' => __('Edit Work Order Request'),
@@ -159,7 +172,7 @@ class PersonnelRequestController extends Controller
             default => __('Edit Leave Request'),
         };
 
-        return view('personnel-requests.edit', compact('personnelRequest', 'tab', 'title'));
+        return view('personnel-requests.edit', compact('personnelRequest', 'tab', 'title', 'requestTypes'));
     }
 
     public function update(Request $request, PersonnelRequest $personnelRequest): RedirectResponse
@@ -171,6 +184,7 @@ class PersonnelRequestController extends Controller
         }
 
         $validated = $request->validate([
+            'request_type' => ['required', 'string', 'in:'.implode(',', array_column(PersonnelRequestType::cases(), 'value'))],
             'request_date' => ['required', 'string'],
             'start_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
             'end_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
@@ -195,11 +209,13 @@ class PersonnelRequestController extends Controller
             ->with('success', __('Personnel request updated successfully.'));
     }
 
-    public function destroy(PersonnelRequest $personnelRequest): RedirectResponse
+    public function destroy(Request $request, PersonnelRequest $personnelRequest): RedirectResponse
     {
         $personnelRequest->delete();
 
-        return redirect()->route('hr.personnel-requests.index')
+        $tab = $request->get('tab', 'leaves');
+
+        return redirect()->route('hr.personnel-requests.index', ['tab' => $tab])
             ->with('success', __('Personnel request deleted successfully.'));
     }
 

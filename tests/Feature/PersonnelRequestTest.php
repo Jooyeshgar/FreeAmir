@@ -292,7 +292,7 @@ class PersonnelRequestTest extends TestCase
 
         $response = $this->delete(route('hr.personnel-requests.destroy', $personnelRequest));
 
-        $response->assertRedirect(route('hr.personnel-requests.index'));
+        $response->assertRedirect(route('hr.personnel-requests.index', ['tab' => 'leaves']));
         $response->assertSessionHas('success');
 
         $this->assertDatabaseMissing('personnel_requests', ['id' => $personnelRequest->id]);
