@@ -25,13 +25,4 @@ class StoreDocumentFileRequest extends FormRequest
             ],
         ];
     }
-
-    public function messages(): array
-    {
-        return [
-            'file.required' => __('Please select a file'),
-            'file.mimes' => __('Only images and PDF files are allowed'),
-            'file.max' => __('File size must not exceed 5MB'),
-        ];
-    }
 }

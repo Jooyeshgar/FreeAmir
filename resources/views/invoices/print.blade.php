@@ -95,7 +95,7 @@
         </tbody>
     </table>
 
-    <table width="100%" cellspacing="0" style="text-align:right;table-layout:fixed;margin-left:2px;">
+    <table width="100%" cellspacing="0" style="text-align:right;table-layout:fixed;margin-left:2px;margin-right:1px;">
         <tbody>
             <tr valign="top" style="line-height:1em;">
                 <td class="border center" style="border-right: none;" width="15%">
