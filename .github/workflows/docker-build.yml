@@ -25,12 +25,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       # === 1. App ===
       - name: Extract metadata for App
         id: meta-app
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/jooyeshgar/freeamir-app
+          images: |
+            ghcr.io/jooyeshgar/freeamir-app
+            hadi60/freeamir-app
 
       - name: Build and push App image
         uses: docker/build-push-action@v5
@@ -46,7 +54,9 @@ jobs:
         id: meta-nginx
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/jooyeshgar/freeamir-nginx
+          images: |
+            ghcr.io/jooyeshgar/freeamir-nginx
+            hadi60/freeamir-nginx
 
       - name: Build and push Nginx image
         uses: docker/build-push-action@v5
@@ -62,7 +72,9 @@ jobs:
         id: meta-all-in-one
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/jooyeshgar/freeamir-all-in-one
+          images: |
+            ghcr.io/jooyeshgar/freeamir-all-in-one
+            hadi60/freeamir-all-in-one
 
       - name: Build and push All in one image
         uses: docker/build-push-action@v5
