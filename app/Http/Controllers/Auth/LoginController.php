@@ -3,33 +3,46 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
 
 class LoginController extends Controller
 {
-    public function showLoginForm()
+    public function showLoginForm(): View
     {
-        return view('auth.login');
+        $debugUsers = [];
+
+        if (config('app.debug')) {
+            $debugUsers = User::query()->select(['name', 'email'])->orderBy('id')->get()
+                ->map(fn (User $user) => [
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ])->values();
+        }
+
+        return view('auth.login', compact('debugUsers'));
     }
 
     public function login(Request $request)
     {
-
         $credentials = $request->validate([
-            'email' => ['required', 'email'],
+            'login' => ['required', 'string'],
             'password' => ['required'],
         ]);
 
-        if (Auth::attempt($credentials)) {
+        $loginField = filter_var($credentials['login'], FILTER_VALIDATE_EMAIL) ? 'email' : 'name';
+
+        if (Auth::attempt([$loginField => $credentials['login'], 'password' => $credentials['password']])) {
             $request->session()->regenerate();
 
             return redirect()->intended('/');
         }
 
         return back()->withErrors([
-            'email' => __('The provided credentials do not match our records.'),
-        ])->onlyInput('email');
+            'login' => __('The provided credentials do not match our records.'),
+        ])->onlyInput('login');
     }
 
     public function logout(Request $request)

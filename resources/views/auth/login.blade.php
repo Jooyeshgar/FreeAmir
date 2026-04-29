@@ -20,19 +20,70 @@
                 <form method="POST" action="{{ route('login') }}">
                     @csrf
                     <h1 class="font-bold text-center">{{ __('Login') }}</h1>
-                    <x-form-input title="{{ __('Username or Email') }}" name="email" place-holder="admin@example.com" />
-                    <x-form-input title="{{ __('Password') }}" name="password" place-holder="password" type="password" />
+                    <div class="mx-0.5">
+                        <label class="form-control w-full max-w-xs">
+                            <div class="label">
+                                <span class="label-text">{{ __('Username or Email') }}</span>
+                            </div>
+                            <input type="text" name="login" placeholder="{{ __('Enter your email') }}"
+                                class="input input-bordered w-full max-w-xs @if ($errors->first('login')) input-error @endif"
+                                value="{{ old('login') }}" autocomplete="username" dir="ltr" />
+                            @if ($errors->first('login'))
+                                <div class="label">
+                                    <span class="label-text-alt text-red-700">{{ $errors->first('login') }}</span>
+                                </div>
+                            @endif
+                        </label>
+                    </div>
+                    <div class="mx-0.5">
+                        <label class="form-control w-full max-w-xs">
+                            <div class="label">
+                                <span class="label-text">{{ __('Password') }}</span>
+                            </div>
+                            <input type="password" name="password" placeholder="{{ __('Enter your password') }}"
+                                class="input input-bordered w-full max-w-xs @if ($errors->first('password')) input-error @endif"
+                                autocomplete="current-password" dir="ltr" />
+                            @if ($errors->first('password'))
+                                <div class="label">
+                                    <span class="label-text-alt text-red-700">{{ $errors->first('password') }}</span>
+                                </div>
+                            @endif
+                        </label>
+                    </div>
                     <div class="flex items-center justify-between mt-4 pl-2 ">
 
                         <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white  py-2 px-8 rounded">
                             {{ __('Login') }}
                         </button>
 
-                        <button type="submit" class="bg-gray-300 hover:bg-gray-400 text-black  py-2 px-8 rounded">
+                        <button type="button" class="bg-gray-300 hover:bg-gray-400 text-black  py-2 px-8 rounded">
                             {{ __('Forgot Password') }}
                         </button>
                     </div>
                 </form>
+
+                @if (config('app.debug'))
+                    <div class="mt-6 border-t border-gray-200 pt-4 text-sm text-gray-700">
+                        <p class="font-semibold">{{ __('Users Information') }}</p>
+                        <p class="mt-1 text-xs text-gray-500">{{ __('All user have common password') }} <span class="font-mono">password</span> {{ __('are usable') }}.</p>
+
+                        <p class="mt-1 text-xs text-gray-500">{{ __('For copy user name or user email click the related button.') }}</p>
+                        <div class="mt-3 space-y-2">
+                            @forelse ($debugUsers as $user)
+                                <div class="rounded border border-gray-200 px-3 py-2">
+                                    <button type="button" class="btn btn-xs font-mono text-xs" dir="ltr" onclick="navigator.clipboard.writeText(@js($user['name']))">{{ $user['name'] }}</button>
+                                    <button type="button" class="btn btn-xs font-mono text-xs" dir="ltr" onclick="navigator.clipboard.writeText(@js($user['email']))">{{ $user['email'] }}</button>
+                                </div>
+                            @empty
+                                <div class="rounded border border-dashed border-gray-200 px-3 py-2 text-xs text-gray-500">{{ __('No users records found.') }}</div>
+                            @endforelse
+                            <p class="mt-1 text-xs text-gray-500">{{ __('For copy password, click the button below.') }}</p>
+                            <div class="rounded border border-gray-200 px-3 py-2">
+                                <button type="button" class="btn btn-xs font-mono text-xs" onclick="navigator.clipboard.writeText('password')">{{ 'password' }}</button>
+                            </div>
+                        </div>
+                    </div>
+                @endif
             </div>
         </div>
 
