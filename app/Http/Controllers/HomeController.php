@@ -13,6 +13,8 @@ class HomeController extends Controller
 
     public function seedDemoData()
     {
+        abort_unless(config('app.debug'), 404);
+
         if (Document::count() !== 0) {
             return redirect()->route('home')->with('error', 'نمیتوان دیتاهای آزمایشی را به دیتابیس پر اضافه کرد.');
         }
@@ -24,6 +26,19 @@ class HomeController extends Controller
         }
 
         return redirect()->route('home')->with('success', 'داده های آزمایشی به دیتابیس اضافه شدند.');
+    }
+
+    public function refreshDatabase()
+    {
+        abort_unless(config('app.debug'), 404);
+
+        try {
+            Artisan::call('migrate:fresh', ['--seed' => true]);
+        } catch (\Exception $e) {
+            return redirect()->route('home')->with('error', 'خطایی در ریفرش کردن دیتابیس رخ داد.');
+        }
+
+        return redirect()->route('home')->with('success', 'دیتابیس با موفقیت ریفرش شد.');
     }
 
     public function index()
@@ -53,9 +68,11 @@ class HomeController extends Controller
             $this->service->profitFromNonPermanentSubjects();
 
         $hasDocument = \App\Models\Document::count() === 0;
+        $isDebugMode = config('app.debug');
 
         return view('home', compact(
             'hasDocument',
+            'isDebugMode',
             'cashTypes',
             'bankAccounts',
             'topTenBankAccountBalances',
