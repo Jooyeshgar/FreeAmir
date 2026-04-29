@@ -50,9 +50,10 @@
         <x-text-input input_value="{{ old('invoice_id') ?? ($invoice->id ?? '') }}" input_name="invoice_id"
             label_text_class="text-gray-500" label_class="w-full hidden"></x-text-input>
         @if (!$invoice->exists)
-            <x-text-input disabled="true" input_value="{{ formatDocumentNumber($previousInvoiceNumber) }}"
-                title="{{ __('Previous Invoice Number') }}" placeholder="{{ __('Previous Invoice Number') }}"
-                label_text_class="text-gray-500 text-nowrap"></x-text-input>
+            <x-text-input disabled="true" input_value="{{ formatDocumentNumber($previousInvoiceNumber) }}" title="{{ __('Previous Invoice Number') }}" 
+                placeholder="{{ __('Previous Invoice Number') }}" label_text_class="text-gray-500 text-nowrap" >
+                <input type="hidden" name="previous_invoice_number" value="{{ $previousInvoiceNumber }}">
+            </x-text-input>
         @endif
 
         <x-text-input
@@ -290,7 +291,7 @@
 
 @pushOnce('scripts')
     <script type="module">
-        jalaliDatepicker.startWatch();
+        jalaliDatepicker.startWatch({'persianDigits': true});
     </script>
     <script>
         document.addEventListener('alpine:init', () => {

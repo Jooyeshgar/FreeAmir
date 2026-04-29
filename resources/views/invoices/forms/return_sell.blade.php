@@ -360,7 +360,9 @@
 
 @pushOnce('scripts')
     <script type="module">
-        jalaliDatepicker.startWatch();
+        jalaliDatepicker.startWatch({
+            'persianDigits': true
+        });
     </script>
     <script>
         document.addEventListener('alpine:init', () => {
