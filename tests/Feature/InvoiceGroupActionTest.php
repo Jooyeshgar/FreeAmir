@@ -14,19 +14,15 @@ use App\Models\User;
 use App\Services\GroupActionService;
 use App\Services\InvoiceService;
 use Cookie;
-use Database\Seeders\CompanySeeder;
-use Database\Seeders\ConfigSeeder;
-use Database\Seeders\CustomerGroupSeeder;
-use Database\Seeders\ProductGroupSeeder;
-use Database\Seeders\SubjectSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Tests\Helpers\SeederHelper;
 use Tests\TestCase;
 
 class InvoiceGroupActionTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, SeederHelper;
 
     protected User $user;
 
@@ -40,13 +36,7 @@ class InvoiceGroupActionTest extends TestCase
     {
         parent::setUp();
 
-        $this->seed(CompanySeeder::class);
-        $this->seed(SubjectSeeder::class);
-        $this->seed(ConfigSeeder::class);
-        $this->seed(CustomerGroupSeeder::class);
-        $this->seed(ProductGroupSeeder::class);
-
-        $this->companyId = Company::withoutGlobalScopes()->orderBy('id')->value('id') ?? 1;
+        $this->companyId = Company::firstOrCreate(['id' => 1], ['name' => 'Test Company', 'fiscal_year' => 1405])->id;
 
         Cache::forever('active_company_id', $this->companyId);
         Cookie::queue('active-company-id', (string) $this->companyId);
@@ -55,7 +45,12 @@ class InvoiceGroupActionTest extends TestCase
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
 
-        $customerGroup = CustomerGroup::withoutGlobalScopes()->where('company_id', $this->companyId)->firstOrFail();
+        $this->importSubjects($this->companyId);
+        $this->importConfigs($this->companyId);
+
+        ProductGroup::factory()->withSubjects()->create(['name' => 'عمومی', 'vat' => 10, 'company_id' => $this->companyId]);
+        $customerGroup = CustomerGroup::factory()->withSubject()->create(['name' => 'عمومی', 'description' => 'گروه مشتریان عمومی', 'company_id' => $this->companyId]);
+
         $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['company_id' => $this->companyId]);
     }
 
