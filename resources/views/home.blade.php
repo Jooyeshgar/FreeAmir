@@ -3,39 +3,7 @@
 
     <main class="home-dashboard">
 
-        @hasrole('Super-Admin')
-            @if ($isDebugMode && $hasDocument)
-                <div class="alert alert-warning">
-                    <p>جدول‌های دیتابیس شما خالی هستند. آیا مایل هستید داده‌های آزمایشی در دیتابیس شما بارگذاری شود؟</p>
-                    <form method="POST" action="{{ route('home.seed-demo-data') }}" class="inline-block m-0">
-                        @csrf
-                        <button type="submit" class="btn btn-ghost">پر کردن دیتابیس</button>
-                    </form>
-                </div>
-            @endif
-
-            @if ($isDebugMode)
-                <div role="alert" class="alert alert-warning flex flex-col mt-4 mb-4">
-                    <div class="w-full flex items-center gap-2">
-                        <p class="m-0">این ابزار فقط در حالت دیباگ فعال است و تمام داده‌های فعلی را حذف می‌کند.</p>
-
-                        <form method="POST" action="{{ route('home.refresh-database') }}" class="inline-block m-0"
-                            onsubmit="return confirm('این عملیات تمام جداول و داده‌های فعلی را حذف کرده و دیتابیس را از اول با داده‌های آزمایشی اولیه دوباره می‌سازد. ادامه می‌دهید؟')">
-                            @csrf
-                            <button type="submit" class="btn btn-error btn-sm">ریفرش کامل دیتابیس</button>
-                        </form>
-                    </div>
-
-                    <p class="text-sm opacity-80 w-full">
-                        برای غیرفعال کردن این امکانات، مقدار
-                        <span class="font-mono">APP_DEBUG=false</span>
-                        را در فایل
-                        <span class="font-mono" dir="ltr">.env</span>
-                        قرار دهید.
-                    </p>
-                </div>
-            @endif
-        @endhasrole
+        @include('home.database-actions')
 
         <div>
             <h1 class="home-page-title">

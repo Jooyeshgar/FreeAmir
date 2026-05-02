@@ -5,89 +5,56 @@
             <h1 class="font-bold">{{ __('Amirs free accounting software') }}</h1>
         </div>
         <div class="language-select">
-            <form action="" class="language-picker__form ">
-                <select name="locale" class="select mx-2 p-3">
-                    <option lang="fa" value="english" selected>فارسی</option>
-                    <option lang="en" value="francais">English</option>
+            <form action="" class="language-picker__form">
+                <select name="language" class="locale select mx-5 pr-10 pl-3 py-2">
+                    <option lang="fa" value="fa" selected>{{ __('Farsi') }}</option>
+                    <option lang="en" value="en">{{ __('English') }}</option>
                 </select>
             </form>
         </div>
     </header>
 
-    <div class="login-bg bg-cover bg-center rounded-t-3xl flex-1 border-8 border-gray-200 p-0 border-opacity-85  overflow-hidden   ">
-        <div class="flex items-center justify-center  rounded-3xl    ">
-            <div class="card w-96 p-7 mt-16	 bg-white  ">
+    <div x-data="loginForm()" class="login-bg bg-cover bg-center rounded-t-3xl flex-1 border-8 border-gray-200 p-0 border-opacity-85 overflow-hidden">
+        <div class="flex items-center justify-center rounded-3xl">
+            <div class="card w-96 p-7 mt-16 bg-white">
                 <form method="POST" action="{{ route('login') }}">
                     @csrf
                     <h1 class="font-bold text-center">{{ __('Login') }}</h1>
-                    <div class="mx-0.5">
-                        <label class="form-control w-full max-w-xs">
-                            <div class="label">
-                                <span class="label-text">{{ __('Username or Email') }}</span>
-                            </div>
-                            <input type="text" name="login" placeholder="{{ __('Enter your email') }}"
-                                class="input input-bordered w-full max-w-xs @if ($errors->first('login')) input-error @endif"
-                                value="{{ old('login') }}" autocomplete="username" dir="ltr" />
-                            @if ($errors->first('login'))
-                                <div class="label">
-                                    <span class="label-text-alt text-red-700">{{ $errors->first('login') }}</span>
-                                </div>
-                            @endif
-                        </label>
-                    </div>
-                    <div class="mx-0.5">
-                        <label class="form-control w-full max-w-xs">
-                            <div class="label">
-                                <span class="label-text">{{ __('Password') }}</span>
-                            </div>
-                            <input type="password" name="password" placeholder="{{ __('Enter your password') }}"
-                                class="input input-bordered w-full max-w-xs @if ($errors->first('password')) input-error @endif"
-                                autocomplete="current-password" dir="ltr" />
-                            @if ($errors->first('password'))
-                                <div class="label">
-                                    <span class="label-text-alt text-red-700">{{ $errors->first('password') }}</span>
-                                </div>
-                            @endif
-                        </label>
-                    </div>
-                    <div class="flex items-center justify-between mt-4 pl-2 ">
-
-                        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white  py-2 px-8 rounded">
-                            {{ __('Login') }}
-                        </button>
-
-                        <button type="button" class="bg-gray-300 hover:bg-gray-400 text-black  py-2 px-8 rounded">
-                            {{ __('Forgot Password') }}
-                        </button>
+                    <x-show-message-bags />
+                    
+                    <x-text-input class="mt-1 w-full max-w-xs" title="{{ __('Email') }}" input_name="email" type="email" placeHolder="{{ __('Enter your email') }}" x-model="email" />
+                    <x-text-input class="mt-1 w-full max-w-xs" title="{{ __('Password') }}" input_name="password" type="password" placeHolder="{{ __('Enter your password') }}" />
+                    <div class="flex items-center justify-between mt-4 pl-2">
+                        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-8 rounded">{{ __('Login') }}</button>
+                        <button type="button" class="bg-gray-300 hover:bg-gray-400 text-black py-2 px-8 rounded">{{ __('Forgot Password') }}</button>
                     </div>
                 </form>
 
-                @if (config('app.debug'))
-                    <div class="mt-6 border-t border-gray-200 pt-4 text-sm text-gray-700">
-                        <p class="font-semibold">{{ __('Users Information') }}</p>
-                        <p class="mt-1 text-xs text-gray-500">{{ __('All user have common password') }} <span class="font-mono">password</span> {{ __('are usable') }}.</p>
+                @if (!app()->isProduction())
+                    <div class="overflow-x-auto mt-3">
+                        <p class="text-sm">{{ __('You can use one of the emails below to log in') }}.</p>
+                        <table class="table w-full text-right">
+                            <thead>
+                                <tr>
+                                    <th class="text-right">{{ __('Email') }}</th>
+                                </tr>
+                            </thead>
 
-                        <p class="mt-1 text-xs text-gray-500">{{ __('For copy user name or user email click the related button.') }}</p>
-                        <div class="mt-3 space-y-2">
-                            @forelse ($debugUsers as $user)
-                                <div class="rounded border border-gray-200 px-3 py-2">
-                                    <button type="button" class="btn btn-xs font-mono text-xs" dir="ltr" onclick="navigator.clipboard.writeText(@js($user['name']))">{{ $user['name'] }}</button>
-                                    <button type="button" class="btn btn-xs font-mono text-xs" dir="ltr" onclick="navigator.clipboard.writeText(@js($user['email']))">{{ $user['email'] }}</button>
-                                </div>
-                            @empty
-                                <div class="rounded border border-dashed border-gray-200 px-3 py-2 text-xs text-gray-500">{{ __('No users records found.') }}</div>
-                            @endforelse
-                            <p class="mt-1 text-xs text-gray-500">{{ __('For copy password, click the button below.') }}</p>
-                            <div class="rounded border border-gray-200 px-3 py-2">
-                                <button type="button" class="btn btn-xs font-mono text-xs" onclick="navigator.clipboard.writeText('password')">{{ 'password' }}</button>
-                            </div>
-                        </div>
+                            <tbody>
+                                <template x-for="(user, index) in demoUsers" :key="index">
+                                    <tr class="hover:bg-gray-100 cursor-pointer">
+                                        <td class="text-left direction-ltr select-text p-2" x-text="user" @click="selectEmail(user)"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
                     </div>
+                    <p class="text-sm mt-1">{!! __('The default password for all users is :password', ['password' => '<strong>password</strong>']) !!}.</p>
                 @endif
             </div>
         </div>
 
-        <div class="flex justify-center mt-4 ">
+        <div class="flex justify-center mt-4">
             <div class="flex space-x-4">
                 <a href="https://github.com/Jooyeshgar/FreeAmir?tab=GPL-3.0-1-ov-file" class="ml-4 bg-gray-300 hover:bg-gray-400 text-black py-2 px-5 rounded">
                     {{ __('Terms of Service') }}
@@ -101,6 +68,20 @@
             </div>
         </div>
     </div>
-    </div>
+    <script>
+        function loginForm() {
+            return {
+                email: '',
+                demoUsers: [
+                    'admin@example.com',
+                    'accountant@example.com',
+                    'seller@example.com'
+                ],
 
+                selectEmail(email) {
+                    this.email = email;
+                }
+            }
+        }
+    </script>
 </x-login-layout>

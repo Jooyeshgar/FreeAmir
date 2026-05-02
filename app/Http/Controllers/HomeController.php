@@ -13,32 +13,32 @@ class HomeController extends Controller
 
     public function seedDemoData()
     {
-        abort_unless(config('app.debug'), 404);
+        abort_unless(config('app.env') !== 'production', 404);
 
         if (Document::count() !== 0) {
-            return redirect()->route('home')->with('error', 'نمیتوان دیتاهای آزمایشی را به دیتابیس پر اضافه کرد.');
+            return redirect()->route('home')->with('error', __('Cannot add demo data to a non-empty database.'));
         }
 
         try {
             Artisan::call('db:seed', ['--class' => 'DemoSeeder']);
         } catch (\Exception $e) {
-            return redirect()->route('home')->with('error', 'خطایی در اجرای پر کردن دیتابیس رخ داد.');
+            return redirect()->route('home')->with('error', __('An error occurred while seeding demo data.'));
         }
 
-        return redirect()->route('home')->with('success', 'داده های آزمایشی به دیتابیس اضافه شدند.');
+        return redirect()->route('home')->with('success', __('Demo data has been added to the database.'));
     }
 
     public function refreshDatabase()
     {
-        abort_unless(config('app.debug'), 404);
+        abort_unless(config('app.env') !== 'production', 404);
 
         try {
             Artisan::call('migrate:fresh', ['--seed' => true]);
         } catch (\Exception $e) {
-            return redirect()->route('home')->with('error', 'خطایی در ریفرش کردن دیتابیس رخ داد.');
+            return redirect()->route('home')->with('error', __('An error occurred while refreshing the database.'));
         }
 
-        return redirect()->route('home')->with('success', 'دیتابیس با موفقیت ریفرش شد.');
+        return redirect()->route('home')->with('success', __('Refresh database completed successfully.'));
     }
 
     public function index()
@@ -68,7 +68,7 @@ class HomeController extends Controller
             $this->service->profitFromNonPermanentSubjects();
 
         $hasDocument = \App\Models\Document::count() === 0;
-        $isDebugMode = config('app.debug');
+        $isDebugMode = config('app.env') !== 'production';
 
         return view('home', compact(
             'hasDocument',
