@@ -68,7 +68,7 @@ class HomeController extends Controller
             $this->service->profitFromNonPermanentSubjects();
 
         $hasDocument = Document::exists();
-        $isDebugMode = ! config('app.debug') || app()->isProduction();
+        $isDebugMode = config('app.debug') && ! app()->isProduction();
 
         return view('home', compact(
             'hasDocument',
