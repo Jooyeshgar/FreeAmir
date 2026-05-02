@@ -176,6 +176,7 @@ return [
                 'unit' => 'Unit price',
                 'unit_discount' => 'Unit discount',
                 'vat' => 'tax',
+                'off' => 'off',
             ],
         ],
         'type' => 'type',
