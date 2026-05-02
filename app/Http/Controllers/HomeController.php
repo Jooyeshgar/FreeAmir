@@ -13,9 +13,9 @@ class HomeController extends Controller
 
     public function seedDemoData()
     {
-        abort_unless(config('app.env') !== 'production', 404);
+        abort_if(app()->isProduction(), 404);
 
-        if (Document::count() !== 0) {
+        if (Document::exists()) {
             return redirect()->route('home')->with('error', __('Cannot add demo data to a non-empty database.'));
         }
 
@@ -30,7 +30,7 @@ class HomeController extends Controller
 
     public function refreshDatabase()
     {
-        abort_unless(config('app.env') !== 'production', 404);
+        abort_if(app()->isProduction(), 404);
 
         try {
             Artisan::call('migrate:fresh', ['--seed' => true]);
@@ -67,7 +67,7 @@ class HomeController extends Controller
         ['incomeData' => $totalIncomesData, 'costData' => $totalCostsData, 'profit' => $profit] =
             $this->service->profitFromNonPermanentSubjects();
 
-        $hasDocument = \App\Models\Document::count() === 0;
+        $hasDocument = Document::exists();
         $isDebugMode = config('app.env') !== 'production';
 
         return view('home', compact(
