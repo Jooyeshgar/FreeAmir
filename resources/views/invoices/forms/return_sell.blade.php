@@ -115,20 +115,22 @@
                 label_text_class="text-gray-500 text-nowrap"></x-text-input>
         @endif
 
-        <x-text-input
-            input_value="{{ old('invoice_number') ?? formatDocumentNumber($invoice->number ?? $previousInvoiceNumber + 1) }}"
-            input_name="invoice_number" title="{{ __('Current Invoice Number') }}"
-            placeholder="{{ __('Current Invoice Number') }}"
-            label_text_class="text-gray-500 text-nowrap"></x-text-input>
+        <x-text-input x-data="{ invoice_number: '{{ formatDocumentNumber($invoice?->number ?? $previousInvoiceNumber + 1) }}' }" title="{{ __('Current Invoice Number') }}"
+            x-model.number="invoice_number" x-bind:name="'invoice_number'"
+            placeholder="{{ __('Current Invoice Number') }}" label_text_class="text-gray-500 text-nowrap"
+            x-on:input="invoice_number = $store.utils.convertToEnglish($event.target.value);"
+            x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(invoice_number));">
+        </x-text-input>
 
-        <x-text-input
-            input_value="{{ old('document_number') ?? formatDocumentNumber($invoice->document?->number ?? $previousDocumentNumber + 1) }}"
-            input_name="document_number" title="{{ __('current document number') }}"
-            placeholder="{{ __('current document number') }}"
-            label_text_class="text-gray-500 text-nowrap"></x-text-input>
+        <x-text-input x-data="{ document_number: '{{ formatDocumentNumber($invoice->document?->number ?? $previousDocumentNumber + 1) }}' }" title="{{ __('current document number') }}"
+            x-model.number="document_number" x-bind:name="'document_number'"
+            placeholder="{{ __('current document number') }}" label_text_class="text-gray-500 text-nowrap"
+            x-on:input="document_number = $store.utils.convertToEnglish($event.target.value);"
+            x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(document_number));">
+        </x-text-input>
 
         <x-text-input data-jdp title="{{ __('date') }}" input_name="date" placeholder="{{ __('date') }}"
-            input_value="{{ old('date') ?? convertToJalali($invoice->date ?? now()) }}"
+            readonly input_value="{{ old('date') ?? convertToJalali($invoice->date ?? now(), true) }}"
             label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
     </div>
 </x-card>
@@ -155,8 +157,8 @@
                         <a href="{{ route('services.create') }}"
                             class="flex items-center gap-1 btn btn-xs btn-ghost text-blue-500 hover:text-blue-700 dark:text-sky-300 dark:hover:text-sky-200 dark:hover:bg-sky-500/10"
                             title="{{ __('Create Service') }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                                     d="M15.232 5.232a4 4 0 015.536 5.536l-7.768 7.768a4 4 0 01-5.536-5.536l1.232-1.232" />
                             </svg>

@@ -56,20 +56,22 @@
             </x-text-input>
         @endif
 
-        <x-text-input
-            input_value="{{ old('invoice_number') ?? formatDocumentNumber($invoice->number ?? $previousInvoiceNumber + 1) }}"
-            input_name="invoice_number" title="{{ __('Current Invoice Number') }}"
-            placeholder="{{ __('Current Invoice Number') }}"
-            label_text_class="text-gray-500 text-nowrap"></x-text-input>
+        <x-text-input x-data="{ invoice_number: '{{ formatDocumentNumber($invoice?->number ?? $previousInvoiceNumber + 1) }}' }"
+            title="{{ __('Current Invoice Number') }}" x-model.number="invoice_number" x-bind:name="'invoice_number'"
+            placeholder="{{ __('Current Invoice Number') }}" label_text_class="text-gray-500 text-nowrap"
+            x-on:input="invoice_number = $store.utils.convertToEnglish($event.target.value);"
+            x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(invoice_number));">
+        </x-text-input>
+ 
+        <x-text-input x-data="{ document_number: '{{ formatDocumentNumber($invoice->document?->number ?? $previousDocumentNumber + 1) }}' }"
+            title="{{ __('current document number') }}" x-model.number="document_number" x-bind:name="'document_number'"
+            placeholder="{{ __('current document number') }}" label_text_class="text-gray-500 text-nowrap"
+            x-on:input="document_number = $store.utils.convertToEnglish($event.target.value);"
+            x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(document_number));">
+        </x-text-input>
 
-        <x-text-input
-            input_value="{{ old('document_number') ?? formatDocumentNumber($invoice->document?->number ?? $previousDocumentNumber + 1) }}"
-            input_name="document_number" title="{{ __('current document number') }}"
-            placeholder="{{ __('current document number') }}"
-            label_text_class="text-gray-500 text-nowrap"></x-text-input>
-
-        <x-text-input data-jdp title="{{ __('date') }}" input_name="date" placeholder="{{ __('date') }}"
-            input_value="{{ old('date') ?? convertToJalali($invoice->date ?? now()) }}"
+        <x-text-input data-jdp title="{{ __('date') }}" input_name="date" placeholder="{{ __('date') }}" readonly
+            input_value="{{ old('date') ?? convertToJalali($invoice->date ?? now(), true) }}"
             label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
     </div>
 </x-card>

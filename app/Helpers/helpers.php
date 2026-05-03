@@ -281,25 +281,36 @@ function jalaliInputToGregorian(?string $date, string $field = 'date'): string
  * Convert a date from Gregorian to Jalali based on locale.
  *
  * Accepts a Carbon instance or a date string in 'YYYY-MM-DD' or 'YYYY/MM/DD'.
- * When locale is Persian, returns a Jalali date string; otherwise returns the original
- * date (Carbon formatted as 'Y-m-d' if needed).
+ * When locale is Persian, returns a Jalali date string.
+ * Optionally formats output as YYYY/MM/DD.
  *
  * @param  Carbon|string|null  $date
+ * @param  bool  $padding  Whether to return Jalali date with padding (YYYY/MM/DD)
  * @return string
  */
-function convertToJalali($date)
+function convertToJalali($date, $padding = false)
 {
     $locale = App::getLocale();
 
-    if ($locale === 'fa' || $locale === 'fa_IR') {
-        return gregorian_to_jalali_date($date);
+    if ($locale !== 'fa' && $locale !== 'fa_IR') {
+        return $date instanceof Carbon ? $date->format('Y-m-d') : (string) $date;
     }
 
-    if ($date instanceof Carbon) {
-        return $date->format('Y-m-d');
+    if (! $date) {
+        $date = now();
     }
 
-    return (string) $date;
+    if (! $date instanceof Carbon) {
+        $date = Carbon::parse($date);
+    }
+
+    [$y, $m, $d] = gregorian_to_jalali($date->year, $date->month, $date->day);
+
+    if ($padding) {
+        return sprintf('%04d/%02d/%02d', $y, $m, $d);
+    }
+
+    return "$y-$m-$d";
 }
 
 if (! function_exists('model_route')) {
