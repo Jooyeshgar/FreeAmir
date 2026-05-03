@@ -281,7 +281,7 @@
             @if ($employee->user)
                 <div class="divider text-lg font-semibold">{{ __('System Account') }}</div>
                 <div class="bg-base-200 rounded-lg px-4 py-3 flex items-center gap-4 text-sm">
-                    <div class="avatar placeholder">
+                    <div class="avatar avatar-placeholder">
                         <div class="bg-primary text-primary-content rounded-full w-10">
                             <span class="text-lg font-bold">{{ mb_substr($employee->user->name, 0, 1) }}</span>
                         </div>

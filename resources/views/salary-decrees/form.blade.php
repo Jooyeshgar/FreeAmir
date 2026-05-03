@@ -50,7 +50,7 @@
                 <template x-for="(benefit, index) in benefits" :key="index">
                     <tr>
                         <td>
-                            <select :name="`benefits[${index}][element_id]`" class="select select-bordered w-full" x-model="benefit.element_id"
+                            <select :name="`benefits[${index}][element_id]`" class="select  w-full" x-model="benefit.element_id"
                                 @change="fillDefault(index)" required>
                                 <option value="">— {{ __('Select Element') }} —</option>
                                 @foreach ($payrollElements as $element)
@@ -59,7 +59,7 @@
                             </select>
                         </td>
                         <td>
-                            <input type="number" :name="`benefits[${index}][value]`" x-model="benefit.value" class="input input-bordered w-full" placeholder="0"
+                            <input type="number" :name="`benefits[${index}][value]`" x-model="benefit.value" class="input  w-full" placeholder="0"
                                 min="0" required />
                         </td>
                         <td>

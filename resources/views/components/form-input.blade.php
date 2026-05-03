@@ -1,14 +1,12 @@
 <div class="mx-0.5">
-    <label class="form-control w-full max-w-xs">
-        <div class="label">
-            <span class="label-text">{{ $title }}</span>
-        </div>
-        <input type="{{ $type }}" name="{{ $name }}" placeholder="{{ $placeHolder }}" class="input input-bordered w-full max-w-xs"
+    <fieldset class="fieldset w-full max-w-xs">
+        <label for="{{ $name }}" class="fieldset-legend">{{ $title }}</label>
+        <input type="{{ $type }}" name="{{ $name }}" id="{{ $name }}" placeholder="{{ $placeHolder }}" class="input w-full max-w-xs"
             value="{{ $value }}" />
         @if ($errors->first($name))
             <div class="label">
-                <span class="label-text-alt text-red-700">{{ $errors->first($name) }}</span>
+                <span class="text-xs text-red-700">{{ $errors->first($name) }}</span>
             </div>
         @endif
-    </label>
+    </fieldset>
 </div>

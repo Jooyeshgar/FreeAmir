@@ -5,9 +5,9 @@
 
     <div class="col-span-2 md:col-span-1">
         <label class="label" for="system_code">
-            <span class="label-text font-medium">{{ __('System Code') }}</span>
+            <span class=" font-medium">{{ __('System Code') }}</span>
         </label>
-        <select name="system_code" id="system_code" class="select select-bordered w-full" required>
+        <select name="system_code" id="system_code" class="select  w-full" required>
             <option value="">{{ __('Select System Code') }}</option>
             @foreach ([
         'CHILD_ALLOWANCE' => __('Child Allowance'),
@@ -37,9 +37,9 @@
 
     <div class="col-span-2 md:col-span-1">
         <label class="label" for="category">
-            <span class="label-text font-medium">{{ __('Category') }}</span>
+            <span class=" font-medium">{{ __('Category') }}</span>
         </label>
-        <select name="category" id="category" class="select select-bordered w-full" required>
+        <select name="category" id="category" class="select  w-full" required>
             <option value="">{{ __('Select Category') }}</option>
             <option value="earning" @selected(old('category', $payrollElement->category ?? '') === 'earning')>{{ __('Earning') }}</option>
             <option value="deduction" @selected(old('category', $payrollElement->category ?? '') === 'deduction')>{{ __('Deduction') }}</option>
@@ -51,9 +51,9 @@
 
     <div class="col-span-2 md:col-span-1">
         <label class="label" for="calc_type">
-            <span class="label-text font-medium">{{ __('Calculation Type') }}</span>
+            <span class=" font-medium">{{ __('Calculation Type') }}</span>
         </label>
-        <select name="calc_type" id="calc_type" class="select select-bordered w-full" required>
+        <select name="calc_type" id="calc_type" class="select  w-full" required>
             <option value="">{{ __('Select Calculation Type') }}</option>
             <option value="fixed" @selected(old('calc_type', $payrollElement->calc_type ?? '') === 'fixed')>{{ __('Fixed') }}</option>
             <option value="daily" @selected(old('calc_type', $payrollElement->calc_type ?? '') === 'daily')>{{ __('Daily') }}</option>
@@ -72,13 +72,13 @@
     {{-- Default Amount / Percentage — label and attributes change based on calc_type --}}
     <div class="col-span-2 md:col-span-1" id="default_amount_wrapper">
         <label class="label" for="default_amount">
-            <span class="label-text font-medium" id="default_amount_label">{{ __('Default Amount') }}</span>
+            <span class=" font-medium" id="default_amount_label">{{ __('Default Amount') }}</span>
         </label>
         <input
             type="number"
             name="default_amount"
             id="default_amount"
-            class="input input-bordered w-full"
+            class="input  w-full"
             value="{{ old('default_amount', $payrollElement->default_amount ?? '') }}"
             placeholder="0"
             step="0.01"
@@ -119,17 +119,17 @@
     <div class="col-span-2 flex flex-wrap gap-6">
         <label class="label cursor-pointer gap-2">
             <input type="checkbox" name="is_taxable" value="1" class="checkbox" @checked(old('is_taxable', $payrollElement->is_taxable ?? false)) />
-            <span class="label-text">{{ __('Is Taxable') }}</span>
+            <span>{{ __('Is Taxable') }}</span>
         </label>
 
         <label class="label cursor-pointer gap-2">
             <input type="checkbox" name="is_insurable" value="1" class="checkbox" @checked(old('is_insurable', $payrollElement->is_insurable ?? false)) />
-            <span class="label-text">{{ __('Is Insurable') }}</span>
+            <span>{{ __('Is Insurable') }}</span>
         </label>
 
         <label class="label cursor-pointer gap-2">
             <input type="checkbox" name="show_in_payslip" value="1" class="checkbox" @checked(old('show_in_payslip', $payrollElement->show_in_payslip ?? true)) />
-            <span class="label-text">{{ __('Show in Payslip') }}</span>
+            <span>{{ __('Show in Payslip') }}</span>
         </label>
     </div>
 </div>

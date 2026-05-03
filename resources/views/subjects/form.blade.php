@@ -4,10 +4,10 @@
     </div>
 
     <div class="flex flex-col justify-end" x-data="{ selectedType: @js(old('type', $subject->type ?? 'debtor')) }">
-        <span class="label-text">{{ __('Type') }}</span>
+        <span>{{ __('Type') }}</span>
         <select name="type" id="type" x-model="selectedType" 
-            class="bg-white h-10 min-h-10 border input-bordered w-full rounded-md focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-2">
-            <option class="label-text" value="debtor">{{ __('Debtor') }}</option>
+            class="bg-white h-10 min-h-10 border  w-full rounded-md focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-2">
+            <option value="debtor">{{ __('Debtor') }}</option>
             <option value="creditor">{{ __('Creditor') }}</option>
             <option value="both">{{ __('Both') }}</option>
         </select>
@@ -15,9 +15,9 @@
 
     @if (! $parentSubject)
         <div class="flex flex-col justify-end" x-data="{ selectedIsPermanent: @js(old('is_permanent', $subject->is_permanent ?? 0)) }">
-            <span class="label-text">{{ __('Permanent/Temporary') }}</span>
+            <span>{{ __('Permanent/Temporary') }}</span>
             <select name="is_permanent" id="is_permanent" x-model="selectedIsPermanent"
-                class="bg-white h-10 min-h-10 border input-bordered w-full rounded-md focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-2">
+                class="bg-white h-10 min-h-10 border  w-full rounded-md focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-2">
                 <option value="1">{{ __('Permanent') }}</option>
                 <option value="0">{{ __('Temporary') }}</option>
             </select>

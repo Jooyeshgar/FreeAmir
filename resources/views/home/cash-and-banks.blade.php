@@ -8,14 +8,14 @@
             </div>
 
             <div class="flex m-2 justify-between overflow-hidden" x-data="cashTypesSelectHandler()" x-init="initializeCashBook()">
-                <select x-model="selectedCashType" x-on:change="handleCashBookChange" class="select ml-2 select-bordered">
+                <select x-model="selectedCashType" x-on:change="handleCashBookChange" class="select ml-2 ">
                     @foreach ($cashTypes as $cashTypeName)
                         <option {{ $loop->first ? 'selected' : '' }} value="{{ $cashTypeName }}">
                             {{ __($cashTypeName) }}</option>
                     @endforeach
                 </select>
 
-                <select x-model="selectedDuration" x-on:change="handleCashBookChange" class="select select-bordered">
+                <select x-model="selectedDuration" x-on:change="handleCashBookChange" class="select ">
                     <option value="1">{{ '۳ ' . __('Month') }}</option>
                     <option value="2">{{ '۶ ' . __('Month') }}</option>
                     <option value="3">{{ '۹ ' . __('Month') }}</option>

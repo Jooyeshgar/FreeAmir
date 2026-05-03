@@ -6,7 +6,7 @@
         </h2>
     </x-slot>
 
-    <div class="">
+    <div>
         <form action="{{ route('invoices.update', $invoice) }}" method="POST">
             @csrf
             @method('PUT')

@@ -19,47 +19,47 @@
                 @csrf
                 @method('PUT')
 
-                <div class="form-control mb-4">
+                <div class="fieldset mb-4">
                     <label class="label">
-                        <span class="label-text">{{ __('Amount') }}</span>
+                        <span>{{ __('Amount') }}</span>
                     </label>
                     <input type="number" step="0.01" name="calculated_amount" value="{{ old('calculated_amount', $payrollItem->calculated_amount) }}"
-                        class="input input-bordered @error('calculated_amount') input-error @enderror" required />
+                        class="input  @error('calculated_amount') input-error @enderror" required />
                     @error('calculated_amount')
-                        <span class="label-text-alt text-error mt-1">{{ $message }}</span>
+                        <span class="text-xs text-error mt-1">{{ $message }}</span>
                     @enderror
                 </div>
 
-                <div class="form-control mb-4">
+                <div class="fieldset mb-4">
                     <label class="label">
-                        <span class="label-text">{{ __('Unit Count') }}</span>
+                        <span>{{ __('Unit Count') }}</span>
                     </label>
                     <input type="number" step="0.01" name="unit_count" value="{{ old('unit_count', $payrollItem->unit_count) }}"
-                        class="input input-bordered @error('unit_count') input-error @enderror" />
+                        class="input  @error('unit_count') input-error @enderror" />
                     @error('unit_count')
-                        <span class="label-text-alt text-error mt-1">{{ $message }}</span>
+                        <span class="text-xs text-error mt-1">{{ $message }}</span>
                     @enderror
                 </div>
 
-                <div class="form-control mb-4">
+                <div class="fieldset mb-4">
                     <label class="label">
-                        <span class="label-text">{{ __('Unit Rate') }}</span>
+                        <span>{{ __('Unit Rate') }}</span>
                     </label>
                     <input type="number" step="0.01" name="unit_rate" value="{{ old('unit_rate', $payrollItem->unit_rate) }}"
-                        class="input input-bordered @error('unit_rate') input-error @enderror" />
+                        class="input  @error('unit_rate') input-error @enderror" />
                     @error('unit_rate')
-                        <span class="label-text-alt text-error mt-1">{{ $message }}</span>
+                        <span class="text-xs text-error mt-1">{{ $message }}</span>
                     @enderror
                 </div>
 
-                <div class="form-control mb-6">
+                <div class="fieldset mb-6">
                     <label class="label">
-                        <span class="label-text">{{ __('Description') }}</span>
+                        <span>{{ __('Description') }}</span>
                     </label>
                     <input type="text" name="description" value="{{ old('description', $payrollItem->description) }}"
-                        class="input input-bordered @error('description') input-error @enderror" />
+                        class="input  @error('description') input-error @enderror" />
                     @error('description')
-                        <span class="label-text-alt text-error mt-1">{{ $message }}</span>
+                        <span class="text-xs text-error mt-1">{{ $message }}</span>
                     @enderror
                 </div>
 

@@ -7,14 +7,14 @@
             </div>
 
             <div class="flex m-2 overflow-hidden" x-data="bankSelectHandler()" x-init="initializeBank()">
-                <select class="select select-bordered ml-2" x-model="selectedBankAccount" @change="handleBankChange">
+                <select class="select  ml-2" x-model="selectedBankAccount" @change="handleBankChange">
                     @foreach ($bankAccounts as $bankAccount)
                         <option {{ $loop->first ? 'selected' : '' }} value="{{ $bankAccount->id }}">
                             {{ $bankAccount->name }}</option>
                     @endforeach
                 </select>
 
-                <select x-model="selectedDuration" @change="handleBankChange" class="select select-bordered">
+                <select x-model="selectedDuration" @change="handleBankChange" class="select ">
                     <option value="1">{{ '۳ ' . __('Month') }}</option>
                     <option value="2">{{ '۶ ' . __('Month') }}</option>
                     <option value="3">{{ '۹ ' . __('Month') }}</option>

@@ -5,7 +5,7 @@
         </h2>
     </x-slot>
 
-    <div class="">
+    <div>
         <form action="{{ isset($invoice) && $invoice ? route('invoices.ancillary-costs.store', $invoice) : route('ancillary-costs.store') }}" method="POST">
             @csrf
             <div class="card-body">

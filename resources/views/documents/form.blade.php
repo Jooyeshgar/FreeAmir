@@ -112,7 +112,7 @@
                                 syncSubjectByCode();
                                 syncSubjectByCodeRemote();
                             "
-                            class="max-h-10 input input-bordered border-slate-400 disabled:background-slate-700 w-full max-w-42 border-white value codeInput" />
+                            class="max-h-10 input  border-slate-400 disabled:background-slate-700 w-full max-w-42 border-white value codeInput" />
                     </div>
                     <div>
                         <x-subject-select :subjects="$subjects" data-subject-select x-bind:selected_id="selectedId" x-bind:selected_name="selectedName"

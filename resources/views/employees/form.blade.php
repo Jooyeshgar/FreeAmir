@@ -184,6 +184,6 @@
     <label class="label cursor-pointer justify-start gap-3">
         <input type="checkbox" name="is_active" value="1" class="checkbox checkbox-primary"
             {{ old('is_active', $employee->is_active ?? true) ? 'checked' : '' }} />
-        <span class="label-text font-medium">{{ __('Active') }}</span>
+        <span class=" font-medium">{{ __('Active') }}</span>
     </label>
 </div>

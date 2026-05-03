@@ -9,7 +9,7 @@
             {{ __('Registration of accounting document') }}
         </span>
     </div>
-    <div class="">
+    <div>
 
         <form action="{{ route('documents.store') }}" method="POST" id="documentForm">
             <x-show-message-bags />

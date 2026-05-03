@@ -31,11 +31,11 @@
             $hint = '<a class="link text-blue-500" href="' . route('banks.create') . '">اضافه کردن بانک</a>';
         @endphp
         <div class="h-full flex flex-wrap items-end" x-data="{ bank_id: '{{ $initialBankId }}', selectedValue: '{{ $initialSelectedValue }}' }">
-            <span class="label-text">{{ __('Bank') }}</span>
+            <span>{{ __('Bank') }}</span>
 
             <x-select-box url="{{ route('bank-accounts.search-bank') }}" :options="[['headerGroup' => 'bank', 'options' => $banks]]" x-model="selectedValue"
                 x-init="if (!selectedValue && bank_id) { selectedValue = 'bank-' + bank_id; }" placeholder="{{ __('Select Bank') }}" hint='{!! $hint !!}'
-                @selected="bank_id = $event.detail.id;" class="" />
+                @selected="bank_id = $event.detail.id;" />
 
             <input type="hidden" x-bind:value="bank_id" name="bank_id">
         </div>

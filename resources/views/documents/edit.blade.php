@@ -9,7 +9,7 @@
             ثبت سند حسابداری
         </span>
     </div>
-    <div class="">
+    <div>
 
         <form action="{{ route('documents.update', $document) }}" method="POST">
             <x-show-message-bags />

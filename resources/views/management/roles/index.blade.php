@@ -15,7 +15,7 @@
             </a>
             <form class="right" method="GET" action="{{ route('roles.index') }}">
                 <input type="text" name="search" placeholder="{{ __('Search') }}"
-                    class="input input-bordered w-full max-w-xs">
+                    class="input  w-full max-w-xs">
                 <button type="submit" class="right btn-flat"><i class=" icon-search"></i></button>
             </form>
 

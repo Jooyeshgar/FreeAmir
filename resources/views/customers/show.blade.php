@@ -113,7 +113,7 @@
                         </thead>
                         <tbody>
                             @forelse ($customer->comments->take(5) as $comment)
-                                <tr class="hover">
+                                <tr class="hover:bg-base-300">
                                     <td class="px-4 py-3">
                                         <span class="badge badge-ghost">{{ $comment->commentBy->name }}</span>
                                     </td>
@@ -256,7 +256,7 @@
                     </thead>
                     <tbody>
                         @forelse ($orders as $order)
-                            <tr class="hover">
+                            <tr class="hover:bg-base-300">
                                 <td class="px-4 py-3">
                                     <span class="badge badge-ghost">{{ $order->date ? formatDate($order->date) : '-' }}</span>
                                 </td>

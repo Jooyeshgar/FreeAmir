@@ -1,7 +1,7 @@
 <header class="navbar justify-between">
     <div>
         <div class="flex items-center bg-base-200 rounded-xl mx-4 p-1">
-            <img src="/images/logo.png" alt="Logo" width="50" class="">
+            <img src="/images/logo.png" alt="Logo" width="50">
         </div>
         <ul class="menu menu-horizontal px-1 bg-base-200 rounded-xl">
             <x-menu />

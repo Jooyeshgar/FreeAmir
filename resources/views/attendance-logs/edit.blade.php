@@ -20,9 +20,9 @@
                     {{-- Employee: read-only, cannot be changed --}}
                     <div class="md:col-span-2">
                         <label class="label">
-                            <span class="label-text font-medium">{{ __('Employee') }}</span>
+                            <span class=" font-medium">{{ __('Employee') }}</span>
                         </label>
-                        <div class="input input-bordered flex items-center bg-base-200 text-base-content/70 cursor-not-allowed">
+                        <div class="input  flex items-center bg-base-200 text-base-content/70 cursor-not-allowed">
                             {{ $attendanceLog->employee->first_name }} {{ $attendanceLog->employee->last_name }}
                         </div>
                         <input type="hidden" name="employee_id" value="{{ $attendanceLog->employee_id }}" />

@@ -74,7 +74,7 @@
                             @php
                                 $depth = $subject->getAttribute('depth') ?? 0;
                             @endphp
-                            <tr class="hover" data-lazy-row data-index="{{ $index }}">
+                            <tr class="hover:bg-base-300" data-lazy-row data-index="{{ $index }}">
                                 <td class="border-r border-gray-400 text-center">
                                     <a href="{{ route('transactions.index', ['subject_id' => $subject->id]) }}" class="text-primary hover:underline" title="{{ __('View transactions for this subject') }}">
                                         {{ $subject->formattedCode() }}

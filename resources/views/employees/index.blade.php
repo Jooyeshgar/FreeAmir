@@ -15,9 +15,9 @@
                 <form action="{{ route('hr.employees.index') }}" method="GET" class="flex flex-wrap items-end gap-2">
 
                     <input type="text" name="search" value="{{ request('search') }}" placeholder="{{ __('Search by name, code or national code') }}"
-                        class="input input-bordered input-sm w-64" />
+                        class="input  input-sm w-64" />
 
-                    <select name="is_active" class="select select-bordered select-sm">
+                    <select name="is_active" class="select  select-sm">
                         <option value="">{{ __('All Statuses') }}</option>
                         <option value="1" {{ request('is_active') === '1' ? 'selected' : '' }}>{{ __('Active') }}</option>
                         <option value="0" {{ request('is_active') === '0' ? 'selected' : '' }}>{{ __('Inactive') }}</option>

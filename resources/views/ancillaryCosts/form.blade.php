@@ -27,7 +27,7 @@
                         x-init="if (!selectedValue && customer_id) {
                             selectedValue = 'customer-' + customer_id;
                         }" placeholder="{{ __('Select Customer') }}" hint='{!! $hint !!}'
-                        @selected="customer_id = $event.detail.id;" class="" />
+                        @selected="customer_id = $event.detail.id;" />
                     <input type="hidden" x-bind:value="customer_id" name="customer_id">
                 </div>
             </div>
@@ -47,7 +47,7 @@
                             x-init="if (!selectedValue && invoice_id) {
                                 selectedValue = 'invoice-' + invoice_id;
                             }" placeholder="{{ __('Select Invoice') }}"
-                            @selected="invoice_id = $event.detail.id; loadInvoiceProducts(invoice_id);" class="" />
+                            @selected="invoice_id = $event.detail.id; loadInvoiceProducts(invoice_id);" />
                         <input type="hidden" x-bind:value="invoice_id" name="invoice_id">
                     </div>
                 </div>
