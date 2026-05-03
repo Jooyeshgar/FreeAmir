@@ -52,6 +52,23 @@
     .home-card-body a {
         @apply text-slate-700 transition-colors hover:text-emerald-600 dark:text-slate-200 dark:hover:text-emerald-300;
     }
+
+    .app-background {
+        @apply pointer-events-none fixed inset-0;
+        z-index: 0;
+        background-image:
+            linear-gradient(rgb(248 250 252 / 0.68), rgb(248 250 252 / 0.68)),
+            url("../images/inbg.jpeg");
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: cover;
+    }
+
+    [data-theme="dark"] .app-background {
+        background-image:
+            linear-gradient(rgb(2 6 23 / 0.76), rgb(2 6 23 / 0.76)),
+            url("../images/inbg-dark.jpeg");
+    }
 }
 
 @font-face {

@@ -2,6 +2,7 @@
     'title' => config('app.name'),
 ])
 
+<!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="light">
 
 <head>
@@ -20,12 +21,10 @@
 
 </head>
 
-<body class="min-h-screen bg-base-100 text-base-content" dir="{{ app()->getLocale() == 'fa' ? 'rtl' : 'ltr' }}">
+<body class="relative min-h-screen overflow-x-hidden bg-base-100 text-base-content" dir="{{ app()->getLocale() == 'fa' ? 'rtl' : 'ltr' }}">
 
-    <span class="flex items-center fixed left-0 right-0 top-0 bottom-0 -z-10">
-        <img src="/images/background.jpg" alt="" class="w-full h-full object-cover opacity-30 dark:opacity-10 dark:brightness-50">
-    </span>
-    <div x-data="{ open: false }" class="min-[1430px]:w-[1430px] m-auto">
+    <div class="app-background" aria-hidden="true"></div>
+    <div x-data="{ open: false }" class="relative z-10 min-[1430px]:w-[1430px] mx-auto">
         <x-header />
 
         {{ $slot }}
