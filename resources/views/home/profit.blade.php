@@ -1,6 +1,6 @@
-    <div class=" w-1/3 max-[850px]:w-full relative bg-white rounded-[16px]">
-        <div class="flex justify-between items-center h-[62px]">
-            <h2 class="text-[#495057] ms-3">
+    <div class="home-card w-1/3 max-[850px]:w-full">
+        <div class="home-card-header">
+            <h2 class="home-card-title">
                 {{ __('Profit and loss') }} : <b>{{ formatNumber($profit) }}
                     {{ config('amir.currency') ?? __('Rial') }}</b>
             </h2>
@@ -20,8 +20,8 @@
                 }
             @endphp
             <x-charts.bar-chart chart-id="profitChart" heightClass="h-64" :datasets="[
-                ['data' => $alignedIncomesData, 'backgroundColor' => '#4bb946c4', 'borderColor' => '#4bb946'],
-                ['data' => $alignedCostsData, 'backgroundColor' => 'red', 'borderColor' => 'red'],
+                ['data' => $alignedIncomesData, 'backgroundColor' => '#22c55ecc', 'borderColor' => '#22c55e'],
+                ['data' => $alignedCostsData, 'backgroundColor' => '#ef4444cc', 'borderColor' => '#ef4444'],
             ]" />
         </div>
     </div>

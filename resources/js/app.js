@@ -9,6 +9,69 @@ window.Chart = Chart;
 Chart.register(...registerables);
 Chart.defaults.font.family = 'vazir'
 
+function getChartTheme() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+    return {
+        isDark,
+        textColor: isDark ? '#cbd5e1' : '#475569',
+        mutedTextColor: isDark ? '#94a3b8' : '#64748b',
+        gridColor: isDark ? 'rgba(148, 163, 184, 0.18)' : 'rgba(148, 163, 184, 0.24)',
+        axisColor: isDark ? 'rgba(148, 163, 184, 0.32)' : 'rgba(100, 116, 139, 0.28)',
+        tooltipBackgroundColor: isDark ? '#020617' : '#111827',
+        tooltipTextColor: '#f8fafc',
+        canvasBackgroundColor: isDark ? '#0f172a' : '#ffffff',
+    };
+}
+
+function applyChartDefaults() {
+    const theme = getChartTheme();
+
+    Chart.defaults.color = theme.textColor;
+    Chart.defaults.borderColor = theme.gridColor;
+}
+
+window.getFreeAmirChartTheme = getChartTheme;
+window.applyFreeAmirChartTheme = applyChartDefaults;
+applyChartDefaults();
+
+function syncThemeController() {
+    let theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+
+    try {
+        theme = localStorage.getItem('theme') === 'dark' ? 'dark' : theme;
+    } catch (error) {
+        theme = theme || 'light';
+    }
+
+    document.documentElement.setAttribute('data-theme', theme);
+    applyChartDefaults();
+
+    document.querySelectorAll('.theme-controller[value="dark"]').forEach((themeController) => {
+        themeController.checked = theme === 'dark';
+
+        themeController.addEventListener('change', () => {
+            const selectedTheme = themeController.checked ? 'dark' : 'light';
+
+            document.documentElement.setAttribute('data-theme', selectedTheme);
+            applyChartDefaults();
+            window.dispatchEvent(new CustomEvent('theme:changed', {
+                detail: {
+                    theme: selectedTheme,
+                },
+            }));
+
+            try {
+                localStorage.setItem('theme', selectedTheme);
+            } catch (error) {
+                return;
+            }
+        });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', syncThemeController);
+
 function convertToJalali(gy, gm, gd) {
     // Implementation of gregorian_to_jalali function in JavaScript
     gy = parseInt(gy);

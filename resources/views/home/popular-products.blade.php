@@ -1,17 +1,17 @@
-    <div class="w-1/2 max-[1200px]:w-full bg-white rounded-[16px]">
-        <div class="flex justify-between items-center">
+    <div class="home-card w-1/2 max-[1200px]:w-full">
+        <div class="home-card-header">
             <div>
-                <h2 class="text-[#495057] ms-3">{{ __('Most popular products and services') }}</h2>
+                <h2 class="home-card-title">{{ __('Most popular products and services') }}</h2>
             </div>
-            <div class="flex rounded-[16px] m-1 overflow-hidden ">
-                <a href="{{ route('products.index') }}" class="flex ml-2 items-center justify-center bg-[#DEE2E6] text-[#242424] rounded-[16px] w-[72px] h-[56px]">
+            <div class="flex m-1 gap-2 overflow-hidden">
+                <a href="{{ route('products.index') }}" class="home-card-action">
                     {{ __('Products') }}</a>
-                <a href="{{ route('services.index') }}" class="flex items-center justify-center bg-[#DEE2E6] text-[#242424] rounded-[16px] w-[72px] h-[56px]">
+                <a href="{{ route('services.index') }}" class="home-card-action">
                     {{ __('Services') }}</a>
             </div>
         </div>
-        <div class="text-[#495057] mt-4 p-4">
-            <table class="w-full text-center text-[13px]">
+        <div class="home-card-body mt-4 overflow-x-auto p-4">
+            <table class="home-table">
                 <tr>
                     <th>{{ __('Code') }}</th>
                     <th>{{ __('Product/Service name') }}</th>
@@ -25,7 +25,7 @@
                             {{ $popularProductAndService['code'] }}
                         </td>
                         <td class="text-right">
-                            <a href="{{ route($popularProductAndService['type'] . '.show', $popularProductAndService['id']) }}">
+                            <a href="{{ route($popularProductAndService['type'] . '.show', $popularProductAndService['id']) }}" class="home-link">
                                 {{ $popularProductAndService['name'] }}</a>
                         </td>
                         <td>

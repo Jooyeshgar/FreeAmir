@@ -1,8 +1,8 @@
 @can('documents.show')
-    <div class="w-1/3 max-[850px]:w-full bg-white rounded-[16px] relative">
-        <div class="flex justify-between items-center max-[850px]:flex-col max-[850px]:mt-4">
+    <div class="home-card w-1/3 max-[850px]:w-full">
+        <div class="home-card-header max-[850px]:flex-col max-[850px]:items-stretch max-[850px]:pt-4">
             <div>
-                <h2 class="text-[#495057] ms-3">
+                <h2 class="home-card-title">
                     {{ __('Cash and banks balances') }}
                 </h2>
             </div>

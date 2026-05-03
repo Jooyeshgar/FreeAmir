@@ -39,8 +39,13 @@
 
             const ctx = document.getElementById(@json($chartId));
             if (!ctx || typeof Chart === 'undefined') return;
+            const getTheme = () => window.getFreeAmirChartTheme ? window.getFreeAmirChartTheme() : {
+                textColor: '#475569',
+                tooltipBackgroundColor: '#111827',
+                tooltipTextColor: '#f8fafc',
+            };
 
-            new Chart(ctx, {
+            const chart = new Chart(ctx, {
                 type: 'pie',
                 data: {
                     labels: items.map(i => i.name),
@@ -48,15 +53,32 @@
                         data: values,
                         backgroundColor: backgroundColors,
                         borderWidth: 2,
+                        borderColor: function() {
+                            return getTheme().isDark ? '#0f172a' : '#ffffff';
+                        },
                     }]
                 },
                 options: {
                     plugins: {
                         legend: {
-                            position: position
+                            position: position,
+                            labels: {
+                                color: function() {
+                                    return getTheme().textColor;
+                                },
+                            },
                         },
                         tooltip: {
                             rtl: true,
+                            backgroundColor: function() {
+                                return getTheme().tooltipBackgroundColor;
+                            },
+                            titleColor: function() {
+                                return getTheme().tooltipTextColor;
+                            },
+                            bodyColor: function() {
+                                return getTheme().tooltipTextColor;
+                            },
                             callbacks: {
                                 title: (ctx) => items[ctx[0].dataIndex].name,
                                 label: (ctx) => {
@@ -72,6 +94,8 @@
                     }
                 }
             });
+
+            window.addEventListener('theme:changed', () => chart.update());
         });
     </script>
 @endpush
