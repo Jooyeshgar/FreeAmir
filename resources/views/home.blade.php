@@ -1,7 +1,7 @@
 <x-app-layout :title="__('Dashboard')">
     <x-show-message-bags />
 
-    <main class="mt-10">
+    <main class="home-dashboard">
 
         @hasrole('Super-Admin')
             @if ($hasDocument)
@@ -16,7 +16,7 @@
         @endhasrole
 
         <div>
-            <h1 class="text-[#495057] text-[24px]">
+            <h1 class="home-page-title">
                 {{ __('Dashboard') }}
             </h1>
         </div>

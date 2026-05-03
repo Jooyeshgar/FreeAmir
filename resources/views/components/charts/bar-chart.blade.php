@@ -10,6 +10,13 @@
             if (!canvas || typeof Chart === 'undefined') return;
 
             const ctx = canvas.getContext('2d');
+            const getTheme = () => window.getFreeAmirChartTheme ? window.getFreeAmirChartTheme() : {
+                textColor: '#475569',
+                mutedTextColor: '#64748b',
+                gridColor: 'rgba(148, 163, 184, 0.24)',
+                tooltipBackgroundColor: '#111827',
+                tooltipTextColor: '#f8fafc',
+            };
 
             window.__chartInstances = window.__chartInstances || {};
             if (window.__chartInstances[chartId]) {
@@ -46,9 +53,10 @@
                     scales: {
                         x: {
                             grid: {
-                                color: '#f1f5f9',
+                                color: () => getTheme().gridColor,
                             },
                             ticks: {
+                                color: () => getTheme().mutedTextColor,
                                 font: {
                                     size: 11
                                 }
@@ -57,20 +65,26 @@
                         y: {
                             beginAtZero: true,
                             grid: {
-                                color: '#f1f5f9',
+                                color: () => getTheme().gridColor,
                             },
                             ticks: {
+                                color: () => getTheme().mutedTextColor,
                                 display: false
                             }
                         }
                     },
                     plugins: {
                         legend: {
-                            display: @json($resolvedShowLegend)
+                            display: @json($resolvedShowLegend),
+                            labels: {
+                                color: () => getTheme().textColor,
+                            },
                         },
                         tooltip: {
                             rtl: true,
-                            backgroundColor: '#111827',
+                            backgroundColor: () => getTheme().tooltipBackgroundColor,
+                            titleColor: () => getTheme().tooltipTextColor,
+                            bodyColor: () => getTheme().tooltipTextColor,
                             titleFont: {
                                 size: 12
                             },
@@ -86,7 +100,7 @@
                         datalabels: {
                             anchor: 'end',
                             align: 'top',
-                            color: @json($datalabelColor),
+                            color: (context) => context.dataset.datalabelColor || @json($datalabelColor),
                             font: {
                                 weight: 'bold',
                                 size: 12
@@ -95,6 +109,10 @@
                         }
                     }
                 }
+            });
+
+            window.addEventListener('theme:changed', () => {
+                window.__chartInstances[chartId]?.update();
             });
         });
     </script>

@@ -1,20 +1,20 @@
-    <div class="w-1/2 max-[1200px]:w-full bg-white rounded-[16px]">
-        <div class="flex justify-between items-center">
+    <div class="home-card w-1/2 max-[1200px]:w-full">
+        <div class="home-card-header">
             <div>
-                <h2 class="text-[#495057] ms-3">
+                <h2 class="home-card-title">
                     {{ __('Bank Account Balance') }}
                 </h2>
             </div>
 
-            <div class="flex rounded-[16px] m-1 overflow-hidden">
-                <a href="{{ route('documents.index') }}" class="flex items-center justify-center bg-[#DEE2E6] text-[#242424] rounded-[16px] w-[72px] h-[56px]">
+            <div class="flex m-1 overflow-hidden">
+                <a href="{{ route('documents.index') }}" class="home-card-action">
                     {{ __('Documents') }}
                 </a>
             </div>
         </div>
 
-        <div class="text-[#495057] mt-4">
-            <div class="flex justify-between mx-4 border-b-2 border-b-[#CED4DA] pb-3 mb-4">
+        <div class="home-card-body mt-4">
+            <div class="flex justify-between mx-4 border-b border-b-slate-200 pb-3 mb-4 text-xs font-semibold text-slate-500 dark:border-b-slate-700 dark:text-slate-400">
                 <p>
                     {{ __('Bank Name') }}
                 </p>
@@ -28,7 +28,7 @@
                 @foreach ($topTenBankAccountBalances as $bankAccountId => $balance)
                     <div class="flex justify-between mx-4 mb-4">
                         <p>
-                            <a href="{{ route('transactions.index', ['subject_id' => $bankAccountId]) }}">
+                            <a href="{{ route('transactions.index', ['subject_id' => $bankAccountId]) }}" class="home-link">
                                 {{ $bankAccounts->find($bankAccountId)->name }}
                             </a>
                         </p>

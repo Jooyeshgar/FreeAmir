@@ -28,6 +28,12 @@
         var cashBalanceChart = null;
         window.addEventListener("DOMContentLoaded", () => {
             const ctx = document.getElementById('cashBalanceChart').getContext('2d');
+            const getTheme = () => window.getFreeAmirChartTheme ? window.getFreeAmirChartTheme() : {
+                mutedTextColor: '#64748b',
+                gridColor: 'rgba(148, 163, 184, 0.24)',
+                tooltipBackgroundColor: '#111827',
+                tooltipTextColor: '#f8fafc',
+            };
 
             cashBalanceChart = new Chart(ctx, {
                 type: 'line',
@@ -35,7 +41,9 @@
                     labels: {!! json_encode($convertedLabels) !!},
                     datasets: [{
                         data: {!! json_encode($convertedDatas) !!},
-                        borderColor: '#999999',
+                        borderColor: function() {
+                            return getTheme().isDark ? '#38bdf8' : '#0ea5e9';
+                        },
                         pointRadius: 2,
                         tension: 0.4,
                         backgroundColor: function(context) {
@@ -57,6 +65,11 @@
                             display: true,
                             grid: {
                                 display: false
+                            },
+                            ticks: {
+                                color: function() {
+                                    return getTheme().mutedTextColor;
+                                },
                             }
                         },
                         y: {
@@ -66,6 +79,9 @@
                                 display: false
                             },
                             ticks: {
+                                color: function() {
+                                    return getTheme().mutedTextColor;
+                                },
                                 display: false
                             }
                         }
@@ -78,6 +94,16 @@
                             enabled: true,
                             padding: 10,
                             cornerRadius: 4,
+                            rtl: true,
+                            backgroundColor: function() {
+                                return getTheme().tooltipBackgroundColor;
+                            },
+                            titleColor: function() {
+                                return getTheme().tooltipTextColor;
+                            },
+                            bodyColor: function() {
+                                return getTheme().tooltipTextColor;
+                            },
                             callbacks: {
                                 label: function(context) {
                                     let value = context.raw;
@@ -88,6 +114,8 @@
                     }
                 }
             });
+
+            window.addEventListener('theme:changed', () => cashBalanceChart?.update());
         });
     </script>
 @endPushOnce

@@ -1,7 +1,7 @@
-    <div class="w-1/2 max-[1200px]:w-full bg-white rounded-[16px]">
-        <div class="flex justify-between items-center max-[850px]:flex-col max-[850px]:mt-4">
+    <div class="home-card w-1/2 max-[1200px]:w-full">
+        <div class="home-card-header">
             <div>
-                <h2 class="text-[#495057] ms-3">
+                <h2 class="home-card-title">
                     {{ __('Bank Account Balance') }}
                 </h2>
             </div>

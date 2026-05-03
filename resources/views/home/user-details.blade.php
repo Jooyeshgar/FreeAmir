@@ -1,23 +1,23 @@
-    <div class="w-1/3 max-[850px]:w-full bg-white rounded-[16px]">
-        <div class="flex justify-between items-center h-[62px]">
-            <h2 class="text-[#495057] ms-3">{{ __('User Details') }}</h2>
+    <div class="home-card w-1/3 max-[850px]:w-full">
+        <div class="home-card-header">
+            <h2 class="home-card-title">{{ __('User Details') }}</h2>
         </div>
-        <div class="border-b-2 border-b-[#CED4DA] m-2">
-            <div class="flex text-[#212529] mt-4 max-[850px]:mb-4">
+        <div class="home-card-body m-2 border-b border-b-slate-200 dark:border-b-slate-700">
+            <div class="flex mt-4 max-[850px]:mb-4">
                 <div class="w-1/2 ms-4 max-[850px]:text-xs">
-                    <span class="text-[#495057]">{{ __('Name') }}:</span>
+                    <span class="text-slate-500 dark:text-slate-400">{{ __('Name') }}:</span>
                     {{ auth()->user()->name }}
                 </div>
 
                 <div class="w-1/2 ms-4 mb-4 max-[850px]:text-xs">
-                    <span class="text-[#495057]">{{ __('Email') }}:</span>
+                    <span class="text-slate-500 dark:text-slate-400">{{ __('Email') }}:</span>
                     {{ auth()->user()->email }}
                 </div>
             </div>
 
-            <div class="flex text-[#212529] mt-1 max-[850px]:mb-4">
+            <div class="flex mt-1 max-[850px]:mb-4">
                 <div class="w-1/2 ms-4 mb-4 max-[850px]:text-xs">
-                    <span class="text-[#495057]">{{ __('Companies') }}:</span>
+                    <span class="text-slate-500 dark:text-slate-400">{{ __('Companies') }}:</span>
                     @foreach (auth()->user()->companies as $company)
                         <a href="{{ route('change-company', ['company' => $company->id]) }}">
                             {{ $company->name . ' - ' . $company->fiscal_year }}

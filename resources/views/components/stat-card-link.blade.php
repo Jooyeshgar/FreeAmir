@@ -2,21 +2,40 @@
 
 @php
     $typeClasses = [
+        'base' => [
+            'text' => 'text-slate-500 dark:text-slate-300',
+            'btn' => 'btn-neutral',
+            'btnDark' => 'dark:border-slate-500/50 dark:text-slate-200 dark:hover:bg-slate-700/70',
+            'cardDark' => 'dark:border-slate-700',
+            'iconDarkBg' => 'dark:bg-slate-700/70',
+        ],
         'success' => [
-            'text' => 'text-green-500',
+            'text' => 'text-green-500 dark:text-emerald-300',
             'btn' => 'btn-success',
+            'btnDark' => 'dark:border-emerald-500/40 dark:text-emerald-200 dark:hover:bg-emerald-500/10 dark:hover:border-emerald-400/60',
+            'cardDark' => 'dark:border-emerald-500/20',
+            'iconDarkBg' => 'dark:bg-emerald-500/10',
         ],
         'error' => [
-            'text' => 'text-red-500',
+            'text' => 'text-red-500 dark:text-red-300',
             'btn' => 'btn-error',
+            'btnDark' => 'dark:border-red-500/40 dark:text-red-200 dark:hover:bg-red-500/10 dark:hover:border-red-400/60',
+            'cardDark' => 'dark:border-red-500/20',
+            'iconDarkBg' => 'dark:bg-red-500/10',
         ],
         'info' => [
-            'text' => 'text-blue-500',
+            'text' => 'text-blue-500 dark:text-sky-300',
             'btn' => 'btn-info',
+            'btnDark' => 'dark:border-sky-500/40 dark:text-sky-200 dark:hover:bg-sky-500/10 dark:hover:border-sky-400/60',
+            'cardDark' => 'dark:border-sky-500/20',
+            'iconDarkBg' => 'dark:bg-sky-500/10',
         ],
         'warning' => [
-            'text' => 'text-orange-500',
+            'text' => 'text-orange-500 dark:text-amber-300',
             'btn' => 'btn-warning',
+            'btnDark' => 'dark:border-amber-500/40 dark:text-amber-200 dark:hover:bg-amber-500/10 dark:hover:border-amber-400/60',
+            'cardDark' => 'dark:border-amber-500/20',
+            'iconDarkBg' => 'dark:bg-amber-500/10',
         ],
     ];
 
@@ -35,19 +54,19 @@
     $iconSvg = $icons[$icon] ?? null;
 @endphp
 
-<div class="card bg-gray-50 border border-gray-100 }}">
+<div class="card bg-gray-50 border border-gray-100 {{ $classes['cardDark'] }} dark:bg-slate-800/80 dark:shadow-none dark:ring-1 dark:ring-white/5">
     <div class="card-body p-3">
         <div class="flex items-center gap-2 mb-3">
             @if ($iconSvg)
-                <div class=" p-2 rounded-lg">
+                <div class=" p-2 rounded-lg {{ $classes['iconDarkBg'] }}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 {{ $classes['text'] }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         {!! $iconSvg !!}
                     </svg>
                 </div>
             @endif
-            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ $title }}</h3>
+            <h3 class="text-sm font-semibold text-gray-700 dark:text-slate-300">{{ $title }}</h3>
         </div>
-        <a href="{{ $link }}" class="btn btn-sm btn-outline {{ $classes['btn'] }} gap-2 w-full hover:brightness-110 transition-all">
+        <a href="{{ $link }}" class="btn btn-sm btn-outline {{ $classes['btn'] }} {{ $classes['btnDark'] }} gap-2 w-full hover:brightness-110 transition-all">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
             </svg>
