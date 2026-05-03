@@ -1,14 +1,14 @@
-<header class="navbar justify-between">
-    <div>
-        <div class="flex items-center bg-base-200 rounded-xl mx-4 p-1">
-            <img src="/images/logo.png" alt="Logo" width="50">
-        </div>
-        <ul class="menu menu-horizontal px-1 bg-base-200 rounded-xl">
+<header class="navbar items-center justify-between gap-4">
+    <nav class="flex min-w-0 flex-1 items-center gap-2" aria-label="{{ __('Main navigation') }}">
+        <a href="/" class="flex shrink-0 items-center rounded-xl bg-base-200 p-1" aria-label="{{ config('app.name') }}">
+            <img src="/images/logo.png" alt="Logo" class="h-12 w-12 object-contain">
+        </a>
+        <ul class="menu lg:menu-horizontal lg:flex-nowrap px-1 bg-base-200 rounded-xl">
             <x-menu />
         </ul>
-    </div>
+    </nav>
 
-    <div>
+    <nav class="flex shrink-0 items-center" aria-label="{{ __('User menu') }}">
         <ul class="menu menu-horizontal px-1 bg-base-200 rounded-xl">
             <li>
                 <label class="flex cursor-pointer gap-2 px-3 py-2">
@@ -41,11 +41,11 @@
                     </svg>
                 </label>
             </li>
-            <li class="dropdown dropdown-end dropdown-hover">
-                <div tabindex="0" role="button">
+            <li class="dropdown dropdown-end dropdown-hover dropdown-bottom">
+                <button type="button" tabindex="0" aria-haspopup="true">
                     {{ cookie('active-company-id') ? config('active-company-name') . ' - ' . config('active-company-fiscal-year') : __('Please Select a Company') }}
-                </div>
-                <ul tabindex="0" class="dropdown-end dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
+                </button>
+                <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow-lg">
                     @foreach (auth()->user()->companies as $company)
                         <li>
                             <a href="{{ route('change-company', ['company' => $company]) }}">
@@ -55,12 +55,12 @@
                     @endforeach
                 </ul>
             </li>
-            <li class="dropdown dropdown-end dropdown-hover">
-                <div tabindex="1" role="button">{{ Auth::user()->name }}</div>
-                <ul tabindex="1" class="dropdown dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
+            <li class="dropdown dropdown-end dropdown-hover dropdown-bottom">
+                <button type="button" tabindex="0" aria-haspopup="true">{{ Auth::user()->name }}</button>
+                <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow-lg">
                     <li><a href="/logout">{{ __('Logout') }}</a></li>
                 </ul>
             </li>
         </ul>
-    </div>
+    </nav>
 </header>

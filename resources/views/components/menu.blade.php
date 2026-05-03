@@ -3,88 +3,99 @@
 @endcan
 
 @can('employee-portal.dashboard')
-    <li class="dropdown dropdown-hover">
-        <div tabindex="0" role="button">{{ __('My Portal') }}</div>
-        <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
-            <li><a href="{{ route('employee-portal.dashboard') }}">{{ __('Dashboard') }}</a></li>
-            <li><a href="{{ route('employee-portal.attendance-logs') }}">{{ __('My Attendance') }}</a></li>
-            <li><a href="{{ route('employee-portal.monthly-attendances') }}">{{ __('Monthly Attendance') }}</a></li>
-            <li><a href="{{ route('employee-portal.payrolls') }}">{{ __('My Payrolls') }}</a></li>
-            <li><a href="{{ route('employee-portal.personnel-requests.index') }}">{{ __('My Requests') }}</a></li>
-            <li><a href="{{ route('employee-portal.employee.show') }}">{{ __('My Information') }}</a></li>
-        </ul>
+    <li>
+        <details>
+            <summary>{{ __('My Portal') }}</summary>
+            <ul class="z-50">
+                <li><a href="{{ route('employee-portal.dashboard') }}">{{ __('Dashboard') }}</a></li>
+                <li><a href="{{ route('employee-portal.attendance-logs') }}">{{ __('My Attendance') }}</a></li>
+                <li><a href="{{ route('employee-portal.monthly-attendances') }}">{{ __('Monthly Attendance') }}</a></li>
+                <li><a href="{{ route('employee-portal.payrolls') }}">{{ __('My Payrolls') }}</a></li>
+                <li><a href="{{ route('employee-portal.personnel-requests.index') }}">{{ __('My Requests') }}</a></li>
+                <li><a href="{{ route('employee-portal.employee.show') }}">{{ __('My Information') }}</a></li>
+            </ul>
+        </details>
     </li>
 @endcan
 @can('invoices.create')
-    <li class="dropdown dropdown-hover">
-        <div tabindex="0" role="button">{{ __('Invoices') }}</div>
-        <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
-            <li><a href="{{ route('invoices.index', ['invoice_type' => 'buy']) }}">{{ __('Buy List') }}</a></li>
-            <li><a href="{{ route('invoices.index', ['invoice_type' => 'buy', 'service_buy' => '1']) }}">{{ __('Buy Service') }}</a></li>
-            <li><a href="{{ route('invoices.index', ['invoice_type' => 'sell']) }}">{{ __('Sell List') }}</a></li>
-            <li><a href="{{ route('invoices.index', ['invoice_type' => 'return_buy']) }}">{{ __('Return Buy List') }}</a></li>
-            <li><a href="{{ route('invoices.index', ['invoice_type' => 'return_sell']) }}">{{ __('Return Sell List') }}</a></li>
-            <li><a href="{{ route('invoices.index', ['invoice_type' => 'return_buy', 'service_buy' => '1']) }}">{{ __('Service Buy Return') }}</a></li>
-            <li><a href="{{ route('customers.create') }}">{{ __('Add Customer') }}</a></li>
-            <li><a href="{{ route('ancillary-costs.index') }}">{{ __('Ancillary Cost List') }}</a></li>
-            <li><a href="{{ route('invoices.inactive') }}">{{ __('Activate Confirmed Invoices') }}</a></li>
-        </ul>
+    <li>
+        <details>
+            <summary>{{ __('Invoices') }}</summary>
+            <ul class="z-50">
+                <li><a href="{{ route('invoices.index', ['invoice_type' => 'buy']) }}">{{ __('Buy List') }}</a></li>
+                <li><a href="{{ route('invoices.index', ['invoice_type' => 'buy', 'service_buy' => '1']) }}">{{ __('Buy Service') }}</a></li>
+                <li><a href="{{ route('invoices.index', ['invoice_type' => 'sell']) }}">{{ __('Sell List') }}</a></li>
+                <li><a href="{{ route('invoices.index', ['invoice_type' => 'return_buy']) }}">{{ __('Return Buy List') }}</a></li>
+                <li><a href="{{ route('invoices.index', ['invoice_type' => 'return_sell']) }}">{{ __('Return Sell List') }}</a></li>
+                <li><a href="{{ route('invoices.index', ['invoice_type' => 'return_buy', 'service_buy' => '1']) }}">{{ __('Service Buy Return') }}</a></li>
+                <li><a href="{{ route('customers.create') }}">{{ __('Add Customer') }}</a></li>
+                <li><a href="{{ route('ancillary-costs.index') }}">{{ __('Ancillary Cost List') }}</a></li>
+                <li><a href="{{ route('invoices.inactive') }}">{{ __('Activate Confirmed Invoices') }}</a></li>
+            </ul>
+        </details>
     </li>
 @endcan
 @canany(['documents.index', 'documents.create', 'documents.edit'])
-    <li class="dropdown dropdown-hover">
-        <div tabindex="1" role="button">{{ __('Accounting') }}</div>
-        <ul tabindex="1" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
-            <li><a href="{{ route('documents.create') }}">{{ __('Create Document') }}</a></li>
-            <li><a href="{{ route('documents.index') }}">{{ __('Document List') }}</a></li>
-        </ul>
+    <li>
+        <details>
+            <summary>{{ __('Accounting') }}</summary>
+            <ul class="z-50">
+                <li><a href="{{ route('documents.create') }}">{{ __('Create Document') }}</a></li>
+                <li><a href="{{ route('documents.index') }}">{{ __('Document List') }}</a></li>
+            </ul>
+        </details>
     </li>
 @endcanany
 @canany(['reports.journal', 'reports.ledger', 'reports.sub-ledger'])
-    <li class="dropdown dropdown-hover">
-        <div tabindex="2" role="button">{{ __('Reports') }}</div>
-        <ul tabindex="2" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
-            @canany(['reports.journal', 'reports.ledger', 'reports.sub-ledger'])
-                <li>
-                    <details>
-                        <summary>{{ __('Accounting') }}</summary>
-                        <ul>
-                            @can('reports.documents')
-                                <li><a href="{{ route('reports.documents') }}">{{ __('Documents Report') }}</a></li>
-                            @endcan
-                            @can('reports.journal')
-                                <li><a href="{{ route('reports.journal') }}">{{ __('Journal') }}</a></li>
-                            @endcan
-                            @can('reports.ledger')
-                                <li><a href="{{ route('reports.ledger') }}">{{ __('Ledger') }}</a></li>
-                            @endcan
-                            @can('reports.sub-ledger')
-                                <li><a href="{{ route('reports.sub-ledger') }}">{{ __('Sub Ledger') }}</a></li>
-                            @endcan
-                            @can('reports.trial-balance')
-                                <li><a href="{{ route('reports.trial-balance') }}">{{ __('Trial Balance') }}</a></li>
-                            @endcan
-                        </ul>
-                    </details>
-                </li>
-            @endcanany
-        </ul>
+    <li>
+        <details>
+            <summary>{{ __('Reports') }}</summary>
+            <ul class="z-50">
+                @canany(['reports.journal', 'reports.ledger', 'reports.sub-ledger'])
+                    <li>
+                        <details>
+                            <summary>{{ __('Accounting') }}</summary>
+                            <ul>
+                                @can('reports.documents')
+                                    <li><a href="{{ route('reports.documents') }}">{{ __('Documents Report') }}</a></li>
+                                @endcan
+                                @can('reports.journal')
+                                    <li><a href="{{ route('reports.journal') }}">{{ __('Journal') }}</a></li>
+                                @endcan
+                                @can('reports.ledger')
+                                    <li><a href="{{ route('reports.ledger') }}">{{ __('Ledger') }}</a></li>
+                                @endcan
+                                @can('reports.sub-ledger')
+                                    <li><a href="{{ route('reports.sub-ledger') }}">{{ __('Sub Ledger') }}</a></li>
+                                @endcan
+                                @can('reports.trial-balance')
+                                    <li><a href="{{ route('reports.trial-balance') }}">{{ __('Trial Balance') }}</a></li>
+                                @endcan
+                            </ul>
+                        </details>
+                    </li>
+                @endcanany
+            </ul>
+        </details>
     </li>
 @endcanany
 
 @canany(['products.index', 'product-groups.index'])
-    <li class="dropdown dropdown-hover">
-        <div tabindex="3" role="button">{{ __('Warehouse') }}</div>
-        <ul tabindex="3" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
-            <li><a href="{{ route('products.index') }}">{{ __('Products') }}</a></li>
-            <li><a href="{{ route('product-groups.index') }}">{{ __('Product Groups') }}</a></li>
-        </ul>
+    <li>
+        <details>
+            <summary>{{ __('Warehouse') }}</summary>
+            <ul class="z-50">
+                <li><a href="{{ route('products.index') }}">{{ __('Products') }}</a></li>
+                <li><a href="{{ route('product-groups.index') }}">{{ __('Product Groups') }}</a></li>
+            </ul>
+        </details>
     </li>
 @endcanany
 
-<li class="dropdown dropdown-hover">
-    <div tabindex="4" role="button">{{ __('Management') }}</div>
-    <ul tabindex="4" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
+<li>
+    <details>
+        <summary>{{ __('Management') }}</summary>
+        <ul class="z-50 max-h-[calc(100vh-6rem)] overflow-y-auto">
 
         {{-- HR & Organization --}}
         @canany(['hr.employees.index', 'hr.employees.create', 'hr.employees.edit', 'hr.org-charts.index', 'hr.org-charts.create', 'hr.org-charts.edit',
@@ -240,5 +251,6 @@
         @endcanany
 
         <li><a href="https://github.com/Jooyeshgar/FreeAmir/issues">{{ __('Support') }}</a></li>
-    </ul>
+        </ul>
+    </details>
 </li>
