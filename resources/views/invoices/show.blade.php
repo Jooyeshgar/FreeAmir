@@ -34,46 +34,50 @@
             <x-show-message-bags />
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="stats shadow bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60">
+                <div
+                    class="stats shadow bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60 dark:from-slate-800 dark:to-sky-950/40 dark:border-sky-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
                     <div class="stat">
-                        <div class="stat-title text-blue-500">{{ __('Subtotal') }}
+                        <div class="stat-title text-blue-500 dark:text-sky-300">{{ __('Subtotal') }}
                             ({{ config('amir.currency') ?? __('Rial') }})</div>
-                        <div class="stat-value text-blue-600 text-3xl">
+                        <div class="stat-value text-blue-600 dark:text-sky-200 text-3xl">
                             {{ formatNumber($invoice->items->reduce(fn($carry, $item) => $carry + ($item->quantity ?? 0) * ($item->unit_price ?? 0), 0)) }}
                         </div>
-                        <div class="stat-desc text-blue-400">{{ __('Before discounts and tax') }}</div>
+                        <div class="stat-desc text-blue-400 dark:text-sky-400/80">{{ __('Before discounts and tax') }}</div>
                     </div>
                 </div>
 
-                <div class="stats shadow bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200/60">
+                <div
+                    class="stats shadow bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200/60 dark:from-slate-800 dark:to-amber-950/40 dark:border-amber-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
                     <div class="stat">
-                        <div class="stat-title text-amber-500">{{ __('Discounts') }}
+                        <div class="stat-title text-amber-500 dark:text-amber-300">{{ __('Discounts') }}
                             ({{ config('amir.currency') ?? __('Rial') }})</div>
-                        <div class="stat-value text-amber-600 text-3xl">
+                        <div class="stat-value text-amber-600 dark:text-amber-200 text-3xl">
                             {{ formatNumber($invoice->items->reduce(fn($carry, $item) => $carry + ($item->unit_discount ?? 0), 0)) }}
                         </div>
-                        <div class="stat-desc text-amber-400">{{ __('Total deductions') }}</div>
+                        <div class="stat-desc text-amber-400 dark:text-amber-400/80">{{ __('Total deductions') }}</div>
                     </div>
                 </div>
 
-                <div class="stats shadow bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/60">
+                <div
+                    class="stats shadow bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/60 dark:from-slate-800 dark:to-emerald-950/40 dark:border-emerald-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
                     <div class="stat">
-                        <div class="stat-title text-emerald-500">{{ __('VAT') }}
+                        <div class="stat-title text-emerald-500 dark:text-emerald-300">{{ __('VAT') }}
                             ({{ config('amir.currency') ?? __('Rial') }})</div>
-                        <div class="stat-value text-emerald-600 text-3xl">
+                        <div class="stat-value text-emerald-600 dark:text-emerald-200 text-3xl">
                             {{ formatNumber($invoice->items->reduce(fn($carry, $item) => $carry + ($item->vat ?? 0), 0)) }}
                         </div>
-                        <div class="stat-desc text-emerald-400">{{ __('Collected tax') }}</div>
+                        <div class="stat-desc text-emerald-400 dark:text-emerald-400/80">{{ __('Collected tax') }}</div>
                     </div>
                 </div>
 
-                <div class="stats shadow bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/60">
+                <div
+                    class="stats shadow bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/60 dark:from-slate-800 dark:to-indigo-950/40 dark:border-indigo-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
                     <div class="stat">
-                        <div class="stat-title text-indigo-500">{{ __('Grand total') }}
+                        <div class="stat-title text-indigo-500 dark:text-indigo-300">{{ __('Grand total') }}
                             ({{ config('amir.currency') ?? __('Rial') }})</div>
-                        <div class="stat-value text-indigo-600 text-3xl">
+                        <div class="stat-value text-indigo-600 dark:text-indigo-200 text-3xl">
                             {{ formatNumber(($invoice->amount ?? 0) - ($invoice->subtraction ?? 0)) }}</div>
-                        <div class="stat-desc text-indigo-400">{{ __('Payable amount') }}</div>
+                        <div class="stat-desc text-indigo-400 dark:text-indigo-400/80">{{ __('Payable amount') }}</div>
                     </div>
                 </div>
 
@@ -104,49 +108,49 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div class="card bg-base-200 shadow">
                             <div class="card-body p-4">
-                                <h3 class="card-title text-xs uppercase tracking-wide text-gray-500">
+                                <h3 class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">
                                     {{ __('Customer') }}</h3>
-                                <p class="text-lg font-semibold text-gray-800">{{ $invoice->customer->name }}</p>
+                                <p class="text-lg font-semibold text-gray-800 dark:text-slate-100">{{ $invoice->customer->name }}</p>
                             </div>
                         </div>
                         <div class="card bg-base-200 shadow">
                             <div class="card-body p-4">
-                                <h3 class="card-title text-xs uppercase tracking-wide text-gray-500">
+                                <h3 class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">
                                     {{ __('Phone') }}</h3>
-                                <p class="text-lg font-semibold text-gray-800">
+                                <p class="text-lg font-semibold text-gray-800 dark:text-slate-100">
                                     {{ $invoice->customer->phone ? convertToFarsi($invoice->customer->phone) : '—' }}
                                 </p>
                             </div>
                         </div>
                         <div class="card bg-base-200 shadow">
                             <div class="card-body p-4">
-                                <h3 class="card-title text-xs uppercase tracking-wide text-gray-500">
+                                <h3 class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">
                                     {{ __('Economic code') }}</h3>
-                                <p class="text-lg font-semibold text-gray-800">
+                                <p class="text-lg font-semibold text-gray-800 dark:text-slate-100">
                                     {{ $invoice->customer->ecnmcs_code ? convertToFarsi($invoice->customer->ecnmcs_code) : '—' }}
                                 </p>
                             </div>
                         </div>
                         <div class="card bg-base-200 shadow">
                             <div class="card-body p-4">
-                                <h3 class="card-title text-xs uppercase tracking-wide text-gray-500">
+                                <h3 class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">
                                     {{ __('Postal code') }}</h3>
-                                <p class="text-lg font-semibold text-gray-800">
+                                <p class="text-lg font-semibold text-gray-800 dark:text-slate-100">
                                     {{ $invoice->customer->postal_code ? convertToFarsi($invoice->customer->postal_code) : '—' }}
                                 </p>
                             </div>
                         </div>
                         <div class="card bg-base-200 shadow md:col-span-2 lg:col-span-4">
                             <div class="card-body p-4">
-                                <h3 class="card-title text-xs uppercase tracking-wide text-gray-500">
+                                <h3 class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">
                                     {{ __('Address') }}</h3>
-                                <p class="text-sm font-medium text-gray-700 leading-relaxed">
+                                <p class="text-sm font-medium text-gray-700 dark:text-slate-200 leading-relaxed">
                                     {{ $invoice->customer->address ?: '—' }}</p>
                             </div>
                         </div>
                     </div>
                 @else
-                    <div class="alert bg-emerald-50 border border-emerald-200 text-emerald-700">
+                    <div class="alert bg-emerald-50 border border-emerald-200 text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-200">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 1010 10A10 10 0 0012 2z" />
                         </svg>
@@ -183,7 +187,7 @@
                                                 {{ $item->itemable->name }}
                                             </a>
                                         @else
-                                            <span class="text-gray-500">{{ __('Removed product/service') }}</span>
+                                            <span class="text-gray-500 dark:text-slate-400">{{ __('Removed product/service') }}</span>
                                         @endif
                                     </td>
                                     <td class="px-4 py-3">{{ $item->description }}</td>
@@ -198,7 +202,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="px-4 py-6 text-center text-gray-500">
+                                    <td colspan="8" class="px-4 py-6 text-center text-gray-500 dark:text-slate-400">
                                         {{ __('There are no items on this invoice yet.') }}
                                     </td>
                                 </tr>
@@ -206,7 +210,7 @@
                         </tbody>
                         <tfoot class="bg-base-300">
                             <tr>
-                                <td colspan="8" class="px-4 py-3 text-right text-sm text-gray-600">
+                                <td colspan="8" class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
                                     {{ __('Total items: :count', ['count' => convertToFarsi($invoice->items->count())]) }}
                                 </td>
                             </tr>
@@ -244,7 +248,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="8" class="px-4 py-6 text-center text-gray-500">
+                                            <td colspan="8" class="px-4 py-6 text-center text-gray-500 dark:text-slate-400">
                                                 {{ __('There are no return invoices yet.') }}
                                             </td>
                                         </tr>
@@ -278,9 +282,9 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                         <div class="card bg-base-200 shadow-sm">
                             <div class="card-body p-4">
-                                <h3 class="card-title text-sm font-medium text-gray-500">{{ __('Title') }}
+                                <h3 class="card-title text-sm font-medium text-gray-500 dark:text-slate-300">{{ __('Title') }}
                                     {{ __('Invoice') }}</h3>
-                                <p class="text-lg font-semibold text-gray-800">
+                                <p class="text-lg font-semibold text-gray-800 dark:text-slate-100">
                                     <a href="{{ route('invoices.show', $invoice->getReturnedInvoice()) }}" class="link link-hover link-primary">
                                         {{ $invoice->getReturnedInvoice()?->title }}
                                         ({{ $invoice->getReturnedInvoice()?->invoice_type->label() }}
@@ -290,47 +294,51 @@
                             </div>
                         </div>
 
-                        <div class="stats shadow bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60">
+                        <div
+                            class="stats shadow bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60 dark:from-slate-800 dark:to-sky-950/40 dark:border-sky-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
                             <div class="stat">
-                                <div class="stat-title text-blue-500">{{ __('Subtotal') }}
+                                <div class="stat-title text-blue-500 dark:text-sky-300">{{ __('Subtotal') }}
                                     ({{ config('amir.currency') ?? __('Rial') }})</div>
-                                <div class="stat-value text-blue-600 text-3xl">
+                                <div class="stat-value text-blue-600 dark:text-sky-200 text-3xl">
                                     {{ formatNumber($invoice->getReturnedInvoice()?->items->reduce(fn($carry, $item) => $carry + ($item->quantity ?? 0) * ($item->unit_price ?? 0), 0)) }}
                                 </div>
-                                <div class="stat-desc text-blue-400">{{ __('Before discounts and tax') }}</div>
+                                <div class="stat-desc text-blue-400 dark:text-sky-400/80">{{ __('Before discounts and tax') }}</div>
                             </div>
                         </div>
 
-                        <div class="stats shadow bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200/60">
+                        <div
+                            class="stats shadow bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200/60 dark:from-slate-800 dark:to-amber-950/40 dark:border-amber-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
                             <div class="stat">
-                                <div class="stat-title text-amber-500">{{ __('Discounts') }}
+                                <div class="stat-title text-amber-500 dark:text-amber-300">{{ __('Discounts') }}
                                     ({{ config('amir.currency') ?? __('Rial') }})</div>
-                                <div class="stat-value text-amber-600 text-3xl">
+                                <div class="stat-value text-amber-600 dark:text-amber-200 text-3xl">
                                     {{ formatNumber($invoice->getReturnedInvoice()?->items->reduce(fn($carry, $item) => $carry + ($item->unit_discount ?? 0), 0)) }}
                                 </div>
-                                <div class="stat-desc text-amber-400">{{ __('Total deductions') }}</div>
+                                <div class="stat-desc text-amber-400 dark:text-amber-400/80">{{ __('Total deductions') }}</div>
                             </div>
                         </div>
 
-                        <div class="stats shadow bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/60">
+                        <div
+                            class="stats shadow bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/60 dark:from-slate-800 dark:to-emerald-950/40 dark:border-emerald-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
                             <div class="stat">
-                                <div class="stat-title text-emerald-500">{{ __('VAT') }}
+                                <div class="stat-title text-emerald-500 dark:text-emerald-300">{{ __('VAT') }}
                                     ({{ config('amir.currency') ?? __('Rial') }})</div>
-                                <div class="stat-value text-emerald-600 text-3xl">
+                                <div class="stat-value text-emerald-600 dark:text-emerald-200 text-3xl">
                                     {{ formatNumber($invoice->getReturnedInvoice()?->items->reduce(fn($carry, $item) => $carry + ($item->vat ?? 0), 0)) }}
                                 </div>
-                                <div class="stat-desc text-emerald-400">{{ __('Collected tax') }}</div>
+                                <div class="stat-desc text-emerald-400 dark:text-emerald-400/80">{{ __('Collected tax') }}</div>
                             </div>
                         </div>
 
-                        <div class="stats shadow bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/60">
+                        <div
+                            class="stats shadow bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/60 dark:from-slate-800 dark:to-indigo-950/40 dark:border-indigo-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
                             <div class="stat">
-                                <div class="stat-title text-indigo-500">{{ __('Grand total') }}
+                                <div class="stat-title text-indigo-500 dark:text-indigo-300">{{ __('Grand total') }}
                                     ({{ config('amir.currency') ?? __('Rial') }})</div>
-                                <div class="stat-value text-indigo-600 text-3xl">
+                                <div class="stat-value text-indigo-600 dark:text-indigo-200 text-3xl">
                                     {{ formatNumber(($invoice->getReturnedInvoice()?->amount ?? 0) - ($invoice->getReturnedInvoice()?->subtraction ?? 0)) }}
                                 </div>
-                                <div class="stat-desc text-indigo-400">{{ __('Payable amount') }}</div>
+                                <div class="stat-desc text-indigo-400 dark:text-indigo-400/80">{{ __('Payable amount') }}</div>
                             </div>
                         </div>
                     </div>
@@ -361,7 +369,7 @@
                                                     {{ $item->itemable->name }}
                                                 </a>
                                             @else
-                                                <span class="text-gray-500">{{ __('Removed product/service') }}</span>
+                                                <span class="text-gray-500 dark:text-slate-400">{{ __('Removed product/service') }}</span>
                                             @endif
                                         </td>
                                         <td class="px-4 py-3">{{ $item->description }}</td>
@@ -378,7 +386,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="px-4 py-6 text-center text-gray-500">
+                                        <td colspan="8" class="px-4 py-6 text-center text-gray-500 dark:text-slate-400">
                                             {{ __('There are no items on this return invoice yet.') }}
                                         </td>
                                     </tr>
@@ -386,7 +394,7 @@
                             </tbody>
                             <tfoot class="bg-base-300">
                                 <tr>
-                                    <td colspan="8" class="px-4 py-3 text-right text-sm text-gray-600">
+                                    <td colspan="8" class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
                                         {{ __('Total items: :count', ['count' => convertToFarsi($invoice->getReturnedInvoice()?->items->count() ?? 0)]) }}
                                     </td>
                                 </tr>

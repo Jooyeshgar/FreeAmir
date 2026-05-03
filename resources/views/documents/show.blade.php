@@ -63,30 +63,33 @@
             <x-show-message-bags />
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div class="stats shadow bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60">
+                <div
+                    class="stats shadow bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60 dark:from-slate-800 dark:to-sky-950/40 dark:border-sky-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
                     <div class="stat">
-                        <div class="stat-title text-blue-500">{{ __('Total Debit') }}
+                        <div class="stat-title text-blue-500 dark:text-sky-300">{{ __('Total Debit') }}
                             ({{ config('amir.currency') ?? __('Rial') }})</div>
-                        <div class="stat-value text-blue-600 text-3xl">{{ formatNumber($sumDebit) }}</div>
-                        <div class="stat-desc text-blue-400">{{ __('Total debit in document') }}</div>
+                        <div class="stat-value text-blue-600 dark:text-sky-200 text-3xl">{{ formatNumber($sumDebit) }}</div>
+                        <div class="stat-desc text-blue-400 dark:text-sky-400/80">{{ __('Total debit in document') }}</div>
                     </div>
                 </div>
 
-                <div class="stats shadow bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/60">
+                <div
+                    class="stats shadow bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/60 dark:from-slate-800 dark:to-emerald-950/40 dark:border-emerald-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
                     <div class="stat">
-                        <div class="stat-title text-emerald-500">{{ __('Total Credit') }}
+                        <div class="stat-title text-emerald-500 dark:text-emerald-300">{{ __('Total Credit') }}
                             ({{ config('amir.currency') ?? __('Rial') }})</div>
-                        <div class="stat-value text-emerald-600 text-3xl">{{ formatNumber($sumCredit) }}</div>
-                        <div class="stat-desc text-emerald-400">{{ __('Total credit in document') }}</div>
+                        <div class="stat-value text-emerald-600 dark:text-emerald-200 text-3xl">{{ formatNumber($sumCredit) }}</div>
+                        <div class="stat-desc text-emerald-400 dark:text-emerald-400/80">{{ __('Total credit in document') }}</div>
                     </div>
                 </div>
 
-                <div class="stats shadow bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/60">
+                <div
+                    class="stats shadow bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/60 dark:from-slate-800 dark:to-indigo-950/40 dark:border-indigo-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
                     <div class="stat">
-                        <div class="stat-title text-indigo-500">{{ __('Transactions') }}</div>
-                        <div class="stat-value text-indigo-600 text-3xl">
+                        <div class="stat-title text-indigo-500 dark:text-indigo-300">{{ __('Transactions') }}</div>
+                        <div class="stat-value text-indigo-600 dark:text-indigo-200 text-3xl">
                             {{ formatNumber($document->transactions->count()) }}</div>
-                        <div class="stat-desc text-indigo-400">{{ __('Entries in this document') }}</div>
+                        <div class="stat-desc text-indigo-400 dark:text-indigo-400/80">{{ __('Entries in this document') }}</div>
                     </div>
                 </div>
             </div>
@@ -128,7 +131,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="px-4 py-6 text-center text-gray-500">
+                                    <td colspan="6" class="px-4 py-6 text-center text-gray-500 dark:text-slate-400">
                                         {{ __('There are no transactions in this document yet.') }}
                                     </td>
                                 </tr>
@@ -136,16 +139,16 @@
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="3" class="px-4 py-3 text-right text-sm text-gray-600">
+                                <td colspan="3" class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
                                     {{ __('Total entries: :count', ['count' => convertToFarsi($document->transactions->count())]) }}
                                 </td>
-                                <td class="px-4 py-3 text-right text-sm text-gray-600">
+                                <td class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
                                     {{ __('Total Document:') }}
                                 </td>
-                                <td class="px-4 py-3 text-right text-sm text-gray-600">
+                                <td class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
                                     {{ formatNumber($sumDebit) }}
                                 </td>
-                                <td class="px-4 py-3 text-right text-sm text-gray-600">
+                                <td class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
                                     {{ formatNumber($sumCredit) }}
                                 </td>
                             </tr>
@@ -205,10 +208,10 @@
                 @if ($documentFiles->isNotEmpty())
                     <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
                         @foreach ($documentFiles as $documentFile)
-                            <div class="card bg-base-100 border border-gray-200 hover:shadow-md transition-shadow">
+                            <div class="card bg-base-100 border border-gray-200 hover:shadow-md transition-shadow dark:border-slate-700 dark:shadow-none dark:ring-1 dark:ring-white/5">
                                 <figure class="px-4 pt-4">
                                     <a href="{{ route('documents.files.view', [$document, $documentFile]) }}"
-                                        class="block w-full h-48 overflow-hidden rounded-lg bg-gray-100">
+                                        class="block w-full h-48 overflow-hidden rounded-lg bg-gray-100 dark:bg-slate-800">
                                         @php
                                             $extension = strtolower(pathinfo($documentFile->path ?? '', PATHINFO_EXTENSION));
                                             $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
@@ -217,7 +220,7 @@
                                             <img src="{{ route('documents.files.view', [$document, $documentFile]) }}" alt="{{ $documentFile->title }}"
                                                 class="w-full h-full object-cover">
                                         @else
-                                            <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                                            <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-800 dark:to-slate-900">
                                                 @if ($extension === 'pdf')
                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-red-500" fill="currentColor" viewBox="0 0 24 24">
                                                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
@@ -247,7 +250,7 @@
                                 </figure>
                                 <div class="card-body p-4">
                                     <h3 class="card-title text-base">{{ $documentFile->title ?? '—' }}</h3>
-                                    <div class="text-sm text-gray-500 space-y-1">
+                                    <div class="text-sm text-gray-500 dark:text-slate-400 space-y-1">
                                         <p>{{ $documentFile->attachBy?->name ?? '—' }}, {{ formatDate($documentFile->created_at) ?? '—' }}</p>
                                     </div>
                                     <div class="card-actions justify-between mt-3">

@@ -49,7 +49,7 @@
                 $prefilledCustomerId = $matchedReturnedInvoice['customer_id'] ?? null;
                 $initialCustomerId = old('customer_id', $invoice->customer_id ?? $prefilledCustomerId);
                 $initialSelectedValue = $initialCustomerId ? "customer-$initialCustomerId" : null;
-                $hint = '<a class="link text-blue-500 hover:underline" href="' . route('customers.create') . '">' . __('Add Customer') . '</a>';
+                $hint = '<a class="link text-blue-500 hover:underline dark:text-sky-300" href="' . route('customers.create') . '">' . __('Add Customer') . '</a>';
             @endphp
 
             <div class="flex flex-wrap w-3/4" x-data="{
@@ -70,7 +70,7 @@
                 }
             ">
                 <span class="flex flex-wrap text-gray-500 w-full">{{ __('Customer') }}
-                    <a href="{{ route('customers.create') }}" class="btn btn-xs btn-ghost text-blue-500 hover:text-blue-700" title="{{ __('Add Customer') }}">
+                    <a href="{{ route('customers.create') }}" class="btn btn-xs btn-ghost text-blue-500 hover:text-blue-700 dark:text-sky-300 dark:hover:text-sky-200 dark:hover:bg-sky-500/10" title="{{ __('Add Customer') }}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 14.25c-2.485 0-4.5 1.79-4.5 4s2.015 4 4.5 4 4.5-1.79 4.5-4-2.015-4-4.5-4zm0-2.25a3 3 0 100-6 3 3 0 000 6zm6-1.5h3m-1.5-1.5v3" />
                         </svg>
@@ -116,7 +116,7 @@
                 <div class="flex items-center gap-3 ml-1">
                     @if (!$isReturnServiceBuy)
                         {{ __('Product') }}
-                        <a href="{{ route('products.create') }}" class="flex items-center gap-1 btn btn-xs btn-ghost text-blue-500 hover:text-blue-700"
+                        <a href="{{ route('products.create') }}" class="flex items-center gap-1 btn btn-xs btn-ghost text-blue-500 hover:text-blue-700 dark:text-sky-300 dark:hover:text-sky-200 dark:hover:bg-sky-500/10"
                             title="{{ __('Create Product') }}">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 7.5l-9-4.5-9 4.5m18 0l-9 4.5m9-4.5v9l-9 4.5m0-9L3 7.5m9 4.5v9m-9-13.5v9l9 4.5" />
@@ -124,7 +124,7 @@
                         </a>
                     @else
                         {{ __('Services') }}
-                        <a href="{{ route('services.create') }}" class="flex items-center gap-1 btn btn-xs btn-ghost text-blue-500 hover:text-blue-700"
+                        <a href="{{ route('services.create') }}" class="flex items-center gap-1 btn btn-xs btn-ghost text-blue-500 hover:text-blue-700 dark:text-sky-300 dark:hover:text-sky-200 dark:hover:bg-sky-500/10"
                             title="{{ __('Create Service') }}">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.232 5.232a4 4 0 015.536 5.536l-7.768 7.768a4 4 0 01-5.536-5.536l1.232-1.232" />
@@ -149,7 +149,7 @@
                         <span class="transaction-count block" x-text="index + 1"></span>
                         <button @click.stop="transactions.splice(index, 1)" type="button" class="absolute left-0 top-0 removeButton">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
-                                class="px-2 size-8 rounded-md h-10 flex justify-center items-center text-center bg-red-500 hover:bg-red-700 text-white font-bold removeTransaction">
+                                class="px-2 size-8 rounded-md h-10 flex justify-center items-center text-center bg-red-500 hover:bg-red-700 dark:bg-red-500/80 dark:hover:bg-red-500 text-white font-bold removeTransaction">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
                             </svg>
@@ -170,9 +170,9 @@
                                     'options' => $isReturnServiceBuy ? $services : [],
                                 ],
                             ];
-                            $hint = !$isReturnServiceBuy ? '<a class="link text-blue-500" href="' . route('products.create') . '">' . __('Create Product') . '</a>'
-                                    : '<a class="link text-blue-500" href="' . route('services.create') . '">' . __('Create Service') . '</a>';
-                            $hint2 = $isReturnServiceBuy ? '<a class="link text-blue-500" href="' . route('services.create') . '">' . __('Create Service') . '</a>' : '';
+                            $hint = !$isReturnServiceBuy ? '<a class="link text-blue-500 dark:text-sky-300" href="' . route('products.create') . '">' . __('Create Product') . '</a>'
+                                    : '<a class="link text-blue-500 dark:text-sky-300" href="' . route('services.create') . '">' . __('Create Service') . '</a>';
+                            $hint2 = $isReturnServiceBuy ? '<a class="link text-blue-500 dark:text-sky-300" href="' . route('services.create') . '">' . __('Create Service') . '</a>' : '';
                         @endphp
 
                         <x-select-box url="{{ route('invoices.search-product-service') }}" :options="$options" x-model="selectedValue" 
@@ -233,14 +233,14 @@
             </x-text-input>
         </div>
         <div class="flex justify-end px-4 gap-4 py-3 rounded-b-2xl">
-            <div class="flex items-center gap-2 px-4 py-2 bg-white shadow-sm rounded-xl border border-gray-200">
-                <span class="text-sm font-medium text-gray-500">{{ __('Total Quantity') }}:</span>
-                <span class="text-lg font-bold text-indigo-600" x-text="transactions.reduce((sum, t) => sum + (Number(t.quantity) || 0), 0)">0</span>
+            <div class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 dark:border-slate-700 dark:shadow-none shadow-sm rounded-xl border border-gray-200">
+                <span class="text-sm font-medium text-gray-500 dark:text-slate-300">{{ __('Total Quantity') }}:</span>
+                <span class="text-lg font-bold text-indigo-600 dark:text-indigo-300" x-text="transactions.reduce((sum, t) => sum + (Number(t.quantity) || 0), 0)">0</span>
             </div>
 
-            <div class="flex items-center gap-2 px-4 py-2 bg-white shadow-sm rounded-xl border border-gray-200">
-                <span class="text-sm font-medium text-gray-500">{{ __('Total Sum') }} ({{ config('amir.currency') ?? __('Rial') }}): </span>
-                <span class="text-lg font-bold text-green-600"
+            <div class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 dark:border-slate-700 dark:shadow-none shadow-sm rounded-xl border border-gray-200">
+                <span class="text-sm font-medium text-gray-500 dark:text-slate-300">{{ __('Total Sum') }} ({{ config('amir.currency') ?? __('Rial') }}): </span>
+                <span class="text-lg font-bold text-green-600 dark:text-emerald-300"
                     x-text="(
                         transactions.reduce((sum, t) => sum + (Number($store.utils.convertToEnglish(t.total)) || 0), 0)
                         - (Number($store.utils.cleanupNumber(subtractionsInput) || 0))
@@ -260,7 +260,7 @@
 </x-card>
 
 <div class="mt-4 flex gap-2 justify-end">
-    <a href="{{ route('invoices.index', ['invoice_type' => 'return_buy']) }}" type="submit" class="btn btn-default rounded-md">{{ __('cancel') }}</a>
+    <a href="{{ route('invoices.index', ['invoice_type' => 'return_buy']) }}" type="submit" class="btn btn-default rounded-md dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-600">{{ __('cancel') }}</a>
     <button id="submitForm" type="submit" class="btn text-white btn-primary rounded-md">{{ __('save') }} </button>
 
     @can('invoices.approve')
