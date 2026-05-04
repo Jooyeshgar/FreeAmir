@@ -15,6 +15,7 @@ class Document extends Model
     protected $casts = [
         'date' => 'date',
         'approved_at' => 'date',
+        'is_imported' => 'boolean',
     ];
 
     protected $fillable = [
@@ -28,6 +29,7 @@ class Document extends Model
         'documentable_type',
         'approved_at',
         'approver_id',
+        'is_imported',
     ];
 
     public static function booted(): void

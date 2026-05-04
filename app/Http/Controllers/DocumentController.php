@@ -121,6 +121,15 @@ class DocumentController extends Controller
         ]);
     }
 
+    public function export(Document $document)
+    {
+        $csv = DocumentService::exportDocument($document);
+
+        return response($csv)
+            ->header('Content-Type', 'text/csv')
+            ->header('Content-Disposition', 'attachment; filename="document_'.$document->id.'.csv"');
+    }
+
     public function show(Document $document)
     {
         return view('documents.show', compact('document'));

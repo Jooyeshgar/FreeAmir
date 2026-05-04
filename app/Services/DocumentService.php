@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Exceptions\DocumentServiceException;
 use App\Models\Document;
 use App\Models\DocumentFile;
+use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -244,5 +245,56 @@ class DocumentService
             });
 
         return ['approved' => $approved, 'skipped' => $skipped];
+    }
+
+    public static function exportDocument(Document $document): string
+    {
+        $documentData = self::prepareDocumentForExport($document);
+
+        $csv = self::makeCSV($documentData);
+
+        return $csv;
+    }
+
+    private static function prepareDocumentForExport(Document $document): array
+    {
+        $data = [
+            'number' => $document->number,
+            'title' => $document->title,
+            'date' => $document->date,
+            'approved_at' => $document->approved_at,
+            'approver_id' => $document->approver_id,
+            'transactions' => [],
+        ];
+
+        foreach ($document->transactions as $transaction) {
+            $data['transactions'][] = [
+                'subject_code' => $transaction->subject?->formattedCode() ?? Subject::find($transaction->subject_id)?->formattedCode() ?? '',
+                'desc' => $transaction->desc,
+                'value' => $transaction->value,
+            ];
+        }
+
+        return $data;
+    }
+
+    private static function makeCSV(array $data): string
+    {
+        $csv = ''; // add header row of CSV
+        $csv .= implode(',', [
+            $data['number'],
+            $data['title'],
+            $data['date'],
+        ])."\n";
+
+        foreach ($data['transactions'] as $transaction) {
+            $csv .= implode(',', [
+                $transaction['subject_code'],
+                $transaction['desc'],
+                $transaction['value'],
+            ])."\n";
+        }
+
+        return $csv;
     }
 }
