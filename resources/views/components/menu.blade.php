@@ -48,6 +48,7 @@
             <ul class="{{ $topDropdownContentClass }}">
                 <li><a href="{{ route('documents.create') }}">{{ __('Create Document') }}</a></li>
                 <li><a href="{{ route('documents.index') }}">{{ __('Document List') }}</a></li>
+                <li><a href="{{ route('documents.export-form') }}">{{ __('Export Documents') }}</a></li>
             </ul>
         </details>
     </li>

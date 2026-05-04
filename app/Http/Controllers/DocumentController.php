@@ -125,17 +125,47 @@ class DocumentController extends Controller
         ]);
     }
 
+    public function exportForm()
+    {
+        $availableColumns = $this->documentExportService->availableColumns();
+        $defaultColumns = $this->documentExportService->defaultColumns();
+
+        return view('documents.export', compact('availableColumns', 'defaultColumns'));
+    }
+
     public function export(Request $request)
     {
-        $documents = Document::with(['transactions.subject'])->cursor();
+        $availableColumns = array_keys($this->documentExportService->availableColumns());
 
-        return response()->streamDownload(function () use ($documents) {
+        $validated = $request->validate([
+            'text' => ['nullable', 'string'],
+            'start_date' => ['nullable', 'string'],
+            'end_date' => ['nullable', 'string'],
+            'start_document_number' => ['nullable'],
+            'end_document_number' => ['nullable'],
+            'columns' => ['nullable', 'array'],
+            'columns.*' => ['string', 'in:'.implode(',', $availableColumns)],
+        ]);
+
+        $filters = collect($validated)->only([
+            'text',
+            'start_date',
+            'end_date',
+            'start_document_number',
+            'end_document_number',
+        ])->toArray();
+
+        $columns = $validated['columns'] ?? [];
+
+        return response()->streamDownload(function () use ($filters, $columns) {
             $handle = fopen('php://output', 'w');
 
-            $this->documentExportService->stream($documents, $handle);
+            $this->documentExportService->streamFromQuery($filters, $columns, $handle);
 
             fclose($handle);
-        }, 'documents.csv');
+        }, 'documents.csv', [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 
     public function show(Document $document)

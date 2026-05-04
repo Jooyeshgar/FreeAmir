@@ -41,10 +41,11 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('documents/sort-numbers', [Controllers\DocumentController::class, 'sortNumbers'])->name('documents.sort-numbers');
     Route::post('documents/sort-numbers/start', [Controllers\DocumentController::class, 'startSorting'])->name('documents.sort-numbers.start');
     Route::post('documents/sort-numbers/process', [Controllers\DocumentController::class, 'processSorting'])->name('documents.sort-numbers.process');
+    Route::get('documents/export', [Controllers\DocumentController::class, 'exportForm'])->name('documents.export-form');
+    Route::post('documents/export', [Controllers\DocumentController::class, 'export'])->name('documents.export');
     Route::resource('documents', Controllers\DocumentController::class);
     Route::get('documents/{document}/print', [Controllers\DocumentController::class, 'print'])->name('documents.print');
     Route::get('documents/{document}/duplicate', [Controllers\DocumentController::class, 'duplicate'])->name('documents.duplicate');
-    Route::get('documents/{document}/export', [Controllers\DocumentController::class, 'export'])->name('documents.export');
     Route::post('documents/import', [Controllers\DocumentController::class, 'import'])->name('documents.import');
 
     Route::resource('transactions', Controllers\TransactionController::class)->only(['index', 'show']);

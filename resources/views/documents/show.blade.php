@@ -314,13 +314,6 @@
                 </a>
 
                 <div class="flex flex-wrap gap-2">
-                    <a href="{{ route('documents.export', $document) }}" class="btn btn-info gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12h12m0 0l-4-4m4 4l-4 4M20 4v16" />
-                        </svg>  
-                        {{ __('Export') }}
-                    </a>
-
                     <a href="{{ route('documents.print', $document) }}" class="btn btn-outline gap-2" target="_blank" rel="noopener">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
