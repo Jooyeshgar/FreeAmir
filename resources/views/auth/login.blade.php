@@ -16,7 +16,7 @@
 
     <div class="login-bg bg-cover bg-center rounded-t-3xl flex-1 border-8 border-gray-200 p-0 border-opacity-85  overflow-hidden   ">
         <div class="flex items-center justify-center  rounded-3xl    ">
-            <div class="card w-96 p-7 mt-16	 h-373 bg-white  ">
+            <div class="card w-96 p-7 mt-16	 bg-white  ">
                 <form method="POST" action="{{ route('login') }}">
                     @csrf
                     <h1 class="font-bold text-center">{{ __('Login') }}</h1>
