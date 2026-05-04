@@ -6,7 +6,7 @@
         </div>
         <div class="language-select">
             <form action="" class="language-picker__form">
-                <select name="language" class="locale select mx-5 pr-10 pl-3 py-2">
+                <select name="language" class="locale select pr-10 pl-3 py-2">
                     <option lang="fa" value="fa" selected>{{ __('Farsi') }}</option>
                     <option lang="en" value="en">{{ __('English') }}</option>
                 </select>
