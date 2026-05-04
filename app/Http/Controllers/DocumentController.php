@@ -6,6 +6,7 @@ use App\Http\Requests\StoreTransactionRequest;
 use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
+use App\Services\DocumentExportService;
 use App\Services\DocumentNumberService;
 use App\Services\DocumentService;
 use App\Services\SubjectService;
@@ -15,7 +16,10 @@ use Illuminate\Validation\ValidationException;
 
 class DocumentController extends Controller
 {
-    public function __construct(private readonly DocumentNumberService $documentNumberService) {}
+    public function __construct(
+        private readonly DocumentNumberService $documentNumberService,
+        private readonly DocumentExportService $documentExportService
+    ) {}
 
     public function index()
     {
@@ -121,13 +125,17 @@ class DocumentController extends Controller
         ]);
     }
 
-    public function export(Document $document)
+    public function export(Request $request)
     {
-        $csv = DocumentService::exportDocument($document);
+        $documents = Document::with(['transactions.subject'])->cursor();
 
-        return response($csv)
-            ->header('Content-Type', 'text/csv')
-            ->header('Content-Disposition', 'attachment; filename="document_'.$document->id.'.csv"');
+        return response()->streamDownload(function () use ($documents) {
+            $handle = fopen('php://output', 'w');
+
+            $this->documentExportService->stream($documents, $handle);
+
+            fclose($handle);
+        }, 'documents.csv');
     }
 
     public function show(Document $document)
