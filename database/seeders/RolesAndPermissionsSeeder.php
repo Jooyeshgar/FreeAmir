@@ -39,6 +39,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'documents.duplicate',
             'documents.approve',
             'documents.search-account-balance',
+            'documents.export',
+            'documents.import',
 
             'transactions.index',
             'transactions.show',

@@ -44,6 +44,8 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::resource('documents', Controllers\DocumentController::class);
     Route::get('documents/{document}/print', [Controllers\DocumentController::class, 'print'])->name('documents.print');
     Route::get('documents/{document}/duplicate', [Controllers\DocumentController::class, 'duplicate'])->name('documents.duplicate');
+    Route::get('documents/{document}/export', [Controllers\DocumentController::class, 'export'])->name('documents.export');
+    Route::post('documents/import', [Controllers\DocumentController::class, 'import'])->name('documents.import');
 
     Route::resource('transactions', Controllers\TransactionController::class)->only(['index', 'show']);
     Route::get('products/search-product-group', [Controllers\ProductController::class, 'searchProductGroup'])->name('products.search-product-group');
