@@ -5,7 +5,7 @@
         </h2>
     </x-slot>
 
-    <div class="">
+    <div>
         <form action="{{ route('invoices.store') }}" method="POST">
             @csrf
             <div class="card-body">

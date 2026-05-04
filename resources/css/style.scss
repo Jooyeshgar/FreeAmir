@@ -26,8 +26,8 @@ input[type="email"]:focus {
     @apply rounded-md;
     @apply shadow-sm;
     outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 3px rgba(0, 123, 255, 0.5);
+    border-color: var(--freeamir-control-focus-color, rgb(15 23 42 / 0.42));
+    box-shadow: 0 0 0 2px var(--freeamir-control-focus-shadow, rgb(15 23 42 / 0.08));
 }
 .prefix-input:focus{
     border-color: transparent !important;
@@ -44,9 +44,9 @@ input[type="email"]:focus {
     display: inline-block;
 }
 
-// .transaction:not(.deactivated-transaction-row) .transaction-count {
-//     display: none;
-// }
+/* .transaction:not(.deactivated-transaction-row) .transaction-count {
+    display: none;
+} */
 
 .transaction.deactivated-transaction-row .removeTransaction {
     display: none;

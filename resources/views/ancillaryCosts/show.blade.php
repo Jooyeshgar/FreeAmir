@@ -185,7 +185,7 @@
                             </thead>
                             <tbody>
                                 @foreach ($ancillaryCost->items as $index => $item)
-                                    <tr class="hover">
+                                    <tr class="hover:bg-base-300">
                                         <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
                                         <td class="px-4 py-3">
                                             @if ($item->product)

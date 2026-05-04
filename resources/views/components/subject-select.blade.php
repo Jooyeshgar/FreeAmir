@@ -7,11 +7,11 @@
     })" @click.outside="close()" x-cloak>
     @if ($title !== '')
         <div class="label">
-            <span class="label-text">{{ $title }}</span>
+            <span>{{ $title }}</span>
         </div>
     @endif
     <button type="button" @click="toggle()" :disabled="disabled" :class="{ 'opacity-60 cursor-not-allowed': disabled }"
-        class="input input-bordered h-10 min-h-10 w-full text-left flex items-center justify-between px-4 bg-base-100 focus:outline-none focus:border-primary">
+        class="input h-10 min-h-10 w-full text-left flex items-center justify-between px-4 bg-base-100 focus:outline-none focus:border-primary">
         <span x-text="selectedLabel ? selectedLabel : placeholder"
             :class="{ 'text-base-content': selectedLabel, 'text-gray-400': !selectedLabel }"
             class="block truncate"></span>
@@ -26,7 +26,7 @@
         class="absolute left-0 right-0 z-[100] w-full bg-base-100 border border-base-300 rounded-box shadow-xl max-h-60 flex flex-col overflow-hidden">
         <div class="p-2 bg-base-100 border-b border-base-200 sticky top-0 z-10">
             <input x-ref="searchInput" x-model="search" @input.debounce.300ms="handleSearch()"
-                @keydown="onKeydown($event)" type="text" class="input input-sm input-bordered w-full"
+                @keydown="onKeydown($event)" type="text" class="input input-sm w-full"
                 placeholder="{{ __('Search') }}">
         </div>
 

@@ -5,7 +5,7 @@
         </h2>
     </x-slot>
 
-    <div class="">
+    <div>
         <form action="{{ isset($invoice) && $invoice ? route('invoices.ancillary-costs.update', [$invoice, $ancillaryCost]) : route('ancillary-costs.update', $ancillaryCost) }}" method="POST">
             @csrf
             @method('PUT')

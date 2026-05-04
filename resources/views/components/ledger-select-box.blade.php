@@ -5,7 +5,7 @@
     <label for="subject_id" class="flex-1">
         {{ __('Select a subject') }}
         <select x-on:change="onCodeSelectBoxChange($event, $refs.codeInput)" name="subject_id" id="subject_id" x-ref="subjectSelect"
-            class="codeSelectBox flex-1 rounded-md max-h-10 min-h-10 select select-bordered border-slate-400 disabled:background-slate-700 w-full max-w-42 focus:outline-none">
+            class="codeSelectBox flex-1 rounded-md max-h-10 min-h-10 select border-slate-400 disabled:background-slate-700 w-full max-w-42 focus:outline-none">
             <option value="">{{ __('Select a subject') }}</option>
 
             @foreach ($subjects as $subject)

@@ -8,7 +8,7 @@
     })" @click.outside="close()">
     {{-- Trigger Button --}}
     <button type="button" @click="toggle()" :disabled="disabled" :class="{ 'opacity-60 cursor-not-allowed': disabled }"
-        class="input input-bordered rounded-md border-slate-400 h-10 min-h-10 w-full text-left flex items-center justify-between px-4 bg-base-100 focus:outline-none focus:border-primary">
+        class="input rounded-md border-slate-400 h-10 min-h-10 w-full text-left flex items-center justify-between px-4 bg-base-100 focus:outline-none focus:border-primary">
 
         <span x-text="selectedLabel ? selectedLabel : placeholder"
             :class="{ 'text-base-content': selectedLabel, 'text-gray-400': !selectedLabel }"
@@ -27,7 +27,7 @@
         {{-- Search Input --}}
         <div class="p-2 bg-base-100 border-b border-base-200 sticky top-0 z-10">
             <input x-ref="searchInput" x-model="search" @input.debounce.300ms="handleSearch()"
-                @keydown="onKeydown($event)" type="text" class="input input-sm input-bordered w-full"
+                @keydown="onKeydown($event)" type="text" class="input input-sm w-full"
                 placeholder="{{ __('Search') }}">
         </div>
 
@@ -83,8 +83,8 @@
             </template>
         </ul>
         <div class='label'>
-            <span class="label-text-alt mr-3">{!! $hint !!}</span>
-            <span class="label-text-alt ml-3">{!! $hint2 !!}</span>
+            <span class="text-xs mr-3">{!! $hint !!}</span>
+            <span class="text-xs ml-3">{!! $hint2 !!}</span>
         </div>
     </div>
 </div>

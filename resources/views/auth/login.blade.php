@@ -6,7 +6,7 @@
         </div>
         <div class="language-select">
             <form action="" class="language-picker__form ">
-                <select name="select select-bordered mx-2 p-3">
+                <select name="locale" class="select mx-2 p-3">
                     <option lang="fa" value="english" selected>فارسی</option>
                     <option lang="en" value="francais">English</option>
                 </select>

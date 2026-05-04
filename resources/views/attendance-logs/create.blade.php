@@ -37,7 +37,7 @@
                             <input type="hidden" name="is_manual" value="0" />
                             <input type="checkbox" name="is_manual" id="is_manual" value="1" class="checkbox checkbox-warning"
                                 {{ old('is_manual') ? 'checked' : '' }} />
-                            <span class="label-text">{{ __('Manually Corrected') }}</span>
+                            <span>{{ __('Manually Corrected') }}</span>
                         </label>
                     </div>
 

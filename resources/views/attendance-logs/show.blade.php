@@ -169,7 +169,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr class="hover">
+                                <tr class="hover:bg-base-300">
                                     <td class="px-4 py-3 font-mono">{{ substr($workShift->start_time, 0, 5) }}</td>
                                     <td
                                         class="px-4 py-3 font-mono
@@ -289,7 +289,7 @@
                                     $calc = (int) ($computed[$key] ?? 0);
                                     $matches = $stored === $calc;
                                 @endphp
-                                <tr class="hover {{ !$matches ? 'bg-error/10' : '' }}">
+                                <tr class="hover:bg-base-300 {{ !$matches ? 'bg-error/10' : '' }}">
                                     <td class="px-4 py-3 font-medium">{{ $label }}</td>
                                     <td class="px-4 py-3 text-center font-mono">{{ formatMinutesAsTime($stored) }}</td>
                                     <td class="px-4 py-3 text-center font-mono">{{ formatMinutesAsTime($calc) }}</td>
@@ -309,7 +309,7 @@
                                 $fridayMatch = $storedFriday === $isFriday;
                                 $holidayMatch = $storedHoliday === $isHoliday;
                             @endphp
-                            <tr class="hover {{ !$fridayMatch ? 'bg-error/10' : '' }}">
+                            <tr class="hover:bg-base-300 {{ !$fridayMatch ? 'bg-error/10' : '' }}">
                                 <td class="px-4 py-3 font-medium">{{ __('Is Friday Flag') }}</td>
                                 <td class="px-4 py-3 text-center">
                                     <span class="badge badge-sm {{ $storedFriday ? 'badge-error' : 'badge-ghost' }}">
@@ -329,7 +329,7 @@
                                     @endif
                                 </td>
                             </tr>
-                            <tr class="hover {{ !$holidayMatch ? 'bg-error/10' : '' }}">
+                            <tr class="hover:bg-base-300 {{ !$holidayMatch ? 'bg-error/10' : '' }}">
                                 <td class="px-4 py-3 font-medium">{{ __('Is Holiday Flag') }} <span
                                         class="text-xs text-gray-400">({{ __('incl. Thursday holiday') }})</span></td>
                                 <td class="px-4 py-3 text-center">
@@ -361,7 +361,7 @@
                                 @php
                                     $stored = (int) ($attendanceLog->{$key} ?? 0);
                                 @endphp
-                                <tr class="hover {{ !$matches ? 'bg-error/10' : '' }}">
+                                <tr class="hover:bg-base-300 {{ !$matches ? 'bg-error/10' : '' }}">
                                     <td class="px-4 py-3 font-medium">{{ $label }}</td>
                                     <td class="px-4 py-3 text-center font-mono">{{ formatMinutesAsTime($stored) }}</td>
                                     <td class="px-4 py-3 text-center font-mono">-</td>
@@ -377,35 +377,35 @@
             <div>
                 <div class="divider text-lg font-semibold">{{ __('Leave & Mission Details') }}</div>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="stats shadow border border-base-300">
+                    <div class="stats bg-base-100 shadow border border-base-300">
                         <div class="stat">
                             <div class="stat-title">{{ __('Paid Leave') }}</div>
                             <div class="stat-value text-xl">{{ (int) $attendanceLog->paid_leave }}</div>
                             <div class="stat-desc">{{ __('minutes') }}</div>
                         </div>
                     </div>
-                    <div class="stats shadow border border-base-300">
+                    <div class="stats bg-base-100 shadow border border-base-300">
                         <div class="stat">
                             <div class="stat-title">{{ __('Unpaid Leave') }}</div>
                             <div class="stat-value text-xl">{{ (int) $attendanceLog->unpaid_leave }}</div>
                             <div class="stat-desc">{{ __('minutes') }}</div>
                         </div>
                     </div>
-                    <div class="stats shadow border border-base-300">
+                    <div class="stats bg-base-100 shadow border border-base-300">
                         <div class="stat">
                             <div class="stat-title">{{ __('Mission') }}</div>
                             <div class="stat-value text-xl">{{ (int) $attendanceLog->mission }}</div>
                             <div class="stat-desc">{{ __('minutes') }}</div>
                         </div>
                     </div>
-                    <div class="stats shadow border border-base-300">
+                    <div class="stats bg-base-100 shadow border border-base-300">
                         <div class="stat">
                             <div class="stat-title">{{ __('Remote Work') }}</div>
                             <div class="stat-value text-xl">{{ (int) $attendanceLog->remote_work }}</div>
                             <div class="stat-desc">{{ __('minutes') }}</div>
                         </div>
                     </div>
-                    <div class="stats shadow border border-base-300 col-span-2 md:col-span-4">
+                    <div class="stats bg-base-100 shadow border border-base-300 col-span-2 md:col-span-4">
                         <div class="stat">
                             <div class="stat-title">{{ __('Description') }}</div>
                             <div class="stat-value text-base font-normal break-words">
@@ -457,7 +457,7 @@
                                         };
                                         $durationMin = (int) $pr->start_date->diffInMinutes($pr->end_date);
                                     @endphp
-                                    <tr class="hover {{ $pr->status === 'approved' ? '' : 'opacity-60' }}">
+                                    <tr class="hover:bg-base-300 {{ $pr->status === 'approved' ? '' : 'opacity-60' }}">
                                         <td class="px-4 py-3">
                                             <span class="badge badge-sm {{ $typeClass }}">{{ $pr->request_type->label() }}</span>
                                         </td>

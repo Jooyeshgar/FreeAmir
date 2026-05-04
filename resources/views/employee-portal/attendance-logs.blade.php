@@ -15,11 +15,11 @@
                 </div>
 
                 <div class="w-36">
-                    <label class="form-control w-full">
+                    <label class="fieldset w-full">
                         <div class="label">
-                            <span class="label-text">{{ __('Entry Type') }}</span>
+                            <span>{{ __('Entry Type') }}</span>
                         </div>
-                        <select name="is_manual" class="select select-bordered select-sm">
+                        <select name="is_manual" class="select  select-sm">
                             <option value="">{{ __('All') }}</option>
                             <option value="1" {{ request('is_manual') === '1' ? 'selected' : '' }}>
                                 {{ __('Manual') }}

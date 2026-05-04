@@ -17,11 +17,11 @@
                 @csrf
                 <fieldset id="previousYears" class="grid grid-cols-2 gap-6 border p-5 my-3">
                     <legend>{{ __('Previous Years') }}</legend>
-                    <div class="form-control">
+                    <div class="fieldset">
                         <label for="source_year_id" class="label">
-                            <span class="label-text">{{ __('Copy Data From') }}</span>
+                            <span>{{ __('Copy Data From') }}</span>
                         </label>
-                        <select class="select select-bordered w-full" id="source_year_id" name="source_year_id" required>
+                        <select class="select  w-full" id="source_year_id" name="source_year_id" required>
                             <option value="">{{ __('Select Source Fiscal Year') }}</option>
                             @foreach ($previousYears as $year)
                                 <option value="{{ $year->id }}">{{ $year->name }} - {{ $year->fiscal_year }}</option>
@@ -29,9 +29,9 @@
                         </select>
                     </div>
 
-                    <div class="form-control">
+                    <div class="fieldset">
                         <label class="label">
-                            <span class="label-text">{{ __('Select Tables to Copy') }}</span>
+                            <span>{{ __('Select Tables to Copy') }}</span>
                         </label>
                         <div class="overflow-x-auto">
                             <table class="table w-full">
@@ -49,7 +49,7 @@
                                                     class="checkbox" checked>
                                             </td>
                                             <td>
-                                                <label for="table_{{ $value }}" class="label-text">{{ $key }}</label>
+                                                <label for="table_{{ $value }}">{{ $key }}</label>
                                             </td>
                                         </tr>
                                     @endforeach

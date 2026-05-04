@@ -110,7 +110,7 @@
                         </thead>
                         <tbody>
                             @forelse ($document->transactions as $index => $transaction)
-                                <tr class="hover">
+                                <tr class="hover:bg-base-300">
                                     <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
                                     <td class="px-4 py-3">
                                         <a href="{{ route('transactions.index', ['subject_id' => $transaction->subject_id]) }}" class="link link-hover"
@@ -174,7 +174,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr class="hover">
+                                <tr class="hover:bg-base-300">
                                     <td class="px-4 py-3 font-semibold">
                                         <a href="{{ route('invoices.show', $document->invoice) }}" class="link link-hover">
                                             {{ formatDocumentNumber($document->invoice->number ?? $document->invoice->id) }}

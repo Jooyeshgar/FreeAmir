@@ -6,19 +6,20 @@
         "build": "vite build"
     },
     "devDependencies": {
+        "@tailwindcss/vite": "^4.2.4",
         "autoprefixer": "^10.4.20",
         "axios": "^1.11.0",
+        "daisyui": "^5.5.19",
         "laravel-vite-plugin": "^2.0.0",
         "sass": "^1.77.0",
-        "tailwindcss": "^3.4.13",
+        "tailwindcss": "^4.2.4",
         "vite": "^7.0.7"
     },
     "dependencies": {
         "@majidh1/jalalidatepicker": "^0.9.4",
         "alpinejs": "^3.14.8",
         "chart.js": "^4.5.1",
-        "chartjs-plugin-datalabels": "^2.2.0",
-        "daisyui": "^4.12.23"
+        "chartjs-plugin-datalabels": "^2.2.0"
     },
     "engines": {
         "node": ">=18.0.0"

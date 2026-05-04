@@ -13,11 +13,11 @@
             <form action="{{ route('attendance.monthly-attendances.index') }}" method="GET" class="flex flex-wrap items-end gap-3 mb-2">
 
                 <div class="w-52">
-                    <label class="form-control w-full">
+                    <label class="fieldset w-full">
                         <div class="label">
-                            <span class="label-text">{{ __('Employee') }}</span>
+                            <span>{{ __('Employee') }}</span>
                         </div>
-                        <select name="employee_id" class="select select-bordered select-sm">
+                        <select name="employee_id" class="select  select-sm">
                             <option value="">{{ __('All Employees') }}</option>
                             @foreach ($employees as $employee)
                                 <option value="{{ $employee->id }}" {{ request('employee_id') == $employee->id ? 'selected' : '' }}>
@@ -29,20 +29,20 @@
                 </div>
 
                 <div class="w-28">
-                    <label class="form-control w-full">
+                    <label class="fieldset w-full">
                         <div class="label">
-                            <span class="label-text">{{ __('Year') }}</span>
+                            <span>{{ __('Year') }}</span>
                         </div>
-                        <input type="number" name="year" value="{{ request('year') }}" placeholder="{{ __('Year') }}" class="input input-bordered input-sm" />
+                        <input type="number" name="year" value="{{ request('year') }}" placeholder="{{ __('Year') }}" class="input  input-sm" />
                     </label>
                 </div>
 
                 <div class="w-36">
-                    <label class="form-control w-full">
+                    <label class="fieldset w-full">
                         <div class="label">
-                            <span class="label-text">{{ __('Month') }}</span>
+                            <span>{{ __('Month') }}</span>
                         </div>
-                        <select name="month" class="select select-bordered select-sm">
+                        <select name="month" class="select  select-sm">
                             <option value="">{{ __('All Months') }}</option>
                             @foreach (\App\Models\MonthlyAttendance::MONTH_NAMES as $num => $name)
                                 <option value="{{ $num }}" {{ request('month') == $num ? 'selected' : '' }}>

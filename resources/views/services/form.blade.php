@@ -7,7 +7,7 @@
                 '<a class="link text-blue-500" href="' . route('service-groups.create') . '">اضافه کردن گروه خدمات</a>';
         @endphp
         <div class="h-full flex flex-wrap items-end" x-data="{ group_id: '{{ $initialGroupId }}', selectedValue: '{{ $initialSelectedValue }}' }">
-            <span class="label-text">{{ __('Service group') }}</span>
+            <span>{{ __('Service group') }}</span>
 
             <x-select-box url="{{ route('services.search-service-group') }}" :options="[['headerGroup' => 'group', 'options' => $groups]]" x-model="selectedValue"
                 x-init="if (!selectedValue && group_id) { selectedValue = 'group-' + group_id; }" placeholder="{{ __('Select Service group') }}" hint='{!! $hint !!}'

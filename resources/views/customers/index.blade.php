@@ -12,7 +12,7 @@
 
                 <form method="GET" action="{{ route('customers.index') }}" class="flex items-center gap-2 ">
                     <label for="group_id" class="sr-only">{{ __('Customer Group') }}</label>
-                    <select name="group_id" id="group_id" class="select select-bordered select-sm" onchange="this.form.submit()">
+                    <select name="group_id" id="group_id" class="select  select-sm" onchange="this.form.submit()">
                         <option value="all">{{ __('All Groups') }}</option>
                         @foreach ($groups as $g)
                             <option value="{{ $g->id }}" @selected(isset($groupId) && $groupId !== 'all' && (int) $groupId === $g->id)>{{ $g->name }}

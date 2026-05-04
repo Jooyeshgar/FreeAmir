@@ -20,14 +20,14 @@
 <div class="bg-white px-2 print:pl-8">
     <table class="w-full border-collapse px-4 border-black max-w-full table-fixed break-inside-avoid-page">
         <thead class="print:table-header-group">
-            <tr class="">
+            <tr>
                 <th class="w-8"></th>
                 <th class="w-1/6"></th>
                 <th class="w-3/6"></th>
                 <th class="w-1/6"></th>
                 <th class="w-1/6"></th>
             </tr>
-            <tr class="">
+            <tr>
                 <td colspan="5" class="pt-3">
                     <div class="flex justify-between items-start p-4 border border-black rounded-lg">
                         <div class="text-center w-full">

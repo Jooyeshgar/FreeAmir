@@ -13,11 +13,11 @@
                 <x-show-message-bags />
 
                 <div>
-                    <label class="form-control w-full">
+                    <label class="fieldset w-full">
                         <div class="label">
-                            <span class="label-text">{{ __('Import Format') }} <span class="text-error">*</span></span>
+                            <span>{{ __('Import Format') }} <span class="text-error">*</span></span>
                         </div>
-                        <select name="import_type" class="select select-bordered @error('import_type') select-error @enderror" required>
+                        <select name="import_type" class="select  @error('import_type') select-error @enderror" required>
                             <option value="">{{ __('— Select Format —') }}</option>
                             @foreach ($importTypes as $value => $label)
                                 <option value="{{ $value }}" {{ old('import_type') === $value ? 'selected' : '' }}>
@@ -26,7 +26,7 @@
                             @endforeach
                         </select>
                         @error('import_type')
-                            <div class="label"><span class="label-text-alt text-error">{{ $message }}</span></div>
+                            <div class="label"><span class="text-xs text-error">{{ $message }}</span></div>
                         @enderror
                     </label>
                 </div>
@@ -41,11 +41,11 @@
                 </div>
 
                 <div class="mt-3">
-                    <label class="form-control w-full">
+                    <label class="fieldset w-full">
                         <div class="label">
-                            <span class="label-text">{{ __('Duplicate Mode') }} <span class="text-error">*</span></span>
+                            <span>{{ __('Duplicate Mode') }} <span class="text-error">*</span></span>
                         </div>
-                        <select name="duplicate_mode" class="select select-bordered @error('duplicate_mode') select-error @enderror" required>
+                        <select name="duplicate_mode" class="select  @error('duplicate_mode') select-error @enderror" required>
                             <option value="ignore" {{ old('duplicate_mode', 'ignore') === 'ignore' ? 'selected' : '' }}>
                                 {{ __('Ignore (keep existing record)') }}
                             </option>
@@ -54,19 +54,19 @@
                             </option>
                         </select>
                         @error('duplicate_mode')
-                            <div class="label"><span class="label-text-alt text-error">{{ $message }}</span></div>
+                            <div class="label"><span class="text-xs text-error">{{ $message }}</span></div>
                         @enderror
                     </label>
                 </div>
 
                 <div class="mt-3">
-                    <label class="form-control w-full">
+                    <label class="fieldset w-full">
                         <div class="label">
-                            <span class="label-text">{{ __('File') }} <span class="text-error">*</span></span>
+                            <span>{{ __('File') }} <span class="text-error">*</span></span>
                         </div>
-                        <input type="file" name="file" class="file-input file-input-bordered w-full @error('file') file-input-error @enderror" required />
+                        <input type="file" name="file" class="file-input  w-full @error('file') file-input-error @enderror" required />
                         @error('file')
-                            <div class="label"><span class="label-text-alt text-error">{{ $message }}</span></div>
+                            <div class="label"><span class="text-xs text-error">{{ $message }}</span></div>
                         @enderror
                     </label>
                 </div>

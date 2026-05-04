@@ -29,7 +29,7 @@ $isManualChecked = old('is_manual') !== null
                         ? old('is_manual')
                         : ($attendanceLog->is_manual ?? false); @endphp
                 {{ $isManualChecked ? 'checked' : '' }} />
-            <span class="label-text">{{ __('Manually Corrected') }}</span>
+            <span>{{ __('Manually Corrected') }}</span>
         </label>
     </div>
 

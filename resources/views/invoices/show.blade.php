@@ -82,7 +82,7 @@
                 </div>
 
                 @if ($changeStatusValidation->hasErrors() || $changeStatusValidation->hasWarning())
-                    <div class="stats bg-gradient-to-br gap-2 shadow col-span-4">
+                    <div class="stats bg-base-100 gap-2 shadow col-span-4">
                         <x-show-messages :message="$changeStatusValidation->toDetailText()" type="alert" />
                     </div>
                 @endif
@@ -179,7 +179,7 @@
                         </thead>
                         <tbody>
                             @forelse ($invoice->items as $index => $item)
-                                <tr class="hover">
+                                <tr class="hover:bg-base-300">
                                     <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
                                     <td class="px-4 py-3">
                                         @if ($item->itemable)
@@ -236,7 +236,7 @@
                                 </thead>
                                 <tbody>
                                     @forelse ($invoice->getReturnInvoice() as $index => $returnedInvoice)
-                                        <tr class="hover">
+                                        <tr class="hover:bg-base-300">
                                             <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
                                             <td class="px-4 py-3">
                                                 <a href="{{ route('invoices.show', $returnedInvoice) }}" class="link link-hover link-primary">
@@ -360,7 +360,7 @@
                             </thead>
                             <tbody>
                                 @forelse ($invoice->getReturnedInvoice()?->items as $index => $item)
-                                    <tr class="hover">
+                                    <tr class="hover:bg-base-300">
                                         <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
                                         <td class="px-4 py-3">
                                             @if ($item->itemable)
@@ -427,7 +427,7 @@
                                 </thead>
                                 <tbody>
                                     @foreach ($invoice->ancillaryCosts as $ancillaryCost)
-                                        <tr class="hover">
+                                        <tr class="hover:bg-base-300">
                                             <td class="px-4 py-3">
                                                 <a class="link" href="{{ route('invoices.ancillary-costs.show', [$invoice, $ancillaryCost]) }}">
                                                     {{ formatDocumentNumber($ancillaryCost->document?->number ?? ($ancillaryCost->document_id ?? ($ancillaryCost->number ?? $ancillaryCost->id))) }}
