@@ -149,6 +149,29 @@ main {
     padding: 0 .4rem;
 }
 
+:root {
+    --freeamir-control-focus-color: rgb(15 23 42 / 0.42);
+    --freeamir-control-focus-shadow: rgb(15 23 42 / 0.08);
+}
+
+[data-theme='dark'] {
+    --freeamir-control-focus-color: rgb(248 250 252 / 0.36);
+    --freeamir-control-focus-shadow: rgb(248 250 252 / 0.08);
+}
+
+:where(
+    .input:not(.input-neutral):not(.input-primary):not(.input-secondary):not(.input-accent):not(.input-info):not(.input-success):not(.input-warning):not(.input-error),
+    .select:not(.select-neutral):not(.select-primary):not(.select-secondary):not(.select-accent):not(.select-info):not(.select-success):not(.select-warning):not(.select-error),
+    .textarea:not(.textarea-neutral):not(.textarea-primary):not(.textarea-secondary):not(.textarea-accent):not(.textarea-info):not(.textarea-success):not(.textarea-warning):not(.textarea-error),
+    .file-input:not(.file-input-neutral):not(.file-input-primary):not(.file-input-secondary):not(.file-input-accent):not(.file-input-info):not(.file-input-success):not(.file-input-warning):not(.file-input-error)
+):is(:focus, :focus-within) {
+    --input-color: var(--freeamir-control-focus-color);
+    border-color: var(--freeamir-control-focus-color);
+    outline: 1px solid var(--freeamir-control-focus-color);
+    outline-offset: 1px;
+    box-shadow: 0 0 0 2px var(--freeamir-control-focus-shadow);
+}
+
 @layer components {
     .app-main-menu > li > details {
         overflow: visible;

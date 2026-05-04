@@ -80,7 +80,7 @@ function closeMenuDetails(details) {
 }
 
 function getSiblingDetails(details) {
-    const parentList = details.parentElement?.parentElement;
+    const parentList = details.closest('li')?.parentElement;
 
     if (!parentList) {
         return [];
