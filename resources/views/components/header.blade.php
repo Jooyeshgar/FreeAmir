@@ -3,7 +3,7 @@
         <a href="/" class="flex shrink-0 items-center rounded-xl bg-base-200 p-1" aria-label="{{ config('app.name') }}">
             <img src="/images/logo.png" alt="Logo" class="h-12 w-12 object-contain">
         </a>
-        <ul class="menu lg:menu-horizontal lg:flex-nowrap px-1 bg-base-200 rounded-xl">
+        <ul class="app-main-menu menu px-1 lg:menu-horizontal lg:flex-nowrap bg-base-200 rounded-xl" data-main-menu>
             <x-menu />
         </ul>
     </nav>

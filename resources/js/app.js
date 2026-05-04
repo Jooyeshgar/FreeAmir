@@ -72,6 +72,68 @@ function syncThemeController() {
 
 document.addEventListener('DOMContentLoaded', syncThemeController);
 
+function closeMenuDetails(details) {
+    details.removeAttribute('open');
+    details.querySelectorAll('details[open]').forEach((nestedDetails) => {
+        nestedDetails.removeAttribute('open');
+    });
+}
+
+function getSiblingDetails(details) {
+    const parentList = details.parentElement?.parentElement;
+
+    if (!parentList) {
+        return [];
+    }
+
+    return Array.from(parentList.children).flatMap((item) => {
+        if (item.tagName !== 'LI') {
+            return [];
+        }
+
+        return Array.from(item.children).filter((child) => child.tagName === 'DETAILS');
+    });
+}
+
+function initializeMainMenuDropdowns() {
+    document.querySelectorAll('[data-main-menu]').forEach((menu) => {
+        const dropdowns = Array.from(menu.querySelectorAll('details'));
+
+        dropdowns.forEach((details) => {
+            details.addEventListener('toggle', () => {
+                if (!details.open) {
+                    details.querySelectorAll('details[open]').forEach(closeMenuDetails);
+                    return;
+                }
+
+                getSiblingDetails(details).forEach((siblingDetails) => {
+                    if (siblingDetails !== details && siblingDetails.open) {
+                        closeMenuDetails(siblingDetails);
+                    }
+                });
+            });
+        });
+
+        menu.addEventListener('click', (event) => {
+            if (!event.target.closest('a[href]')) {
+                return;
+            }
+
+            dropdowns.forEach(closeMenuDetails);
+        });
+
+        document.addEventListener('click', (event) => {
+            if (menu.contains(event.target)) {
+                return;
+            }
+
+            dropdowns.forEach(closeMenuDetails);
+        });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initializeMainMenuDropdowns);
+
 function convertToJalali(gy, gm, gd) {
     // Implementation of gregorian_to_jalali function in JavaScript
     gy = parseInt(gy);

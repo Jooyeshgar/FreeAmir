@@ -1,12 +1,18 @@
+@php
+    $topDropdownClass = 'app-main-menu-dropdown';
+    $topDropdownContentClass = 'app-main-menu-panel z-50 w-max min-w-56 max-w-[calc(100vw-2rem)] overflow-x-auto';
+    $scrollingTopDropdownContentClass = $topDropdownContentClass . ' max-h-[calc(100vh-6rem)] overflow-y-auto';
+@endphp
+
 @can('home.*')
-    <li><a href="/" class="hover:rounded-xl">{{ __('Home') }}</a></li>
+    <li><a href="/">{{ __('Home') }}</a></li>
 @endcan
 
 @can('employee-portal.dashboard')
     <li>
-        <details>
+        <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('My Portal') }}</summary>
-            <ul class="z-50">
+            <ul class="{{ $topDropdownContentClass }}">
                 <li><a href="{{ route('employee-portal.dashboard') }}">{{ __('Dashboard') }}</a></li>
                 <li><a href="{{ route('employee-portal.attendance-logs') }}">{{ __('My Attendance') }}</a></li>
                 <li><a href="{{ route('employee-portal.monthly-attendances') }}">{{ __('Monthly Attendance') }}</a></li>
@@ -19,9 +25,9 @@
 @endcan
 @can('invoices.create')
     <li>
-        <details>
+        <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('Invoices') }}</summary>
-            <ul class="z-50">
+            <ul class="{{ $topDropdownContentClass }}">
                 <li><a href="{{ route('invoices.index', ['invoice_type' => 'buy']) }}">{{ __('Buy List') }}</a></li>
                 <li><a href="{{ route('invoices.index', ['invoice_type' => 'buy', 'service_buy' => '1']) }}">{{ __('Buy Service') }}</a></li>
                 <li><a href="{{ route('invoices.index', ['invoice_type' => 'sell']) }}">{{ __('Sell List') }}</a></li>
@@ -37,9 +43,9 @@
 @endcan
 @canany(['documents.index', 'documents.create', 'documents.edit'])
     <li>
-        <details>
+        <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('Accounting') }}</summary>
-            <ul class="z-50">
+            <ul class="{{ $topDropdownContentClass }}">
                 <li><a href="{{ route('documents.create') }}">{{ __('Create Document') }}</a></li>
                 <li><a href="{{ route('documents.index') }}">{{ __('Document List') }}</a></li>
             </ul>
@@ -48,9 +54,9 @@
 @endcanany
 @canany(['reports.journal', 'reports.ledger', 'reports.sub-ledger'])
     <li>
-        <details>
+        <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('Reports') }}</summary>
-            <ul class="z-50">
+            <ul class="{{ $topDropdownContentClass }}">
                 @canany(['reports.journal', 'reports.ledger', 'reports.sub-ledger'])
                     <li>
                         <details>
@@ -82,9 +88,9 @@
 
 @canany(['products.index', 'product-groups.index'])
     <li>
-        <details>
+        <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('Warehouse') }}</summary>
-            <ul class="z-50">
+            <ul class="{{ $topDropdownContentClass }}">
                 <li><a href="{{ route('products.index') }}">{{ __('Products') }}</a></li>
                 <li><a href="{{ route('product-groups.index') }}">{{ __('Product Groups') }}</a></li>
             </ul>
@@ -93,9 +99,9 @@
 @endcanany
 
 <li>
-    <details>
+    <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
         <summary>{{ __('Management') }}</summary>
-        <ul class="z-50 max-h-[calc(100vh-6rem)] overflow-y-auto">
+        <ul class="{{ $scrollingTopDropdownContentClass }}">
 
         {{-- HR & Organization --}}
         @canany(['hr.employees.index', 'hr.employees.create', 'hr.employees.edit', 'hr.org-charts.index', 'hr.org-charts.create', 'hr.org-charts.edit',

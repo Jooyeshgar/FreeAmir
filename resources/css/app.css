@@ -149,6 +149,28 @@ main {
     padding: 0 .4rem;
 }
 
+@layer components {
+    .app-main-menu > li > details {
+        overflow: visible;
+    }
+
+    .app-main-menu > li > a,
+    .app-main-menu > li > details > summary,
+    .app-main-menu .app-main-menu-panel :is(a, summary) {
+        white-space: nowrap;
+        text-wrap: nowrap;
+    }
+
+    .app-main-menu .app-main-menu-panel ul {
+        width: max-content;
+        min-width: 100%;
+    }
+
+    .app-main-menu .app-main-menu-panel {
+        overscroll-behavior: contain;
+    }
+}
+
 #originalTransactions .removeButton {
     display: none;
 }
