@@ -64,28 +64,4 @@ class StoreAncillaryCostRequest extends FormRequest
             'ancillaryCosts.*.amount' => 'required|numeric|min:0',
         ];
     }
-
-    public function messages(): array
-    {
-        return [
-            'type.required' => __('The Type field is required.'),
-            'type.in' => __('The selected Type is invalid.'),
-            'vatPercentage.numeric' => __('VAT must be a number.'),
-            'vatPercentage.min' => __('VAT must be at least :min.'),
-            'vatPercentage.max' => __('VAT may not be greater than :max.'),
-            'invoice_id.required' => __('The Invoice field is required.'),
-            'invoice_id.integer' => __('The invoice ID field must be an integer.'),
-            'invoice_id.exists' => __('The selected invoice ID is invalid.'),
-            'customer_id.required' => __('The Customer field is required.'),
-            'customer_id.integer' => __('The customer ID field must be an integer.'),
-            'customer_id.exists' => __('The selected customer ID is invalid.'),
-            'date.required' => __('The Date field is required.'),
-            'date.date' => __('The Date field must be a valid date.'),
-            'ancillaryCosts.*.product_id.required' => __('Product is required for each ancillary cost.'),
-            'ancillaryCosts.*.product_id.exists' => __('The selected product is invalid.'),
-            'ancillaryCosts.*.amount.required' => __('Amount is required for each ancillary cost.'),
-            'ancillaryCosts.*.amount.numeric' => __('Amount must be a number.'),
-            'ancillaryCosts.*.amount.min' => __('Amount must be at least :min.'),
-        ];
-    }
 }
