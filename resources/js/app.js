@@ -36,6 +36,11 @@ window.applyFreeAmirChartTheme = applyChartDefaults;
 applyChartDefaults();
 
 function syncThemeController() {
+    if (document.documentElement.hasAttribute('data-force-light')) {
+        document.documentElement.setAttribute('data-theme', 'light');
+        return;
+    }
+
     let theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
 
     try {

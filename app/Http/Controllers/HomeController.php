@@ -13,17 +13,32 @@ class HomeController extends Controller
 
     public function seedDemoData()
     {
-        if (Document::count() !== 0) {
-            return redirect()->route('home')->with('error', 'نمیتوان دیتاهای آزمایشی را به دیتابیس پر اضافه کرد.');
+        abort_if(! config('app.debug') || app()->isProduction(), 404);
+
+        if (Document::exists()) {
+            return redirect()->route('home')->with('error', __('Cannot add demo data to a non-empty database.'));
         }
 
         try {
             Artisan::call('db:seed', ['--class' => 'DemoSeeder']);
         } catch (\Exception $e) {
-            return redirect()->route('home')->with('error', 'خطایی در اجرای پر کردن دیتابیس رخ داد.');
+            return redirect()->route('home')->with('error', __('An error occurred while seeding demo data.'));
         }
 
-        return redirect()->route('home')->with('success', 'داده های آزمایشی به دیتابیس اضافه شدند.');
+        return redirect()->route('home')->with('success', __('Demo data has been added to the database.'));
+    }
+
+    public function refreshDatabase()
+    {
+        abort_if(! config('app.debug') || app()->isProduction(), 404);
+
+        try {
+            Artisan::call('migrate:fresh', ['--seed' => true]);
+        } catch (\Exception $e) {
+            return redirect()->route('home')->with('error', __('An error occurred while refreshing the database.'));
+        }
+
+        return redirect()->route('home')->with('success', __('Refresh database completed successfully.'));
     }
 
     public function index()
@@ -52,10 +67,12 @@ class HomeController extends Controller
         ['incomeData' => $totalIncomesData, 'costData' => $totalCostsData, 'profit' => $profit] =
             $this->service->profitFromNonPermanentSubjects();
 
-        $hasDocument = \App\Models\Document::count() === 0;
+        $hasDocument = Document::exists();
+        $isDebugMode = config('app.debug') && ! app()->isProduction();
 
         return view('home', compact(
             'hasDocument',
+            'isDebugMode',
             'cashTypes',
             'bankAccounts',
             'topTenBankAccountBalances',

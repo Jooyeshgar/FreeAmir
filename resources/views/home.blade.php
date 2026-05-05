@@ -3,17 +3,7 @@
 
     <main class="home-dashboard">
 
-        @hasrole('Super-Admin')
-            @if ($hasDocument)
-                <div class="alert alert-warning">
-                    <p>جدول‌های دیتابیس شما خالی هستند. آیا مایل هستید داده‌های آزمایشی در دیتابیس شما بارگذاری شود؟</p>
-                    <form method="POST" action="{{ route('home.seed-demo-data') }}" class="inline-block m-0">
-                        @csrf
-                        <button type="submit" class="btn btn-ghost">پر کردن دیتابیس</button>
-                    </form>
-                </div>
-            @endif
-        @endhasrole
+        @include('home.database-actions')
 
         <div>
             <h1 class="home-page-title">
