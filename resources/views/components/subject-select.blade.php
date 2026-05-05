@@ -6,7 +6,7 @@
         disabled: @js($disabled),
     })" @click.outside="close()" x-cloak>
     @if ($title !== '')
-        <div class="label">
+        <div class="label-text">
             <span>{{ $title }}</span>
         </div>
     @endif

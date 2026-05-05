@@ -3,7 +3,7 @@
         <div class="card-body">
 
             {{-- Tabs --}}
-            <div role="tablist" class="tabs tabs-lift tabs-lg mb-4">
+            <div role="tablist" class="tabs tabs-lifted tabs-lg mb-4">
 
                 <a role="tab" href="{{ route('hr.personnel-requests.index', array_merge(request()->except('tab', 'page'), ['tab' => 'leaves'])) }}"
                     class="tab {{ $tab === 'leaves' ? 'tab-active' : '' }}">

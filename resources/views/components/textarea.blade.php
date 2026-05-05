@@ -20,7 +20,7 @@
         @endif
     </div>
 
-    <textarea class="textarea h-auto" placeholder="{{ $placeholder ?? '' }}"
+    <textarea class="textarea h-auto w-full" placeholder="{{ $placeholder ?? '' }}"
         {{ $required ? 'required' : '' }} name="{{ $name }}" id="{{ $name }}">{{ $value ?? '' }}</textarea>
 
     @if ($errors->first($name))

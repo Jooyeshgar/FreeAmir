@@ -32,7 +32,7 @@
 
             <button class="flex justify-content gap-4 align-center w-full px-4 mb-2" id="addWebsite" @click="addWebsite(); activeTab = websites.length;"
                 type="button">
-                <div class="bg-gray-200 max-h-10 min-h-10 hover:bg-gray-300 border-none btn w-full rounded-md btn-active">
+                <div class="max-h-10 min-h-10 border-none btn w-full rounded-md">
                     <span class="text-2xl">+</span>
                     {{ __('Add Website') }}
                 </div>

@@ -3,10 +3,9 @@
         <x-input name="name" id="name" title="{{ __('Name') }}" :value="old('name', $subject->name ?? '')" placeholder="{{ __('Please enter the name') }}" />
     </div>
 
-    <div class="flex flex-col justify-end" x-data="{ selectedType: @js(old('type', $subject->type ?? 'debtor')) }">
-        <span>{{ __('Type') }}</span>
-        <select name="type" id="type" x-model="selectedType" 
-            class="bg-white h-10 min-h-10 border  w-full rounded-md focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-2">
+   <div class="flex flex-col justify-end" x-data="{ selectedType: @js(old('type', $subject->type ?? 'debtor')) }">
+        <label>{{ __('Type') }}</label>
+        <select name="type" id="type" x-model="selectedType" class="select select-sm h-10 min-h-10 w-full px-2">
             <option value="debtor">{{ __('Debtor') }}</option>
             <option value="creditor">{{ __('Creditor') }}</option>
             <option value="both">{{ __('Both') }}</option>
@@ -15,9 +14,8 @@
 
     @if (! $parentSubject)
         <div class="flex flex-col justify-end" x-data="{ selectedIsPermanent: @js(old('is_permanent', $subject->is_permanent ?? 0)) }">
-            <span>{{ __('Permanent/Temporary') }}</span>
-            <select name="is_permanent" id="is_permanent" x-model="selectedIsPermanent"
-                class="bg-white h-10 min-h-10 border  w-full rounded-md focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-2">
+            <label>{{ __('Permanent/Temporary') }}</label>
+            <select name="is_permanent" id="is_permanent" x-model="selectedIsPermanent" class="select select-sm h-10 min-h-10 w-full px-2">
                 <option value="1">{{ __('Permanent') }}</option>
                 <option value="0">{{ __('Temporary') }}</option>
             </select>
