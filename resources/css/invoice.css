@@ -22,6 +22,7 @@
 }
 
 .contractTitle {
+    padding: 7.5px;
     font-size: 9pt;
     font-weight: bold;
     border-top: 1px solid #000;
@@ -36,6 +37,7 @@
 }
 
 .contractSection {
+    padding: 7.5px;
     font-size: 10pt;
     direction: rtl;
     line-height: 1.5em;
@@ -46,6 +48,7 @@
 }
 
 .transactionsTable {
+    margin-left: 2px;
     border-right: 1px solid #000;
     text-align: right;
     width: 100%;
