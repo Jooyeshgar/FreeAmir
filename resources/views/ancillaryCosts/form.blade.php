@@ -56,10 +56,10 @@
                 <div class="flex-wrap">
                     <span class="text-gray-500 w-full"> {{ __('Cost Type') }} </span>
                     <select name="type" id="type" x-model="selectedCostType"
-                        class="bg-white h-10 min-h-10 border border-slate-400 w-full rounded-md focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-2">
-                        <option value="">{{ __('Select Cost Type') }}</option>
+                        class="h-10 min-h-10 border border-slate-400 w-full rounded-md text-gray-500 px-2">
+                        <option class="bg-base-100" value="">{{ __('Select Cost Type') }}</option>
                         @foreach (App\Enums\AncillaryCostType::cases() as $type)
-                            <option value="{{ $type->value }}">{{ $type->label() }}</option>
+                            <option class="bg-base-100 " value="{{ $type->value }}">{{ $type->label() }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -105,13 +105,13 @@
             <template x-if="availableProducts && availableProducts.length > 0">
                 <div>
                     <template x-for="(product, index) in availableProducts" :key="product.id">
-                        <div class="flex gap-2 items-center px-4 py-3 border-b hover:bg-gray-50">
+                        <div class="flex gap-2 items-center px-4 py-3 border-b">
                             <div class="flex-1 text-center max-w-8">
-                                <span class="text-gray-600" x-text="index + 1"></span>
+                                <span class="text-gray-500" x-text="index + 1"></span>
                             </div>
 
                             <div class="flex-1 min-w-48 text-center">
-                                <span class="text-gray-800" x-text="product.name"></span>
+                                <span class="text-gray-500" x-text="product.name"></span>
                                 <input type="hidden" x-bind:name="'ancillaryCosts[' + index + '][product_id]'"
                                     x-bind:value="product.id">
                                 <input type="hidden" x-bind:name="'ancillaryCosts[' + index + '][description]'"
@@ -120,13 +120,13 @@
 
                             <div class="flex-1 min-w-32 max-w-32">
                                 <input type="text" x-bind:value="product.quantity ?? 0" readonly
-                                    class="mt-1 block w-full rounded-md border-gray-200 bg-gray-100 text-gray-700 px-3 py-2 text-center" />
+                                    class="mt-1 block w-full rounded-md border-gray-200 text-gray-500 px-3 py-2 text-center" />
                             </div>
 
                             <div class="flex-1 min-w-32 max-w-48">
                                 <input type="text"
                                     x-bind:value="calculateAmountPerUnit(product.id, product.quantity)" readonly
-                                    class="mt-1 block w-full rounded-md border-gray-200 bg-gray-100 text-gray-700 px-3 py-2 text-center" />
+                                    class="mt-1 block w-full rounded-md border-gray-200 text-gray-500 px-3 py-2 text-center" />
                             </div>
 
                             <div class="flex-1 min-w-32 max-w-48">
@@ -145,13 +145,13 @@
         <hr>
         <div class="flex flex-row justify-end">
             <div class="flex justify-end px-4 gap-4 py-3">
-                <div class="flex items-center gap-2 px-4 py-2 bg-white shadow-sm rounded-xl border border-gray-200">
+                <div class="flex items-center gap-2 px-4 py-2 shadow-sm rounded-xl border border-gray-200">
                     <span class="text-sm font-medium text-gray-500">{{ __('Total') }} ({{ config('amir.currency') ?? __('Rial') }}):</span>
                     <span class="text-lg font-bold text-green-600" x-text="calculateTotal().toLocaleString('fa-IR')">
                         0
                     </span>
                 </div>
-                <div class="flex items-center gap-2 px-4 py-2 bg-white shadow-sm rounded-xl border border-gray-200">
+                <div class="flex items-center gap-2 px-4 py-2 shadow-sm rounded-xl border border-gray-200">
                     <span class="text-sm font-medium text-gray-500">{{ __('Total with VAT') }} ({{ config('amir.currency') ?? __('Rial') }}):</span>
                     <span class="text-lg font-bold text-green-600"
                         x-text="calculateTotalWithVat(Number(vat)).toLocaleString('fa-IR')">

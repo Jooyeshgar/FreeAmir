@@ -3,7 +3,7 @@
         <div class="card-body">
 
             {{-- Tabs --}}
-            <div role="tablist" class="tabs tabs-lifted tabs-lg mb-4">
+            <div role="tablist" class="flex justify-around tabs tabs-lifted tabs-lg mb-4">
 
                 <a role="tab" href="{{ route('hr.personnel-requests.index', array_merge(request()->except('tab', 'page'), ['tab' => 'leaves'])) }}"
                     class="tab {{ $tab === 'leaves' ? 'tab-active' : '' }}">
@@ -41,7 +41,7 @@
 
             {{-- Filters --}}
             <div class="flex flex-wrap items-end justify-between gap-3">
-                <form action="{{ route('hr.personnel-requests.index') }}" method="GET" class="flex flex-wrap items-end gap-2">
+                <form action="{{ route('hr.personnel-requests.index') }}" method="GET" class="flex justify-between gap-2 w-1/2">
                     <input type="hidden" name="tab" value="{{ $tab }}" />
 
                     <select name="employee_id" class="select  select-sm">
@@ -53,7 +53,7 @@
                         @endforeach
                     </select>
 
-                    <select name="status" class="select  select-sm">
+                    <select name="status" class="select select-sm">
                         <option value="">{{ __('All Statuses') }}</option>
                         <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>
                             {{ __('Pending') }}

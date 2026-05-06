@@ -6,7 +6,7 @@
     </x-slot>
     <div class="card-title">{{ __('Add customer') }}</div>
     <form action="{{ route('customers.update', $customer) }}" method="POST" class="relative">
-        <div class="card bg-gray-100 shadow-xl rounded-xl">
+        <div class="card bg-base-100 shadow-xl rounded-xl">
 
             @csrf
             @method('PUT')

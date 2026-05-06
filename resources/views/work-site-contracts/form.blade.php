@@ -1,19 +1,17 @@
 <div class="grid grid-cols-2 gap-6">
     <div class="col-span-2 md:col-span-1">
-        <label for="work_site_id" class="block text-sm font-medium text-gray-700 mb-1">
-            {{ __('Work Site') }} <span class="text-red-500">*</span>
-        </label>
+        <label for="work_site_id" class="label block text-sm font-medium mb-1">{{ __('Work Site') }}*</label>
         <select name="work_site_id" id="work_site_id"
             class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" required>
-            <option value="">— {{ __('Select Work Site') }} —</option>
+            <option class="bg-base-100" value="">— {{ __('Select Work Site') }} —</option>
             @foreach ($workSites as $workSite)
-                <option value="{{ $workSite->id }}" {{ old('work_site_id', $workSiteContract->work_site_id ?? '') == $workSite->id ? 'selected' : '' }}>
+                <option class="bg-base-100" value="{{ $workSite->id }}" {{ old('work_site_id', $workSiteContract->work_site_id ?? '') == $workSite->id ? 'selected' : '' }}>
                     {{ $workSite->name }}
                 </option>
             @endforeach
         </select>
         @error('work_site_id')
-            <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+            <p class="text-xs mt-1">{{ $message }}</p>
         @enderror
     </div>
 
@@ -26,7 +24,7 @@
     </div>
 
     <div class="col-span-2 md:col-span-1">
-        <label for="is_active" class="block text-sm font-medium text-gray-700 mb-1">
+        <label for="is_active" class="block text-sm font-medium label mb-1">
             {{ __('Active') }}
         </label>
         <input type="checkbox" name="is_active" id="is_active" value="1" class="checkbox"
@@ -37,7 +35,7 @@
     </div>
 
     <div class="col-span-2">
-        <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
+        <label for="description" class="block text-sm font-medium label mb-1">
             {{ __('Description') }}
         </label>
         <textarea name="description" id="description" rows="3"

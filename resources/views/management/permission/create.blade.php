@@ -27,7 +27,7 @@
                             placeholder="{{ __('Description') }}" :value="old('description', $permission->description ?? '')" />
                     </div>
 
-                    <h3 class="col-span-4 text-lg font-semibold mb-2">{{ __('Roles') }}</h3>
+                    <h3 class="label col-span-4 text-lg font-semibold mb-2">{{ __('Roles') }}</h3>
                     @foreach ($roles as $role)
                         <div class="col-span-2 md:col-span-1">
                             <x-checkbox title="{{ $role->name }}" name="roles[]" id="roles-{{ $role->id }}"

@@ -21,7 +21,7 @@
                     <br />
                     <hr>
                     <br />
-                    <h3>{{ __('Roles') }}</h3>
+                    <h3 class="label">{{ __('Roles') }}</h3>
                     <div class="grid gap-3 grid-cols-5">
                         @foreach ($roles as $role)
                             <x-checkbox :title="$role->name" name="role[]" :value="$role->name" id="role-{{ $role->id }}" />
@@ -31,7 +31,7 @@
                 <br />
                 <hr>
                 <br />
-                <h3>{{ __('Companies') }}</h3>
+                <h3 class="label">{{ __('Companies') }}</h3>
                 <div class="grid gap-3 grid-cols-5">
                     @foreach ($companies as $company)
                         <x-checkbox :title="$company->name" name="company[]" :value="$company->id"

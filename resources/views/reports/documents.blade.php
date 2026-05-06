@@ -1,5 +1,5 @@
-<x-app-layout>
-    <div class="font-bold text-gray-600 py-6 text-2xl">
+<x-app-layout :title="__('Documents Report')">
+    <div class="font-bold text-gray-500 py-6 text-2xl">
         <span>
             {{ __('Documents Report') }}
         </span>

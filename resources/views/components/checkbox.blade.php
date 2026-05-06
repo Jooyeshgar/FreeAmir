@@ -2,7 +2,7 @@
 
 <div class="fieldset">
     <label class="cursor-pointer justify-start gap-3">
-        <span class="label-text">{{ $title }}</span>
+        <span class="label">{{ $title }}</span>
         <input {{ $attributes->merge() }} name="{{ $name }}" id="{{ $id }}"
             type="checkbox" {{ $checked ? 'checked' : '' }} class="checkbox" value="{{ $value }}" />
     </label>

@@ -1,10 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Employees') }}
-        </h2>
-    </x-slot>
-
+<x-app-layout :title="__('Employees')">
     <x-show-message-bags />
 
     <div class="card bg-base-100 shadow-xl">
@@ -12,12 +6,12 @@
 
             {{-- Filters --}}
             <div class="flex flex-wrap items-end justify-between gap-3">
-                <form action="{{ route('hr.employees.index') }}" method="GET" class="flex flex-wrap items-end gap-2">
+                <form action="{{ route('hr.employees.index') }}" method="GET" class="flex gap-2">
 
                     <input type="text" name="search" value="{{ request('search') }}" placeholder="{{ __('Search by name, code or national code') }}"
-                        class="input  input-sm w-64" />
+                        class="input input-sm w-96" />
 
-                    <select name="is_active" class="select  select-sm">
+                    <select name="is_active" class="select select-sm">
                         <option value="">{{ __('All Statuses') }}</option>
                         <option value="1" {{ request('is_active') === '1' ? 'selected' : '' }}>{{ __('Active') }}</option>
                         <option value="0" {{ request('is_active') === '0' ? 'selected' : '' }}>{{ __('Inactive') }}</option>

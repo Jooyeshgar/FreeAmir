@@ -1,9 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Trial Balance') }}
-        </h2>
-    </x-slot>
+<x-app-layout :title="__('Trial Balance')">
     <x-show-message-bags />
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
@@ -40,9 +35,9 @@
                     <div class="col-span-1">
                         <x-input name="end_document_number" value="{{ $end_document_number }}" class="w-full" placeholder="{{ __('Document end number') }}" />
                     </div>
-                    <div class="col-span-1 flex items-center gap-3">
+                    <div class="col-span-1 flex items-center gap-3 mb-2">
                         <input type="checkbox" name="include_children" value="1" class="checkbox checkbox-md" {{ $include_children ? 'checked' : '' }}>
-                        <span class="text-gray-700">{{ __('Include 2 levels') }}</span>
+                        <span class="label">{{ __('Include 2 levels') }}</span>
                     </div>
                     <div class="col-span-2 flex gap-2 justify-end">
                         <button type="submit" class="btn btn-primary text-white rounded-md">{{ __('Search') }}</button>

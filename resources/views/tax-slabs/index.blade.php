@@ -60,7 +60,7 @@
                         @endphp
                     @empty
                         <tr>
-                            <td colspan="3" class="text-center py-4 text-gray-500">
+                            <td colspan="6" class="text-center py-4 text-gray-500">
                                 {{ __('No tax slabs found.') }}
                             </td>
                         </tr>

@@ -1,4 +1,4 @@
-<x-report-layout title="{{ __('Trial Balance') }}">
+<x-report-layout title="{{ __('Print Trial Balance') }}">
     <div class="bg-white p-2">
         <h1 class="mr-1 text-xl">
             {{ __('Trial Balance') }}

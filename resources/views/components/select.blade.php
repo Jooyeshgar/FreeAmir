@@ -1,9 +1,9 @@
 @props(['title', 'name', 'id', 'title2' => null, 'hint' => null, 'hint2' => null, 'options' => [], 'selected' => null])
 
-<fieldset {{ $attributes->merge(['class' => 'fieldset w-full ' . $attributes->get('class')]) }}>
+<fieldset {{ $attributes->merge(['class' => 'w-full ' . $attributes->get('class')]) }}>
 
     <div class="flex items-center justify-between gap-2">
-        <label for="{{ $id }}" class="fieldset-legend">{{ $title }}</label>
+        <label for="{{ $id }}" class="label">{{ $title }}</label>
         @if ($title2)
             <span class="label text-xs">{!! $title2 !!}</span>
         @endif

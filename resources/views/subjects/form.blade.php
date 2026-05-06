@@ -4,7 +4,7 @@
     </div>
 
    <div class="flex flex-col justify-end" x-data="{ selectedType: @js(old('type', $subject->type ?? 'debtor')) }">
-        <label>{{ __('Type') }}</label>
+        <label class="label">{{ __('Type') }}</label>
         <select name="type" id="type" x-model="selectedType" class="select select-sm h-10 min-h-10 w-full px-2">
             <option value="debtor">{{ __('Debtor') }}</option>
             <option value="creditor">{{ __('Creditor') }}</option>
@@ -14,7 +14,7 @@
 
     @if (! $parentSubject)
         <div class="flex flex-col justify-end" x-data="{ selectedIsPermanent: @js(old('is_permanent', $subject->is_permanent ?? 0)) }">
-            <label>{{ __('Permanent/Temporary') }}</label>
+            <label class="label">{{ __('Permanent/Temporary') }}</label>
             <select name="is_permanent" id="is_permanent" x-model="selectedIsPermanent" class="select select-sm h-10 min-h-10 w-full px-2">
                 <option value="1">{{ __('Permanent') }}</option>
                 <option value="0">{{ __('Temporary') }}</option>
