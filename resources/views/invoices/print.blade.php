@@ -7,12 +7,11 @@
 </head>
 
 <body>
-    <table width="100%" cellspacing="2" cellpadding="4" style="table-layout:fixed;">
+    <table width="100%">
         <tbody>
             <tr>
-                <td class="border right pink">شماره: <span
-                        style="color:#BB0000;">{{ formatDocumentNumber($invoice->number) }}</span></td>
-                <td rowspan="2" class="none" style="text-align:center;font-weight:bold;font-size:20px; width:80%;">
+                <td class="invoiceInfo"></td>
+                <td class="invoiceType" rowspan="2">
                     @if ($invoice->invoice_type == App\Enums\InvoiceType::BUY)
                         صورتحساب خرید کالا و خدمات
                     @elseif ($invoice->invoice_type == App\Enums\InvoiceType::SELL)
@@ -25,116 +24,89 @@
                 </td>
             </tr>
             <tr>
-                <td class="border right pink">
+                <td class="invoiceInfo">
+                    شماره: <span class="red">{{ formatDocumentNumber($invoice->number) }}</span> -
                     <span> تاریخ: {{ formatDate($invoice->date) }}</span>
                 </td>
             </tr>
         </tbody>
     </table>
 
-    <table width="100%" cellspacing="0" cellpadding="4" style="margin-top:2px;margin-left:2px; align-item:right;">
+    <table class="contractTable" cellspacing="0" cellpadding="4">
         <tbody>
             <tr>
-                <td colspan="4" class="border center pink mainlineheight">
+                <td class="contractTitle" colspan="4">
                     @if ($invoice->invoice_type == App\Enums\InvoiceType::BUY || $invoice->invoice_type == App\Enums\InvoiceType::RETURN_BUY)
-                        <p align="center" class="bold">مشخصات خریدار</p>
+                        مشخصات خریدار
                     @else
-                        <p align="center" class="bold">مشخصات فروشنده</p>
+                        مشخصات فروشنده
                     @endif
                 </td>
             </tr>
-            <tr class="right" width="100%">
-                <td class="right none lheight" width="33%" style="border-left:1px solid #000;">
+            <tr>
+                <td class="contractSection" width="33%">
                     شماره ملی: {{ convertToFarsi('10840096498') }}<br />
                     شماره تلفن: {{ convertToFarsi('031') }}<bdo dir="ltr">-</bdo>{{ convertToFarsi('32121091') }}
                 </td>
-                <td class="right none lheight" width="33%">
+                <td class="contractSection" width="30%">
                     شماره اقتصادی: {{ convertToFarsi('411337894159') }}<br />
                     کد پستی ۱۰ رقمی: {{ convertToFarsi('8136613699') }}
                 </td>
-                <td class="right none lheight" width="27%">
+                <td class="contractSection" width="30%">
                     شرکت مهندسی جویشگر پردیس ارم<br />
                     دفتر مرکزی: اصفهان میدان امام حسین ارگ جهان نما فاز ۴ طبقه ۴ واحد ۱۶
                 </td>
-                <td class="right none" width="6%" style="border-right:1px solid #000;">
+                <td class="logo">
                     @php $logo = base64_encode(file_get_contents(public_path('images/logo.svg'))); @endphp
-                    <img src="data:image/png;base64,{{ $logo }}" width="90" height="80" align="left">
+                    <img src="data:image/png;base64,{{ $logo }}" width="70" height="70" align="left">
                 </td>
             </tr>
 
             <tr>
-                <td class="pink center border mainlineheight" colspan="4" width="100%">
+                <td class="contractTitle" colspan="4">
                     @if ($invoice->invoice_type == App\Enums\InvoiceType::BUY || $invoice->invoice_type == App\Enums\InvoiceType::RETURN_BUY)
-                        <p align="center" class="bold">مشخصات فروشنده</p>
+                        مشخصات فروشنده
                     @else
-                        <p align="center" class="bold">مشخصات خریدار</p>
+                        مشخصات خریدار
                     @endif
                 </td>
             </tr>
-            <tr class="right">
-                <td class="right none lheight" width="33%" style="border-left:1px solid #000;">
+            <tr>
+                <td class="contractSection">
                     شماره ملی:
                     {{ isset($invoice->customer->personal_code) ? convertToFarsi($invoice->customer->personal_code) : '' }}<br />
                     شماره تلفن: <bdo
                         dir="ltr">{{ isset($invoice->customer->phone) ? convertToFarsi($invoice->customer->phone) : '' }}</bdo>
                 </td>
-                <td class="right none lheight" width="33%">
+                <td class="contractSection">
                     شماره اقتصادی:
                     {{ isset($invoice->customer->ecnmcs_code) ? convertToFarsi($invoice->customer->ecnmcs_code) : '' }}<br />
                     کد پستی ۱۰ رقمی:
                     {{ isset($invoice->customer->postal_code) ? convertToFarsi($invoice->customer->postal_code) : '' }}
                 </td>
-                <td class="right none lheight" width="33%">
+                <td class="contractSection">
                     {{ $invoice->customer->name }}<br />
                     {{ $invoice->customer->address }}
                 </td>
-                <td class="right none" width="6%" style="border-right:1px solid #000;">
-
-                </td>
+                <td class="contractSection"></td>
             </tr>
         </tbody>
     </table>
 
-    <table width="100%" cellspacing="0" style="text-align:right;table-layout:fixed;margin-left:2px;margin-right:1px;">
+    <table class="transactionsTable" cellspacing="0">
         <tbody>
-            <tr valign="top" style="line-height:1em;">
-                <td class="border center" style="border-right: none;" width="15%">
-                    <p class="bold">جمع مبلغ کل
-                        بعلاوه جمع مالیات و عوارض
-                        (ریال)
-                    </p>
-                </td>
-                <td class="border center" style="border-right: none;" width="12%">
-                    <p class="bold">جمع مالیات و عوارض (ریال)</p>
-                </td>
-                <td class="border center" style="border-right: none;" width="10%">
-                    <p class="bold">مبلغ کل پس از تخفیف (ریال)
-                    </p>
-                </td>
-                <td class="border center" style="border-right: none;" width="4%">
-                    <p class="bold">مبلغ تخفیف</p>
-                </td>
-                <td class="border center" style="border-right: none;" width="5%">
-                    <p class="bold">مبلغ کل (ریال)</p>
-                </td>
-                <td class="border center" style="border-right: none;" width="5%">
-                    <p class="bold">مبلغ واحد (ریال)</p>
-                </td>
-                <td class="border center" style="border-right: none;" width="4%">
-                    <p class="bold">واحد اندازه گیری</p>
-                </td>
-                <td class="border center" style="border-right: none;" width="4%">
-                    <p class="bold">تعداد مقدار</p>
-                </td>
-                <td class="border center" style="border-right: none;" width="20%">
-                    <p class="bold">شرح کالا یا خدمات</p>
-                </td>
-                <td class="border center" style="border-right: none;" width="2%">
-                    <p class="bold">کد کالا</p>
-                </td>
-                <td class="border center" width="2%">
-                    <p class="vertical bold" style="font-size:8pt;width:50%;margin-top:10pt">ردیف</p>
-                </td>
+            <tr>
+                <td class="transactionsHeader" width="12%">جمع مبلغ کل بعلاوه جمع مالیات و عوارض (ریال)</td>
+                <td class="transactionsHeader" width="12%">جمع مالیات و عوارض (ریال)</td>
+                <td class="transactionsHeader" width="12%">مبلغ کل پس از تخفیف (ریال)</td>
+                <td class="transactionsHeader" width="9%">مبلغ تخفیف</td>
+                <td class="transactionsHeader" width="9%">مبلغ کل (ریال)</td>
+                <td class="transactionsHeader" width="9%">مبلغ واحد (ریال)</td>
+                <td class="transactionsHeader" width="4%">واحد اندازه گیری</td>
+                <td class="transactionsHeader" width="5%">تعداد مقدار</td>
+                <td class="transactionsHeader" width="21%">شرح کالا یا خدمات</td>
+                <td class="transactionsHeader" width="6%">کد کالا</td>
+                <td class="transactionsHeaderIndex" width="2.5%">ردیف</td>
             </tr>
             @php
                 $invoiceTotalPrice = 0;
@@ -156,103 +128,57 @@
                     $total = $totalPriceAfterDiscount + $vatPrice ?? 0;
                     $code = $invoiceItem->itemable->code ?? '';
                 @endphp
-                <tr valign="top">
-                    <td class="border center mainlineheight" style="border-right: none;">
-                        <p align="center">{{ formatNumber($total) }}</p>
+                <tr>
+                    <td class="transactionsRow">{{ formatNumber($total) }}</td>
+                    <td class="transactionsRow">{{ formatNumber($vatPrice) }}</td>
+                    <td class="transactionsRow">{{ formatNumber($totalPriceAfterDiscount) }}</td>
+                    <td class="transactionsRow">{{ formatNumber($discountPrice) }}</td>
+                    <td class="transactionsRow">{{ formatNumber($totalPrice) }}</td>
+                    <td class="transactionsRow">{{ formatNumber($unitPrice) }}</td>
+                    <td class="transactionsRow"></td>
+                    <td class="transactionsRow">{{ formatNumber((int) $itemQuantity) }}</td>
+                    <td class="transactionsRow">
+                        {{ $invoiceItem->description ?? ($invoiceItem->itemable?->name ?? '') }}
                     </td>
-                    <td class="border center mainlineheight" style="border-right: none;">
-                        <p align="center">{{ formatNumber($vatPrice) }}</p>
-                    </td>
-                    <td class="border center mainlineheight" style="border-right: none;">
-                        <p align="center">{{ formatNumber($totalPriceAfterDiscount) }}</p>
-                    </td>
-                    <td class="border center mainlineheight" style="border-right: none;">
-                        <p align="center">{{ formatNumber($discountPrice) }}</p>
-                    </td>
-                    <td class="border center mainlineheight" style="border-right: none;">
-                        <p align="center">{{ formatNumber($totalPrice) }}</p>
-                    </td>
-                    <td class="border center mainlineheight" style="border-right: none;">
-                        <p align="center">{{ formatNumber($unitPrice) }}</p>
-                    </td>
-                    <td class="border center mainlineheight" style="border-right: none;">
-                        <p align="center"> </p>
-                    </td>
-                    <td class="border center mainlineheight" style="border-right: none;">
-                        <p align="center">{{ formatNumber((int) $itemQuantity) }}</p>
-                    </td>
-                    <td class="border center mainlineheight" style="border-right: none;">
-                        <p align="center">{{ $invoiceItem->description }}</p>
-                    </td>
-                    <td class="border center mainlineheight" style="border border-right: none;">
-                        <p align="center">{{ convertToFarsi($code) }}</p>
-                    </td>
-                    <td class="border center mainlineheight">
-                        <p align="center" class="bold">{{ convertToFarsi($index + 1) }}</p>
-                    </td>
+                    <td class="transactionsRow">{{ convertToFarsi($code) }}</td>
+                    <td class="transactionsRow transactionsRowIndex">{{ convertToFarsi($index + 1) }}</td>
                 </tr>
             @endforeach
 
-            <tr valign="top">
-                <td class="border center mainlineheight" style="border-right: none;" width="9%">
-                    <p align="center">{{ formatNumber($invoice->amount) }}</p>
-                </td>
-                <td class="border center mainlineheight" style="border-right: none;" width="15%">
-                    <p align="center">{{ formatNumber(abs($invoice->vat)) }}</p>
-                </td>
-                <td class="border center mainlineheight" style="border-right: none;" width="13%">
-                    <p align="center">{{ formatNumber($invoiceTotalPriceAfterDiscount) }}</p>
-                </td>
-                <td class="border center mainlineheight" style="border-right: none;" width="7%">
-                    <p align="center">{{ formatNumber($invoiceTotalDiscount) }}</p>
-                </td>
-                <td class="border center mainlineheight" style="border-right: none;" width="7%">
-                    <p align="center">{{ formatNumber($invoiceTotalPrice) }}</p>
-                </td>
-                <td colspan="6" class="border pink center mainlineheight" width="45%">
-                    <p align="center">جمع کل (ریال): {{ formatNumber($invoice->amount) }}</p>
+            <tr>
+                <td class="transactionsRow">{{ formatNumber($invoice->amount) }}</td>
+                <td class="transactionsRow">{{ formatNumber(abs($invoice->vat)) }}</td>
+                <td class="transactionsRow">{{ formatNumber($invoiceTotalPriceAfterDiscount) }}</td>
+                <td class="transactionsRow">{{ formatNumber($invoiceTotalDiscount) }}</td>
+                <td class="transactionsRow">{{ formatNumber($invoiceTotalPrice) }}</td>
+                <td colspan="6" class="totalInvoiceTransactions">جمع کل (ریال): {{ formatNumber($invoice->amount) }}
                 </td>
             </tr>
 
-            <tr valign="top">
-                <td colspan="2" class="mainlineheight" style="border: none;" width="24%">
-                    <p align="right">مهر و امضاء خریدار</p>
-                </td>
-                <td colspan="3" class="mainlineheight" style="border: none;" width="32%">
-                    <p align="right">مهر و امضای فروشنده</p>
-                </td>
-
-                <td colspan="2" class="border" style="border-right: none;" width="9%">
-                    <label style="display: flex; align-items: center; justify-content: center;">
-                        <span style="">غیر نقدی</span>
-                        <input type="checkbox" />
-                    </label>
+            <tr>
+                <td colspan="2" class="signature">مهر و امضاء خریدار</td>
+                <td colspan="3" class="signature">مهر و امضای فروشنده</td>
+                <td colspan="2" class="cashType">
+                    <span>غیر نقدی</span>
+                    <input type="checkbox" />
                 </td>
 
-                <td class="border" style="border-left: none; border-right: none;" width="9%">
-                    <label style="display: flex; align-items: center; justify-content: center;">
-                        <span style="">نقدی</span>
-                        <input type="checkbox" checked />
-                    </label>
+                <td class="cashType leftBorder">
+                    <span>نقدی</span>
+                    <input type="checkbox" />
                 </td>
 
-                <td colspan="3" class="border mainlineheight" style="border-left: none;" width="24%">
-                    <p align="right">:شرایط و نحوه فروش</p>
-                </td>
+                <td colspan="3" class="payType">:شرایط و نحوه فروش</td>
             </tr>
 
-            <tr valign="top">
-                <td colspan="5" class="mainlineheight" style="border: none;" width="56%">
-                    <p align="right"><br></p>
-                </td>
-                <td colspan="6" class="border mainlineheight" width="44%">
-                    <p align="right">
-                        @if (strlen($invoice->description) < 3)
-                            :توضیحات
-                        @else
-                            توضیحات: {{ $invoice->description }}
-                        @endif
-                    </p>
+            <tr>
+                <td colspan="5"></td>
+                <td colspan="6" class="invoiceDecs">
+                    @if (strlen($invoice->description) < 3)
+                        :توضیحات
+                    @else
+                        توضیحات: {{ $invoice->description }}
+                    @endif
                 </td>
             </tr>
         </tbody>
