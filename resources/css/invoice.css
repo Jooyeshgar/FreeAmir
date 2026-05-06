@@ -1,57 +1,136 @@
-.none {
-    border: none;
+.invoiceType {
+    text-align: center;
+    font-weight: bold;
+    font-size: 15pt;
+    width: 80%;
 }
 
-.border {
+.invoiceInfo {
+    text-align: center;
+    width: 20%;
+    padding: 7.5px;
+    font-size: 10pt;
     border: 1px solid #000;
-}
-
-.right {
-    text-align: right;
-    direction: rtl;
-}
-
-.center {
-    text-align: center !important;
-    direction: rtl;
-}
-
-.pink {
     background-color: #ffe0eb;
 }
 
-table {
-    font-family: "sahel";
-    font-size: 12pt;
-    height: 100%;
-    margin-left: 0;
-    margin-right: 0;
+.contractTable {
+    margin-top: 2px;
+    margin-left: 2px;
+    border-right: 1px solid #000;
+    border-left: 1px solid #000;
 }
 
-.bold {
+.contractTitle {
+    padding: 7.5px;
+    font-size: 9pt;
     font-weight: bold;
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #000;
+    text-align: center !important;
+    background-color: #ffe0eb;
+}
+
+.logo {
+    direction: rtl;
+    border: none;
+}
+
+.contractSection {
+    padding: 7.5px;
+    font-size: 10pt;
+    direction: rtl;
+    line-height: 1.5em;
+}
+
+.red {
+    color: #BB0000;
+}
+
+.transactionsTable {
+    margin-left: 2px;
+    border-right: 1px solid #000;
+    text-align: right;
+    width: 100%;
+}
+
+.transactionsHeader {
+    padding: 5px;
+    font-size: 9pt;
+    border-left: 1px solid #000;
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #000;
+    text-align: center !important;
+    direction: rtl;
+    font-weight: bold;
+}
+
+.transactionsRow {
+    font-size: 10pt;
+    border-left: 1px solid #000;
+    border-bottom: 1px solid #000;
+    text-align: center !important;
+    direction: rtl;
+    padding: 5px;
+}
+
+.transactionsHeaderIndex {
+    font-size: 7pt;
+    border-left: 1px solid #000;
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #000;
+    text-align: center !important;
+    direction: rtl;
+    font-weight: bold;
+}
+
+.transactionsRowIndex {
+    font-size: 8pt;
+    font-weight: bold;
+}
+
+.invoiceDesc {
+    padding: 10px;
+    border-bottom: 1px solid #000;
+    border-left: 1px solid #000;
     font-size: 10pt;
 }
 
-.lheight {
-    line-height: 1.5em;
-    text-align: right;
+.totalInvoiceTransactions {
+    background-color: #ffe0eb;
+    border-left: 1px solid #000;
+    text-align: center !important;
+    direction: rtl;
+    font-size: 10pt;
 }
 
-.mainlineheight {
-    line-height: 0;
+.signature {
+    padding: 5px;
+    border: none;
+    font-size: 10pt;
+}
+
+.payType {
+    padding: 10px;
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #000;
+    font-size: 10pt;
+}
+
+.cashType {
+    border: 1px solid #000;
+    border-right: none;
+    font-size: 10pt;
+}
+
+.leftBorder {
+    border-left: none;
 }
 
 @page {
     margin: 5mm 5mm 0 5mm;
 }
 
-body {
-    height: 100%;
-    font-size: 10pt;
-    font-family: "sahel";
-}
-
-.vertical {
-    writing-mode: vertical-rl;
+* {
+    font-family: "Sahel"
 }
