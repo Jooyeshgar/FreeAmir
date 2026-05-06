@@ -86,7 +86,7 @@
     font-weight: bold;
 }
 
-.invoiceDecs {
+.invoiceDesc {
     padding: 10px;
     border-bottom: 1px solid #000;
     border-left: 1px solid #000;
@@ -126,4 +126,8 @@
 
 @page {
     margin: 5mm 5mm 0 5mm;
+}
+
+* {
+    font-family: "Sahel"
 }

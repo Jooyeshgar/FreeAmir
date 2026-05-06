@@ -173,7 +173,7 @@
 
             <tr>
                 <td colspan="5"></td>
-                <td colspan="6" class="invoiceDecs">
+                <td colspan="6" class="invoiceDesc">
                     @if (strlen($invoice->description) < 3)
                         :توضیحات
                     @else
