@@ -8,8 +8,8 @@
         </ul>
     </nav>
 
-    <nav class="flex shrink-0 items-center" aria-label="{{ __('User menu') }}">
-        <ul class="menu menu-horizontal px-1 bg-base-200 rounded-xl">
+    <nav aria-label="{{ __('User menu') }}">
+        <ul class="flex shrink-0 items-center menu menu-horizontal px-1 bg-base-200 rounded-xl">
             <li>
                 <label class="flex cursor-pointer gap-2 px-3 py-2">
                     <svg
@@ -42,7 +42,7 @@
                 </label>
             </li>
             <li class="dropdown dropdown-end dropdown-hover">
-                <div class="mt-1" role="button">
+                <div role="button">
                     {{ cookie('active-company-id') ? config('active-company-name') . ' - ' . config('active-company-fiscal-year') : __('Please Select a Company') }}
                 </div>
                 <ul class="dropdown-content menu bg-base-100 rounded-box z-[1] w-35">
@@ -56,7 +56,7 @@
                 </ul>
             </li>
             <li class="dropdown dropdown-end dropdown-hover">
-                <div class="mt-1" role="button">{{ Auth::user()->name }}</div>
+                <div role="button">{{ Auth::user()->name }}</div>
                 <ul class="dropdown-content menu bg-base-100 rounded-box z-[1]">
                     <li><a href="/logout">{{ __('Logout') }}</a></li>
                 </ul>
