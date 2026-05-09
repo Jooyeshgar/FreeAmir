@@ -1,6 +1,39 @@
 @hasrole('Super-Admin')
     @if ($isDebugMode && !$hasDocument && !session('hide_empty_database_demo_alert'))
-        <div x-data="{ show: true }" x-show="show" x-transition class="alert alert-warning">
+        <div class="alert alert-warning"
+            x-data="{
+                loading: false,
+                    visible: true,
+                    async dismiss() {
+                        if (this.loading) return;
+                        this.loading = true;
+                        this.visible = false;
+            
+                        try {
+                            const res = await fetch('{{ route('home.hide-demo-alert') }}', {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'Accept': 'application/json'
+                                },
+                                credentials: 'same-origin'
+                            });
+            
+                            if (!res.ok) {
+                                this.visible = true;
+                                const t = await res.text();
+                            }
+                        } catch (e) {
+                            this.visible = true;
+                        } finally {
+                            this.loading = false;
+                        }
+                    }
+                }"
+            x-show="visible"
+            x-transition
+        >
             <div class="flex items-center justify-between gap-4 w-full">
                 <p class="m-0">{{ __('Your database tables are empty. Do you want to load demo data into your database?') }}</p>
 
@@ -10,21 +43,9 @@
                         <button type="submit" class="btn btn-info btn-sm">{{ __('Seed Demo Data') }}</button>
                     </form>
 
-                    <form x-ref="hideForm" method="POST" action="{{ route('home.hide-demo-alert') }}" target="hidden_iframe" class="inline-block m-0">
-                        @csrf
-                        <button type="submit" class="btn btn-error btn-sm"
-                            @click.prevent="
-                                show = false;
-                                $nextTick(() => $refs.hideForm.submit());
-                            "
-                        >
-                            {{ __('Need not') }}
-                        </button>
-                    </form>
+                    <button type="button" class="btn btn-error btn-sm" @click="dismiss" :disabled="loading">{{ __('Dismiss') }}</button>
                 </div>
             </div>
-
-            <iframe name="hidden_iframe" class="hidden"></iframe>
         </div>
     @endif
 

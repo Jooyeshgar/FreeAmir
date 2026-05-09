@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Document;
 use App\Services\HomeService;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 
@@ -11,7 +14,7 @@ class HomeController extends Controller
 {
     public function __construct(private readonly HomeService $service) {}
 
-    public function seedDemoData()
+    public function seedDemoData(): RedirectResponse
     {
         abort_if(! config('app.debug') || app()->isProduction(), 404);
 
@@ -28,7 +31,7 @@ class HomeController extends Controller
         return redirect()->route('home')->with('success', __('Demo data has been added to the database.'));
     }
 
-    public function refreshDatabase()
+    public function refreshDatabase(): RedirectResponse
     {
         abort_if(! config('app.debug') || app()->isProduction(), 404);
 
@@ -41,7 +44,7 @@ class HomeController extends Controller
         return redirect()->route('home')->with('success', __('Refresh database completed successfully.'));
     }
 
-    public function index()
+    public function index(): View|RedirectResponse
     {
         if (! (auth()->user()->can('documents.show') or auth()->user()->can('products.index'))) {
             if (auth()->user()->can('employee-portal.dashboard')) {
@@ -88,7 +91,7 @@ class HomeController extends Controller
         ));
     }
 
-    public function cashAndBanksBalances(Request $request)
+    public function cashAndBanksBalances(Request $request): JsonResponse
     {
         $data = $request->validate(
             [
@@ -100,7 +103,7 @@ class HomeController extends Controller
         return $this->service->cashAndBanksBalances($data['type'], intval($data['duration']));
     }
 
-    public function bankAccount(Request $request)
+    public function bankAccount(Request $request): JsonResponse
     {
         $data = $request->validate(
             [
@@ -112,10 +115,10 @@ class HomeController extends Controller
         return $this->service->balanceForSubjectIds([$data['subject_id']], intval($data['duration']));
     }
 
-    public function hideDemoAlert()
+    public function hideDemoAlert(): JsonResponse
     {
         session(['hide_empty_database_demo_alert' => true]);
 
-        return response()->noContent();
+        return response()->json(['ok' => true]);
     }
 }
