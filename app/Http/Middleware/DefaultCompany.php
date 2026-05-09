@@ -46,7 +46,7 @@ class DefaultCompany
     private function setDefaultCompany(): void
     {
         if (Auth::check()) {
-            $company = Auth::user()->companies()->first();
+            $company = Auth::user()->companies()->where('fiscal_year', toEnglish(jdate('Y')))->first();
             if ($company) {
                 Cookie::queue('active-company-id', $company->id, 362 * 24 * 60);
 

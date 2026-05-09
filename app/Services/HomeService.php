@@ -184,7 +184,7 @@ class HomeService
 
     public function getMonthlyWarehouse()
     {
-        $year = config('active-company-fiscal-year');
+        $year = config('active-company-fiscal-year') ?? toEnglish(jdate('Y'));
         $startDate = jalali_to_gregorian($year, 1, 1, '-');
         $endDate = jalali_to_gregorian($year, 12, 30, '-');
 
