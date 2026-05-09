@@ -77,10 +77,14 @@ docker compose down
 - Docker >= 24
 
 ### مراحل
-
-**دریافت و اجرا:**
+**  دریافت:**
 ```bash
-docker run -d --name freeamir -p 80:80 -v freeamir-data:/var/lib/mysql ghcr.io/jooyeshgar/freeamir-all-in-one:latest
+docker pull docker.arvancloud.ir/hadi60/freeamir-all-in-one:main
+```
+
+**  اجرا:**
+```bash
+docker run -d --name freeamir -p 80:80 -v freeamir-data:/var/lib/mysql docker.arvancloud.ir/hadi60/freeamir-all-in-one:main
 ```
 
 پس از اتمام راه‌اندازی، برنامه در آدرس http://localhost در دسترس خواهد بود.
