@@ -1,11 +1,30 @@
 @hasrole('Super-Admin')
-    @if ($isDebugMode && !$hasDocument)
-        <div class="alert alert-warning">
-            <p>{{ __('Your database tables are empty. Do you want to load demo data into your database?') }}</p>
-            <form method="POST" action="{{ route('home.seed-demo-data') }}" class="inline-block m-0">
-                @csrf
-                <button type="submit" class="btn btn-info">{{ __('Seed Demo Data') }}</button>
-            </form>
+    @if ($isDebugMode && !$hasDocument && !session('hide_empty_database_demo_alert'))
+        <div x-data="{ show: true }" x-show="show" x-transition class="alert alert-warning">
+            <div class="flex items-center justify-between gap-4 w-full">
+                <p class="m-0">{{ __('Your database tables are empty. Do you want to load demo data into your database?') }}</p>
+
+                <div class="flex items-center gap-2">
+                    <form method="POST" action="{{ route('home.seed-demo-data') }}" class="inline-block m-0">
+                        @csrf
+                        <button type="submit" class="btn btn-info btn-sm">{{ __('Seed Demo Data') }}</button>
+                    </form>
+
+                    <form x-ref="hideForm" method="POST" action="{{ route('home.hide-demo-alert') }}" target="hidden_iframe" class="inline-block m-0">
+                        @csrf
+                        <button type="submit" class="btn btn-error btn-sm"
+                            @click.prevent="
+                                show = false;
+                                $nextTick(() => $refs.hideForm.submit());
+                            "
+                        >
+                            {{ __('Need not') }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <iframe name="hidden_iframe" class="hidden"></iframe>
         </div>
     @endif
 

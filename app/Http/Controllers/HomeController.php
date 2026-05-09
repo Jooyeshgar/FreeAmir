@@ -111,4 +111,11 @@ class HomeController extends Controller
 
         return $this->service->balanceForSubjectIds([$data['subject_id']], intval($data['duration']));
     }
+
+    public function hideDemoAlert()
+    {
+        session(['hide_empty_database_demo_alert' => true]);
+
+        return response()->noContent();
+    }
 }

@@ -167,6 +167,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
 });
 
 Route::middleware(['auth', 'role:Super-Admin'])->group(function () {
+    Route::post('/hide-demo-alert', [Controllers\HomeController::class, 'hideDemoAlert'])->name('home.hide-demo-alert');
     Route::post('/seed-demo-data', [Controllers\HomeController::class, 'seedDemoData'])->name('home.seed-demo-data');
     Route::post('/refresh-database', [Controllers\HomeController::class, 'refreshDatabase'])->name('home.refresh-database');
 });
