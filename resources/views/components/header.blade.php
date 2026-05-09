@@ -42,9 +42,9 @@
                 </label>
             </li>
             <li class="dropdown dropdown-end dropdown-hover">
-                <div role="button">
+                <button type="button" tabindex="0" aria-haspopup="true">
                     {{ cookie('active-company-id') ? config('active-company-name') . ' - ' . config('active-company-fiscal-year') : __('Please Select a Company') }}
-                </div>
+                </button>
                 <ul class="dropdown-content menu bg-base-100 rounded-box z-[1] w-35">
                     @foreach (auth()->user()->companies as $company)
                         <li>
@@ -56,7 +56,9 @@
                 </ul>
             </li>
             <li class="dropdown dropdown-end dropdown-hover">
-                <div role="button">{{ Auth::user()->name }}</div>
+                <button type="button" tabindex="0" aria-haspopup="true">
+                    {{ Auth::user()->name }}
+                </button>
                 <ul class="dropdown-content menu bg-base-100 rounded-box z-[1]">
                     <li><a href="/logout">{{ __('Logout') }}</a></li>
                 </ul>

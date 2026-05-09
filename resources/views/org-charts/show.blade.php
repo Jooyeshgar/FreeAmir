@@ -32,7 +32,7 @@
 
                         $nodeClasses = $isActive ?
                             'w-full border border-gray-300 bg-base-300 px-3 py-2'
-                            : 'w-full border border-gray-200 bg-base-500 px-3 py-2';
+                            : 'w-full border border-gray-200 bg-base-100 px-3 py-2';
 
                         $title = e($node->title);
                         $showUrl = e(route('hr.org-charts.show', $node));
