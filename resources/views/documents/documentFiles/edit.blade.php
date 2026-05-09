@@ -1,11 +1,7 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Edit Document File') }}
-        </h2>
-    </x-slot>
+<x-app-layout :title="__('Edit Document File')">
     <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('documents.files.update', [$document->id, $documentFile]) }}" method="POST" enctype="multipart/form-data">
+        <form action="{{ route('documents.files.update', [$document->id, $documentFile]) }}" method="POST"
+            enctype="multipart/form-data">
             @csrf
             @method('PUT')
             <div class="card-body">

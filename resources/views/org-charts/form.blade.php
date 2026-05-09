@@ -10,7 +10,7 @@
         <label for="parent_id" class="block text-sm font-medium label">
             {{ __('Parent Node') }}
         </label>
-        <select name="parent_id" id="parent_id" class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+        <select name="parent_id" id="parent_id" class="w-full select px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
             <option value="">— {{ __('None (Root Node)') }} —</option>
             @foreach ($parents as $parent)
                 <option value="{{ $parent->id }}" {{ (string) $selectedParentId === (string) $parent->id ? 'selected' : '' }}>

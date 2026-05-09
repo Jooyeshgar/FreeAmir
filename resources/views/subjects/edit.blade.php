@@ -1,10 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Create Subject') }}
-        </h2>
-    </x-slot>
-
+<x-app-layout :title="__('Edit subject')">
     <div class="card bg-base-100 shadow-xl">
         <form action="{{ route('subjects.update', $subject->id) }}" method="POST">
             @csrf

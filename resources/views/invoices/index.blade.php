@@ -66,7 +66,7 @@
                                 $shouldSkip = $isSellWorkflow ? $skipIfSell : $skipIfNotSell;
                             @endphp
                             <select name="status" id="status"
-                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
+                                class="select block w-full rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2">
                                 <option value="all">{{ __('All Invoices') }}</option>
                                 @foreach (\App\Enums\InvoiceStatus::cases() as $status)
                                     @if ($shouldSkip($status))

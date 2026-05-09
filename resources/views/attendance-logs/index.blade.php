@@ -1,10 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Attendance Logs') }}
-        </h2>
-    </x-slot>
-
+<x-app-layout :title="__('Attendance Logs')">
     <x-show-message-bags />
 
     <div class="card bg-base-100 shadow-xl">
@@ -13,20 +7,16 @@
             {{-- Filter bar --}}
             <form action="{{ route('attendance.attendance-logs.index') }}" method="GET" class="flex flex-wrap items-end gap-3 mb-2">
 
-                <div class="w-48">
-                    <label class="fieldset w-full">
-                        <div class="label">
-                            <span>{{ __('Employee') }}</span>
-                        </div>
-                        <select name="employee_id" class="select  select-sm">
-                            <option value="">{{ __('All Employees') }}</option>
-                            @foreach ($employees as $employee)
-                                <option value="{{ $employee->id }}" {{ request('employee_id') == $employee->id ? 'selected' : '' }}>
-                                    {{ $employee->first_name }} {{ $employee->last_name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </label>
+                <div class="w-1/5 flex flex-col">
+                    <label class="label">{{ __('Employee') }}</label>
+                    <select name="employee_id" class="select  select-sm">
+                        <option value="">{{ __('All Employees') }}</option>
+                        @foreach ($employees as $employee)
+                            <option value="{{ $employee->id }}" {{ request('employee_id') == $employee->id ? 'selected' : '' }}>
+                                {{ $employee->first_name }} {{ $employee->last_name }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
 
                 <div class="w-36">
@@ -38,7 +28,7 @@
                 </div>
 
                 <div class="w-36">
-                    <label class="fieldset w-full">
+                    <label class="w-full">
                         <div class="label">
                             <span>{{ __('Entry Type') }}</span>
                         </div>
@@ -54,7 +44,7 @@
                     </label>
                 </div>
 
-                <div class="flex gap-2 items-end pb-1">
+                <div class="flex gap-2 items-end">
                     <button type="submit" class="btn btn-sm btn-primary">
                         {{ __('Search') }}
                     </button>

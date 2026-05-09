@@ -9,7 +9,7 @@
         @endif
     </div>
 
-    <select name="{{ $name }}" id="{{ $id }}" class="select">
+    <select name="{{ $name }}" id="{{ $id }}" class="select w-full">
 
         @foreach ($options as $key => $value)
             <option value="{{ $key }}" {{ old($name, $selected == $key || $selected == $value) ? 'selected' : '' }}>

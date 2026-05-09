@@ -1,6 +1,6 @@
 <div class="grid grid-cols-2 gap-6">
     <div class="col-span-2 md:col-span-1">
-        <label for="work_site_id" class="label block text-sm font-medium mb-1">{{ __('Work Site') }}*</label>
+        <label for="work_site_id" class="label block text-sm font-medium">{{ __('Work Site') }}*</label>
         <select name="work_site_id" id="work_site_id"
             class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" required>
             <option class="bg-base-100" value="">— {{ __('Select Work Site') }} —</option>

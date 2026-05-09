@@ -1,10 +1,6 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Monthly Attendance Detail') }}
-        </h2>
-    </x-slot>
-
+<x-app-layout :title="$monthlyAttendance->employee?->first_name . ' ' . $monthlyAttendance->employee?->last_name . ' ' .
+            $monthlyAttendance->month_name . ' ' . convertToFarsi($monthlyAttendance->year)
+    ">
     <x-show-message-bags />
 
     {{-- Summary card --}}

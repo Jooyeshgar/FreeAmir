@@ -1,10 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('User Details') }}
-        </h2>
-    </x-slot>
-
+<x-app-layout :title="__('User Details') . ' - ' . $user->name">
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <h2 class="text-2xl font-bold">{{ $user->name }}</h2>
@@ -22,7 +16,7 @@
                 <h3 class="text-lg font-medium">{{ __('Companies') }}</h3>
                 <div class="mt-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     @forelse ($user->companies as $company)
-                        <div class="p-3 bg-gray-100 rounded-lg">
+                        <div class="p-3 rounded-lg">
                             <span class="font-medium">{{ $company->name }}</span>
                         </div>
                     @empty

@@ -1,10 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Edit User') }}
-        </h2>
-    </x-slot>
-
+<x-app-layout :title="__('Edit User')">
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <form method="post" action="{{ route('users.update', $user) }}">

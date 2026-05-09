@@ -310,7 +310,7 @@ function convertToJalali($date, $padding = false)
         return sprintf('%04d/%02d/%02d', $y, $m, $d);
     }
 
-    return "$y-$m-$d";
+    return "$y/$m/$d";
 }
 
 if (! function_exists('model_route')) {

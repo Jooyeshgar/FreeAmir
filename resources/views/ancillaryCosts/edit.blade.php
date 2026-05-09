@@ -1,10 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Edit Ancillary Cost') }}
-        </h2>
-    </x-slot>
-
+<x-app-layout :title="__('Edit Ancillary Cost')">
     <div>
         <form action="{{ isset($invoice) && $invoice ? route('invoices.ancillary-costs.update', [$invoice, $ancillaryCost]) : route('ancillary-costs.update', $ancillaryCost) }}" method="POST">
             @csrf

@@ -1,10 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Import Attendance Logs') }}
-        </h2>
-    </x-slot>
-
+<x-app-layout :title="__('Import Attendance Logs')">
     <div class="card bg-base-100 shadow-xl max-w-2xl mx-auto">
         <form action="{{ route('attendance.attendance-logs.import.preview') }}" method="POST" enctype="multipart/form-data">
             @csrf

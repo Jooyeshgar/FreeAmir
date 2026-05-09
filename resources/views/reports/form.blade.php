@@ -10,8 +10,8 @@
         <x-date-picker name="end_date" class="w-40" placeholder="{{ __('End date') }}"></x-date-picker>
     </div>
 </div>
-<div class="flex flex-wrap gap-2 items-center mt-2 label">
-    <div class="shrink-0 w-32 text-sm font-medium">{{ __('Document Number:') }}</div>
+<div class="flex flex-wrap gap-2 items-center mt-2">
+    <div class="shrink-0 w-32 text-sm font-medium label">{{ __('Document Number:') }}</div>
     <div class="flex gap-2">
         <x-input name="start_document_number" class="w-40" placeholder="{{ __('Document start number') }}"></x-input>
         <x-input name="end_document_number" class="w-40" placeholder="{{ __('Document end number') }}"></x-input>

@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-app-layout :title="$service->name">
     <div class="card bg-base-100 shadow-xl">
         <!-- Card Header -->
         <div class="card-header bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 px-6 py-4 rounded-t-2xl border-b-2 border-primary/20">

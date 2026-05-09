@@ -1,10 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Monthly Attendances') }}
-        </h2>
-    </x-slot>
-
+<x-app-layout :title="__('Monthly Attendances')">
     <x-show-message-bags />
 
     <div class="card bg-base-100 shadow-xl">
@@ -12,8 +6,8 @@
             {{-- Filter bar --}}
             <form action="{{ route('attendance.monthly-attendances.index') }}" method="GET" class="flex flex-wrap items-end gap-3 mb-2">
 
-                <div class="w-52">
-                    <label class="fieldset w-full">
+                <div class="w-1/5">
+                    <label class="w-full">
                         <div class="label">
                             <span>{{ __('Employee') }}</span>
                         </div>
@@ -29,7 +23,7 @@
                 </div>
 
                 <div class="w-28">
-                    <label class="fieldset w-full">
+                    <label class="w-full">
                         <div class="label">
                             <span>{{ __('Year') }}</span>
                         </div>
@@ -38,7 +32,7 @@
                 </div>
 
                 <div class="w-36">
-                    <label class="fieldset w-full">
+                    <label class="w-full">
                         <div class="label">
                             <span>{{ __('Month') }}</span>
                         </div>

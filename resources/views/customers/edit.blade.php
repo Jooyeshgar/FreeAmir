@@ -1,10 +1,10 @@
-<x-app-layout>
+<x-app-layout :title="__('Edit customer')">
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Create Customer') }}
+            {{ __('Edit customer') }}
         </h2>
     </x-slot>
-    <div class="card-title">{{ __('Add customer') }}</div>
+    <div class="card-title">{{ __('Edit customer') }}</div>
     <form action="{{ route('customers.update', $customer) }}" method="POST" class="relative">
         <div class="card bg-base-100 shadow-xl rounded-xl">
 
