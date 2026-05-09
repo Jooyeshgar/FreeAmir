@@ -45,7 +45,7 @@
                 <button type="button" tabindex="0" aria-haspopup="true">
                     {{ cookie('active-company-id') ? config('active-company-name') . ' - ' . config('active-company-fiscal-year') : __('Please Select a Company') }}
                 </button>
-                <ul class="dropdown-content menu bg-base-100 rounded-box z-[1] w-35">
+                <ul class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52">
                     @foreach (auth()->user()->companies as $company)
                         <li>
                             <a href="{{ route('change-company', ['company' => $company]) }}">
