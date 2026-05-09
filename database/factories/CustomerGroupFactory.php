@@ -45,6 +45,8 @@ class CustomerGroupFactory extends Factory
 
             $group->subject_id = $subject->id;
             $group->saveQuietly();
+            $subject->subjectable()->associate($group);
+            $subject->save();
         });
     }
 }
