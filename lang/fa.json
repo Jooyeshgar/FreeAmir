@@ -129,6 +129,7 @@
     "Ancillary Costs": "هزینه های جانبی",
     "Ancillary cost items are not synchronized with invoice items. Please edit the ancillary cost to synchronize with the invoice items.": "اقلام هزینه جانبی با اقلام فاکتور همگام نیستند. لطفاً هزینه جانبی را ویرایش کنید تا با اقلام فاکتور همگام شود.",
     "Ancillary costs can only be added to buy invoices": "هزینه های جانبی را فقط می توان برای فاکتور خرید اضافه کرد",
+    "Ancillary Costs cannot be added to service buy invoices.": "هزینه های جانبی نمی توانند برای فاکتورهای خرید خدمات اضافه شوند.",
     "AncillaryCost": "هزینه جانبی",
     "Annual Exemption": "معافیت سالانه",
     "Approve": "تایید",

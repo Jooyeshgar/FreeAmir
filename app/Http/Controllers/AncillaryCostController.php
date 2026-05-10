@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\InvoiceType;
 use App\Http\Requests\StoreAncillaryCostRequest;
 use App\Models\AncillaryCost;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Invoice;
+use App\Models\Product;
 use App\Services\AncillaryCostService;
 use Exception;
 use Illuminate\Http\Request;
@@ -55,6 +57,12 @@ class AncillaryCostController extends Controller
 
     public function create(?Invoice $invoice = null)
     {
+
+        $isServiceBuy = $invoice->invoice_type === InvoiceType::BUY && $invoice->items->where('itemable_type', Product::class)->isEmpty();
+        if ($isServiceBuy) {
+            abort(403, __('Ancillary Costs cannot be added to service buy invoices.'));
+        }
+
         $invoiceItems = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing()->take(20);
 
         if ($invoice) {
@@ -116,6 +124,11 @@ class AncillaryCostController extends Controller
 
     public function edit(Invoice $invoice, AncillaryCost $ancillaryCost)
     {
+        $isServiceBuy = $invoice->invoice_type === InvoiceType::BUY && $invoice->items->where('itemable_type', Product::class)->isEmpty();
+        if ($isServiceBuy) {
+            abort(403, __('Ancillary Costs cannot be added to service buy invoices.'));
+        }
+
         $this->ensureInvoiceMatchesAncillaryCost($invoice, $ancillaryCost);
         $invoices = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing()->take(20)
             ->map(function ($invoice) { // Format invoices for select box
