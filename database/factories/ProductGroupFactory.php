@@ -51,6 +51,7 @@ class ProductGroupFactory extends Factory
                         'company_id' => $companyId,
                     ])
                     ->withParent($parent)
+                    ->for($group, 'subjectable')
                     ->create();
 
                 $updates[$column] = $subject->id;

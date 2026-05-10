@@ -38,6 +38,7 @@ class CustomerGroupFactory extends Factory
 
             $subject = Subject::factory()
                 ->withParent($parent)
+                ->for($group, 'subjectable')
                 ->create([
                     'name' => $group->name,
                     'company_id' => $group->company_id,
@@ -45,8 +46,6 @@ class CustomerGroupFactory extends Factory
 
             $group->subject_id = $subject->id;
             $group->saveQuietly();
-            $subject->subjectable()->associate($group);
-            $subject->save();
         });
     }
 }

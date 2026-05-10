@@ -60,6 +60,7 @@ class ProductFactory extends Factory
 
                 $subject = Subject::factory()
                     ->withParent(Subject::withoutGlobalScopes()->find($parentId))
+                    ->for($product, 'subjectable')
                     ->create([
                         'name' => $product->name,
                         'company_id' => $product->company_id,

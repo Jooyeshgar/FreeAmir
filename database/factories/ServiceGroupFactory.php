@@ -35,6 +35,7 @@ class ServiceGroupFactory extends Factory
                     'company_id' => $companyId,
                 ])
                 ->withParent($subjectParent)
+                ->for($group, 'subjectable')
                 ->create();
 
             $cogsSubject = Subject::factory()
@@ -43,6 +44,7 @@ class ServiceGroupFactory extends Factory
                     'company_id' => $companyId,
                 ])
                 ->withParent($cogsParent)
+                ->for($group, 'subjectable')
                 ->create();
 
             $salesReturnsSubject = Subject::factory()
@@ -51,6 +53,7 @@ class ServiceGroupFactory extends Factory
                     'company_id' => $companyId,
                 ])
                 ->withParent($salesReturnsParent)
+                ->for($group, 'subjectable')
                 ->create();
 
             $group->updateQuietly([

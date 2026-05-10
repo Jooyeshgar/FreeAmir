@@ -77,6 +77,7 @@ class ServiceFactory extends Factory
 
             $subject = Subject::factory()
                 ->withParent($subjectParent)
+                ->for($service, 'subjectable')
                 ->create([
                     'name' => $service->name,
                     'company_id' => $service->company_id,
@@ -84,6 +85,7 @@ class ServiceFactory extends Factory
 
             $cogsSubject = Subject::factory()
                 ->withParent($cogsParent)
+                ->for($service, 'subjectable')
                 ->create([
                     'name' => $service->name,
                     'company_id' => $service->company_id,
@@ -91,6 +93,7 @@ class ServiceFactory extends Factory
 
             $salesReturnsSubject = Subject::factory()
                 ->withParent($salesReturnsParent)
+                ->for($service, 'subjectable')
                 ->create([
                     'name' => $service->name,
                     'company_id' => $service->company_id,
