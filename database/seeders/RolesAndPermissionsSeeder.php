@@ -102,6 +102,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'backups.create',
             'backups.export',
             'backups.import',
+            'backups.upload',
 
             'bank-accounts.index',
             'bank-accounts.create',
