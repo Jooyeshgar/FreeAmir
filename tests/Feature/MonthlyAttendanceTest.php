@@ -31,7 +31,7 @@ class MonthlyAttendanceTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
+        $company = Company::factory()->create(['fiscal_year' => 1402]);
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();

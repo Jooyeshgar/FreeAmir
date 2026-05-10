@@ -4,11 +4,13 @@
         <x-select name="employee_id" id="employee_id" title="{{ __('Employee') }}" :selected="old('employee_id', isset($salaryDecree) ? $salaryDecree->employee_id : '')" :options="$employees
             ->mapWithKeys(fn($e) => [$e->id => $e->first_name . ' ' . $e->last_name])
             ->prepend('— ' . __('Select Employee') . ' —', '')
-            ->all()" required />
+            ->all()"
+            required />
     </div>
 
     <div class="col-span-2 md:col-span-1">
-        <x-input name="name" id="name" title="{{ __('Decree Name') }}" :value="old('name', isset($salaryDecree->name) ? $salaryDecree->name : '')" placeholder="{{ __('e.g. Decree-1403-001') }}" />
+        <x-input name="name" id="name" title="{{ __('Decree Name') }}" :value="old('name', isset($salaryDecree->name) ? $salaryDecree->name : '')"
+            placeholder="{{ __('e.g. Decree-1403-001') }}" />
     </div>
 
     <div class="col-span-2 md:col-span-1">
@@ -16,12 +18,16 @@
     </div>
 
     <div class="col-span-2 md:col-span-1">
-        <x-date-picker name="end_date" id="end_date" title="{{ __('End Date') }}" :value="old('end_date', isset($salaryDecree) && $salaryDecree->end_date ? toEnglish(formatDate($salaryDecree->end_date)) : '')" />
+        <x-date-picker name="end_date" id="end_date" title="{{ __('End Date') }}" :value="old(
+            'end_date',
+            isset($salaryDecree) && $salaryDecree->end_date ? toEnglish(formatDate($salaryDecree->end_date)) : '',
+        )" />
         <p class="text-gray-400 text-xs mt-1">{{ __('Leave empty if the decree is currently active.') }}</p>
     </div>
 
     <div class="col-span-2 md:col-span-1">
-        <x-input name="daily_wage" id="daily_wage" type="number" title="{{ __('Daily Wage') }}" :value="old('daily_wage', $salaryDecree->daily_wage ?? '')" placeholder="0" />
+        <x-input name="daily_wage" id="daily_wage" type="number" title="{{ __('Daily Wage') }}" :value="old('daily_wage', $salaryDecree->daily_wage ?? '')"
+            placeholder="0" />
     </div>
 
     <div class="col-span-2 md:col-span-1">
@@ -29,7 +35,8 @@
     </div>
 
     <div class="col-span-2">
-        <x-textarea name="description" id="description" title="{{ __('Description') }}" :value="old('description', $salaryDecree->description ?? '')" placeholder="{{ __('Optional notes about this decree') }}" />
+        <x-textarea name="description" id="description" title="{{ __('Description') }}" :value="old('description', $salaryDecree->description ?? '')"
+            placeholder="{{ __('Optional notes about this decree') }}" />
     </div>
 
 </div>
@@ -50,8 +57,8 @@
                 <template x-for="(benefit, index) in benefits" :key="index">
                     <tr>
                         <td>
-                            <select :name="`benefits[${index}][element_id]`" class="select  w-full" x-model="benefit.element_id"
-                                @change="fillDefault(index)" required>
+                            <select :name="`benefits[${index}][element_id]`" class="select  w-full"
+                                x-model="benefit.element_id" @change="fillDefault(index)" required>
                                 <option value="">— {{ __('Select Element') }} —</option>
                                 @foreach ($payrollElements as $element)
                                     <option value="{{ $element->id }}">{{ $element->title }}</option>
@@ -59,8 +66,8 @@
                             </select>
                         </td>
                         <td>
-                            <input type="number" :name="`benefits[${index}][value]`" x-model="benefit.value" class="input  w-full" placeholder="0"
-                                min="0" required />
+                            <input type="number" :name="`benefits[${index}][value]`" x-model="benefit.value"
+                                class="input  w-full" placeholder="0" min="0" required />
                         </td>
                         <td>
                             <button type="button" @click="remove(index)" class="btn btn-sm btn-error btn-outline">

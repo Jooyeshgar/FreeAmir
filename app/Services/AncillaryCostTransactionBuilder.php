@@ -82,7 +82,7 @@ class AncillaryCostTransactionBuilder
     private function buildCustomerTransaction(): void
     {
         $customerId = $this->data['customer_id'];
-        $subject_id = Customer::find($customerId)->subject->id;
+        $subject_id = Customer::find($customerId)->subject_id;
 
         $this->transactions[] = [
             'subject_id' => $subject_id,

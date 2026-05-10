@@ -99,6 +99,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'companies.update',
             'companies.destroy',
 
+            'backups.create',
+            'backups.export',
+            'backups.import',
+            'backups.upload',
+
             'bank-accounts.index',
             'bank-accounts.create',
             'bank-accounts.store',

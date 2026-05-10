@@ -71,7 +71,7 @@
             </div>
             <div class="flex w-1/8 hidden">
                 <x-text-input data-jdp class="w-3/4" title="{{ __('date') }}" input_name="date"
-                    placeholder="{{ __('date') }}" input_value="{{ old('date') ?? convertToJalali($ancillaryCost->date ?? now()) }}"
+                    placeholder="{{ __('date') }}" input_value="{{ old('date') ?? convertToJalali($invoice->date ?? now()) }}"
                     label_text_class="text-gray-500 text-nowrap" input_class="datePicker w-full"></x-text-input>
             </div>
     </x-card>

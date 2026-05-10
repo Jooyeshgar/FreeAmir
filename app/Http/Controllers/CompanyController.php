@@ -82,7 +82,6 @@ class CompanyController extends Controller
             $validated['source_year_id'],
             $validated['tables_to_copy'] ?? []
         );
-        $company->users()->attach($request->user()->id);
 
         return redirect(route('companies.index'))
             ->with('success', __('Company created successfully.'));
