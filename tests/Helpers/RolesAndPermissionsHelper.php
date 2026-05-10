@@ -1,20 +1,20 @@
 <?php
 
-namespace Database\Seeders;
+namespace Tests\Helpers;
 
-use App\Models\Employee;
 use App\Models\Role;
 use App\Models\User;
-use App\Models\WorkShift;
-use App\Models\WorkSite;
-use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 
-class RolesAndPermissionsSeeder extends Seeder
+trait RolesAndPermissionsHelper
 {
-    public function run(): void
+    public function importRolesAndPermissions(int $companyId)
     {
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        $this->createRolesAndPermissions($companyId);
+    }
+
+    private function createRolesAndPermissions(int $companyId): void
+    {
         $permissions = [
             'home',
             'home.cash-banks',
@@ -419,30 +419,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'employee' => ['Employee'],
         ];
 
-        $workSite = WorkSite::firstOrCreate(
-            ['code' => 'DEMO-WS-1'],
-            [
-                'company_id' => 1,
-                'name' => 'کارگاه ۱',
-                'is_active' => true,
-            ]
-        );
-
-        $workShift = WorkShift::firstOrCreate(
-            [
-                'company_id' => 1,
-                'name' => 'شیفت کاری',
-            ],
-            [
-                'start_time' => '08:00:00',
-                'end_time' => '16:00:00',
-                'float' => 0,
-                'break' => 0,
-                'is_active' => true,
-                'paid_leave' => 1200,
-            ]
-        );
-
         foreach ($users as $name => $role) {
             $user = User::firstOrCreate(
                 ['email' => $name.'@example.com'],
@@ -451,35 +427,8 @@ class RolesAndPermissionsSeeder extends Seeder
                     'password' => bcrypt('password'),
                 ]
             );
-            $user->companies()->sync([1]);
+            $user->companies()->sync([$companyId]);
             $user->assignRole($role);
-
-            $baseCode = 'EMP-'.$user->id;
-            $employeeCode = $baseCode;
-            $counter = 1;
-
-            while (Employee::withoutGlobalScopes()
-                ->where('code', $employeeCode)
-                ->where('user_id', '!=', $user->id)
-                ->exists()) {
-                $employeeCode = substr($baseCode.'-'.$counter, 0, 20);
-                $counter++;
-            }
-
-            Employee::withoutGlobalScopes()->updateOrCreate(
-                ['user_id' => $user->id],
-                [
-                    'first_name' => $name,
-                    'last_name' => 'Demo',
-                    'user_id' => $user->id,
-                    'company_id' => 1,
-                    'code' => $employeeCode,
-                    'work_site_id' => $workSite->id,
-                    'work_shift_id' => $workShift->id,
-                    'is_active' => true,
-                    'leave_remain' => 1200,
-                ]
-            );
         }
     }
 }
