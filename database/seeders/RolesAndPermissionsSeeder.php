@@ -154,7 +154,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'invoices.inactive.approve',
             'invoices.conflicts',
             'invoices.conflicts.more',
-            'invoices.groupAction',
+            'invoices.group-action',
 
             'ancillary-costs.index',
             'ancillary-costs.search-customer',
