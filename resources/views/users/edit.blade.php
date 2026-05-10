@@ -26,7 +26,7 @@
                     <h3>{{ __('Roles') }}</h3>
                     <div class="grid gap-3 grid-cols-5">
                         @foreach ($roles as $role)
-                            <x-checkbox :title="$role->name" name="role[]" :value="$role->name" id="role-{{ $role->id }}"
+                            <x-checkbox :title="$role->display_name" name="role[]" :value="$role->name" id="role-{{ $role->id }}"
                                 checked="{{ $user->hasRole($role->name) ? true : false }}" />
                         @endforeach
                     </div>
