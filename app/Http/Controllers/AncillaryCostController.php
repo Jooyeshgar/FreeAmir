@@ -15,14 +15,6 @@ use Illuminate\Http\Request;
 
 class AncillaryCostController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('permission:ancillary-costs.view', ['only' => ['index', 'show']]);
-        $this->middleware('permission:ancillary-costs.create', ['only' => ['create', 'store']]);
-        $this->middleware('permission:ancillary-costs.edit', ['only' => ['edit', 'update']]);
-        $this->middleware('permission:ancillary-costs.delete', ['only' => ['destroy']]);
-    }
-
     public function index(Request $request)
     {
         $ancillaryCosts = AncillaryCost::with('invoice')->orderByDesc('date')->paginate(12);

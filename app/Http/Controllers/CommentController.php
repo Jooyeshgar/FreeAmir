@@ -5,18 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreCommentRequest;
 use App\Models\Comment;
 use App\Models\Customer;
-use App\Services\CommentService;
 
 class CommentController extends Controller
 {
-    public function __construct(private readonly CommentService $service)
-    {
-        $this->middleware('permission:customers.view', ['only' => ['index']]);
-        $this->middleware('permission:customers.create', ['only' => ['create', 'store']]);
-        $this->middleware('permission:customers.edit', ['only' => ['edit', 'update']]);
-        $this->middleware('permission:customers.delete', ['only' => ['destroy']]);
-    }
-
     public function index(Customer $customer)
     {
         $comments = Comment::where('customer_id', $customer->id)->paginate(25);

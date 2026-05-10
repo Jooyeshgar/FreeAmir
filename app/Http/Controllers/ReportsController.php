@@ -14,15 +14,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportsController extends Controller
 {
-    public function __construct(private readonly SubjectService $subjectService)
-    {
-        $this->middleware('permission:reports.ledger', ['only' => ['ledger']]);
-        $this->middleware('permission:reports.journal', ['only' => ['journal']]);
-        $this->middleware('permission:reports.sub-ledger', ['only' => ['subLedger']]);
-        $this->middleware('permission:reports.trial-balance', ['only' => ['trialBalance']]);
-        $this->middleware('permission:reports.documents', ['only' => ['documents']]);
-        $this->middleware('permission:reports.result', ['only' => ['result']]);
-    }
+    public function __construct(private readonly SubjectService $subjectService) {}
 
     public function ledger()
     {

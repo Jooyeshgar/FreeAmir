@@ -10,14 +10,6 @@ use ZipArchive;
 
 class BackupController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('permission:backups.create', ['only' => ['create']]);
-        $this->middleware('permission:backups.export', ['only' => ['export']]);
-        $this->middleware('permission:backups.import', ['only' => ['import']]);
-        $this->middleware('permission:backups.upload', ['only' => ['upload']]);
-    }
-
     public function create()
     {
         $previousYears = Company::all();

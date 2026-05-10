@@ -26,13 +26,7 @@ class InvoiceController extends Controller
         private readonly InvoiceService $invoiceService,
         private readonly AncillaryCostService $ancillaryCostService,
         private readonly GroupActionService $groupActionService
-    ) {
-        $this->middleware('permission:invoices.view', ['only' => ['index']]);
-        $this->middleware('permission:invoices.create', ['only' => ['create', 'store']]);
-        $this->middleware('permission:invoices.edit', ['only' => ['edit', 'update']]);
-        $this->middleware('permission:invoices.delete', ['only' => ['destroy']]);
-        $this->middleware('permission:invoices.approve', ['only' => ['changeStatus', 'inactiveInvoices', 'approveInactiveInvoices', 'conflicts', 'showMoreConflictsByType', 'groupAction']]);
-    }
+    ) {}
 
     /**
      * Display a listing of the resource.
