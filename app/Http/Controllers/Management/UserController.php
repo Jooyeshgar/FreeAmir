@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Management;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\Role;
 use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
@@ -12,7 +13,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {

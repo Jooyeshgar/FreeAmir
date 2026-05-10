@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Management;
 
 use App\Http\Controllers\Controller;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
@@ -21,9 +21,7 @@ class RoleController extends Controller
 
     public $messages = [];
 
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * Display a listing of the resource.

@@ -40,8 +40,8 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('subjects/search', [Controllers\SubjectController::class, 'search'])->name('subjects.search');
     Route::get('subjects/search-code', [Controllers\SubjectController::class, 'searchCode'])->name('subjects.search-code');
     Route::resource('subjects', Controllers\SubjectController::class);
-    Route::post('documents/{document}/change-status', [Controllers\DocumentController::class, 'changeStatus'])->name('documents.change-status')->middleware('can:documents.approve');
-    Route::post('documents/approve-all', [Controllers\DocumentController::class, 'approveAll'])->name('documents.approve-all')->middleware('can:documents.approve');
+    Route::post('documents/{document}/change-status', [Controllers\DocumentController::class, 'changeStatus'])->name('documents.change-status');
+    Route::post('documents/approve-all', [Controllers\DocumentController::class, 'approveAll'])->name('documents.approve-all');
     Route::get('documents/search-account-balance', [Controllers\DocumentController::class, 'searchAccountBalance'])->name('documents.search-account-balance');
     Route::get('documents/sort-numbers', [Controllers\DocumentController::class, 'sortNumbers'])->name('documents.sort-numbers');
     Route::post('documents/sort-numbers/start', [Controllers\DocumentController::class, 'startSorting'])->name('documents.sort-numbers.start');
@@ -60,10 +60,10 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::resource('customers', Controllers\CustomerController::class);
     Route::resource('customer-groups', Controllers\CustomerGroupController::class);
     Route::resource('companies', Controllers\CompanyController::class);
-    Route::post('companies/close-fiscal-year/{company}', [Controllers\CompanyController::class, 'closeFiscalYear'])->name('companies.close-fiscal-year')->middleware('can:companies.close-fiscal-year');
-    Route::get('companies/{company}/closing-wizard', [Controllers\CompanyController::class, 'closingWizard'])->name('companies.closing-wizard')->middleware('can:companies.close-fiscal-year');
-    Route::post('companies/{company}/closing-wizard/step1', [Controllers\CompanyController::class, 'closingWizardStep1'])->name('companies.closing-wizard.step1')->middleware('can:companies.close-fiscal-year');
-    Route::post('companies/{company}/closing-wizard/step3', [Controllers\CompanyController::class, 'closingWizardStep3'])->name('companies.closing-wizard.step3')->middleware('can:companies.close-fiscal-year');
+    Route::post('companies/close-fiscal-year/{company}', [Controllers\CompanyController::class, 'closeFiscalYear'])->name('companies.close-fiscal-year');
+    Route::get('companies/{company}/closing-wizard', [Controllers\CompanyController::class, 'closingWizard'])->name('companies.closing-wizard');
+    Route::post('companies/{company}/closing-wizard/step1', [Controllers\CompanyController::class, 'closingWizardStep1'])->name('companies.closing-wizard.step1');
+    Route::post('companies/{company}/closing-wizard/step3', [Controllers\CompanyController::class, 'closingWizardStep3'])->name('companies.closing-wizard.step3');
     Route::get('bank-accounts/search-bank', [Controllers\BankAccountController::class, 'searchBank'])->name('bank-accounts.search-bank');
     Route::resource('bank-accounts', Controllers\BankAccountController::class);
     Route::resource('banks', Controllers\BankController::class);
@@ -79,7 +79,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('ancillary-costs/search-customer', [Controllers\AncillaryCostController::class, 'searchCustomer'])->name('ancillary-costs.search-customer');
         Route::get('ancillary-costs/search-invoice', [Controllers\AncillaryCostController::class, 'searchInvoice'])->name('ancillary-costs.search-invoice');
         Route::get('ancillary-costs/get-products/{invoice_id}', [Controllers\AncillaryCostController::class, 'getBuyInvoiceProducts'])->name('ancillary-costs.get-products');
-        Route::post('ancillary-costs/{ancillary_cost}/change-status/{status}', [Controllers\AncillaryCostController::class, 'changeStatus'])->name('ancillary-costs.change-status')->middleware('can:ancillary-costs.approve');
+        Route::post('ancillary-costs/{ancillary_cost}/change-status/{status}', [Controllers\AncillaryCostController::class, 'changeStatus'])->name('ancillary-costs.change-status');
         Route::get('ancillary-costs/', [Controllers\AncillaryCostController::class, 'index'])->name('ancillary-costs.index');
         Route::get('{invoice}/ancillary-costs/create', [Controllers\AncillaryCostController::class, 'create'])->name('invoices.ancillary-costs.create');
         Route::post('{invoice}/ancillary-costs', [Controllers\AncillaryCostController::class, 'store'])->name('invoices.ancillary-costs.store');
@@ -93,7 +93,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('invoices/{invoice}/conflicts/{type}', [Controllers\InvoiceController::class, 'showMoreConflictsByType'])->name('invoices.conflicts.more');
     Route::get('invoices/{invoice}/groupAction', [Controllers\InvoiceController::class, 'groupAction'])->name('invoices.groupAction');
     Route::get('invoices/{invoice}/print', [Controllers\InvoiceController::class, 'print'])->name('invoices.print');
-    Route::post('invoices/{invoice}/change-status/{status}', [Controllers\InvoiceController::class, 'changeStatus'])->name('invoices.change-status')->middleware('can:invoices.approve');
+    Route::post('invoices/{invoice}/change-status/{status}', [Controllers\InvoiceController::class, 'changeStatus'])->name('invoices.change-status');
     Route::group(['prefix' => 'management'], function () {
         Route::post('users/{user}/create-employee', [Controllers\Management\UserController::class, 'createEmployee'])
             ->name('users.create-employee');

@@ -22,7 +22,7 @@
                 </tr>
                 @foreach ($roles as $role)
                     <tr>
-                        <td class="center-align" style="direction: ltr">{{ $role->name }}</td>
+                        <td class="center-align" style="direction: ltr">{{ $role->display_name }}</td>
                         <td class="center-align">{{ $role->guard_name }}</td>
                         <td class="center-align">
                             <a class="btn btn-sm btn-info" href="{{ route('roles.edit', $role->id) }}">

@@ -25,7 +25,7 @@
                     <h3 class="label col-span-4 text-lg font-semibold mb-2">{{ __('Roles') }}</h3>
                     @foreach ($roles as $role)
                         <div class="col-span-2 md:col-span-1">
-                            <x-checkbox title="{{ $role->name }}" name="roles[]" id="roles-{{ $role->id }}"
+                            <x-checkbox title="{{ $role->display_name }}" name="roles[]" id="roles-{{ $role->id }}"
                                 value="{{ $role->id }}" :checked="$syncedRoles->contains($role->id)" />
                         </div>
                     @endforeach
