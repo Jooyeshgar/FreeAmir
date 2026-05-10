@@ -1325,6 +1325,12 @@ class FiscalYearService
             $newAccount->subject_id = $subjectMapping[$oldSubjectId];
             $newAccount->saveQuietly();
 
+            $subject = Subject::withoutGlobalScope(FiscalYearScope::class)->find($newAccount->subject_id);
+            $subject->subjectable()->associate($newAccount);
+            if ($subject->isDirty(['subjectable_id', 'subjectable_type'])) {
+                $subject->save();
+            }
+
             $mapping[$accountData['id']] = $newAccount->id;
         }
 
@@ -1348,6 +1354,12 @@ class FiscalYearService
             $oldSubjectId = $groupData['subject_id'] ?? null;
             $newGroup->subject_id = ($oldSubjectId && isset($subjectMapping[$oldSubjectId])) ? $subjectMapping[$oldSubjectId] : null;
             $newGroup->save();
+
+            $subject = Subject::withoutGlobalScope(FiscalYearScope::class)->find($newGroup->subject_id);
+            $subject->subjectable()->associate($newGroup);
+            if ($subject->isDirty(['subjectable_id', 'subjectable_type'])) {
+                $subject->save();
+            }
 
             $mapping[$groupData['id']] = $newGroup->id;
         }
@@ -1389,6 +1401,12 @@ class FiscalYearService
             $newCustomer->group_id = $groupMapping[$oldGroupId];
             $newCustomer->subject_id = $subjectMapping[$oldSubjectId];
             $newCustomer->saveQuietly();
+
+            $subject = Subject::withoutGlobalScope(FiscalYearScope::class)->find($newCustomer->subject_id);
+            $subject->subjectable()->associate($newCustomer);
+            if ($subject->isDirty(['subjectable_id', 'subjectable_type'])) {
+                $subject->save();
+            }
 
             $mapping[$customerData['id']] = $newCustomer->id;
         }
@@ -1458,6 +1476,15 @@ class FiscalYearService
             $newGroup->sales_returns_subject_id = $subjectMapping[$oldSalesReturnsSubjectId];
             $newGroup->save();
 
+            $subjectsArray = [$newGroup->subject_id, $newGroup->cogs_subject_id, $newGroup->sales_returns_subject_id];
+            foreach ($subjectsArray as $subjId) {
+                $subject = Subject::withoutGlobalScope(FiscalYearScope::class)->find($subjId);
+                $subject->subjectable()->associate($newGroup);
+                if ($subject->isDirty(['subjectable_id', 'subjectable_type'])) {
+                    $subject->save();
+                }
+            }
+
             $mapping[$groupData['id']] = $newGroup->id;
         }
 
@@ -1513,6 +1540,15 @@ class FiscalYearService
             $newService->company_id = $targetYearId;
             $newService->save();
 
+            $subjectsArray = [$newService->subject_id, $newService->cogs_subject_id, $newService->sales_returns_subject_id];
+            foreach ($subjectsArray as $subjId) {
+                $subject = Subject::withoutGlobalScope(FiscalYearScope::class)->find($subjId);
+                $subject->subjectable()->associate($newService);
+                if ($subject->isDirty(['subjectable_id', 'subjectable_type'])) {
+                    $subject->save();
+                }
+            }
+
             $mapping[$serviceData['id']] = $newService->id;
         }
 
@@ -1566,6 +1602,15 @@ class FiscalYearService
             $newGroup->cogs_subject_id = $subjectMapping[$oldCogsSubjectId];
             $newGroup->inventory_subject_id = $subjectMapping[$oldInventorySubjectId];
             $newGroup->save();
+
+            $subjectsArray = [$newGroup->sales_returns_subject_id, $newGroup->income_subject_id, $newGroup->cogs_subject_id, $newGroup->inventory_subject_id];
+            foreach ($subjectsArray as $subjId) {
+                $subject = Subject::withoutGlobalScope(FiscalYearScope::class)->find($subjId);
+                $subject->subjectable()->associate($newGroup);
+                if ($subject->isDirty(['subjectable_id', 'subjectable_type'])) {
+                    $subject->save();
+                }
+            }
 
             $mapping[$groupData['id']] = $newGroup->id;
         }
@@ -1629,6 +1674,15 @@ class FiscalYearService
             $newProduct->inventory_subject_id = $subjectMapping[$oldInventorySubjectId];
             $newProduct->company_id = $targetYearId;
             $newProduct->save();
+
+            $subjectsArray = [$newProduct->sales_returns_subject_id, $newProduct->income_subject_id, $newProduct->cogs_subject_id, $newProduct->inventory_subject_id];
+            foreach ($subjectsArray as $subjId) {
+                $subject = Subject::withoutGlobalScope(FiscalYearScope::class)->find($subjId);
+                $subject->subjectable()->associate($newProduct);
+                if ($subject->isDirty(['subjectable_id', 'subjectable_type'])) {
+                    $subject->save();
+                }
+            }
 
             $mapping[$productData['id']] = $newProduct->id;
         }
@@ -2087,13 +2141,13 @@ class FiscalYearService
 
         $sourceSubjectIds = $closeDocument->transactions()->pluck('subject_id')->filter()->unique()->values();
 
-        $sourceSubjectsById = Subject::withoutGlobalScope('App\\Models\\Scopes\\FiscalYearScope')
+        $sourceSubjectsById = Subject::withoutGlobalScope(FiscalYearScope::class)
             ->where('company_id', $closeDocument->company_id)
             ->whereIn('id', $sourceSubjectIds)
             ->get(['id', 'code'])
             ->keyBy('id');
 
-        $targetSubjectsByCode = Subject::withoutGlobalScope('App\\Models\\Scopes\\FiscalYearScope')
+        $targetSubjectsByCode = Subject::withoutGlobalScope(FiscalYearScope::class)
             ->where('company_id', $company->id)
             ->whereIn('code', $sourceSubjectsById->pluck('code')->filter()->unique()->values())
             ->pluck('id', 'code')
@@ -2164,7 +2218,7 @@ class FiscalYearService
 
     protected static function newFiscalYear(Company $company): Company
     {
-        $newFiscalYearData = collect($company->getAttributes())->except(['id', 'closed_at', 'fiscal_year'])
+        $newFiscalYearData = collect($company->getAttributes())->except(['id', 'closed_at', 'closed_by', 'fiscal_year'])
             ->merge(['fiscal_year' => $company->fiscal_year + 1])->toArray();
 
         $sectionsToCopy = ['subjects', 'configs', 'banks', 'customers', 'products', 'services', 'employees']; // Sections to copy to the new fiscal year
@@ -2250,19 +2304,19 @@ class FiscalYearService
     public static function getWizardValidations(Company $company): array
     {
         // 1. Draft (unapproved) documents
-        $draftCount = Document::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+        $draftCount = Document::withoutGlobalScope(FiscalYearScope::class)
             ->where('company_id', $company->id)
             ->whereNull('approved_at')
             ->count();
 
         // 2. Negative inventory
-        $negativeInventoryCount = \App\Models\Product::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+        $negativeInventoryCount = Product::withoutGlobalScope(FiscalYearScope::class)
             ->where('company_id', $company->id)
             ->where('quantity', '<', 0)
             ->count();
 
         // 3. Gaps in document numbers
-        $numbers = Document::withoutGlobalScope('App\Models\Scopes\FiscalYearScope')
+        $numbers = Document::withoutGlobalScope(FiscalYearScope::class)
             ->where('company_id', $company->id)
             ->orderBy('number')
             ->pluck('number')
