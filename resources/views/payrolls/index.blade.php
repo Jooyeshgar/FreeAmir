@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-app-layout :title="__('Payroll')">
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -27,12 +27,12 @@
             <form action="{{ route('salary.payrolls.index') }}" method="GET"
                 class="mt-4 rounded-box border border-base-300 bg-base-200/40 p-4 flex flex-wrap items-end gap-3 mb-4">
 
-                <div class="w-48">
-                    <label class="fieldset w-full">
+                <div class="w-1/5">
+                    <label class="w-full">
                         <div class="label">
                             <span>{{ __('Employee') }}</span>
                         </div>
-                        <select name="employee_id" class="select ">
+                        <select name="employee_id" class="select select-sm">
                             <option value="">{{ __('All Employees') }}</option>
                             @foreach ($employees as $employee)
                                 <option value="{{ $employee->id }}" {{ request('employee_id') == $employee->id ? 'selected' : '' }}>
@@ -44,7 +44,7 @@
                 </div>
 
                 <div class="w-28">
-                    <label class="fieldset w-full">
+                    <label class="w-full">
                         <div class="label">
                             <span>{{ __('Year') }}</span>
                         </div>
@@ -53,11 +53,11 @@
                 </div>
 
                 <div class="w-36">
-                    <label class="fieldset w-full">
+                    <label class="w-full">
                         <div class="label">
                             <span>{{ __('Month') }}</span>
                         </div>
-                        <select name="month" class="select ">
+                        <select name="month" class="select select-sm">
                             <option value="">{{ __('All Months') }}</option>
                             @foreach (\App\Models\MonthlyAttendance::MONTH_NAMES as $monthIndex => $monthName)
                                 <option value="{{ $monthIndex }}" {{ request('month') == $monthIndex ? 'selected' : '' }}>
@@ -69,8 +69,8 @@
                 </div>
 
                 <div>
-                    <button type="submit" class="btn btn-primary">{{ __('Filter') }}</button>
-                    <a href="{{ route('salary.payrolls.index') }}" class="btn btn-ghost">{{ __('Reset') }}</a>
+                    <button type="submit" class="btn btn-primary btn-sm">{{ __('Filter') }}</button>
+                    <a href="{{ route('salary.payrolls.index') }}" class="btn btn-ghost btn-sm">{{ __('Reset') }}</a>
                 </div>
             </form>
 

@@ -1,10 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Import Preview') }}
-        </h2>
-    </x-slot>
-
+<x-app-layout :title="__('Import Preview')">
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <h2 class="card-title mb-2">{{ __('Import Preview') }}</h2>

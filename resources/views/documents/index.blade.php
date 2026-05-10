@@ -1,10 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Transactions') }}
-        </h2>
-    </x-slot>
-
+<x-app-layout :title="__('Documents')">
     <x-show-message-bags />
 
     <div class="card bg-base-100 shadow-xl">
@@ -42,7 +36,7 @@
                             $status = request('status') ?? 'all';
                         @endphp
                         <select name="status" id="status"
-                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900 px-3 py-2">
+                            class="select block w-full rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2">
                             <option value="all" @selected($status === 'all')>{{ __('All Documents') }}</option>
                             <option value="approved" @selected($status === 'approved')>{{ __('Approved') }}</option>
                             <option value="unapproved" @selected($status === 'unapproved')>{{ __('Not approved') }}</option>

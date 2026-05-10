@@ -1,12 +1,7 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Create Ancillary Cost') }}
-        </h2>
-    </x-slot>
-
+<x-app-layout :title="__('Create Ancillary Cost')">
     <div>
-        <form action="{{ isset($invoice) && $invoice ? route('invoices.ancillary-costs.store', $invoice) : route('ancillary-costs.store') }}" method="POST">
+        <form action="{{ isset($invoice) && $invoice ? route('invoices.ancillary-costs.store', $invoice) : route('ancillary-costs.store') }}"
+            method="POST">
             @csrf
             <div class="card-body">
                 <h2 class="card-title">{{ __('Add Ancillary Cost') }}</h2>

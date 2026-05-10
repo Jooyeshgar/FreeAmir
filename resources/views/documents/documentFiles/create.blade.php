@@ -1,9 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Create Document File') }}
-        </h2>
-    </x-slot>
+<x-app-layout :title="__('Create Document File')">
     <div class="card bg-base-100 shadow-xl">
         <form action="{{ route('documents.files.store', $document->id) }}" method="POST" enctype="multipart/form-data">
             @csrf

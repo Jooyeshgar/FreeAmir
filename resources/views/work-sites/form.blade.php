@@ -12,7 +12,7 @@
     </div>
 
     <div class="col-span-2 md:col-span-1">
-        <label for="is_active" class="block text-sm font-medium text-gray-700 mb-1">
+        <label for="is_active" class="block text-sm font-medium label mb-1">
             {{ __('Active') }}
         </label>
         <input type="checkbox" name="is_active" id="is_active" value="1" class="checkbox" {{ old('is_active', $workSite->is_active ?? true) ? 'checked' : '' }} />
@@ -22,7 +22,7 @@
     </div>
 
     <div class="col-span-2">
-        <label for="address" class="block text-sm font-medium text-gray-700 mb-1">
+        <label for="address" class="block text-sm font-medium label mb-1">
             {{ __('Address') }}
         </label>
         <textarea name="address" id="address" rows="3"

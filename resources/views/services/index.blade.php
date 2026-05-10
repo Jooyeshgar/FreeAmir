@@ -1,9 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Services') }}
-        </h2>
-    </x-slot>
+<x-app-layout :title="__('Services')">
     <x-show-message-bags />
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
@@ -66,7 +61,8 @@
                             <td class="px-4 py-2">{{ formatNumber($service->selling_price) }}</td>
                             <td class="px-4 py-2">{{ formatNumber($service->vat) }}%</td>
                             <td class="px-4 py-2">
-                                <a href="{{ route('service-groups.show', $service->serviceGroup) }}">{{ $service->serviceGroup ? $service->serviceGroup->name : '' }}</a>
+                                <a
+                                    href="{{ route('service-groups.show', $service->serviceGroup) }}">{{ $service->serviceGroup ? $service->serviceGroup->name : '' }}</a>
                             </td>
                             <td class="px-4 py-2">
                                 <a href="{{ route('services.edit', $service) }}"

@@ -13,10 +13,10 @@
     'bordered' => true,
     'model_name' => false,
 ])
-<fieldset {{ $attributes->whereDoesntStartWith('x-')->merge(['class' => 'fieldset w-full ']) }}>
+<fieldset {{ $attributes->whereDoesntStartWith('x-')->merge(['class' => 'w-full ']) }}>
     @if ($title != '')
         <div class="flex items-center justify-between gap-2">
-            <label for="{{ $name }}" class="fieldset-legend">{{ $title }}{{ $required ? '*' : '' }}</label>
+            <label for="{{ $name }}" class="label">{{ $title }}{{ $required ? '*' : '' }}</label>
             @if ($title2)
                 <span class="label text-xs">{!! $title2 !!}</span>
             @endif

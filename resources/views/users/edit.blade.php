@@ -1,10 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Edit User') }}
-        </h2>
-    </x-slot>
-
+<x-app-layout :title="__('Edit User')">
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <form method="post" action="{{ route('users.update', $user) }}">
@@ -23,7 +17,7 @@
                     <br />
                     <hr>
                     <br />
-                    <h3>{{ __('Roles') }}</h3>
+                    <h3 class="label">{{ __('Roles') }}</h3>
                     <div class="grid gap-3 grid-cols-5">
                         @foreach ($roles as $role)
                             <x-checkbox :title="$role->name" name="role[]" :value="$role->name" id="role-{{ $role->id }}"
@@ -34,7 +28,7 @@
                 <br />
                 <hr>
                 <br />
-                <h3>{{ __('Companies') }}</h3>
+                <h3 class="label">{{ __('Companies') }}</h3>
                 <div class="grid gap-3 grid-cols-5">
                     @foreach ($companies as $company)
                         <x-checkbox :title="$company->name" name="company[]" :value="$company->id" id="company-{{ $company->id }}"

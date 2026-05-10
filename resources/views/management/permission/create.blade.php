@@ -1,9 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Permissions') }}
-        </h2>
-    </x-slot>
+<x-app-layout :title="__('Permission')">
     <x-show-message-bags />
 
     <div class="card bg-base-100 shadow-xl">
@@ -18,8 +13,8 @@
 
                 <div class="grid grid-cols-4 gap-5">
                     <div class="col-span-4 md:col-span-2">
-                        <x-input name="name" id="name" placeholder="{{ __('Permission wildcard') }}" title=""
-                            :value="old('name', $permission->name ?? '')" />
+                        <x-input name="name" id="name" placeholder="{{ __('Permission wildcard') }}"
+                            title="" :value="old('name', $permission->name ?? '')" />
                     </div>
                     <div></div>
                     <div class="col-span-4">
@@ -27,7 +22,7 @@
                             placeholder="{{ __('Description') }}" :value="old('description', $permission->description ?? '')" />
                     </div>
 
-                    <h3 class="col-span-4 text-lg font-semibold mb-2">{{ __('Roles') }}</h3>
+                    <h3 class="label col-span-4 text-lg font-semibold mb-2">{{ __('Roles') }}</h3>
                     @foreach ($roles as $role)
                         <div class="col-span-2 md:col-span-1">
                             <x-checkbox title="{{ $role->name }}" name="roles[]" id="roles-{{ $role->id }}"

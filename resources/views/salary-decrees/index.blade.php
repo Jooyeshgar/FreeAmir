@@ -1,20 +1,14 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Salary Decrees') }}
-        </h2>
-    </x-slot>
-
+<x-app-layout :title="__('Salary Decrees')">
     <x-show-message-bags />
 
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="flex items-center justify-between gap-3">
-                <form action="{{ route('salary.salary-decrees.index') }}" method="GET" class="flex items-center gap-2 flex-wrap">
+                <form action="{{ route('salary.salary-decrees.index') }}" method="GET" class="flex items-center gap-2 flex-wrap w-3/4">
                     <input type="text" name="search" value="{{ request('search') }}" placeholder="{{ __('Filter by name') }}"
                         class="px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
 
-                    <select name="employee_id" class="px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                    <select name="employee_id" class="select px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
                         <option value="">— {{ __('All Employees') }} —</option>
                         @foreach ($employees as $employee)
                             <option value="{{ $employee->id }}" {{ request('employee_id') == $employee->id ? 'selected' : '' }}>

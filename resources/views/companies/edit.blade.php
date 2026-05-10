@@ -1,9 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Create Company') }}
-        </h2>
-    </x-slot>
+<x-app-layout :title="__('Edit Company')">
     <x-show-message-bags />
 
     <div class="card bg-base-100 shadow-xl">
@@ -24,8 +19,8 @@
                     <div class="col-span-2 md:col-span-1">
                         <x-input name="currency" id="currency" title="{{ __('Currency') }}" :value="old('currency', $company->currency ?? '')" />
                     </div>
-                    <div class="col-span-2 md:col-span-1 flex gap-x-4">
-                        <label for="logo">
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="label" for="logo">
                             {{ __('Company logo') }}
                         </label>
                         <input type="file" id="logo" name="logo" class="file-input w-full max-w-xs" accept="image/*" />

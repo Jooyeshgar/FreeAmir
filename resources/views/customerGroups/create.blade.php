@@ -1,11 +1,5 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Create Customer Group') }}
-        </h2>
-    </x-slot>
-
-    <div class="card bg-gray-100 shadow-xl">
+<x-app-layout :title="__('Create Customer Group')">
+    <div class="card bg-base-100 shadow-xl">
         <form action="{{ route('customer-groups.store') }}" method="POST">
             @csrf
             <div class="card-body">

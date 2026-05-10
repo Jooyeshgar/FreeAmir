@@ -1,10 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Create Bank') }}
-        </h2>
-    </x-slot>
-
+<x-app-layout :title="__('Create Bank')">
     <div class="card bg-base-100 shadow-xl">
         <form action="{{ route('banks.store') }}" method="POST">
             @csrf
@@ -14,7 +8,7 @@
 
                 @include('banks.form')
                 <div class="card-actions">
-                    <button type="submit" class="btn btn-pr"> {{ __('Create') }} </button>
+                    <button type="submit" class="btn btn-primary"> {{ __('Create') }} </button>
                 </div>
             </div>
         </form>

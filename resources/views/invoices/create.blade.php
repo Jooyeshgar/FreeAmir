@@ -1,10 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-slate-100 leading-tight">
-            {{ $isServiceBuy ? __('Create') . ' ' . __('Service Buy Invoice') : __('Create Invoice') }}
-        </h2>
-    </x-slot>
-
+<x-app-layout :title="$isServiceBuy ? __('Create') . ' ' . __('Service Buy Invoice') : __('Create Invoice')">
     <div>
         <form action="{{ route('invoices.store') }}" method="POST">
             @csrf

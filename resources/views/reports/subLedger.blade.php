@@ -1,10 +1,5 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Subsidiary Ledger Report') }}
-        </h2>
-    </x-slot>
-    <div class="font-bold text-gray-600 py-6 text-2xl">
+<x-app-layout :title="__('Subsidiary Ledger Report')">
+    <div class="font-bold text-gray-500 py-6 text-2xl">
         <span>
             {{ __('Subsidiary Ledger Report') }}
         </span>
@@ -104,7 +99,7 @@
                 }
             }">
                 <div class="w-1/3">
-                    <x-input name="code_input" id="code_input" placeholder="{{ __('Subject Code') }}" title="{{ __('Subject') }}"
+                    <x-input name="code_input" id="code_input" placeholder="{{ __('Subject Code') }}" title="{{ __('Subject Code') }}"
                         x-bind:value="$store.utils.formatCode(selectedCode)"
                         @input="
                             selectedCode = normalizeForTyping($event.target.value);

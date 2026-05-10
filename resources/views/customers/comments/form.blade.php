@@ -20,7 +20,7 @@
 
                 <input type="radio" name="rating" value="0" @click="rating = 0" :checked="rating === 0" hidden />
 
-                <input class="text-sm bg-white text-gray-400 w-12" type="reset" name="reset-rating" value="{{__('Reset')}}" @click="rating = 0" />
+                <input class="text-sm text-gray-400 w-12" type="reset" name="reset-rating" value="{{__('Reset')}}" @click="rating = 0" />
 
                 @for ($i = 1; $i <= 10; $i++)
                     @php $starValue = $i * 0.5; @endphp

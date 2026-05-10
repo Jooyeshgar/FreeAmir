@@ -42,7 +42,7 @@
 </div>
 
 <div class="mt-8" x-data="benefitsManager()" x-init="init()">
-    <h3 class="text-base font-semibold text-gray-700 mb-3">{{ __('Payroll Benefits') }}</h3>
+    <h3 class="text-base font-semibold text-gray-500 mb-3">{{ __('Payroll Benefits') }}</h3>
 
     <div class="overflow-x-auto">
         <table class="table w-full">

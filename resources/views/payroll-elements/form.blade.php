@@ -7,7 +7,7 @@
         <label class="label" for="system_code">
             <span class=" font-medium">{{ __('System Code') }}</span>
         </label>
-        <select name="system_code" id="system_code" class="select  w-full" required>
+        <select name="system_code" id="system_code" class="select w-full" required>
             <option value="">{{ __('Select System Code') }}</option>
             @foreach ([
         'CHILD_ALLOWANCE' => __('Child Allowance'),
@@ -72,13 +72,13 @@
     {{-- Default Amount / Percentage — label and attributes change based on calc_type --}}
     <div class="col-span-2 md:col-span-1" id="default_amount_wrapper">
         <label class="label" for="default_amount">
-            <span class=" font-medium" id="default_amount_label">{{ __('Default Amount') }}</span>
+            <span class="font-medium" id="default_amount_label">{{ __('Default Amount') }}</span>
         </label>
         <input
             type="number"
             name="default_amount"
             id="default_amount"
-            class="input  w-full"
+            class="input w-full"
             value="{{ old('default_amount', $payrollElement->default_amount ?? '') }}"
             placeholder="0"
             step="0.01"

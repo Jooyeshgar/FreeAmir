@@ -1,11 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Edit Invoice') }} #{{ formatDocumentNumber($invoice->number) }}
-            {{ $isServiceBuy ? __('Edit') . ' ' . __('Service Buy Invoice') : __('Edit Invoice') }}
-        </h2>
-    </x-slot>
-
+<x-app-layout title="{{ __('Edit Invoice') }} #{{ formatDocumentNumber($invoice->number) }}">
     <div>
         <form action="{{ route('invoices.update', $invoice) }}" method="POST">
             @csrf

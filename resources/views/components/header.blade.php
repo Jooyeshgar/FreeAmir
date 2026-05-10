@@ -8,8 +8,8 @@
         </ul>
     </nav>
 
-    <nav class="flex shrink-0 items-center" aria-label="{{ __('User menu') }}">
-        <ul class="menu menu-horizontal px-1 bg-base-200 rounded-xl">
+    <nav aria-label="{{ __('User menu') }}">
+        <ul class="flex shrink-0 items-center menu menu-horizontal px-1 bg-base-200 rounded-xl">
             <li>
                 <label class="flex cursor-pointer gap-2 px-3 py-2">
                     <svg
@@ -41,11 +41,11 @@
                     </svg>
                 </label>
             </li>
-            <li class="dropdown dropdown-end dropdown-hover dropdown-bottom">
+            <li class="dropdown dropdown-end dropdown-hover">
                 <button type="button" tabindex="0" aria-haspopup="true">
                     {{ cookie('active-company-id') ? config('active-company-name') . ' - ' . config('active-company-fiscal-year') : __('Please Select a Company') }}
                 </button>
-                <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow-lg">
+                <ul class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52">
                     @foreach (auth()->user()->companies as $company)
                         <li>
                             <a href="{{ route('change-company', ['company' => $company]) }}">
@@ -55,9 +55,11 @@
                     @endforeach
                 </ul>
             </li>
-            <li class="dropdown dropdown-end dropdown-hover dropdown-bottom">
-                <button type="button" tabindex="0" aria-haspopup="true">{{ Auth::user()->name }}</button>
-                <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow-lg">
+            <li class="dropdown dropdown-end dropdown-hover">
+                <button type="button" tabindex="0" aria-haspopup="true">
+                    {{ Auth::user()->name }}
+                </button>
+                <ul class="dropdown-content menu bg-base-100 rounded-box z-[1]">
                     <li><a href="/logout">{{ __('Logout') }}</a></li>
                 </ul>
             </li>

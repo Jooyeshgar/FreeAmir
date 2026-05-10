@@ -1,9 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Rules') }}
-        </h2>
-    </x-slot>
+<x-app-layout :title="__('Role')">
     <x-show-message-bags />
 
     <div class="card bg-base-100 shadow-xl">
@@ -23,7 +18,7 @@
                         <x-textarea title="{{ __('Description') }}" id="description" name="description"
                             :value="old('description', $role?->description ?? '')" />
                     </div>
-                    <h3 class="col-span-4">{{ __('Permissions') }}</h3>
+                    <h3 class="label col-span-4">{{ __('Permissions') }}</h3>
                     @foreach ($permissions as $permission)
                         <div class="col-span-2 md:col-span-1">
                             <x-checkbox title="{{ $permission->name }}" name="permissions[]" id="permissions-{{ $permission->id }}"

@@ -1,8 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Sort Documents Number') }}</h2>
-    </x-slot>
-
+<x-app-layout :title="__('Sort Documents Number')">
     <x-show-message-bags />
 
     <div class="card bg-base-100 shadow-xl" x-data="documentNumberSort({
@@ -50,17 +46,17 @@
                 @endif
             </div>
 
-            <div class="card bg-gray-50">
+            <div class="card bg-base-100">
                 <div class="card-body p-6">
-                    <h3 class="text-lg font-semibold text-gray-800">{{ __('Sort Progress') }}</h3>
+                    <h3 class="text-lg font-semibold text-gray-500">{{ __('Sort Progress') }}</h3>
                     <div class="bg-gray-200 rounded-full overflow-hidden relative h-5">
                         <div class="bg-blue-600 transition-all duration-300 h-5" :style="`width: ${progress.percent}%`"></div>
-                        <div class="absolute inset-0 flex items-center justify-center text-xs font-semibold text-gray-700">
+                        <div class="absolute inset-0 flex items-center justify-center text-xs font-semibold text-gray-500">
                             <span x-text="progress.percent + '%'"></span>
                         </div>
                     </div>
 
-                    <div class="flex flex-wrap items-center justify-between gap-2 text-sm text-gray-600">
+                    <div class="flex flex-wrap items-center justify-between gap-2 text-sm text-gray-500">
                         <span>{{ __('Processed') }}:
                             <span x-text="progress.processed_label"></span> /
                             <span x-text="progress.total_label"></span>
@@ -68,12 +64,12 @@
                     </div>
 
                     <div class="text-sm text-gray-500">{{ __('Status') }}:
-                        <span class="font-semibold text-gray-700" x-text="statusText"></span>
+                        <span class="font-semibold text-gray-500" x-text="statusText"></span>
                     </div>
 
                     <div class="flex justify-end mt-2 relative">
                         <div class="relative group" x-show="isStartDisabled">
-                            <div class="absolute bottom-full mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                            <div class="absolute bottom-full mb-2 hidden group-hover:block bg-gray-500 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
                                 {{ __('No need to sort because document numbers are already sorted.') }}
                             </div>
                         </div>

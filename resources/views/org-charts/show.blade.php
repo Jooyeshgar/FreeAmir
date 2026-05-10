@@ -1,9 +1,9 @@
-<x-app-layout :title="__('Organization Chart')">
+<x-app-layout :title="$orgChart->title">
     <div class="card bg-base-100">
         <div class="card-body" x-data="{ allExpanded: true }">
 
             <div class="flex flex-wrap items-center justify-between gap-2">
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Organization Chart') }}</h2>
+                <h2 class="font-semibold text-xl">{{ __('Organization Chart') }}</h2>
 
                 <div class="flex gap-2">
                     <button type="button" class="btn" @click="allExpanded = true; $dispatch('toggle-all', { state: true })">
@@ -32,7 +32,7 @@
 
                         $nodeClasses = $isActive ?
                             'w-full border border-gray-300 bg-base-300 px-3 py-2'
-                            : 'w-full border border-gray-200 bg-white px-3 py-2';
+                            : 'w-full border border-gray-200 bg-base-100 px-3 py-2';
 
                         $title = e($node->title);
                         $showUrl = e(route('hr.org-charts.show', $node));
@@ -58,7 +58,7 @@
                         }
 
                         $html .= '<div class="flex-1 ' . $nodeClasses . '">';
-                        $html .= '<div class="text-sm text-gray-800 flex items-center justify-between gap-3">';
+                        $html .= '<div class="text-sm text-gray-500 flex items-center justify-between gap-3">';
                         $html .= '<div class="flex items-center gap-2">';
                         $html .= '<a href="' . $showUrl . '">' . $title . '</a>';
 
@@ -136,7 +136,7 @@
                     };
                 @endphp
 
-                <div class="mt-4 overflow-x-auto bg-white p-3">
+                <div class="mt-4 overflow-x-auto p-3">
                     <ul class="space-y-2 min-w-max">
                         @foreach ($roots as $node)
                             {!! $renderTreeNode($node, $orgChart->id) !!}
