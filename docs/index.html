@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="امیر، نرم افزار آزاد حسابداری لاراول برای کسب و کارهای ایرانی">
+    <title>امیر | نرم افزار آزاد حسابداری لاراول</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Vazirmatn', 'Tahoma', 'Arial', 'sans-serif'],
+                    },
+                    colors: {
+                        ink: '#16201c',
+                        mint: '#0f766e',
+                        amber: '#b45309',
+                        paper: '#fafaf7',
+                    },
+                    boxShadow: {
+                        soft: '0 18px 45px rgba(22, 32, 28, 0.10)',
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .hero-grid {
+            background-image:
+                linear-gradient(rgba(15, 118, 110, 0.09) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(15, 118, 110, 0.09) 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
+    </style>
+</head>
+<body class="bg-paper text-ink antialiased">
+<div x-data="{ menuOpen: false, docFilter: 'all' }" class="min-h-screen overflow-hidden">
+    <header class="sticky top-0 z-50 border-b border-stone-200/80 bg-paper/90 backdrop-blur">
+        <nav class="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 lg:px-8" aria-label="ناوبری اصلی">
+            <a href="#top" class="flex items-center gap-3">
+                <span class="grid h-11 w-11 place-items-center rounded-lg bg-ink text-lg font-black text-white">ا</span>
+                <span>
+                    <span class="block text-base font-black">امیر</span>
+                    <span class="block text-xs text-stone-500">حسابداری آزاد برای ایران</span>
+                </span>
+            </a>
+
+            <button
+                type="button"
+                class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-stone-300 text-ink md:hidden"
+                @click="menuOpen = !menuOpen"
+                :aria-expanded="menuOpen.toString()"
+                aria-controls="mobile-menu"
+                aria-label="باز کردن منو">
+                <span class="text-xl leading-none" x-text="menuOpen ? '×' : '☰'"></span>
+            </button>
+
+            <div class="hidden items-center gap-7 text-sm font-semibold text-stone-700 md:flex">
+                <a class="transition hover:text-mint" href="#intro">معرفی</a>
+                <a class="transition hover:text-mint" href="#features">ویژگی ها</a>
+                <a class="transition hover:text-mint" href="#quickstart">شروع سریع</a>
+                <a class="transition hover:text-mint" href="#docs">مستندات</a>
+                <a class="transition hover:text-mint" href="#downloads">دانلودها</a>
+            </div>
+        </nav>
+        <div id="mobile-menu" x-show="menuOpen" x-transition class="border-t border-stone-200 bg-paper px-5 py-4 md:hidden">
+            <div class="grid gap-3 text-sm font-semibold text-stone-700">
+                <a class="rounded-lg px-3 py-2 hover:bg-white" href="#intro" @click="menuOpen = false">معرفی</a>
+                <a class="rounded-lg px-3 py-2 hover:bg-white" href="#features" @click="menuOpen = false">ویژگی ها</a>
+                <a class="rounded-lg px-3 py-2 hover:bg-white" href="#quickstart" @click="menuOpen = false">شروع سریع</a>
+                <a class="rounded-lg px-3 py-2 hover:bg-white" href="#docs" @click="menuOpen = false">مستندات</a>
+                <a class="rounded-lg px-3 py-2 hover:bg-white" href="#downloads" @click="menuOpen = false">دانلودها</a>
+            </div>
+        </div>
+    </header>
+
+    <main id="top">
+        <section class="hero-grid relative border-b border-stone-200">
+            <div class="mx-auto grid min-h-[calc(100vh-76px)] max-w-7xl items-center gap-12 px-5 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-20">
+                <div>
+                    <div class="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-800">
+                        در حال توسعه فعال؛ مناسب بررسی، مشارکت و آزمایش مستقل
+                    </div>
+                    <h1 class="max-w-4xl text-4xl font-black leading-tight text-ink sm:text-5xl lg:text-6xl">
+                        امیر، نرم افزار آزاد حسابداری لاراول
+                    </h1>
+                    <p class="mt-6 max-w-2xl text-lg leading-9 text-stone-700">
+                        حسابداری دوبل، فاکتور خرید و فروش، مدیریت کالا، بهای تمام شده، سال مالی و تجربه فارسی اول برای کسب و کارهای ایرانی.
+                    </p>
+                    <div class="mt-9 flex flex-col gap-3 sm:flex-row">
+                        <a href="INSTALLATION.html" class="inline-flex items-center justify-center rounded-lg bg-mint px-6 py-3 text-sm font-black text-white shadow-soft transition hover:bg-teal-800">
+                            شروع نصب و راه اندازی
+                        </a>
+                        <a href="https://github.com/Jooyeshgar/FreeAmir" class="inline-flex items-center justify-center rounded-lg border border-stone-300 bg-white px-6 py-3 text-sm font-black text-ink transition hover:border-mint hover:text-mint">
+                            مشاهده در GitHub
+                        </a>
+                    </div>
+                </div>
+
+                <div class="relative">
+                    <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-soft">
+                        <div class="rounded-xl border border-stone-200 bg-stone-950 p-4 text-left text-sm text-stone-100" dir="ltr">
+                            <div class="mb-4 flex gap-2">
+                                <span class="h-3 w-3 rounded-full bg-red-400"></span>
+                                <span class="h-3 w-3 rounded-full bg-amber-300"></span>
+                                <span class="h-3 w-3 rounded-full bg-emerald-400"></span>
+                            </div>
+                            <pre class="overflow-x-auto whitespace-pre-wrap leading-7"><code>docker compose up -d
+php artisan migrate --seed
+npm run build
+
+FreeAmir:
+  accounting: double-entry
+  inventory: moving-weighted-average
+  locale: fa_IR
+  license: GPL-3.0</code></pre>
+                        </div>
+                    </div>
+                    <div class="mt-4 grid grid-cols-3 gap-3">
+                        <div class="rounded-lg border border-stone-200 bg-white p-4 text-center shadow-sm">
+                            <div class="text-2xl font-black text-mint">Laravel 12</div>
+                            <div class="mt-1 text-xs text-stone-500">چارچوب اصلی</div>
+                        </div>
+                        <div class="rounded-lg border border-stone-200 bg-white p-4 text-center shadow-sm">
+                            <div class="text-2xl font-black text-mint">RTL</div>
+                            <div class="mt-1 text-xs text-stone-500">فارسی اول</div>
+                        </div>
+                        <div class="rounded-lg border border-stone-200 bg-white p-4 text-center shadow-sm">
+                            <div class="text-2xl font-black text-mint">GPL-3</div>
+                            <div class="mt-1 text-xs text-stone-500">متن باز</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="intro" class="mx-auto max-w-7xl px-5 py-16 lg:px-8">
+            <div class="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+                <div>
+                    <p class="text-sm font-black text-mint">معرفی پروژه</p>
+                    <h2 class="mt-3 text-3xl font-black leading-tight">حسابداری آزاد برای نیازهای واقعی کسب و کار ایرانی</h2>
+                </div>
+                <div class="rounded-2xl border border-stone-200 bg-white p-7 leading-9 text-stone-700 shadow-sm">
+                    <p>
+                        امیر یک نرم افزار حسابداری آزاد و رایگان مبتنی بر Laravel است. تمرکز پروژه روی ثبت های دوبل، فاکتور فروش و خرید، مدیریت کالا، عملیات سال مالی و تجربه کاربری فارسی است.
+                    </p>
+                    <p class="mt-4">
+                        پروژه هنوز در مسیر توسعه فعال قرار دارد و پیش از استفاده عملیاتی باید با داده آزمایشی، نیازهای هر مجموعه و کنترل های حسابداری مستقل بررسی شود.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section id="features" class="border-y border-stone-200 bg-white">
+            <div class="mx-auto max-w-7xl px-5 py-16 lg:px-8">
+                <div class="max-w-2xl">
+                    <p class="text-sm font-black text-mint">ویژگی ها</p>
+                    <h2 class="mt-3 text-3xl font-black">قابلیت های اصلی امیر</h2>
+                </div>
+                <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <article class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
+                        <h3 class="text-lg font-black">حسابداری و گزارش</h3>
+                        <p class="mt-3 leading-8 text-stone-600">مدیریت درآمد و هزینه، فاکتور و رسید، گزارش های مالی و پایه های لازم برای قواعد مالیاتی ایران.</p>
+                    </article>
+                    <article class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
+                        <h3 class="text-lg font-black">انبارداری و کالا</h3>
+                        <p class="mt-3 leading-8 text-stone-600">مدیریت محصولات، موجودی، گردش انبار و محاسبه بهای تمام شده با میانگین موزون متحرک.</p>
+                    </article>
+                    <article class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
+                        <h3 class="text-lg font-black">سال مالی</h3>
+                        <p class="mt-3 leading-8 text-stone-600">ایجاد، نگهداری، خروجی گرفتن و وارد کردن داده های سال مالی با توجه به مرزهای حسابداری.</p>
+                    </article>
+                    <article class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
+                        <h3 class="text-lg font-black">حضور و غیاب</h3>
+                        <p class="mt-3 leading-8 text-stone-600">ثبت ورود و خروج، پیگیری کارکرد روزانه و ماهانه و ورود اطلاعات از منابع خارجی.</p>
+                    </article>
+                    <article class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
+                        <h3 class="text-lg font-black">حقوق و دستمزد</h3>
+                        <p class="mt-3 leading-8 text-stone-600">محاسبه حقوق ماهانه، مدیریت کسورات و مزایا، فیش حقوقی و گزارش های مرتبط.</p>
+                    </article>
+                    <article class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
+                        <h3 class="text-lg font-black">متن باز و قابل توسعه</h3>
+                        <p class="mt-3 leading-8 text-stone-600">کد آزاد با معماری سرویس محور Laravel برای مشارکت، بررسی و توسعه شفاف.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="quickstart" class="mx-auto max-w-7xl px-5 py-16 lg:px-8">
+            <div class="grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
+                <div>
+                    <p class="text-sm font-black text-mint">شروع سریع</p>
+                    <h2 class="mt-3 text-3xl font-black">سه مسیر نصب، از آزمایش سریع تا محیط عملیاتی</h2>
+                    <p class="mt-5 leading-8 text-stone-600">راهنمای نصب، Docker Compose، اجرای تک دستوری Docker و نصب استاندارد با PHP و MariaDB را پوشش می دهد.</p>
+                    <a href="INSTALLATION.html" class="mt-7 inline-flex rounded-lg bg-ink px-5 py-3 text-sm font-black text-white transition hover:bg-stone-800">مشاهده راهنمای نصب</a>
+                </div>
+                <div class="grid gap-4">
+                    <div class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+                        <div class="flex items-start gap-4">
+                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-teal-50 font-black text-mint">۱</span>
+                            <div>
+                                <h3 class="font-black">Docker Compose برای محیط عملیاتی</h3>
+                                <p class="mt-2 leading-8 text-stone-600">استفاده از ایمیج های آماده GitHub Container Registry با فایل تنظیمات محیطی.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+                        <div class="flex items-start gap-4">
+                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-teal-50 font-black text-mint">۲</span>
+                            <div>
+                                <h3 class="font-black">Docker تک دستوری برای آزمایش</h3>
+                                <p class="mt-2 leading-8 text-stone-600">راه اندازی سریع یک کانتینر همه در یک برای ارزیابی اولیه و تست کوتاه مدت.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+                        <div class="flex items-start gap-4">
+                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-teal-50 font-black text-mint">۳</span>
+                            <div>
+                                <h3 class="font-black">نصب استاندارد Laravel</h3>
+                                <p class="mt-2 leading-8 text-stone-600">راه اندازی با PHP، Composer، Node.js و MariaDB برای توسعه یا استقرار سفارشی.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="docs" class="border-y border-stone-200 bg-white">
+            <div class="mx-auto max-w-7xl px-5 py-16 lg:px-8">
+                <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+                    <div>
+                        <p class="text-sm font-black text-mint">مستندات</p>
+                        <h2 class="mt-3 text-3xl font-black">همه فایل های مستندات پروژه</h2>
+                        <p class="mt-4 max-w-2xl leading-8 text-stone-600">لینک ها با مسیرهای HTML سازگار با GitHub Pages آمده اند و فایل های Markdown موجود بدون تغییر باقی مانده اند.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" @click="docFilter = 'all'" :class="docFilter === 'all' ? 'bg-ink text-white' : 'bg-paper text-stone-700'" class="rounded-lg border border-stone-200 px-4 py-2 text-sm font-bold">همه</button>
+                        <button type="button" @click="docFilter = 'fa'" :class="docFilter === 'fa' ? 'bg-ink text-white' : 'bg-paper text-stone-700'" class="rounded-lg border border-stone-200 px-4 py-2 text-sm font-bold">فارسی</button>
+                        <button type="button" @click="docFilter = 'en'" :class="docFilter === 'en' ? 'bg-ink text-white' : 'bg-paper text-stone-700'" class="rounded-lg border border-stone-200 px-4 py-2 text-sm font-bold">English</button>
+                    </div>
+                </div>
+
+                <div class="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <a x-show="docFilter === 'all' || docFilter === 'fa'" href="README.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-mint">فارسی</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">فهرست کامل مستندات</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">README.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'en'" href="README.en.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-amber-700">English</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">Documentation Index</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">README.en.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'fa'" href="INSTALLATION.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-mint">فارسی</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">راهنمای نصب</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">INSTALLATION.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'en'" href="INSTALLATION.en.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-amber-700">English</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">Installation Guide</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">INSTALLATION.en.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'fa'" href="user/README.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-mint">فارسی</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">راهنمای استفاده کنندگان</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">user/README.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'en'" href="user/README.en.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-amber-700">English</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">User Guide</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">user/README.en.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'fa'" href="accounting/README.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-mint">فارسی</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">مفاهیم حسابداری</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">accounting/README.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'en'" href="accounting/README.en.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-amber-700">English</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">Accounting Concepts</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">accounting/README.en.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'fa'" href="developer/README.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-mint">فارسی</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">راهنمای برنامه نویس</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">developer/README.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'en'" href="developer/README.en.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-amber-700">English</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">Developer Guide</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">developer/README.en.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'fa'" href="user/attendance/README.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-mint">فارسی</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">حضور و غیاب</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">user/attendance/README.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'en'" href="user/attendance/README.en.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-amber-700">English</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">Attendance</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">user/attendance/README.en.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'fa'" href="user/salary/README.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-mint">فارسی</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">حقوق و دستمزد</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">user/salary/README.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'en'" href="user/salary/README.en.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-amber-700">English</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">Salary and Payroll</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">user/salary/README.en.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'fa'" href="user/inventory-costing.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-mint">فارسی</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">بهای تمام شده کالا</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">user/inventory-costing.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'en'" href="user/inventory-costing.en.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-amber-700">English</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">Inventory Costing</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">user/inventory-costing.en.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'fa'" href="fiscal-year.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-mint">فارسی</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">سال مالی</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">fiscal-year.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'en'" href="fiscal-year.en.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-amber-700">English</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">Fiscal Year</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">fiscal-year.en.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'fa'" href="FiscalYearExportImport.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-mint">فارسی</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">خروجی و ورودی سال مالی</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">FiscalYearExportImport.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'fa'" href="accounting-basics.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-mint">فارسی</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">مبانی حسابداری</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">accounting-basics.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'fa'" href="return-sell-return-buy.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-mint">فارسی</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">برگشت از فروش و خرید</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">return-sell-return-buy.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'fa'" href="project-structure.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-mint">فارسی</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">ساختار پروژه</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">project-structure.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'fa'" href="database-guide.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-mint">فارسی</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">راهنمای پایگاه داده</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">database-guide.html</p>
+                    </a>
+                    <a x-show="docFilter === 'all' || docFilter === 'fa'" href="testing-guide.html" class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                        <span class="text-xs font-black text-mint">فارسی</span>
+                        <h3 class="mt-2 font-black group-hover:text-mint">راهنمای تست</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">testing-guide.html</p>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section id="downloads" class="mx-auto max-w-7xl px-5 py-16 lg:px-8">
+            <div class="grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
+                <div>
+                    <p class="text-sm font-black text-mint">دانلودها</p>
+                    <h2 class="mt-3 text-3xl font-black">منابع راه اندازی و دریافت پروژه</h2>
+                    <p class="mt-5 leading-8 text-stone-600">این لینک ها از راهنمای نصب پروژه استخراج شده اند و برای GitHub Pages به صورت مستقیم قابل استفاده هستند.</p>
+                </div>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <a href="https://github.com/Jooyeshgar/FreeAmir" class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm transition hover:border-mint hover:shadow-soft">
+                        <h3 class="font-black">مخزن GitHub</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">کد منبع، گزارش باگ و Pull Request</p>
+                    </a>
+                    <a href="https://raw.githubusercontent.com/Jooyeshgar/FreeAmir/main/docker/production/docker-compose.prebuilt.yml" class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm transition hover:border-mint hover:shadow-soft">
+                        <h3 class="font-black">docker-compose.prebuilt.yml</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">فایل Docker Compose برای ایمیج های آماده</p>
+                    </a>
+                    <a href="https://raw.githubusercontent.com/Jooyeshgar/FreeAmir/main/docker/production/.env.example" class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm transition hover:border-mint hover:shadow-soft">
+                        <h3 class="font-black">فایل نمونه env</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">متغیرهای محیطی پیشنهادی برای نصب Docker</p>
+                    </a>
+                    <a href="https://github.com/Jooyeshgar/FreeAmir/pkgs/container/freeamir-all-in-one" class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm transition hover:border-mint hover:shadow-soft">
+                        <h3 class="font-black">ایمیج همه در یک</h3>
+                        <p class="mt-2 text-sm leading-7 text-stone-600">کانتینر آزمایشی ghcr.io/jooyeshgar/freeamir-all-in-one</p>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section id="contribute" class="border-y border-stone-200 bg-white">
+            <div class="mx-auto grid max-w-7xl gap-8 px-5 py-16 lg:grid-cols-2 lg:px-8">
+                <div class="rounded-2xl border border-stone-200 bg-paper p-7 shadow-sm">
+                    <p class="text-sm font-black text-mint">مشارکت</p>
+                    <h2 class="mt-3 text-2xl font-black">ساختن امیر با مشارکت جامعه</h2>
+                    <p class="mt-4 leading-8 text-stone-600">برای گزارش باگ، پیشنهاد قابلیت و ارسال Pull Request، راهنمای مشارکت پروژه را ببینید. تغییرات اثرگذار بر محاسبات مالی باید با تست و بازبینی دامنه حسابداری همراه باشند.</p>
+                    <a href="https://github.com/Jooyeshgar/FreeAmir/blob/main/CONTRIBUTING.md" class="mt-6 inline-flex rounded-lg border border-stone-300 bg-white px-5 py-3 text-sm font-black text-ink transition hover:border-mint hover:text-mint">راهنمای مشارکت</a>
+                </div>
+                <div class="rounded-2xl border border-stone-200 bg-paper p-7 shadow-sm">
+                    <p class="text-sm font-black text-mint">مجوز</p>
+                    <h2 class="mt-3 text-2xl font-black">GPL-3.0</h2>
+                    <p class="mt-4 leading-8 text-stone-600">امیر تحت مجوز GPL-3 منتشر شده است؛ استفاده، بررسی، اصلاح و مشارکت در پروژه با رعایت شرایط مجوز آزاد است.</p>
+                    <a href="https://github.com/Jooyeshgar/FreeAmir/blob/main/LICENSE" class="mt-6 inline-flex rounded-lg border border-stone-300 bg-white px-5 py-3 text-sm font-black text-ink transition hover:border-mint hover:text-mint">مشاهده مجوز</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="mx-auto max-w-7xl px-5 py-10 text-sm text-stone-500 lg:px-8">
+        <div class="flex flex-col gap-4 border-t border-stone-200 pt-8 sm:flex-row sm:items-center sm:justify-between">
+            <p>امیر؛ نرم افزار آزاد حسابداری لاراول برای کسب و کارهای ایرانی.</p>
+            <div class="flex gap-5">
+                <a class="hover:text-mint" href="README.html">مستندات</a>
+                <a class="hover:text-mint" href="INSTALLATION.html">نصب</a>
+                <a class="hover:text-mint" href="https://github.com/Jooyeshgar/FreeAmir">GitHub</a>
+            </div>
+        </div>
+    </footer>
+</div>
+</body>
+</html>
