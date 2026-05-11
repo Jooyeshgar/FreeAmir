@@ -973,7 +973,7 @@ class FiscalYearService
             }
 
             $newAl = new AttendanceLog;
-            $newAl->fill(collect($al)->except(['id', 'employee_id', 'monthly_attendance_id'])->toArray());
+            $newAl->fill(collect($al)->except(['id', 'employee_id', 'monthly_attendance_id', 'approved_overtime'])->toArray());
             $newAl->company_id = $targetYearId;
             $newAl->employee_id = $employeeMapping[$oldEmployeeId];
             $newAl->monthly_attendance_id = $monthlyAttendanceMapping[$oldMonthlyAttendanceId];
@@ -1030,7 +1030,8 @@ class FiscalYearService
             }
 
             $newSd = new SalaryDecree;
-            $newSd->fill(collect($sd)->except(['id', 'employee_id'])->toArray());
+            $newSd->fill(collect($sd)->only(['name', 'start_date', 'end_date', 'daily_wage', 'description', 'is_active'])->toArray());
+
             $newSd->company_id = $targetYearId;
             $newSd->employee_id = $employeeMapping[$oldEmployeeId];
             $newSd->save();

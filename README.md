@@ -1,11 +1,14 @@
-## امیر: نرم افزار آزاد حسابداری لاراول
-**[English Version](README.en.md)**
+# امیر: نرم‌افزار آزاد حسابداری لاراول
 
-**توجه مهم:** نرم‌افزار «امیر» در حال حاضر در مراحل توسعه قرار دارد و به طور کامل تست نشده است. لطفاً پیش از استفاده در محیط‌های عملیاتی (Production)، از صحت عملکرد بخش‌های مورد نیاز خود اطمینان حاصل کنید.
+**[English version](README.en.md)**
 
-### معرفی:
+**وضعیت پروژه:** امیر در حال توسعه فعال است و هنوز برای استفاده عملیاتی بدون بررسی و تست مستقل توصیه نمی‌شود. پیش از استفاده در محیط Production، بخش‌های مورد نیاز خود را با داده آزمایشی بررسی کنید.
 
-**امیر** یک نرم افزار حسابداری رایگان و آزاد است که با لاراول نوشته شده و به طور خاص برای کسب و کارها و افراد ایرانی طراحی شده است. این نرم افزار با هدف ارائه یک راهکار جامع و کاربرپسند برای مدیریت امور مالی، با ویژگی هایی که مطابق با نیازهای خاص کاربران ایرانی است، از جمله پشتیبانی از قوانین مالیاتی ایران، ساخته شده است.
+## معرفی
+
+**امیر** یک نرم‌افزار حسابداری آزاد و رایگان مبتنی بر Laravel است که برای کسب‌وکارهای ایرانی طراحی شده است. تمرکز پروژه روی حسابداری دوبل، فاکتور فروش و خرید، مدیریت کالا و بهای تمام‌شده، عملیات سال مالی، و تجربه فارسی‌اول است.
+
+## قابلیت‌ها
 
 **ویژگی ها:**
 
@@ -31,37 +34,58 @@
     *   تهیه فیش حقوقی و گزارشات حقوق و دستمزد
 *   **آزاد (متن باز):** استفاده، اصلاح و مشارکت در آن رایگان است.
 
-### نصب:
+## نصب سریع
 
-راهنمای کامل نصب در فایل **[INSTALLATION.md](docs/INSTALLATION.md)** موجود است و شامل سه روش جداگانه می‌شود:
+راهنمای کامل نصب در [docs/INSTALLATION.md](docs/INSTALLATION.md) قرار دارد و سه مسیر را پوشش می‌دهد:
 
-*   **[روش اول — محیط عملیاتی با Docker Compose (پیشنهادی)](docs/INSTALLATION.md#روش-۱-محیط-عملیاتی--docker-compose-پیشنهادی):** استفاده از ایمیج‌های از پیش ساخته‌شده بدون نیاز به کد منبع یا ابزارهای Build.
-*   **[روش دوم — همه-در-یک با Docker (فقط برای آزمایش)](docs/INSTALLATION.md#روش-۲-همه-در-یک--دستور-تکی-docker-فقط-برای-آزمایش):** اجرای سریع همه چیز در یک کانتینر تکی برای ارزیابی.
-*   **[روش سوم — نصب استاندارد (PHP + MariaDB)](docs/INSTALLATION.md#روش-۳-نصب-استاندارد--php--mariadb):** نصب مستقیم روی سرور یا سیستم با PHP، Composer و npm.
+- Docker Compose برای محیط عملیاتی
+- Docker تک‌دستوری برای آزمایش سریع
+- نصب استاندارد با PHP، Composer، npm و MariaDB
 
-### استفاده:
+پس از نصب، برنامه معمولاً از `http://localhost` در دسترس است. اطلاعات ورود پیش‌فرض در محیط‌های آزمایشی:
 
-1.  با مرورگر وب خود به برنامه در http://localhost:8000 (یا پورتی که در فایل `.env` شما مشخص شده است) دسترسی پیدا کنید.
-2.  با نام کاربری پیش فرض وارد شوید (ایمیل: `admin@example.com`، رمز عبور: `password`).
-3.  ویژگی ها و کارکردهای برنامه را بررسی کنید.
+- ایمیل: `admin@example.com`
+- رمز عبور: `password`
 
-### دستورات آرتيزان سفارشی:
+## مستندات
 
-این پروژه شامل چندین دستور آرتيزان سفارشی برای تسهیل کارهای رایج است.
+همه مستندات پروژه فایل Markdown هستند. نسخه فارسی هر README بدون پیشوند است و نسخه انگلیسی همان README با الگوی `README.en.md` نگهداری می‌شود.
 
-**مدیریت سال مالی:**
-    برای جزئیات بیشتر به [FiscalYearExportImport.md](docs/FiscalYearExportImport.md) مراجعه کنید.
-    *   `fiscal-year:export`: داده‌های یک سال مالی مشخص را به یک فایل JSON صادر می‌کند.
-    *   `fiscal-year:import`: داده‌های سال مالی را از یک فایل JSON به یک سال مالی جدید وارد می‌کند.
+| بخش | فارسی | English |
+|---|---|---|
+| فهرست کامل مستندات | [docs/README.md](docs/README.md) | [docs/README.en.md](docs/README.en.md) |
+| راهنمای استفاده کنندگان | [docs/user/README.md](docs/user/README.md) | [docs/user/README.en.md](docs/user/README.en.md) |
+| مفاهیم حسابداری | [docs/accounting/README.md](docs/accounting/README.md) | [docs/accounting/README.en.md](docs/accounting/README.en.md) |
+| راهنمای برنامه‌نویس | [docs/developer/README.md](docs/developer/README.md) | [docs/developer/README.en.md](docs/developer/README.en.md) |
+| حضور و غیاب | [docs/user/attendance/README.md](docs/user/attendance/README.md) | [docs/user/attendance/README.en.md](docs/user/attendance/README.en.md) |
+| حقوق و دستمزد | [docs/user/salary/README.md](docs/user/salary/README.md) | [docs/user/salary/README.en.md](docs/user/salary/README.en.md) |
+| نصب | [docs/INSTALLATION.md](docs/INSTALLATION.md) | [docs/INSTALLATION.en.md](docs/INSTALLATION.en.md) |
+| سال مالی چیست و چگونه ساخته می‌شود | [docs/fiscal-year.md](docs/fiscal-year.md) | [docs/fiscal-year.en.md](docs/fiscal-year.en.md) |
+| خروجی/ورودی سال مالی | [docs/FiscalYearExportImport.md](docs/FiscalYearExportImport.md) | فعلاً همان سند انگلیسی |
 
-### مشارکت:
+## توسعه
 
-ما از مشارکت در پروژه امیر استقبال می کنیم! لطفاً برای دستورالعمل های مربوط به ارسال گزارش باگ، درخواست ویژگی و درخواست های pull به فایل [CONTRIBUTING.md](CONTRIBUTING.md) مراجعه کنید.
+برای توسعه محلی می‌توانید از Laravel Sail یا دستورهای مستقیم استفاده کنید:
 
-### لایسنس:
+```bash
+sail up -d
+sail artisan test
+sail npm run dev
+```
 
-این پروژه تحت لایسنس GPL-3 منتشر شده است. برای جزئیات به فایل [LICENSE](LICENSE) مراجعه کنید.
+در صورت نبود Sail:
 
-### پشتیبانی:
+```bash
+php artisan test
+npm run dev
+```
 
-برای هر گونه سوال یا مشکلی، لطفاً در مخزن گیت هاب یک issue ایجاد کنید.
+پیش از تغییر در منطق حسابداری، [راهنمای برنامه‌نویس](docs/developer/README.md) را بخوانید. تغییرات اثرگذار بر محاسبات مالی باید تست داشته باشند.
+
+## مشارکت
+
+از مشارکت در امیر استقبال می‌کنیم. برای گزارش باگ، پیشنهاد قابلیت و Pull Request، [CONTRIBUTING.md](CONTRIBUTING.md) را ببینید.
+
+## مجوز
+
+این پروژه تحت مجوز GPL-3 منتشر شده است. جزئیات در [LICENSE](LICENSE) قرار دارد.
