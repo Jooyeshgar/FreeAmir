@@ -42,7 +42,7 @@ The full installation guide is available at [docs/INSTALLATION.en.md](docs/INSTA
 - Single-command Docker for quick testing
 - Standard installation with PHP, Composer, npm, and MariaDB
 
-After installation, the app is usually available at `http://localhost:8000`. Default testing credentials:
+After installation, the app is usually available at `http://localhost`. Default testing credentials:
 
 - Email: `admin@example.com`
 - Password: `password`
