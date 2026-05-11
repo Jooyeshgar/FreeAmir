@@ -1,67 +1,72 @@
-## Amir: Free Laravel Accounting Software
+# Amir: Free Laravel Accounting Software
+
 **[نسخه فارسی](README.md)**
 
-**Important Note:** "Amir" is currently under development and has not been fully tested yet. Before using it in a production environment, please ensure that the specific features you intend to use are functioning correctly.
+**Project status:** Amir is under active development and is not yet recommended for production use without independent review and testing. Before using it in Production, validate the workflows you need with test data.
 
-### Introduction:
+## Introduction
 
-**Amir** is a free and open-source accounting software written in Laravel, designed specifically for Iranian businesses and individuals. It aims to provide a user-friendly and comprehensive solution for managing finances, with features tailored to the specific needs of Iranian users, including support for Iranian tax regulations.
+**Amir** is a free and open-source accounting application built with Laravel for Iranian businesses. The project focuses on double-entry bookkeeping, sales and purchase invoices, inventory cost flows, fiscal-year operations, and a Persian-first user experience.
 
-**Features:**
+## Features
 
-*   **Intuitive interface:** Easy to use for businesses of all sizes and technical expertise.
-*   **Multiple languages:** Currently supports Farsi (Persian) with potential for further language expansion.
-*   **Accounting functionalities:**
-    *   Manage income and expenses
-    *   Track invoices and receipts
-    *   Generate financial reports
-    *   Support for Iranian tax regulations
-    *   (Tax Compliance System - under development)
-*   **Warehousing (انبار داری):**
-    *   Manage products and inventory
-    *   Track stock levels and warehouse movements
-    *   Moving weighted average cost flow (perpetual inventory system)
-*   **Attendance (حضور و غیاب):**
-    *   Record employee check-in / check-out
-    *   Track daily and monthly attendance
-    *   Import attendance data from external sources
-*   **Payroll (حقوق و دستمزد):**
-    *   Calculate monthly salaries based on attendance
-    *   Manage deductions, bonuses, and benefits
-    *   Generate payslips and payroll reports
-*   **Open-source:** Free to use, modify, and contribute to.
+- Double-entry accounting with balanced debit and credit documents
+- Invoice, customer, bank, product, and grouping management
+- Inventory accounting with moving weighted average cost flow
+- Fiscal-year operations, including creating fiscal years and importing/exporting fiscal-year data
+- Financial reports and dashboards
+- Persian localization, Jalali calendar support, and common Iranian business requirements
+- Open source under the GPL-3 license
 
-### Installation:
+## Quick Installation
 
-Full installation instructions are available in **[docs/INSTALLATION.en.md](docs/INSTALLATION.en.md)**, covering three options:
+The full installation guide is available at [docs/INSTALLATION.en.md](docs/INSTALLATION.en.md) and covers three paths:
 
-*   **[Option 1 — Production with Docker Compose (Recommended)](docs/INSTALLATION.en.md#option-1-production--docker-compose-recommended):** Use pre-built images with no source code or build tools required.
-*   **[Option 2 — All-in-One Docker (Testing only)](docs/INSTALLATION.en.md#option-2-all-in-one--single-docker-command-testing-only):** Spin up everything in a single container for quick evaluation.
-*   **[Option 3 — Standard Installation (PHP + MariaDB)](docs/INSTALLATION.en.md#option-3-standard-installation--php--mariadb):** Install directly on your server or workstation using PHP, Composer, and npm.
+- Docker Compose for production-style deployment
+- Single-command Docker for quick testing
+- Standard installation with PHP, Composer, npm, and MariaDB
 
-### Usage:
+After installation, the app is usually available at `http://localhost:8000`. Default testing credentials:
 
-1.  Access the application in your web browser at http://localhost:8000 (or the port specified in your `.env` file).
-2.  Log in with the default credentials (email: `admin@example.com`, password: `password`).
-3.  Explore the features and functionalities of the application.
+- Email: `admin@example.com`
+- Password: `password`
 
-### Custom Artisan Commands:
+## Documentation
 
-This project includes several custom Artisan commands to facilitate common tasks.
+All project documentation files are Markdown. Persian README files have no prefix, and their English counterparts use the `README.en.md` pattern.
 
-**Fiscal Year Management:**
-    See [FiscalYearExportImport.md](docs/FiscalYearExportImport.md) for more details.
-    *   `fiscal-year:export`: Exports data from a specific fiscal year to a JSON file.
-    *   `fiscal-year:import`: Imports fiscal year data from a JSON file into a new fiscal year.
+| Section | Persian | English |
+|---|---|---|
+| Full documentation index | [docs/README.md](docs/README.md) | [docs/README.en.md](docs/README.en.md) |
+| Programmer guide | [docs/developer/README.md](docs/developer/README.md) | [docs/developer/README.en.md](docs/developer/README.en.md) |
+| Ordinary user guide | [docs/user/README.md](docs/user/README.md) | [docs/user/README.en.md](docs/user/README.en.md) |
+| Installation | [docs/INSTALLATION.md](docs/INSTALLATION.md) | [docs/INSTALLATION.en.md](docs/INSTALLATION.en.md) |
+| What a fiscal year is and how to create one | [docs/fiscal-year.md](docs/fiscal-year.md) | [docs/fiscal-year.en.md](docs/fiscal-year.en.md) |
+| Fiscal-year export/import | [docs/FiscalYearExportImport.md](docs/FiscalYearExportImport.md) | currently the same English document |
 
-### Contributing:
+## Development
 
-We welcome contributions to the Amir project! Please refer to the [CONTRIBUTING.md](CONTRIBUTING.md) file for guidelines on how to submit bug reports, feature requests, and pull requests.
+For local development, use Laravel Sail or direct commands:
 
-### License:
+```bash
+sail up -d
+sail artisan test
+sail npm run dev
+```
 
-This project is licensed under the GPL-3 License. See the [LICENSE](LICENSE) file for details.
+Without Sail:
 
-### Support:
+```bash
+php artisan test
+npm run dev
+```
 
-For any questions or issues, please feel free to create an issue on the GitHub repository.
+Before changing accounting logic, read the [programmer guide](docs/developer/README.en.md). Changes that affect financial calculations must include tests.
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for bug reports, feature requests, and pull requests.
+
+## License
+
+This project is released under the GPL-3 license. See [LICENSE](LICENSE) for details.
