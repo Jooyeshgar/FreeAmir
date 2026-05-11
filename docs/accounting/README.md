@@ -1,3 +1,5 @@
+<div dir="rtl" align="right">
+
 # مفاهیم حسابداری
 
 **[English version](README.en.md)**  
@@ -20,3 +22,5 @@
 | [inventory-costing.md](../user/inventory-costing.md) | بهای تمام‌شده، روش‌های FIFO/LIFO/میانگین و روش مورد استفاده امیر |
 | [return-sell-return-buy.md](../return-sell-return-buy.md) | ثبت حسابداری برگشت از فروش و برگشت از خرید |
 | [fiscal-year.md](../fiscal-year.md) | مفهوم سال مالی و ایجاد آن در امیر |
+
+</div>

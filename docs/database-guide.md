@@ -1,3 +1,5 @@
+<div dir="rtl" align="right">
+
 # راهنمای دیتابیس امیر
 
 این راهنما ساختار پایگاه داده، روابط بین جداول و نکات مهم برای کار با دیتابیس امیر را توضیح می‌دهد.
@@ -515,3 +517,5 @@ class FiscalYearScope implements Scope
 ### Audit Trail
 
 در حال حاضر در مخزن، مایگریشنی برای ایجاد جدول `audit_logs` وجود ندارد. در صورت نیاز به Audit Trail باید مایگریشن، مدل و منطق مربوط به ثبت تغییرات را متناسب با نیاز پروژه اضافه کنید یا از پکیج‌های آماده (مانند [spatie/laravel-activitylog](https://github.com/spatie/laravel-activitylog)) بهره ببرید.
+
+</div>
