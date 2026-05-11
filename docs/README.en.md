@@ -8,8 +8,9 @@ This directory is the Markdown documentation hub for Amir. To keep languages ali
 
 | Path | Audience | Description |
 |---|---|---|
-| [Programmer guide](developer/README.en.md) | Developers | Architecture, database, testing, accounting basics for development, and scripts |
-| [Ordinary user guide](user/README.en.md) | Non-developer users | Accounting concepts, inventory, moving weighted average, purchase/sales returns, and fiscal years |
+| [Ordinary user guide](user/README.en.md) | Non-developer users | Day-to-day operations, attendance, salary, inventory, and fiscal years |
+| [Accounting concepts](accounting/README.en.md) | Users and developers | Accounting concepts, COGS, purchase/sales returns, and fiscal years |
+| [Programmer guide](developer/README.en.md) | Developers | Architecture, database, testing, and scripts |
 | [Installation guide](INSTALLATION.en.md) | System admins and developers | Installation with Docker Compose, single-command Docker, or standard setup |
 | [Fiscal year](fiscal-year.en.md) | Everyone | What a fiscal year is and how to create one in Amir |
 | [Fiscal-year export/import](FiscalYearExportImport.md) | System admins and developers | The `fiscal-year:export` and `fiscal-year:import` commands |
@@ -19,14 +20,15 @@ This directory is the Markdown documentation hub for Amir. To keep languages ali
 | File | Category | Description |
 |---|---|---|
 | [INSTALLATION.md](INSTALLATION.md) / [INSTALLATION.en.md](INSTALLATION.en.md) | Installation | Persian and English installation guides |
-| [developer/README.md](developer/README.md) / [developer/README.en.md](developer/README.en.md) | Programmer | Secondary index for technical documentation |
 | [user/README.md](user/README.md) / [user/README.en.md](user/README.en.md) | Ordinary user | Secondary index for practical and accounting documentation |
+| [accounting/README.md](accounting/README.md) / [accounting/README.en.md](accounting/README.en.md) | Accounting | Accounting concepts index |
+| [developer/README.md](developer/README.md) / [developer/README.en.md](developer/README.en.md) | Programmer | Secondary index for technical documentation |
+| [user/attendance/README.md](user/attendance/README.md) / [user/attendance/README.en.md](user/attendance/README.en.md) | Attendance | Work shifts, logs, imports, and monthly attendance |
+| [user/salary/README.md](user/salary/README.md) / [user/salary/README.en.md](user/salary/README.en.md) | Salary and payroll | Payroll elements, salary decrees, and payrolls |
+| [user/inventory-costing.md](user/inventory-costing.md) / [user/inventory-costing.en.md](user/inventory-costing.en.md) | Inventory accounting | COGS, costing methods, and Amir's selected method |
 | [fiscal-year.md](fiscal-year.md) / [fiscal-year.en.md](fiscal-year.en.md) | Fiscal year | Fiscal-year concept and creation guide |
 | [FiscalYearExportImport.md](FiscalYearExportImport.md) | Fiscal year | Exporting and importing fiscal-year data |
-| [accounting-basics.md](accounting-basics.md) | Accounting | Accounting basics for developers |
-| [inventory-accounting-guide.md](inventory-accounting-guide.md) | Inventory accounting | Inventory and cost of goods |
-| [moving-weighted-average.md](moving-weighted-average.md) | Inventory accounting | Moving weighted average design and implementation |
-| [Registering-Sales-of-Goods-in-Permanent-System.md](Registering-Sales-of-Goods-in-Permanent-System.md) | Inventory accounting | Recording sales of goods in a perpetual system |
+| [accounting-basics.md](accounting-basics.md) | Accounting | Accounting basics, debit, credit, and documents |
 | [return-sell-return-buy.md](return-sell-return-buy.md) | Inventory accounting | Sales returns and purchase returns |
 | [project-structure.md](project-structure.md) | Technical | Laravel project structure |
 | [database-guide.md](database-guide.md) | Technical | Database structure and relationships |

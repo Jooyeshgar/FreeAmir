@@ -10,13 +10,29 @@
 
 ## قابلیت‌ها
 
-- حسابداری دوبل با اسناد متوازن بدهکار و بستانکار
-- مدیریت فاکتور، مشتری، بانک، کالا و گروه‌بندی‌ها
-- انبارداری و محاسبه بهای تمام‌شده با روش میانگین موزون متحرک
-- عملیات سال مالی، شامل ایجاد سال مالی و انتقال/ورود و خروج داده
-- گزارش‌ها و داشبوردهای مالی
-- پشتیبانی از فارسی، تقویم جلالی و نیازهای رایج کسب‌وکارهای ایرانی
-- متن‌باز با مجوز GPL-3
+**ویژگی ها:**
+
+*   **رابط کاربری بصری:** استفاده آسان برای کسب و کارها با هر اندازه و دانش فنی.
+*   **چند زبانه:** در حال حاضر از فارسی پشتیبانی می‌کند (با قابلیت اضافه شدن زبان‌های دیگر در آینده).
+*   **کارکردهای حسابداری:**
+    *   مدیریت درآمد و هزینه
+    *   پیگیری فاکتورها و رسیدها
+    *   تهیه گزارشات مالی
+    *   پشتیبانی از قوانین مالیاتی ایران
+    *   (سامانه مودیان - در حال توسعه)
+*   **انبارداری:**
+    *   مدیریت محصولات و موجودی کالا
+    *   پیگیری سطح موجودی و گردش انبار
+    *   محاسبه بهای تمام‌شده به روش میانگین موزون متحرک (سیستم دائمی)
+*   **حضور و غیاب:**
+    *   ثبت ورود و خروج پرسنل
+    *   پیگیری حضور روزانه و ماهانه
+    *   وارد کردن اطلاعات حضور و غیاب از منابع خارجی
+*   **حقوق و دستمزد:**
+    *   محاسبه حقوق ماهانه بر اساس حضور و غیاب
+    *   مدیریت کسورات، پاداش‌ها و مزایا
+    *   تهیه فیش حقوقی و گزارشات حقوق و دستمزد
+*   **آزاد (متن باز):** استفاده، اصلاح و مشارکت در آن رایگان است.
 
 ## نصب سریع
 
@@ -38,8 +54,11 @@
 | بخش | فارسی | English |
 |---|---|---|
 | فهرست کامل مستندات | [docs/README.md](docs/README.md) | [docs/README.en.md](docs/README.en.md) |
+| راهنمای استفاده کنندگان | [docs/user/README.md](docs/user/README.md) | [docs/user/README.en.md](docs/user/README.en.md) |
+| مفاهیم حسابداری | [docs/accounting/README.md](docs/accounting/README.md) | [docs/accounting/README.en.md](docs/accounting/README.en.md) |
 | راهنمای برنامه‌نویس | [docs/developer/README.md](docs/developer/README.md) | [docs/developer/README.en.md](docs/developer/README.en.md) |
-| راهنمای کاربر عادی | [docs/user/README.md](docs/user/README.md) | [docs/user/README.en.md](docs/user/README.en.md) |
+| حضور و غیاب | [docs/user/attendance/README.md](docs/user/attendance/README.md) | [docs/user/attendance/README.en.md](docs/user/attendance/README.en.md) |
+| حقوق و دستمزد | [docs/user/salary/README.md](docs/user/salary/README.md) | [docs/user/salary/README.en.md](docs/user/salary/README.en.md) |
 | نصب | [docs/INSTALLATION.md](docs/INSTALLATION.md) | [docs/INSTALLATION.en.md](docs/INSTALLATION.en.md) |
 | سال مالی چیست و چگونه ساخته می‌شود | [docs/fiscal-year.md](docs/fiscal-year.md) | [docs/fiscal-year.en.md](docs/fiscal-year.en.md) |
 | خروجی/ورودی سال مالی | [docs/FiscalYearExportImport.md](docs/FiscalYearExportImport.md) | فعلاً همان سند انگلیسی |

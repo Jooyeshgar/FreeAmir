@@ -10,13 +10,29 @@
 
 ## Features
 
-- Double-entry accounting with balanced debit and credit documents
-- Invoice, customer, bank, product, and grouping management
-- Inventory accounting with moving weighted average cost flow
-- Fiscal-year operations, including creating fiscal years and importing/exporting fiscal-year data
-- Financial reports and dashboards
-- Persian localization, Jalali calendar support, and common Iranian business requirements
-- Open source under the GPL-3 license
+**Features:**
+
+- **Visual user interface:** Easy to use for businesses with different sizes and technical backgrounds.
+- **Multilingual:** Persian is currently supported, with room for additional languages in the future.
+- **Accounting functions:**
+  - Income and expense management
+  - Invoice and receipt tracking
+  - Financial reports
+  - Support for common Iranian tax requirements
+  - Taxpayer system integration under development
+- **Inventory:**
+  - Product and inventory management
+  - Stock level and inventory movement tracking
+  - Cost of goods calculation with moving weighted average in a perpetual inventory system
+- **Attendance:**
+  - Employee entry and exit records
+  - Daily and monthly attendance tracking
+  - Attendance import from external sources
+- **Salary and payroll:**
+  - Monthly payroll calculation based on attendance
+  - Deductions, bonuses, and benefits management
+  - Payslips and payroll reports
+- **Free and open source:** Free to use, modify, and contribute to.
 
 ## Quick Installation
 
@@ -38,8 +54,11 @@ All project documentation files are Markdown. Persian README files have no prefi
 | Section | Persian | English |
 |---|---|---|
 | Full documentation index | [docs/README.md](docs/README.md) | [docs/README.en.md](docs/README.en.md) |
-| Programmer guide | [docs/developer/README.md](docs/developer/README.md) | [docs/developer/README.en.md](docs/developer/README.en.md) |
 | Ordinary user guide | [docs/user/README.md](docs/user/README.md) | [docs/user/README.en.md](docs/user/README.en.md) |
+| Accounting concepts | [docs/accounting/README.md](docs/accounting/README.md) | [docs/accounting/README.en.md](docs/accounting/README.en.md) |
+| Programmer guide | [docs/developer/README.md](docs/developer/README.md) | [docs/developer/README.en.md](docs/developer/README.en.md) |
+| Attendance | [docs/user/attendance/README.md](docs/user/attendance/README.md) | [docs/user/attendance/README.en.md](docs/user/attendance/README.en.md) |
+| Salary and payroll | [docs/user/salary/README.md](docs/user/salary/README.md) | [docs/user/salary/README.en.md](docs/user/salary/README.en.md) |
 | Installation | [docs/INSTALLATION.md](docs/INSTALLATION.md) | [docs/INSTALLATION.en.md](docs/INSTALLATION.en.md) |
 | What a fiscal year is and how to create one | [docs/fiscal-year.md](docs/fiscal-year.md) | [docs/fiscal-year.en.md](docs/fiscal-year.en.md) |
 | Fiscal-year export/import | [docs/FiscalYearExportImport.md](docs/FiscalYearExportImport.md) | currently the same English document |

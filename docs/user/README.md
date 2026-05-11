@@ -1,4 +1,4 @@
-# راهنمای کاربر عادی امیر
+# راهنمای استفاده کنندگان امیر
 
 **[English version](README.en.md)**  
 **[بازگشت به فهرست مستندات](../README.md)**
@@ -9,19 +9,24 @@
 
 1. [مبانی حسابداری](../accounting-basics.md)
 2. [سال مالی چیست و چگونه ساخته می‌شود](../fiscal-year.md)
-3. [راهنمای حسابداری موجودی کالا](../inventory-accounting-guide.md)
-4. [میانگین موزون متحرک](../moving-weighted-average.md)
-5. [ثبت فروش کالا در سیستم دائمی](../Registering-Sales-of-Goods-in-Permanent-System.md)
+3. [بهای تمام‌شده کالا و روش محاسبه در امیر](inventory-costing.md)
+4. [راهنمای حضور و غیاب](attendance/README.md)
+5. [راهنمای حقوق و دستمزد](salary/README.md)
 6. [برگشت از فروش و برگشت از خرید](../return-sell-return-buy.md)
+
+## عملیات برنامه
+
+| فایل | موضوع |
+|---|---|
+| [attendance/README.md](attendance/README.md) | شیفت کاری، لاگ‌های حضور و غیاب، ورود اطلاعات، کارکرد ماهانه و تولید حقوق |
+| [salary/README.md](salary/README.md) | جدول مالیات، محل کار، عوامل حقوقی، احکام حقوقی و فیش حقوقی |
 
 ## مفاهیم حسابداری
 
 | فایل | موضوع |
 |---|---|
 | [accounting-basics.md](../accounting-basics.md) | مفاهیم پایه حسابداری، بدهکار، بستانکار و سند حسابداری |
-| [inventory-accounting-guide.md](../inventory-accounting-guide.md) | موجودی کالا، بهای تمام‌شده و روش دائمی |
-| [moving-weighted-average.md](../moving-weighted-average.md) | میانگین موزون متحرک و اثر خرید و فروش روی بهای کالا |
-| [Registering-Sales-of-Goods-in-Permanent-System.md](../Registering-Sales-of-Goods-in-Permanent-System.md) | ثبت فروش کالا و بهای تمام‌شده در سیستم دائمی |
+| [inventory-costing.md](inventory-costing.md) | بهای تمام‌شده، روش‌های FIFO/LIFO/میانگین و روش میانگین موزون متحرک در امیر |
 | [return-sell-return-buy.md](../return-sell-return-buy.md) | ثبت حسابداری برگشت از فروش و برگشت از خرید |
 
 ## عملیات کاربردی
@@ -34,4 +39,4 @@
 
 ## نکته
 
-بعضی فایل‌های حسابداری در حال حاضر برای توسعه‌دهنده‌ها هم نوشته شده‌اند و ممکن است نمونه کد یا ساختار دیتابیس داشته باشند. برای استفاده روزمره، روی تعریف مفاهیم، مثال‌های عددی و نتیجه ثبت‌ها تمرکز کنید.
+مستندات فنی و داخلی پروژه در [راهنمای توسعه‌دهندگان](../developer/README.md) نگهداری می‌شود. مستندات این بخش برای استفاده روزمره و درک مفاهیم کاربردی نوشته شده‌اند.

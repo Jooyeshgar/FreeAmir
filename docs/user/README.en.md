@@ -9,19 +9,24 @@ This index is for users who want to understand Amir's accounting concepts and pr
 
 1. [Accounting basics](../accounting-basics.md)
 2. [What a fiscal year is and how to create one](../fiscal-year.en.md)
-3. [Inventory accounting guide](../inventory-accounting-guide.md)
-4. [Moving weighted average](../moving-weighted-average.md)
-5. [Recording sales of goods in a perpetual system](../Registering-Sales-of-Goods-in-Permanent-System.md)
+3. [Inventory costing and COGS in Amir](inventory-costing.en.md)
+4. [Attendance guide](attendance/README.en.md)
+5. [Salary and payroll guide](salary/README.en.md)
 6. [Sales returns and purchase returns](../return-sell-return-buy.md)
+
+## Product Operations
+
+| File | Topic |
+|---|---|
+| [attendance/README.en.md](attendance/README.en.md) | Work shifts, attendance logs, imports, monthly attendance, and payroll creation |
+| [salary/README.en.md](salary/README.en.md) | Tax slabs, work sites, payroll elements, salary decrees, and payrolls |
 
 ## Accounting Concepts
 
 | File | Topic |
 |---|---|
 | [accounting-basics.md](../accounting-basics.md) | Basic accounting concepts, debit, credit, and accounting documents |
-| [inventory-accounting-guide.md](../inventory-accounting-guide.md) | Inventory, cost of goods, and the perpetual system |
-| [moving-weighted-average.md](../moving-weighted-average.md) | Moving weighted average and how purchases and sales affect product cost |
-| [Registering-Sales-of-Goods-in-Permanent-System.md](../Registering-Sales-of-Goods-in-Permanent-System.md) | Recording sales and cost of goods in a perpetual system |
+| [inventory-costing.en.md](inventory-costing.en.md) | COGS, FIFO/LIFO/average methods, and Amir's moving weighted average method |
 | [return-sell-return-buy.md](../return-sell-return-buy.md) | Accounting records for sales returns and purchase returns |
 
 ## Practical Operations
@@ -34,4 +39,4 @@ This index is for users who want to understand Amir's accounting concepts and pr
 
 ## Note
 
-Some accounting files are currently also written for developers and may include code examples or database structure. For everyday use, focus on definitions, numeric examples, and the effect of each accounting entry.
+Technical and internal project documentation is kept in the [developer guide](../developer/README.en.md). This section is written for everyday use and practical accounting concepts.

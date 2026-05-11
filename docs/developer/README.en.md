@@ -7,14 +7,12 @@ This index is for developers and contributors. If you plan to change Laravel cod
 
 ## Suggested Reading Path
 
-1. [Accounting basics](../accounting-basics.md)
-2. [Project structure](../project-structure.md)
-3. [Database guide](../database-guide.md)
-4. [Testing guide](../testing-guide.md)
-5. [Inventory accounting guide](../inventory-accounting-guide.md)
-6. [Moving weighted average](../moving-weighted-average.md)
-7. [Fiscal year](../fiscal-year.en.md)
-8. [Fiscal-year export/import](../FiscalYearExportImport.md)
+1. [Project structure](../project-structure.md)
+2. [Database guide](../database-guide.md)
+3. [Testing guide](../testing-guide.md)
+4. [Accounting basics](../accounting-basics.md)
+5. [Fiscal year](../fiscal-year.en.md)
+6. [Fiscal-year export/import](../FiscalYearExportImport.md)
 
 ## Technical Documentation
 
@@ -30,9 +28,7 @@ This index is for developers and contributors. If you plan to change Laravel cod
 | File | Purpose |
 |---|---|
 | [accounting-basics.md](../accounting-basics.md) | Debit/credit concepts, balanced documents, and transaction storage |
-| [inventory-accounting-guide.md](../inventory-accounting-guide.md) | Inventory accounting and cost of goods logic |
-| [moving-weighted-average.md](../moving-weighted-average.md) | Moving weighted average design and calculation details |
-| [Registering-Sales-of-Goods-in-Permanent-System.md](../Registering-Sales-of-Goods-in-Permanent-System.md) | Recording sales of goods in a perpetual system |
+| [user/inventory-costing.en.md](../user/inventory-costing.en.md) | User-facing explanation of COGS and the moving weighted average method |
 | [return-sell-return-buy.md](../return-sell-return-buy.md) | Recording sales returns and purchase returns |
 | [fiscal-year.en.md](../fiscal-year.en.md) | Fiscal-year concept and creation flow |
 | [FiscalYearExportImport.md](../FiscalYearExportImport.md) | Fiscal-year export and import commands |
