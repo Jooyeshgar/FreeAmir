@@ -22,7 +22,6 @@ class Invoice extends Model
         'customer_id',
         'creator_id',
         'subtraction',
-        'tax',
         'ship_date',
         'ship_via',
         'description',
@@ -34,6 +33,7 @@ class Invoice extends Model
         'title',
         'returned_invoice_id',
         'company_id',
+        'taxID',
     ];
 
     protected $casts = [
@@ -50,6 +50,11 @@ class Invoice extends Model
         static::creating(function ($model) {
             $model->company_id = getActiveCompany();
         });
+    }
+
+    public function moadianHistories()
+    {
+        return $this->hasMany(MoadianHistory::class, 'invoice_id');
     }
 
     public function document()

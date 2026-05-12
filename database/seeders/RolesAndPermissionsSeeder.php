@@ -134,6 +134,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'invoices.search-product-service',
             'invoices.approve',
 
+            'invoices.moadian-histories.index',
+            'invoices.moadian-histories.show',
+            'invoices.send-moadian',
+
             'ancillary-costs.index',
             'ancillary-costs.create',
             'ancillary-costs.store',

@@ -37,6 +37,7 @@
                 <li><a href="{{ route('customers.create') }}">{{ __('Add Customer') }}</a></li>
                 <li><a href="{{ route('ancillary-costs.index') }}">{{ __('Ancillary Cost List') }}</a></li>
                 <li><a href="{{ route('invoices.inactive') }}">{{ __('Activate Confirmed Invoices') }}</a></li>
+                <li><a href="{{ route('invoices.moadian-histories.index') }}">{{ __('Moadian Histories') }}</a></li>
             </ul>
         </details>
     </li>

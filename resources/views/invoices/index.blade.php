@@ -201,10 +201,31 @@
                                         $invoice->status->isUnapproved() ||
                                         $invoice->status->isApprovedInactive();
                                     $canUnapprove = $invoice->status->isApproved();
-                                    $canChangeStatus = $canApprove || $canUnapprove;
+                                    
+                                    $hasMoadianSuccess = $invoice->moadianHistories->contains(function ($history) {
+                                        $data = json_decode($history->data, true);
+
+                                        return strtoupper($data['status'] ?? '') === 'SUCCESS';
+                                    });
+                                    
+                                    $canChangeStatus = ($canApprove || $canUnapprove) && ! $hasMoadianSuccess;
                                 @endphp
                                 <a href="{{ route('invoices.show', $invoice) }}" target="_blank" rel="noopener" class="btn btn-sm btn-info">{{ __('Show') }}</a>
-
+                                @can('invoices.send-moadian')
+                                    @if ($invoice->invoice_type->isSell())
+                                        @if ($invoice->status->isApproved() && ! $hasMoadianSuccess)
+                                            <form action="{{ route('invoices.send-moadian', $invoice) }}" method="POST" class="inline-block">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm">{{ __('Send Moadian') }}</button>
+                                            </form>
+                                        @else
+                                            <span class="tooltip" data-tip="{{ __('Approve the invoice first to send to moadian') }}">
+                                                <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
+                                                    title="{{ __('Approve the invoice first to send to moadian') }}">{{ __('Send Moadian') }}</button>
+                                            </span>
+                                        @endif
+                                    @endif
+                                @endcan
                                 @can('invoices.approve')
                                     @if ($isSellWorkflow && ($invoice->status->isPreInvoice() || $invoice->status->isRejected()))
                                         <form action="{{ route('invoices.change-status', [$invoice, 'ready_to_approve']) }}" method="POST" class="inline-block m-0">
@@ -239,7 +260,7 @@
                                     @endif
                                 @endcan
 
-                                @if (!$invoice->status->isApproved())
+                                @if (!$invoice->status->isApproved() && ! $hasMoadianSuccess)
                                     <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                     <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" class="inline-block m-0">
                                         @csrf

@@ -10,7 +10,7 @@
     <table width="100%">
         <tbody>
             <tr>
-                <td class="invoiceInfo"></td>
+                <td class="invoiceInfo">{{ convertToFarsi($invoice->taxID) }}</td>
                 <td class="invoiceType" rowspan="2">
                     @if ($invoice->invoice_type == App\Enums\InvoiceType::BUY)
                         صورتحساب خرید کالا و خدمات

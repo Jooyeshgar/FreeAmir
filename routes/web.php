@@ -88,11 +88,14 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::put('{invoice}/ancillary-costs/{ancillary_cost}', [Controllers\AncillaryCostController::class, 'update'])->name('invoices.ancillary-costs.update');
         Route::delete('{invoice}/ancillary-costs/{ancillary_cost}', [Controllers\AncillaryCostController::class, 'destroy'])->name('invoices.ancillary-costs.destroy');
     });
+    Route::get('invoices/moadian-histories', [Controllers\MoadianHistoryController::class, 'index'])->name('invoices.moadian-histories.index');
     Route::resource('invoices', Controllers\InvoiceController::class)->except(['index']);
+    Route::get('invoices/{invoice}/moadian-histories', [Controllers\MoadianHistoryController::class, 'index'])->name('invoices.moadian-histories.show');
     Route::get('invoices/{invoice}/conflicts', [Controllers\InvoiceController::class, 'conflicts'])->name('invoices.conflicts');
     Route::get('invoices/{invoice}/conflicts/{type}', [Controllers\InvoiceController::class, 'showMoreConflictsByType'])->name('invoices.conflicts.more');
     Route::get('invoices/{invoice}/groupAction', [Controllers\InvoiceController::class, 'groupAction'])->name('invoices.groupAction');
     Route::get('invoices/{invoice}/print', [Controllers\InvoiceController::class, 'print'])->name('invoices.print');
+    Route::post('invoices/{invoice}/send-moadian', [Controllers\InvoiceController::class, 'sendMoadian'])->name('invoices.send-moadian');
     Route::post('invoices/{invoice}/change-status/{status}', [Controllers\InvoiceController::class, 'changeStatus'])->name('invoices.change-status')->middleware('can:invoices.approve');
     Route::group(['prefix' => 'management'], function () {
         Route::post('users/{user}/create-employee', [Controllers\Management\UserController::class, 'createEmployee'])

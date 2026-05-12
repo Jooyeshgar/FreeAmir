@@ -16,6 +16,7 @@ use App\Models\ServiceGroup;
 use App\Services\AncillaryCostService;
 use App\Services\GroupActionService;
 use App\Services\InvoiceService;
+use App\Services\MoadianService;
 use DB;
 use Illuminate\Http\Request;
 use PDF;
@@ -25,7 +26,8 @@ class InvoiceController extends Controller
     public function __construct(
         private readonly InvoiceService $invoiceService,
         private readonly AncillaryCostService $ancillaryCostService,
-        private readonly GroupActionService $groupActionService
+        private readonly GroupActionService $groupActionService,
+        private readonly MoadianService $moadianService,
     ) {
         $this->middleware('permission:invoices.view', ['only' => ['index']]);
         $this->middleware('permission:invoices.create', ['only' => ['create', 'store']]);
@@ -715,5 +717,35 @@ class InvoiceController extends Controller
         }
 
         return $map;
+    }
+
+    public function sendMoadian(Request $request, Invoice $invoice)
+    {
+        if (! $invoice->status->isApproved()) {
+            return redirect()->back()->with('error', __('Cannot send a unapproved invoice to moadian.'));
+        }
+
+        if (! $invoice->invoice_type->isSell()) {
+            return redirect()->back()->with('error', __('Cannot send a buy or return buy invoice to moadian.'));
+        }
+
+        $hasMoadianSuccess = $invoice->moadianHistories->contains(function ($history) {
+            $data = json_decode($history->data, true);
+
+            return strtoupper($data['status'] ?? '') === 'SUCCESS';
+        });
+
+        if (! $hasMoadianSuccess) {
+            return redirect()->back()->with('error', __('Cannot send an invoice to moadian that already has successful status from moadian.'));
+        }
+
+        $validated = $request->validate([
+            'transaction_reference_number' => 'nullable|string|max:14',
+            'transaction_date' => 'required|date',
+        ]);
+
+        $this->moadianService->sendInvoice($invoice, $validated['transaction_reference_number'], $validated['transaction_date']);
+
+        return redirect()->route('invoices.moadian-histories.show', $invoice)->with('success', __('Inactive invoices approved successfully.'));
     }
 }

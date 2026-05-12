@@ -27,6 +27,9 @@
                     </svg>
                     {{ $invoice->status->label() }}
                 </span>
+                @if ($invoice->invoice_type->isSell() && $invoice->status->isApproved())
+                    <a class="badge badge-lg link" href="{{ route('invoices.moadian-histories.show', $invoice) }}">{{ __('Moadian Histories') }}</a>
+                @endif
             </div>
         </div>
 
@@ -567,8 +570,32 @@
                             $invoice->status->isUnapproved() ||
                             $invoice->status->isApprovedInactive();
                         $canUnapprove = $invoice->status->isApproved();
-                        $canChangeStatus = $canApprove || $canUnapprove;
+                        
+                        $hasMoadianSuccess = $invoice->moadianHistories->contains(function ($history) {
+                            $data = json_decode($history->data, true);
+
+                            return strtoupper($data['status'] ?? '') === 'SUCCESS';
+                        });
+
+                        $canChangeStatus = ($canApprove || $canUnapprove) && ! $hasMoadianSuccess;
                     @endphp
+
+                    @can('invoices.send-moadian')
+                        @if ($invoice->invoice_type->isSell())
+                            @if ($invoice->status->isApproved() && ! $hasMoadianSuccess)
+                                <form action="{{ route('invoices.send-moadian', $invoice) }}" method="POST" class="inline-block">
+                                    @csrf
+                                    <button type="submit" class="btn">{{ __('Send Moadian') }}</button>
+                                </form>
+                            @else
+                                <span class="tooltip" data-tip="{{ __('Approve the invoice first to send to moadian') }}">
+                                    <button class="btn btn-error btn-disabled cursor-not-allowed"
+                                        title="{{ __('Approve the invoice first to send to moadian') }}">{{ __('Send Moadian') }}</button>
+                                </span>
+                            @endif
+                        @endif
+                    @endcan
+
                     <a href="{{ route('invoices.print', $invoice) }}" class="btn btn-outline gap-2" target="_blank" rel="noopener">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -612,7 +639,7 @@
                         @endif
                     @endcan
 
-                    @if (!$invoice->status->isApproved())
+                    @if (! $invoice->status->isApproved() && ! $hasMoadianSuccess)
                         <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-primary gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

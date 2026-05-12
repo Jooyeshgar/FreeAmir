@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\CustomerType;
 use App\Models\Customer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Enum;
 
 class StoreCustomerRequest extends FormRequest
 {
@@ -67,6 +69,7 @@ class StoreCustomerRequest extends FormRequest
             'acc_name_2' => 'nullable|string|max:50|regex:/^[\w\d\s]*$/u',
             'acc_no_2' => 'nullable|string|max:30|regex:/^[\w\d\s]*$/u',
             'acc_bank_2' => 'nullable|string|max:50|regex:/^[\w\d\s]*$/u',
+            'type' => ['required', new Enum(CustomerType::class)],
         ];
     }
 }
