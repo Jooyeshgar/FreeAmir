@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CustomerType;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -36,16 +37,13 @@ class Customer extends Model
         'acc_name_2',
         'acc_no_2',
         'acc_bank_2',
-        'type_buyer',
-        'type_seller',
-        'type_mate',
-        'type_agent',
         'introducer_id',
         'commission',
         'marked',
         'reason',
         'disc_rate',
         'company_id',
+        'type',
     ];
 
     protected $attributes = [
@@ -53,10 +51,7 @@ class Customer extends Model
         'cell' => '',
         'balance' => 0,
         'credit' => 0,
-        'type_buyer' => 0,
-        'type_seller' => 0,
-        'type_mate' => 0,
-        'type_agent' => 0,
+        'type' => CustomerType::class,
         'commission' => '',
         'marked' => 0,
         'reason' => '',

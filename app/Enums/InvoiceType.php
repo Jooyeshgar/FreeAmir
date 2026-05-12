@@ -10,26 +10,24 @@ enum InvoiceType: string
     case SELL = 'sell';
     case RETURN_BUY = 'return_buy';
     case RETURN_SELL = 'return_sell';
+    case VOID = 'void';
 
     /**
      * Get translated label for the invoice type.
-     *
-     * @return string
      */
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::BUY => Lang::get('Buy'),
             self::SELL => Lang::get('Sell'),
             self::RETURN_BUY => Lang::get('Return from Buy'),
             self::RETURN_SELL => Lang::get('Return from Sell'),
+            self::VOID => Lang::get('Void'),
         };
     }
 
     /**
      * Check if this is a sell type (sell or return from sell).
-     *
-     * @return bool
      */
     public function isSell(): bool
     {
@@ -38,8 +36,6 @@ enum InvoiceType: string
 
     /**
      * Check if this is a buy type (buy or return from buy).
-     *
-     * @return bool
      */
     public function isBuy(): bool
     {
@@ -48,8 +44,6 @@ enum InvoiceType: string
 
     /**
      * Check if this is a return type (return from buy or return from sell).
-     *
-     * @return bool
      */
     public function isReturn(): bool
     {
@@ -58,13 +52,12 @@ enum InvoiceType: string
 
     /**
      * Get all invoice types as an associative array for dropdowns.
-     *
-     * @return array
      */
     public static function options(): array
     {
         return array_reduce(self::cases(), function ($carry, $case) {
             $carry[$case->value] = $case->label();
+
             return $carry;
         }, []);
     }
