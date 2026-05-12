@@ -9,7 +9,6 @@ enum CustomerType: string
     case CIVIL_PARTNERSHIP = 'civil_partnership';
     case FOREIGN_NATIONAL = 'foreign_national';
 
-    // Get translated label
     public function label(): string
     {
         return match ($this) {
@@ -20,27 +19,12 @@ enum CustomerType: string
         };
     }
 
-    public static function labels(): array
-    {
-        return array_map(
-            fn (self $case) => $case->label(),
-            self::cases()
-        );
-    }
-
     public static function options(): array
     {
-        return array_combine(
-            self::values(),
-            self::labels()
-        );
-    }
+        return array_reduce(self::cases(), function ($carry, $case) {
+            $carry[$case->value] = $case->label();
 
-    public static function values(): array
-    {
-        return array_map(
-            fn (self $case) => $case->value,
-            self::cases()
-        );
+            return $carry;
+        }, []);
     }
 }

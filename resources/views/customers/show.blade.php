@@ -23,8 +23,9 @@
                         </svg>
                         <a href="{{ route('transactions.index', ['subject_id' => $customer->subject_id]) }}">{{ $customer->subject->formattedCode() }}</a>
                     </span>
-                    </a>
                 @endif
+
+                <span class="badge badge-lg badge-ghost gap-2">{{ $customer->type->label() }}</span>
             </div>
         </div>
 

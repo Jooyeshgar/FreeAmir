@@ -51,7 +51,6 @@ class Customer extends Model
         'cell' => '',
         'balance' => 0,
         'credit' => 0,
-        'type' => CustomerType::class,
         'commission' => '',
         'marked' => 0,
         'reason' => '',
@@ -61,6 +60,10 @@ class Customer extends Model
         'responsible' => '',
         'desc' => '',
         'postal_code' => '',
+    ];
+
+    protected $casts = [
+        'type' => CustomerType::class,
     ];
 
     public static function booted(): void

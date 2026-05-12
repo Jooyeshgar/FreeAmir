@@ -37,7 +37,7 @@
                     <span class="label"> {{ __('Type') }}</span>
                     <select name="type" id="type" class="select">
                         @foreach (App\Enums\CustomerType::cases() as $type)
-                            <option value="{{ $type->value }}" {{ old('type', $selected == $key || $selected == $value) ? 'selected' : '' }}>{{ $type->label() }}</option>
+                            <option value="{{ $type->value }}" @selected(old('type', $customer->type ?? '') == $type)>{{ $type->label() }}</option>
                         @endforeach
                     </select>
                 </div>
