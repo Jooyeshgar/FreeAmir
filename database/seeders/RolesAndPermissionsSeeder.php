@@ -3,12 +3,12 @@
 namespace Database\Seeders;
 
 use App\Models\Employee;
-use App\Models\Role;
 use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
@@ -353,10 +353,10 @@ class RolesAndPermissionsSeeder extends Seeder
             Permission::firstOrCreate(['name' => $permission]);
         }
 
-        $superAdmin = Role::firstOrCreate(['name' => 'Super-Admin']);
+        $superAdmin = Role::firstOrCreate(['name' => __('Super-Admin')]);
         $superAdmin->syncPermissions(Permission::all());
 
-        $accountant = Role::firstOrCreate(['name' => 'Accountant']);
+        $accountant = Role::firstOrCreate(['name' => __('Accountant')]);
 
         $accountantPermissions = Permission::where('name', 'NOT LIKE', 'users.%')
             ->where('name', 'NOT LIKE', 'roles.%')
@@ -366,7 +366,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $accountant->syncPermissions($accountantPermissions);
 
-        $warehouse = Role::firstOrCreate(['name' => 'Warehousekeeper']);
+        $warehouse = Role::firstOrCreate(['name' => __('Warehousekeeper')]);
 
         $warehousePermissions = Permission::where(function ($q) {
             $q->where('name', 'LIKE', 'products.%')
@@ -378,7 +378,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $warehouse->syncPermissions($warehousePermissions);
 
-        $seller = Role::firstOrCreate(['name' => 'Seller']);
+        $seller = Role::firstOrCreate(['name' => __('Seller')]);
 
         $sellerPermissions = Permission::where(function ($q) {
             $q->where('name', 'LIKE', 'invoices.%')
@@ -401,7 +401,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $seller->syncPermissions($sellerPermissions);
 
-        $employeeRole = Role::firstOrCreate(['name' => 'Employee']);
+        $employeeRole = Role::firstOrCreate(['name' => __('Employee')]);
 
         $employeePermissions = Permission::where('name', 'LIKE', 'employee-portal.%')
             ->orWhere('name', 'change-company')
@@ -410,13 +410,13 @@ class RolesAndPermissionsSeeder extends Seeder
         $employeeRole->syncPermissions($employeePermissions);
 
         $users = [
-            'admin' => ['Super-Admin', 'Employee'],
-            'accountant' => ['Accountant', 'Employee'],
-            'seller' => ['Seller', 'Employee'],
-            'warehouse' => ['Warehousekeeper', 'Employee'],
-            'seller-warehouse' => ['Seller', 'Warehousekeeper', 'Employee'],
-            'accountant-seller-warehouse' => ['Accountant', 'Seller', 'Warehousekeeper', 'Employee'],
-            'employee' => ['Employee'],
+            'admin' => [__('Super-Admin'), __('Employee')],
+            'accountant' => [__('Accountant'), __('Employee')],
+            'seller' => [__('Seller'), __('Employee')],
+            'warehouse' => [__('Warehousekeeper'), __('Employee')],
+            'seller-warehouse' => [__('Seller'), __('Warehousekeeper'), __('Employee')],
+            'accountant-seller-warehouse' => [__('Accountant'), __('Seller'), __('Warehousekeeper'), __('Employee')],
+            'employee' => [__('Employee')],
         ];
 
         $workSite = WorkSite::firstOrCreate(

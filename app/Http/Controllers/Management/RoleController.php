@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Management;
 
 use App\Http\Controllers\Controller;
-use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
@@ -31,7 +31,7 @@ class RoleController extends Controller
     public function index(Request $request)
     {
         $validated = Validator::make($request->all(), $this->searchRules, $this->messages)->validate();
-        $query = Role::where('name', '!=', 'Super-Admin')->orderBy('id', 'desc');
+        $query = Role::where('name', '!=', __('Super-Admin'))->orderBy('id', 'desc');
 
         if (isset($validated['search']) && $search = $validated['search']) {
             $query->where('name', 'like', "%{$search}%");
