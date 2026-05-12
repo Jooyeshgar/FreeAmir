@@ -7,8 +7,6 @@ Route::get('/login', [Controllers\Auth\LoginController::class, 'showLoginForm'])
 Route::post('/login', [Controllers\Auth\LoginController::class, 'login']);
 Route::get('/logout', [Controllers\Auth\LoginController::class, 'logout'])->name('logout');
 
-Route::get('change-company/{company}', [Controllers\CompanyController::class, 'setActiveCompany'])->name('change-company')->middleware('auth');
-
 Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee-portal', 'as' => 'employee-portal.'], function () {
     Route::get('/employee', [Controllers\EmployeePortalController::class, 'employeeShow'])->name('employee.show');
     Route::get('/change-employee-information', [Controllers\EmployeePortalController::class, 'changeEmployeeInformation'])->name('change-employee-information');
@@ -28,6 +26,10 @@ Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee
 });
 
 Route::group(['middleware' => ['auth', 'check-permission']], function () {
+    Route::get('change-company/{company}', [Controllers\CompanyController::class, 'setActiveCompany'])->name('change-company');
+    Route::post('/seed-demo-data', [Controllers\HomeController::class, 'seedDemoData'])->name('home.seed-demo-data');
+    Route::post('/refresh-database', [Controllers\HomeController::class, 'refreshDatabase'])->name('home.refresh-database');
+
     Route::group(['prefix' => 'backups', 'as' => 'backups.'], function () {
         Route::get('/create', [Controllers\BackupController::class, 'create'])->name('create');
         Route::get('/upload', [Controllers\BackupController::class, 'upload'])->name('upload');
@@ -170,9 +172,4 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('{documentFile}/view', 'view')->name('view');
         Route::get('{documentFile}/download', 'download')->name('download');
     });
-});
-
-Route::middleware(['auth', 'role:Super-Admin'])->group(function () {
-    Route::post('/seed-demo-data', [Controllers\HomeController::class, 'seedDemoData'])->name('home.seed-demo-data');
-    Route::post('/refresh-database', [Controllers\HomeController::class, 'refreshDatabase'])->name('home.refresh-database');
 });
