@@ -1024,4 +1024,49 @@ class InvoiceService
             'service_id' => null,
         ]]);
     }
+
+    public function validateVoidingInvoice(Invoice $invoice): string
+    {
+        if (! $invoice->status->isApproved()) {
+            return 'Invoice must be approved before voiding.';
+        }
+
+        if ($invoice->invoice_type !== InvoiceType::SELL) {
+            return 'Only sell invoices are eligible for voiding.';
+        }
+
+        return '';
+    }
+
+    public function voidInvoice(Invoice $invoice, User $user, string $date, float $number): ?Invoice
+    {
+        $voidInvoice = null;
+
+        DB::transaction(function () use ($invoice, $user, $date, $number, &$voidInvoice) {
+            $voidInvoice = new Invoice;
+            $voidInvoice->fill(collect($invoice)->except(['id', 'date', 'creator_id', 'document_id', 'number'])->toArray());
+            $voidInvoice->creator_id = $user->id;
+            $voidInvoice->date = $date;
+            $voidInvoice->number = $number;
+            $voidInvoice->invoice_type = InvoiceType::VOID;
+            $voidInvoice->save();
+
+            $voidInvoice->items()->createMany($invoice->items->toArray());
+
+            $transactions = $invoice->document->transactions->map(fn ($transaction) => [
+                'subject_id' => $transaction->subject_id,
+                'desc' => __('For Void').' '.($transaction->desc ?? ''),
+                'value' => -1 * $transaction->value,
+            ])->all();
+
+            $document = DocumentService::createDocument($user, ['date' => $date], $transactions);
+            DocumentService::changeDocumentStatus($document, $user, 'approved');
+            DocumentService::syncDocumentable($document, $voidInvoice);
+
+            $voidInvoice->document_id = $document->id;
+            $voidInvoice->save();
+        });
+
+        return $voidInvoice;
+    }
 }

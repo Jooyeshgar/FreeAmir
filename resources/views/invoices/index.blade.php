@@ -201,10 +201,18 @@
                                         $invoice->status->isUnapproved() ||
                                         $invoice->status->isApprovedInactive();
                                     $canUnapprove = $invoice->status->isApproved();
-                                    $canChangeStatus = $canApprove || $canUnapprove;
+                                    $canChangeStatus = ($canApprove || $canUnapprove);
                                 @endphp
                                 <a href="{{ route('invoices.show', $invoice) }}" target="_blank" rel="noopener" class="btn btn-sm btn-info">{{ __('Show') }}</a>
-
+                                @can('invoices.void')
+                                    @if ($invoice->invoice_type->isSell() && $invoice->status->isApproved())
+                                        <a href="{{ route('invoices.void-form', $invoice) }}" class="btn btn-sm btn-warning gap-2">{{ __('Void') }}</a>
+                                    @else
+                                        <span class="tooltip" data-tip="{{ __('Only sell invoices are eligible for voiding.') }}">
+                                            <button class="btn btn-sm btn-warning gap-2 btn-disabled cursor-not-allowed">{{ __('Void') }}</button>
+                                        </span>
+                                    @endif
+                                @endcan
                                 @can('invoices.approve')
                                     @if ($isSellWorkflow && ($invoice->status->isPreInvoice() || $invoice->status->isRejected()))
                                         <form action="{{ route('invoices.change-status', [$invoice, 'ready_to_approve']) }}" method="POST" class="inline-block m-0">

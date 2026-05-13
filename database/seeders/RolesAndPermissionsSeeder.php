@@ -133,6 +133,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'invoices.search-customer',
             'invoices.search-product-service',
             'invoices.approve',
+            'invoices.void-form',
+            'invoices.void',
 
             'ancillary-costs.index',
             'ancillary-costs.create',

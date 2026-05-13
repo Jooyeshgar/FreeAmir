@@ -567,8 +567,19 @@
                             $invoice->status->isUnapproved() ||
                             $invoice->status->isApprovedInactive();
                         $canUnapprove = $invoice->status->isApproved();
-                        $canChangeStatus = $canApprove || $canUnapprove;
+                        $canChangeStatus = ($canApprove || $canUnapprove);
                     @endphp
+
+                    @can('invoices.void')
+                        @if ($invoice->invoice_type->isSell() && $invoice->status->isApproved())
+                            <a href="{{ route('invoices.void-form', $invoice) }}" class="btn btn-sm btn-warning gap-2">{{ __('Void') }}</a>
+                        @else
+                            <span class="tooltip" data-tip="{{ __('Only sell invoices are eligible for voiding.') }}">
+                                <button class="btn btn-sm btn-warning gap-2 btn-disabled cursor-not-allowed">{{ __('Void') }}</button>
+                            </span>
+                        @endif
+                    @endcan
+
                     <a href="{{ route('invoices.print', $invoice) }}" class="btn btn-outline gap-2" target="_blank" rel="noopener">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -612,7 +623,7 @@
                         @endif
                     @endcan
 
-                    @if (!$invoice->status->isApproved())
+                    @if (! $invoice->status->isApproved())
                         <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-primary gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
