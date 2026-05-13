@@ -34,7 +34,6 @@ class Invoice extends Model
         'title',
         'returned_invoice_id',
         'company_id',
-        'taxID',
     ];
 
     protected $casts = [
