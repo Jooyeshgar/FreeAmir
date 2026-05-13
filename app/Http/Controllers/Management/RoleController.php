@@ -21,7 +21,9 @@ class RoleController extends Controller
 
     public $messages = [];
 
-    public function __construct() {}
+    public function __construct()
+    {
+    }
 
     /**
      * Display a listing of the resource.
