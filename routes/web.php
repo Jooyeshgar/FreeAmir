@@ -100,6 +100,8 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('invoices/{invoice}/conflicts/{type}', [Controllers\InvoiceController::class, 'showMoreConflictsByType'])->name('invoices.conflicts.more');
     Route::get('invoices/{invoice}/group-action', [Controllers\InvoiceController::class, 'groupAction'])->name('invoices.group-action');
     Route::get('invoices/{invoice}/print', [Controllers\InvoiceController::class, 'print'])->name('invoices.print');
+    Route::get('invoices/{invoice}/void', [Controllers\InvoiceController::class, 'showVoidForm'])->name('invoices.void-form');
+    Route::post('invoices/{invoice}/void', [Controllers\InvoiceController::class, 'voidInvoice'])->name('invoices.void');
     Route::post('invoices/{invoice}/change-status/{status}', [Controllers\InvoiceController::class, 'changeStatus'])->name('invoices.change-status');
     Route::group(['prefix' => 'management'], function () {
         Route::post('users/{user}/create-employee', [Controllers\Management\UserController::class, 'createEmployee'])

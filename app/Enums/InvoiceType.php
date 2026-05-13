@@ -10,6 +10,7 @@ enum InvoiceType: string
     case SELL = 'sell';
     case RETURN_BUY = 'return_buy';
     case RETURN_SELL = 'return_sell';
+    case VOID = 'void';
 
     /**
      * Get translated label for the invoice type.
@@ -23,6 +24,7 @@ enum InvoiceType: string
             self::SELL => Lang::get('Sell'),
             self::RETURN_BUY => Lang::get('Return from Buy'),
             self::RETURN_SELL => Lang::get('Return from Sell'),
+            self::VOID => Lang::get('Void'),
         };
     }
 
@@ -34,6 +36,16 @@ enum InvoiceType: string
     public function isSell(): bool
     {
         return in_array($this, [self::SELL, self::RETURN_SELL]);
+    }
+
+    /**
+     * Check if this is a void type.
+     *
+     * @return bool
+     */
+    public function isVoid(): bool
+    {
+        return $this === self::VOID;
     }
 
     /**
