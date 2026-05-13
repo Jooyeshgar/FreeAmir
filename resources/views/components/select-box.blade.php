@@ -346,7 +346,7 @@
 
                 highlight(text, query) {
                     const regex = new RegExp(`(${query})`, 'ig');
-                    return text.replace(regex, '<span class="bg-yellow-200">$1</span>');
+                    return text.replace(regex, '<span class="bg-yellow-200 dark:bg-blue-500">$1</span>');
                 },
 
                 selectOption(opt) {

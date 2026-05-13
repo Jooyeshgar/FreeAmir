@@ -340,7 +340,7 @@
                     const safe = this.escapeRegex(query);
                     return String(text).replace(
                         new RegExp(`(${safe})`, 'ig'),
-                        '<span class="bg-yellow-200">$1</span>'
+                        '<span class="bg-yellow-200 dark:bg-blue-500">$1</span>'
                     );
                 },
 
