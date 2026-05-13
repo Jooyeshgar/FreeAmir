@@ -353,7 +353,7 @@ class RolesAndPermissionsSeeder extends Seeder
             Permission::firstOrCreate(['name' => $permission]);
         }
 
-        $superAdmin = Role::firstOrCreate(['name' => __('Super-Admin')]);
+        $superAdmin = Role::firstOrCreate(['name' => 'Super-Admin']);
         $superAdmin->syncPermissions(Permission::all());
 
         $accountant = Role::firstOrCreate(['name' => __('Accountant')]);
@@ -410,7 +410,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $employeeRole->syncPermissions($employeePermissions);
 
         $users = [
-            'admin' => [__('Super-Admin'), __('Employee')],
+            'admin' => ['Super-Admin', __('Employee')],
             'accountant' => [__('Accountant'), __('Employee')],
             'seller' => [__('Seller'), __('Employee')],
             'warehouse' => [__('Warehousekeeper'), __('Employee')],
