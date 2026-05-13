@@ -572,10 +572,10 @@
 
                     @can('invoices.void')
                         @if ($invoice->invoice_type->isSell() && $invoice->status->isApproved())
-                            <a href="{{ route('invoices.void-form', $invoice) }}" class="btn btn-sm btn-warning gap-2">{{ __('Void') }}</a>
+                            <a href="{{ route('invoices.void-form', $invoice) }}" class="btn gap-2">{{ __('Void') }}</a>
                         @else
-                            <span class="tooltip" data-tip="{{ __('Only sell invoices are eligible for voiding.') }}">
-                                <button class="btn btn-sm btn-warning gap-2 btn-disabled cursor-not-allowed">{{ __('Void') }}</button>
+                            <span class="tooltip" data-tip="{{ __('Only approved sell invoices are eligible for voiding.') }}">
+                                <button class="btn gap-2 btn-disabled cursor-not-allowed">{{ __('Void') }}</button>
                             </span>
                         @endif
                     @endcan

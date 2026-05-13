@@ -153,7 +153,7 @@ class CostOfGoodsService
                 ->sum('quantity');
         };
 
-        $totalIncomingQuantity = (float) $buildQuery([InvoiceType::BUY, InvoiceType::RETURN_SELL]);
+        $totalIncomingQuantity = (float) $buildQuery([InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID]);
         $totalOutgoingQuantity = (float) $buildQuery([InvoiceType::SELL, InvoiceType::RETURN_BUY]);
 
         return $totalIncomingQuantity - $totalOutgoingQuantity;
@@ -225,7 +225,7 @@ class CostOfGoodsService
 
         foreach ($products as $product) {
             $lastInvoiceItem = InvoiceItem::whereHas('invoice', function ($query) use ($invoice, $product) {
-                $query->whereIn('invoice_type', [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::RETURN_BUY])
+                $query->whereIn('invoice_type', [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::RETURN_BUY, InvoiceType::VOID])
                     ->where('date', '<', $invoice->date)
                     ->whereHas('items', function ($q) use ($product) {
                         $q->where('itemable_type', Product::class)
@@ -261,8 +261,8 @@ class CostOfGoodsService
     private static function getPreviousInvoice(Invoice $invoice, $productId)
     {
         $allowedInvoiceTypes = match ($invoice->invoice_type) {
-            InvoiceType::BUY => [InvoiceType::BUY, InvoiceType::RETURN_SELL],
-            InvoiceType::RETURN_SELL => [InvoiceType::RETURN_SELL, InvoiceType::BUY],
+            InvoiceType::BUY => [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID],
+            InvoiceType::RETURN_SELL => [InvoiceType::RETURN_SELL, InvoiceType::BUY, InvoiceType::VOID],
             InvoiceType::SELL => [InvoiceType::SELL, InvoiceType::RETURN_BUY],
             InvoiceType::RETURN_BUY => [InvoiceType::RETURN_BUY, InvoiceType::SELL],
             default => [],

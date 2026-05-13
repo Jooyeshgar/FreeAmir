@@ -716,4 +716,31 @@ class InvoiceController extends Controller
 
         return $map;
     }
+
+    public function showVoidForm(Invoice $invoice)
+    {
+        $validatedVoidingMessage = $this->invoiceService->validateVoidingInvoice($invoice, null);
+        $previousInvoiceNumber = floor(Invoice::where('invoice_type', InvoiceType::VOID)->max('number') ?? 0);
+
+        return $validatedVoidingMessage !== '' ? redirect()->back()->with('error', __($validatedVoidingMessage)) : view('invoices.forms.void', compact('invoice', 'previousInvoiceNumber'));
+    }
+
+    public function voidInvoice(Request $request, Invoice $invoice)
+    {
+        $validatedVoidingMessage = $this->invoiceService->validateVoidingInvoice($invoice, $request->input('date'));
+
+        if ($validatedVoidingMessage !== '') {
+            return redirect()->back()->with('error', __($validatedVoidingMessage));
+        }
+
+        $date = convertToGregorian($request->input('date'));
+        $number = convertToInt($request->input('invoice_number'));
+
+        $voidInvoice = $this->invoiceService->voidInvoice($invoice, auth()->user(), $date, $number);
+
+        return redirect()->route('invoices.show', $invoice)->with(
+            $voidInvoice ? 'success' : 'error',
+            $voidInvoice ? __('Invoice voided successfully.') : __('Failed to void invoice.')
+        );
+    }
 }
