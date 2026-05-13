@@ -719,24 +719,23 @@ class InvoiceController extends Controller
         return $map;
     }
 
+    public function showMoadianForm(Invoice $invoice)
+    {
+        $validatedSendMoadianMessage = $this->moadianService->validateSendMoadian($invoice);
+
+        if ($validatedSendMoadianMessage) {
+            return redirect()->back()->withInput()->withErrors(__($validatedSendMoadianMessage));
+        }
+
+        return view('invoices.moadian', compact('invoice'));
+    }
+
     public function sendMoadian(Request $request, Invoice $invoice)
     {
-        if (! $invoice->status->isApproved()) {
-            return redirect()->back()->with('error', __('Cannot send a unapproved invoice to moadian.'));
-        }
+        $validatedSendMoadianMessage = $this->moadianService->validateSendMoadian($invoice);
 
-        if (! $invoice->invoice_type->isSell()) {
-            return redirect()->back()->with('error', __('Cannot send a buy or return buy invoice to moadian.'));
-        }
-
-        $hasMoadianSuccess = $invoice->moadianHistories->contains(function ($history) {
-            $data = json_decode($history->data, true);
-
-            return strtoupper($data['status'] ?? '') === 'SUCCESS';
-        });
-
-        if (! $hasMoadianSuccess) {
-            return redirect()->back()->with('error', __('Cannot send an invoice to moadian that already has successful status from moadian.'));
+        if ($validatedSendMoadianMessage) {
+            return redirect()->back()->withInput()->withErrors(__($validatedSendMoadianMessage));
         }
 
         $validated = $request->validate([
@@ -744,8 +743,38 @@ class InvoiceController extends Controller
             'transaction_date' => 'required|date',
         ]);
 
-        $this->moadianService->sendInvoice($invoice, $validated['transaction_reference_number'], $validated['transaction_date']);
+        $resultStatus = $this->moadianService->sendInvoice($invoice, $validated['transaction_reference_number'], $validated['transaction_date']);
 
-        return redirect()->route('invoices.moadian-histories.show', $invoice)->with('success', __('Inactive invoices approved successfully.'));
+        return redirect()->back()->with(
+            $resultStatus ? 'success' : 'error',
+            $resultStatus ? __('Invoice sent to Moadian successfully.') : __('Failed to send invoice to Moadian.')
+        );
+    }
+
+    public function showVoidForm(Invoice $invoice)
+    {
+        $validatedVoidingMessage = $this->invoiceService->validateVoidingInvoice($invoice);
+        $previousInvoiceNumber = floor(Invoice::where('invoice_type', InvoiceType::VOID)->max('number') ?? 0);
+
+        return $validatedVoidingMessage !== '' ? redirect()->back()->with('error', __($validatedVoidingMessage)) : view('invoices.forms.void', compact('invoice', 'previousInvoiceNumber'));
+    }
+
+    public function voidInvoice(Request $request, Invoice $invoice)
+    {
+        $validatedVoidingMessage = $this->invoiceService->validateVoidingInvoice($invoice);
+
+        if ($validatedVoidingMessage !== '') {
+            return redirect()->back()->with('error', __($validatedVoidingMessage));
+        }
+
+        $date = convertToGregorian($request->input('date'));
+        $number = convertToInt($request->input('invoice_number'));
+
+        $voidInvoice = $this->invoiceService->voidInvoice($invoice, auth()->user(), $date, $number);
+
+        return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with(
+            $voidInvoice ? 'success' : 'error',
+            $voidInvoice ? __('Invoice voided successfully.') : __('Failed to void invoice.')
+        );
     }
 }

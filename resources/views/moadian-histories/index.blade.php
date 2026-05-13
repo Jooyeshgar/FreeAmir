@@ -1,7 +1,7 @@
 <x-app-layout :title="__('Moadian Histories')">
     <div class="card bg-base-100">
         <div class="card-body">
-            <h2 class="card-title">{{ isset($invoice) ? __('Moadian Histories') . __('Invoice') . ' ' . $invoice->invoice_type->label() . ' #' . formatDocumentNumber($invoice->number ?? $invoice->id) : __('Moadian Histories') }} </h2>
+            <h2 class="card-title">{{ isset($invoice) ? __('Moadian Histories') . ' ' . __('Invoice') . ' ' . $invoice->invoice_type->label() . ' #' . formatDocumentNumber($invoice->number ?? $invoice->id) : __('Moadian Histories') }} </h2>
             
             <div>
                 <form method="GET" action="{{ route('invoices.moadian-histories.index') }}" class="flex flex-wrap items-end gap-4">
@@ -40,8 +40,7 @@
                     <tbody>
                         @forelse ($moadianHistories as $history)
                             @php
-                                $data = json_decode($history->data, true);
-                                $status = STR::upper($data['status']) ?? 'UNKNOWN';
+                                $status = isset($data['status']) ? Str::upper($data['status']) : 'UNKNOWN';
                             @endphp
                             <tr>
                                 <td class="text-sm text-gray-500">
@@ -53,12 +52,12 @@
                                         {{ $status }}
                                     </span>
                                 </td>
-                                <td class="text-sm text-gray-500">{{ $data['referenceNumber'] ?? '-' }}</td>
+                                <td class="text-sm text-gray-500">{{ $history->data['referenceNumber'] ?? '-' }}</td>
                                 <td class="text-sm text-gray-500">{{ convertToFarsi($history->created_at->format('Y/m/d H:i')) }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="text-sm text-center text-gray-500 px-2 py-2">{{ __('No moadian histories found.') }}</td>
+                                <td colspan="4" class="text-sm text-center text-gray-500 px-2 py-2">{{ __('No moadian histories found.') }}</td>
                             </tr>
                         @endforelse
                     </tbody>

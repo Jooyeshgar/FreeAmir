@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\CustomerType;
 use App\Enums\InvoiceType;
 use App\Models\Invoice;
-use DateTime;
 use Illuminate\Support\Carbon;
 use Jooyeshgar\Moadian\Facades\Moadian;
 use Jooyeshgar\Moadian\Invoice as MoadianInvoice;
@@ -24,11 +24,67 @@ class MoadianService
 
     public MoadianInvoice $moadianInvoice;
 
-    private DateTime $transaction_date;
+    private string $transaction_date;
 
     private ?string $transaction_reference_number;
 
-    private function moadianData(Invoice $invoice)
+    public function sendInvoice(Invoice $invoice, ?string $transaction_reference_number, string $transaction_date): bool
+    {
+        $this->moadian_username = config('services.moadian.username');
+        $this->taxID = config('services.moadian.tax_id');
+
+        $this->transaction_reference_number = $transaction_reference_number;
+        $this->transaction_date = $transaction_date;
+
+        $this->moadianData($invoice);
+
+        $info = [];
+        $sentInvoiceToMoadianWithSuccess = true;
+
+        try {
+            $info = Moadian::sendInvoice($this->moadianInvoice);
+            $info = $info->getBody();
+            $info = $info['result'][0];
+        } catch (\Exception $e) {
+            $sentInvoiceToMoadianWithSuccess = false;
+        }
+
+        $invoice->moadianHistories()->create(['data' => $info]);
+        $invoice->update(['taxID' => $this->header->taxid]);
+
+        return $sentInvoiceToMoadianWithSuccess;
+    }
+
+    public function validateSendMoadian(Invoice $invoice): string
+    {
+        if (! $invoice->status->isApproved()) {
+            return 'Cannot send a unapproved invoice to moadian.';
+        }
+
+        if (! $invoice->invoice_type->isSell()) {
+            return 'Cannot send a buy or return buy invoice to moadian.';
+        }
+
+        $hasMoadianSuccess = $invoice->moadianHistories->contains(function ($history) {
+            $data = $history->data;
+
+            return strtoupper($data['status'] ?? '') === 'SUCCESS';
+        });
+
+        if ($hasMoadianSuccess) {
+            return 'Cannot send an invoice to moadian that already has successful status from moadian.';
+        }
+
+        foreach ($invoice->items as $item) {
+            if (! $item->itemable->sstid) {
+                return 'All invoice items must have a valid SSTID.';
+            }
+        }
+
+        return '';
+    }
+
+    private function moadianData(Invoice $invoice): void
     {
         $this->invoice = $invoice;
 
@@ -37,24 +93,6 @@ class MoadianService
 
         $this->moadianInvoiceItems();
         $this->moadianInvoicePayments();
-    }
-
-    public function sendInvoice(Invoice $invoice, ?string $transaction_reference_number, DateTime $transaction_date)
-    {
-        $this->moadian_username = env('MOADIAN_USERNAME');
-        $this->taxID = env('TAXID');
-
-        $this->transaction_reference_number = $transaction_reference_number;
-        $this->transaction_date = $transaction_date;
-
-        $this->moadianData($invoice);
-
-        $info = Moadian::sendInvoice($this->moadianInvoice);
-        $info = $info->getBody();
-        $info = $info['result'][0];
-
-        $invoice->moadianHistories()->create(['data' => json_encode($info)]);
-        $invoice->update(['taxID' => $this->header->taxid]);
     }
 
     private function voidInvoice(): bool
@@ -100,7 +138,12 @@ class MoadianService
         $header->inno = $this->invoice->number;
         $header->inp = 1;
         $header->tins = $this->taxID;
-        $header->tob = $this->invoice->customer->type;
+        $header->tob = match ($this->invoice->customer->type) {
+            CustomerType::INDIVIDUAL => 1,
+            CustomerType::LEGAL_ENTITY => 2,
+            CustomerType::CIVIL_PARTNERSHIP => 3,
+            CustomerType::FOREIGN_NATIONAL => 4,
+        };
         $header->bid = $this->invoice->customer->personal_code;
         $header->tinb = $this->invoice->customer->ecnmcs_code;
         $header->bpc = $this->invoice->customer->postal_code;
@@ -122,15 +165,17 @@ class MoadianService
     private function moadianInvoiceItems(): void
     {
         foreach ($this->invoice->items as $item) {
+            $amountAfterDiscount = $item->unit_price * $item->quantity - $item->discount;
+
             $body = new InvoiceItem;
-            $body->sstid = $item->itemable->sstid;
+            $body->sstid = $item->itemable->sstid ?? 1;
             $body->sstt = $item->itemable->name;
             $body->am = $item->quantity;
             $body->fee = $item->unit_price;
             $body->prdis = $item->unit_price * $item->quantity;
             $body->dis = $item->unit_discount;
-            $body->adis = $item->unit_price * $item->quantity - $item->discount;
-            $body->vra = $item->vat / ($item->unit_price * $item->quantity - $item->discount);
+            $body->adis = $amountAfterDiscount;
+            $body->vra = $amountAfterDiscount > 0 ? $item->vat / ($amountAfterDiscount) : 0.0;
             $body->vam = $item->vat;
             $body->tsstam = $item->amount;
             $this->moadianInvoice->addItem($body);
