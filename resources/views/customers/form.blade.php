@@ -32,6 +32,16 @@
                         placeholder="{{ __('Economic code') }}" :value="old('ecnmcs_code', $customer->ecnmcs_code ?? '')" />
                 </div>
             </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <span class="label"> {{ __('Type') }}</span>
+                    <select name="type" id="type" class="select">
+                        @foreach (App\Enums\CustomerType::cases() as $type)
+                            <option value="{{ $type->value }}" @selected(old('type', $customer->type ?? '') == $type)>{{ $type->label() }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
         </div>
 
     </div>

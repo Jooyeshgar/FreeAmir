@@ -90,6 +90,7 @@ class CustomerTest extends TestCase
             'acc_name_2' => 'Account Name 2',
             'acc_no_2' => '0987654321',
             'acc_bank_2' => 'Test Bank 2',
+            'type' => 'individual',
         ];
 
         $response = $this->actingAs($this->user)
@@ -118,6 +119,7 @@ class CustomerTest extends TestCase
         $customerData = [
             'name' => 'Test Customer',
             'group_id' => $this->customerGroup->id,
+            'type' => 'individual',
         ];
 
         $this->actingAs($this->user)->post(route('customers.store'), $customerData);
@@ -131,6 +133,7 @@ class CustomerTest extends TestCase
         $newCustomerData = [
             'name' => 'new name',
             'group_id' => $this->customerGroup->id,
+            'type' => 'individual',
         ];
 
         $this->actingAs($this->user)->put(route('customers.update', $customer), $newCustomerData);
@@ -147,6 +150,7 @@ class CustomerTest extends TestCase
         $customerData = [
             'name' => 'Test Customer',
             'group_id' => $this->customerGroup->id,
+            'type' => 'individual',
         ];
 
         $this->actingAs($this->user)->post(route('customers.store'), $customerData);
@@ -162,6 +166,7 @@ class CustomerTest extends TestCase
         $newCustomerData = [
             'name' => 'new name with new customer group',
             'group_id' => $newCustomerGroup->id,
+            'type' => 'individual',
         ];
 
         $this->actingAs($this->user)->put(route('customers.update', $customer), $newCustomerData);
@@ -184,6 +189,7 @@ class CustomerTest extends TestCase
         $customerData = [
             'name' => 'Jane Doe',
             'group_id' => $this->customerGroup->id,
+            'type' => 'individual',
         ];
 
         $response = $this->actingAs($this->user)
@@ -202,6 +208,7 @@ class CustomerTest extends TestCase
     {
         $customerData = [
             'group_id' => $this->customerGroup->id,
+            'type' => 'individual',
         ];
 
         $response = $this->actingAs($this->user)
@@ -214,6 +221,7 @@ class CustomerTest extends TestCase
     {
         $customerData = [
             'name' => 'Test Customer',
+            'type' => 'individual',
         ];
 
         $response = $this->actingAs($this->user)
@@ -227,6 +235,7 @@ class CustomerTest extends TestCase
         $customerData = [
             'name' => str_repeat('a', 101), // 101 characters
             'group_id' => $this->customerGroup->id,
+            'type' => 'individual',
         ];
 
         $response = $this->actingAs($this->user)
@@ -241,6 +250,7 @@ class CustomerTest extends TestCase
             'name' => 'Test Customer',
             'phone' => 123456, // Invalid phone format
             'group_id' => $this->customerGroup->id,
+            'type' => 'individual',
         ];
 
         $response = $this->actingAs($this->user)
@@ -255,6 +265,7 @@ class CustomerTest extends TestCase
             'name' => 'Test Customer',
             'phone' => '09123456789', // Valid Iranian mobile number
             'group_id' => $this->customerGroup->id,
+            'type' => 'individual',
         ];
 
         $response = $this->actingAs($this->user)
@@ -270,6 +281,7 @@ class CustomerTest extends TestCase
             'name' => 'Test Customer',
             'email' => 'invalid-email',
             'group_id' => $this->customerGroup->id,
+            'type' => 'individual',
         ];
 
         $response = $this->actingAs($this->user)
@@ -283,6 +295,7 @@ class CustomerTest extends TestCase
         $customerData = [
             'name' => 'Test Customer',
             'group_id' => 999999, // Non-existent group
+            'type' => 'individual',
         ];
 
         $response = $this->actingAs($this->user)
@@ -296,6 +309,7 @@ class CustomerTest extends TestCase
         $customerData = [
             'name' => 'Test Customer',
             'group_id' => $this->customerGroup->id,
+            'type' => 'individual',
             // rep_via_email not included
         ];
 
@@ -312,6 +326,7 @@ class CustomerTest extends TestCase
             'name' => 'Test Customer',
             'group_id' => $this->customerGroup->id,
             'rep_via_email' => 'on',
+            'type' => 'individual',
         ];
 
         $response = $this->actingAs($this->user)
@@ -326,6 +341,7 @@ class CustomerTest extends TestCase
         $customerData = [
             'name' => 'Test Customer',
             'group_id' => $this->customerGroup->id,
+            'type' => 'individual',
         ];
 
         $response = $this->actingAs($this->user)
@@ -356,6 +372,7 @@ class CustomerTest extends TestCase
             'phone' => '09123456789',
             'email' => 'updated@example.com',
             'group_id' => $this->customerGroup->id,
+            'type' => 'individual',
         ];
 
         $response = $this->actingAs($this->user)->put(route('customers.update', $this->customer), $updateData);
@@ -407,6 +424,7 @@ class CustomerTest extends TestCase
             'name' => 'Test Customer',
             'address' => str_repeat('a', 151), // 151 characters
             'group_id' => $this->customerGroup->id,
+            'type' => 'individual',
         ];
 
         $response = $this->actingAs($this->user)
@@ -421,6 +439,7 @@ class CustomerTest extends TestCase
             'name' => 'Test Customer',
             'desc' => str_repeat('a', 151), // 151 characters
             'group_id' => $this->customerGroup->id,
+            'type' => 'individual',
         ];
 
         $response = $this->actingAs($this->user)
@@ -434,6 +453,7 @@ class CustomerTest extends TestCase
         $customerData = [
             'name' => 'Test Customer',
             'group_id' => $this->customerGroup->id,
+            'type' => 'individual',
             'phone' => null,
             'email' => null,
             'address' => null,

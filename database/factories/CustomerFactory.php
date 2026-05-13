@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\CustomerType;
 use App\Models\Bank;
 use App\Models\Company;
 use App\Models\Customer;
@@ -47,12 +48,9 @@ class CustomerFactory extends Factory
             'acc_name_2' => $this->faker->name,
             'acc_no_2' => $this->faker->bankAccountNumber,
             'acc_bank_2' => empty($bankIds) ? '' : (string) $this->faker->randomElement($bankIds),
-            'type_buyer' => $this->faker->boolean,
-            'type_seller' => $this->faker->boolean,
-            'type_mate' => $this->faker->boolean,
-            'type_agent' => $this->faker->boolean,
             'introducer_id' => empty($customerIds) ? null : $this->faker->randomElement($customerIds),
             'commission' => $this->faker->randomFloat(2, 0, 100),
+            'type' => $this->faker->randomElement(CustomerType::cases()),
             'marked' => $this->faker->boolean,
             'reason' => $this->faker->text,
             'disc_rate' => $this->faker->randomFloat(2, 0, 100),
