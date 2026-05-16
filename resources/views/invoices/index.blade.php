@@ -57,7 +57,7 @@
                         <div class="col-span-2 md:col-span-1">
                             <x-date-picker name="end_date" class="w-40" placeholder="{{ __('End date') }}" value="{{ request('end_date') }}"></x-date-picker>
                         </div>
-                        <div class="col-span-2 md:col-span-1">
+                        <div class="col-span-2 md:col-span-1" {{ request('invoice_type') === 'void' ? 'hidden' : '' }}>
                             @php
                                 $invoiceType = request('invoice_type');
                                 $isSellWorkflow = $invoiceType === 'sell';
@@ -84,7 +84,7 @@
                 </form>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" {{ request('invoice_type') === 'void' ? 'hidden' : '' }}>
                 @php
                     $invoiceType = request('invoice_type');
                     $statusFilter = request('status');
@@ -127,6 +127,8 @@
                             $quantityTitle = __('Returned Sold Products Quantity');
                         } elseif ($invoiceType === 'return_buy' && request('service_buy') == '1') {
                             $quantityTitle = __('Returned Sold Services Quantity');
+                        } elseif ($invoiceType === 'void') {
+                            $quantityTitle = __('Voided Products Quantity');
                         }
                     @endphp
                     <a href="{{ $url }}" class="block transition-transform hover:scale-105 {{ $isActive ? 'ring-2 ring-primary rounded-xl' : '' }}">
@@ -155,7 +157,7 @@
                 </thead>
                 <tbody>
                     @foreach ($invoices as $invoice)
-                        <tr>
+                        <tr class="{{ $invoice->voidInvoice()->exists() ? 'text-gray-400 opacity-70' : '' }}">
                             <td class="px-4 py-2">
                                 <a href="{{ route('invoices.show', $invoice) }}" class="link link-hover">
                                     {{ formatDocumentNumber($invoice->number) }}
@@ -194,6 +196,7 @@
                             </td>
                             <td class="px-4 py-2">
                                 @php
+                                    $isVoided = $invoice->voidInvoice()->exists();
                                     $isSellWorkflow = $invoice->invoice_type === \App\Enums\InvoiceType::SELL;
                                     $canApprove =
                                         ($isSellWorkflow ? false : $invoice->status->isPending()) ||
@@ -224,6 +227,10 @@
                                             <a data-tip="{{ $invoice->changeStatusValidation->toText() }}" href="{{ route('invoices.conflicts', $invoice) }}"
                                                 class="btn btn-sm btn-accent inline-flex tooltip">{{ __('Fix Conflict') }}
                                             </a>
+                                        @elseif ($isVoided)
+                                            <span class="tooltip" data-tip="{{ __('Unapprove the void invoice first to change status.') }}">
+                                                <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Unapprove') }}</button>
+                                            </span>
                                         @else
                                             <form
                                                 action="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}{{ $invoice->changeStatusValidation->hasWarning() ? '?confirm=1' : '' }}"
@@ -238,7 +245,7 @@
                                     @endif
                                 @endcan
 
-                                @if (!$invoice->status->isApproved())
+                                @if (!$invoice->status->isApproved() && !$isVoided)
                                     <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                     <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" class="inline-block m-0">
                                         @csrf
@@ -246,13 +253,11 @@
                                         <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
                                     </form>
                                 @else
-                                    <span class="tooltip" data-tip="{{ __('Unapprove the invoice first to edit') }}">
-                                        <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
-                                            title="{{ __('Unapprove the invoice first to edit') }}">{{ __('Edit') }}</button>
+                                    <span class="tooltip" data-tip="{{ $isVoided ? __('Voided invoices cannot be edited') : __('Unapprove the invoice first to edit') }}">
+                                        <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Edit') }}</button>
                                     </span>
-                                    <span class="tooltip" data-tip="{{ __('Unapprove the invoice first to delete') }}">
-                                        <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed"
-                                            title="{{ __('Unapprove the invoice first to delete') }}">{{ __('Delete') }}</button>
+                                    <span class="tooltip" data-tip="{{ $isVoided ? __('Voided invoices cannot be deleted') : __('Unapprove the invoice first to delete') }}">
+                                        <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Delete') }}</button>
                                     </span>
                                 @endif
 

@@ -40,7 +40,7 @@ class InvoiceController extends Controller
             ->orderByDesc('number');
 
         $builder->when($request->filled('invoice_type') &&
-            in_array($request->invoice_type, ['buy', 'sell', 'return_buy', 'return_sell']),
+            in_array($request->invoice_type, ['buy', 'sell', 'return_buy', 'return_sell', 'void']),
             fn ($invoice) => $invoice->where('invoice_type', $request->invoice_type)
         );
 
@@ -713,18 +713,26 @@ class InvoiceController extends Controller
 
     public function showVoidForm(Invoice $invoice)
     {
-        $validatedVoidingMessage = $this->invoiceService->validateVoidingInvoice($invoice, null);
+        $voidInvoiceDecision = $this->invoiceService->validateVoidingInvoice($invoice);
         $previousInvoiceNumber = floor(Invoice::where('invoice_type', InvoiceType::VOID)->max('number') ?? 0);
 
-        return $validatedVoidingMessage !== '' ? redirect()->back()->with('error', __($validatedVoidingMessage)) : view('invoices.forms.void', compact('invoice', 'previousInvoiceNumber'));
+        if ($voidInvoiceDecision->hasErrors()) {
+            $error = $voidInvoiceDecision->messages->first(fn ($m) => $m->type === 'error');
+
+            return redirect()->route('invoices.show', $invoice)->with('error', $error?->text ?? __('Cannot void the invoice.'));
+        }
+
+        return view('invoices.forms.void', compact('invoice', 'previousInvoiceNumber'));
     }
 
     public function voidInvoice(Request $request, Invoice $invoice)
     {
-        $validatedVoidingMessage = $this->invoiceService->validateVoidingInvoice($invoice, $request->input('date'));
+        $voidInvoiceDecision = $this->invoiceService->validateVoidingInvoice($invoice, $request->input('date'));
 
-        if ($validatedVoidingMessage !== '') {
-            return redirect()->back()->with('error', __($validatedVoidingMessage));
+        if ($voidInvoiceDecision->hasErrors()) {
+            $error = $voidInvoiceDecision->messages->first(fn ($m) => $m->type === 'error');
+
+            return redirect()->back()->with('error', $error?->text ?? __('Cannot void the invoice.'));
         }
 
         $date = convertToGregorian($request->input('date'));
@@ -732,9 +740,8 @@ class InvoiceController extends Controller
 
         $voidInvoice = $this->invoiceService->voidInvoice($invoice, auth()->user(), $date, $number);
 
-        return redirect()->route('invoices.show', $invoice)->with(
-            $voidInvoice ? 'success' : 'error',
-            $voidInvoice ? __('Invoice voided successfully.') : __('Failed to void invoice.')
-        );
+        [$msgType, $msg] = $this->invoiceMessage($voidInvoice, 'voided', true);
+
+        return redirect()->route('invoices.show', $invoice)->with($msgType, $msg);
     }
 }

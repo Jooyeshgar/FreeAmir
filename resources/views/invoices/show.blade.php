@@ -27,6 +27,11 @@
                     </svg>
                     {{ $invoice->status->label() }}
                 </span>
+                @if($invoice->voidInvoice()->exists())
+                    <span class="badge badge-lg badge-error gap-2">
+                        <a href="{{ route('invoices.show', $invoice->voidInvoice()->first()) }}" class="link">{{ __('This invoice is voided.') }}</a>
+                    </span>
+                @endif
             </div>
         </div>
 
@@ -219,7 +224,7 @@
                 </div>
             </div>
 
-            @if (in_array($invoice->invoice_type, [App\Enums\InvoiceType::BUY, App\Enums\InvoiceType::SELL]))
+            @if (in_array($invoice->invoice_type, [App\Enums\InvoiceType::BUY, App\Enums\InvoiceType::SELL]) && ! $invoice->voidInvoice()->exists())
                 <!-- Returned Invoice Information -->
                 <div>
                     @if ($invoice->getReturnInvoice())
@@ -571,12 +576,14 @@
                     @endphp
 
                     @can('invoices.void')
-                        @if ($invoice->invoice_type->isSell() && $invoice->status->isApproved())
-                            <a href="{{ route('invoices.void-form', $invoice) }}" class="btn gap-2">{{ __('Void') }}</a>
-                        @else
-                            <span class="tooltip" data-tip="{{ __('Only approved sell invoices are eligible for voiding.') }}">
-                                <button class="btn gap-2 btn-disabled cursor-not-allowed">{{ __('Void') }}</button>
-                            </span>
+                        @if ($invoice->invoice_type === App\Enums\InvoiceType::SELL)
+                            @if ($invoice->status->isApproved() && !$invoice->voidInvoice()->exists())
+                                <a href="{{ route('invoices.void-form', $invoice) }}" class="btn gap-2">{{ __('Void') }}</a>
+                            @else
+                                <span class="tooltip" data-tip="{{ __('Invoice has voided already.') }}">
+                                    <button class="btn gap-2 btn-disabled cursor-not-allowed">{{ __('Void') }}</button>
+                                </span>
+                            @endif
                         @endif
                     @endcan
 

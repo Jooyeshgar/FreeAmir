@@ -429,19 +429,25 @@ class InvoiceService
         ];
 
         if ($invoice->invoice_type->isVoid()) {
-            $buildResult['transactions'] = $invoice->document->transactions->map(fn ($transaction) => [
+            $voidedInvoice = $invoice->relationLoaded('voidedInvoice') ?
+                $invoice->voidedInvoice :
+                $invoice->voidedInvoice()->with('document.transactions')->first();
+
+            $buildResult['transactions'] = $voidedInvoice->document->transactions->map(fn ($transaction) => [
                 'subject_id' => $transaction->subject_id,
                 'desc' => __('For Void').' '.($transaction->desc ?? ''),
                 'value' => -1 * $transaction->value,
             ])->all();
+            $documentTitle = __('For Void').' '.$invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? ''));
         } else {
             $transactionBuilder = new InvoiceTransactionBuilder(self::itemsFormatterForSyncingInvoiceItems($invoice), $invoiceData);
             $buildResult = $transactionBuilder->build();
+            $documentTitle = $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? ''));
         }
 
         $documentData = [
             'date' => $invoiceData['date'] ?? now()->toDateString(),
-            'title' => $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? '')),
+            'title' => $documentTitle,
             'approved_at' => now(),
             'approver_id' => $user->id,
         ];
@@ -1034,35 +1040,43 @@ class InvoiceService
         ]]);
     }
 
-    public function validateVoidingInvoice(Invoice $invoice, ?string $date): string
+    public function validateVoidingInvoice(Invoice $invoice, ?string $date = null): InvoiceStatusDecision
     {
+        $decision = new InvoiceStatusDecision;
+
+        if ($invoice->voidInvoice()->exists()) {
+            $decision->addMessage('error', __('Invoice has voided already.'));
+        }
+
         if (! $invoice->status->isApproved()) {
-            return 'Invoice must be approved before voiding.';
+            $decision->addMessage('error', __('Invoice must be approved before voiding.'));
         }
 
         if ($invoice->invoice_type !== InvoiceType::SELL) {
-            return 'Only sell invoices are eligible for voiding.';
+            $decision->addMessage('error', __('Only sell invoices are eligible for voiding.'));
         }
 
-        if (! $date) {
-            return '';
+        if ($invoice->getReturnInvoice()->isNotEmpty()) {
+            $decision->addMessage('error', __('Only sales invoices that have not been returned are eligible for voiding.'));
         }
 
-        $invoiceDate = Carbon::parse((string) $invoice->date)->startOfDay();
-        $voidDate = Carbon::parse($date)->startOfDay();
+        if ($date !== null) {
+            $invoiceDate = Carbon::parse((string) $invoice->date)->startOfDay();
+            $voidDate = Carbon::parse($date)->startOfDay();
 
-        if ($invoiceDate->gt($voidDate)) {
-            return 'Void invoice date cannot be earlier than the invoice date.';
+            if ($invoiceDate->gt($voidDate)) {
+                $decision->addMessage('error', __('Void invoice date cannot be earlier than the invoice date.'));
+            }
+
+            if ($voidDate->gt($invoiceDate->copy()->addDays(12))) {
+                $decision->addMessage('error', __('Invoice can only be voided within 12 days of the invoice date.'));
+            }
         }
 
-        if ($voidDate->gt($invoiceDate->copy()->addDays(12))) {
-            return 'Invoice can only be voided within 12 days of the invoice date.';
-        }
-
-        return '';
+        return $decision;
     }
 
-    public function voidInvoice(Invoice $invoice, User $user, string $date, float $number): ?Invoice
+    public function voidInvoice(Invoice $invoice, User $user, string $date, float $number): array
     {
         $voidInvoice = null;
 
@@ -1096,6 +1110,9 @@ class InvoiceService
             $this->approveInvoice($voidInvoice);
         });
 
-        return $voidInvoice;
+        return [
+            'invoice' => $voidInvoice,
+            'document' => $voidInvoice?->document,
+        ];
     }
 }
