@@ -1076,15 +1076,10 @@ class InvoiceService
         }
 
         if ($date !== null) {
-            $invoiceDate = Carbon::parse((string) convertToJalali($invoice->date))->startOfDay();
-            $voidDate = Carbon::parse($date)->startOfDay();
+            $voidDate = Carbon::parse($date);
 
-            if ($invoiceDate->gt($voidDate)) {
+            if ($voidDate->lt($invoice->date)) {
                 $decision->addMessage('error', __('Void invoice date cannot be earlier than the invoice date.'));
-            }
-
-            if ($voidDate->gt($invoiceDate->copy()->addDays(12))) {
-                $decision->addMessage('error', __('Invoice can only be voided within 12 days of the invoice date.'));
             }
         }
 
