@@ -20,6 +20,8 @@
                         صورتحساب برگشت از خرید
                     @elseif ($invoice->invoice_type == App\Enums\InvoiceType::RETURN_SELL)
                         صورتحساب برگشت از فروش
+                    @elseif ($invoice->invoice_type == App\Enums\InvoiceType::VOID)
+                        صورتحساب ابطال فروش
                     @endif
                 </td>
             </tr>
