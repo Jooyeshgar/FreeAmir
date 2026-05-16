@@ -29,7 +29,21 @@
                 </span>
                 @if($invoice->voidInvoice()->exists())
                     <span class="badge badge-lg badge-error gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 2h6l5 5v13a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2h3z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"d="M9 10l6 6m0-6l-6 6"/>
+                        </svg>
                         <a href="{{ route('invoices.show', $invoice->voidInvoice()->first()) }}" class="link">{{ __('This invoice is voided.') }}</a>
+                    </span>
+                @elseif($invoice->voidedInvoice()->exists())
+                    <span class="badge badge-lg badge-error gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 2h6l5 5v13a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2h3z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"d="M9 10l6 6m0-6l-6 6"/>
+                        </svg>
+                        <a href="{{ route('invoices.show', $invoice->voidedInvoice()->first()) }}">
+                            {{ __('The invoice that was voided by this invoice is invoice number.') }}
+                        </a>
                     </span>
                 @endif
             </div>
