@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Spatie\Permission\Exceptions\UnauthorizedException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -22,17 +23,30 @@ class CheckPermission
      *
      * @throws UnauthorizedException If the user lacks the necessary permissions.
      */
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next, ?string $permission = null): Response
     {
-        $routeName = $request->route()->getName();
-
-        $wildcardPermission = "{$routeName}.*";
+        $routeName = $permission ?? $request->route()->getName();
+        $wildcardPermission = preg_replace('/\.[^.]+$/', '.*', $routeName) ?? "{$routeName}.*";
+        $user = $request->user();
 
         if (
-            ! $request->user()->can($routeName) &&
-            ! $request->user()->can($wildcardPermission)
+            ! $user->can($routeName) &&
+            ! $user->can($wildcardPermission)
         ) {
             throw UnauthorizedException::forPermissions([$wildcardPermission]);
+        }
+
+        if ($user->currentAccessToken()) {
+            if (! $user->can('api.access')) {
+                throw UnauthorizedException::forPermissions(['api.access']);
+            }
+
+            $tokenAllowsRoute = collect($user->currentAccessToken()->abilities ?? [])
+                ->contains(fn (string $ability) => Str::is($ability, $routeName));
+
+            if (! $tokenAllowsRoute) {
+                throw UnauthorizedException::forPermissions([$wildcardPermission]);
+            }
         }
 
         return $next($request);

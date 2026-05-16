@@ -7,7 +7,7 @@ use Illuminate\Validation\ValidationException;
 
 function getActiveCompany()
 {
-    return Cookie::get('active-company-id') ?? 1; // defualt 'active-company-id' for seeders: 1
+    return config('active-company-id') ?? Cookie::get('active-company-id') ?? 1; // defualt 'active-company-id' for seeders: 1
 }
 
 /**
