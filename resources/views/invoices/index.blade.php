@@ -57,7 +57,7 @@
                         <div class="col-span-2 md:col-span-1">
                             <x-date-picker name="end_date" class="w-40" placeholder="{{ __('End date') }}" value="{{ request('end_date') }}"></x-date-picker>
                         </div>
-                        <div class="col-span-2 md:col-span-1" {{ request('invoice_type') === 'void' ? 'hidden' : '' }}>
+                        <div class="col-span-2 md:col-span-1">
                             @php
                                 $invoiceType = request('invoice_type');
                                 $isSellWorkflow = $invoiceType === 'sell';
@@ -84,7 +84,7 @@
                 </form>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" {{ request('invoice_type') === 'void' ? 'hidden' : '' }}>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 @php
                     $invoiceType = request('invoice_type');
                     $statusFilter = request('status');
@@ -128,7 +128,7 @@
                         } elseif ($invoiceType === 'return_buy' && request('service_buy') == '1') {
                             $quantityTitle = __('Returned Sold Services Quantity');
                         } elseif ($invoiceType === 'void') {
-                            $quantityTitle = __('Voided Products Quantity');
+                            $quantityTitle = __('Voided Sold Products Quantity');
                         }
                     @endphp
                     <a href="{{ $url }}" class="block transition-transform hover:scale-105 {{ $isActive ? 'ring-2 ring-primary rounded-xl' : '' }}">

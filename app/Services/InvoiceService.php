@@ -698,6 +698,21 @@ class InvoiceService
             return;
         }
 
+        if ($invoice->invoice_type->isVoid()) {
+            $decision->addMessage('warning', __('Void invoice is linked to original invoice (:invoice)', [
+                'invoice' => $originalInvoice->number,
+            ]));
+            $decision->addConflict($originalInvoice);
+
+            if (! $originalInvoice->status->isApproved()) {
+                $decision->addMessage('error', __('Voided invoice is not approved', [
+                    'invoice' => $originalInvoice->number,
+                ]));
+            }
+
+            return;
+        }
+
         $decision->addMessage('warning', __('Return invoice is linked to original invoice (:invoice)', [
             'invoice' => $originalInvoice->number,
         ]));
@@ -1061,7 +1076,7 @@ class InvoiceService
         }
 
         if ($date !== null) {
-            $invoiceDate = Carbon::parse((string) $invoice->date)->startOfDay();
+            $invoiceDate = Carbon::parse((string) convertToJalali($invoice->date))->startOfDay();
             $voidDate = Carbon::parse($date)->startOfDay();
 
             if ($invoiceDate->gt($voidDate)) {
