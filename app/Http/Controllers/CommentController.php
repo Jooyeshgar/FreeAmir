@@ -9,13 +9,7 @@ use App\Services\CommentService;
 
 class CommentController extends Controller
 {
-    public function __construct(private readonly CommentService $service)
-    {
-        $this->middleware('permission:customers.view', ['only' => ['index']]);
-        $this->middleware('permission:customers.create', ['only' => ['create', 'store']]);
-        $this->middleware('permission:customers.edit', ['only' => ['edit', 'update']]);
-        $this->middleware('permission:customers.delete', ['only' => ['destroy']]);
-    }
+    public function __construct(private readonly CommentService $service) {}
 
     public function index(Customer $customer)
     {

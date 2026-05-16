@@ -1,4 +1,4 @@
-@hasrole('Super-Admin')
+@can(['home.seed-demo-data', 'home.refresh-database'])
     @if ($isDebugMode && !$hasDocument)
         <div class="alert alert-warning">
             <p>{{ __('Your database tables are empty. Do you want to load demo data into your database?') }}</p>
@@ -24,4 +24,4 @@
             </p>
         </div>
     @endif
-@endhasrole
+@endcan

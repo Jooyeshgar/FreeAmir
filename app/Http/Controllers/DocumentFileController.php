@@ -12,11 +12,7 @@ class DocumentFileController extends Controller
 {
     public function __construct(
         private readonly DocumentFileService $service
-    ) {
-        $this->middleware('permission:documents.create')->only(['create', 'store']);
-        $this->middleware('permission:documents.edit')->only(['edit', 'update']);
-        $this->middleware('permission:documents.delete')->only('destroy');
-    }
+    ) {}
 
     public function create(Document $document)
     {
