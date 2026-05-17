@@ -27,6 +27,7 @@ Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee
 
 Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('api-tokens', [Controllers\ApiTokenController::class, 'index'])->name('api-tokens.index');
+    Route::get('api-tokens/create', [Controllers\ApiTokenController::class, 'create'])->name('api-tokens.create');
     Route::post('api-tokens', [Controllers\ApiTokenController::class, 'store'])->name('api-tokens.store');
     Route::delete('api-tokens/{tokenId}', [Controllers\ApiTokenController::class, 'destroy'])->name('api-tokens.destroy');
 

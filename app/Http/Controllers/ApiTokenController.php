@@ -10,18 +10,23 @@ use Illuminate\View\View;
 
 class ApiTokenController extends Controller
 {
-    public function index(Request $request, ApiTokenAbilityService $apiTokenAbilityService): View
+    public function index(Request $request): View
+    {
+        $tokens = $request->user()->tokens()->latest()->get();
+
+        return view('api-tokens.index', compact('tokens'));
+    }
+
+    public function create(Request $request, ApiTokenAbilityService $apiTokenAbilityService): View
     {
         $permissions = $apiTokenAbilityService->userAbilities($request->user());
 
-        $tokens = $request->user()->tokens()->latest()->get();
-
-        return view('api-tokens.index', compact('permissions', 'tokens'));
+        return view('api-tokens.create', compact('permissions'));
     }
 
     public function store(Request $request, ApiTokenAbilityService $apiTokenAbilityService): RedirectResponse
     {
-        $availablePermissions = $apiTokenAbilityService->userAbilities($request->user())->pluck('name')->all();
+        $availablePermissions = $apiTokenAbilityService->userAbilities($request->user())->all();
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],

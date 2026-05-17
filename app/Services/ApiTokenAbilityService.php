@@ -30,11 +30,8 @@ class ApiTokenAbilityService
 
     public function userAbilities($user): Collection
     {
-        $apiAbilities = $this->abilities()->all();
-
-        return $user->getAllPermissions()
-            ->whereIn('name', $apiAbilities)
-            ->sortBy('name')
+        return $this->abilities()
+            ->filter(fn (string $ability) => $user->can($ability))
             ->values();
     }
 }

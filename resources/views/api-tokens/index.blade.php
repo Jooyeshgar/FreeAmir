@@ -1,71 +1,51 @@
-<x-app-layout :title="__('API tokens')">
-    <div class="container mx-auto max-w-4xl space-y-6">
-        <h1 class="text-2xl font-bold">{{ __('API tokens') }}</h1>
+<x-app-layout :title="__('API Tokens')">
+    <x-show-message-bags />
 
-        @if (session('plainTextToken'))
-            <div class="alert alert-warning">
-                <div>
-                    <div>{{ __('Copy this token now. It will not be shown again.') }}</div>
-                    <code class="break-all">{{ session('plainTextToken') }}</code>
-                </div>
-            </div>
-        @endif
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <div class="flex items-center justify-between gap-4">
+                <span class="card-title">{{ __('API Tokens') }}</span>
 
-        <form method="POST" action="{{ route('api-tokens.store') }}" class="space-y-4 rounded-box bg-base-100 p-4 shadow">
-            @csrf
-            <label class="form-control">
-                <span class="label-text">{{ __('Token name') }}</span>
-                <input class="input input-bordered" name="name" required value="{{ old('name') }}">
-            </label>
-
-            <div>
-                <div class="mb-2 font-medium">{{ __('Permissions') }}</div>
-                <div class="grid gap-2 md:grid-cols-2">
-                    @foreach ($permissions as $permission)
-                        <label class="label cursor-pointer justify-start gap-2">
-                            <input
-                                type="checkbox"
-                                class="checkbox checkbox-sm"
-                                name="permissions[]"
-                                value="{{ $permission->name }}"
-                                @checked(in_array($permission->name, old('permissions', []), true))
-                            >
-                            <span class="label-text">{{ $permission->name }}</span>
-                        </label>
-                    @endforeach
-                </div>
+                <a href="{{ route('api-tokens.create') }}">
+                    <button class="btn btn-primary">{{ __('Create token') }}</button>
+                </a>
             </div>
 
-            <button class="btn btn-primary">{{ __('Create token') }}</button>
-        </form>
+            @if (session('plainTextToken'))
+                <div class="alert alert-warning">
+                    <div>
+                        <div>{{ __('Copy this token now. It will not be shown again.') }}</div>
+                        <code class="break-all">{{ session('plainTextToken') }}</code>
+                    </div>
+                </div>
+            @endif
 
-        <div class="overflow-x-auto rounded-box bg-base-100 shadow">
-            <table class="table">
+            <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <tr>
-                        <th>{{ __('Name') }}</th>
-                        <th>{{ __('Permissions') }}</th>
-                        <th>{{ __('Last used') }}</th>
-                        <th></th>
+                        <th class="px-4 py-2">{{ __('Name') }}</th>
+                        <th class="px-4 py-2">{{ __('Permissions') }}</th>
+                        <th class="px-4 py-2">{{ __('Last used') }}</th>
+                        <th class="px-4 py-2">{{ __('Action') }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse ($tokens as $token)
                         <tr>
-                            <td>{{ $token->name }}</td>
-                            <td>{{ implode(', ', $token->abilities ?? []) }}</td>
-                            <td>{{ $token->last_used_at }}</td>
-                            <td>
-                                <form method="POST" action="{{ route('api-tokens.destroy', $token->id) }}">
+                            <td class="px-4 py-2">{{ $token->name }}</td>
+                            <td class="px-4 py-2">{{ implode(', ', $token->abilities ?? []) }}</td>
+                            <td class="px-4 py-2">{{ $token->last_used_at }}</td>
+                            <td class="px-4 py-2">
+                                <form method="POST" action="{{ route('api-tokens.destroy', $token->id) }}" class="inline">
                                     @csrf
                                     @method('DELETE')
-                                    <button class="btn btn-error btn-sm">{{ __('Delete') }}</button>
+                                    <button class="btn btn-sm btn-ghost text-red-600 hover:text-red-900">{{ __('Delete') }}</button>
                                 </form>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4">{{ __('No API token found.') }}</td>
+                            <td colspan="4" class="px-4 py-2">{{ __('No API token found.') }}</td>
                         </tr>
                     @endforelse
                 </tbody>
