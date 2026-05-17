@@ -162,7 +162,7 @@
                 </thead>
                 <tbody>
                     @foreach ($invoices as $invoice)
-                        <tr class="{{ $invoice->voidInvoice()->exists() ? 'text-gray-500' : '' }}">
+                        <tr class="{{ $invoice->voidInvoice ? 'text-gray-500' : '' }}">
                             <td class="px-4 py-2">
                                 <a href="{{ route('invoices.show', $invoice) }}" class="link link-hover">
                                     {{ formatDocumentNumber($invoice->number) }}
@@ -171,7 +171,7 @@
                             <td class="px-4 py-2">
                                 <a href="{{ route('customers.show', $invoice->customer) }}">{{ $invoice->customer->name ?? '' }}</a>
                                 <br>
-                                <span class="text-xs {{ $invoice->voidInvoice()->exists() ? 'text-gray-400' : 'text-gray-500' }}">{{ $invoice->title ?? '' }}</span>
+                                <span class="text-xs {{ $invoice->voidInvoice ? 'text-gray-400' : 'text-gray-500' }}">{{ $invoice->title ?? '' }}</span>
                             </td>
                             <td class="px-4 py-2">
                                 @if ($invoice->document_id)
@@ -201,7 +201,7 @@
                             </td>
                             <td class="px-4 py-2">
                                 @php
-                                    $isVoided = $invoice->voidInvoice()->exists();
+                                    $isVoided = (bool) $invoice->voidInvoice;
                                     $isVoidInvoice = $invoice->invoice_type->isVoid();
                                     $isSellWorkflow = $invoice->invoice_type === \App\Enums\InvoiceType::SELL;
                                     $canApprove =

@@ -26,9 +26,9 @@
                     <a href="{{ route('invoices.show', $invoice) }}" class="btn btn-ghost">{{ __('Back') }}</a>
                     <button type="submit" class="btn btn-primary">{{ __('Void') }}</button>
                 </div>
-            </form>
-        </x-card>
-    </div>
+            </x-card>
+        </div>
+    </form>
 
     @pushOnce('scripts')
         <script type="module">

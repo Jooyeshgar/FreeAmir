@@ -87,7 +87,7 @@ class Invoice extends Model
      */
     public function getReturnInvoice()
     {
-        return Invoice::where('returned_invoice_id', $this->id)->whereNot('invoice_type', 'void')->get();
+        return Invoice::where('returned_invoice_id', $this->id)->whereNot('invoice_type', InvoiceType::VOID)->get();
     }
 
     /**
@@ -95,7 +95,7 @@ class Invoice extends Model
      */
     public function getReturnedInvoice()
     {
-        return Invoice::whereNot('invoice_type', 'void')->find($this->returned_invoice_id);
+        return Invoice::whereNot('invoice_type', InvoiceType::VOID)->find($this->returned_invoice_id);
     }
 
     /**
@@ -103,7 +103,7 @@ class Invoice extends Model
      */
     public function voidInvoice()
     {
-        return $this->hasOne(Invoice::class, 'returned_invoice_id')->where('invoice_type', 'void');
+        return $this->hasOne(Invoice::class, 'returned_invoice_id')->where('invoice_type', InvoiceType::VOID);
     }
 
     /**
@@ -111,6 +111,6 @@ class Invoice extends Model
      */
     public function voidedInvoice()
     {
-        return $this->belongsTo(Invoice::class, 'returned_invoice_id')->where('invoice_type', '!=', 'void');
+        return $this->belongsTo(Invoice::class, 'returned_invoice_id')->where('invoice_type', '!=', InvoiceType::VOID);
     }
 }

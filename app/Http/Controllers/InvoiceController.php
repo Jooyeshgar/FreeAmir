@@ -35,7 +35,7 @@ class InvoiceController extends Controller
      */
     public function index(Request $request)
     {
-        $builder = Invoice::with(['customer', 'document'])
+        $builder = Invoice::with(['customer', 'document', 'voidInvoice'])
             ->orderByDesc('date')
             ->orderByDesc('number');
 
@@ -258,6 +258,8 @@ class InvoiceController extends Controller
             'document',
             'document.transactions',
             'items',
+            'voidInvoice',
+            'voidedInvoice',
             'ancillaryCosts',
             'ancillaryCosts.customer',
             'ancillaryCosts.document',

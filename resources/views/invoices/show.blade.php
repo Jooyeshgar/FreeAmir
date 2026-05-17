@@ -28,8 +28,8 @@
                 </span>
 
                 @php
-                    $voidInvoice = $invoice->voidInvoice()->first();
-                    $voidedInvoice = $invoice->voidedInvoice()->first();
+                    $voidInvoice = $invoice->voidInvoice;
+                    $voidedInvoice = $invoice->voidedInvoice;
                 @endphp
 
                 @if ($voidInvoice || $voidedInvoice)
@@ -238,7 +238,7 @@
                 </div>
             </div>
 
-            @if (in_array($invoice->invoice_type, [App\Enums\InvoiceType::BUY, App\Enums\InvoiceType::SELL]) && ! $invoice->voidInvoice()->exists())
+            @if (in_array($invoice->invoice_type, [App\Enums\InvoiceType::BUY, App\Enums\InvoiceType::SELL]) && ! $invoice->voidInvoice)
                 <!-- Returned Invoice Information -->
                 <div>
                     @if ($invoice->getReturnInvoice())
@@ -591,10 +591,10 @@
 
                     @can('invoices.void')
                         @if ($invoice->invoice_type === App\Enums\InvoiceType::SELL)
-                            @if ($invoice->status->isApproved() && !$invoice->voidInvoice()->exists() && $invoice->getReturnInvoice()->isEmpty())
+                            @if ($invoice->status->isApproved() && ! $invoice->voidInvoice && $invoice->getReturnInvoice()->isEmpty())
                                 <a href="{{ route('invoices.void-form', $invoice) }}" class="btn gap-2">{{ __('Void') }}</a>
                             @else
-                                <span class="tooltip" data-tip="{{ $invoice->voidInvoice()->exists() ? __('Invoice has voided already.') : __('Only approved sell invoices without return invoices can be voided.') }}">
+                                <span class="tooltip" data-tip="{{ $invoice->voidInvoice ? __('Invoice has voided already.') : __('Only approved sell invoices without return invoices can be voided.') }}">
                                     <button class="btn gap-2 btn-disabled cursor-not-allowed">{{ __('Void') }}</button>
                                 </span>
                             @endif

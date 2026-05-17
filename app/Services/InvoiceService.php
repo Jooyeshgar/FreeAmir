@@ -437,7 +437,7 @@ class InvoiceService
                 'desc' => __('For Void').' '.($transaction->desc ?? ''),
                 'value' => -1 * $transaction->value,
             ])->all();
-            $documentTitle = __('For Void').' '.$invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? ''));
+            $documentTitle = __('For Void').' '.($invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? '')));
         } else {
             $transactionBuilder = new InvoiceTransactionBuilder(self::itemsFormatterForSyncingInvoiceItems($invoice), $invoiceData);
             $buildResult = $transactionBuilder->build();
@@ -1113,7 +1113,7 @@ class InvoiceService
                     'quantity' => $item->quantity,
                     'unit_price' => $item->unit_price,
                     'unit_discount' => $item->unit_discount,
-                    'cog_after' => $item->itemable_type === Product::class ? $item->itemable->average_cost : 0.0,
+                    'cog_after' => $item->itemable_type === Product::class ? $item->cog_after : 0.0,
                     'quantity_at' => $item->itemable_type === Product::class ? $item->itemable->quantity : 0,
                     'price' => $item->price,
                     'vat' => $item->vat,
