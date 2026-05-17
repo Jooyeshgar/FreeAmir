@@ -186,16 +186,21 @@ class ApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(2, 'data.transactions');
 
-        $this->post('/api/documents/'.$documentId.'/files', [
+        $fileResponse = $this->post('/api/documents/'.$documentId.'/files', [
             'title' => 'receipt',
             'file' => UploadedFile::fake()->create('receipt.pdf', 100, 'application/pdf'),
         ], $this->apiHeaders())
             ->assertCreated()
-            ->assertJsonPath('data.title', 'receipt');
+            ->assertJsonPath('data.title', 'receipt')
+            ->assertJsonPath('data.document_id', $documentId)
+            ->assertJsonPath('data.user_id', $this->user->id)
+            ->assertJsonPath('data.name', 'receipt.pdf');
 
         $this->assertDatabaseHas('document_files', [
+            'id' => $fileResponse->json('data.id'),
             'document_id' => $documentId,
             'title' => 'receipt',
+            'name' => 'receipt.pdf',
         ]);
         $this->assertDatabaseHas('documents', [
             'id' => $documentId,

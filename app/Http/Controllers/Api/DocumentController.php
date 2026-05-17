@@ -42,11 +42,10 @@ class DocumentController extends Controller
         $data['document_id'] = $document->id;
         $data['user_id'] = $request->user()->id;
 
-        $documentFileService->create($data);
-        $document->load('documentFiles');
+        $documentFile = $documentFileService->create($data);
 
         return response()->json([
-            'data' => $document->documentFiles()->latest()->first(),
+            'data' => $documentFile,
         ], 201);
     }
 }

@@ -26,7 +26,9 @@ class CheckPermission
     public function handle(Request $request, Closure $next, ?string $permission = null): Response
     {
         $routeName = $permission ?? $request->route()->getName();
-        $wildcardPermission = preg_replace('/\.[^.]+$/', '.*', $routeName) ?? "{$routeName}.*";
+        $wildcardPermission = str_contains($routeName, '.')
+            ? preg_replace('/\.[^.]+$/', '.*', $routeName)
+            : "{$routeName}.*";
         $user = $request->user();
 
         if (
