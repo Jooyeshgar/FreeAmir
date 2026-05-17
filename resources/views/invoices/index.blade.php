@@ -39,25 +39,24 @@
                 @endif
 
                 <form action="{{ route('invoices.index') }}" method="GET" class="ml-auto">
-                    <div class="mt-4 mb-4 grid grid-cols-8 gap-6">
-
-                        <div class="col-span-2 md:col-span-1" hidden>
+                    <div class="mt-4 mb-4 grid grid-cols-16 gap-3 items-end">
+                        <div class="hidden">
                             <x-input name="invoice_type" value="{{ request('invoice_type') }}" placeholder="{{ __('Invoice Type') }}" />
                             <x-input name="service_buy" value="{{ request('service_buy') }}" placeholder="{{ __('Service Buy') }}" />
                         </div>
-                        <div class="col-span-2 md:col-span-1">
+                        <div class="col-span-2">
                             <x-input name="number" value="{{ request('number') }}" placeholder="{{ __('Invoice Number') }}" />
                         </div>
-                        <div class="col-span-6 md:col-span-3">
+                        <div class="col-span-4">
                             <x-input name="text" value="{{ request('text') }}" placeholder="{{ __('Search by customer name or transaction description') }}" />
                         </div>
-                        <div class="col-span-2 md:col-span-1">
-                            <x-date-picker name="start_date" class="w-40" placeholder="{{ __('Start date') }}" value="{{ request('start_date') }}"></x-date-picker>
+                        <div class="col-span-2">
+                            <x-date-picker name="start_date" class="w-full" placeholder="{{ __('Start date') }}" value="{{ request('start_date') }}"></x-date-picker>
                         </div>
-                        <div class="col-span-2 md:col-span-1">
-                            <x-date-picker name="end_date" class="w-40" placeholder="{{ __('End date') }}" value="{{ request('end_date') }}"></x-date-picker>
+                        <div class="col-span-2">
+                            <x-date-picker name="end_date" class="w-full" placeholder="{{ __('End date') }}" value="{{ request('end_date') }}"></x-date-picker>
                         </div>
-                        <div class="col-span-2 md:col-span-1">
+                        <div class="col-span-2">
                             @php
                                 $invoiceType = request('invoice_type');
                                 $isSellWorkflow = $invoiceType === 'sell';
@@ -77,7 +76,13 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-span-2 md:col-span-1 text-center">
+                        @if (request('invoice_type') === 'sell')
+                            <label class="col-span-2 flex items-center gap-3 mb-2">
+                                <input type="checkbox" name="voided" value="1" class="checkbox checkbox-primary" @checked(request('voided') == '1') />
+                                <span class="label-text">{{ __('Voided') }}</span>
+                            </label>
+                        @endif
+                        <div class="col-span-2">
                             <input type="submit" value="{{ __('Search') }}" class="btn-primary btn" />
                         </div>
                     </div>
@@ -157,7 +162,7 @@
                 </thead>
                 <tbody>
                     @foreach ($invoices as $invoice)
-                        <tr class="{{ $invoice->voidInvoice()->exists() ? 'text-gray-400 opacity-70' : '' }}">
+                        <tr class="{{ $invoice->voidInvoice()->exists() ? 'text-gray-500' : '' }}">
                             <td class="px-4 py-2">
                                 <a href="{{ route('invoices.show', $invoice) }}" class="link link-hover">
                                     {{ formatDocumentNumber($invoice->number) }}
@@ -166,7 +171,7 @@
                             <td class="px-4 py-2">
                                 <a href="{{ route('customers.show', $invoice->customer) }}">{{ $invoice->customer->name ?? '' }}</a>
                                 <br>
-                                <span class="text-xs text-gray-500">{{ $invoice->title ?? '' }}</span>
+                                <span class="text-xs {{ $invoice->voidInvoice()->exists() ? 'text-gray-400' : 'text-gray-500' }}">{{ $invoice->title ?? '' }}</span>
                             </td>
                             <td class="px-4 py-2">
                                 @if ($invoice->document_id)
@@ -197,6 +202,7 @@
                             <td class="px-4 py-2">
                                 @php
                                     $isVoided = $invoice->voidInvoice()->exists();
+                                    $isVoidInvoice = $invoice->invoice_type->isVoid();
                                     $isSellWorkflow = $invoice->invoice_type === \App\Enums\InvoiceType::SELL;
                                     $canApprove =
                                         ($isSellWorkflow ? false : $invoice->status->isPending()) ||
@@ -245,17 +251,21 @@
                                     @endif
                                 @endcan
 
-                                @if (!$invoice->status->isApproved() && !$isVoided)
+                                @if (!$invoice->status->isApproved() && !$isVoided && !$isVoidInvoice)
                                     <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                @else
+                                    <span class="tooltip" data-tip="{{ $isVoidInvoice ? __('Editing is not allowed for void invoices.') : ($isVoided ? __('Voided invoices cannot be edited') : __('Unapprove the invoice first to edit')) }}">
+                                        <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Edit') }}</button>
+                                    </span>
+                                @endif
+
+                                @if (!$invoice->status->isApproved() && !$isVoided)
                                     <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" class="inline-block m-0">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
                                     </form>
                                 @else
-                                    <span class="tooltip" data-tip="{{ $isVoided ? __('Voided invoices cannot be edited') : __('Unapprove the invoice first to edit') }}">
-                                        <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Edit') }}</button>
-                                    </span>
                                     <span class="tooltip" data-tip="{{ $isVoided ? __('Voided invoices cannot be deleted') : __('Unapprove the invoice first to delete') }}">
                                         <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Delete') }}</button>
                                     </span>

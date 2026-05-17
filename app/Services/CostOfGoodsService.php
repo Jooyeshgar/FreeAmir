@@ -100,6 +100,17 @@ class CostOfGoodsService
      */
     private static function resolveCostCalculationInputs(Invoice $invoice, InvoiceItem $invoiceItem, ?Invoice $previousInvoice): ?array
     {
+        // Voiding a sell invoice fully reverses the sale, so inventory returns at the
+        // original COG snapshot stored on the sell item rather than the selling price.
+        if ($invoice->status->isApproved() && $invoice->invoice_type === InvoiceType::VOID) {
+            return [
+                'baseCost' => (float) $invoiceItem->cog_after * (float) $invoiceItem->quantity,
+                'availableQuantity' => (float) self::sumQuantityApprovedPreviousInvoices($invoice, $invoiceItem),
+                'newQuantity' => (float) $invoiceItem->quantity,
+                'ancillaryCosts' => collect(),
+            ];
+        }
+
         // use current invoice item and invoice ancillary costs.
         if ($invoice->status->isApproved()) {
             return [
@@ -263,6 +274,7 @@ class CostOfGoodsService
         $allowedInvoiceTypes = match ($invoice->invoice_type) {
             InvoiceType::BUY => [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID],
             InvoiceType::RETURN_SELL => [InvoiceType::RETURN_SELL, InvoiceType::BUY, InvoiceType::VOID],
+            InvoiceType::VOID => [InvoiceType::VOID, InvoiceType::BUY, InvoiceType::RETURN_SELL],
             InvoiceType::SELL => [InvoiceType::SELL, InvoiceType::RETURN_BUY],
             InvoiceType::RETURN_BUY => [InvoiceType::RETURN_BUY, InvoiceType::SELL],
             default => [],

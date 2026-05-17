@@ -11,7 +11,6 @@ use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\Service;
 use App\Models\User;
-use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -651,6 +650,14 @@ class InvoiceService
                 }
             }
 
+            $voidInvoice = $invoice->voidInvoice;
+            if ($voidInvoice) {
+                $decision->addMessage('error', __('invoices.status_change.blocked_by_return_invoice', [
+                    'invoice' => $voidInvoice->number,
+                ]));
+                $decision->addConflict($voidInvoice);
+            }
+
             return;
         }
 
@@ -1076,9 +1083,7 @@ class InvoiceService
         }
 
         if ($date !== null) {
-            $voidDate = Carbon::parse($date);
-
-            if ($voidDate->lt($invoice->date)) {
+            if (strtotime($date) < strtotime($invoice->date)) {
                 $decision->addMessage('error', __('Void invoice date cannot be earlier than the invoice date.'));
             }
         }

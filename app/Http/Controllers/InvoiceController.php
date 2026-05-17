@@ -77,6 +77,8 @@ class InvoiceController extends Controller
             $item->where('itemable_type', Product::class);
         }));
 
+        $builder->when($request->invoice_type === InvoiceType::SELL->value && $request->boolean('voided'), fn ($q) => $q->whereHas('voidInvoice'));
+
         $statsBuilder = $builder->clone();
 
         $builder->when($request->filled('status') &&
@@ -281,10 +283,14 @@ class InvoiceController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory
+     * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory|\Illuminate\Http\RedirectResponse
      */
     public function edit(Invoice $invoice)
     {
+        if ($invoice->invoice_type->isVoid()) {
+            return redirect()->back()->with('error', __('Editing is not allowed for void invoices.'));
+        }
+
         $invoice->load('customer', 'document.transactions', 'items'); // Eager load relationships
 
         $returnInvoices = [];
@@ -355,6 +361,10 @@ class InvoiceController extends Controller
      */
     public function update(StoreInvoiceRequest $request, Invoice $invoice)
     {
+        if ($invoice->invoice_type->isVoid()) {
+            return redirect()->back()->with('error', __('Editing is not allowed for void invoices.'));
+        }
+
         $validated = $request->validated();
         $invoiceData = InvoiceService::extractInvoiceData($validated);
         $items = InvoiceService::mapTransactionsToItems($validated['transactions'], true);
@@ -727,16 +737,25 @@ class InvoiceController extends Controller
 
     public function voidInvoice(Request $request, Invoice $invoice)
     {
-        $voidInvoiceDecision = $this->invoiceService->validateVoidingInvoice($invoice, $request->input('date'));
+        $validated = $request->validate([
+            'date' => ['required', 'date'],
+            'invoice_number' => ['required'],
+        ]);
+
+        $number = convertToInt($validated['invoice_number']);
+        if (! is_numeric($number) || $number < 1) {
+            return back()->with('error', __('Invoice Number is invalid.'));
+        }
+
+        $date = convertToGregorian($validated['date']);
+
+        $voidInvoiceDecision = $this->invoiceService->validateVoidingInvoice($invoice, $date);
 
         if ($voidInvoiceDecision->hasErrors()) {
             $error = $voidInvoiceDecision->messages->first(fn ($m) => $m->type === 'error');
 
             return redirect()->back()->with('error', $error?->text ?? __('Cannot void the invoice.'));
         }
-
-        $date = convertToGregorian($request->input('date'));
-        $number = convertToInt($request->input('invoice_number'));
 
         $voidInvoice = $this->invoiceService->voidInvoice($invoice, auth()->user(), $date, $number);
 
