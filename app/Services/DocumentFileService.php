@@ -14,16 +14,16 @@ class DocumentFileService
 
     protected string $disk = 'public';
 
-    public function create(array $data): void
+    public function create(array $data): DocumentFile
     {
-        DB::transaction(function () use ($data) {
+        return DB::transaction(function () use ($data): DocumentFile {
             if (isset($data['file'])) {
                 $fileInfo = $this->storeFile($data['document_id'], $data['file']);
                 $data = array_merge($data, $fileInfo);
                 unset($data['file']);
             }
 
-            DocumentFile::create($data);
+            return DocumentFile::create($data);
         });
     }
 

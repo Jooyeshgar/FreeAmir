@@ -26,6 +26,10 @@ Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee
 });
 
 Route::group(['middleware' => ['auth', 'check-permission']], function () {
+    Route::get('api-tokens', [Controllers\ApiTokenController::class, 'index'])->name('api-tokens.index');
+    Route::post('api-tokens', [Controllers\ApiTokenController::class, 'store'])->name('api-tokens.store');
+    Route::delete('api-tokens/{tokenId}', [Controllers\ApiTokenController::class, 'destroy'])->name('api-tokens.destroy');
+
     Route::get('change-company/{company}', [Controllers\CompanyController::class, 'setActiveCompany'])->name('change-company');
     Route::post('/seed-demo-data', [Controllers\HomeController::class, 'seedDemoData'])->name('home.seed-demo-data');
     Route::post('/refresh-database', [Controllers\HomeController::class, 'refreshDatabase'])->name('home.refresh-database');

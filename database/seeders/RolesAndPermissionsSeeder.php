@@ -21,6 +21,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'home.bank-account',
             'home.seed-demo-data',
             'home.refresh-database',
+            'api.access',
+            'api-tokens.index',
+            'api-tokens.store',
+            'api-tokens.destroy',
 
             'subjects.index',
             'subjects.create',
@@ -362,6 +366,8 @@ class RolesAndPermissionsSeeder extends Seeder
             ->where('name', 'NOT LIKE', 'roles.%')
             ->where('name', 'NOT LIKE', 'permissions.%')
             ->where('name', 'NOT LIKE', 'configs.%')
+            ->where('name', 'NOT LIKE', 'api.%')
+            ->where('name', 'NOT LIKE', 'api-tokens.%')
             ->pluck('name')->toArray();
 
         $accountant->syncPermissions($accountantPermissions);
