@@ -25,9 +25,12 @@ class DocumentController extends Controller
         ], 201);
     }
 
-    public function show(int $documentId): JsonResponse
+    public function show(int $company, int $documentId): JsonResponse
     {
-        $document = Document::with(['transactions', 'documentFiles'])->findOrFail($documentId);
+        $document = Document::withoutGlobalScopes()
+            ->with(['transactions', 'documentFiles'])
+            ->where('company_id', getActiveCompany())
+            ->findOrFail($documentId);
 
         return response()->json(['data' => $document]);
     }
@@ -35,9 +38,12 @@ class DocumentController extends Controller
     public function attachFile(
         AttachDocumentFileRequest $request,
         DocumentFileService $documentFileService,
+        int $company,
         int $documentId
     ): JsonResponse {
-        $document = Document::findOrFail($documentId);
+        $document = Document::withoutGlobalScopes()
+            ->where('company_id', getActiveCompany())
+            ->findOrFail($documentId);
         $data = $request->validated();
         $data['document_id'] = $document->id;
         $data['user_id'] = $request->user()->id;

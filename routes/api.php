@@ -1,11 +1,18 @@
 <?php
 
 use App\Http\Controllers\Api\AttendanceLogController;
+use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\EmployeeController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum', 'api-company'])->group(function () {
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('companies', [CompanyController::class, 'index'])
+        ->middleware('check-permission:companies.index')
+        ->name('api.companies.index');
+});
+
+Route::prefix('companies/{company}')->middleware(['auth:sanctum', 'api-company'])->group(function () {
     Route::post('attendance/logs', [AttendanceLogController::class, 'store'])
         ->middleware('check-permission:attendance.attendance-logs.store')
         ->name('api.attendance-logs.store');

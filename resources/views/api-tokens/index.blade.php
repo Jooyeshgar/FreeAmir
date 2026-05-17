@@ -1,6 +1,4 @@
-@extends('layouts.app')
-
-@section('content')
+<x-app-layout :title="__('API tokens')">
     <div class="container mx-auto max-w-4xl space-y-6">
         <h1 class="text-2xl font-bold">{{ __('API tokens') }}</h1>
 
@@ -74,4 +72,4 @@
             </table>
         </div>
     </div>
-@endsection
+</x-app-layout>

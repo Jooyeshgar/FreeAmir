@@ -2,32 +2,31 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\ApiTokenAbilityService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ApiTokenController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, ApiTokenAbilityService $apiTokenAbilityService): View
     {
-        $permissions = $request->user()->getAllPermissions()
-            ->whereNotIn('name', ['api.access', 'api-tokens.index', 'api-tokens.store', 'api-tokens.destroy'])
-            ->sortBy('name')
-            ->values();
+        $permissions = $apiTokenAbilityService->userAbilities($request->user());
 
         $tokens = $request->user()->tokens()->latest()->get();
 
         return view('api-tokens.index', compact('permissions', 'tokens'));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, ApiTokenAbilityService $apiTokenAbilityService): RedirectResponse
     {
-        $availablePermissions = $request->user()->getAllPermissions()->pluck('name')->all();
+        $availablePermissions = $apiTokenAbilityService->userAbilities($request->user())->pluck('name')->all();
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'permissions' => ['required', 'array', 'min:1'],
-            'permissions.*' => ['required', 'string', 'in:'.implode(',', $availablePermissions)],
+            'permissions.*' => ['required', 'string', Rule::in($availablePermissions)],
         ]);
 
         $token = $request->user()->createToken($validated['name'], $validated['permissions']);

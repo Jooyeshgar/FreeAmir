@@ -10,11 +10,17 @@ class SetApiCompany
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $companyId = $request->header('X-Company-Id');
+        $companyId = $request->route('company');
 
-        if (! $companyId) {
+        if ($companyId === null || $companyId === '') {
             return response()->json([
-                'message' => __('The X-Company-Id header is required.'),
+                'message' => __('The company path parameter is required.'),
+            ], 422);
+        }
+
+        if (filter_var($companyId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) {
+            return response()->json([
+                'message' => __('The company path parameter must be a valid company ID.'),
             ], 422);
         }
 

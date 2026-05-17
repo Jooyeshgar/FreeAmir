@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\ApiTokenAbilityService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -11,12 +12,28 @@ class ApiTokenTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_api_token_abilities_are_discovered_from_api_route_permissions(): void
+    {
+        $abilities = app(ApiTokenAbilityService::class)->abilities();
+
+        $this->assertContains('documents.show', $abilities);
+        $this->assertContains('companies.index', $abilities);
+        $this->assertNotContains('configs.index', $abilities);
+        $this->assertNotContains('api.access', $abilities);
+    }
+
     public function test_user_can_create_token_only_from_own_permissions(): void
     {
         $user = User::factory()->create();
-        foreach (['api-tokens.*', 'api.access', 'documents.show'] as $permission) {
+        foreach (['api-tokens.*', 'api.access', 'documents.show', 'configs.index'] as $permission) {
             $user->givePermissionTo(Permission::firstOrCreate(['name' => $permission]));
         }
+
+        $this->actingAs($user)
+            ->get(route('api-tokens.index'))
+            ->assertOk()
+            ->assertSee('documents.show')
+            ->assertDontSee('configs.index');
 
         $this->actingAs($user)
             ->post(route('api-tokens.store'), [
@@ -30,6 +47,13 @@ class ApiTokenTest extends TestCase
             'tokenable_id' => $user->id,
             'name' => 'reader',
         ]);
+
+        $this->actingAs($user)
+            ->post(route('api-tokens.store'), [
+                'name' => 'web-only',
+                'permissions' => ['configs.index'],
+            ])
+            ->assertSessionHasErrors('permissions.0');
 
         $this->actingAs($user)
             ->post(route('api-tokens.store'), [

@@ -7,6 +7,7 @@ use App\Http\Requests\Api\StoreAttendanceLogsRequest;
 use App\Models\AttendanceLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class AttendanceLogController extends Controller
@@ -34,11 +35,11 @@ class AttendanceLogController extends Controller
 
     public function store(StoreAttendanceLogsRequest $request): JsonResponse
     {
-        $logs = collect($request->validated('logs'))
+        $logs = DB::transaction(fn () => collect($request->validated('logs'))
             ->map(fn (array $log) => AttendanceLog::create(array_merge($log, [
                 'company_id' => getActiveCompany(),
                 'is_manual' => $log['is_manual'] ?? false,
-            ])));
+            ]))));
 
         return response()->json([
             'data' => $logs,
