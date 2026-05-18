@@ -35,12 +35,12 @@ class InvoiceController extends Controller
      */
     public function index(Request $request)
     {
-        $builder = Invoice::with(['customer', 'document'])
+        $builder = Invoice::with(['customer', 'document', 'voidInvoice'])
             ->orderByDesc('date')
             ->orderByDesc('number');
 
         $builder->when($request->filled('invoice_type') &&
-            in_array($request->invoice_type, ['buy', 'sell', 'return_buy', 'return_sell']),
+            in_array($request->invoice_type, ['buy', 'sell', 'return_buy', 'return_sell', 'void']),
             fn ($invoice) => $invoice->where('invoice_type', $request->invoice_type)
         );
 
@@ -76,6 +76,8 @@ class InvoiceController extends Controller
         $builder->when(! $service_buy && ! in_array($request->invoice_type, [InvoiceType::SELL->value, InvoiceType::RETURN_SELL->value]), fn ($q) => $q->whereHas('items', function ($item) {
             $item->where('itemable_type', Product::class);
         }));
+
+        $builder->when($request->invoice_type === InvoiceType::SELL->value && $request->boolean('voided'), fn ($q) => $q->whereHas('voidInvoice'));
 
         $statsBuilder = $builder->clone();
 
@@ -256,6 +258,8 @@ class InvoiceController extends Controller
             'document',
             'document.transactions',
             'items',
+            'voidInvoice',
+            'voidedInvoice',
             'ancillaryCosts',
             'ancillaryCosts.customer',
             'ancillaryCosts.document',
@@ -281,10 +285,14 @@ class InvoiceController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory
+     * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory|\Illuminate\Http\RedirectResponse
      */
     public function edit(Invoice $invoice)
     {
+        if ($invoice->invoice_type->isVoid()) {
+            return redirect()->back()->with('error', __('Editing is not allowed for void invoices.'));
+        }
+
         $invoice->load('customer', 'document.transactions', 'items'); // Eager load relationships
 
         $returnInvoices = [];
@@ -355,6 +363,10 @@ class InvoiceController extends Controller
      */
     public function update(StoreInvoiceRequest $request, Invoice $invoice)
     {
+        if ($invoice->invoice_type->isVoid()) {
+            return redirect()->back()->with('error', __('Editing is not allowed for void invoices.'));
+        }
+
         $validated = $request->validated();
         $invoiceData = InvoiceService::extractInvoiceData($validated);
         $items = InvoiceService::mapTransactionsToItems($validated['transactions'], true);
@@ -709,5 +721,48 @@ class InvoiceController extends Controller
         }
 
         return $map;
+    }
+
+    public function showVoidForm(Invoice $invoice)
+    {
+        $voidInvoiceDecision = $this->invoiceService->validateVoidingInvoice($invoice);
+        $previousInvoiceNumber = floor(Invoice::where('invoice_type', InvoiceType::VOID)->max('number') ?? 0);
+
+        if ($voidInvoiceDecision->hasErrors()) {
+            $error = $voidInvoiceDecision->messages->first(fn ($m) => $m->type === 'error');
+
+            return redirect()->route('invoices.show', $invoice)->with('error', $error?->text ?? __('Cannot void the invoice.'));
+        }
+
+        return view('invoices.forms.void', compact('invoice', 'previousInvoiceNumber'));
+    }
+
+    public function voidInvoice(Request $request, Invoice $invoice)
+    {
+        $validated = $request->validate([
+            'date' => ['required', 'date'],
+            'invoice_number' => ['required'],
+        ]);
+
+        $number = convertToInt($validated['invoice_number']);
+        if (! is_numeric($number) || $number < 1) {
+            return back()->with('error', __('Invoice Number is invalid.'));
+        }
+
+        $date = convertToGregorian($validated['date']);
+
+        $voidInvoiceDecision = $this->invoiceService->validateVoidingInvoice($invoice, $date);
+
+        if ($voidInvoiceDecision->hasErrors()) {
+            $error = $voidInvoiceDecision->messages->first(fn ($m) => $m->type === 'error');
+
+            return redirect()->back()->with('error', $error?->text ?? __('Cannot void the invoice.'));
+        }
+
+        $voidInvoice = $this->invoiceService->voidInvoice($invoice, auth()->user(), $date, $number);
+
+        [$msgType, $msg] = $this->invoiceMessage($voidInvoice, 'voided', true);
+
+        return redirect()->route('invoices.show', $invoice)->with($msgType, $msg);
     }
 }

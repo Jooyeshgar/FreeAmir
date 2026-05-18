@@ -4,6 +4,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\InvoiceType;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
@@ -14,6 +15,7 @@ use App\Services\CostOfGoodsService;
 use Cookie;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Spatie\Permission\Models\Permission;
 use Tests\Helpers\InvoiceTestHelper;
 use Tests\Helpers\SeederHelper;
 use Tests\TestCase;
@@ -41,6 +43,9 @@ class ReturnInvoiceValidationTest extends TestCase
         $_COOKIE['active-company-id'] = (string) $this->companyId;
 
         $this->user = User::factory()->create();
+        $this->user->givePermissionTo([
+            Permission::firstOrCreate(['name' => 'invoices.store']),
+        ]);
         $this->actingAs($this->user);
 
         $this->importSubjects($this->companyId);
@@ -164,6 +169,62 @@ class ReturnInvoiceValidationTest extends TestCase
 
         // موجودی باید به ۱۰ برگردد
         $this->assertEquals(10, $product->quantity);
+    }
+
+    public function test_return_sell_store_validation_blocks_full_invoice_return(): void
+    {
+        $productA = $this->createProduct(['name' => 'Product A']);
+        $productB = $this->createProduct(['name' => 'Product B']);
+
+        $this->buy([
+            $this->productItem($productA, 10, 100),
+            $this->productItem($productB, 10, 120),
+        ], true, 6054, '2026-06-01');
+
+        $sell = $this->sell([
+            $this->productItem($productA, 3, 180),
+            $this->productItem($productB, 2, 200),
+        ], true, 6055, '2026-06-02')['invoice'];
+
+        $response = $this->from(route('invoices.create', ['invoice_type' => 'return_sell']))
+            ->post(route('invoices.store'), [
+                'title' => 'Return sell invoice',
+                'date' => '2026-06-03',
+                'invoice_type' => InvoiceType::RETURN_SELL->value,
+                'customer_id' => $sell->customer_id,
+                'returned_invoice_id' => $sell->id,
+                'document_number' => 6056,
+                'invoice_number' => 6056,
+                'transactions' => [
+                    [
+                        'item_id' => 'product-'.$productA->id,
+                        'quantity' => 3,
+                        'unit' => 180,
+                        'total' => 540,
+                        'off' => 0,
+                        'vat' => 0,
+                    ],
+                    [
+                        'item_id' => 'product-'.$productB->id,
+                        'quantity' => 2,
+                        'unit' => 200,
+                        'total' => 400,
+                        'off' => 0,
+                        'vat' => 0,
+                    ],
+                ],
+            ]);
+
+        $response->assertRedirect(route('invoices.create', ['invoice_type' => 'return_sell']));
+        $response->assertSessionHasErrors(['transactions']);
+        $response->assertSessionHasErrors([
+            'transactions' => __('To return a sales invoice, reduce the quantity of at least one item or remove an item. Returning all items with their original quantities is equivalent to voiding the sales invoice, so you must void it.'),
+        ]);
+        $this->assertDatabaseMissing('invoices', [
+            'invoice_type' => InvoiceType::RETURN_SELL->value,
+            'returned_invoice_id' => $sell->id,
+            'number' => 6056,
+        ]);
     }
 
     // -------------------------------------------------------------------------

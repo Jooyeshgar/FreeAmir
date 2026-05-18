@@ -100,6 +100,17 @@ class CostOfGoodsService
      */
     private static function resolveCostCalculationInputs(Invoice $invoice, InvoiceItem $invoiceItem, ?Invoice $previousInvoice): ?array
     {
+        // Voiding a sell invoice fully reverses the sale, so inventory returns at the
+        // original COG snapshot stored on the sell item rather than the selling price.
+        if ($invoice->status->isApproved() && $invoice->invoice_type === InvoiceType::VOID) {
+            return [
+                'baseCost' => (float) $invoiceItem->cog_after * (float) $invoiceItem->quantity,
+                'availableQuantity' => (float) self::sumQuantityApprovedPreviousInvoices($invoice, $invoiceItem),
+                'newQuantity' => (float) $invoiceItem->quantity,
+                'ancillaryCosts' => collect(),
+            ];
+        }
+
         // use current invoice item and invoice ancillary costs.
         if ($invoice->status->isApproved()) {
             return [
@@ -153,7 +164,7 @@ class CostOfGoodsService
                 ->sum('quantity');
         };
 
-        $totalIncomingQuantity = (float) $buildQuery([InvoiceType::BUY, InvoiceType::RETURN_SELL]);
+        $totalIncomingQuantity = (float) $buildQuery([InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID]);
         $totalOutgoingQuantity = (float) $buildQuery([InvoiceType::SELL, InvoiceType::RETURN_BUY]);
 
         return $totalIncomingQuantity - $totalOutgoingQuantity;
@@ -225,7 +236,7 @@ class CostOfGoodsService
 
         foreach ($products as $product) {
             $lastInvoiceItem = InvoiceItem::whereHas('invoice', function ($query) use ($invoice, $product) {
-                $query->whereIn('invoice_type', [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::RETURN_BUY])
+                $query->whereIn('invoice_type', [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::RETURN_BUY, InvoiceType::VOID])
                     ->where('date', '<', $invoice->date)
                     ->whereHas('items', function ($q) use ($product) {
                         $q->where('itemable_type', Product::class)
@@ -261,8 +272,9 @@ class CostOfGoodsService
     private static function getPreviousInvoice(Invoice $invoice, $productId)
     {
         $allowedInvoiceTypes = match ($invoice->invoice_type) {
-            InvoiceType::BUY => [InvoiceType::BUY, InvoiceType::RETURN_SELL],
-            InvoiceType::RETURN_SELL => [InvoiceType::RETURN_SELL, InvoiceType::BUY],
+            InvoiceType::BUY => [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID],
+            InvoiceType::RETURN_SELL => [InvoiceType::RETURN_SELL, InvoiceType::BUY, InvoiceType::VOID],
+            InvoiceType::VOID => [InvoiceType::VOID, InvoiceType::BUY, InvoiceType::RETURN_SELL],
             InvoiceType::SELL => [InvoiceType::SELL, InvoiceType::RETURN_BUY],
             InvoiceType::RETURN_BUY => [InvoiceType::RETURN_BUY, InvoiceType::SELL],
             default => [],

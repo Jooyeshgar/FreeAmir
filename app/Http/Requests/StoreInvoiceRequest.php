@@ -153,6 +153,45 @@ class StoreInvoiceRequest extends FormRequest
                         );
                     }
                 }
+
+                // Prevent full return of all items in a sales return invoice
+                if ($invoiceType === 'return_sell') {
+                    $makeItemKey = fn (string $type, int|string $id): string => "{$type}:{$id}";
+
+                    $submittedItems = collect($transactions)->mapWithKeys(
+                        fn ($transaction) => [
+                            $makeItemKey(
+                                $transaction['item_type'],
+                                $transaction['item_id']
+                            ) => (float) $transaction['quantity'],
+                        ]
+                    );
+
+                    $originalItems = $returnedInvoice->items->mapWithKeys(
+                        function ($item) use ($makeItemKey) {
+                            $itemType = $item->itemable_type === Product::class ? 'product' : 'service';
+
+                            return [
+                                $makeItemKey(
+                                    $itemType,
+                                    $item->itemable_id
+                                ) => (float) $item->quantity,
+                            ];
+                        }
+                    );
+
+                    $isFullReturnSell = $originalItems->count() === $submittedItems->count()
+                        && $originalItems->every(
+                            fn ($quantity, $itemKey) => $submittedItems->get($itemKey) === $quantity
+                        );
+
+                    if ($isFullReturnSell) {
+                        $validator->errors()->add(
+                            'transactions',
+                            __('To return a sales invoice, reduce the quantity of at least one item or remove an item. Returning all items with their original quantities is equivalent to voiding the sales invoice, so you must void it.')
+                        );
+                    }
+                }
             }
 
             if (! in_array($invoiceType, ['sell', 'buy'])) {

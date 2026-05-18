@@ -82,15 +82,35 @@ class Invoice extends Model
         return $this->belongsTo(Invoice::class, 'returned_invoice_id');
     }
 
-    // Return invoice for the current returned invoice (If it is returned). e.g. sell -> return sell
+    /**
+     * Return invoice for the current returned invoice (If it is returned). e.g. sell -> return sell
+     */
     public function getReturnInvoice()
     {
-        return Invoice::where('returned_invoice_id', $this->id)->get();
+        return Invoice::where('returned_invoice_id', $this->id)->whereNot('invoice_type', InvoiceType::VOID)->get();
     }
 
-    // Returned invoice for the current return invoice. e.g. return sell -> sell
+    /**
+     *  Returned invoice for the current return invoice. e.g. return sell -> sell
+     */
     public function getReturnedInvoice()
     {
-        return Invoice::find($this->returned_invoice_id);
+        return Invoice::whereNot('invoice_type', InvoiceType::VOID)->find($this->returned_invoice_id);
+    }
+
+    /**
+     * Void invoice for the current voided invoice (If it is voided). e.g. sell -> void
+     */
+    public function voidInvoice()
+    {
+        return $this->hasOne(Invoice::class, 'returned_invoice_id')->where('invoice_type', InvoiceType::VOID);
+    }
+
+    /**
+     *  The original invoice that was voided by this void invoice (if any). Example: void -> sell
+     */
+    public function voidedInvoice()
+    {
+        return $this->belongsTo(Invoice::class, 'returned_invoice_id')->where('invoice_type', '!=', InvoiceType::VOID);
     }
 }

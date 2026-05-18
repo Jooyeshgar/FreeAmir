@@ -308,7 +308,7 @@ class InvoiceService
             $quantityAt = 0;
             if ($product) {
                 $invoiceType = $invoice->invoice_type;
-                if (in_array($invoiceType, [InvoiceType::BUY, InvoiceType::RETURN_SELL], true)) {
+                if (in_array($invoiceType, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID], true)) {
                     $quantityAt = max(0, $product->quantity - $quantity);
                 } elseif (in_array($invoiceType, [InvoiceType::SELL, InvoiceType::RETURN_BUY], true)) {
                     $quantityAt = $product->quantity + $quantity;
@@ -329,7 +329,7 @@ class InvoiceService
                 'itemable_id' => $itemableId,
             ];
 
-            if (in_array($invoice->invoice_type, [InvoiceType::RETURN_SELL, InvoiceType::RETURN_BUY]) && $invoice->returned_invoice_id) {
+            if (in_array($invoice->invoice_type, [InvoiceType::RETURN_SELL, InvoiceType::RETURN_BUY, InvoiceType::VOID]) && $invoice->returned_invoice_id) {
                 $originalItem = InvoiceItem::where('invoice_id', $invoice->returned_invoice_id)
                     ->where('itemable_type', $itemableType)->where('itemable_id', $itemableId)->first();
 
@@ -427,12 +427,26 @@ class InvoiceService
             'title' => $invoice->title,
         ];
 
-        $transactionBuilder = new InvoiceTransactionBuilder(self::itemsFormatterForSyncingInvoiceItems($invoice), $invoiceData);
-        $buildResult = $transactionBuilder->build();
+        if ($invoice->invoice_type->isVoid()) {
+            $voidedInvoice = $invoice->relationLoaded('voidedInvoice') ?
+                $invoice->voidedInvoice :
+                $invoice->voidedInvoice()->with('document.transactions')->first();
+
+            $buildResult['transactions'] = $voidedInvoice->document->transactions->map(fn ($transaction) => [
+                'subject_id' => $transaction->subject_id,
+                'desc' => __('For Void').' '.($transaction->desc ?? ''),
+                'value' => -1 * $transaction->value,
+            ])->all();
+            $documentTitle = __('For Void').' '.($invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? '')));
+        } else {
+            $transactionBuilder = new InvoiceTransactionBuilder(self::itemsFormatterForSyncingInvoiceItems($invoice), $invoiceData);
+            $buildResult = $transactionBuilder->build();
+            $documentTitle = $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? ''));
+        }
 
         $documentData = [
             'date' => $invoiceData['date'] ?? now()->toDateString(),
-            'title' => $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? '')),
+            'title' => $documentTitle,
             'approved_at' => now(),
             'approver_id' => $user->id,
         ];
@@ -543,7 +557,7 @@ class InvoiceService
             $query->whereIn('invoice_type', $invoiceTypes);
         }
 
-        if (in_array($invoice->invoice_type, [InvoiceType::RETURN_BUY, InvoiceType::RETURN_SELL], true) && $invoice->returned_invoice_id) {
+        if (in_array($invoice->invoice_type, [InvoiceType::RETURN_BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID], true) && $invoice->returned_invoice_id) {
             $query->where('id', '!=', $invoice->returned_invoice_id);
         }
 
@@ -636,10 +650,18 @@ class InvoiceService
                 }
             }
 
+            $voidInvoice = $invoice->voidInvoice;
+            if ($voidInvoice) {
+                $decision->addMessage('error', __('invoices.status_change.blocked_by_return_invoice', [
+                    'invoice' => $voidInvoice->number,
+                ]));
+                $decision->addConflict($voidInvoice);
+            }
+
             return;
         }
 
-        if (! in_array($invoice->invoice_type, [InvoiceType::RETURN_BUY, InvoiceType::RETURN_SELL], true)) {
+        if (! in_array($invoice->invoice_type, [InvoiceType::RETURN_BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID], true)) {
             return;
         }
 
@@ -679,6 +701,21 @@ class InvoiceService
                 'invoice' => $originalInvoice->number,
             ]));
             $decision->addConflict($originalInvoice);
+
+            return;
+        }
+
+        if ($invoice->invoice_type->isVoid()) {
+            $decision->addMessage('warning', __('Void invoice is linked to original invoice (:invoice)', [
+                'invoice' => $originalInvoice->number,
+            ]));
+            $decision->addConflict($originalInvoice);
+
+            if (! $originalInvoice->status->isApproved()) {
+                $decision->addMessage('error', __('Voided invoice is not approved', [
+                    'invoice' => $originalInvoice->number,
+                ]));
+            }
 
             return;
         }
@@ -1023,5 +1060,74 @@ class InvoiceService
             'product_id' => null,
             'service_id' => null,
         ]]);
+    }
+
+    public function validateVoidingInvoice(Invoice $invoice, ?string $date = null): InvoiceStatusDecision
+    {
+        $decision = new InvoiceStatusDecision;
+
+        if ($invoice->voidInvoice()->exists()) {
+            $decision->addMessage('error', __('Invoice has voided already.'));
+        }
+
+        if (! $invoice->status->isApproved()) {
+            $decision->addMessage('error', __('Invoice must be approved before voiding.'));
+        }
+
+        if ($invoice->invoice_type !== InvoiceType::SELL) {
+            $decision->addMessage('error', __('Only sell invoices are eligible for voiding.'));
+        }
+
+        if ($invoice->getReturnInvoice()->isNotEmpty()) {
+            $decision->addMessage('error', __('Only sales invoices that have not been returned are eligible for voiding.'));
+        }
+
+        if ($date !== null) {
+            if (strtotime($date) < strtotime($invoice->date)) {
+                $decision->addMessage('error', __('Void invoice date cannot be earlier than the invoice date.'));
+            }
+        }
+
+        return $decision;
+    }
+
+    public function voidInvoice(Invoice $invoice, User $user, string $date, float $number): array
+    {
+        $voidInvoice = null;
+
+        DB::transaction(function () use ($invoice, $user, $date, $number, &$voidInvoice) {
+            $voidInvoice = new Invoice;
+            $voidInvoice->fill(collect($invoice)->except(['id', 'date', 'creator_id', 'document_id', 'number', 'status'])->toArray());
+            $voidInvoice->status = InvoiceStatus::PENDING;
+            $voidInvoice->creator_id = $user->id;
+            $voidInvoice->date = $date;
+            $voidInvoice->number = $number;
+            $voidInvoice->invoice_type = InvoiceType::VOID;
+            $voidInvoice->returned_invoice_id = $invoice->id; // Like a return sell invoice
+            $voidInvoice->save();
+
+            $voidInvoice->items()->createMany(
+                $invoice->items->map(fn ($item) => [
+                    'itemable_type' => $item->itemable_type,
+                    'itemable_id' => $item->itemable_id,
+                    'quantity' => $item->quantity,
+                    'unit_price' => $item->unit_price,
+                    'unit_discount' => $item->unit_discount,
+                    'cog_after' => $item->itemable_type === Product::class ? $item->cog_after : 0.0,
+                    'quantity_at' => $item->itemable_type === Product::class ? $item->itemable->quantity : 0,
+                    'price' => $item->price,
+                    'vat' => $item->vat,
+                    'amount' => $item->amount,
+                    'description' => $item->description,
+                ])->toArray()
+            );
+
+            $this->approveInvoice($voidInvoice);
+        });
+
+        return [
+            'invoice' => $voidInvoice,
+            'document' => $voidInvoice?->document,
+        ];
     }
 }

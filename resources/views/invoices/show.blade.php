@@ -1,5 +1,4 @@
 <x-app-layout :title="__('Invoice') . ' ' . $invoice->invoice_type->label() . ' #' . formatDocumentNumber($invoice->number ?? $invoice->id)">
-
     <div class="card bg-base-100 shadow-xl">
         <div
             class="card-header bg-gradient-to-r from-blue-50 to-indigo-50 dark:text-white dark:from-gray-800 dark:to-gray-700 px-6 py-4 rounded-t-2xl border-b-2 border-primary/20">
@@ -27,6 +26,26 @@
                     </svg>
                     {{ $invoice->status->label() }}
                 </span>
+
+                @php
+                    $voidInvoice = $invoice->voidInvoice;
+                    $voidedInvoice = $invoice->voidedInvoice;
+                @endphp
+
+                @if ($voidInvoice || $voidedInvoice)
+                    <span class="badge badge-lg badge-error gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 2h6l5 5v13a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2h3z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10l6 6m0-6l-6 6"/>
+                        </svg>
+                        @if ($voidInvoice)
+                            <a href="{{ route('invoices.show', $voidInvoice) }}" class="link">{{ __('This invoice is voided.') }}</a>
+                        @else
+                            <a href="{{ route('invoices.show', $voidedInvoice) }}" class="link">{{ __('The void invoice of sell invoice number #:number',
+                                ['number' => formatDocumentNumber($voidedInvoice->number)]) }}</a>
+                        @endif
+                    </span>
+                @endif
             </div>
         </div>
 
@@ -219,7 +238,7 @@
                 </div>
             </div>
 
-            @if (in_array($invoice->invoice_type, [App\Enums\InvoiceType::BUY, App\Enums\InvoiceType::SELL]))
+            @if (in_array($invoice->invoice_type, [App\Enums\InvoiceType::BUY, App\Enums\InvoiceType::SELL]) && ! $invoice->voidInvoice)
                 <!-- Returned Invoice Information -->
                 <div>
                     @if ($invoice->getReturnInvoice())
@@ -567,8 +586,21 @@
                             $invoice->status->isUnapproved() ||
                             $invoice->status->isApprovedInactive();
                         $canUnapprove = $invoice->status->isApproved();
-                        $canChangeStatus = $canApprove || $canUnapprove;
+                        $canChangeStatus = ($canApprove || $canUnapprove);
                     @endphp
+
+                    @can('invoices.void')
+                        @if ($invoice->invoice_type === App\Enums\InvoiceType::SELL)
+                            @if ($invoice->status->isApproved() && ! $invoice->voidInvoice && $invoice->getReturnInvoice()->isEmpty())
+                                <a href="{{ route('invoices.void-form', $invoice) }}" class="btn gap-2">{{ __('Void') }}</a>
+                            @else
+                                <span class="tooltip" data-tip="{{ $invoice->voidInvoice ? __('Invoice has voided already.') : __('Only approved sell invoices without return invoices can be voided.') }}">
+                                    <button class="btn gap-2 btn-disabled cursor-not-allowed">{{ __('Void') }}</button>
+                                </span>
+                            @endif
+                        @endif
+                    @endcan
+
                     <a href="{{ route('invoices.print', $invoice) }}" class="btn btn-outline gap-2" target="_blank" rel="noopener">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -612,7 +644,7 @@
                         @endif
                     @endcan
 
-                    @if (!$invoice->status->isApproved())
+                    @if (! $invoice->status->isApproved() && ! $invoice->invoice_type->isVoid())
                         <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-primary gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -621,7 +653,7 @@
                             {{ __('Edit invoice') }}
                         </a>
                     @else
-                        <span class="tooltip" data-tip="{{ __('Editing is not allowed for approved invoices.') }}">
+                        <span class="tooltip" data-tip="{{ $invoice->invoice_type->isVoid() ? __('Editing is not allowed for void invoices.') : __('Editing is not allowed for approved invoices.') }}">
                             <button class="btn btn-primary gap-2 btn-disabled cursor-not-allowed">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
