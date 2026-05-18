@@ -49,6 +49,9 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\LazyCollection;
+use ZipArchive;
 
 class FiscalYearService
 {
@@ -115,6 +118,71 @@ class FiscalYearService
         ];
 
         return $exportData;
+    }
+
+    /**
+     * Calculate the total disk size (in bytes) of all document files for a specific company.
+     *
+     * @param  int  $companyId  The unique identifier of the company.
+     * @return int The total size of all existing document files in bytes.
+     */
+    public static function documentFilesSizeBytes(int $companyId): int
+    {
+        $disk = Storage::disk('public');
+        $totalBytes = 0;
+
+        foreach (self::getCompanyDocumentFiles($companyId) as $docFile) {
+            $path = self::normalizeFilePath($docFile->path);
+
+            if ($disk->exists($path)) {
+                $totalBytes += $disk->size($path);
+            }
+        }
+
+        return $totalBytes;
+    }
+
+    /**
+     * Add actual document files from storage into a provided ZIP archive.
+     *
+     * @param  ZipArchive  $zip  The instantiated ZipArchive object to append files to.
+     * @param  int  $companyId  The unique identifier of the company.
+     */
+    public static function documentFilesToZip(ZipArchive $zip, int $companyId): void
+    {
+        $disk = Storage::disk('public');
+
+        foreach (self::getCompanyDocumentFiles($companyId) as $docFile) {
+            $path = self::normalizeFilePath($docFile->path);
+
+            if ($disk->exists($path)) {
+                $zip->addFile($disk->path($path), 'files/'.$path);
+            }
+        }
+    }
+
+    /**
+     * Fetch all document files for a specific company in a memory-efficient manner.
+     *
+     * @param  int  $companyId  The ID of the company to retrieve files for.
+     * @return \Illuminate\Support\LazyCollection<\App\Models\DocumentFile>
+     */
+    private static function getCompanyDocumentFiles(int $companyId): LazyCollection
+    {
+        $documentIdsSubquery = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $companyId)->select('id');
+
+        return DocumentFile::whereIn('document_id', $documentIdsSubquery)->cursor();
+    }
+
+    /**
+     * Normalize a file path for disk operations.
+     *
+     * @param  string  $path  The raw file path.
+     * @return string The normalized path.
+     */
+    private static function normalizeFilePath(string $path): string
+    {
+        return str_starts_with($path, 'storage/') ? substr($path, 8) : $path;
     }
 
     /**
@@ -297,6 +365,8 @@ class FiscalYearService
                             ]);
                         }
                     }
+                }
+                if (in_array('document_files', $sectionsToImport)) {
                     if (isset($importData['document_files'])) {
                         $documentMapping = $idMappings['documents'] ?? [];
 
@@ -347,13 +417,11 @@ class FiscalYearService
                     $serviceMapping = $idMappings['services'] ?? [];
 
                     if (isset($importData['invoices'])) {
-                        if (! empty($customerMapping) && ! empty($documentMapping)) {
+                        if (! empty($customerMapping)) {
                             $idMappings['invoices'] = self::_importInvoices($importData['invoices'], $targetYearId, $documentMapping, $customerMapping);
                         } else {
-                            Log::warning('Skipping not-return type invoice import due to missing customer or document mappings.', [
+                            Log::warning('Skipping invoice import due to missing customer mapping.', [
                                 'target_year_id' => $targetYearId,
-                                'has_customer_mapping' => ! empty($customerMapping),
-                                'has_document_mapping' => ! empty($documentMapping),
                             ]);
                         }
                     }
@@ -372,15 +440,14 @@ class FiscalYearService
                     }
 
                     if (isset($importData['ancillary_costs'])) {
-                        if (! empty($idMappings['invoices']) && ! empty($customerMapping) && ! empty($documentMapping)) {
+                        if (! empty($idMappings['invoices']) && ! empty($customerMapping)) {
                             $idMappings['ancillary_costs'] = self::_importAncillaryCosts($importData['ancillary_costs'], $targetYearId, $idMappings['invoices'], $customerMapping, $documentMapping);
                         } else {
-                            Log::warning('Skipping ancillary cost import due to missing invoice or customer or document mappings.',
+                            Log::warning('Skipping ancillary cost import due to missing invoice or customer mappings.',
                                 [
                                     'target_year_id' => $targetYearId,
                                     'has_invoice_mapping' => ! empty($idMappings['invoices']),
                                     'has_customer_mapping' => ! empty($customerMapping),
-                                    'has_document_mapping' => ! empty($documentMapping),
                                 ]);
                         }
                     }
@@ -1921,7 +1988,7 @@ class FiscalYearService
             $newInvoice = new Invoice;
             $newInvoice->fill(collect($invoiceData)->except(['id', 'customer_id', 'document_id'])->toArray());
             $newInvoice->customer_id = $customerMapping[$oldCustomerId];
-            $newInvoice->document_id = $oldDocumentId ? $documentMapping[$oldDocumentId] : null;
+            $newInvoice->document_id = $oldDocumentId ? ($documentMapping[$oldDocumentId] ?? null) : null;
             $newInvoice->company_id = $targetYearId;
             $newInvoice->saveQuietly();
 
@@ -1952,7 +2019,7 @@ class FiscalYearService
             $newInvoice->fill(collect($invoiceData)->except(['id', 'customer_id', 'document_id', 'returned_invoice_id'])->toArray());
             $newInvoice->customer_id = $customerMapping[$oldCustomerId];
             $newInvoice->returned_invoice_id = $mapping[$oldReturnedInvoiceId];
-            $newInvoice->document_id = $oldDocumentId ? $documentMapping[$oldDocumentId] : null;
+            $newInvoice->document_id = $oldDocumentId ? ($documentMapping[$oldDocumentId] ?? null) : null;
             $newInvoice->company_id = $targetYearId;
             $newInvoice->saveQuietly();
 

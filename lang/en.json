@@ -1,4 +1,9 @@
 {
+    "Backup": "Backup",
+    "Backup from": "Backup from",
+    "Selecting this option will increase the backup size by approximately :size MB.": "Selecting this option will increase the backup size by approximately :size MB.",
+    "Civil Partnership": "Civil Partnership",
+    "Select Tables to backup": "Select Tables to backup",
     " with number ": " with number ",
     "(From amount) - (To amount) : Discount amount": "(From amount) - (To amount) : Discount amount",
     ":approved documents approved successfully.|:approved documents approved successfully.": ":approved document approved successfully.|:approved documents approved successfully.",

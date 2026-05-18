@@ -12,7 +12,8 @@ enum FiscalYearSection: string
     case PRODUCTS = 'products'; // Represents product_groups + products + product_websites
     case SERVICES = 'services'; // Represents service_groups + services
     case SUBJECTS = 'subjects';
-    case DOCUMENTS = 'documents'; // Represents documents + transactions + document_files
+    case DOCUMENTS = 'documents'; // Represents documents + transactions
+    case DOCUMENT_FILES = 'document_files'; // Represents documents_file files stored on disk
     case INVOICES = 'invoices'; // Represents invoices + ancillary_costs
     // case CHEQUES = 'cheques'; //  Represents cheques + cheque_histories
     case EMPLOYEES = 'employees'; // Represents employees + org_charts + work_sites + work_site_contracts + work_shifts
@@ -44,6 +45,7 @@ enum FiscalYearSection: string
             self::SERVICES->value => self::SERVICES->label(),
             self::SUBJECTS->value => self::SUBJECTS->label(),
             self::DOCUMENTS->value => self::DOCUMENTS->label(),
+            self::DOCUMENT_FILES->value => self::DOCUMENT_FILES->label(),
             self::INVOICES->value => self::INVOICES->label(),
             self::EMPLOYEES->value => self::EMPLOYEES->label(),
             self::PAYROLLS->value => self::PAYROLLS->label(),

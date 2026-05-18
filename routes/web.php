@@ -38,6 +38,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::group(['prefix' => 'backups', 'as' => 'backups.'], function () {
         Route::get('/create', [Controllers\BackupController::class, 'create'])->name('create');
         Route::get('/upload', [Controllers\BackupController::class, 'upload'])->name('upload');
+        Route::get('/document-files-size', [Controllers\BackupController::class, 'documentFilesSize'])->name('document-files-size');
         Route::post('/export', [Controllers\BackupController::class, 'export'])->name('export');
         Route::post('/import', [Controllers\BackupController::class, 'import'])->name('import');
     });
