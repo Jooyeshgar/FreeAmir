@@ -17,10 +17,6 @@
                             title="" :value="old('name', $permission->name ?? '')" />
                     </div>
                     <div></div>
-                    <div class="col-span-4">
-                        <x-textarea name="description" id="description" title="{{ __('Description') }}"
-                            placeholder="{{ __('Description') }}" :value="old('description', $permission->description ?? '')" />
-                    </div>
 
                     <h3 class="label col-span-4 text-lg font-semibold mb-2">{{ __('Roles') }}</h3>
                     @foreach ($roles as $role)

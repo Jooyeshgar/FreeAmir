@@ -10,23 +10,14 @@ use Spatie\Permission\Models\Role;
 
 class PermissionController extends Controller
 {
-    public $rules = [
-        'name' => 'required | string | min:1 | max:255',
-        'description' => 'nullable | string | min:3 | max:255',
-    ];
-
     public $searchRules = [
         'search' => 'nullable | string',
     ];
 
     public $messages = [];
 
-    public function __construct() {}
-
     /**
      * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function index(Request $request)
     {
@@ -53,27 +44,28 @@ class PermissionController extends Controller
         return view('management.permission.create', [
             'permission' => null,
             'roles' => $roles,
-            'syncedRoles' => collect(),
+            'syncedRoles' => collect(old('roles')),
         ]);
     }
 
     /**
      * Store a newly created resource in storage.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
     {
-        $validatedData = Validator::make($request->all(), $this->rules, $this->messages)->validate();
+        $validatedData = Validator::make($request->all(), [
+            'name' => 'required|string|min:1|max:255|unique:permissions,name',
+            'roles' => 'required|array|min:1',
+            'roles.*' => 'exists:roles,id',
+        ], $this->messages)->validate();
 
-        // add additional data in order to store
-        $validatedData['guard_name'] = 'web';
-        $perm = Permission::create($validatedData);
+        $perm = Permission::create([
+            'name' => $validatedData['name'],
+            'guard_name' => 'web',
+        ]);
 
-        if ($request->has('roles')) {
-            $roles = Role::whereIn('id', $request->roles)->get();
-            $perm->syncRoles($roles);
-        }
+        $roles = Role::whereIn('id', $validatedData['roles'])->get();
+        $perm->syncRoles($roles);
 
         return redirect(route('permissions.index'))
             ->with('success', __('Permission create successfully.'));
@@ -81,38 +73,31 @@ class PermissionController extends Controller
 
     /**
      * Show the form for editing the specified resource.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function edit(Permission $permission)
     {
-        $roles = Role::all();
-        $syncedRoles = $permission->roles()->pluck('id');
-
         return view('management.permission.create', [
             'permission' => $permission,
-            'roles' => $roles,
-            'syncedRoles' => $syncedRoles,
+            'roles' => Role::all(),
+            'syncedRoles' => $permission->roles()->pluck('id'),
         ]);
     }
 
     /**
      * Update the specified resource in storage.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function update(Request $request, Permission $permission)
     {
-        $validated = Validator::make($request->all(), $this->rules, $this->messages)->validate();
+        $validated = Validator::make($request->all(), [
+            'name' => "required|string|min:1|max:255|unique:permissions,name,{$permission->id}",
+            'roles' => 'required|array|min:1',
+            'roles.*' => 'exists:roles,id',
+        ], $this->messages)->validate();
 
-        if ($request->has('roles')) {
-            $roles = Role::whereIn('id', $request->roles)->get();
-            $permission->syncRoles($roles);
-        } else {
-            $permission->syncRoles([]);
-        }
+        $roles = Role::whereIn('id', $validated['roles'])->get();
+        $permission->syncRoles($roles);
 
-        if ($permission->update($validated)) {
+        if ($permission->update(['name' => $validated['name']])) {
             return redirect(route('permissions.index'))
                 ->with('success', __('Permission updated successfully'));
         }
@@ -123,8 +108,6 @@ class PermissionController extends Controller
 
     /**
      * Remove the specified resource from storage.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function destroy(Permission $permission)
     {
