@@ -11,6 +11,7 @@ use App\Models\DocumentFile;
 use App\Models\Invoice;
 use App\Models\Scopes\FiscalYearScope;
 use App\Models\User;
+use App\Services\DocumentService;
 use App\Services\FiscalYearService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -243,7 +244,7 @@ class BackupControllerTest extends TestCase
 
         $document = Document::factory()->create(['company_id' => $this->company->id]);
         $path = "documents/{$document->id}/test.pdf";
-        Storage::disk('public')->put($path, str_repeat('x', 1024 * 1024)); // 1 MiB
+        Storage::disk('public')->put($path, str_repeat('x', 1024 * 1024));
         DocumentFile::factory()->withDocument($document)->create(['path' => $path]);
 
         $response = $this->get(route('backups.document-files-size', ['source_id' => $this->company->id]));
@@ -253,19 +254,20 @@ class BackupControllerTest extends TestCase
         $response->assertJson(['size_mb' => 1.0]);
     }
 
-    public function test_export_appends_document_files_to_zip_when_section_selected(): void
+    public function test_export_embeds_document_file_base64_in_json_when_section_selected(): void
     {
         Storage::fake('public');
 
         $document = Document::factory()->create(['company_id' => $this->company->id]);
+        $fileContent = 'dummy pdf content';
         $path = "documents/{$document->id}/report.pdf";
-        Storage::disk('public')->put($path, 'dummy pdf content');
+        Storage::disk('public')->put($path, $fileContent);
         DocumentFile::factory()->withDocument($document)->create(['path' => $path]);
 
         $response = $this->post(route('backups.export'), [
             'source_id' => $this->company->id,
             'tables_to_backup' => [
-                FiscalYearSection::SUBJECTS->value,
+                FiscalYearSection::DOCUMENTS->value,
                 FiscalYearSection::DOCUMENT_FILES->value,
             ],
         ]);
@@ -275,35 +277,89 @@ class BackupControllerTest extends TestCase
         $zip = new ZipArchive;
         $zip->open($response->baseResponse->getFile()->getPathname());
 
-        $entries = [];
-        for ($i = 0; $i < $zip->numFiles; $i++) {
-            $entries[] = $zip->getNameIndex($i);
-        }
+        $this->assertSame(1, $zip->numFiles);
+        $jsonContent = $zip->getFromIndex(0);
         $zip->close();
 
-        $this->assertCount(2, $entries);
-        $this->assertTrue(collect($entries)->contains(fn ($n) => str_starts_with($n, 'files/')));
-        $this->assertTrue(collect($entries)->contains(fn ($n) => str_ends_with($n, '.json')));
+        $data = json_decode($jsonContent, true);
+        $this->assertNotEmpty($data['document_files']);
+
+        $docFile = $data['document_files'][0];
+        $this->assertArrayHasKey('document_file', $docFile);
+        $this->assertSame('report.pdf', $docFile['document_file']['name']);
+        $this->assertSame('pdf', $docFile['document_file']['extension']);
+        $this->assertSame(strlen($fileContent), $docFile['document_file']['size']);
+        $this->assertSame(hash('sha256', $fileContent), $docFile['document_file']['sha256']);
+        $this->assertSame(base64_encode($fileContent), $docFile['document_file']['content']);
     }
 
-    public function test_import_restores_binary_document_files_from_zip(): void
+    public function test_export_document_file_metadata_is_complete(): void
     {
         Storage::fake('public');
+
+        $document = Document::factory()->create(['company_id' => $this->company->id]);
+        $fileContent = str_repeat('A', 1024);
+        $path = "documents/{$document->id}/invoice.pdf";
+        Storage::disk('public')->put($path, $fileContent);
+        DocumentFile::factory()->withDocument($document)->create(['path' => $path]);
+
+        $response = $this->post(route('backups.export'), [
+            'source_id' => $this->company->id,
+            'tables_to_backup' => [
+                FiscalYearSection::DOCUMENTS->value,
+                FiscalYearSection::DOCUMENT_FILES->value,
+            ],
+        ]);
+
+        $zip = new ZipArchive;
+        $zip->open($response->baseResponse->getFile()->getPathname());
+        $data = json_decode($zip->getFromIndex(0), true);
+        $zip->close();
+
+        $meta = $data['document_files'][0]['document_file'];
+
+        $this->assertArrayHasKey('name', $meta);
+        $this->assertArrayHasKey('mime', $meta);
+        $this->assertArrayHasKey('extension', $meta);
+        $this->assertArrayHasKey('size', $meta);
+        $this->assertArrayHasKey('sha256', $meta);
+        $this->assertArrayHasKey('content', $meta);
+        $this->assertSame(1024, $meta['size']);
+        $this->assertSame(hash('sha256', $fileContent), $meta['sha256']);
+        $this->assertSame('pdf', $meta['extension']);
+        $this->assertSame('invoice.pdf', $meta['name']);
+    }
+
+    public function test_import_restores_document_files_from_embedded_base64(): void
+    {
+        Storage::fake('public');
+
+        $binaryContent = 'binary file content';
 
         $payload = [
             'documents' => [
                 ['id' => 99, 'number' => 1, 'date' => '2026-01-01', 'creator_id' => null, 'title' => 'Doc', 'company_id' => 0],
             ],
             'document_files' => [
-                ['id' => 1, 'document_id' => 99, 'user_id' => null, 'title' => 'Test File', 'name' => 'test.pdf', 'path' => 'documents/99/test.pdf'],
+                [
+                    'id' => 1, 'document_id' => 99, 'user_id' => null,
+                    'title' => 'Test File', 'name' => 'test.pdf', 'path' => 'documents/99/test.pdf',
+                    'document_file' => [
+                        'name' => 'test.pdf',
+                        'mime' => 'application/pdf',
+                        'extension' => 'pdf',
+                        'size' => strlen($binaryContent),
+                        'sha256' => hash('sha256', $binaryContent),
+                        'content' => base64_encode($binaryContent),
+                    ],
+                ],
             ],
         ];
 
-        $zipPath = tempnam(sys_get_temp_dir(), 'bin_import_test_');
+        $zipPath = tempnam(sys_get_temp_dir(), 'base64_import_test_');
         $zip = new ZipArchive;
         $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
         $zip->addFromString('backup.json', json_encode($payload));
-        $zip->addFromString('files/documents/99/test.pdf', 'binary file content');
         $zip->close();
 
         $upload = UploadedFile::fake()->createWithContent('backup.zip', File::get($zipPath));
@@ -312,10 +368,10 @@ class BackupControllerTest extends TestCase
         $this->post(route('backups.import'), [
             'file' => $upload,
             'fiscal_year' => 1405,
-            'company_name' => 'Binary Import Co',
+            'company_name' => 'Base64 Import Co',
         ])->assertRedirect(route('home'));
 
-        $newCompany = Company::where('name', 'Binary Import Co')->firstOrFail();
+        $newCompany = Company::where('name', 'Base64 Import Co')->firstOrFail();
 
         $documentIds = Document::withoutGlobalScope(FiscalYearScope::class)
             ->where('company_id', $newCompany->id)
@@ -326,5 +382,325 @@ class BackupControllerTest extends TestCase
         $expectedPath = "documents/{$docFile->document_id}/test.pdf";
         $this->assertSame($expectedPath, $docFile->path);
         Storage::disk('public')->assertExists($expectedPath);
+        $this->assertSame($binaryContent, Storage::disk('public')->get($expectedPath));
+    }
+
+    public function test_import_checksum_mismatch_throws_exception(): void
+    {
+        Storage::fake('public');
+
+        $payload = [
+            'documents' => [
+                ['id' => 1, 'number' => 1, 'date' => '2026-01-01', 'creator_id' => null, 'title' => 'Doc', 'company_id' => 0],
+            ],
+            'document_files' => [
+                [
+                    'id' => 1, 'document_id' => 1, 'user_id' => null,
+                    'title' => 'File', 'name' => 'file.pdf', 'path' => 'documents/1/file.pdf',
+                    'document_file' => [
+                        'name' => 'file.pdf',
+                        'mime' => 'application/pdf',
+                        'extension' => 'pdf',
+                        'size' => 7,
+                        'sha256' => 'deliberately_wrong_sha256_value',
+                        'content' => base64_encode('content'),
+                    ],
+                ],
+            ],
+        ];
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/SHA-256 checksum mismatch/');
+
+        FiscalYearService::importData($payload, ['name' => 'Checksum Fail Co', 'fiscal_year' => 1407]);
+    }
+
+    public function test_import_base64_checksum_validates_on_correct_hash(): void
+    {
+        Storage::fake('public');
+
+        $content = 'correct content';
+
+        $payload = [
+            'documents' => [
+                ['id' => 1, 'number' => 1, 'date' => '2026-01-01', 'creator_id' => null, 'title' => 'Doc', 'company_id' => 0],
+            ],
+            'document_files' => [
+                [
+                    'id' => 1, 'document_id' => 1, 'user_id' => null,
+                    'title' => 'File', 'name' => 'valid.pdf', 'path' => 'documents/1/valid.pdf',
+                    'document_file' => [
+                        'name' => 'valid.pdf',
+                        'mime' => 'application/pdf',
+                        'extension' => 'pdf',
+                        'size' => strlen($content),
+                        'sha256' => hash('sha256', $content),
+                        'content' => base64_encode($content),
+                    ],
+                ],
+            ],
+        ];
+
+        $company = FiscalYearService::importData($payload, ['name' => 'Checksum OK Co', 'fiscal_year' => 1408]);
+
+        $documentIds = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $company->id)->pluck('id');
+        $docFile = DocumentFile::whereIn('document_id', $documentIds)->firstOrFail();
+
+        Storage::disk('public')->assertExists($docFile->path);
+        $this->assertSame($content, Storage::disk('public')->get($docFile->path));
+    }
+
+    public function test_export_and_import_large_file_roundtrip(): void
+    {
+        Storage::fake('public');
+
+        $largeContent = str_repeat('X', 200 * 1024); // 200 KiB — spans multiple 57 KiB encode chunks
+        $document = Document::factory()->create(['company_id' => $this->company->id]);
+        $path = "documents/{$document->id}/large.bin";
+        Storage::disk('public')->put($path, $largeContent);
+        DocumentFile::factory()->withDocument($document)->create(['path' => $path]);
+
+        $response = $this->post(route('backups.export'), [
+            'source_id' => $this->company->id,
+            'tables_to_backup' => [
+                FiscalYearSection::DOCUMENTS->value,
+                FiscalYearSection::DOCUMENT_FILES->value,
+            ],
+        ]);
+
+        $response->assertStatus(200);
+
+        $zip = new ZipArchive;
+        $zip->open($response->baseResponse->getFile()->getPathname());
+        $data = json_decode($zip->getFromIndex(0), true);
+        $zip->close();
+
+        $meta = $data['document_files'][0]['document_file'];
+        $this->assertSame(200 * 1024, $meta['size']);
+        $this->assertSame(hash('sha256', $largeContent), $meta['sha256']);
+        $this->assertSame($largeContent, base64_decode($meta['content']));
+    }
+
+    public function test_export_documents_section_without_document_files_section_omits_base64(): void
+    {
+        Storage::fake('public');
+
+        $document = Document::factory()->create(['company_id' => $this->company->id]);
+        Storage::disk('public')->put("documents/{$document->id}/note.pdf", 'content');
+        DocumentFile::factory()->withDocument($document)->create(['path' => "documents/{$document->id}/note.pdf"]);
+
+        $response = $this->post(route('backups.export'), [
+            'source_id' => $this->company->id,
+            'tables_to_backup' => [FiscalYearSection::DOCUMENTS->value],
+        ]);
+
+        $zip = new ZipArchive;
+        $zip->open($response->baseResponse->getFile()->getPathname());
+        $data = json_decode($zip->getFromIndex(0), true);
+        $zip->close();
+
+        $this->assertNotEmpty($data['document_files']);
+        $this->assertArrayNotHasKey('document_file', $data['document_files'][0]);
+    }
+
+    public function test_export_skips_document_file_missing_from_storage_gracefully(): void
+    {
+        Storage::fake('public');
+
+        $document = Document::factory()->create(['company_id' => $this->company->id]);
+        DocumentFile::factory()->withDocument($document)->create(['path' => "documents/{$document->id}/ghost.pdf"]);
+
+        $response = $this->post(route('backups.export'), [
+            'source_id' => $this->company->id,
+            'tables_to_backup' => [
+                FiscalYearSection::DOCUMENTS->value,
+                FiscalYearSection::DOCUMENT_FILES->value,
+            ],
+        ]);
+
+        $response->assertStatus(200);
+
+        $zip = new ZipArchive;
+        $zip->open($response->baseResponse->getFile()->getPathname());
+        $data = json_decode($zip->getFromIndex(0), true);
+        $zip->close();
+
+        $this->assertNotEmpty($data['document_files']);
+        $this->assertArrayNotHasKey('document_file', $data['document_files'][0]);
+    }
+
+    public function test_export_multiple_document_files_all_get_embedded(): void
+    {
+        Storage::fake('public');
+
+        $doc1 = Document::factory()->create(['company_id' => $this->company->id]);
+        $doc2 = Document::factory()->create(['company_id' => $this->company->id]);
+        $content1 = 'first file content';
+        $content2 = 'second file content';
+
+        Storage::disk('public')->put("documents/{$doc1->id}/a.pdf", $content1);
+        Storage::disk('public')->put("documents/{$doc2->id}/b.pdf", $content2);
+        DocumentFile::factory()->withDocument($doc1)->create(['path' => "documents/{$doc1->id}/a.pdf"]);
+        DocumentFile::factory()->withDocument($doc2)->create(['path' => "documents/{$doc2->id}/b.pdf"]);
+
+        $response = $this->post(route('backups.export'), [
+            'source_id' => $this->company->id,
+            'tables_to_backup' => [
+                FiscalYearSection::DOCUMENTS->value,
+                FiscalYearSection::DOCUMENT_FILES->value,
+            ],
+        ]);
+
+        $zip = new ZipArchive;
+        $zip->open($response->baseResponse->getFile()->getPathname());
+        $data = json_decode($zip->getFromIndex(0), true);
+        $zip->close();
+
+        $this->assertCount(2, $data['document_files']);
+
+        $contents = collect($data['document_files'])
+            ->map(fn ($f) => base64_decode($f['document_file']['content']))
+            ->sort()
+            ->values()
+            ->all();
+
+        $this->assertSame(
+            collect([$content1, $content2])->sort()->values()->all(),
+            $contents
+        );
+    }
+
+    public function test_import_skips_document_file_entry_without_base64_content(): void
+    {
+        Storage::fake('public');
+
+        $payload = [
+            'documents' => [
+                ['id' => 1, 'number' => 1, 'date' => '2026-01-01', 'creator_id' => null, 'title' => 'Doc', 'company_id' => 0],
+            ],
+            'document_files' => [
+                ['id' => 1, 'document_id' => 1, 'user_id' => null, 'title' => 'Plain', 'name' => 'plain.pdf', 'path' => 'documents/1/plain.pdf'],
+            ],
+        ];
+
+        $company = FiscalYearService::importData($payload, ['name' => 'No Content Co', 'fiscal_year' => 1409]);
+
+        $documentIds = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $company->id)->pluck('id');
+
+        $this->assertSame(0, DocumentFile::whereIn('document_id', $documentIds)->count());
+        Storage::disk('public')->assertMissing('documents/1/plain.pdf');
+    }
+
+    public function test_import_multiple_document_files_all_restored(): void
+    {
+        Storage::fake('public');
+
+        $c1 = 'alpha content';
+        $c2 = 'beta content';
+
+        $payload = [
+            'documents' => [
+                ['id' => 10, 'number' => 1, 'date' => '2026-01-01', 'creator_id' => null, 'title' => 'A', 'company_id' => 0],
+                ['id' => 20, 'number' => 2, 'date' => '2026-01-01', 'creator_id' => null, 'title' => 'B', 'company_id' => 0],
+            ],
+            'document_files' => [
+                [
+                    'id' => 1, 'document_id' => 10, 'user_id' => null, 'title' => 'F1', 'name' => 'alpha.pdf', 'path' => 'documents/10/alpha.pdf',
+                    'document_file' => ['name' => 'alpha.pdf', 'mime' => 'application/pdf', 'extension' => 'pdf', 'size' => strlen($c1), 'sha256' => hash('sha256', $c1), 'content' => base64_encode($c1)],
+                ],
+                [
+                    'id' => 2, 'document_id' => 20, 'user_id' => null, 'title' => 'F2', 'name' => 'beta.pdf', 'path' => 'documents/20/beta.pdf',
+                    'document_file' => ['name' => 'beta.pdf', 'mime' => 'application/pdf', 'extension' => 'pdf', 'size' => strlen($c2), 'sha256' => hash('sha256', $c2), 'content' => base64_encode($c2)],
+                ],
+            ],
+        ];
+
+        $company = FiscalYearService::importData($payload, ['name' => 'Multi File Co', 'fiscal_year' => 1410]);
+
+        $documentIds = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $company->id)->pluck('id');
+        $docFiles = DocumentFile::whereIn('document_id', $documentIds)->get();
+
+        $this->assertCount(2, $docFiles);
+
+        foreach ($docFiles as $docFile) {
+            Storage::disk('public')->assertExists($docFile->path);
+        }
+
+        $restoredContents = $docFiles->map(fn ($f) => Storage::disk('public')->get($f->path))->sort()->values()->all();
+        $this->assertSame(collect([$c1, $c2])->sort()->values()->all(), $restoredContents);
+    }
+
+    public function test_import_invalid_base64_throws_exception(): void
+    {
+        Storage::fake('public');
+
+        $payload = [
+            'documents' => [
+                ['id' => 1, 'number' => 1, 'date' => '2026-01-01', 'creator_id' => null, 'title' => 'Doc', 'company_id' => 0],
+            ],
+            'document_files' => [
+                [
+                    'id' => 1, 'document_id' => 1, 'user_id' => null,
+                    'title' => 'File', 'name' => 'file.pdf', 'path' => 'documents/1/file.pdf',
+                    'document_file' => [
+                        'name' => 'file.pdf', 'mime' => 'application/pdf', 'extension' => 'pdf',
+                        'size' => 7, 'sha256' => 'irrelevant',
+                        'content' => '!!!NOT_VALID_BASE64!!!', // contains chars outside base64 alphabet
+                    ],
+                ],
+            ],
+        ];
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/Invalid Base64/');
+
+        FiscalYearService::importData($payload, ['name' => 'Bad Base64 Co', 'fiscal_year' => 1411]);
+    }
+
+    public function test_deleting_document_file_removes_storage_file(): void
+    {
+        Storage::fake('public');
+
+        $document = Document::factory()->create(['company_id' => $this->company->id]);
+        $path = "documents/{$document->id}/attachment.pdf";
+        Storage::disk('public')->put($path, 'file body');
+        $docFile = DocumentFile::factory()->withDocument($document)->create(['path' => $path]);
+
+        Storage::disk('public')->assertExists($path);
+
+        (new \App\Services\DocumentFileService)->delete($docFile);
+
+        Storage::disk('public')->assertMissing($path);
+        $this->assertDatabaseMissing('document_files', ['id' => $docFile->id]);
+    }
+
+    public function test_deleting_document_removes_all_document_files_and_storage_files(): void
+    {
+        $disk = Storage::fake('public');
+
+        $document = Document::factory()->create(['company_id' => $this->company->id]);
+        $paths = [
+            "documents/{$document->id}/file1.pdf",
+            "documents/{$document->id}/file2.pdf",
+        ];
+
+        $fileIds = [];
+        foreach ($paths as $path) {
+            $disk->put($path, 'content');
+            $fileIds[] = DocumentFile::factory()->withDocument($document)->create(['path' => $path])->id;
+        }
+
+        config(['active-company-id' => $this->company->id]);
+        DocumentService::deleteDocument($document->id);
+
+        foreach ($paths as $path) {
+            $disk->assertMissing($path);
+        }
+
+        foreach ($fileIds as $id) {
+            $this->assertDatabaseMissing('document_files', ['id' => $id]);
+        }
+
+        $this->assertDatabaseMissing('documents', ['id' => $document->id]);
     }
 }

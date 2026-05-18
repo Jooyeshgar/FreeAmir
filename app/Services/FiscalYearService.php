@@ -51,7 +51,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\LazyCollection;
-use ZipArchive;
 
 class FiscalYearService
 {
@@ -143,22 +142,58 @@ class FiscalYearService
     }
 
     /**
-     * Add actual document files from storage into a provided ZIP archive.
+     * Embed each document file's content as Base64 directly into the export data array.
      *
-     * @param  ZipArchive  $zip  The instantiated ZipArchive object to append files to.
-     * @param  int  $companyId  The unique identifier of the company.
+     * @param  array  $exportData  Export data array, modified in place.
      */
-    public static function documentFilesToZip(ZipArchive $zip, int $companyId): void
+    public static function documentFilesInBase64(array &$exportData): void
     {
-        $disk = Storage::disk('public');
-
-        foreach (self::getCompanyDocumentFiles($companyId) as $docFile) {
-            $path = self::normalizeFilePath($docFile->path);
-
-            if ($disk->exists($path)) {
-                $zip->addFile($disk->path($path), 'files/'.$path);
-            }
+        if (empty($exportData['document_files'])) {
+            return;
         }
+
+        $disk = Storage::disk('public');
+        $chunkSize = 57 * 1024; // 58,368 bytes — divisible by 3 for clean base64 blocks
+
+        foreach ($exportData['document_files'] as &$docFileData) {
+            $path = self::normalizeFilePath($docFileData['path'] ?? '');
+
+            if (! $disk->exists($path)) {
+                continue;
+            }
+
+            $stream = $disk->readStream($path);
+            if (! is_resource($stream)) {
+                continue;
+            }
+
+            $hash = hash_init('sha256');
+            $base64Parts = [];
+
+            try {
+                while (! feof($stream)) {
+                    $chunk = fread($stream, $chunkSize);
+                    if ($chunk === false || $chunk === '') {
+                        break;
+                    }
+                    hash_update($hash, $chunk);
+                    $base64Parts[] = base64_encode($chunk);
+                }
+            } finally {
+                fclose($stream);
+            }
+
+            $docFileData['document_file'] = [
+                'name' => basename($path),
+                'mime' => $disk->mimeType($path) ?: 'application/octet-stream',
+                'extension' => pathinfo($path, PATHINFO_EXTENSION),
+                'size' => $disk->size($path),
+                'sha256' => hash_final($hash),
+                'content' => implode('', $base64Parts),
+            ];
+        }
+
+        unset($docFileData);
     }
 
     /**
@@ -1845,6 +1880,10 @@ class FiscalYearService
      */
     protected static function _importDocumentFiles(array $documentFilesData, int $targetYearId, array $documentMapping): void
     {
+        $disk = Storage::disk('public');
+        // 77,824 = 4/3 × 58 368 — each chunk is a multiple of 4 base64 chars for clean decoding
+        $decodeChunkSize = 77824;
+
         foreach ($documentFilesData as $documentFileData) {
             $oldDocFileId = $documentFileData['document_id'] ?? null;
             $oldUserId = $documentFileData['user_id'] ?? null;
@@ -1855,11 +1894,59 @@ class FiscalYearService
                 continue;
             }
 
-            $newFile = new DocumentFile;
-            $newFile->fill(collect($documentFileData)->except(['id', 'document_id', 'user_id'])->toArray());
-            $newFile->document_id = $documentMapping[$oldDocFileId];
-            $newFile->user_id = $oldUserId;
+            // Entries without embedded Base64 content are skipped entirely
+            if (! isset($documentFileData['document_file']['content'])) {
+                continue;
+            }
 
+            $newDocumentId = $documentMapping[$oldDocFileId];
+            $fileData = $documentFileData['document_file'];
+            $base64Content = $fileData['content'];
+            $expectedSha256 = $fileData['sha256'] ?? null;
+            $fileName = basename($fileData['name'] ?? ($documentFileData['name'] ?? 'file'));
+            $newRelPath = 'documents/'.$newDocumentId.'/'.$fileName;
+
+            $tempPath = tempnam(sys_get_temp_dir(), 'docfile_import_');
+            $tempHandle = fopen($tempPath, 'wb');
+            $hash = hash_init('sha256');
+            $length = strlen($base64Content);
+
+            try {
+                for ($offset = 0; $offset < $length; $offset += $decodeChunkSize) {
+                    $chunk = substr($base64Content, $offset, $decodeChunkSize);
+                    $decoded = base64_decode($chunk, true);
+
+                    if ($decoded === false) {
+                        throw new \RuntimeException("Invalid Base64 data in document file: {$fileName}");
+                    }
+
+                    hash_update($hash, $decoded);
+                    fwrite($tempHandle, $decoded);
+                }
+
+                if (is_resource($tempHandle)) {
+                    fclose($tempHandle);
+                }
+
+                if ($expectedSha256 !== null && hash_final($hash) !== $expectedSha256) {
+                    throw new \RuntimeException("SHA-256 checksum mismatch for document file: {$fileName}");
+                }
+
+                $fileStream = fopen($tempPath, 'rb');
+                $disk->writeStream($newRelPath, $fileStream);
+                fclose($fileStream);
+            } finally {
+                if (is_resource($tempHandle)) {
+                    fclose($tempHandle);
+                }
+                @unlink($tempPath);
+            }
+
+            $newFile = new DocumentFile;
+            $newFile->fill(collect($documentFileData)->except(['id', 'document_id', 'user_id', 'document_file'])->toArray());
+            $newFile->document_id = $newDocumentId;
+            $newFile->user_id = $oldUserId;
+            $newFile->path = $newRelPath;
             $newFile->save();
         }
     }
