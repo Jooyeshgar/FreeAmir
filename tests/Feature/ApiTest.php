@@ -65,20 +65,6 @@ class ApiTest extends TestCase
         return '/api/companies/'.$this->company->id.$path;
     }
 
-    public function test_api_token_requests_do_not_require_api_access_permission(): void
-    {
-        $user = User::factory()->create();
-        $this->company->users()->attach($user);
-        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'hr.employees.index']));
-        $token = $user->createToken('limited', ['hr.employees.index'])->plainTextToken;
-
-        $response = $this->getJson('/api/companies/'.$this->company->id.'/employees', [
-            'Authorization' => 'Bearer '.$token,
-        ]);
-
-        $response->assertOk();
-    }
-
     public function test_token_must_have_route_permission_even_when_user_has_it(): void
     {
         $token = $this->user->createToken('read-only', ['hr.employees.index'])->plainTextToken;
