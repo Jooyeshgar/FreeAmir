@@ -39,10 +39,6 @@ class CheckPermission
         }
 
         if ($user->currentAccessToken()) {
-            if (! $user->can('api.access')) {
-                throw UnauthorizedException::forPermissions(['api.access']);
-            }
-
             $tokenAllowsRoute = collect($user->currentAccessToken()->abilities ?? [])
                 ->contains(fn (string $ability) => Str::is($ability, $routeName));
 

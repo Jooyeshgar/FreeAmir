@@ -15,7 +15,7 @@ class ApiTokenTest extends TestCase
     public function test_user_can_open_create_token_page(): void
     {
         $user = User::factory()->create();
-        foreach (['api-tokens.*', 'api.access', 'documents.show'] as $permission) {
+        foreach (['api-tokens.*', 'documents.show'] as $permission) {
             $user->givePermissionTo(Permission::firstOrCreate(['name' => $permission]));
         }
 
@@ -29,7 +29,7 @@ class ApiTokenTest extends TestCase
     public function test_user_can_create_token_only_from_own_permissions(): void
     {
         $user = User::factory()->create();
-        foreach (['api-tokens.*', 'api.access', 'documents.show', 'configs.index'] as $permission) {
+        foreach (['api-tokens.*', 'documents.show', 'configs.index'] as $permission) {
             $user->givePermissionTo(Permission::firstOrCreate(['name' => $permission]));
         }
 
@@ -70,11 +70,11 @@ class ApiTokenTest extends TestCase
     public function test_user_can_create_token_from_api_permissions_granted_by_wildcard(): void
     {
         $user = User::factory()->create();
-        foreach (['api-tokens.*', 'api.access', 'documents.*'] as $permission) {
+        foreach (['api-tokens.*', 'documents.*'] as $permission) {
             Permission::firstOrCreate(['name' => $permission]);
         }
 
-        $user->givePermissionTo('api-tokens.*', 'api.access', 'documents.*');
+        $user->givePermissionTo('api-tokens.*', 'documents.*');
 
         $this->actingAs($user)
             ->get(route('api-tokens.create'))

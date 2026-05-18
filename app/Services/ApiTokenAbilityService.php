@@ -18,7 +18,6 @@ class ApiTokenAbilityService
                 ->filter(fn (string $middleware) => str_starts_with($middleware, 'check-permission:'))
                 ->map(fn (string $middleware) => substr($middleware, strlen('check-permission:'))))
             ->reject(fn (string $permission) => in_array($permission, [
-                'api.access',
                 'api-tokens.index',
                 'api-tokens.store',
                 'api-tokens.destroy',

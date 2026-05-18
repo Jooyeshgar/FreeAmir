@@ -21,7 +21,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'home.bank-account',
             'home.seed-demo-data',
             'home.refresh-database',
-            'api.access',
             'api-tokens.index',
             'api-tokens.create',
             'api-tokens.store',

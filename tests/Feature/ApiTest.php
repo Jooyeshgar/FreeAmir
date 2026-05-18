@@ -36,7 +36,6 @@ class ApiTest extends TestCase
         $this->company->users()->attach($this->user);
 
         $permissions = [
-            'api.access',
             'companies.index',
             'attendance.attendance-logs.index',
             'attendance.attendance-logs.store',
@@ -66,7 +65,7 @@ class ApiTest extends TestCase
         return '/api/companies/'.$this->company->id.$path;
     }
 
-    public function test_api_requires_api_access_permission_for_token_requests(): void
+    public function test_api_token_requests_do_not_require_api_access_permission(): void
     {
         $user = User::factory()->create();
         $this->company->users()->attach($user);
@@ -77,7 +76,7 @@ class ApiTest extends TestCase
             'Authorization' => 'Bearer '.$token,
         ]);
 
-        $response->assertForbidden();
+        $response->assertOk();
     }
 
     public function test_token_must_have_route_permission_even_when_user_has_it(): void
@@ -206,7 +205,7 @@ class ApiTest extends TestCase
 
     public function test_api_companies_requires_user_permission_and_token_ability(): void
     {
-        $tokenWithoutAbility = $this->user->createToken('without-companies', ['api.access'])->plainTextToken;
+        $tokenWithoutAbility = $this->user->createToken('without-companies', ['hr.employees.index'])->plainTextToken;
 
         $this->getJson('/api/companies', [
             'Authorization' => 'Bearer '.$tokenWithoutAbility,
@@ -214,7 +213,6 @@ class ApiTest extends TestCase
 
         $userWithoutPermission = User::factory()->create();
         $this->company->users()->attach($userWithoutPermission);
-        $userWithoutPermission->givePermissionTo(Permission::firstOrCreate(['name' => 'api.access']));
         $token = $userWithoutPermission->createToken('companies', ['companies.index'])->plainTextToken;
 
         $this->getJson('/api/companies', [
