@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Management;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Spatie\Permission\Exceptions\PermissionAlreadyExists;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -60,14 +59,10 @@ class PermissionController extends Controller
             'roles.*' => 'exists:roles,id',
         ], $this->messages)->validate();
 
-        try {
-            $perm = Permission::create([
-                'name' => $validatedData['name'],
-                'guard_name' => 'web',
-            ]);
-        } catch (PermissionAlreadyExists) {
-            return back()->withInput()->withErrors(['name' => __('This permission already exists.')]);
-        }
+        $perm = Permission::create([
+            'name' => $validatedData['name'],
+            'guard_name' => 'web',
+        ]);
 
         $roles = Role::whereIn('id', $validatedData['roles'])->get();
         $perm->syncRoles($roles);
