@@ -14,6 +14,11 @@ return [
     |
     */
 
+    'moadian' => [
+        'username' => env('MOADIAN_USERNAME'),
+        'tax_id' => env('TAX_ID'),
+    ],
+
     'mailgun' => [
         'domain' => env('MAILGUN_DOMAIN'),
         'secret' => env('MAILGUN_SECRET'),

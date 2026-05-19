@@ -16,6 +16,7 @@ use App\Models\ServiceGroup;
 use App\Services\AncillaryCostService;
 use App\Services\GroupActionService;
 use App\Services\InvoiceService;
+use App\Services\MoadianService;
 use DB;
 use Illuminate\Http\Request;
 use PDF;
@@ -264,6 +265,7 @@ class InvoiceController extends Controller
             'ancillaryCosts.customer',
             'ancillaryCosts.document',
             'ancillaryCosts.items',
+            'moadianHistories',
         ]);
 
         return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy'));
@@ -723,15 +725,47 @@ class InvoiceController extends Controller
         return $map;
     }
 
+    public function showMoadianForm(Invoice $invoice, MoadianService $moadianService)
+    {
+        $decision = $moadianService->validateSendMoadian($invoice);
+
+        if ($decision->hasErrors()) {
+            return redirect()->route('invoices.show', $invoice)->withErrors($decision->messages->pluck('text')->all());
+        }
+
+        return view('invoices.moadian', compact('invoice'));
+    }
+
+    public function sendMoadian(Request $request, Invoice $invoice, MoadianService $moadianService)
+    {
+        $validated = $request->validate([
+            'transaction_date' => ['required', 'string'],
+            'transaction_reference_number' => ['nullable', 'string'],
+        ]);
+
+        $decision = $moadianService->validateSendMoadian($invoice);
+
+        if ($decision->hasErrors()) {
+            return redirect()->route('invoices.show', $invoice)->withErrors($decision->messages->pluck('text')->all());
+        }
+
+        $date = convertToGregorian($validated['transaction_date']);
+        $success = $moadianService->sendInvoice($invoice, $validated['transaction_reference_number'] ?? null, $date);
+
+        if ($success) {
+            return redirect()->route('invoices.show', $invoice)->with('success', __('Invoice sent to Moadian successfully.'));
+        }
+
+        return redirect()->route('invoices.show', $invoice)->with('error', __('Failed to send invoice to Moadian. Please try again.'));
+    }
+
     public function showVoidForm(Invoice $invoice)
     {
         $voidInvoiceDecision = $this->invoiceService->validateVoidingInvoice($invoice);
         $previousInvoiceNumber = floor(Invoice::where('invoice_type', InvoiceType::VOID)->max('number') ?? 0);
 
         if ($voidInvoiceDecision->hasErrors()) {
-            $error = $voidInvoiceDecision->messages->first(fn ($m) => $m->type === 'error');
-
-            return redirect()->route('invoices.show', $invoice)->with('error', $error?->text ?? __('Cannot void the invoice.'));
+            return redirect()->route('invoices.show', $invoice)->with('error', $voidInvoiceDecision->messages->pluck('text')->all());
         }
 
         return view('invoices.forms.void', compact('invoice', 'previousInvoiceNumber'));
@@ -754,9 +788,7 @@ class InvoiceController extends Controller
         $voidInvoiceDecision = $this->invoiceService->validateVoidingInvoice($invoice, $date);
 
         if ($voidInvoiceDecision->hasErrors()) {
-            $error = $voidInvoiceDecision->messages->first(fn ($m) => $m->type === 'error');
-
-            return redirect()->back()->with('error', $error?->text ?? __('Cannot void the invoice.'));
+            return redirect()->back()->with('error', $voidInvoiceDecision->messages->pluck('text')->all());
         }
 
         $voidInvoice = $this->invoiceService->voidInvoice($invoice, auth()->user(), $date, $number);

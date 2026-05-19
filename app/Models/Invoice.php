@@ -34,6 +34,7 @@ class Invoice extends Model
         'title',
         'returned_invoice_id',
         'company_id',
+        'taxID',
     ];
 
     protected $casts = [
@@ -75,6 +76,11 @@ class Invoice extends Model
     public function ancillaryCosts()
     {
         return $this->hasMany(AncillaryCost::class, 'invoice_id');
+    }
+
+    public function moadianHistories()
+    {
+        return $this->hasMany(MoadianHistory::class, 'invoice_id');
     }
 
     public function returnedInvoice()
