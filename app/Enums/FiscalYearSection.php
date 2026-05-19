@@ -13,7 +13,7 @@ enum FiscalYearSection: string
     case SERVICES = 'services'; // Represents service_groups + services
     case SUBJECTS = 'subjects';
     case DOCUMENTS = 'documents'; // Represents documents + transactions
-    case DOCUMENT_FILES = 'document_files'; // Represents documents_file files stored on disk
+    case DOCUMENT_FILES = 'document_files'; // Represents documents_files
     case INVOICES = 'invoices'; // Represents invoices + ancillary_costs
     // case CHEQUES = 'cheques'; //  Represents cheques + cheque_histories
     case EMPLOYEES = 'employees'; // Represents employees + org_charts + work_sites + work_site_contracts + work_shifts

@@ -2,12 +2,7 @@
     use App\Enums\FiscalYearSection;
 @endphp
 
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Backup') }}
-        </h2>
-    </x-slot>
+<x-app-layout :title="__('Backup')">
     <x-show-message-bags />
 
     <div class="card bg-base-100 shadow-xl">
@@ -29,7 +24,7 @@
                             .then(data => { this.docFileSizeMb = data.size_mb; })
                             .catch(() => { this.docFileSizeMb = null; });
                     }
-                }">
+                }" x-init="fetchSize()">
                     <div class="form-control">
                         <label for="source_id" class="label">
                             <span class="label-text">{{ __('Backup from') }}</span>
@@ -55,28 +50,30 @@
                                         <th>{{ __('Table Name') }}</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody class="divide-y divide-gray-100">
                                     @foreach (FiscalYearSection::ui() as $key => $value)
-                                        @php $isDocumentFiles = $value === FiscalYearSection::DOCUMENT_FILES->value; @endphp
+                                        @php $isDocumentFiles = $key === FiscalYearSection::DOCUMENT_FILES->value; @endphp
+
                                         <tr>
-                                            <td>
-                                                <input type="checkbox" name="tables_to_backup[]"
-                                                    value="{{ $value }}" id="table_{{ $value }}"
-                                                    class="checkbox" @checked(!$isDocumentFiles)
-                                                    @if ($isDocumentFiles) x-on:change="fetchSize()" @endif>
+                                            <td class="w-1/3 px-4 py-3">
+                                                <input type="checkbox" name="tables_to_backup[]" value="{{ $key }}" id="table_{{ $key }}"
+                                                    class="h-4 w-4 rounded border-gray-300 " @checked(true)
+                                                    @if ($isDocumentFiles) x-on:change="fetchSize()" @endif
+                                                >
                                             </td>
-                                            <td>
-                                                <label for="table_{{ $value }}"
-                                                    class="label-text">{{ $key }}</label>
+
+                                            <td class="px-4 py-3">
+                                                <div class="flex flex-col gap-1">
+                                                    <label for="table_{{ $key }}" class="text-label cursor-pointer">{{ $value }}</label>
+
+                                                    @if ($isDocumentFiles)
+                                                        <span x-show="docFileSizeMb !== null" x-cloak class="text-xs text-warning"
+                                                            x-text="`{{ __('Selecting this option will increase the backup size by approximately :size MB.') }}`.replace(':size', $store.utils.convertToFarsi(String(docFileSizeMb)))">
+                                                        </span>
+                                                    @endif
+                                                </div>
                                             </td>
                                         </tr>
-                                        @if ($isDocumentFiles)
-                                            <tr x-show="docFileSizeMb !== null" x-cloak>
-                                                <td colspan="2" class="text-sm text-info py-1 px-2"
-                                                    x-text="`{{ __('Selecting this option will increase the backup size by approximately :size MB.') }}`.replace(':size', $store.utils.formatNumber(docFileSizeMb))">
-                                                </td>
-                                            </tr>
-                                        @endif
                                     @endforeach
                                 </tbody>
                             </table>

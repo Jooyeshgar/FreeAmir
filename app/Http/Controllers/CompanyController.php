@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Enums\FiscalYearSection;
 use App\Models\Company;
+use App\Models\Document;
 use App\Services\FiscalYearService;
 use Cookie;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class CompanyController extends Controller
@@ -125,13 +127,23 @@ class CompanyController extends Controller
      */
     public function destroy(Company $company): RedirectResponse
     {
-        if ($company->delete()) {
+        try {
+            DB::transaction(function () use ($company) {
+                $documents = Document::withoutGlobalScopes()->where('company_id', $company->id)->get();
+
+                foreach ($documents as $document) {
+                    Storage::disk('public')->deleteDirectory("documents/{$document->id}");
+                }
+
+                $company->delete();
+            });
+
             return redirect(route('companies.index'))
                 ->with('success', __('Company deleted successfully.'));
+        } catch (\Throwable $e) {
+            return redirect(route('companies.index'))
+                ->with('error', __('An error occurred, try again.'));
         }
-
-        return redirect(route('companies.index'))
-            ->with('error', 'An error occurred, Try again.');
     }
 
     /**

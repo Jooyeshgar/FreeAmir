@@ -134,6 +134,8 @@ class FiscalYearService
             $path = self::normalizeFilePath($docFile->path);
 
             if ($disk->exists($path)) {
+                // Base64 inflates by 4/3, ZIP deflate compresses
+                // Base64 text back by ~15–20%, so net ZIP growth ≈ raw file size.
                 $totalBytes += $disk->size($path);
             }
         }
