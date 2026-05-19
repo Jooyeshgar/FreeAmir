@@ -628,7 +628,14 @@
                                     {{ __('Void') }}
                                 </a>
                             @else
-                                <span class="tooltip" data-tip="{{ __('Invoice must be approved and sent to Moadian before voiding') }}">
+                                @php
+                                    $voidDisabledTip = $invoice->voidInvoice
+                                        ? __('Invoice has voided already.')
+                                        : ($invoice->getReturnInvoice()->isNotEmpty()
+                                            ? __('Only approved sell invoices without return invoices can be voided.')
+                                            : __('Invoice must be approved and sent to Moadian before voiding'));
+                                @endphp
+                                <span class="tooltip" data-tip="{{ $voidDisabledTip }}">
                                     <button class="btn btn-warning gap-2 btn-disabled cursor-not-allowed">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
