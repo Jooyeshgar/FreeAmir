@@ -23,7 +23,8 @@
         </details>
     </li>
 @endcan
-@canany(['invoices.index', 'invoices.inactive', 'ancillary-costs.index'])
+@canany(['invoices.index', 'invoices.inactive', 'customers.create', 'ancillary-costs.index',
+    'invoices.moadian-histories.index'])
     <li>
         <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('Invoices') }}</summary>
@@ -74,6 +75,9 @@
                 @endcanany
                 @can('invoices.inactive')
                     <li><a href="{{ route('invoices.inactive') }}">{{ __('Activate Confirmed Invoices') }}</a></li>
+                @endcan
+                @can('customers.create')
+                    <li><a href="{{ route('customers.create') }}">{{ __('Add Customer') }}</a></li>
                 @endcan
             </ul>
         </details>
@@ -159,8 +163,7 @@
 @endcanany
 
 @canany(['salary.payrolls.dashboard', 'salary.payrolls.index', 'hr.employees.index', 'hr.personnel-requests.index',
-    'attendance.attendance-logs.index',
-    'attendance.monthly-attendances.index'])
+    'attendance.attendance-logs.index', 'attendance.monthly-attendances.index'])
     <li>
         <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('HR') }}</summary>
