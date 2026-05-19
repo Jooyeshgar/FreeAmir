@@ -732,6 +732,13 @@ class FiscalYearService
 
             $sourceData['document_files'] = ! empty($documentIds) ? DocumentFile::whereIn('document_id', $documentIds)->get()->toArray() : [];
         }
+        if (in_array('document_files', $sections) && ! isset($sourceData['document_files'])) {
+            $documentIdsSubquery = Document::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
+                ->select('id');
+
+            $sourceData['document_files'] = DocumentFile::whereIn('document_id', $documentIdsSubquery)->get()->toArray();
+        }
         if (in_array('invoices', $sections)) {
             $sourceData['invoices'] = Invoice::withoutGlobalScope(FiscalYearScope::class)
                 ->where('company_id', $sourceYearId)

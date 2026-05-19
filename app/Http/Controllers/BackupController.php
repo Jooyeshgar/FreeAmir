@@ -36,14 +36,18 @@ class BackupController extends Controller
             'tables_to_backup.*' => 'string|in:'.implode(',', array_map(fn ($case) => $case->value, FiscalYearSection::cases())),
         ]);
 
-        $includeDocumentFiles = in_array(FiscalYearSection::DOCUMENT_FILES->value, $validated['tables_to_backup']);
-        $dbSections = array_values(array_filter(
-            $validated['tables_to_backup'],
-            fn ($s) => $s !== FiscalYearSection::DOCUMENT_FILES->value
-        ));
+        $tables = $validated['tables_to_backup'];
+        $documentsVal = FiscalYearSection::DOCUMENTS->value;
+        $documentFilesVal = FiscalYearSection::DOCUMENT_FILES->value;
+
+        if (in_array($documentFilesVal, $tables) && ! in_array($documentsVal, $tables)) {
+            $tables = array_values(array_filter($tables, fn ($s) => $s !== $documentFilesVal));
+        }
+
+        $includeDocumentFiles = in_array($documentFilesVal, $tables);
 
         $company = Company::findOrFail($validated['source_id']);
-        $exportData = FiscalYearService::exportData($validated['source_id'], $dbSections);
+        $exportData = FiscalYearService::exportData($validated['source_id'], $tables);
 
         if ($includeDocumentFiles) {
             FiscalYearService::documentFilesInBase64($exportData);

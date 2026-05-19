@@ -494,6 +494,8 @@
     "Document #": "Document #",
     "Document Date": "Document Date",
     "Document Files": "Document Files",
+    "Document Files requires Documents to be selected. If you proceed, Document Files will be excluded from the backup. Do you want to continue?": "Document Files requires Documents to be selected. If you proceed, Document Files will be excluded from the backup. Do you want to continue?",
+    "Document Files will not be exported because Documents is not selected.": "Document Files will not be exported because Documents is not selected.",
     "document_files": "document_files",
     "Document Information": "Document Information",
     "Document Issuance": "Document Issuance",

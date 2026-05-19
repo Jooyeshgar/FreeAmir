@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\FiscalYearSection;
 use App\Models\Company;
 use App\Models\Document;
+use App\Models\DocumentFile;
 use App\Services\FiscalYearService;
 use Cookie;
 use Illuminate\Contracts\View\View;
@@ -13,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class CompanyController extends Controller
 {
@@ -129,11 +131,15 @@ class CompanyController extends Controller
     {
         try {
             DB::transaction(function () use ($company) {
-                $documents = Document::withoutGlobalScopes()->where('company_id', $company->id)->get();
+                $documentIds = Document::withoutGlobalScopes()->where('company_id', $company->id)->pluck('id');
 
-                foreach ($documents as $document) {
-                    Storage::disk('public')->deleteDirectory("documents/{$document->id}");
-                }
+                $disk = Storage::disk('public');
+                DocumentFile::withoutGlobalScopes()->whereIn('document_id', $documentIds)->pluck('path')->each(function (string $path) use ($disk) {
+                    $normalized = Str::startsWith($path, 'storage/') ? Str::after($path, 'storage/') : $path;
+                    if ($normalized && $disk->exists($normalized)) {
+                        $disk->delete($normalized);
+                    }
+                });
 
                 $company->delete();
             });

@@ -657,6 +657,138 @@ class BackupControllerTest extends TestCase
         FiscalYearService::importData($payload, ['name' => 'Bad Base64 Co', 'fiscal_year' => 1411]);
     }
 
+    public function test_export_excludes_document_files_when_only_document_files_selected(): void
+    {
+        Storage::fake('public');
+
+        $document = Document::factory()->create(['company_id' => $this->company->id]);
+        $path = "documents/{$document->id}/test.pdf";
+        Storage::disk('public')->put($path, 'content');
+        DocumentFile::factory()->withDocument($document)->create(['path' => $path]);
+
+        $response = $this->post(route('backups.export'), [
+            'source_id' => $this->company->id,
+            'tables_to_backup' => [FiscalYearSection::DOCUMENT_FILES->value],
+        ]);
+
+        $response->assertStatus(200);
+
+        $zip = new ZipArchive;
+        $zip->open($response->baseResponse->getFile()->getPathname());
+        $data = json_decode($zip->getFromIndex(0), true);
+        $zip->close();
+
+        $this->assertArrayNotHasKey('document_files', $data);
+        $this->assertNotContains(FiscalYearSection::DOCUMENT_FILES->value, $data['meta']['sections_exported']);
+    }
+
+    public function test_export_strips_document_files_but_keeps_other_sections_when_documents_missing(): void
+    {
+        Storage::fake('public');
+
+        $document = Document::factory()->create(['company_id' => $this->company->id]);
+        Storage::disk('public')->put("documents/{$document->id}/f.pdf", 'x');
+        DocumentFile::factory()->withDocument($document)->create(['path' => "documents/{$document->id}/f.pdf"]);
+
+        $response = $this->post(route('backups.export'), [
+            'source_id' => $this->company->id,
+            'tables_to_backup' => [
+                FiscalYearSection::SUBJECTS->value,
+                FiscalYearSection::DOCUMENT_FILES->value,
+            ],
+        ]);
+
+        $response->assertStatus(200);
+
+        $zip = new ZipArchive;
+        $zip->open($response->baseResponse->getFile()->getPathname());
+        $data = json_decode($zip->getFromIndex(0), true);
+        $zip->close();
+
+        $this->assertArrayNotHasKey('document_files', $data);
+        $this->assertArrayHasKey('subjects', $data);
+        $this->assertContains(FiscalYearSection::SUBJECTS->value, $data['meta']['sections_exported']);
+        $this->assertNotContains(FiscalYearSection::DOCUMENT_FILES->value, $data['meta']['sections_exported']);
+    }
+
+    public function test_import_skips_document_files_when_documents_section_absent_from_payload(): void
+    {
+        Storage::fake('public');
+
+        $fileContent = 'orphaned file content';
+
+        $payload = [
+            'document_files' => [
+                [
+                    'id' => 5, 'document_id' => 99, 'user_id' => null,
+                    'title' => 'Orphan', 'name' => 'orphan.pdf', 'path' => 'documents/99/orphan.pdf',
+                    'document_file' => [
+                        'name' => 'orphan.pdf',
+                        'mime' => 'application/pdf',
+                        'extension' => 'pdf',
+                        'size' => strlen($fileContent),
+                        'sha256' => hash('sha256', $fileContent),
+                        'content' => base64_encode($fileContent),
+                    ],
+                ],
+            ],
+        ];
+
+        $company = FiscalYearService::importData($payload, ['name' => 'No Docs Co', 'fiscal_year' => 1412]);
+
+        $documentIds = Document::withoutGlobalScope(FiscalYearScope::class)
+            ->where('company_id', $company->id)
+            ->pluck('id');
+
+        $this->assertSame(0, DocumentFile::whereIn('document_id', $documentIds)->count());
+        Storage::disk('public')->assertMissing('documents/99/orphan.pdf');
+    }
+
+    public function test_import_endpoint_skips_document_files_when_documents_not_in_backup(): void
+    {
+        Storage::fake('public');
+
+        $fileContent = 'embedded but orphaned';
+
+        $payload = [
+            'meta' => [
+                'source_company_id' => $this->company->id,
+                'source_company_name' => $this->company->name,
+            ],
+            'document_files' => [
+                [
+                    'id' => 1, 'document_id' => 1, 'user_id' => null,
+                    'title' => 'File', 'name' => 'doc.pdf', 'path' => 'documents/1/doc.pdf',
+                    'document_file' => [
+                        'name' => 'doc.pdf',
+                        'mime' => 'application/pdf',
+                        'extension' => 'pdf',
+                        'size' => strlen($fileContent),
+                        'sha256' => hash('sha256', $fileContent),
+                        'content' => base64_encode($fileContent),
+                    ],
+                ],
+            ],
+        ];
+
+        $response = $this->post(route('backups.import'), [
+            'file' => $this->makeZipUpload($payload),
+            'fiscal_year' => 1413,
+            'company_name' => 'No Docs Import Co',
+        ]);
+
+        $response->assertRedirect(route('home'));
+
+        $newCompany = Company::where('name', 'No Docs Import Co')->firstOrFail();
+
+        $documentIds = Document::withoutGlobalScope(FiscalYearScope::class)
+            ->where('company_id', $newCompany->id)
+            ->pluck('id');
+
+        $this->assertSame(0, DocumentFile::whereIn('document_id', $documentIds)->count());
+        Storage::disk('public')->assertMissing('documents/1/doc.pdf');
+    }
+
     public function test_deleting_document_file_removes_storage_file(): void
     {
         Storage::fake('public');
