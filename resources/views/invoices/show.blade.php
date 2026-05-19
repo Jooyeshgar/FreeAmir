@@ -27,6 +27,10 @@
                     {{ $invoice->status->label() }}
                 </span>
 
+                @if ($invoice->invoice_type->isMoadianSendable() && $invoice->status->isApproved())
+                    <a class="badge badge-lg link" href="{{ route('invoices.moadian-histories.show', $invoice) }}">{{ __('Moadian Histories') }}</a>
+                @endif
+
                 @php
                     $voidInvoice = $invoice->voidInvoice;
                     $voidedInvoice = $invoice->voidedInvoice;
@@ -586,16 +590,51 @@
                             $invoice->status->isUnapproved() ||
                             $invoice->status->isApprovedInactive();
                         $canUnapprove = $invoice->status->isApproved();
-                        $canChangeStatus = ($canApprove || $canUnapprove);
+                        
+                        $hasMoadianSuccess = $invoice->moadianHistories->contains(function ($history) {
+                            $data = $history->data;
+
+                            return strtoupper($data['status'] ?? '') === 'SUCCESS';
+                        });
+
+                        $canChangeStatus = ($canApprove || $canUnapprove) && ! $hasMoadianSuccess;
                     @endphp
+
+                    @can('invoices.send-moadian')
+                        @if ($invoice->invoice_type->isMoadianSendable())
+                            @if ($invoice->status->isApproved() && ! $hasMoadianSuccess)
+                                <a class="btn btn-success" href="{{ route('invoices.moadian-form', $invoice) }}">{{ __('Send Moadian') }}</a>
+                            @elseif ($hasMoadianSuccess)
+                                <span class="tooltip" data-tip="{{ __('This invoice has already been sent successfully to Moadian and cannot be sent again.') }}">
+                                    <button class="btn btn-success btn-disabled cursor-not-allowed"
+                                        title="{{ __('This invoice has already been sent successfully to Moadian and cannot be sent again.') }}">{{ __('Send Moadian') }}</button>
+                                </span>
+                            @else
+                                <span class="tooltip" data-tip="{{ __('Approve the invoice first to send to moadian') }}">
+                                    <button class="btn btn-error btn-disabled cursor-not-allowed"
+                                        title="{{ __('Approve the invoice first to send to moadian') }}">{{ __('Send Moadian') }}</button>
+                                </span>
+                            @endif
+                        @endif
+                    @endcan
 
                     @can('invoices.void')
                         @if ($invoice->invoice_type === App\Enums\InvoiceType::SELL)
-                            @if ($invoice->status->isApproved() && ! $invoice->voidInvoice && $invoice->getReturnInvoice()->isEmpty())
-                                <a href="{{ route('invoices.void-form', $invoice) }}" class="btn gap-2">{{ __('Void') }}</a>
+                            @if ($invoice->status->isApproved() && ! $invoice->voidInvoice && $invoice->getReturnInvoice()->isEmpty() && $hasMoadianSuccess)
+                                <a href="{{ route('invoices.void-form', $invoice) }}" class="btn btn-warning">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                    </svg>
+                                    {{ __('Void') }}
+                                </a>
                             @else
-                                <span class="tooltip" data-tip="{{ $invoice->voidInvoice ? __('Invoice has voided already.') : __('Only approved sell invoices without return invoices can be voided.') }}">
-                                    <button class="btn gap-2 btn-disabled cursor-not-allowed">{{ __('Void') }}</button>
+                                <span class="tooltip" data-tip="{{ __('Invoice must be approved and sent to Moadian before voiding') }}">
+                                    <button class="btn btn-warning gap-2 btn-disabled cursor-not-allowed">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                        </svg>
+                                        {{ __('Void') }}
+                                    </button>
                                 </span>
                             @endif
                         @endif
@@ -644,7 +683,7 @@
                         @endif
                     @endcan
 
-                    @if (! $invoice->status->isApproved() && ! $invoice->invoice_type->isVoid())
+                    @if (! $invoice->status->isApproved() && ! $invoice->invoice_type->isVoid() && ! $hasMoadianSuccess)
                         <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-primary gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -653,7 +692,7 @@
                             {{ __('Edit invoice') }}
                         </a>
                     @else
-                        <span class="tooltip" data-tip="{{ $invoice->invoice_type->isVoid() ? __('Editing is not allowed for void invoices.') : __('Editing is not allowed for approved invoices.') }}">
+                        <span class="tooltip" data-tip="{{ __('Editing is not allowed for approved invoices.') }}">
                             <button class="btn btn-primary gap-2 btn-disabled cursor-not-allowed">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

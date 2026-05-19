@@ -48,6 +48,11 @@ enum InvoiceType: string
         return $this === self::VOID;
     }
 
+    public function isMoadianSendable(): bool
+    {
+        return in_array($this, [self::SELL, self::RETURN_SELL, self::VOID]);
+    }
+
     /**
      * Check if this is a buy type (buy or return from buy).
      *

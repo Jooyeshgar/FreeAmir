@@ -13,6 +13,7 @@
         "carlos-meneses/laravel-mpdf": "^2.1",
         "doctrine/dbal": "^3.10",
         "guzzlehttp/guzzle": "^7.2",
+        "jooyeshgar/moadian": "^2.0",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.2",
         "laravel/tinker": "^2.10",
