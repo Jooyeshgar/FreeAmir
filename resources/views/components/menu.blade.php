@@ -23,7 +23,7 @@
         </details>
     </li>
 @endcan
-@canany(['invoices.index', 'invoices.inactive', 'customers.create', 'ancillary-costs.index'])
+@canany(['invoices.index', 'invoices.inactive', 'customers.create', 'ancillary-costs.index', 'invoices.moadian-histories.index'])
     <li>
         <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('Invoices') }}</summary>
@@ -63,9 +63,6 @@
                 @endcan
                 @can('customers.create')
                     <li><a href="{{ route('customers.create') }}">{{ __('Add Customer') }}</a></li>
-                @endcan
-                @can('invoices.moadian-histories.index')
-                    <li><a href="{{ route('invoices.moadian-histories.index') }}">{{ __('Moadian Histories') }}</a></li>
                 @endcan
             </ul>
         </details>
