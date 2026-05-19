@@ -28,7 +28,7 @@
         <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('Invoices') }}</summary>
             <ul class="{{ $topDropdownContentClass }}">
-                @canany(['invoices.index', 'ancillary-costs.index'])
+                @can('invoices.index')
                     <li>
                         <details>
                             <summary>{{ __('Sales') }}</summary>
@@ -36,18 +36,13 @@
                                 @can('invoices.index')
                                     <li><a href="{{ route('invoices.index', ['invoice_type' => 'sell']) }}">{{ __('Sell List') }}</a></li>
                                     <li><a href="{{ route('invoices.index', ['invoice_type' => 'return_sell']) }}">{{ __('Return Sell List') }}</a></li>
-                                @endcan
-                                @can('ancillary-costs.index')
-                                    <li><a href="{{ route('ancillary-costs.index') }}">{{ __('Ancillary Cost List') }}</a></li>
-                                @endcan
-                                @can('invoices.index')
                                     <li><a href="{{ route('invoices.index', ['invoice_type' => 'void']) }}">{{ __('Voided Sell') }}</a></li>
                                 @endcan
                             </ul>
                         </details>
                     </li>
-                @endcanany
-                @can('invoices.index')
+                @endcan
+                @canany(['invoices.index', 'ancillary-costs.index'])
                     <li>
                         <details>
                             <summary>{{ __('Purchases') }}</summary>
@@ -56,10 +51,13 @@
                                 <li><a href="{{ route('invoices.index', ['invoice_type' => 'buy', 'service_buy' => '1']) }}">{{ __('Buy Service') }}</a></li>
                                 <li><a href="{{ route('invoices.index', ['invoice_type' => 'return_buy']) }}">{{ __('Return Buy List') }}</a></li>
                                 <li><a href="{{ route('invoices.index', ['invoice_type' => 'return_buy', 'service_buy' => '1']) }}">{{ __('Service Buy Return') }}</a></li>
+                                @can('ancillary-costs.index')
+                                    <li><a href="{{ route('ancillary-costs.index') }}">{{ __('Ancillary Cost List') }}</a></li>
+                                @endcan
                             </ul>
                         </details>
                     </li>
-                @endcan
+                @endcanany
                 @can('invoices.inactive')
                     <li><a href="{{ route('invoices.inactive') }}">{{ __('Activate Confirmed Invoices') }}</a></li>
                 @endcan
