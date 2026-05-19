@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PayrollStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -17,6 +18,8 @@ class PayrollStatusHistory extends Model
     ];
 
     protected $casts = [
+        'from_status' => PayrollStatus::class,
+        'to_status' => PayrollStatus::class,
         'changed_at' => 'datetime',
     ];
 

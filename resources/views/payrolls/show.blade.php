@@ -56,26 +56,26 @@
             @if (!($isEmployeeView ?? false))
                 @php
                     $transitionActions = [
-                        \App\Models\Payroll::STATUS_DRAFT => [
-                            'to' => \App\Models\Payroll::STATUS_PENDING_MANAGER_APPROVAL,
+                        \App\Enums\PayrollStatus::Draft->value => [
+                            'to' => \App\Enums\PayrollStatus::PendingManagerApproval,
                             'route' => 'salary.payrolls.transition.draft-to-pending-manager-approval',
                             'label' => __('Submit for Approval'),
                             'class' => 'btn-warning',
                         ],
-                        \App\Models\Payroll::STATUS_PENDING_MANAGER_APPROVAL => [
-                            'to' => \App\Models\Payroll::STATUS_APPROVED,
+                        \App\Enums\PayrollStatus::PendingManagerApproval->value => [
+                            'to' => \App\Enums\PayrollStatus::Approved,
                             'route' => 'salary.payrolls.transition.pending-manager-approval-to-approved',
                             'label' => __('Approve'),
                             'class' => 'btn-success',
                         ],
-                        \App\Models\Payroll::STATUS_APPROVED => [
-                            'to' => \App\Models\Payroll::STATUS_PAID,
+                        \App\Enums\PayrollStatus::Approved->value => [
+                            'to' => \App\Enums\PayrollStatus::Paid,
                             'route' => 'salary.payrolls.transition.approved-to-paid',
                             'label' => __('Mark as Paid'),
                             'class' => 'btn-info',
                         ],
                     ];
-                    $transitionAction = $transitionActions[$payroll->status] ?? null;
+                    $transitionAction = $transitionActions[$payroll->status?->value] ?? null;
                     $transitionPermission = $transitionAction ? $payroll->transitionPermissionTo($transitionAction['to']) : null;
                     $canTransition = $transitionPermission && auth()->user()?->getAllPermissions()->contains('name', $transitionPermission);
                 @endphp
@@ -142,8 +142,8 @@
                         <tbody>
                             @forelse ($payroll->statusHistories as $history)
                                 <tr>
-                                    <td>{{ \App\Models\Payroll::statusLabels()[$history->from_status] ?? $history->from_status }}</td>
-                                    <td>{{ \App\Models\Payroll::statusLabels()[$history->to_status] ?? $history->to_status }}</td>
+                                    <td>{{ $history->from_status?->label() ?? '—' }}</td>
+                                    <td>{{ $history->to_status?->label() ?? '—' }}</td>
                                     <td>{{ $history->user?->name ?? '—' }}</td>
                                     <td>{{ formatDate($history->changed_at) }}</td>
                                     <td>{{ $history->note ?? '—' }}</td>

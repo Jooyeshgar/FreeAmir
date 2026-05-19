@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\PayrollStatus;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Payroll;
@@ -40,7 +41,7 @@ class PayrollWorkflowTest extends TestCase
     public function test_draft_payroll_can_be_submitted_for_manager_approval_with_transition_permission(): void
     {
         $this->grant('salary.payrolls.transition.draft-to-pending-manager-approval');
-        $payroll = $this->makePayroll(['status' => Payroll::STATUS_DRAFT]);
+        $payroll = $this->makePayroll(['status' => PayrollStatus::Draft]);
 
         $response = $this->patch(route('salary.payrolls.transition.draft-to-pending-manager-approval', $payroll), [
             'note' => 'Ready for review',
@@ -49,12 +50,12 @@ class PayrollWorkflowTest extends TestCase
         $response->assertRedirect(route('salary.payrolls.show', $payroll));
         $this->assertDatabaseHas('payrolls', [
             'id' => $payroll->id,
-            'status' => Payroll::STATUS_PENDING_MANAGER_APPROVAL,
+            'status' => PayrollStatus::PendingManagerApproval->value,
         ]);
         $this->assertDatabaseHas('payroll_status_histories', [
             'payroll_id' => $payroll->id,
-            'from_status' => Payroll::STATUS_DRAFT,
-            'to_status' => Payroll::STATUS_PENDING_MANAGER_APPROVAL,
+            'from_status' => PayrollStatus::Draft->value,
+            'to_status' => PayrollStatus::PendingManagerApproval->value,
             'changed_by' => $this->user->id,
             'note' => 'Ready for review',
         ]);
@@ -63,46 +64,46 @@ class PayrollWorkflowTest extends TestCase
     public function test_pending_payroll_can_be_approved_with_approval_permission(): void
     {
         $this->grant('salary.payrolls.transition.pending-manager-approval-to-approved');
-        $payroll = $this->makePayroll(['status' => Payroll::STATUS_PENDING_MANAGER_APPROVAL]);
+        $payroll = $this->makePayroll(['status' => PayrollStatus::PendingManagerApproval]);
 
         $response = $this->patch(route('salary.payrolls.transition.pending-manager-approval-to-approved', $payroll));
 
         $response->assertRedirect(route('salary.payrolls.show', $payroll));
         $this->assertDatabaseHas('payrolls', [
             'id' => $payroll->id,
-            'status' => Payroll::STATUS_APPROVED,
+            'status' => PayrollStatus::Approved->value,
         ]);
     }
 
     public function test_general_payroll_wildcard_permission_is_not_enough_to_change_status(): void
     {
         $this->grant('salary.payrolls.*');
-        $payroll = $this->makePayroll(['status' => Payroll::STATUS_PENDING_MANAGER_APPROVAL]);
+        $payroll = $this->makePayroll(['status' => PayrollStatus::PendingManagerApproval]);
 
         $response = $this->patch(route('salary.payrolls.transition.pending-manager-approval-to-approved', $payroll));
 
         $response->assertForbidden();
         $this->assertDatabaseHas('payrolls', [
             'id' => $payroll->id,
-            'status' => Payroll::STATUS_PENDING_MANAGER_APPROVAL,
+            'status' => PayrollStatus::PendingManagerApproval->value,
         ]);
         $this->assertDatabaseMissing('payroll_status_histories', [
             'payroll_id' => $payroll->id,
-            'to_status' => Payroll::STATUS_APPROVED,
+            'to_status' => PayrollStatus::Approved->value,
         ]);
     }
 
     public function test_invalid_transition_is_rejected_even_with_transition_permission(): void
     {
         $this->grant('salary.payrolls.transition.pending-manager-approval-to-approved');
-        $payroll = $this->makePayroll(['status' => Payroll::STATUS_DRAFT]);
+        $payroll = $this->makePayroll(['status' => PayrollStatus::Draft]);
 
         $response = $this->patch(route('salary.payrolls.transition.pending-manager-approval-to-approved', $payroll));
 
         $response->assertUnprocessable();
         $this->assertDatabaseHas('payrolls', [
             'id' => $payroll->id,
-            'status' => Payroll::STATUS_DRAFT,
+            'status' => PayrollStatus::Draft->value,
         ]);
     }
 
@@ -119,7 +120,7 @@ class PayrollWorkflowTest extends TestCase
             'employer_insurance' => 2_000_000,
             'tax_base_amount' => 9_000_000,
             'income_tax_amount' => 500_000,
-            'status' => Payroll::STATUS_DRAFT,
+            'status' => PayrollStatus::Draft,
         ], $overrides));
     }
 

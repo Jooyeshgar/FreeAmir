@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PayrollStatus;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,14 +12,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Payroll extends Model
 {
     use HasFactory;
-
-    public const STATUS_DRAFT = 'draft';
-
-    public const STATUS_PENDING_MANAGER_APPROVAL = 'pending_manager_approval';
-
-    public const STATUS_APPROVED = 'approved';
-
-    public const STATUS_PAID = 'paid';
 
     protected $fillable = [
         'company_id',
@@ -42,6 +35,7 @@ class Payroll extends Model
     protected $casts = [
         'year' => 'integer',
         'month' => 'integer',
+        'status' => PayrollStatus::class,
         'total_earnings' => 'decimal:2',
         'total_deductions' => 'decimal:2',
         'net_payment' => 'decimal:2',
@@ -88,47 +82,21 @@ class Payroll extends Model
 
     public static function statusLabels(): array
     {
-        return [
-            self::STATUS_DRAFT => __('Draft'),
-            self::STATUS_PENDING_MANAGER_APPROVAL => __('Pending Manager Approval'),
-            self::STATUS_APPROVED => __('Approved'),
-            self::STATUS_PAID => __('Paid'),
-        ];
-    }
-
-    public static function transitionPermissions(): array
-    {
-        return [
-            self::STATUS_DRAFT => [
-                self::STATUS_PENDING_MANAGER_APPROVAL => 'salary.payrolls.transition.draft-to-pending-manager-approval',
-            ],
-            self::STATUS_PENDING_MANAGER_APPROVAL => [
-                self::STATUS_APPROVED => 'salary.payrolls.transition.pending-manager-approval-to-approved',
-            ],
-            self::STATUS_APPROVED => [
-                self::STATUS_PAID => 'salary.payrolls.transition.approved-to-paid',
-            ],
-        ];
+        return PayrollStatus::options();
     }
 
     public function statusLabel(): string
     {
-        return self::statusLabels()[$this->status] ?? $this->status;
+        return $this->status?->label() ?? '';
     }
 
     public function statusBadgeClass(): string
     {
-        return match ($this->status) {
-            self::STATUS_DRAFT => 'badge-ghost',
-            self::STATUS_PENDING_MANAGER_APPROVAL => 'badge-warning',
-            self::STATUS_APPROVED => 'badge-success',
-            self::STATUS_PAID => 'badge-info',
-            default => 'badge-neutral',
-        };
+        return $this->status?->badgeClass() ?? 'badge-neutral';
     }
 
-    public function transitionPermissionTo(string $toStatus): ?string
+    public function transitionPermissionTo(PayrollStatus $toStatus): ?string
     {
-        return self::transitionPermissions()[$this->status][$toStatus] ?? null;
+        return $this->status?->transitionPermissionTo($toStatus);
     }
 }

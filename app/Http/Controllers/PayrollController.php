@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PayrollStatus;
 use App\Models\Employee;
 use App\Models\MonthlyAttendance;
 use App\Models\Payroll;
@@ -14,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Spatie\Permission\Exceptions\UnauthorizedException;
 
@@ -41,7 +43,7 @@ class PayrollController extends Controller
             'employee_id' => ['nullable', 'integer', 'exists:employees,id'],
             'year' => ['nullable', 'integer', 'between:1300,1600'],
             'month' => ['nullable', 'integer', 'between:1,12'],
-            'status' => ['nullable', 'string', 'in:'.implode(',', array_keys(Payroll::statusLabels()))],
+            'status' => ['nullable', 'string', Rule::enum(PayrollStatus::class)],
         ]);
 
         $query = Payroll::query();
@@ -132,7 +134,7 @@ class PayrollController extends Controller
         return $this->transition(
             request: $request,
             payroll: $payroll,
-            toStatus: Payroll::STATUS_PENDING_MANAGER_APPROVAL,
+            toStatus: PayrollStatus::PendingManagerApproval,
             message: __('Payroll submitted for manager approval.')
         );
     }
@@ -142,7 +144,7 @@ class PayrollController extends Controller
         return $this->transition(
             request: $request,
             payroll: $payroll,
-            toStatus: Payroll::STATUS_APPROVED,
+            toStatus: PayrollStatus::Approved,
             message: __('Payroll approved successfully.')
         );
     }
@@ -152,7 +154,7 @@ class PayrollController extends Controller
         return $this->transition(
             request: $request,
             payroll: $payroll,
-            toStatus: Payroll::STATUS_PAID,
+            toStatus: PayrollStatus::Paid,
             message: __('Payroll marked as paid.')
         );
     }
@@ -175,7 +177,7 @@ class PayrollController extends Controller
             ->with('success', __('Payroll deleted successfully.'));
     }
 
-    private function transition(Request $request, Payroll $payroll, string $toStatus, string $message): RedirectResponse
+    private function transition(Request $request, Payroll $payroll, PayrollStatus $toStatus, string $message): RedirectResponse
     {
         $validated = $request->validate([
             'note' => ['nullable', 'string', 'max:1000'],

@@ -148,13 +148,7 @@
                                     <td class="text-end">{{ formatNumber($payroll->employer_insurance) }}</td>
                                     <td class="text-end font-semibold text-primary">{{ formatNumber($payroll->net_payment) }}</td>
                                     <td>
-                                        @if ($payroll->status === 'draft')
-                                            <span class="badge badge-warning badge-sm">{{ __('Draft') }}</span>
-                                        @elseif ($payroll->status === 'approved')
-                                            <span class="badge badge-success badge-sm">{{ __('Approved') }}</span>
-                                        @else
-                                            <span class="badge badge-info badge-sm">{{ __('Paid') }}</span>
-                                        @endif
+                                        <span class="badge {{ $payroll->statusBadgeClass() }} badge-sm">{{ $payroll->statusLabel() }}</span>
                                     </td>
                                     <td>
                                         <a href="{{ route('salary.payrolls.show', $payroll) }}" class="btn btn-xs btn-primary">

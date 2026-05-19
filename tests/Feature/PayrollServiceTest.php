@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\PayrollStatus;
 use App\Models\Company;
 use App\Models\DecreeBenefit;
 use App\Models\Employee;
@@ -665,7 +666,7 @@ class PayrollServiceTest extends TestCase
             'monthly_attendance_id' => $attendance->id,
             'year' => 1404,
             'month' => 1,
-            'status' => 'draft',
+            'status' => PayrollStatus::Draft->value,
         ]);
     }
 
