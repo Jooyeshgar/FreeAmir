@@ -47,6 +47,7 @@ class Employee extends Model
         'contract_start_date',
         'contract_end_date',
         'org_chart_id',
+        'organization_unit_id',
         'work_site_id',
         'work_shift_id',
         'contract_framework_id',
@@ -81,6 +82,11 @@ class Employee extends Model
     public function orgChart(): BelongsTo
     {
         return $this->belongsTo(OrgChart::class, 'org_chart_id');
+    }
+
+    public function organizationUnit(): BelongsTo
+    {
+        return $this->belongsTo(OrganizationUnit::class, 'organization_unit_id');
     }
 
     public function workSite(): BelongsTo

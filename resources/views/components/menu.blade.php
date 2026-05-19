@@ -166,125 +166,116 @@
         <summary>{{ __('Management') }}</summary>
         <ul class="{{ $scrollingTopDropdownContentClass }}">
 
-        {{-- HR, Attendance & Salary --}}
-        @canany([
-            'hr.org-charts.index',
-            'attendance.work-shifts.index',
-            'salary.payrolls.index',
-            'salary.tax-slabs.index',
-            'salary.work-sites.index',
-            'salary.work-site-contracts.index',
-            'salary.public-holidays.index',
-            'salary.payroll-elements.index',
-            'salary.salary-decrees.index',
-        ])
-            <li>
-                <details>
-                    <summary>{{ __('HR & Organization') }}</summary>
-                    <ul>
-                        @can('hr.org-charts.index')
-                            <li><a href="{{ route('hr.org-charts.index') }}">{{ __('Organization Chart') }}</a></li>
-                        @endcan
-                        @can('attendance.work-shifts.index')
-                            <li><a href="{{ route('attendance.work-shifts.index') }}">{{ __('Work Shifts') }}</a></li>
-                        @endcan
-                        @can('salary.payrolls.index')
-                            <li><a href="{{ route('salary.payrolls.index') }}">{{ __('Payrolls') }}</a></li>
-                        @endcan
-                        @can('salary.tax-slabs.index')
-                            <li><a href="{{ route('salary.tax-slabs.index') }}">{{ __('Yearly Tax Slabs') }}</a></li>
-                        @endcan
-                        @can('salary.work-sites.index')
-                            <li><a href="{{ route('salary.work-sites.index') }}">{{ __('Work Sites') }}</a></li>
-                        @endcan
-                        @can('salary.work-site-contracts.index')
-                            <li><a href="{{ route('salary.work-site-contracts.index') }}">{{ __('Work Site Contracts') }}</a></li>
-                        @endcan
-                        @can('salary.public-holidays.index')
-                            <li><a href="{{ route('salary.public-holidays.index') }}">{{ __('Public Holidays') }}</a></li>
-                        @endcan
-                        @can('salary.payroll-elements.index')
-                            <li><a href="{{ route('salary.payroll-elements.index') }}">{{ __('Payroll Elements') }}</a></li>
-                        @endcan
-                        @can('salary.salary-decrees.index')
-                            <li><a href="{{ route('salary.salary-decrees.index') }}">{{ __('Salary Decrees') }}</a></li>
-                        @endcan
-                    </ul>
-                </details>
-            </li>
-        @endcanany
+            {{-- HR, Attendance & Salary --}}
+            @canany(['hr.org-charts.index', 'attendance.work-shifts.index', 'salary.payrolls.index', 'salary.tax-slabs.index', 'salary.work-sites.index',
+                'salary.work-site-contracts.index', 'salary.public-holidays.index', 'salary.payroll-elements.index', 'salary.salary-decrees.index'])
+                <li>
+                    <details>
+                        <summary>{{ __('HR & Organization') }}</summary>
+                        <ul>
+                            @can('hr.org-charts.index')
+                                <li><a href="{{ route('hr.org-charts.index') }}">{{ __('Organization Chart') }}</a></li>
+                            @endcan
+                            @can('attendance.work-shifts.index')
+                                <li><a href="{{ route('attendance.work-shifts.index') }}">{{ __('Work Shifts') }}</a></li>
+                            @endcan
+                            @can('salary.payrolls.index')
+                                <li><a href="{{ route('salary.payrolls.index') }}">{{ __('Payrolls') }}</a></li>
+                            @endcan
+                            @can('salary.tax-slabs.index')
+                                <li><a href="{{ route('salary.tax-slabs.index') }}">{{ __('Yearly Tax Slabs') }}</a></li>
+                            @endcan
+                            @can('salary.work-sites.index')
+                                <li><a href="{{ route('salary.work-sites.index') }}">{{ __('Work Sites') }}</a></li>
+                            @endcan
+                            @can('salary.work-site-contracts.index')
+                                <li><a href="{{ route('salary.work-site-contracts.index') }}">{{ __('Work Site Contracts') }}</a></li>
+                            @endcan
+                            @can('salary.public-holidays.index')
+                                <li><a href="{{ route('salary.public-holidays.index') }}">{{ __('Public Holidays') }}</a></li>
+                            @endcan
+                            @can('salary.payroll-elements.index')
+                                <li><a href="{{ route('salary.payroll-elements.index') }}">{{ __('Payroll Elements') }}</a></li>
+                            @endcan
+                            @can('salary.salary-decrees.index')
+                                <li><a href="{{ route('salary.salary-decrees.index') }}">{{ __('Salary Decrees') }}</a></li>
+                            @endcan
+                        </ul>
+                    </details>
+                </li>
+            @endcanany
 
-        {{-- Customers --}}
-        @canany(['customers.index', 'customer-groups.index'])
-            <li>
-                <details>
-                    <summary>{{ __('Customers') }}</summary>
-                    <ul>
-                        @can('customers.index')
-                            <li><a href="{{ route('customers.index') }}">{{ __('Customers') }}</a></li>
-                        @endcan
-                        @can('customer-groups.index')
-                            <li><a href="{{ route('customer-groups.index') }}">{{ __('Customer Groups') }}</a></li>
-                        @endcan
-                    </ul>
-                </details>
-            </li>
-        @endcanany
+            {{-- Customers --}}
+            @canany(['customers.index', 'customer-groups.index'])
+                <li>
+                    <details>
+                        <summary>{{ __('Customers') }}</summary>
+                        <ul>
+                            @can('customers.index')
+                                <li><a href="{{ route('customers.index') }}">{{ __('Customers') }}</a></li>
+                            @endcan
+                            @can('customer-groups.index')
+                                <li><a href="{{ route('customer-groups.index') }}">{{ __('Customer Groups') }}</a></li>
+                            @endcan
+                        </ul>
+                    </details>
+                </li>
+            @endcanany
 
-        {{-- Finance --}}
-        @canany(['bank-accounts.index', 'banks.index', 'subjects.index', 'documents.sort-numbers'])
-            <li>
-                <details>
-                    <summary>{{ __('Finance') }}</summary>
-                    <ul>
-                        @can('subjects.index')
-                            <li><a href="{{ route('subjects.index') }}">{{ __('Subjects') }}</a></li>
-                        @endcan
-                        @can('bank-accounts.index')
-                            <li><a href="{{ route('bank-accounts.index') }}">{{ __('Bank Accounts') }}</a></li>
-                        @endcan
-                        @can('banks.index')
-                            <li><a href="{{ route('banks.index') }}">{{ __('Banks') }}</a></li>
-                        @endcan
-                        @can('documents.sort-numbers')
-                            <li><a href="{{ route('documents.sort-numbers') }}">{{ __('Sort Documents Number') }}</a></li>
-                        @endcan
-                    </ul>
-                </details>
-            </li>
-        @endcanany
+            {{-- Finance --}}
+            @canany(['bank-accounts.index', 'banks.index', 'subjects.index', 'documents.sort-numbers'])
+                <li>
+                    <details>
+                        <summary>{{ __('Finance') }}</summary>
+                        <ul>
+                            @can('subjects.index')
+                                <li><a href="{{ route('subjects.index') }}">{{ __('Subjects') }}</a></li>
+                            @endcan
+                            @can('bank-accounts.index')
+                                <li><a href="{{ route('bank-accounts.index') }}">{{ __('Bank Accounts') }}</a></li>
+                            @endcan
+                            @can('banks.index')
+                                <li><a href="{{ route('banks.index') }}">{{ __('Banks') }}</a></li>
+                            @endcan
+                            @can('documents.sort-numbers')
+                                <li><a href="{{ route('documents.sort-numbers') }}">{{ __('Sort Documents Number') }}</a></li>
+                            @endcan
+                        </ul>
+                    </details>
+                </li>
+            @endcanany
 
-        {{-- System --}}
-        @canany(['companies.index', 'users.index', 'permissions.index', 'roles.index', 'configs.index', 'backups.create'])
-            <li>
-                <details>
-                    <summary>{{ __('System') }}</summary>
-                    <ul>
-                        @can('companies.index')
-                            <li><a href="{{ route('companies.index') }}">{{ __('Companies') }}</a></li>
-                        @endcan
-                        @can('users.index')
-                            <li><a href="{{ route('users.index') }}">{{ __('Users') }}</a></li>
-                        @endcan
-                        @can('permissions.index')
-                            <li><a href="{{ route('permissions.index') }}">{{ __('Permissions') }}</a></li>
-                        @endcan
-                        @can('roles.index')
-                            <li><a href="{{ route('roles.index') }}">{{ __('Roles') }}</a></li>
-                        @endcan
-                        @can('configs.index')
-                            <li><a href="{{ route('configs.index') }}">{{ __('Configs') }}</a></li>
-                        @endcan
-                        @can('backups.create')
-                            <li><a href="{{ route('backups.create') }}">{{ __('Backup') }}</a></li>
-                            <li><a href="{{ route('backups.upload') }}">{{ __('Upload Backup') }}</a></li>
-                        @endcan
-                    </ul>
-                </details>
-            </li>
-        @endcanany
+            {{-- System --}}
+            @canany(['companies.index', 'users.index', 'permissions.index', 'roles.index', 'configs.index', 'backups.create'])
+                <li>
+                    <details>
+                        <summary>{{ __('System') }}</summary>
+                        <ul>
+                            @can('companies.index')
+                                <li><a href="{{ route('companies.index') }}">{{ __('Companies') }}</a></li>
+                            @endcan
+                            @can('users.index')
+                                <li><a href="{{ route('users.index') }}">{{ __('Users') }}</a></li>
+                            @endcan
+                            @can('permissions.index')
+                                <li><a href="{{ route('permissions.index') }}">{{ __('Permissions') }}</a></li>
+                            @endcan
+                            @can('roles.index')
+                                <li><a href="{{ route('roles.index') }}">{{ __('Roles') }}</a></li>
+                            @endcan
+                            @can('configs.index')
+                                <li><a href="{{ route('configs.index') }}">{{ __('Configs') }}</a></li>
+                            @endcan
+                            @can('backups.create')
+                                <li><a href="{{ route('backups.create') }}">{{ __('Backup') }}</a></li>
+                                <li><a href="{{ route('backups.upload') }}">{{ __('Upload Backup') }}</a></li>
+                            @endcan
+                        </ul>
+                    </details>
+                </li>
+            @endcanany
 
-        <li><a href="https://github.com/Jooyeshgar/FreeAmir/issues">{{ __('Support') }}</a></li>
+            <li><a href="https://github.com/Jooyeshgar/FreeAmir/issues">{{ __('Support') }}</a></li>
         </ul>
     </details>
 </li>

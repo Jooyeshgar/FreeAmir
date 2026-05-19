@@ -40,6 +40,7 @@
                             <th>{{ __('National Code') }}</th>
                             <th>{{ __('Employment Type') }}</th>
                             <th>{{ __('Work Site') }}</th>
+                            <th>{{ __('Organization Unit') }}</th>
                             <th>{{ __('Status') }}</th>
                             <th>{{ __('Action') }}</th>
                         </tr>
@@ -52,6 +53,7 @@
                                 <td>{{ $employee->national_code ?? '—' }}</td>
                                 <td>{{ $employee->employment_type?->label() ?? '—' }}</td>
                                 <td>{{ $employee->workSite?->name ?? '—' }}</td>
+                                <td>{{ $employee->organizationUnit?->name ?? '—' }}</td>
                                 <td>
                                     @if ($employee->is_active)
                                         <span class="badge badge-success">{{ __('Active') }}</span>
@@ -84,7 +86,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center py-4 text-gray-500">
+                                <td colspan="8" class="text-center py-4 text-gray-500">
                                     {{ __('No employees found.') }}
                                 </td>
                             </tr>

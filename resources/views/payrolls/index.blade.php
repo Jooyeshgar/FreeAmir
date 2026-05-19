@@ -68,6 +68,22 @@
                     </label>
                 </div>
 
+                <div class="w-56">
+                    <label class="w-full">
+                        <div class="label">
+                            <span>{{ __('Status') }}</span>
+                        </div>
+                        <select name="status" class="select select-sm">
+                            <option value="">{{ __('All Statuses') }}</option>
+                            @foreach (\App\Models\Payroll::statusLabels() as $status => $label)
+                                <option value="{{ $status }}" {{ request('status') === $status ? 'selected' : '' }}>
+                                    {{ $label }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </label>
+                </div>
+
                 <div>
                     <button type="submit" class="btn btn-primary btn-sm">{{ __('Filter') }}</button>
                     <a href="{{ route('salary.payrolls.index') }}" class="btn btn-ghost btn-sm">{{ __('Reset') }}</a>
@@ -126,13 +142,7 @@
                                 <td>{{ formatNumber($payroll->employer_insurance) }}</td>
                                 <td>{{ formatNumber($payroll->net_payment) }}</td>
                                 <td>
-                                    @if ($payroll->status === 'paid')
-                                        <span class="badge badge-success badge-sm">{{ __('Paid') }}</span>
-                                    @elseif ($payroll->status === 'draft')
-                                        <span class="badge badge-ghost badge-sm">{{ __('Draft') }}</span>
-                                    @else
-                                        <span class="badge badge-warning badge-sm">{{ $payroll->status }}</span>
-                                    @endif
+                                    <span class="badge {{ $payroll->statusBadgeClass() }} badge-sm">{{ $payroll->statusLabel() }}</span>
                                 </td>
                                 <td>
                                     <div class="flex items-center gap-1">
@@ -145,7 +155,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center py-6 text-gray-500">
+                                <td colspan="10" class="text-center py-6 text-gray-500">
                                     {{ __('No payrolls found') }}
                                 </td>
                             </tr>

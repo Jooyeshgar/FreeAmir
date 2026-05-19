@@ -224,6 +224,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'hr.org-charts.update',
             'hr.org-charts.destroy',
 
+            'hr.organization-units.index',
+            'hr.organization-units.create',
+            'hr.organization-units.store',
+            'hr.organization-units.show',
+            'hr.organization-units.edit',
+            'hr.organization-units.update',
+            'hr.organization-units.destroy',
+
             'hr.personnel-requests.index',
             'hr.personnel-requests.create',
             'hr.personnel-requests.store',
@@ -310,6 +318,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'salary.payrolls.index',
             'salary.payrolls.show',
             'salary.payrolls.destroy',
+            'salary.payrolls.transition.draft-to-pending-manager-approval',
+            'salary.payrolls.transition.pending-manager-approval-to-approved',
+            'salary.payrolls.transition.approved-to-paid',
 
             'salary.payroll-items.edit',
             'salary.payroll-items.update',

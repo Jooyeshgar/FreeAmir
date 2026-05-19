@@ -242,7 +242,7 @@ class PayrollService
             ->where('employee_id', $attendance->employee_id)
             ->where('year', $attendance->year)
             ->where('month', '<', $attendance->month)
-            ->whereIn('status', ['draft', 'approved', 'paid'])
+            ->whereIn('status', ['draft', 'pending_manager_approval', 'approved', 'paid'])
             ->selectRaw('COALESCE(SUM(tax_base_amount), 0) as sum_tax_base')
             ->selectRaw('COALESCE(SUM(income_tax_amount), 0) as sum_income_tax')
             ->selectRaw('COUNT(*) as payroll_count')
