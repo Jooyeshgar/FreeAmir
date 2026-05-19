@@ -73,6 +73,27 @@ class OrganizationUnitTest extends TestCase
         ]);
     }
 
+    public function test_store_rejects_parent_from_another_company(): void
+    {
+        $foreignParent = OrganizationUnit::factory()->create([
+            'company_id' => Company::factory()->create()->id,
+        ]);
+
+        $response = $this->post(route('hr.organization-units.store'), [
+            'name' => 'Finance',
+            'code' => 'FIN',
+            'parent_id' => $foreignParent->id,
+            'is_active' => '1',
+        ]);
+
+        $response->assertSessionHasErrors('parent_id');
+        $this->assertDatabaseMissing('organization_units', [
+            'company_id' => $this->companyId,
+            'name' => 'Finance',
+            'parent_id' => $foreignParent->id,
+        ]);
+    }
+
     public function test_employee_can_be_assigned_to_organization_unit(): void
     {
         $unit = OrganizationUnit::factory()->create(['company_id' => $this->companyId]);
@@ -94,6 +115,32 @@ class OrganizationUnitTest extends TestCase
         $this->assertDatabaseHas('employees', [
             'code' => 'EMP-UNIT-1',
             'organization_unit_id' => $unit->id,
+        ]);
+    }
+
+    public function test_employee_cannot_be_assigned_to_organization_unit_from_another_company(): void
+    {
+        $foreignUnit = OrganizationUnit::factory()->create([
+            'company_id' => Company::factory()->create()->id,
+        ]);
+        $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $workShift = WorkShift::factory()->create(['company_id' => $this->companyId]);
+
+        $response = $this->post(route('hr.employees.store'), [
+            'code' => 'EMP-UNIT-FOREIGN',
+            'first_name' => 'Ali',
+            'last_name' => 'Ahmadi',
+            'nationality' => 'iranian',
+            'organization_unit_id' => $foreignUnit->id,
+            'work_site_id' => $workSite->id,
+            'work_shift_id' => $workShift->id,
+            'is_active' => '1',
+        ]);
+
+        $response->assertSessionHasErrors('organization_unit_id');
+        $this->assertDatabaseMissing('employees', [
+            'code' => 'EMP-UNIT-FOREIGN',
+            'organization_unit_id' => $foreignUnit->id,
         ]);
     }
 

@@ -64,7 +64,11 @@ class StoreEmployeeRequest extends FormRequest
 
             // Org
             'org_chart_id' => ['nullable', 'integer', 'exists:org_charts,id'],
-            'organization_unit_id' => ['nullable', 'integer', 'exists:organization_units,id'],
+            'organization_unit_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('organization_units', 'id')->where('company_id', getActiveCompany()),
+            ],
             'work_site_id' => ['required', 'integer', 'exists:work_sites,id'],
             'work_shift_id' => ['required', 'integer', 'exists:work_shifts,id'],
             'contract_framework_id' => ['nullable', 'integer', 'exists:work_site_contracts,id'],

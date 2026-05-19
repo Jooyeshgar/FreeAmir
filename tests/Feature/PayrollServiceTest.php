@@ -572,6 +572,39 @@ class PayrollServiceTest extends TestCase
         $this->assertEquals(1450800, $taxAmount);
     }
 
+    public function test_calculate_excludes_pending_manager_approval_payrolls_from_tax_accumulation(): void
+    {
+        $this->seedTaxSlabs();
+
+        $decree = $this->makeDecree(['employee_id' => $this->employee->id]);
+
+        $monthBase = self::DAILY_WAGE * 26;
+        $taxBaseMonth1 = $monthBase - ($monthBase * self::EMP_INS_RATE);
+
+        Payroll::withoutGlobalScopes()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'decree_id' => $decree->id,
+            'monthly_attendance_id' => null,
+            'year' => 1404,
+            'month' => 1,
+            'total_earnings' => $monthBase,
+            'total_deductions' => 0,
+            'net_payment' => $monthBase,
+            'employer_insurance' => 0,
+            'tax_base_amount' => $taxBaseMonth1,
+            'income_tax_amount' => 0,
+            'status' => PayrollStatus::PendingManagerApproval->value,
+        ]);
+
+        $attendance2 = $this->makeAttendance(['month' => 2, 'work_days' => 26, 'absent_days' => 0]);
+        $result = $this->service->calculate($attendance2, $decree, $this->companyId);
+
+        $taxAmount = $result['income_tax'] ?? $result['deductions']['income_tax']['amount'];
+
+        $this->assertEquals(1450800, $taxAmount);
+    }
+
     // -----------------------------------------------------------------------
     // 15. Net payment calculation
     // -----------------------------------------------------------------------

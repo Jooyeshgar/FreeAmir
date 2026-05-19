@@ -105,7 +105,11 @@ class OrganizationUnitController extends Controller
                 'max:50',
                 $codeRule,
             ],
-            'parent_id' => ['nullable', 'integer', 'exists:organization_units,id'],
+            'parent_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('organization_units', 'id')->where('company_id', $companyId),
+            ],
             'description' => ['nullable', 'string'],
             'is_active' => ['boolean'],
         ]);
