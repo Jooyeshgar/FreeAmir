@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\FiscalYearSection;
 use App\Models\Company;
 use App\Services\FiscalYearService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use ZipArchive;
 
@@ -13,8 +14,18 @@ class BackupController extends Controller
     public function create()
     {
         $previousYears = Company::all();
+        $currentYear = toEnglish(jdate('Y'));
 
-        return view('backups.create', compact('previousYears'));
+        return view('backups.create', compact('previousYears', 'currentYear'));
+    }
+
+    public function documentFilesSize(Request $request): JsonResponse
+    {
+        $validated = $request->validate(['source_id' => 'required|exists:companies,id']);
+
+        $bytes = FiscalYearService::documentFilesSizeBytes($validated['source_id']);
+
+        return response()->json(['size_mb' => round($bytes / (1024 * 1024), 2)]);
     }
 
     public function export(Request $request)
@@ -25,8 +36,25 @@ class BackupController extends Controller
             'tables_to_backup.*' => 'string|in:'.implode(',', array_map(fn ($case) => $case->value, FiscalYearSection::cases())),
         ]);
 
-        $exportData = FiscalYearService::exportData($validated['source_id'], $validated['tables_to_backup']);
-        $fileBaseName = 'company_backup_'.$validated['source_id'].'_'.now()->format('Ymd_His');
+        $tables = $validated['tables_to_backup'];
+        $documentsVal = FiscalYearSection::DOCUMENTS->value;
+        $documentFilesVal = FiscalYearSection::DOCUMENT_FILES->value;
+
+        if (in_array($documentFilesVal, $tables) && ! in_array($documentsVal, $tables)) {
+            $tables = array_values(array_filter($tables, fn ($s) => $s !== $documentFilesVal));
+        }
+
+        $includeDocumentFiles = in_array($documentFilesVal, $tables);
+
+        $company = Company::findOrFail($validated['source_id']);
+        $exportData = FiscalYearService::exportData($validated['source_id'], $tables);
+
+        if ($includeDocumentFiles) {
+            FiscalYearService::documentFilesInBase64($exportData);
+        }
+
+        $safeName = preg_replace('/\s+/', '-', trim($company->name));
+        $fileBaseName = "Amir-{$safeName}-".now()->format('Y-m-d-H-i');
 
         $jsonContent = json_encode($exportData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         if (! $jsonContent) {
@@ -45,7 +73,7 @@ class BackupController extends Controller
             return redirect()->back()->with('error', __('Failed to open ZIP archive.'));
         }
 
-        if (! $zip->addFromString($fileBaseName.'.json', $jsonContent)) {
+        if (! $zip->addFromString("{$fileBaseName}.json", $jsonContent)) {
             $zip->close();
             @unlink($zipFilePath);
 
@@ -54,7 +82,7 @@ class BackupController extends Controller
 
         $zip->close();
 
-        return response()->download($zipFilePath, $fileBaseName.'.zip', ['Content-Type' => 'application/zip'])->deleteFileAfterSend(true);
+        return response()->download($zipFilePath, "{$fileBaseName}.zip", ['Content-Type' => 'application/zip'])->deleteFileAfterSend(true);
     }
 
     public function upload()
@@ -141,6 +169,8 @@ class BackupController extends Controller
             'fiscal_year' => (int) $validated['fiscal_year'],
         ];
         FiscalYearService::importData($importData, $newFiscalYearData);
+
+        $zip->close();
 
         if ($zipPath && file_exists($zipPath)) {
             @unlink($zipPath);

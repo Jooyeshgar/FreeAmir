@@ -49,6 +49,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\LazyCollection;
 
 class FiscalYearService
 {
@@ -115,6 +117,109 @@ class FiscalYearService
         ];
 
         return $exportData;
+    }
+
+    /**
+     * Calculate the total disk size (in bytes) of all document files for a specific company.
+     *
+     * @param  int  $companyId  The unique identifier of the company.
+     * @return int The total size of all existing document files in bytes.
+     */
+    public static function documentFilesSizeBytes(int $companyId): int
+    {
+        $disk = Storage::disk('public');
+        $totalBytes = 0;
+
+        foreach (self::getCompanyDocumentFiles($companyId) as $docFile) {
+            $path = self::normalizeFilePath($docFile->path);
+
+            if ($disk->exists($path)) {
+                // Base64 inflates by 4/3, ZIP deflate compresses
+                // Base64 text back by ~15–20%, so net ZIP growth ≈ raw file size.
+                $totalBytes += $disk->size($path);
+            }
+        }
+
+        return $totalBytes;
+    }
+
+    /**
+     * Embed each document file's content as Base64 directly into the export data array.
+     *
+     * @param  array  $exportData  Export data array, modified in place.
+     */
+    public static function documentFilesInBase64(array &$exportData): void
+    {
+        if (empty($exportData['document_files'])) {
+            return;
+        }
+
+        $disk = Storage::disk('public');
+        $chunkSize = 57 * 1024; // 58,368 bytes — divisible by 3 for clean base64 blocks
+
+        foreach ($exportData['document_files'] as &$docFileData) {
+            $path = self::normalizeFilePath($docFileData['path'] ?? '');
+
+            if (! $disk->exists($path)) {
+                continue;
+            }
+
+            $stream = $disk->readStream($path);
+            if (! is_resource($stream)) {
+                continue;
+            }
+
+            $hash = hash_init('sha256');
+            $base64Parts = [];
+
+            try {
+                while (! feof($stream)) {
+                    $chunk = fread($stream, $chunkSize);
+                    if ($chunk === false || $chunk === '') {
+                        break;
+                    }
+                    hash_update($hash, $chunk);
+                    $base64Parts[] = base64_encode($chunk);
+                }
+            } finally {
+                fclose($stream);
+            }
+
+            $docFileData['document_file'] = [
+                'name' => basename($path),
+                'mime' => $disk->mimeType($path) ?: 'application/octet-stream',
+                'extension' => pathinfo($path, PATHINFO_EXTENSION),
+                'size' => $disk->size($path),
+                'sha256' => hash_final($hash),
+                'content' => implode('', $base64Parts),
+            ];
+        }
+
+        unset($docFileData);
+    }
+
+    /**
+     * Fetch all document files for a specific company in a memory-efficient manner.
+     *
+     * @param  int  $companyId  The ID of the company to retrieve files for.
+     * @return \Illuminate\Support\LazyCollection<\App\Models\DocumentFile>
+     */
+    private static function getCompanyDocumentFiles(int $companyId): LazyCollection
+    {
+        $documentIdsSubquery = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $companyId)->select('id');
+
+        return DocumentFile::whereIn('document_id', $documentIdsSubquery)->cursor();
+    }
+
+    /**
+     * Normalize a file path for disk operations.
+     *
+     * @param  string  $path  The raw file path.
+     * @return string The normalized path.
+     */
+    private static function normalizeFilePath(string $path): string
+    {
+        return str_starts_with($path, 'storage/') ? substr($path, 8) : $path;
     }
 
     /**
@@ -297,6 +402,8 @@ class FiscalYearService
                             ]);
                         }
                     }
+                }
+                if (in_array('document_files', $sectionsToImport)) {
                     if (isset($importData['document_files'])) {
                         $documentMapping = $idMappings['documents'] ?? [];
 
@@ -347,13 +454,11 @@ class FiscalYearService
                     $serviceMapping = $idMappings['services'] ?? [];
 
                     if (isset($importData['invoices'])) {
-                        if (! empty($customerMapping) && ! empty($documentMapping)) {
+                        if (! empty($customerMapping)) {
                             $idMappings['invoices'] = self::_importInvoices($importData['invoices'], $targetYearId, $documentMapping, $customerMapping);
                         } else {
-                            Log::warning('Skipping not-return type invoice import due to missing customer or document mappings.', [
+                            Log::warning('Skipping invoice import due to missing customer mapping.', [
                                 'target_year_id' => $targetYearId,
-                                'has_customer_mapping' => ! empty($customerMapping),
-                                'has_document_mapping' => ! empty($documentMapping),
                             ]);
                         }
                     }
@@ -372,15 +477,14 @@ class FiscalYearService
                     }
 
                     if (isset($importData['ancillary_costs'])) {
-                        if (! empty($idMappings['invoices']) && ! empty($customerMapping) && ! empty($documentMapping)) {
+                        if (! empty($idMappings['invoices']) && ! empty($customerMapping)) {
                             $idMappings['ancillary_costs'] = self::_importAncillaryCosts($importData['ancillary_costs'], $targetYearId, $idMappings['invoices'], $customerMapping, $documentMapping);
                         } else {
-                            Log::warning('Skipping ancillary cost import due to missing invoice or customer or document mappings.',
+                            Log::warning('Skipping ancillary cost import due to missing invoice or customer mappings.',
                                 [
                                     'target_year_id' => $targetYearId,
                                     'has_invoice_mapping' => ! empty($idMappings['invoices']),
                                     'has_customer_mapping' => ! empty($customerMapping),
-                                    'has_document_mapping' => ! empty($documentMapping),
                                 ]);
                         }
                     }
@@ -627,6 +731,13 @@ class FiscalYearService
             $sourceData['transactions'] = ! empty($documentIds) ? Transaction::whereIn('document_id', $documentIds)->get()->toArray() : [];
 
             $sourceData['document_files'] = ! empty($documentIds) ? DocumentFile::whereIn('document_id', $documentIds)->get()->toArray() : [];
+        }
+        if (in_array('document_files', $sections) && ! isset($sourceData['document_files'])) {
+            $documentIdsSubquery = Document::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
+                ->select('id');
+
+            $sourceData['document_files'] = DocumentFile::whereIn('document_id', $documentIdsSubquery)->get()->toArray();
         }
         if (in_array('invoices', $sections)) {
             $sourceData['invoices'] = Invoice::withoutGlobalScope(FiscalYearScope::class)
@@ -1778,6 +1889,10 @@ class FiscalYearService
      */
     protected static function _importDocumentFiles(array $documentFilesData, int $targetYearId, array $documentMapping): void
     {
+        $disk = Storage::disk('public');
+        // 77,824 = 4/3 × 58 368 — each chunk is a multiple of 4 base64 chars for clean decoding
+        $decodeChunkSize = 77824;
+
         foreach ($documentFilesData as $documentFileData) {
             $oldDocFileId = $documentFileData['document_id'] ?? null;
             $oldUserId = $documentFileData['user_id'] ?? null;
@@ -1788,11 +1903,59 @@ class FiscalYearService
                 continue;
             }
 
-            $newFile = new DocumentFile;
-            $newFile->fill(collect($documentFileData)->except(['id', 'document_id', 'user_id'])->toArray());
-            $newFile->document_id = $documentMapping[$oldDocFileId];
-            $newFile->user_id = $oldUserId;
+            // Entries without embedded Base64 content are skipped entirely
+            if (! isset($documentFileData['document_file']['content'])) {
+                continue;
+            }
 
+            $newDocumentId = $documentMapping[$oldDocFileId];
+            $fileData = $documentFileData['document_file'];
+            $base64Content = $fileData['content'];
+            $expectedSha256 = $fileData['sha256'] ?? null;
+            $fileName = basename($fileData['name'] ?? ($documentFileData['name'] ?? 'file'));
+            $newRelPath = 'documents/'.$newDocumentId.'/'.$fileName;
+
+            $tempPath = tempnam(sys_get_temp_dir(), 'docfile_import_');
+            $tempHandle = fopen($tempPath, 'wb');
+            $hash = hash_init('sha256');
+            $length = strlen($base64Content);
+
+            try {
+                for ($offset = 0; $offset < $length; $offset += $decodeChunkSize) {
+                    $chunk = substr($base64Content, $offset, $decodeChunkSize);
+                    $decoded = base64_decode($chunk, true);
+
+                    if ($decoded === false) {
+                        throw new \RuntimeException("Invalid Base64 data in document file: {$fileName}");
+                    }
+
+                    hash_update($hash, $decoded);
+                    fwrite($tempHandle, $decoded);
+                }
+
+                if (is_resource($tempHandle)) {
+                    fclose($tempHandle);
+                }
+
+                if ($expectedSha256 !== null && hash_final($hash) !== $expectedSha256) {
+                    throw new \RuntimeException("SHA-256 checksum mismatch for document file: {$fileName}");
+                }
+
+                $fileStream = fopen($tempPath, 'rb');
+                $disk->writeStream($newRelPath, $fileStream);
+                fclose($fileStream);
+            } finally {
+                if (is_resource($tempHandle)) {
+                    fclose($tempHandle);
+                }
+                @unlink($tempPath);
+            }
+
+            $newFile = new DocumentFile;
+            $newFile->fill(collect($documentFileData)->except(['id', 'document_id', 'user_id', 'document_file'])->toArray());
+            $newFile->document_id = $newDocumentId;
+            $newFile->user_id = $oldUserId;
+            $newFile->path = $newRelPath;
             $newFile->save();
         }
     }
@@ -1921,7 +2084,7 @@ class FiscalYearService
             $newInvoice = new Invoice;
             $newInvoice->fill(collect($invoiceData)->except(['id', 'customer_id', 'document_id'])->toArray());
             $newInvoice->customer_id = $customerMapping[$oldCustomerId];
-            $newInvoice->document_id = $oldDocumentId ? $documentMapping[$oldDocumentId] : null;
+            $newInvoice->document_id = $oldDocumentId ? ($documentMapping[$oldDocumentId] ?? null) : null;
             $newInvoice->company_id = $targetYearId;
             $newInvoice->saveQuietly();
 
@@ -1952,7 +2115,7 @@ class FiscalYearService
             $newInvoice->fill(collect($invoiceData)->except(['id', 'customer_id', 'document_id', 'returned_invoice_id'])->toArray());
             $newInvoice->customer_id = $customerMapping[$oldCustomerId];
             $newInvoice->returned_invoice_id = $mapping[$oldReturnedInvoiceId];
-            $newInvoice->document_id = $oldDocumentId ? $documentMapping[$oldDocumentId] : null;
+            $newInvoice->document_id = $oldDocumentId ? ($documentMapping[$oldDocumentId] ?? null) : null;
             $newInvoice->company_id = $targetYearId;
             $newInvoice->saveQuietly();
 
