@@ -750,6 +750,14 @@ class InvoiceController extends Controller
         }
 
         $date = convertToGregorian($validated['transaction_date']);
+
+        if (! $invoice->pay_date) {
+            $invoice->update([
+                'pay_date' => $date,
+                'pay_reference_number' => $validated['transaction_reference_number'] ?? null,
+            ]);
+        }
+
         $success = $moadianService->sendInvoice($invoice, $validated['transaction_reference_number'] ?? null, $date);
 
         if ($success) {

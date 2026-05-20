@@ -35,6 +35,8 @@ class Invoice extends Model
         'returned_invoice_id',
         'company_id',
         'taxID',
+        'pay_date',
+        'pay_reference_number',
     ];
 
     protected $casts = [
@@ -42,6 +44,7 @@ class Invoice extends Model
         'status' => InvoiceStatus::class,
         'date' => 'date',
         'ship_date' => 'date',
+        'pay_date' => 'date',
         'active' => 'boolean',
     ];
 

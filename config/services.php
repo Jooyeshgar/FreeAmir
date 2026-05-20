@@ -15,7 +15,6 @@ return [
     */
 
     'moadian' => [
-        'username' => env('MOADIAN_USERNAME'),
         'tax_id' => env('TAX_ID'),
     ],
 
