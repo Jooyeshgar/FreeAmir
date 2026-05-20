@@ -25,9 +25,14 @@
 
     <x-header />
 
-    <main class="min-[1430px]:w-[1430px] mx-auto">
+    <main class="min-[1430px]:w-[1430px] mx-auto mt-5">
         {{ $slot }}
     </main>
+
+    <footer class="mt-8 text-center text-xs opacity-60 pb-4">
+        {{ __('Integrated Accounting and Human Resources System') }} · {{ __('Version :version', ['version' => config('app.version')]) }}
+    </footer>
+
     @stack('scripts')
 
     @stack('footer')

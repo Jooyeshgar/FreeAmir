@@ -12,8 +12,8 @@ use App\Enums\EmployeeNationality;
 use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Models\Employee;
-use App\Models\OrgChart;
 use App\Models\OrganizationUnit;
+use App\Models\OrgChart;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
 use App\Models\WorkSiteContract;
@@ -25,7 +25,7 @@ class EmployeeController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = Employee::with(['workSite', 'orgChart', 'organizationUnit'])
+        $query = Employee::with(['workSite', 'orgChart', 'workSiteContract', 'organizationUnit'])
             ->orderBy('code');
 
         if ($request->filled('search')) {
@@ -42,7 +42,17 @@ class EmployeeController extends Controller
             $query->where('is_active', (bool) $request->is_active);
         }
 
+        if ($request->filled('work_site_id')) {
+            $query->where('work_site_id', $request->integer('work_site_id'));
+        }
+
+        if ($request->filled('contract_framework_id')) {
+            $query->where('contract_framework_id', $request->integer('contract_framework_id'));
+        }
+
         $employees = $query->paginate(15)->withQueryString();
+        $workSites = WorkSite::orderBy('name')->get(['id', 'name']);
+        $workSiteContracts = WorkSiteContract::orderBy('name')->get(['id', 'name']);
 
         $totalCount = Employee::count();
         $activeCount = Employee::where('is_active', true)->count();
@@ -61,7 +71,9 @@ class EmployeeController extends Controller
             'fullTimeCount',
             'flexibleCount',
             'newHiresCount',
-            'withoutSalaryDecreeCount'
+            'withoutSalaryDecreeCount',
+            'workSites',
+            'workSiteContracts'
         ));
     }
 

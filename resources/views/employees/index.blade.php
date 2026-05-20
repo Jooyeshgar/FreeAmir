@@ -2,19 +2,54 @@
     <x-show-message-bags />
 
     {{-- Page Header --}}
-    <div class="flex flex-wrap items-center justify-between gap-4 py-6 px-1">
-        <div>
+    <div class="flex flex-wrap items-center justify-between gap-4 px-1 pb-5">
+        <div class="min-w-48">
             <h1 class="text-xl font-bold text-base-content">{{ __('Employees') }}</h1>
             <p class="text-sm text-base-content/50 mt-0.5">{{ __('Manage your organization\'s team members') }}</p>
         </div>
-        @can('hr.employees.create')
-            <a href="{{ route('hr.employees.create') }}" class="btn btn-primary btn-sm gap-1.5">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+
+        <div class="flex flex-wrap items-center justify-start gap-2" dir="ltr">
+            @can('hr.employees.create')
+                <a href="{{ route('hr.employees.create') }}" class="btn btn-primary btn-sm gap-1.5" dir="rtl">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                    {{ __('Add Employee') }}
+                </a>
+            @endcan
+
+            <button type="button" class="btn btn-sm btn-outline gap-1.5" dir="rtl">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14" />
                 </svg>
-                {{ __('Add Employee') }}
-            </a>
-        @endcan
+                {{ __('Excel Export') }}
+            </button>
+
+            <form action="{{ route('hr.employees.index') }}" method="GET" class="flex flex-wrap items-center gap-2">
+                @if (request()->filled('search'))
+                    <input type="hidden" name="search" value="{{ request('search') }}">
+                @endif
+                @if (request()->filled('is_active'))
+                    <input type="hidden" name="is_active" value="{{ request('is_active') }}">
+                @endif
+                <select name="contract_framework_id" class="select select-sm w-36" dir="rtl" onchange="this.form.submit()">
+                    <option value="">{{ __('All Contracts') }}</option>
+                    @foreach ($workSiteContracts as $contract)
+                        <option value="{{ $contract->id }}" {{ (string) request('contract_framework_id') === (string) $contract->id ? 'selected' : '' }}>
+                            {{ $contract->name }}
+                        </option>
+                    @endforeach
+                </select>
+                <select name="work_site_id" class="select select-sm w-36" dir="rtl" onchange="this.form.submit()">
+                    <option value="">{{ __('All Units') }}</option>
+                    @foreach ($workSites as $workSite)
+                        <option value="{{ $workSite->id }}" {{ (string) request('work_site_id') === (string) $workSite->id ? 'selected' : '' }}>
+                            {{ $workSite->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </form>
+        </div>
     </div>
 
     {{-- Stats Row --}}
@@ -65,125 +100,171 @@
         ]" />
     </div>
 
-    {{-- Main Card --}}
+    {{-- Employee List --}}
     <div class="card bg-base-100 shadow-sm border border-base-200 mx-1 mb-6">
         <div class="card-body p-0">
-
-            {{-- Filters --}}
             <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-base-200">
-                <form action="{{ route('hr.employees.index') }}" method="GET" class="flex flex-wrap gap-2">
-                    <div class="join">
-                        <input type="text" name="search" value="{{ request('search') }}"
-                            placeholder="{{ __('Search by name, code or national code') }}"
-                            class="input input-sm join-item w-72" />
-                        <button type="submit" class="btn btn-sm btn-neutral join-item">{{ __('Search') }}</button>
-                    </div>
-                    <select name="is_active" class="select select-sm" onchange="this.form.submit()">
-                        <option value="">{{ __('All Statuses') }}</option>
-                        <option value="1" {{ request('is_active') === '1' ? 'selected' : '' }}>{{ __('Active') }}</option>
-                        <option value="0" {{ request('is_active') === '0' ? 'selected' : '' }}>{{ __('Inactive') }}</option>
-                    </select>
-                    @if(request()->hasAny(['search', 'is_active']))
-                        <a href="{{ route('hr.employees.index') }}" class="btn btn-sm btn-ghost">{{ __('Reset') }}</a>
-                    @endif
-                </form>
-                <span class="text-sm text-base-content/40 hidden sm:block">
-                    {{ $employees->total() }} {{ __('records') }}
-                </span>
+                <div class="flex items-center gap-3">
+                    <h2 class="text-base font-bold text-base-content">{{ __('Employee List') }}</h2>
+                    <span class="badge badge-ghost">
+                        {{ convertToFarsi($employees->total()) }} {{ __('records') }}
+                    </span>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2" dir="ltr">
+                    <form action="{{ route('hr.employees.index') }}" method="GET" class="join">
+                        @if (request()->filled('work_site_id'))
+                            <input type="hidden" name="work_site_id" value="{{ request('work_site_id') }}">
+                        @endif
+                        @if (request()->filled('contract_framework_id'))
+                            <input type="hidden" name="contract_framework_id" value="{{ request('contract_framework_id') }}">
+                        @endif
+                        @if (request()->filled('is_active'))
+                            <input type="hidden" name="is_active" value="{{ request('is_active') }}">
+                        @endif
+                        <label class="input input-sm join-item flex w-64 max-w-full items-center gap-2 bg-base-100" dir="rtl">
+                            <input type="search" name="search" value="{{ request('search') }}" class="grow"
+                                placeholder="{{ __('Search by name, code or national code') }}" />
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z" />
+                            </svg>
+                        </label>
+                    </form>
+                </div>
             </div>
 
-            {{-- Table --}}
-            <div class="overflow-x-auto">
-                <table class="table table-sm w-full">
-                    <thead>
-                        <tr class="text-base-content/60 text-xs uppercase tracking-wide bg-base-200/40">
-                            <th>{{ __('Employee') }}</th>
-                            <th>{{ __('Code') }}</th>
-                            <th>{{ __('National Code') }}</th>
-                            <th>{{ __('Employment Type') }}</th>
-                            <th>{{ __('Work Site') }}</th>
-                            <th>{{ __('Organization Unit') }}</th>
-                            <th>{{ __('Status') }}</th>
-                            <th class="text-center">{{ __('Actions') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($employees as $employee)
-                            <tr class="hover:bg-base-200/30 transition-colors border-b border-base-200/60 last:border-0">
-                                <td>
+            <div class="p-4 sm:p-5">
+                @if ($employees->count())
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                        @foreach ($employees as $employee)
+                            @php
+                                $avatarTones = [
+                                    'bg-blue-600 text-white',
+                                    'bg-emerald-600 text-white',
+                                    'bg-amber-500 text-white',
+                                    'bg-rose-600 text-white',
+                                    'bg-violet-600 text-white',
+                                    'bg-cyan-600 text-white',
+                                ];
+                                $avatarTone = $avatarTones[$employee->id % count($avatarTones)];
+                            @endphp
+                            <div
+                                class="card rounded-lg border border-base-200 bg-base-100 shadow-sm transition hover:border-primary/30 hover:shadow-md dark:bg-base-200/40">
+                                <div class="card-body gap-4 p-4">
                                     <div class="flex items-center gap-3">
-                                        <div class="avatar placeholder">
-                                            <div class="bg-neutral/10 text-neutral rounded-full w-9 h-9 flex items-center justify-center">
-                                                <span class="text-sm font-semibold leading-none">
+                                        <div class="avatar placeholder shrink-0">
+                                            <div class="{{ $avatarTone }} flex h-14 w-14 items-center justify-center rounded-2xl text-center">
+                                                <span class="text-lg font-bold leading-none">
                                                     {{ mb_substr($employee->first_name, 0, 1) }}{{ mb_substr($employee->last_name, 0, 1) }}
                                                 </span>
                                             </div>
                                         </div>
-                                        <span class="font-medium text-sm">{{ $employee->first_name }} {{ $employee->last_name }}</span>
+
+                                        <div class="min-w-0 space-y-1">
+                                            <h3 class="truncate text-base font-bold text-base-content">{{ $employee->first_name }} {{ $employee->last_name }}</h3>
+                                            <p class="truncate text-sm text-base-content/60">{{ $employee->orgChart?->title ?? __('No position') }}</p>
+                                        </div>
                                     </div>
-                                </td>
-                                <td class="text-sm text-base-content/60 font-mono">{{ $employee->code }}</td>
-                                <td class="text-sm text-base-content/60">{{ $employee->national_code ?? '—' }}</td>
-                                <td class="text-sm">{{ $employee->employment_type?->label() ?? '—' }}</td>
-                                <td class="text-sm">{{ $employee->workSite?->name ?? '—' }}</td>
-                                <td>{{ $employee->organizationUnit?->name ?? '—' }}</td>
-                                <td>
-                                    @if ($employee->is_active)
-                                        <span class="badge badge-success badge-sm gap-1 font-medium">
-                                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-current"></span>
-                                            {{ __('Active') }}
+
+                                    <div class="space-y-2 text-sm text-base-content/65">
+                                        <div class="flex items-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/35" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m4 0h4" />
+                                            </svg>
+                                            <span>{{ $employee->workSite?->name ?? __('No work site') }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/35" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M9 12h6m-7 4h8M7 4h10a2 2 0 0 1 2 2v14l-4-2-3 2-3-2-4 2V6a2 2 0 0 1 2-2Z" />
+                                            </svg>
+                                            <span>{{ $employee->code }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/35" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M8 7V3m8 4V3M5 11h14M7 21h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z" />
+                                            </svg>
+                                            <span>{{ $employee->contract_start_date ? formatDate($employee->contract_start_date) : __('No start date') }}</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="badge {{ $employee->is_active ? 'badge-success' : 'badge-error' }} badge-sm">
+                                            {{ $employee->is_active ? __('Active') : __('Inactive') }}
                                         </span>
-                                    @else
-                                        <span class="badge badge-error badge-sm gap-1 font-medium">
-                                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-current"></span>
-                                            {{ __('Inactive') }}
+                                        <span class="badge badge-info badge-outline badge-sm">
+                                            {{ $employee->employment_type?->label() ?? __('No type') }}
                                         </span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <div class="flex items-center justify-center gap-1">
+                                    </div>
+
+                                    <div class="card-actions items-center justify-between border-t border-base-200 pt-3">
                                         @can('hr.employees.show')
-                                            <a href="{{ route('hr.employees.show', $employee) }}" class="btn btn-xs btn-ghost">
+                                            <a href="{{ route('hr.employees.show', $employee) }}" class="btn btn-xs btn-ghost gap-1">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12 18 18.75 12 18.75 2.25 12 2.25 12Z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                                </svg>
                                                 {{ __('View') }}
                                             </a>
                                         @endcan
-                                        @can('hr.employees.edit')
-                                            <a href="{{ route('hr.employees.edit', $employee) }}" class="btn btn-xs btn-info">
-                                                {{ __('Edit') }}
-                                            </a>
-                                        @endcan
-                                        @can('hr.employees.delete')
-                                            <form action="{{ route('hr.employees.destroy', $employee) }}" method="POST" class="inline-block"
-                                                onsubmit="return confirm('{{ __('Are you sure?') }}')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-xs btn-error">
-                                                    {{ __('Delete') }}
-                                                </button>
-                                            </form>
-                                        @endcan
+                                        <div class="flex items-center gap-1 text-base-content/45">
+                                            @if ($employee->phone)
+                                                <a href="tel:{{ $employee->phone }}" class="btn btn-xs btn-ghost btn-square" title="{{ __('Phone') }}">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106a1.125 1.125 0 0 0-1.173.417l-.97 1.293a1.125 1.125 0 0 1-1.21.38 12.035 12.035 0 0 1-7.143-7.143 1.125 1.125 0 0 1 .38-1.21l1.293-.97a1.125 1.125 0 0 0 .417-1.173L6.963 3.102A1.125 1.125 0 0 0 5.872 2.25H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
+                                                    </svg>
+                                                </a>
+                                            @endif
+                                            @can('hr.employees.edit')
+                                                <a href="{{ route('hr.employees.edit', $employee) }}" class="btn btn-xs btn-ghost btn-square"
+                                                    title="{{ __('Edit') }}">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L8.582 18.07a4.5 4.5 0 0 1-1.897 1.13L3 20.25l1.05-3.685a4.5 4.5 0 0 1 1.13-1.897l11.682-11.681Z" />
+                                                    </svg>
+                                                </a>
+                                            @endcan
+                                            @can('hr.employees.delete')
+                                                <form action="{{ route('hr.employees.destroy', $employee) }}" method="POST"
+                                                    onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-xs btn-ghost btn-square text-error" title="{{ __('Delete') }}">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                                d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673A2.25 2.25 0 0 1 15.916 21H8.084a2.25 2.25 0 0 1-2.244-1.827L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                                        </svg>
+                                                    </button>
+                                                </form>
+                                            @endcan
+                                        </div>
                                     </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8">
-                                    <div class="flex flex-col items-center justify-center py-16 text-base-content/30">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        </svg>
-                                        <p class="text-base font-medium">{{ __('No employees found.') }}</p>
-                                        <p class="text-sm mt-1 text-base-content/25">{{ __('Try adjusting your search filters.') }}</p>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="flex flex-col items-center justify-center py-16 text-base-content/35">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="mb-4 h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M17 20h5v-2a3 3 0 0 0-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 0 1 5.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 0 1 9.288 0M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                        </svg>
+                        <p class="text-base font-medium">{{ __('No employees found.') }}</p>
+                        <p class="mt-1 text-sm text-base-content/30">{{ __('Try adjusting your search filters.') }}</p>
+                    </div>
+                @endif
             </div>
 
             {{-- Pagination --}}
-            @if($employees->hasPages())
+            @if ($employees->hasPages())
                 <div class="px-5 py-4 border-t border-base-200">
                     {!! $employees->links() !!}
                 </div>
