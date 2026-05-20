@@ -6,6 +6,7 @@ use App\DTO\InvoiceStatusDecision;
 use App\Enums\CustomerType;
 use App\Enums\InvoiceType;
 use App\Models\Invoice;
+use GuzzleHttp\Exception\ClientException;
 use Illuminate\Support\Carbon;
 use Jooyeshgar\Moadian\Facades\Moadian;
 use Jooyeshgar\Moadian\Invoice as MoadianInvoice;
@@ -31,7 +32,7 @@ class MoadianService
 
     public function sendInvoice(Invoice $invoice, ?string $transaction_reference_number, string $transaction_date): bool
     {
-        $this->moadian_username = config('services.moadian.username');
+        $this->moadian_username = config('moadian.username');
         $this->taxID = config('services.moadian.tax_id');
 
         $this->transaction_reference_number = $transaction_reference_number;
@@ -86,6 +87,20 @@ class MoadianService
         }
 
         return $decision;
+    }
+
+    public function moadianStatus(string $referenceNumber, Invoice $invoice): array
+    {
+        try {
+            $response = Moadian::inquiryByReferenceNumbers($referenceNumber);
+            $statusData = $response->getBody()[0] ?? [];
+        } catch (ClientException $e) {
+            $statusData = ['status' => 'FAILED', 'error' => $e->getMessage()];
+        }
+
+        $invoice->moadianHistories()->create(['data' => $statusData]);
+
+        return $statusData;
     }
 
     private function moadianData(Invoice $invoice): void

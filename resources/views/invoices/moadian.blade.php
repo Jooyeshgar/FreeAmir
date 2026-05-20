@@ -9,10 +9,10 @@
             <x-card class="w-full" class_body="p-4">
                 <div class="flex justify-start gap-2">
                     <x-text-input data-jdp title="{{ __('Transaction date') }}" input_name="transaction_date" placeholder="{{ __('Transaction date') }}" readonly
-                            input_value="{{ old('transaction_date') ?? convertToJalali(now(), true) }}"
+                            input_value="{{ old('transaction_date') ?? ($invoice->pay_date ? convertToJalali($invoice->pay_date, true) : convertToJalali(now(), true)) }}"
                             label_text_class="text-gray-500 text-nowrap" input_class="datePicker">
                     </x-text-input>
-                    <x-text-input x-data="{ transaction_reference_number: '{{ null }}' }"
+                    <x-text-input x-data="{ transaction_reference_number: '{{ old('transaction_reference_number') ?? $invoice->pay_reference_number ?? null }}' }"
                         title="{{ __('Transaction Reference Number') }}" x-model.number="transaction_reference_number" x-bind:name="'transaction_reference_number'"
                         placeholder="{{ __('Transaction Reference Number') }}" label_text_class="text-gray-500 text-nowrap"
                         x-on:input="transaction_reference_number = $store.utils.convertToEnglish($event.target.value);"

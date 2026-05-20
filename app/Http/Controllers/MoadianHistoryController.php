@@ -4,14 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Models\Invoice;
 use App\Models\MoadianHistory;
+use App\Services\MoadianService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class MoadianHistoryController extends Controller
 {
+    public function __construct(private readonly MoadianService $moadianService) {}
+
     public function index(Request $request): View
     {
-        $query = MoadianHistory::with('invoice');
+        $query = MoadianHistory::with('invoice')->whereIn('created_at', MoadianHistory::selectRaw('MAX(created_at)')->groupBy('invoice_id'));
 
         if ($request->filled('status')) {
             $query->where('data->status', $request->input('status'));
@@ -23,11 +27,15 @@ class MoadianHistoryController extends Controller
 
         $moadianHistories = $query->latest()->paginate(10)->withQueryString();
 
-        return view('moadian-histories.index', compact('moadianHistories'));
+        return view('moadian-histories.index', ['moadianHistories' => $moadianHistories, 'latestHistoryId' => null, 'latestHistoryStatus' => null]);
     }
 
     public function show(Request $request, Invoice $invoice): View
     {
+        $latestHistory = $invoice->moadianHistories()->latest()->first();
+        $latestHistoryId = $latestHistory?->id;
+        $latestHistoryStatus = $latestHistory ? strtoupper($latestHistory->data['status'] ?? 'UNKNOWN') : null;
+
         $query = MoadianHistory::with('invoice')->where('invoice_id', $invoice->id);
 
         if ($request->filled('status')) {
@@ -40,6 +48,19 @@ class MoadianHistoryController extends Controller
 
         $moadianHistories = $query->latest()->paginate(10)->withQueryString();
 
-        return view('moadian-histories.index', compact('moadianHistories', 'invoice'));
+        return view('moadian-histories.index', compact('moadianHistories', 'invoice', 'latestHistoryId', 'latestHistoryStatus'));
+    }
+
+    public function checkStatus(Invoice $invoice): RedirectResponse
+    {
+        $latestHistory = $invoice->moadianHistories()->latest()->first();
+
+        if (! $latestHistory || ! isset($latestHistory->data['referenceNumber'])) {
+            return redirect()->back()->with('error', __('No reference number available to check status.'));
+        }
+
+        $this->moadianService->moadianStatus($latestHistory->data['referenceNumber'], $invoice);
+
+        return redirect()->back()->with('success', __('Status checked and updated successfully.'));
     }
 }

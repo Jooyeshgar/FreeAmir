@@ -12,15 +12,15 @@
                 @endif
             </h2>
 
+            <x-show-message-bags />
             <div>
                 <form method="GET" action="{{ route('invoices.moadian-histories.index') }}" class="flex flex-wrap items-end gap-4">
                     <div>
                         <label for="status" class="label text-sm">{{ __('Status') }}</label>
                         <select name="status" id="status" class="select w-full">
                             <option value="">{{ __('All') }}</option>
-                            <option value="SUCCESS" {{ request('status') == 'SUCCESS' ? 'selected' : '' }}>{{ __('Success') }}</option>
-                            <option value="FAILED" {{ request('status') == 'FAILED' ? 'selected' : '' }}>{{ __('Failed') }}</option>
-                            <option value="PENDING" {{ request('status') == 'PENDING' ? 'selected' : '' }}>{{ __('Pending') }}</option>
+                            <option value="SUCCESS" {{ request('status') == 'SUCCESS' ? 'selected' : '' }}>{{ __('SUCCESS') }}</option>
+                            <option value="FAILED" {{ request('status') == 'FAILED' ? 'selected' : '' }}>{{ __('FAILED') }}</option>
                         </select>
                     </div>
 
@@ -40,33 +40,60 @@
                 <table class="w-full divide-y">
                     <thead>
                         <tr>
-                            <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Invoice Number') }}</th>
+                            @if(!isset($invoice))
+                                <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Invoice Number') }}</th>
+                            @endif
                             <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Status') }}</th>
                             <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Reference Number') }}</th>
+                            <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('UID') }}</th>
                             <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Date') }}</th>
+                            <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Action') }}</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="text-center">
                         @forelse ($moadianHistories as $history)
                             @php
                                 $status = isset($history->data['status']) ? Str::upper($history->data['status']) : 'UNKNOWN';
+                                $isLatest = $latestHistoryId === null || $history->id === $latestHistoryId;
                             @endphp
                             <tr>
+                                @if(!isset($invoice))
                                 <td class="text-sm text-gray-500">
                                     <a class="link" href="{{ route('invoices.show', $history->invoice_id) }}">{{ formatDocumentNumber($history->invoice->number) ?? '' }}</a>
                                 </td>
+                                @endif
                                 <td>
                                     <span class="text-xs
                                         {{ $status === 'SUCCESS' ? 'bg-green-100 text-green-500' : ($status === 'FAILED' ? 'bg-red-100 text-red-500' : 'bg-yellow-100 text-yellow-500') }}">
-                                        {{ $status }}
+                                        {{ __($status) }}
                                     </span>
                                 </td>
                                 <td class="text-sm text-gray-500">{{ $history->data['referenceNumber'] ?? '-' }}</td>
+                                <td class="text-sm text-gray-500 text-xs break-all">{{ $history->data['uid'] ?? '-' }}</td>
                                 <td class="text-sm text-gray-500">{{ convertToFarsi($history->created_at->format('Y/m/d H:i')) }}</td>
+                                <td class="py-2">
+                                    @if($isLatest)
+                                        <div class="flex items-center justify-center gap-2">
+                                            @if(isset($history->data['referenceNumber']) && $status === 'UNKNOWN')
+                                                @can('invoices.moadian-check-status')
+                                                    <form method="POST" action="{{ route('invoices.moadian-check-status', $history->invoice_id) }}">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-xs btn-info">{{ __('Check Status') }}</button>
+                                                    </form>
+                                                @endcan
+                                            @endif
+                                            @if($status === 'FAILED')
+                                                @can('invoices.send-moadian')
+                                                    <a href="{{ route('invoices.moadian-form', $history->invoice_id) }}" class="btn btn-xs btn-info">{{ __('Send Again') }}</a>
+                                                @endcan
+                                            @endif
+                                        </div>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="text-sm text-center text-gray-500 p-3">{{ __('No moadian histories found.') }}</td>
+                                <td colspan="{{ isset($invoice) ? 5 : 6 }}" class="text-sm text-center text-gray-500 p-3">{{ __('No moadian histories found.') }}</td>
                             </tr>
                         @endforelse
                     </tbody>

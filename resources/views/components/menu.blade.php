@@ -44,6 +44,9 @@
                                     <li><a
                                             href="{{ route('invoices.index', ['invoice_type' => 'void']) }}">{{ __('Voided Sell') }}</a>
                                     </li>
+                                    <li><a
+                                            href="{{ route('invoices.moadian-histories.index') }}">{{ __('Moadian Histories') }}</a>
+                                    </li>
                                 @endcan
                             </ul>
                         </details>
