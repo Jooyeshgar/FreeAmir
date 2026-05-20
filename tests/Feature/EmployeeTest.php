@@ -7,6 +7,7 @@ use App\Enums\EmployeeGender;
 use App\Enums\EmployeeNationality;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\SalaryDecree;
 use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
@@ -130,6 +131,143 @@ class EmployeeTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Active');
         $response->assertDontSee('Inactive');
+    }
+
+    public function test_index_marks_active_employees_with_expired_contract(): void
+    {
+        $this->makeEmployee([
+            'first_name' => 'Expired',
+            'last_name' => 'Contract',
+            'is_active' => true,
+            'contract_end_date' => now()->subDay()->toDateString(),
+        ]);
+
+        $response = $this->get(route('hr.employees.index'));
+
+        $response->assertStatus(200);
+        $response->assertSee(__('Expired contract'));
+    }
+
+    public function test_index_marks_employees_without_salary_decree(): void
+    {
+        $employee = $this->makeEmployee([
+            'first_name' => 'No',
+            'last_name' => 'Decree',
+        ]);
+
+        $response = $this->get(route('hr.employees.index', ['search' => $employee->code]));
+
+        $response->assertStatus(200);
+        $response->assertSee(__('No salary decree'));
+    }
+
+    public function test_export_downloads_csv_with_current_filters(): void
+    {
+        $matching = $this->makeEmployee([
+            'first_name' => 'Reza',
+            'last_name' => 'Ahmadi',
+            'code' => 'EMP-001',
+        ]);
+        $this->makeEmployee([
+            'first_name' => 'Sara',
+            'last_name' => 'Karimi',
+            'code' => 'EMP-002',
+        ]);
+        SalaryDecree::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $matching->id,
+        ]);
+
+        $response = $this->get(route('hr.employees.export', ['search' => 'Ahmadi']));
+
+        $response->assertStatus(200);
+        $response->assertDownload();
+
+        $csv = $response->streamedContent();
+        $this->assertStringContainsString('EMP-001', $csv);
+        $this->assertStringContainsString('Ahmadi', $csv);
+        $this->assertStringNotContainsString('EMP-002', $csv);
+        $this->assertStringNotContainsString('Karimi', $csv);
+    }
+
+    public function test_export_contains_required_headers(): void
+    {
+        $response = $this->get(route('hr.employees.export'));
+
+        $csv = $response->streamedContent();
+
+        foreach ([__('Code'), __('First Name'), __('Last Name'), __('National Code'), __('Work Site'), __('Position'), __('Employment Type'), __('Status'), __('Salary Decree Count')] as $header) {
+            $this->assertStringContainsString($header, $csv);
+        }
+    }
+
+    public function test_export_includes_salary_decree_count_per_employee(): void
+    {
+        $employee = $this->makeEmployee(['code' => 'EMP-DC1', 'first_name' => 'Decree', 'last_name' => 'Owner']);
+
+        SalaryDecree::factory()->count(3)->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $employee->id,
+        ]);
+
+        $csv = $this->get(route('hr.employees.export'))->streamedContent();
+
+        $rows = array_filter(explode("\n", $csv));
+        $dataRow = collect($rows)->first(fn ($r) => str_contains($r, 'EMP-DC1'));
+        $this->assertNotNull($dataRow, 'Employee row not found in export');
+
+        $fields = str_getcsv($dataRow);
+        $this->assertSame('3', end($fields));
+    }
+
+    public function test_export_filters_by_work_site(): void
+    {
+        $otherSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
+
+        $this->makeEmployee(['code' => 'EMP-S1', 'work_site_id' => $this->workSite->id]);
+        $this->makeEmployee(['code' => 'EMP-S2', 'work_site_id' => $otherSite->id]);
+
+        $csv = $this->get(route('hr.employees.export', ['work_site_id' => $this->workSite->id]))->streamedContent();
+
+        $this->assertStringContainsString('EMP-S1', $csv);
+        $this->assertStringNotContainsString('EMP-S2', $csv);
+    }
+
+    public function test_export_filters_by_is_active(): void
+    {
+        $this->makeEmployee(['code' => 'EMP-ACT', 'is_active' => true]);
+        $this->makeEmployee(['code' => 'EMP-INA', 'is_active' => false]);
+
+        $csv = $this->get(route('hr.employees.export', ['is_active' => '1']))->streamedContent();
+
+        $this->assertStringContainsString('EMP-ACT', $csv);
+        $this->assertStringNotContainsString('EMP-INA', $csv);
+    }
+
+    public function test_export_excludes_employees_from_other_companies(): void
+    {
+        $this->makeEmployee(['code' => 'EMP-MINE']);
+
+        $otherCompany = Company::factory()->create();
+        $otherSite = WorkSite::factory()->create(['company_id' => $otherCompany->id]);
+        Employee::factory()->create([
+            'company_id' => $otherCompany->id,
+            'work_site_id' => $otherSite->id,
+            'code' => 'EMP-OTHER',
+        ]);
+
+        $csv = $this->get(route('hr.employees.export'))->streamedContent();
+
+        $this->assertStringContainsString('EMP-MINE', $csv);
+        $this->assertStringNotContainsString('EMP-OTHER', $csv);
+    }
+
+    public function test_export_filename_contains_timestamp(): void
+    {
+        $response = $this->get(route('hr.employees.export'));
+
+        $response->assertDownload();
+        $this->assertMatchesRegularExpression('/filename=employees_\d{14}\.csv/', $response->headers->get('content-disposition') ?? '');
     }
 
     // ----------------------------------------------------------------

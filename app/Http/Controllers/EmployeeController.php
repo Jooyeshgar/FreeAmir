@@ -12,39 +12,110 @@ use App\Enums\EmployeeNationality;
 use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Models\Employee;
-use App\Models\OrgChart;
 use App\Models\OrganizationUnit;
+use App\Models\OrgChart;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
 use App\Models\WorkSiteContract;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EmployeeController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = Employee::with(['workSite', 'orgChart', 'organizationUnit'])
-            ->orderBy('code');
+        $employees = $this->filteredEmployeeQuery($request)
+            ->paginate(15)
+            ->withQueryString();
+        $workSites = WorkSite::orderBy('name')->get(['id', 'name']);
+        $workSiteContracts = WorkSiteContract::orderBy('name')->get(['id', 'name']);
 
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('first_name', 'like', "%{$search}%")
-                    ->orWhere('last_name', 'like', "%{$search}%")
-                    ->orWhere('code', 'like', "%{$search}%")
-                    ->orWhere('national_code', 'like', "%{$search}%");
-            });
-        }
+        $stats = Employee::selectRaw(
+            'COUNT(*) as total_count,
+            SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active_count,
+            SUM(CASE WHEN employment_type = ? THEN 1 ELSE 0 END) as full_time_count,
+            SUM(CASE WHEN employment_type IN (?, ?) THEN 1 ELSE 0 END) as flexible_count,
+            SUM(CASE WHEN contract_start_date >= ? THEN 1 ELSE 0 END) as new_hires_count',
+            [
+                EmployeeEmploymentType::PERMANENT->value,
+                EmployeeEmploymentType::CONTRACT->value,
+                EmployeeEmploymentType::OTHER->value,
+                now()->subDays(30)->toDateString(),
+            ]
+        )->first();
 
-        if ($request->filled('is_active')) {
-            $query->where('is_active', (bool) $request->is_active);
-        }
+        $totalCount = (int) $stats->total_count;
+        $activeCount = (int) $stats->active_count;
+        $fullTimeCount = (int) $stats->full_time_count;
+        $flexibleCount = (int) $stats->flexible_count;
+        $newHiresCount = (int) $stats->new_hires_count;
+        $withoutSalaryDecreeCount = Employee::doesntHave('salaryDecrees')->count();
 
-        $employees = $query->paginate(15)->withQueryString();
+        return view('employees.index', compact(
+            'employees',
+            'totalCount',
+            'activeCount',
+            'fullTimeCount',
+            'flexibleCount',
+            'newHiresCount',
+            'withoutSalaryDecreeCount',
+            'workSites',
+            'workSiteContracts'
+        ));
+    }
 
-        return view('employees.index', compact('employees'));
+    public function export(Request $request): StreamedResponse
+    {
+        $filename = 'employees_'.now()->format('YmdHis').'.csv';
+
+        return response()->streamDownload(function () use ($request) {
+            $file = fopen('php://output', 'w');
+
+            fwrite($file, "\xEF\xBB\xBF");
+            fputcsv($file, [
+                __('Code'),
+                __('First Name'),
+                __('Last Name'),
+                __('National Code'),
+                __('Phone'),
+                __('Work Site'),
+                __('Position'),
+                __('Contract'),
+                __('Employment Type'),
+                __('Status'),
+                __('Contract Start Date'),
+                __('Contract End Date'),
+                __('Salary Decree Count'),
+            ]);
+
+            $this->filteredEmployeeQuery($request)
+                ->chunk(200, function ($employees) use ($file) {
+                    foreach ($employees as $employee) {
+                        fputcsv($file, [
+                            $employee->code,
+                            $employee->first_name,
+                            $employee->last_name,
+                            $employee->national_code,
+                            $employee->phone,
+                            $employee->workSite?->name,
+                            $employee->orgChart?->title,
+                            $employee->workSiteContract?->name,
+                            $employee->employment_type?->label(),
+                            $employee->is_active ? __('Active') : __('Inactive'),
+                            $employee->contract_start_date?->toDateString(),
+                            $employee->contract_end_date?->toDateString(),
+                            $employee->salary_decrees_count,
+                        ]);
+                    }
+                });
+
+            fclose($file);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 
     public function create(): View
@@ -113,6 +184,40 @@ class EmployeeController extends Controller
 
         return redirect()->route('hr.employees.index')
             ->with('success', __('Employee deleted successfully.'));
+    }
+
+    private function filteredEmployeeQuery(Request $request): Builder
+    {
+        $query = Employee::with(['workSite', 'orgChart', 'workSiteContract', 'organizationUnit'])
+            ->withCount([
+                'salaryDecrees',
+                'salaryDecrees as active_salary_decrees_count' => fn ($q) => $q->where('is_active', true),
+            ])
+            ->orderBy('code');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function (Builder $q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhere('national_code', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('is_active')) {
+            $query->where('is_active', (bool) $request->is_active);
+        }
+
+        if ($request->filled('work_site_id')) {
+            $query->where('work_site_id', $request->integer('work_site_id'));
+        }
+
+        if ($request->filled('contract_framework_id')) {
+            $query->where('contract_framework_id', $request->integer('contract_framework_id'));
+        }
+
+        return $query;
     }
 
     /** Build the shared enum options arrays used by views. */

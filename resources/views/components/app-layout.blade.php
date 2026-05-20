@@ -21,15 +21,18 @@
 
 </head>
 
-<body class="relative min-h-screen overflow-x-hidden bg-base-100 text-base-content" dir="{{ app()->getLocale() == 'fa' ? 'rtl' : 'ltr' }}">
+<body class="relative min-h-screen overflow-x-hidden bg-base-200 text-base-content" dir="{{ app()->getLocale() == 'fa' ? 'rtl' : 'ltr' }}">
 
-    <div class="app-background" aria-hidden="true"></div>
-    <div x-data="{ open: false }" class="relative z-10 min-[1430px]:w-[1430px] mx-auto">
-        <x-header />
+    <x-header />
 
+    <main class="min-[1430px]:w-[1430px] mx-auto mt-5">
         {{ $slot }}
+    </main>
 
-    </div>
+    <footer class="mt-8 text-center text-xs opacity-60 pb-4">
+        {{ __('Integrated Accounting and Human Resources System') }} {{ __('Version :version', ['version' => config('app.version')]) }}
+    </footer>
+
     @stack('scripts')
 
     @stack('footer')

@@ -18,6 +18,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Determine app version
+        id: app-version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="nightly-$(date -u +'%Y%m%d')-${GITHUB_SHA::7}"
+          fi
+
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -49,7 +61,11 @@ jobs:
           file: ./docker/production/php-fpm/Dockerfile
           push: true
           tags: ${{ steps.meta-app.outputs.tags }}
-          labels: ${{ steps.meta-app.outputs.labels }}
+          labels: |
+            ${{ steps.meta-app.outputs.labels }}
+            org.opencontainers.image.version=${{ steps.app-version.outputs.version }}
+          build-args: |
+            APP_VERSION=${{ steps.app-version.outputs.version }}
 
       # === 2. Nginx ===
       - name: Extract metadata for Nginx
@@ -89,4 +105,8 @@ jobs:
           file: ./docker/all-in-one/Dockerfile
           push: true
           tags: ${{ steps.meta-all-in-one.outputs.tags }}
-          labels: ${{ steps.meta-all-in-one.outputs.labels }}
+          labels: |
+            ${{ steps.meta-all-in-one.outputs.labels }}
+            org.opencontainers.image.version=${{ steps.app-version.outputs.version }}
+          build-args: |
+            APP_VERSION=${{ steps.app-version.outputs.version }}

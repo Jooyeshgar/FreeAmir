@@ -59,6 +59,9 @@ RUN mkdir -p bootstrap/cache storage/framework/cache/data storage/framework/sess
 
 FROM php:8.3-fpm AS production
 
+ARG APP_VERSION=nightly-local
+ENV APP_VERSION="${APP_VERSION}"
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpng16-16 \
     libonig5 \

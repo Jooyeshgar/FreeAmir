@@ -114,6 +114,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     });
 
     Route::group(['prefix' => 'hr', 'as' => 'hr.'], function () {
+        Route::get('employees/export', [Controllers\EmployeeController::class, 'export'])->name('employees.export');
         Route::resource('employees', Controllers\EmployeeController::class);
         Route::resource('organization-units', Controllers\OrganizationUnitController::class);
         Route::resource('org-charts', Controllers\OrgChartController::class);
