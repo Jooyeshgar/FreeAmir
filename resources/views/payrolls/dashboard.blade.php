@@ -61,52 +61,7 @@
 
         <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
             @foreach ($metricCards as $card)
-                @php
-                    $tone = [
-                        'info' => ['card' => 'border-sky-500/25 bg-sky-500/10', 'icon' => 'bg-sky-500/15 text-sky-500', 'stroke' => '#38bdf8'],
-                        'error' => ['card' => 'border-rose-500/25 bg-rose-500/10', 'icon' => 'bg-rose-500/15 text-rose-500', 'stroke' => '#fb7185'],
-                        'success' => ['card' => 'border-emerald-500/25 bg-emerald-500/10', 'icon' => 'bg-emerald-500/15 text-emerald-500', 'stroke' => '#34d399'],
-                        'primary' => ['card' => 'border-primary/25 bg-primary/10', 'icon' => 'bg-primary/15 text-primary', 'stroke' => '#60a5fa'],
-                        'warning' => ['card' => 'border-amber-500/25 bg-amber-500/10', 'icon' => 'bg-amber-500/15 text-amber-500', 'stroke' => '#f59e0b'],
-                        'secondary' => ['card' => 'border-violet-500/25 bg-violet-500/10', 'icon' => 'bg-violet-500/15 text-violet-500', 'stroke' => '#a78bfa'],
-                    ][$card['tone']] ?? ['card' => 'border-base-300 bg-base-200', 'icon' => 'bg-base-300 text-base-content', 'stroke' => '#64748b'];
-                    $change = $card['change'];
-                @endphp
-
-                <article class="card border shadow-sm {{ $tone['card'] }}">
-                    <div class="card-body gap-3 p-4">
-                        <div class="flex items-start justify-between gap-2">
-                            <div class="rounded-lg p-2 {{ $tone['icon'] }}">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 19V5m0 14h16M8 15l3-3 3 2 4-6" />
-                                </svg>
-                            </div>
-                            <span class="text-xs text-base-content/60">{{ $card['title'] }}</span>
-                        </div>
-
-                        <div>
-                            <div class="text-xl font-bold leading-8 text-base-content">
-                                {{ formatNumber($card['value']) }}
-                            </div>
-                            <div class="flex items-center justify-between gap-2 text-xs">
-                                <span class="text-base-content/60">{{ $card['suffix'] }}</span>
-                                @if ($change === null)
-                                    <span class="text-base-content/50">{{ __('No change') }}</span>
-                                @else
-                                    <span class="{{ $change >= 0 ? 'text-success' : 'text-error' }}">
-                                        {{ $change >= 0 ? '↑' : '↓' }}
-                                        {{ formatNumber(abs($change)) }}{{ __('Percent sign') }}
-                                    </span>
-                                @endif
-                            </div>
-                        </div>
-
-                        <svg class="h-11 w-full overflow-visible" viewBox="0 0 180 56" preserveAspectRatio="none" aria-hidden="true">
-                            <polyline points="{{ $card['sparkline'] }}" fill="none" stroke="{{ $tone['stroke'] }}" stroke-width="3" stroke-linecap="round"
-                                stroke-linejoin="round" opacity=".9" />
-                        </svg>
-                    </div>
-                </article>
+                <x-metric-card :card="$card" />
             @endforeach
         </section>
 
