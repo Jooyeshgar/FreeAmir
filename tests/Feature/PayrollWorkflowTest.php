@@ -9,6 +9,7 @@ use App\Models\Payroll;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class PayrollWorkflowTest extends TestCase
@@ -107,6 +108,76 @@ class PayrollWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_super_admin_can_submit_draft_for_approval(): void
+    {
+        $this->grantSuperAdminRole();
+        $payroll = $this->makePayroll(['status' => PayrollStatus::Draft]);
+
+        $response = $this->patch(route('salary.payrolls.transition.draft-to-pending-manager-approval', $payroll));
+
+        $response->assertRedirect(route('salary.payrolls.show', $payroll));
+        $this->assertDatabaseHas('payrolls', ['id' => $payroll->id, 'status' => PayrollStatus::PendingManagerApproval->value]);
+    }
+
+    public function test_super_admin_can_approve_payroll(): void
+    {
+        $this->grantSuperAdminRole();
+        $payroll = $this->makePayroll(['status' => PayrollStatus::PendingManagerApproval]);
+
+        $response = $this->patch(route('salary.payrolls.transition.pending-manager-approval-to-approved', $payroll));
+
+        $response->assertRedirect(route('salary.payrolls.show', $payroll));
+        $this->assertDatabaseHas('payrolls', ['id' => $payroll->id, 'status' => PayrollStatus::Approved->value]);
+    }
+
+    public function test_super_admin_can_mark_payroll_as_paid(): void
+    {
+        $this->grantSuperAdminRole();
+        $payroll = $this->makePayroll(['status' => PayrollStatus::Approved]);
+
+        $response = $this->patch(route('salary.payrolls.transition.approved-to-paid', $payroll));
+
+        $response->assertRedirect(route('salary.payrolls.show', $payroll));
+        $this->assertDatabaseHas('payrolls', ['id' => $payroll->id, 'status' => PayrollStatus::Paid->value]);
+    }
+
+    public function test_accountant_can_submit_draft_for_approval(): void
+    {
+        $this->grantAccountantRole();
+        $payroll = $this->makePayroll(['status' => PayrollStatus::Draft]);
+
+        $response = $this->patch(route('salary.payrolls.transition.draft-to-pending-manager-approval', $payroll));
+
+        $response->assertRedirect(route('salary.payrolls.show', $payroll));
+        $this->assertDatabaseHas('payrolls', ['id' => $payroll->id, 'status' => PayrollStatus::PendingManagerApproval->value]);
+    }
+
+    public function test_accountant_cannot_approve_payroll(): void
+    {
+        $this->grantAccountantRole();
+        $payroll = $this->makePayroll(['status' => PayrollStatus::PendingManagerApproval]);
+
+        $response = $this->patch(route('salary.payrolls.transition.pending-manager-approval-to-approved', $payroll));
+
+        $response->assertForbidden();
+        $this->assertDatabaseHas('payrolls', ['id' => $payroll->id, 'status' => PayrollStatus::PendingManagerApproval->value]);
+        $this->assertDatabaseMissing('payroll_status_histories', [
+            'payroll_id' => $payroll->id,
+            'to_status' => PayrollStatus::Approved->value,
+        ]);
+    }
+
+    public function test_accountant_can_mark_approved_payroll_as_paid(): void
+    {
+        $this->grantAccountantRole();
+        $payroll = $this->makePayroll(['status' => PayrollStatus::Approved]);
+
+        $response = $this->patch(route('salary.payrolls.transition.approved-to-paid', $payroll));
+
+        $response->assertRedirect(route('salary.payrolls.show', $payroll));
+        $this->assertDatabaseHas('payrolls', ['id' => $payroll->id, 'status' => PayrollStatus::Paid->value]);
+    }
+
     private function makePayroll(array $overrides = []): Payroll
     {
         return Payroll::withoutGlobalScopes()->create(array_merge([
@@ -129,5 +200,31 @@ class PayrollWorkflowTest extends TestCase
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => $permission])
         );
+    }
+
+    private function grantSuperAdminRole(): void
+    {
+        $this->grantRole('Super-Admin', [
+            'salary.payrolls.transition.draft-to-pending-manager-approval',
+            'salary.payrolls.transition.pending-manager-approval-to-approved',
+            'salary.payrolls.transition.approved-to-paid',
+        ]);
+    }
+
+    private function grantAccountantRole(): void
+    {
+        $this->grantRole('Accountant', [
+            'salary.payrolls.transition.draft-to-pending-manager-approval',
+            'salary.payrolls.transition.approved-to-paid',
+        ]);
+    }
+
+    private function grantRole(string $roleName, array $permissions): void
+    {
+        $role = Role::firstOrCreate(['name' => $roleName]);
+        foreach ($permissions as $perm) {
+            $role->givePermissionTo(Permission::firstOrCreate(['name' => $perm]));
+        }
+        $this->user->assignRole($role);
     }
 }

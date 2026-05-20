@@ -160,7 +160,7 @@
                         </table>
                     </div>
                 @else
-                    @can('salary.payrolls.create')
+                    @can('attendance.monthly-attendances.payroll.store')
                         @if ($decrees->isEmpty())
                             <p class="text-sm text-warning">{{ __('No active salary decrees found for this employee. Please create one first.') }}</p>
                             <a href="{{ route('salary.salary-decrees.create', ['employee' => $monthlyAttendance->employee]) }}" class="btn btn-sm btn-warning">

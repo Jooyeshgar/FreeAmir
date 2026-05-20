@@ -9,9 +9,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (DB::getDriverName() === 'mysql') {
-            DB::statement("ALTER TABLE payrolls MODIFY status ENUM('draft', 'pending_manager_approval', 'approved', 'paid') NOT NULL DEFAULT 'draft'");
-        }
+        Schema::table('payrolls', function (Blueprint $table) {
+            $table->enum('status', ['draft', 'pending_manager_approval', 'approved', 'paid'])->default('draft')->change();
+        });
 
         Schema::create('payroll_status_histories', function (Blueprint $table) {
             $table->increments('id');
@@ -33,12 +33,10 @@ return new class extends Migration
     {
         Schema::dropIfExists('payroll_status_histories');
 
-        if (DB::getDriverName() === 'mysql') {
-            DB::table('payrolls')
-                ->where('status', 'pending_manager_approval')
-                ->update(['status' => 'draft']);
+        DB::table('payrolls')->where('status', 'pending_manager_approval')->update(['status' => 'draft']);
 
-            DB::statement("ALTER TABLE payrolls MODIFY status ENUM('draft', 'approved', 'paid') NOT NULL DEFAULT 'draft'");
-        }
+        Schema::table('payrolls', function (Blueprint $table) {
+            $table->enum('status', ['draft', 'approved', 'paid'])->default('draft')->change();
+        });
     }
 };

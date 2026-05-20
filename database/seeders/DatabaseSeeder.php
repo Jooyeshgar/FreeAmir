@@ -20,6 +20,8 @@ class DatabaseSeeder extends Seeder
             CustomerGroupSeeder::class,
             ProductGroupSeeder::class,
             ServiceGroupSeeder::class,
+            OrgChartSeeder::class,
+            OrganizationUnitSeeder::class,
             RolesAndPermissionsSeeder::class,
         ]);
     }

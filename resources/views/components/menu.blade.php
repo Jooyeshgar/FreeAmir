@@ -174,7 +174,7 @@
                 'salary.work-site-contracts.index', 'salary.public-holidays.index', 'salary.payroll-elements.index', 'salary.salary-decrees.index'])
                 <li>
                     <details>
-                        <summary>{{ __('Organization') }}</summary>
+                        <summary>{{ __('HR & Organization') }}</summary>
                         <ul>
                             @can('hr.org-charts.index')
                                 <li><a href="{{ route('hr.org-charts.index') }}">{{ __('Organization Chart') }}</a></li>

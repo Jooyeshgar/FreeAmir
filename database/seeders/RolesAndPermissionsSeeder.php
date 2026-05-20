@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\Employee;
+use App\Models\OrganizationUnit;
+use App\Models\OrgChart;
 use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
@@ -383,6 +385,7 @@ class RolesAndPermissionsSeeder extends Seeder
             ->where('name', 'NOT LIKE', 'configs.%')
             ->where('name', 'NOT LIKE', 'api.%')
             ->where('name', 'NOT LIKE', 'api-tokens.%')
+            ->where('name', 'NOT LIKE', 'salary.payrolls.transition.pending-manager-approval-to-approved')
             ->pluck('name')->toArray();
 
         $accountant->syncPermissions($accountantPermissions);
@@ -431,13 +434,41 @@ class RolesAndPermissionsSeeder extends Seeder
         $employeeRole->syncPermissions($employeePermissions);
 
         $users = [
-            'admin' => ['Super-Admin', __('Employee')],
-            'accountant' => [__('Accountant'), __('Employee')],
-            'seller' => [__('Seller'), __('Employee')],
-            'warehouse' => [__('Warehousekeeper'), __('Employee')],
-            'seller-warehouse' => [__('Seller'), __('Warehousekeeper'), __('Employee')],
-            'accountant-seller-warehouse' => [__('Accountant'), __('Seller'), __('Warehousekeeper'), __('Employee')],
-            'employee' => [__('Employee')],
+            'admin' => [
+                'roles' => ['Super-Admin', __('Employee')],
+                'org_chart' => 'مدیرعامل',
+                'org_unit' => 'مدیریت',
+            ],
+            'accountant' => [
+                'roles' => [__('Accountant'), __('Employee')],
+                'org_chart' => 'حسابدار ارشد',
+                'org_unit' => 'حسابداری',
+            ],
+            'seller' => [
+                'roles' => [__('Seller'), __('Employee')],
+                'org_chart' => 'کارشناس فروش',
+                'org_unit' => 'فروش و بازاریابی',
+            ],
+            'warehouse' => [
+                'roles' => [__('Warehousekeeper'), __('Employee')],
+                'org_chart' => 'سرپرست انبار',
+                'org_unit' => 'انبار و لجستیک',
+            ],
+            'seller-warehouse' => [
+                'roles' => [__('Seller'), __('Warehousekeeper'), __('Employee')],
+                'org_chart' => 'کارشناس فروش',
+                'org_unit' => 'فروش و بازاریابی',
+            ],
+            'accountant-seller-warehouse' => [
+                'roles' => [__('Accountant'), __('Seller'), __('Warehousekeeper'), __('Employee')],
+                'org_chart' => 'مدیر مالی',
+                'org_unit' => 'امور مالی',
+            ],
+            'employee' => [
+                'roles' => [__('Employee')],
+                'org_chart' => 'کارشناس منابع انسانی',
+                'org_unit' => 'منابع انسانی',
+            ],
         ];
 
         $workSite = WorkSite::firstOrCreate(
@@ -464,7 +495,11 @@ class RolesAndPermissionsSeeder extends Seeder
             ]
         );
 
-        foreach ($users as $name => $role) {
+        $orgCharts = OrgChart::withoutGlobalScopes()->where('company_id', 1)->get()->keyBy('title');
+
+        $orgUnits = OrganizationUnit::withoutGlobalScopes()->where('company_id', 1)->get()->keyBy('name');
+
+        foreach ($users as $name => $config) {
             $user = User::firstOrCreate(
                 ['email' => $name.'@example.com'],
                 [
@@ -473,7 +508,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 ]
             );
             $user->companies()->sync([1]);
-            $user->assignRole($role);
+            $user->assignRole($config['roles']);
 
             $baseCode = 'EMP-'.$user->id;
             $employeeCode = $baseCode;
@@ -497,6 +532,8 @@ class RolesAndPermissionsSeeder extends Seeder
                     'code' => $employeeCode,
                     'work_site_id' => $workSite->id,
                     'work_shift_id' => $workShift->id,
+                    'org_chart_id' => $orgCharts->get($config['org_chart'])?->id,
+                    'organization_unit_id' => $orgUnits->get($config['org_unit'])?->id,
                     'is_active' => true,
                     'leave_remain' => 1200,
                 ]

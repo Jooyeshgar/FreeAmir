@@ -13,7 +13,7 @@ return new class extends Migration
 
             $table->foreign('organization_unit_id')
                 ->references('id')->on('organization_units')
-                ->cascadeOnDelete();
+                ->nullOnDelete();
         });
     }
 
