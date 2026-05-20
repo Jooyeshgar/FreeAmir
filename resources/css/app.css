@@ -138,11 +138,6 @@ jdp-container .jdp-days .jdp-day.selected {
     background: rgba(59, 189, 30, 0.99) !important;
 }
 
-header {
-    position: relative;
-    z-index: 6;
-}
-
 main {
     position: relative;
     z-index: 2;
@@ -191,6 +186,17 @@ main {
 
     .app-main-menu .app-main-menu-panel {
         overscroll-behavior: contain;
+        @apply bg-base-100 border border-base-content/10 shadow-lg shadow-base-content/10 rounded-xl;
+    }
+
+    .app-main-menu > li > a,
+    .app-main-menu > li > details > summary {
+        @apply rounded-lg text-sm font-medium text-base-content/80 transition-colors;
+    }
+
+    .app-main-menu > li > a:hover,
+    .app-main-menu > li > details > summary:hover {
+        @apply bg-base-200 text-base-content;
     }
 }
 

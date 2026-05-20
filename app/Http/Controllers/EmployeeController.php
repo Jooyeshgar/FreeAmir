@@ -44,7 +44,11 @@ class EmployeeController extends Controller
 
         $employees = $query->paginate(15)->withQueryString();
 
-        return view('employees.index', compact('employees'));
+        $totalCount = Employee::count();
+        $activeCount = Employee::where('is_active', true)->count();
+        $inactiveCount = Employee::where('is_active', false)->count();
+
+        return view('employees.index', compact('employees', 'totalCount', 'activeCount', 'inactiveCount'));
     }
 
     public function create(): View
