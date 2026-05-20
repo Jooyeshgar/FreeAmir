@@ -115,6 +115,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
 
     Route::group(['prefix' => 'hr', 'as' => 'hr.'], function () {
         Route::resource('employees', Controllers\EmployeeController::class);
+        Route::resource('organization-units', Controllers\OrganizationUnitController::class);
         Route::resource('org-charts', Controllers\OrgChartController::class);
         Route::resource('personnel-requests', Controllers\PersonnelRequestController::class);
         Route::patch('personnel-requests/{personnel_request}/approve', [Controllers\PersonnelRequestController::class, 'approve'])->name('personnel-requests.approve');
@@ -142,6 +143,9 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::resource('public-holidays', Controllers\PublicHolidayController::class)->except(['show']);
         Route::resource('payroll-elements', Controllers\PayrollElementController::class)->except(['show']);
         Route::resource('salary-decrees', Controllers\SalaryDecreeController::class)->except(['show']);
+        Route::patch('payrolls/{payroll}/submit-for-approval', [Controllers\PayrollController::class, 'submitForApproval'])->name('payrolls.transition.draft-to-pending-manager-approval');
+        Route::patch('payrolls/{payroll}/approve', [Controllers\PayrollController::class, 'approve'])->name('payrolls.transition.pending-manager-approval-to-approved');
+        Route::patch('payrolls/{payroll}/mark-paid', [Controllers\PayrollController::class, 'markPaid'])->name('payrolls.transition.approved-to-paid');
         Route::get('payrolls/{payroll}', [Controllers\PayrollController::class, 'show'])->name('payrolls.show');
         Route::get('payrolls', [Controllers\PayrollController::class, 'index'])->name('payrolls.index');
         Route::delete('payrolls/{payroll}', [Controllers\PayrollController::class, 'destroy'])->name('payrolls.destroy');

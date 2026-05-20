@@ -2,15 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PayrollStatus;
 use App\Models\Employee;
 use App\Models\MonthlyAttendance;
 use App\Models\Payroll;
 use App\Models\PayrollItem;
+use App\Models\PayrollStatusHistory;
 use App\Models\SalaryDecree;
 use App\Services\PayrollService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Spatie\Permission\Exceptions\UnauthorizedException;
 
 class PayrollController extends Controller
 {
@@ -21,7 +28,7 @@ class PayrollController extends Controller
      */
     public function show(Payroll $payroll): View
     {
-        $payroll->load(['employee', 'decree.benefits.element', 'monthlyAttendance', 'items.element']);
+        $payroll->load(['employee', 'decree.benefits.element', 'monthlyAttendance', 'items.element', 'statusHistories.user']);
 
         return view('payrolls.show', compact('payroll'))
             ->with('isEmployeeView', false);
@@ -36,6 +43,7 @@ class PayrollController extends Controller
             'employee_id' => ['nullable', 'integer', 'exists:employees,id'],
             'year' => ['nullable', 'integer', 'between:1300,1600'],
             'month' => ['nullable', 'integer', 'between:1,12'],
+            'status' => ['nullable', 'string', Rule::enum(PayrollStatus::class)],
         ]);
 
         $query = Payroll::query();
@@ -50,6 +58,10 @@ class PayrollController extends Controller
 
         if (! empty($validated['month'])) {
             $query->where('month', $validated['month']);
+        }
+
+        if (! empty($validated['status'])) {
+            $query->where('status', $validated['status']);
         }
 
         $payrolls = $query->with(['employee', 'decree', 'monthlyAttendance'])
@@ -117,6 +129,36 @@ class PayrollController extends Controller
             ->with('success', __('Payroll item updated successfully.'));
     }
 
+    public function submitForApproval(Request $request, Payroll $payroll): RedirectResponse
+    {
+        return $this->transition(
+            request: $request,
+            payroll: $payroll,
+            toStatus: PayrollStatus::PendingManagerApproval,
+            message: __('Payroll submitted for manager approval.')
+        );
+    }
+
+    public function approve(Request $request, Payroll $payroll): RedirectResponse
+    {
+        return $this->transition(
+            request: $request,
+            payroll: $payroll,
+            toStatus: PayrollStatus::Approved,
+            message: __('Payroll approved successfully.')
+        );
+    }
+
+    public function markPaid(Request $request, Payroll $payroll): RedirectResponse
+    {
+        return $this->transition(
+            request: $request,
+            payroll: $payroll,
+            toStatus: PayrollStatus::Paid,
+            message: __('Payroll marked as paid.')
+        );
+    }
+
     /**
      * Remove the specified payroll.
      */
@@ -133,5 +175,48 @@ class PayrollController extends Controller
 
         return redirect()->route('attendance.monthly-attendances.index')
             ->with('success', __('Payroll deleted successfully.'));
+    }
+
+    private function transition(Request $request, Payroll $payroll, PayrollStatus $toStatus, string $message): RedirectResponse
+    {
+        $validated = $request->validate([
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $fromStatus = $payroll->status;
+        $permission = $payroll->transitionPermissionTo($toStatus);
+
+        if ($permission === null) {
+            abort(Response::HTTP_UNPROCESSABLE_ENTITY, __('This payroll status transition is not allowed.'));
+        }
+
+        $this->authorizeExactTransitionPermission($request, $permission);
+
+        DB::transaction(function () use ($payroll, $fromStatus, $toStatus, $validated, $request) {
+            $payroll->forceFill(['status' => $toStatus])->save();
+
+            PayrollStatusHistory::create([
+                'payroll_id' => $payroll->id,
+                'from_status' => $fromStatus,
+                'to_status' => $toStatus,
+                'changed_by' => $request->user()?->id,
+                'changed_at' => Carbon::now(),
+                'note' => $validated['note'] ?? null,
+            ]);
+        });
+
+        return redirect()->route('salary.payrolls.show', $payroll)
+            ->with('success', $message);
+    }
+
+    private function authorizeExactTransitionPermission(Request $request, string $permission): void
+    {
+        $hasExactPermission = $request->user()
+            ?->getAllPermissions()
+            ->contains('name', $permission) ?? false;
+
+        if (! $hasExactPermission) {
+            throw UnauthorizedException::forPermissions([$permission]);
+        }
     }
 }

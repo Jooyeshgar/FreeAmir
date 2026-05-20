@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\PayrollStatus;
 use App\Models\MonthlyAttendance;
 use App\Models\Payroll;
 use App\Models\PayrollItem;
@@ -242,7 +243,11 @@ class PayrollService
             ->where('employee_id', $attendance->employee_id)
             ->where('year', $attendance->year)
             ->where('month', '<', $attendance->month)
-            ->whereIn('status', ['draft', 'approved', 'paid'])
+            ->whereIn('status', [
+                PayrollStatus::Draft->value,
+                PayrollStatus::Approved->value,
+                PayrollStatus::Paid->value,
+            ])
             ->selectRaw('COALESCE(SUM(tax_base_amount), 0) as sum_tax_base')
             ->selectRaw('COALESCE(SUM(income_tax_amount), 0) as sum_income_tax')
             ->selectRaw('COUNT(*) as payroll_count')
@@ -526,7 +531,7 @@ class PayrollService
             'employer_insurance' => $breakdown['employer_insurance'],
             'tax_base_amount' => $breakdown['tax_base'],
             'income_tax_amount' => $breakdown['income_tax'],
-            'status' => 'draft',
+            'status' => PayrollStatus::Draft,
             'description' => __('Payroll for :month :year', [
                 'month' => $attendance->month_name,
                 'year' => $attendance->year,

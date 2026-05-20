@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PayrollStatus;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -34,6 +35,7 @@ class Payroll extends Model
     protected $casts = [
         'year' => 'integer',
         'month' => 'integer',
+        'status' => PayrollStatus::class,
         'total_earnings' => 'decimal:2',
         'total_deductions' => 'decimal:2',
         'net_payment' => 'decimal:2',
@@ -66,8 +68,35 @@ class Payroll extends Model
         return $this->hasMany(PayrollItem::class, 'payroll_id');
     }
 
+    public function statusHistories(): HasMany
+    {
+        return $this->hasMany(PayrollStatusHistory::class, 'payroll_id')
+            ->orderBy('changed_at')
+            ->orderBy('id');
+    }
+
     public function personnelRequests(): HasMany
     {
         return $this->hasMany(PersonnelRequest::class, 'payroll_id');
+    }
+
+    public static function statusLabels(): array
+    {
+        return PayrollStatus::options();
+    }
+
+    public function statusLabel(): string
+    {
+        return $this->status?->label() ?? '';
+    }
+
+    public function statusBadgeClass(): string
+    {
+        return $this->status?->badgeClass() ?? 'badge-neutral';
+    }
+
+    public function transitionPermissionTo(PayrollStatus $toStatus): ?string
+    {
+        return $this->status?->transitionPermissionTo($toStatus);
     }
 }

@@ -13,6 +13,7 @@ use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Models\Employee;
 use App\Models\OrgChart;
+use App\Models\OrganizationUnit;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
 use App\Models\WorkSiteContract;
@@ -24,7 +25,7 @@ class EmployeeController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = Employee::with(['workSite', 'orgChart'])
+        $query = Employee::with(['workSite', 'orgChart', 'organizationUnit'])
             ->orderBy('code');
 
         if ($request->filled('search')) {
@@ -50,11 +51,12 @@ class EmployeeController extends Controller
     {
         $workSites = WorkSite::orderBy('name')->get(['id', 'name']);
         $orgCharts = OrgChart::orderBy('title')->get(['id', 'title']);
+        $organizationUnits = OrganizationUnit::orderBy('name')->get(['id', 'name']);
         $workSiteContracts = WorkSiteContract::orderBy('name')->get(['id', 'name']);
         $workShifts = WorkShift::orderBy('name')->get(['id', 'name']);
 
         return view('employees.create', array_merge(
-            compact('workSites', 'orgCharts', 'workSiteContracts', 'workShifts'),
+            compact('workSites', 'orgCharts', 'organizationUnits', 'workSiteContracts', 'workShifts'),
             self::enumOptions()
         ));
     }
@@ -72,7 +74,7 @@ class EmployeeController extends Controller
 
     public function show(Employee $employee): View
     {
-        $employee->load(['workSite', 'orgChart', 'workSiteContract', 'workShift']);
+        $employee->load(['workSite', 'orgChart', 'organizationUnit', 'workSiteContract', 'workShift']);
 
         return view('employees.show', compact('employee'));
     }
@@ -81,11 +83,12 @@ class EmployeeController extends Controller
     {
         $workSites = WorkSite::orderBy('name')->get(['id', 'name']);
         $orgCharts = OrgChart::orderBy('title')->get(['id', 'title']);
+        $organizationUnits = OrganizationUnit::orderBy('name')->get(['id', 'name']);
         $workSiteContracts = WorkSiteContract::orderBy('name')->get(['id', 'name']);
         $workShifts = WorkShift::orderBy('name')->get(['id', 'name']);
 
         return view('employees.edit', array_merge(
-            compact('employee', 'workSites', 'orgCharts', 'workSiteContracts', 'workShifts'),
+            compact('employee', 'workSites', 'orgCharts', 'organizationUnits', 'workSiteContracts', 'workShifts'),
             self::enumOptions()
         ));
     }

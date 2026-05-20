@@ -79,13 +79,7 @@
                                     </span>
                                 </td>
                                 <td>
-                                    @if ($payroll->status === 'paid')
-                                        <span class="badge badge-success badge-sm">{{ __('Paid') }}</span>
-                                    @elseif ($payroll->status === 'draft')
-                                        <span class="badge badge-ghost badge-sm">{{ __('Draft') }}</span>
-                                    @else
-                                        <span class="badge badge-warning badge-sm">{{ $payroll->status }}</span>
-                                    @endif
+                                    <span class="badge {{ $payroll->statusBadgeClass() }} badge-sm">{{ $payroll->statusLabel() }}</span>
                                 </td>
                                 <td>
                                     <a href="{{ route('employee-portal.payrolls.show', $payroll) }}" class="btn btn-xs btn-outline">

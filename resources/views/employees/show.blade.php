@@ -57,6 +57,13 @@
                             </a>
                         @endif
 
+                        @if ($employee->organizationUnit)
+                            <a href="{{ route('hr.organization-units.show', $employee->organizationUnit) }}"
+                                class="badge badge-lg badge-neutral gap-2 hover:brightness-110 transition-all">
+                                {{ $employee->organizationUnit->name }}
+                            </a>
+                        @endif
+
                         @if ($employee->user)
                             <a href="{{ route('users.show', $employee->user) }}" class="badge badge-lg badge-info gap-2 hover:brightness-110 transition-all">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -165,6 +172,16 @@
                     @if ($employee->orgChart)
                         <a href="{{ route('hr.org-charts.show', $employee->orgChart) }}" class="font-semibold link link-primary hover:link-hover">
                             {{ $employee->orgChart->title }}
+                        </a>
+                    @else
+                        <div class="font-semibold">—</div>
+                    @endif
+                </div>
+                <div class="bg-base-200 rounded-lg px-4 py-3">
+                    <div class="text-xs text-gray-500 mb-1">{{ __('Organization Unit') }}</div>
+                    @if ($employee->organizationUnit)
+                        <a href="{{ route('hr.organization-units.show', $employee->organizationUnit) }}" class="font-semibold link link-primary hover:link-hover">
+                            {{ $employee->organizationUnit->name }}
                         </a>
                     @else
                         <div class="font-semibold">—</div>

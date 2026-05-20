@@ -77,6 +77,12 @@
     </div>
 
     <div>
+        <x-select name="organization_unit_id" id="organization_unit_id" title="{{ __('Organization Unit') }}" :title2="'<a href=\'' . route('hr.organization-units.create') . '\' target=\'_blank\' class=\'link link-primary text-xs\'>+ ' . __('New') . '</a>'"
+            :options="['' => __('— None —')] + $organizationUnits->mapWithKeys(fn($unit) => [$unit->id => $unit->name])->toArray()"
+            :selected="old('organization_unit_id', $employee->organization_unit_id ?? '')" />
+    </div>
+
+    <div>
         <x-select name="contract_framework_id" id="contract_framework_id" title="{{ __('Contract Framework') }}" :title2="'<a href=\'' . route('salary.work-site-contracts.create') . '\' target=\'_blank\' class=\'link link-primary text-xs\'>+ ' . __('New') . '</a>'"
             :options="['' => __('— None —')] + $workSiteContracts->mapWithKeys(fn($cf) => [$cf->id => $cf->name])->toArray()"
             :selected="old('contract_framework_id', $employee->contract_framework_id ?? '')" />

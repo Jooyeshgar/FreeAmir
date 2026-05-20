@@ -17,13 +17,7 @@
                         <span class="font-medium">{{ $payroll->decree?->name ?? '—' }}</span>
                         &nbsp;|&nbsp;
                         {{ __('Status') }}:
-                        @if ($payroll->status === 'draft')
-                            <span class="badge badge-warning badge-sm">{{ __('Draft') }}</span>
-                        @elseif ($payroll->status === 'approved')
-                            <span class="badge badge-success badge-sm">{{ __('Approved') }}</span>
-                        @else
-                            <span class="badge badge-info badge-sm">{{ __('Paid') }}</span>
-                        @endif
+                        <span class="badge {{ $payroll->statusBadgeClass() }} badge-sm">{{ $payroll->statusLabel() }}</span>
                     </p>
                 </div>
 
@@ -43,7 +37,7 @@
                             </a>
                         @endif
 
-                        @can('salary.payrolls.delete')
+                        @can('salary.payrolls.destroy')
                             <form action="{{ route('salary.payrolls.destroy', $payroll) }}" method="POST" class="inline-block"
                                 onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                 @csrf
@@ -59,6 +53,52 @@
         </div>
 
         <div class="card-body">
+            @if (!($isEmployeeView ?? false))
+                @php
+                    $transitionActions = [
+                        \App\Enums\PayrollStatus::Draft->value => [
+                            'to' => \App\Enums\PayrollStatus::PendingManagerApproval,
+                            'route' => 'salary.payrolls.transition.draft-to-pending-manager-approval',
+                            'label' => __('Submit for Approval'),
+                            'class' => 'btn-warning',
+                        ],
+                        \App\Enums\PayrollStatus::PendingManagerApproval->value => [
+                            'to' => \App\Enums\PayrollStatus::Approved,
+                            'route' => 'salary.payrolls.transition.pending-manager-approval-to-approved',
+                            'label' => __('Approve'),
+                            'class' => 'btn-success',
+                        ],
+                        \App\Enums\PayrollStatus::Approved->value => [
+                            'to' => \App\Enums\PayrollStatus::Paid,
+                            'route' => 'salary.payrolls.transition.approved-to-paid',
+                            'label' => __('Mark as Paid'),
+                            'class' => 'btn-info',
+                        ],
+                    ];
+                    $transitionAction = $transitionActions[$payroll->status?->value] ?? null;
+                    $transitionPermission = $transitionAction ? $payroll->transitionPermissionTo($transitionAction['to']) : null;
+                    $canTransition = $transitionPermission && auth()->user()?->getAllPermissions()->contains('name', $transitionPermission);
+                @endphp
+
+                @if ($transitionAction && $canTransition)
+                    <form action="{{ route($transitionAction['route'], $payroll) }}" method="POST"
+                        class="rounded-box border border-base-300 bg-base-200/40 p-4 flex flex-col gap-3 md:flex-row md:items-end">
+                        @csrf
+                        @method('PATCH')
+                        <div class="flex-1">
+                            <label for="note" class="label">
+                                <span>{{ __('Workflow Note') }}</span>
+                            </label>
+                            <input type="text" name="note" id="note" value="{{ old('note') }}" class="input input-sm input-bordered w-full"
+                                placeholder="{{ __('Optional note') }}" />
+                        </div>
+                        <button type="submit" class="btn btn-sm {{ $transitionAction['class'] }}">
+                            {{ $transitionAction['label'] }}
+                        </button>
+                    </form>
+                @endif
+            @endif
+
             {{-- Summary stats --}}
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-2">
                 <div class="stat bg-success/20 rounded-box p-3">
@@ -85,6 +125,41 @@
                 </div>
             </div>
 
+            @if (!($isEmployeeView ?? false))
+                <div class="divider">{{ __('Approval Workflow') }}</div>
+
+                <div class="overflow-x-auto">
+                    <table class="table table-sm w-full">
+                        <thead>
+                            <tr>
+                                <th>{{ __('From') }}</th>
+                                <th>{{ __('To') }}</th>
+                                <th>{{ __('Changed By') }}</th>
+                                <th>{{ __('Changed At') }}</th>
+                                <th>{{ __('Note') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($payroll->statusHistories as $history)
+                                <tr>
+                                    <td>{{ $history->from_status?->label() ?? '—' }}</td>
+                                    <td>{{ $history->to_status?->label() ?? '—' }}</td>
+                                    <td>{{ $history->user?->name ?? '—' }}</td>
+                                    <td>{{ formatDate($history->changed_at) }}</td>
+                                    <td>{{ $history->note ?? '—' }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-gray-500">
+                                        {{ __('No workflow changes recorded yet.') }}
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+
             @if ($payroll->description)
                 <p class="text-sm text-gray-500 mt-3">{{ $payroll->description }}</p>
             @endif
@@ -100,7 +175,7 @@
                             <th class="text-end">{{ __('Unit Count') }}</th>
                             <th class="text-end">{{ __('Unit Rate') }}</th>
                             <th class="text-end">{{ __('Amount') }}</th>
-                            @can('salary.payrolls.edit')
+                            @can('salary.payroll-items.edit')
                                 <th></th>
                             @endcan
                         </tr>
@@ -127,7 +202,7 @@
                                 <td class="text-end {{ $item->calculated_amount >= 0 ? 'text-success' : 'text-error' }}">
                                     {{ formatNumber(abs((float) $item->calculated_amount)) }}
                                 </td>
-                                @can('salary.payrolls.edit')
+                                @can('salary.payroll-items.edit')
                                     <td class="text-end">
                                         @if (!($isEmployeeView ?? false))
                                             <a href="{{ route('salary.payroll-items.edit', $item) }}" class="btn btn-xs btn-ghost" title="{{ __('Edit') }}">
