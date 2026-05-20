@@ -47,6 +47,7 @@ class PayrollController extends Controller
             'employee_id' => ['nullable', 'integer', 'exists:employees,id'],
             'year' => ['nullable', 'integer', 'between:1300,1600'],
             'month' => ['nullable', 'integer', 'between:1,12'],
+            'organization_unit_id' => ['nullable', 'integer', 'exists:organization_units,id'],
             'status' => ['nullable', 'string', Rule::enum(PayrollStatus::class)],
         ]);
 
@@ -64,6 +65,10 @@ class PayrollController extends Controller
             $query->where('month', $validated['month']);
         }
 
+        if (! empty($validated['organization_unit_id'])) {
+            $query->whereHas('employee', fn (Builder $employeeQuery) => $employeeQuery->where('organization_unit_id', $validated['organization_unit_id']));
+        }
+
         if (! empty($validated['status'])) {
             $query->where('status', $validated['status']);
         }
@@ -74,8 +79,9 @@ class PayrollController extends Controller
             ->withQueryString();
 
         $employees = Employee::orderBy('code')->get();
+        $organizationUnits = OrganizationUnit::orderBy('name')->get(['id', 'name']);
 
-        return view('payrolls.index', compact('payrolls', 'employees'));
+        return view('payrolls.index', compact('payrolls', 'employees', 'organizationUnits'));
     }
 
     /**
@@ -105,18 +111,6 @@ class PayrollController extends Controller
         $statusFilter = $validated['status'] ?? null;
         $search = trim($validated['q'] ?? '');
 
-        $availableYears = Payroll::query()
-            ->select('year')
-            ->distinct()
-            ->orderByDesc('year')
-            ->pluck('year')
-            ->map(fn ($item) => (int) $item);
-
-        if (! $availableYears->contains($year)) {
-            $availableYears->push($year);
-        }
-
-        $availableYears = $availableYears->unique()->sortDesc()->values();
         $organizationUnits = OrganizationUnit::orderBy('name')->get(['id', 'name']);
 
         $periodQuery = $this->payrollDashboardQuery($year, $month, $organizationUnitId);
@@ -140,7 +134,10 @@ class PayrollController extends Controller
         $alerts = $this->dashboardAlerts($year, $month, $organizationUnitId, $summary);
 
         $payrollsQuery = $this->payrollDashboardQuery($year, $month, $organizationUnitId)
-            ->with(['employee.organizationUnit', 'monthlyAttendance'])
+            ->with([
+                'employee.organizationUnit',
+                'monthlyAttendance.logs' => fn ($query) => $query->orderBy('log_date'),
+            ])
             ->when($statusFilter, fn (Builder $query) => $query->where('status', $statusFilter))
             ->when($search !== '', function (Builder $query) use ($search) {
                 $query->whereHas('employee', function (Builder $employeeQuery) use ($search) {
@@ -156,7 +153,7 @@ class PayrollController extends Controller
             ->orderByDesc('issue_date')
             ->orderByDesc('id');
 
-        $payrolls = $payrollsQuery->paginate(10)->withQueryString();
+        $payrolls = $payrollsQuery->paginate(10, ['*'], 'payroll_page')->withQueryString();
 
         $payrollChartData = [
             'labels' => $monthlyTrend->pluck('label')->all(),
@@ -165,7 +162,7 @@ class PayrollController extends Controller
         ];
 
         $attendanceChartData = [
-            'labels' => ['حضور کامل', 'تاخیر / تعجیل', 'مرخصی', 'غیبت'],
+            'labels' => [__('Full Attendance'), __('Delay / Early Leave'), __('Leave'), __('Absent')],
             'data' => [
                 $attendanceSummary['present_days'],
                 $attendanceSummary['delay_day_equivalent'],
@@ -176,25 +173,31 @@ class PayrollController extends Controller
 
         if (array_sum($attendanceChartData['data']) <= 0) {
             $attendanceChartData = [
-                'labels' => ['بدون داده'],
+                'labels' => [__('No data')],
                 'data' => [1],
             ];
         }
+
+        $monthNames = collect(MonthlyAttendance::MONTH_NAMES)
+            ->mapWithKeys(fn (string $label, int $monthNumber) => [$monthNumber => $this->jalaliMonthLabel($monthNumber)])
+            ->all();
+        $periodLabel = ($monthNames[$month] ?? (string) $month).' '.formatNumber($year);
 
         return view('payrolls.dashboard', compact(
             'alerts',
             'attendanceChartData',
             'attendanceHeatmap',
             'attendanceSummary',
-            'availableYears',
             'departmentCosts',
             'metricCards',
             'month',
+            'monthNames',
             'monthlyTrend',
             'organizationUnitId',
             'organizationUnits',
             'payrollChartData',
             'payrolls',
+            'periodLabel',
             'search',
             'statusFilter',
             'statusSummaries',
@@ -405,7 +408,7 @@ class PayrollController extends Controller
 
                 return [
                     'month' => $monthNumber,
-                    'label' => $label,
+                    'label' => $this->jalaliMonthLabel($monthNumber),
                     'payroll_count' => (int) ($row->payroll_count ?? 0),
                     'employee_count' => (int) ($row->employee_count ?? 0),
                     'gross' => (float) ($row->gross ?? 0),
@@ -421,49 +424,49 @@ class PayrollController extends Controller
     {
         return [
             [
-                'title' => 'درآمد کل ناخالص',
+                'title' => __('Gross Payroll'),
                 'value' => $summary['gross'],
-                'suffix' => 'ریال',
+                'suffix' => __('Rial'),
                 'change' => $this->percentChange($summary['gross'], $previousSummary['gross']),
                 'sparkline' => $this->sparklinePoints($monthlyTrend->pluck('gross')->all()),
                 'tone' => 'info',
             ],
             [
-                'title' => 'مجموع کسورات',
+                'title' => __('Total Deductions'),
                 'value' => $summary['deductions'],
-                'suffix' => 'ریال',
+                'suffix' => __('Rial'),
                 'change' => $this->percentChange($summary['deductions'], $previousSummary['deductions']),
                 'sparkline' => $this->sparklinePoints($monthlyTrend->pluck('deductions')->all()),
                 'tone' => 'error',
             ],
             [
-                'title' => 'پرداخت خالص',
+                'title' => __('Net Payment'),
                 'value' => $summary['net'],
-                'suffix' => 'ریال',
+                'suffix' => __('Rial'),
                 'change' => $this->percentChange($summary['net'], $previousSummary['net']),
                 'sparkline' => $this->sparklinePoints($monthlyTrend->pluck('net')->all()),
                 'tone' => 'success',
             ],
             [
-                'title' => 'بیمه کارفرما',
+                'title' => __('Employer Insurance'),
                 'value' => $summary['employer_insurance'],
-                'suffix' => 'ریال',
+                'suffix' => __('Rial'),
                 'change' => $this->percentChange($summary['employer_insurance'], $previousSummary['employer_insurance']),
                 'sparkline' => $this->sparklinePoints($monthlyTrend->pluck('employer_insurance')->all()),
                 'tone' => 'primary',
             ],
             [
-                'title' => 'میانگین خالص',
+                'title' => __('Average Net Payment'),
                 'value' => $summary['average_net'],
-                'suffix' => 'ریال',
+                'suffix' => __('Rial'),
                 'change' => $this->percentChange($summary['average_net'], $previousSummary['average_net']),
                 'sparkline' => $this->sparklinePoints($monthlyTrend->pluck('net')->all()),
                 'tone' => 'warning',
             ],
             [
-                'title' => 'تعداد کارکنان',
+                'title' => __('Employee Count'),
                 'value' => $summary['employee_count'],
-                'suffix' => 'نفر',
+                'suffix' => __('person(s)'),
                 'change' => $this->percentChange($summary['employee_count'], $previousSummary['employee_count']),
                 'sparkline' => $this->sparklinePoints($monthlyTrend->pluck('employee_count')->all()),
                 'tone' => 'secondary',
@@ -511,7 +514,7 @@ class PayrollController extends Controller
         $total = $payrolls->sum(fn (Payroll $payroll) => (float) $payroll->net_payment + (float) $payroll->employer_insurance);
 
         return $payrolls
-            ->groupBy(fn (Payroll $payroll) => $payroll->employee?->organizationUnit?->name ?? 'بدون واحد')
+            ->groupBy(fn (Payroll $payroll) => $payroll->employee?->organizationUnit?->name ?? __('No unit'))
             ->map(function (Collection $items, string $name) use ($total) {
                 $cost = $items->sum(fn (Payroll $payroll) => (float) $payroll->net_payment + (float) $payroll->employer_insurance);
 
@@ -601,51 +604,59 @@ class PayrollController extends Controller
                 $query->whereHas('employee', fn (Builder $employeeQuery) => $employeeQuery->where('organization_unit_id', $organizationUnitId));
             })
             ->orderBy('employee_id')
-            ->limit(6)
-            ->get();
+            ->paginate(6, ['*'], 'attendance_page')
+            ->withQueryString();
 
         if ($attendances->isEmpty()) {
             return $this->sampleAttendanceHeatmap($days);
         }
 
+        $attendances->through(function (MonthlyAttendance $attendance) use ($days) {
+            $logsByDay = $attendance->logs->keyBy(fn ($log) => (int) toEnglish(jdate('j', $log->log_date->timestamp)));
+
+            return [
+                'name' => trim(($attendance->employee?->first_name ?? '').' '.($attendance->employee?->last_name ?? '')) ?: __('Unnamed employee'),
+                'cells' => $days->map(function (int $day) use ($attendance, $logsByDay) {
+                    if ($day > (int) $attendance->duration) {
+                        return ['status' => 'future', 'log_id' => null];
+                    }
+
+                    $log = $logsByDay->get($day);
+
+                    if (! $log) {
+                        return ['status' => 'future', 'log_id' => null];
+                    }
+
+                    return [
+                        'status' => $this->attendanceCellStatus($log),
+                        'log_id' => $log->id,
+                    ];
+                }),
+            ];
+        });
+
         return [
             'placeholder' => false,
             'days' => $days,
-            'employees' => $attendances->map(function (MonthlyAttendance $attendance) use ($days) {
-                $logsByDay = $attendance->logs->keyBy(fn ($log) => (int) toEnglish(jdate('j', $log->log_date->timestamp)));
-
-                return [
-                    'name' => trim(($attendance->employee?->first_name ?? '').' '.($attendance->employee?->last_name ?? '')) ?: 'بدون نام',
-                    'cells' => $days->map(function (int $day) use ($attendance, $logsByDay) {
-                        if ($day > (int) $attendance->duration) {
-                            return 'future';
-                        }
-
-                        $log = $logsByDay->get($day);
-
-                        if (! $log) {
-                            return 'future';
-                        }
-
-                        return $this->attendanceCellStatus($log);
-                    }),
-                ];
-            }),
+            'employees' => $attendances,
         ];
     }
 
     private function sampleAttendanceHeatmap(Collection $days): array
     {
-        $names = ['دانیال راد', 'حسین نبی', 'آتنا مظلوم', 'صادق زمانی', 'پویا فلاح'];
+        $names = collect(range(1, 5))->map(fn (int $number) => __('Sample Employee :number', ['number' => formatNumber($number)]));
         $pattern = ['present', 'present', 'present', 'delay', 'present', 'leave', 'present', 'present', 'absent', 'future'];
 
         return [
             'placeholder' => true,
             'days' => $days,
-            'employees' => collect($names)->map(function (string $name, int $employeeIndex) use ($days, $pattern) {
+            'employees' => $names->map(function (string $name, int $employeeIndex) use ($days, $pattern) {
                 return [
                     'name' => $name,
-                    'cells' => $days->map(fn (int $day) => $pattern[($day + $employeeIndex) % count($pattern)]),
+                    'cells' => $days->map(fn (int $day) => [
+                        'status' => $pattern[($day + $employeeIndex) % count($pattern)],
+                        'log_id' => null,
+                    ]),
                 ];
             }),
         ];
@@ -693,30 +704,35 @@ class PayrollController extends Controller
         return [
             [
                 'title' => $pendingPayrolls > 0
-                    ? "{$pendingPayrolls} فیش حقوقی در انتظار تایید مدیر است"
-                    : '۲۳ مورد نیازمند توجه در صف اعلان‌ها',
-                'description' => $pendingPayrolls > 0 ? 'از جریان تایید حقوق پیگیری شود.' : 'نمونه داده تا اتصال مرکز اعلان‌ها',
+                    ? __(':count payroll(s) are waiting for manager approval', ['count' => formatNumber($pendingPayrolls)])
+                    : __(':count notification item(s) need attention', ['count' => formatNumber(23)]),
+                'description' => $pendingPayrolls > 0 ? __('Follow up from payroll approval workflow.') : __('Sample data until the notification center is connected.'),
                 'tone' => $pendingPayrolls > 0 ? 'warning' : 'placeholder',
             ],
             [
                 'title' => $pendingRequests > 0
-                    ? "{$pendingRequests} درخواست پرسنلی هنوز تعیین تکلیف نشده است"
-                    : 'گزارش بیمه ماه جاری هنوز ارسال نشده',
-                'description' => $pendingRequests > 0 ? 'مرخصی، ماموریت و دورکاری‌های در انتظار بررسی.' : 'نمونه داده تا تکمیل اعلان‌های منابع انسانی',
+                    ? __(':count personnel request(s) are still pending', ['count' => formatNumber($pendingRequests)])
+                    : __('Current month insurance report has not been submitted yet'),
+                'description' => $pendingRequests > 0 ? __('Leave, mission, and remote-work requests waiting for review.') : __('Sample data until HR notifications are completed.'),
                 'tone' => $pendingRequests > 0 ? 'info' : 'placeholder',
             ],
             [
                 'title' => $summary['payroll_count'] > 0
-                    ? "برای {$summary['payroll_count']} فیش حقوقی این دوره داده ثبت شده است"
-                    : 'کارکرد چند نفر نزدیک پایان ماه ناقص است',
-                'description' => $summary['payroll_count'] > 0 ? 'این ردیف از داده واقعی حقوق دوره ساخته شده است.' : 'نمونه داده برای نگه داشتن جایگاه هشدارها',
+                    ? __('Payroll data has been recorded for :count payslip(s) in this period', ['count' => formatNumber($summary['payroll_count'])])
+                    : __('Several attendance records are incomplete near month end'),
+                'description' => $summary['payroll_count'] > 0 ? __('This item is generated from real payroll data for the period.') : __('Sample data to keep the alerts area populated.'),
                 'tone' => $summary['payroll_count'] > 0 ? 'success' : 'placeholder',
             ],
             [
-                'title' => 'مرخصی استحقاقی چند نفر نزدیک پایان سال است',
-                'description' => 'نمونه داده تا اتصال قوانین یادآوری مرخصی',
+                'title' => __('Several annual leave balances are close to year end'),
+                'description' => __('Sample data until leave reminder rules are connected.'),
                 'tone' => 'placeholder',
             ],
         ];
+    }
+
+    private function jalaliMonthLabel(int $month): string
+    {
+        return __("Jalali month {$month}");
     }
 }

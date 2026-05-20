@@ -1,13 +1,6 @@
 @php
-    $periodLabel = (\App\Models\MonthlyAttendance::MONTH_NAMES[$month] ?? $month) . ' ' . convertToFarsi((string) $year);
-    $filterParams = array_filter(
-        request()->only(['year', 'month', 'organization_unit_id', 'q']),
-        fn($value) => filled($value),
-    );
-    $statusParams = array_filter(
-        request()->only(['year', 'month', 'organization_unit_id']),
-        fn($value) => filled($value),
-    );
+    $statusParams = array_filter(request()->only(['year', 'month', 'organization_unit_id']), fn($value) => filled($value));
+    $payrollIndexParams = array_filter(request()->only(['year', 'month', 'organization_unit_id']), fn($value) => filled($value));
     $departmentBarClasses = ['progress-info', 'progress-success', 'progress-warning', 'progress-secondary', 'progress-error', 'progress-primary'];
     $heatmapClasses = [
         'present' => 'border-emerald-400/40 bg-emerald-400',
@@ -19,61 +12,50 @@
     ];
 @endphp
 
-<x-app-layout :title="'داشبورد حقوق و دستمزد'">
+<x-app-layout :title="__('Payroll Dashboard')">
     <x-show-message-bags />
 
     <main class="mt-8 space-y-4" x-data="{ compactTable: false }">
         <section class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-base-content">داشبورد حقوق و دستمزد</h1>
+                <h1 class="text-2xl font-bold text-base-content">{{ __('Payroll Dashboard') }}</h1>
                 <p class="mt-1 text-sm text-base-content/60">
-                    نمای کلی پرداختی‌ها، کسورات و حضور پرسنل - دوره گزارش: {{ $periodLabel }}
+                    {{ __('Overview of payments, deductions, and personnel attendance - report period: :period', ['period' => $periodLabel]) }}
                 </p>
             </div>
 
             <form action="{{ route('salary.payrolls.dashboard') }}" method="GET" class="flex flex-wrap items-end gap-2">
-                <label class="form-control w-32">
-                    <span class="label-text mb-1 text-xs">سال</span>
-                    <select name="year" class="select select-sm select-bordered">
-                        @foreach ($availableYears as $availableYear)
-                            <option value="{{ $availableYear }}" @selected($year === (int) $availableYear)>
-                                {{ convertToFarsi((string) $availableYear) }}
-                            </option>
-                        @endforeach
-                    </select>
-                </label>
 
                 <label class="form-control w-36">
-                    <span class="label-text mb-1 text-xs">ماه</span>
+                    <span class="label-text mb-1 text-xs">{{ __('Month') }}</span>
                     <select name="month" class="select select-sm select-bordered">
-                        @foreach (\App\Models\MonthlyAttendance::MONTH_NAMES as $monthNumber => $monthName)
+                        @foreach ($monthNames as $monthNumber => $monthName)
                             <option value="{{ $monthNumber }}" @selected($month === $monthNumber)>{{ $monthName }}</option>
                         @endforeach
                     </select>
                 </label>
 
                 <label class="form-control w-44">
-                    <span class="label-text mb-1 text-xs">واحد</span>
+                    <span class="label-text mb-1 text-xs">{{ __('Organization Unit') }}</span>
                     <select name="organization_unit_id" class="select select-sm select-bordered">
-                        <option value="">همه واحدها</option>
+                        <option value="">{{ __('All Units') }}</option>
                         @foreach ($organizationUnits as $unit)
                             <option value="{{ $unit->id }}" @selected($organizationUnitId === $unit->id)>{{ $unit->name }}</option>
                         @endforeach
                     </select>
                 </label>
 
-                <button type="submit" class="btn btn-sm btn-neutral">اعمال</button>
-                <a href="{{ route('salary.payrolls.dashboard') }}" class="btn btn-sm btn-ghost">بازنشانی</a>
+                <button type="submit" class="btn btn-sm btn-neutral">{{ __('Apply') }}</button>
+                <a href="{{ route('salary.payrolls.dashboard') }}" class="btn btn-sm btn-ghost">{{ __('Reset') }}</a>
 
                 @can('attendance.monthly-attendances.index')
                     <a href="{{ route('attendance.monthly-attendances.index', ['year' => $year, 'month' => $month]) }}" class="btn btn-sm btn-info">
-                        + محاسبه حقوق ماه
+                        {{ __('Calculate monthly payroll') }}
                     </a>
                 @else
-                    <button type="button" class="btn btn-sm btn-info" disabled>+ محاسبه حقوق ماه</button>
+                    <button type="button" class="btn btn-sm btn-info" disabled>{{ __('Calculate monthly payroll') }}</button>
                 @endcan
 
-                <button type="button" class="btn btn-sm btn-outline" disabled>خروجی Excel</button>
             </form>
         </section>
 
@@ -109,18 +91,19 @@
                             <div class="flex items-center justify-between gap-2 text-xs">
                                 <span class="text-base-content/60">{{ $card['suffix'] }}</span>
                                 @if ($change === null)
-                                    <span class="text-base-content/50">بدون تغییر</span>
+                                    <span class="text-base-content/50">{{ __('No change') }}</span>
                                 @else
                                     <span class="{{ $change >= 0 ? 'text-success' : 'text-error' }}">
                                         {{ $change >= 0 ? '↑' : '↓' }}
-                                        {{ formatNumber(abs($change)) }}٪
+                                        {{ formatNumber(abs($change)) }}{{ __('Percent sign') }}
                                     </span>
                                 @endif
                             </div>
                         </div>
 
                         <svg class="h-11 w-full overflow-visible" viewBox="0 0 180 56" preserveAspectRatio="none" aria-hidden="true">
-                            <polyline points="{{ $card['sparkline'] }}" fill="none" stroke="{{ $tone['stroke'] }}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity=".9" />
+                            <polyline points="{{ $card['sparkline'] }}" fill="none" stroke="{{ $tone['stroke'] }}" stroke-width="3" stroke-linecap="round"
+                                stroke-linejoin="round" opacity=".9" />
                         </svg>
                     </div>
                 </article>
@@ -132,10 +115,10 @@
                 <div class="card-body">
                     <div class="flex items-start justify-between gap-3">
                         <div>
-                            <h2 class="card-title text-base">تفکیک هزینه به‌ازای واحد</h2>
-                            <p class="text-xs text-base-content/55">سهم هر واحد از کل پرداختی و بیمه کارفرما</p>
+                            <h2 class="card-title text-base">{{ __('Cost Breakdown by Unit') }}</h2>
+                            <p class="text-xs text-base-content/55">{{ __('Each unit share of total payment and employer insurance') }}</p>
                         </div>
-                        <span class="badge badge-ghost">جزئیات</span>
+                        <span class="badge badge-ghost">{{ __('Details') }}</span>
                     </div>
 
                     <div class="mt-3 space-y-4">
@@ -144,7 +127,7 @@
                             <div>
                                 <div class="mb-1 flex items-center justify-between gap-3 text-sm">
                                     <span class="font-medium">{{ $department['name'] }}</span>
-                                    <span class="text-xs text-base-content/60">{{ convertToFarsi((string) $department['employees']) }} نفر</span>
+                                    <span class="text-xs text-base-content/60">{{ __(':count person(s)', ['count' => formatNumber($department['employees'])]) }}</span>
                                 </div>
                                 <div class="flex items-center gap-3">
                                     <progress class="progress {{ $barClass }} h-2" value="{{ $department['percent'] }}" max="100"></progress>
@@ -153,7 +136,7 @@
                             </div>
                         @empty
                             <div class="rounded-lg border border-dashed border-base-300 bg-base-200/50 p-5 text-center text-sm text-base-content/60">
-                                برای این دوره هزینه‌ای ثبت نشده است.
+                                {{ __('No costs have been recorded for this period.') }}
                             </div>
                         @endforelse
                     </div>
@@ -164,13 +147,13 @@
                 <div class="card-body">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                            <h2 class="card-title text-base">روند حقوق و کسورات سال جاری</h2>
-                            <p class="text-xs text-base-content/55">مجموع ماهانه (ریال)</p>
+                            <h2 class="card-title text-base">{{ __('Current Year Payroll and Deductions Trend') }}</h2>
+                            <p class="text-xs text-base-content/55">{{ __('Monthly total (:currency)', ['currency' => __('Rial')]) }}</p>
                         </div>
                         <div class="join">
-                            <button type="button" class="btn join-item btn-xs btn-active">۱۲ ماه</button>
-                            <button type="button" class="btn join-item btn-xs" disabled>فصلی</button>
-                            <button type="button" class="btn join-item btn-xs" disabled>ابتدای سال</button>
+                            <button type="button" class="btn join-item btn-xs btn-active">{{ __('12 months') }}</button>
+                            <button type="button" class="btn join-item btn-xs" disabled>{{ __('Quarterly') }}</button>
+                            <button type="button" class="btn join-item btn-xs" disabled>{{ __('Year to date') }}</button>
                         </div>
                     </div>
                     <div class="mt-3 h-72">
@@ -185,10 +168,10 @@
                 <div class="card-body">
                     <div class="flex items-start justify-between gap-3">
                         <div>
-                            <h2 class="card-title text-base">هشدارها و یادآوری‌ها</h2>
-                            <p class="text-xs text-base-content/55">مواردی که نیاز به توجه دارد</p>
+                            <h2 class="card-title text-base">{{ __('Alerts and Reminders') }}</h2>
+                            <p class="text-xs text-base-content/55">{{ __('Items that need attention') }}</p>
                         </div>
-                        <span class="text-xs text-base-content/50">مشاهده همه</span>
+                        <span class="text-xs text-base-content/50">{{ __('View all') }}</span>
                     </div>
 
                     <div class="mt-3 space-y-3">
@@ -203,8 +186,10 @@
                             @endphp
                             <div class="flex items-center gap-3 rounded-lg bg-base-200/70 p-3">
                                 <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg {{ $alertClass }}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                        stroke-width="1.8">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
                                     </svg>
                                 </span>
                                 <div class="min-w-0 flex-1">
@@ -212,7 +197,7 @@
                                     <div class="truncate text-xs text-base-content/55">{{ $alert['description'] }}</div>
                                 </div>
                                 @if ($alert['tone'] === 'placeholder')
-                                    <span class="badge badge-ghost badge-sm">نمونه</span>
+                                    <span class="badge badge-ghost badge-sm">{{ __('Sample') }}</span>
                                 @endif
                             </div>
                         @endforeach
@@ -224,21 +209,22 @@
                 <div class="card-body">
                     <div class="flex items-start justify-between gap-3">
                         <div>
-                            <h2 class="card-title text-base">جریان تایید حقوق</h2>
-                            <p class="text-xs text-base-content/55">وضعیت احکام در گردش</p>
+                            <h2 class="card-title text-base">{{ __('Payroll Approval Workflow') }}</h2>
+                            <p class="text-xs text-base-content/55">{{ __('Status of circulating payroll records') }}</p>
                         </div>
-                        <span class="badge badge-warning badge-sm">{{ convertToFarsi((string) $statusSummaries->sum('count')) }} مورد فعال</span>
+                        <span class="badge badge-warning badge-sm">{{ __(':count active item(s)', ['count' => formatNumber($statusSummaries->sum('count'))]) }}</span>
                     </div>
 
                     <div class="mt-3 space-y-3">
                         @foreach ($statusSummaries as $status)
-                            <a href="{{ route('salary.payrolls.dashboard', array_merge($filterParams, ['status' => $status['value']])) }}" class="block rounded-lg bg-base-200/70 p-3 transition hover:bg-base-200">
+                            <a href="{{ route('salary.payrolls.index', array_merge($payrollIndexParams, ['status' => $status['value']])) }}"
+                                class="block rounded-lg bg-base-200/70 p-3 transition hover:bg-base-200">
                                 <div class="flex items-center justify-between gap-3">
                                     <div>
                                         <div class="text-sm font-semibold">{{ $status['label'] }}</div>
-                                        <div class="text-xs text-base-content/55">{{ formatNumber($status['amount']) }} ریال</div>
+                                        <div class="text-xs text-base-content/55">{{ formatNumber($status['amount']) }} {{ __('Rial') }}</div>
                                     </div>
-                                    <span class="badge {{ $status['badge'] }}">{{ convertToFarsi((string) $status['count']) }}</span>
+                                    <span class="badge {{ $status['badge'] }}">{{ formatNumber($status['count']) }}</span>
                                 </div>
                             </a>
                         @endforeach
@@ -250,10 +236,10 @@
                 <div class="card-body">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                            <h2 class="card-title text-base">حضور و غیاب ماه</h2>
-                            <p class="text-xs text-base-content/55">جمع روزهای ثبت‌شده</p>
+                            <h2 class="card-title text-base">{{ __('Monthly Attendance') }}</h2>
+                            <p class="text-xs text-base-content/55">{{ __('Total recorded days') }}</p>
                         </div>
-                        <span class="badge badge-ghost">همه پرسنل</span>
+                        <span class="badge badge-ghost">{{ __('All Personnel') }}</span>
                     </div>
 
                     <div class="mt-3 grid grid-cols-1 items-center gap-4 sm:grid-cols-[12rem_1fr]">
@@ -261,24 +247,24 @@
                             <canvas id="attendanceDonutChart" class="h-full w-full"></canvas>
                             <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
                                 <span class="text-2xl font-bold">{{ formatNumber($attendanceSummary['present_days'] + $attendanceSummary['absent_days']) }}</span>
-                                <span class="text-xs text-base-content/55">روز</span>
+                                <span class="text-xs text-base-content/55">{{ __('day(s)') }}</span>
                             </div>
                         </div>
                         <div class="space-y-2 text-sm">
                             <div class="flex items-center justify-between gap-3">
-                                <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>حضور کامل</span>
+                                <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>{{ __('Full Attendance') }}</span>
                                 <span>{{ formatNumber($attendanceSummary['present_days']) }}</span>
                             </div>
                             <div class="flex items-center justify-between gap-3">
-                                <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span>تاخیر / تعجیل</span>
+                                <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span>{{ __('Delay / Early Leave') }}</span>
                                 <span>{{ formatMinutesAsTime($attendanceSummary['delay_minutes']) }}</span>
                             </div>
                             <div class="flex items-center justify-between gap-3">
-                                <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-sky-400"></span>مرخصی</span>
+                                <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-sky-400"></span>{{ __('Leave') }}</span>
                                 <span>{{ formatMinutesAsTime($attendanceSummary['leave_minutes']) }}</span>
                             </div>
                             <div class="flex items-center justify-between gap-3">
-                                <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-rose-400"></span>غیبت</span>
+                                <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-rose-400"></span>{{ __('Absent') }}</span>
                                 <span>{{ formatNumber($attendanceSummary['absent_days']) }}</span>
                             </div>
                         </div>
@@ -291,21 +277,24 @@
             <div class="card-body p-0">
                 <div class="flex flex-col gap-3 border-b border-base-300 p-4 lg:flex-row lg:items-center lg:justify-between">
                     <div>
-                        <h2 class="card-title text-base">لیست حقوق پرسنل</h2>
-                        <p class="text-xs text-base-content/55">نمایش {{ convertToFarsi((string) $payrolls->count()) }} از {{ convertToFarsi((string) $payrolls->total()) }} مورد</p>
+                        <h2 class="card-title text-base">{{ __('Personnel Payroll List') }}</h2>
+                        <p class="text-xs text-base-content/55">
+                            {{ __('Showing :count of :total item(s)', ['count' => formatNumber($payrolls->count()), 'total' => formatNumber($payrolls->total())]) }}
+                        </p>
                     </div>
 
                     <div class="flex flex-wrap items-center gap-2">
                         <div class="join">
-                            <a href="{{ route('salary.payrolls.dashboard', $statusParams) }}" class="btn join-item btn-xs {{ $statusFilter ? 'btn-ghost' : 'btn-primary' }}">
-                                همه
-                                <span class="badge badge-sm">{{ convertToFarsi((string) $statusSummaries->sum('count')) }}</span>
+                            <a href="{{ route('salary.payrolls.dashboard', $statusParams) }}"
+                                class="btn join-item btn-xs {{ $statusFilter ? 'btn-ghost' : 'btn-primary' }}">
+                                {{ __('All') }}
+                                <span class="badge badge-sm">{{ formatNumber($statusSummaries->sum('count')) }}</span>
                             </a>
                             @foreach ($statusSummaries as $status)
                                 <a href="{{ route('salary.payrolls.dashboard', array_merge($statusParams, ['status' => $status['value']])) }}"
                                     class="btn join-item btn-xs {{ $statusFilter === $status['value'] ? 'btn-primary' : 'btn-ghost' }}">
                                     {{ $status['label'] }}
-                                    <span class="badge badge-sm">{{ convertToFarsi((string) $status['count']) }}</span>
+                                    <span class="badge badge-sm">{{ formatNumber($status['count']) }}</span>
                                 </a>
                             @endforeach
                         </div>
@@ -319,13 +308,14 @@
                             @if ($statusFilter)
                                 <input type="hidden" name="status" value="{{ $statusFilter }}">
                             @endif
-                            <input type="search" name="q" value="{{ $search }}" class="input input-sm input-bordered w-52" placeholder="جستجوی نام یا واحد..." />
-                            <button type="submit" class="btn btn-sm btn-ghost">جستجو</button>
+                            <input type="search" name="q" value="{{ $search }}" class="input input-sm input-bordered w-52"
+                                placeholder="{{ __('Search name or unit...') }}" />
+                            <button type="submit" class="btn btn-sm btn-ghost">{{ __('Search') }}</button>
                         </form>
 
                         <label class="flex cursor-pointer items-center gap-2 text-xs text-base-content/60">
                             <input type="checkbox" class="toggle toggle-xs" x-model="compactTable">
-                            فشرده
+                            {{ __('Compact') }}
                         </label>
                     </div>
                 </div>
@@ -334,15 +324,15 @@
                     <table class="table table-zebra" :class="{ 'table-sm': compactTable }">
                         <thead>
                             <tr>
-                                <th>کارمند</th>
-                                <th>واحد</th>
-                                <th>روزهای کاری</th>
-                                <th>اضافه‌کاری</th>
-                                <th>درآمد ناخالص</th>
-                                <th>کسورات</th>
-                                <th>بیمه کارفرما</th>
-                                <th>پرداخت خالص</th>
-                                <th>وضعیت</th>
+                                <th>{{ __('Employee') }}</th>
+                                <th>{{ __('Organization Unit') }}</th>
+                                <th>{{ __('Working Days') }}</th>
+                                <th>{{ __('Overtime') }}</th>
+                                <th>{{ __('Gross Payroll') }}</th>
+                                <th>{{ __('Deductions') }}</th>
+                                <th>{{ __('Employer Insurance') }}</th>
+                                <th>{{ __('Net Payment') }}</th>
+                                <th>{{ __('Status') }}</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -353,7 +343,7 @@
                                         <div class="flex items-center gap-3">
                                             <div class="avatar placeholder">
                                                 <div class="w-9 rounded-lg bg-primary text-primary-content">
-                                                    <span>{{ mb_substr($payroll->employee?->first_name ?? '؟', 0, 1) }}</span>
+                                                    <span>{{ mb_substr($payroll->employee?->first_name ?? '?', 0, 1) }}</span>
                                                 </div>
                                             </div>
                                             <div>
@@ -364,31 +354,41 @@
                                             </div>
                                         </div>
                                     </td>
-                                    <td>{{ $payroll->employee?->organizationUnit?->name ?? 'بدون واحد' }}</td>
+                                    <td>{{ $payroll->employee?->organizationUnit?->name ?? __('No unit') }}</td>
                                     <td>
                                         @if ($payroll->monthlyAttendance)
-                                            {{ formatNumber($payroll->monthlyAttendance->present_days) }}
-                                            /
-                                            {{ formatNumber($payroll->monthlyAttendance->work_days) }}
+                                            @php $attendanceLog = $payroll->monthlyAttendance->logs->first(); @endphp
+                                            @if ($attendanceLog)
+                                                <a href="{{ route('attendance.attendance-logs.show', $attendanceLog) }}" class="link link-primary">
+                                                    {{ formatNumber($payroll->monthlyAttendance->present_days) }}
+                                                    /
+                                                    {{ formatNumber($payroll->monthlyAttendance->work_days) }}
+                                                </a>
+                                            @else
+                                                {{ formatNumber($payroll->monthlyAttendance->present_days) }}
+                                                /
+                                                {{ formatNumber($payroll->monthlyAttendance->work_days) }}
+                                            @endif
                                         @else
                                             -
                                         @endif
                                     </td>
-                                    <td>{{ $payroll->monthlyAttendance ? formatMinutesAsTime($payroll->monthlyAttendance->overtime + $payroll->monthlyAttendance->auto_overtime) : '-' }}</td>
+                                    <td>{{ $payroll->monthlyAttendance ? formatMinutesAsTime($payroll->monthlyAttendance->overtime + $payroll->monthlyAttendance->auto_overtime) : '-' }}
+                                    </td>
                                     <td class="font-medium">{{ formatNumber($payroll->total_earnings) }}</td>
                                     <td class="font-medium text-error">-{{ formatNumber($payroll->total_deductions) }}</td>
                                     <td>{{ formatNumber($payroll->employer_insurance) }}</td>
-                                    <td class="font-bold">{{ formatNumber($payroll->net_payment) }} ریال</td>
+                                    <td class="font-bold">{{ formatNumber($payroll->net_payment) }} {{ __('Rial') }}</td>
                                     <td><span class="badge {{ $payroll->statusBadgeClass() }} badge-sm">{{ $payroll->statusLabel() }}</span></td>
                                     <td>
                                         @can('salary.payrolls.show')
-                                            <a href="{{ route('salary.payrolls.show', $payroll) }}" class="btn btn-xs btn-ghost">مشاهده</a>
+                                            <a href="{{ route('salary.payrolls.show', $payroll) }}" class="btn btn-xs btn-ghost">{{ __('View') }}</a>
                                         @endcan
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="10" class="py-8 text-center text-base-content/55">برای فیلتر انتخاب‌شده فیش حقوقی وجود ندارد.</td>
+                                    <td colspan="10" class="py-8 text-center text-base-content/55">{{ __('No payrolls found for the selected filter.') }}</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -405,49 +405,79 @@
             <div class="card-body">
                 <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div>
-                        <h2 class="card-title text-base">لاگ حضور روزانه - {{ $periodLabel }}</h2>
+                        <h2 class="card-title text-base">{{ __('Daily Attendance Log') }} - {{ $periodLabel }}</h2>
                         <p class="text-xs text-base-content/55">
-                            پنج کارمند آخر، کلیک روی هر روز برای جزئیات در نسخه بعدی فعال می‌شود
+                            {{ __('Click any available day to open its attendance log details.') }}
                         </p>
                     </div>
-                    <div class="flex gap-2">
-                        <button type="button" class="btn btn-sm btn-outline" disabled>فیلتر</button>
-                        <button type="button" class="btn btn-sm btn-outline" disabled>خروجی</button>
-                    </div>
+                    <form action="{{ route('salary.payrolls.dashboard') }}" method="GET" class="flex flex-wrap items-end gap-2">
+                        <input type="hidden" name="year" value="{{ $year }}">
+                        <input type="hidden" name="month" value="{{ $month }}">
+                        @if ($statusFilter)
+                            <input type="hidden" name="status" value="{{ $statusFilter }}">
+                        @endif
+                        @if ($search)
+                            <input type="hidden" name="q" value="{{ $search }}">
+                        @endif
+                        <label class="form-control w-44">
+                            <span class="label-text mb-1 text-xs">{{ __('Organization Unit') }}</span>
+                            <select name="organization_unit_id" class="select select-sm select-bordered">
+                                <option value="">{{ __('All Units') }}</option>
+                                @foreach ($organizationUnits as $unit)
+                                    <option value="{{ $unit->id }}" @selected($organizationUnitId === $unit->id)>{{ $unit->name }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                        <button type="submit" class="btn btn-sm btn-outline">{{ __('Filter') }}</button>
+                    </form>
                 </div>
 
                 @if ($attendanceHeatmap['placeholder'])
                     <div class="alert alert-info mt-3 py-2 text-sm">
-                        <span>این ماتریس با نمونه داده نمایش داده شده تا منبع کامل لاگ روزانه به داشبورد وصل شود.</span>
+                        <span>{{ __('This matrix is shown with sample data until the complete daily log source is connected to the dashboard.') }}</span>
                     </div>
                 @endif
 
                 <div class="mt-4 overflow-x-auto">
                     <div class="min-w-[860px] space-y-2">
-                        <div class="grid items-center gap-1" style="grid-template-columns: 8rem repeat({{ $attendanceHeatmap['days']->count() }}, minmax(1.6rem, 1fr));">
+                        <div class="grid items-center gap-1"
+                            style="grid-template-columns: 8rem repeat({{ $attendanceHeatmap['days']->count() }}, minmax(1.6rem, 1fr));">
                             <div></div>
                             @foreach ($attendanceHeatmap['days'] as $day)
-                                <div class="text-center text-[11px] text-base-content/50">{{ convertToFarsi((string) $day) }}</div>
+                                <div class="text-center text-[11px] text-base-content/50">{{ formatNumber($day) }}</div>
                             @endforeach
                         </div>
 
                         @foreach ($attendanceHeatmap['employees'] as $employee)
-                            <div class="grid items-center gap-1" style="grid-template-columns: 8rem repeat({{ $attendanceHeatmap['days']->count() }}, minmax(1.6rem, 1fr));">
+                            <div class="grid items-center gap-1"
+                                style="grid-template-columns: 8rem repeat({{ $attendanceHeatmap['days']->count() }}, minmax(1.6rem, 1fr));">
                                 <div class="truncate pl-2 text-xs font-medium">{{ $employee['name'] }}</div>
                                 @foreach ($employee['cells'] as $cell)
-                                    <div class="h-7 rounded-md border {{ $heatmapClasses[$cell] ?? $heatmapClasses['future'] }}"></div>
+                                    @php $cellClass = $heatmapClasses[$cell['status']] ?? $heatmapClasses['future']; @endphp
+                                    @if ($cell['log_id'])
+                                        <a href="{{ route('attendance.attendance-logs.show', $cell['log_id']) }}"
+                                            class="h-7 rounded-md border {{ $cellClass }}" title="{{ __('View Attendance Log') }}"></a>
+                                    @else
+                                        <div class="h-7 rounded-md border {{ $cellClass }}"></div>
+                                    @endif
                                 @endforeach
                             </div>
                         @endforeach
                     </div>
                 </div>
 
+                @if (method_exists($attendanceHeatmap['employees'], 'links'))
+                    <div class="mt-4 border-t border-base-300 pt-4">
+                        {{ $attendanceHeatmap['employees']->links() }}
+                    </div>
+                @endif
+
                 <div class="mt-4 flex flex-wrap justify-end gap-4 text-xs text-base-content/60">
-                    <span class="flex items-center gap-2"><span class="h-3 w-3 rounded bg-emerald-400"></span>حضور کامل</span>
-                    <span class="flex items-center gap-2"><span class="h-3 w-3 rounded bg-amber-400"></span>تاخیر / تعجیل</span>
-                    <span class="flex items-center gap-2"><span class="h-3 w-3 rounded bg-sky-400"></span>مرخصی</span>
-                    <span class="flex items-center gap-2"><span class="h-3 w-3 rounded bg-rose-400"></span>غیبت</span>
-                    <span class="flex items-center gap-2"><span class="h-3 w-3 rounded bg-base-300"></span>روزهای آینده</span>
+                    <span class="flex items-center gap-2"><span class="h-3 w-3 rounded bg-emerald-400"></span>{{ __('Full Attendance') }}</span>
+                    <span class="flex items-center gap-2"><span class="h-3 w-3 rounded bg-amber-400"></span>{{ __('Delay / Early Leave') }}</span>
+                    <span class="flex items-center gap-2"><span class="h-3 w-3 rounded bg-sky-400"></span>{{ __('Leave') }}</span>
+                    <span class="flex items-center gap-2"><span class="h-3 w-3 rounded bg-rose-400"></span>{{ __('Absent') }}</span>
+                    <span class="flex items-center gap-2"><span class="h-3 w-3 rounded bg-base-300"></span>{{ __('Future Days') }}</span>
                 </div>
             </div>
         </section>
@@ -458,6 +488,7 @@
             document.addEventListener('DOMContentLoaded', () => {
                 const payrollData = @json($payrollChartData);
                 const attendanceData = @json($attendanceChartData);
+                const currencyLabel = @json(__('Rial'));
                 let payrollChart = null;
                 let attendanceChart = null;
 
@@ -487,14 +518,14 @@
                             data: {
                                 labels: payrollData.labels,
                                 datasets: [{
-                                        label: 'پرداخت خالص',
+                                        label: @json(__('Net Payment')),
                                         data: payrollData.net,
                                         backgroundColor: '#38bdf8',
                                         borderRadius: 7,
                                         stack: 'payroll',
                                     },
                                     {
-                                        label: 'کسورات',
+                                        label: @json(__('Deductions')),
                                         data: payrollData.deductions,
                                         backgroundColor: '#f87171',
                                         borderRadius: 7,
@@ -518,7 +549,7 @@
                                     },
                                     tooltip: {
                                         callbacks: {
-                                            label: (context) => `${context.dataset.label}: ${formatMoney(context.parsed.y)} ریال`,
+                                            label: (context) => `${context.dataset.label}: ${formatMoney(context.parsed.y)} ${currencyLabel}`,
                                         },
                                     },
                                 },
