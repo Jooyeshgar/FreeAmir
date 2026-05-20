@@ -15,7 +15,7 @@
 <x-app-layout :title="__('Payroll Dashboard')">
     <x-show-message-bags />
 
-    <main class="mt-8 space-y-4" x-data="{ compactTable: false }">
+    <main class="mt-8 space-y-4">
         <section class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-base-content">{{ __('Payroll Dashboard') }}</h1>
@@ -118,7 +118,6 @@
                             <h2 class="card-title text-base">{{ __('Cost Breakdown by Unit') }}</h2>
                             <p class="text-xs text-base-content/55">{{ __('Each unit share of total payment and employer insurance') }}</p>
                         </div>
-                        <span class="badge badge-ghost">{{ __('Details') }}</span>
                     </div>
 
                     <div class="mt-3 space-y-4">
@@ -171,7 +170,6 @@
                             <h2 class="card-title text-base">{{ __('Alerts and Reminders') }}</h2>
                             <p class="text-xs text-base-content/55">{{ __('Items that need attention') }}</p>
                         </div>
-                        <span class="text-xs text-base-content/50">{{ __('View all') }}</span>
                     </div>
 
                     <div class="mt-3 space-y-3">
@@ -313,15 +311,11 @@
                             <button type="submit" class="btn btn-sm btn-ghost">{{ __('Search') }}</button>
                         </form>
 
-                        <label class="flex cursor-pointer items-center gap-2 text-xs text-base-content/60">
-                            <input type="checkbox" class="toggle toggle-xs" x-model="compactTable">
-                            {{ __('Compact') }}
-                        </label>
                     </div>
                 </div>
 
                 <div class="overflow-x-auto">
-                    <table class="table table-zebra" :class="{ 'table-sm': compactTable }">
+                    <table class="table table-zebra">
                         <thead>
                             <tr>
                                 <th>{{ __('Employee') }}</th>
@@ -342,7 +336,7 @@
                                     <td>
                                         <div class="flex items-center gap-3">
                                             <div class="avatar placeholder">
-                                                <div class="w-9 rounded-lg bg-primary text-primary-content">
+                                                <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-content">
                                                     <span>{{ mb_substr($payroll->employee?->first_name ?? '?', 0, 1) }}</span>
                                                 </div>
                                             </div>
@@ -455,8 +449,8 @@
                                 @foreach ($employee['cells'] as $cell)
                                     @php $cellClass = $heatmapClasses[$cell['status']] ?? $heatmapClasses['future']; @endphp
                                     @if ($cell['log_id'])
-                                        <a href="{{ route('attendance.attendance-logs.show', $cell['log_id']) }}"
-                                            class="h-7 rounded-md border {{ $cellClass }}" title="{{ __('View Attendance Log') }}"></a>
+                                        <a href="{{ route('attendance.attendance-logs.show', $cell['log_id']) }}" class="h-7 rounded-md border {{ $cellClass }}"
+                                            title="{{ __('View Attendance Log') }}"></a>
                                     @else
                                         <div class="h-7 rounded-md border {{ $cellClass }}"></div>
                                     @endif

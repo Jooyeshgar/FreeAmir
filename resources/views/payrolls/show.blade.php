@@ -53,52 +53,6 @@
         </div>
 
         <div class="card-body">
-            @if (!($isEmployeeView ?? false))
-                @php
-                    $transitionActions = [
-                        \App\Enums\PayrollStatus::Draft->value => [
-                            'to' => \App\Enums\PayrollStatus::PendingManagerApproval,
-                            'route' => 'salary.payrolls.transition.draft-to-pending-manager-approval',
-                            'label' => __('Submit for Approval'),
-                            'class' => 'btn-warning',
-                        ],
-                        \App\Enums\PayrollStatus::PendingManagerApproval->value => [
-                            'to' => \App\Enums\PayrollStatus::Approved,
-                            'route' => 'salary.payrolls.transition.pending-manager-approval-to-approved',
-                            'label' => __('Approve'),
-                            'class' => 'btn-success',
-                        ],
-                        \App\Enums\PayrollStatus::Approved->value => [
-                            'to' => \App\Enums\PayrollStatus::Paid,
-                            'route' => 'salary.payrolls.transition.approved-to-paid',
-                            'label' => __('Mark as Paid'),
-                            'class' => 'btn-info',
-                        ],
-                    ];
-                    $transitionAction = $transitionActions[$payroll->status?->value] ?? null;
-                    $transitionPermission = $transitionAction ? $payroll->transitionPermissionTo($transitionAction['to']) : null;
-                    $canTransition = $transitionPermission && auth()->user()?->getAllPermissions()->contains('name', $transitionPermission);
-                @endphp
-
-                @if ($transitionAction && $canTransition)
-                    <form action="{{ route($transitionAction['route'], $payroll) }}" method="POST"
-                        class="rounded-box border border-base-300 bg-base-200/40 p-4 flex flex-col gap-3 md:flex-row md:items-end">
-                        @csrf
-                        @method('PATCH')
-                        <div class="flex-1">
-                            <label for="note" class="label">
-                                <span>{{ __('Workflow Note') }}</span>
-                            </label>
-                            <input type="text" name="note" id="note" value="{{ old('note') }}" class="input input-sm input-bordered w-full"
-                                placeholder="{{ __('Optional note') }}" />
-                        </div>
-                        <button type="submit" class="btn btn-sm {{ $transitionAction['class'] }}">
-                            {{ $transitionAction['label'] }}
-                        </button>
-                    </form>
-                @endif
-            @endif
-
             {{-- Summary stats --}}
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-2">
                 <div class="stat bg-success/20 rounded-box p-3">
@@ -126,8 +80,33 @@
             </div>
 
             @if (!($isEmployeeView ?? false))
-                <div class="divider">{{ __('Approval Workflow') }}</div>
+                @php
+                    $transitionActions = [
+                        \App\Enums\PayrollStatus::Draft->value => [
+                            'to' => \App\Enums\PayrollStatus::PendingManagerApproval,
+                            'route' => 'salary.payrolls.transition.draft-to-pending-manager-approval',
+                            'label' => __('Submit for Approval'),
+                            'class' => 'btn-warning',
+                        ],
+                        \App\Enums\PayrollStatus::PendingManagerApproval->value => [
+                            'to' => \App\Enums\PayrollStatus::Approved,
+                            'route' => 'salary.payrolls.transition.pending-manager-approval-to-approved',
+                            'label' => __('Approve'),
+                            'class' => 'btn-success',
+                        ],
+                        \App\Enums\PayrollStatus::Approved->value => [
+                            'to' => \App\Enums\PayrollStatus::Paid,
+                            'route' => 'salary.payrolls.transition.approved-to-paid',
+                            'label' => __('Mark as Paid'),
+                            'class' => 'btn-info',
+                        ],
+                    ];
+                    $transitionAction = $transitionActions[$payroll->status?->value] ?? null;
+                    $transitionPermission = $transitionAction ? $payroll->transitionPermissionTo($transitionAction['to']) : null;
+                    $canTransition = $transitionPermission && auth()->user()?->can($transitionPermission);
+                @endphp
 
+                <div class="divider">{{ __('Approval Workflow') }}</div>
                 <div class="overflow-x-auto">
                     <table class="table table-sm w-full">
                         <thead>
@@ -158,6 +137,24 @@
                         </tbody>
                     </table>
                 </div>
+                @if ($transitionAction && $canTransition)
+                    <form action="{{ route($transitionAction['route'], $payroll) }}" method="POST">
+                        @csrf
+                        @method('PATCH')
+                        <div class="flex flex-col gap-3 md:flex-row md:items-end">
+                            <div class="flex-1">
+                                <label for="note" class="label">
+                                    <span class="label-text-alt text-gray-500">{{ __('Optional') }}</span>
+                                </label>
+                                <input type="text" name="note" id="note" value="{{ old('note') }}" class="input input-sm input-bordered w-full"
+                                    placeholder="{{ __('Example: Approved after reviewing attendance and deductions.') }}" />
+                            </div>
+                            <button type="submit" class="btn btn-sm {{ $transitionAction['class'] }}">
+                                {{ $transitionAction['label'] }}
+                            </button>
+                        </div>
+                    </form>
+                @endif
             @endif
 
             @if ($payroll->description)
@@ -208,7 +205,7 @@
                                             <a href="{{ route('salary.payroll-items.edit', $item) }}" class="btn btn-xs btn-ghost" title="{{ __('Edit') }}">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5
-                                                                 m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                                                         m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                                 </svg>
                                             </a>
                                         @endif

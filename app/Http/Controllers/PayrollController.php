@@ -322,7 +322,7 @@ class PayrollController extends Controller
             abort(Response::HTTP_UNPROCESSABLE_ENTITY, __('This payroll status transition is not allowed.'));
         }
 
-        $this->authorizeExactTransitionPermission($request, $permission);
+        $this->authorizeTransitionPermission($request, $permission);
 
         DB::transaction(function () use ($payroll, $fromStatus, $toStatus, $validated, $request) {
             $payroll->forceFill(['status' => $toStatus])->save();
@@ -341,13 +341,9 @@ class PayrollController extends Controller
             ->with('success', $message);
     }
 
-    private function authorizeExactTransitionPermission(Request $request, string $permission): void
+    private function authorizeTransitionPermission(Request $request, string $permission): void
     {
-        $hasExactPermission = $request->user()
-            ?->getAllPermissions()
-            ->contains('name', $permission) ?? false;
-
-        if (! $hasExactPermission) {
+        if (! $request->user()?->can($permission)) {
             throw UnauthorizedException::forPermissions([$permission]);
         }
     }

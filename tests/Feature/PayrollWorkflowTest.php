@@ -76,21 +76,70 @@ class PayrollWorkflowTest extends TestCase
         ]);
     }
 
-    public function test_general_payroll_wildcard_permission_is_not_enough_to_change_status(): void
+    public function test_transition_wildcard_permission_can_change_status(): void
     {
-        $this->grant('salary.payrolls.*');
+        $this->grant('salary.payrolls.transition.*');
         $payroll = $this->makePayroll(['status' => PayrollStatus::PendingManagerApproval]);
 
         $response = $this->patch(route('salary.payrolls.transition.pending-manager-approval-to-approved', $payroll));
 
-        $response->assertForbidden();
+        $response->assertRedirect(route('salary.payrolls.show', $payroll));
         $this->assertDatabaseHas('payrolls', [
             'id' => $payroll->id,
-            'status' => PayrollStatus::PendingManagerApproval->value,
+            'status' => PayrollStatus::Approved->value,
         ]);
-        $this->assertDatabaseMissing('payroll_status_histories', [
-            'payroll_id' => $payroll->id,
-            'to_status' => PayrollStatus::Approved->value,
+    }
+
+    public function test_salary_wildcard_permission_can_change_status(): void
+    {
+        $this->grant('salary.*');
+        $payroll = $this->makePayroll(['status' => PayrollStatus::Approved]);
+
+        $response = $this->patch(route('salary.payrolls.transition.approved-to-paid', $payroll));
+
+        $response->assertRedirect(route('salary.payrolls.show', $payroll));
+        $this->assertDatabaseHas('payrolls', [
+            'id' => $payroll->id,
+            'status' => PayrollStatus::Paid->value,
+        ]);
+    }
+
+    public function test_transition_form_is_visible_with_wildcard_permission(): void
+    {
+        $this->grant('salary.payrolls.show');
+        $this->grant('salary.payrolls.transition.*');
+        $payroll = $this->makePayroll(['status' => PayrollStatus::Draft]);
+
+        $response = $this->get(route('salary.payrolls.show', $payroll));
+
+        $response->assertOk();
+        $response->assertSee(route('salary.payrolls.transition.draft-to-pending-manager-approval', $payroll), false);
+    }
+
+    public function test_transition_form_is_visible_for_super_admin_without_synced_permissions(): void
+    {
+        Role::firstOrCreate(['name' => 'Super-Admin']);
+        $this->user->assignRole('Super-Admin');
+        $payroll = $this->makePayroll(['status' => PayrollStatus::Draft]);
+
+        $response = $this->get(route('salary.payrolls.show', $payroll));
+
+        $response->assertOk();
+        $response->assertSee(route('salary.payrolls.transition.draft-to-pending-manager-approval', $payroll), false);
+    }
+
+    public function test_super_admin_can_change_status_without_synced_permissions(): void
+    {
+        Role::firstOrCreate(['name' => 'Super-Admin']);
+        $this->user->assignRole('Super-Admin');
+        $payroll = $this->makePayroll(['status' => PayrollStatus::PendingManagerApproval]);
+
+        $response = $this->patch(route('salary.payrolls.transition.pending-manager-approval-to-approved', $payroll));
+
+        $response->assertRedirect(route('salary.payrolls.show', $payroll));
+        $this->assertDatabaseHas('payrolls', [
+            'id' => $payroll->id,
+            'status' => PayrollStatus::Approved->value,
         ]);
     }
 
