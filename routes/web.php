@@ -25,6 +25,10 @@ Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee
     Route::delete('/personnel-requests/{personnel_request}', [Controllers\EmployeePortalController::class, 'destroyPersonnelRequest'])->name('personnel-requests.destroy');
 });
 
+Route::get('salary/payrolls/dashboard', [Controllers\PayrollController::class, 'dashboard'])
+    ->middleware(['auth', 'check-permission:salary.payrolls.index'])
+    ->name('salary.payrolls.dashboard');
+
 Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('api-tokens', [Controllers\ApiTokenController::class, 'index'])->name('api-tokens.index');
     Route::get('api-tokens/create', [Controllers\ApiTokenController::class, 'create'])->name('api-tokens.create');

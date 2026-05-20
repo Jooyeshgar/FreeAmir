@@ -84,6 +84,22 @@
                     </label>
                 </div>
 
+                <div class="w-56">
+                    <label class="w-full">
+                        <div class="label">
+                            <span>{{ __('Organization Unit') }}</span>
+                        </div>
+                        <select name="organization_unit_id" class="select select-sm">
+                            <option value="">{{ __('All Units') }}</option>
+                            @foreach ($organizationUnits as $unit)
+                                <option value="{{ $unit->id }}" {{ request('organization_unit_id') == $unit->id ? 'selected' : '' }}>
+                                    {{ $unit->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </label>
+                </div>
+
                 <div>
                     <button type="submit" class="btn btn-primary btn-sm">{{ __('Filter') }}</button>
                     <a href="{{ route('salary.payrolls.index') }}" class="btn btn-ghost btn-sm">{{ __('Reset') }}</a>
