@@ -12,9 +12,12 @@
                         <x-input title="{{ __('Company name') }}" name="company_name" id="company_name"
                             :value="old('company_name', '')" placeholder="{{ __('Please enter the company name') }}" />
                     </div>
-                    <div class="col-span-2 md:col-span-1">
-                        <x-input name="fiscal_year" id="fiscal_year" title="{{ __('Fiscal year') }}" :value="old('fiscal_year', '')"
-                            placeholder="{{ __('Please enter the fiscal year') }}" />
+                    <div class="col-span-2 md:col-span-1" x-data="{ fiscalYear: '{{ old('fiscal_year', '') }}' }">
+                        <x-input name="fiscal_year" id="fiscal_year" title="{{ __('Fiscal year') }}"
+                            placeholder="{{ convertToFarsi('1405') }}"
+                            x-on:input="fiscalYear = $store.utils.cleanupNumber($event.target.value)"
+                            x-effect="$el.value = $store.utils.convertToFarsi($store.utils.cleanupNumber(fiscalYear) || '')" />
+                        <input type="hidden" name="fiscal_year" x-bind:value="fiscalYear" />
                     </div>
                     <div class="col-span-2 md:col-span-1 w-64 max-w-md">
                         <x-input type="file" name="file" title="{{ __('File') }} ({{ __('zip') }})"
