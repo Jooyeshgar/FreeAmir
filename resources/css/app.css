@@ -33,6 +33,70 @@
   @apply text-2xl font-bold text-slate-700 dark:text-slate-100;
 }
 
+@utility warehouse-dashboard {
+  @apply mt-6 space-y-5;
+}
+
+@utility warehouse-page-title {
+  @apply text-2xl font-bold text-slate-800 dark:text-slate-50;
+}
+
+@utility warehouse-kpi-card {
+  @apply min-h-44 rounded-lg border p-4 shadow-xs shadow-slate-200/70 dark:shadow-none;
+}
+
+@utility warehouse-kpi-icon {
+  @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/80 text-current dark:bg-slate-950/40;
+}
+
+@utility warehouse-panel {
+  @apply rounded-lg border border-slate-200/80 bg-white/95 shadow-xs shadow-slate-200/70 dark:border-slate-700/80 dark:bg-slate-900/95 dark:shadow-none;
+}
+
+@utility warehouse-panel-header {
+  @apply flex min-h-[62px] items-center justify-between gap-3 border-b border-slate-100 px-4 dark:border-slate-800;
+}
+
+@utility warehouse-panel-title {
+  @apply text-sm font-semibold text-slate-700 dark:text-slate-100;
+}
+
+@utility warehouse-panel-subtitle {
+  @apply mt-1 text-xs text-slate-500 dark:text-slate-400;
+}
+
+@utility warehouse-table {
+  @apply w-full text-right text-sm text-slate-600 dark:text-slate-300;
+
+  & th {
+    @apply border-b border-slate-200 pb-3 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-400;
+  }
+
+  & td {
+    @apply border-b border-slate-100 py-3 dark:border-slate-800;
+  }
+}
+
+@utility warehouse-link {
+  @apply text-slate-800 transition-colors hover:text-emerald-600 dark:text-slate-100 dark:hover:text-emerald-300;
+}
+
+@utility warehouse-mini-stat {
+  @apply rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/30;
+
+  & span {
+    @apply block text-xs text-slate-500 dark:text-slate-400;
+  }
+
+  & strong {
+    @apply mt-3 block text-lg font-bold text-slate-900 dark:text-white;
+  }
+
+  & small {
+    @apply mt-1 block text-xs text-slate-500 dark:text-slate-400;
+  }
+}
+
 @utility home-card {
   @apply relative rounded-lg border border-slate-200/80 bg-white/95 shadow-xs shadow-slate-200/70 dark:border-slate-700/80 dark:bg-slate-900/95 dark:shadow-none;
 }
