@@ -6,8 +6,8 @@
     'detail' => null,
     'change' => null,
     'sparkline' => null,
+    'series' => null,
     'tone' => null,
-    'bar' => null,
 ])
 
 @php
@@ -17,23 +17,47 @@
     $detail = $detail ?? data_get($card, 'detail');
     $change = $change ?? data_get($card, 'change');
     $sparkline = $sparkline ?? data_get($card, 'sparkline');
+    $series = $series ?? data_get($card, 'series');
     $tone = $tone ?? data_get($card, 'tone', 'info');
-    $bar = $bar ?? data_get($card, 'bar');
     $displayValue = is_numeric($rawValue) ? formatNumber($rawValue) : $rawValue;
 
     $toneClasses = [
-        'info' => ['card' => 'border-sky-500/25 bg-sky-500/10', 'icon' => 'bg-sky-500/15 text-sky-500', 'stroke' => '#38bdf8', 'bar' => 'bg-sky-500'],
-        'error' => ['card' => 'border-rose-500/25 bg-rose-500/10', 'icon' => 'bg-rose-500/15 text-rose-500', 'stroke' => '#fb7185', 'bar' => 'bg-rose-500'],
-        'success' => ['card' => 'border-emerald-500/25 bg-emerald-500/10', 'icon' => 'bg-emerald-500/15 text-emerald-500', 'stroke' => '#34d399', 'bar' => 'bg-emerald-500'],
-        'primary' => ['card' => 'border-primary/25 bg-primary/10', 'icon' => 'bg-primary/15 text-primary', 'stroke' => '#60a5fa', 'bar' => 'bg-primary'],
-        'warning' => ['card' => 'border-amber-500/25 bg-amber-500/10', 'icon' => 'bg-amber-500/15 text-amber-500', 'stroke' => '#f59e0b', 'bar' => 'bg-amber-500'],
-        'secondary' => ['card' => 'border-violet-500/25 bg-violet-500/10', 'icon' => 'bg-violet-500/15 text-violet-500', 'stroke' => '#a78bfa', 'bar' => 'bg-violet-500'],
-    ][$tone] ?? ['card' => 'border-base-300 bg-base-200', 'icon' => 'bg-base-300 text-base-content', 'stroke' => '#64748b', 'bar' => 'bg-base-content/50'];
+        'info' => ['card' => 'border-sky-500/25 bg-sky-500/10', 'icon' => 'bg-sky-500/15 text-sky-500', 'stroke' => '#38bdf8'],
+        'error' => ['card' => 'border-rose-500/25 bg-rose-500/10', 'icon' => 'bg-rose-500/15 text-rose-500', 'stroke' => '#fb7185'],
+        'success' => ['card' => 'border-emerald-500/25 bg-emerald-500/10', 'icon' => 'bg-emerald-500/15 text-emerald-500', 'stroke' => '#34d399'],
+        'primary' => ['card' => 'border-primary/25 bg-primary/10', 'icon' => 'bg-primary/15 text-primary', 'stroke' => '#60a5fa'],
+        'warning' => ['card' => 'border-amber-500/25 bg-amber-500/10', 'icon' => 'bg-amber-500/15 text-amber-500', 'stroke' => '#f59e0b'],
+        'secondary' => ['card' => 'border-violet-500/25 bg-violet-500/10', 'icon' => 'bg-violet-500/15 text-violet-500', 'stroke' => '#a78bfa'],
+    ][$tone] ?? ['card' => 'border-base-300 bg-base-200', 'icon' => 'bg-base-300 text-base-content', 'stroke' => '#64748b'];
 
-    $barClass = $bar ?: $toneClasses['bar'];
+    if (blank($sparkline)) {
+        $values = collect(is_iterable($series) ? $series : [0, 0])
+            ->values()
+            ->map(fn ($value) => (float) $value)
+            ->all();
+
+        if (empty($values)) {
+            $values = [0, 0];
+        }
+
+        $width = 180;
+        $height = 56;
+        $min = min($values);
+        $max = max($values);
+        $range = max($max - $min, 1);
+        $step = count($values) > 1 ? $width / (count($values) - 1) : 0;
+        $sparkline = collect($values)
+            ->map(function (float $value, int $index) use ($height, $min, $range, $step) {
+                $x = $index * $step;
+                $y = $height - 4 - (($value - $min) / $range * ($height - 8));
+
+                return sprintf('%.2f,%.2f', $x, $y);
+            })
+            ->implode(' ');
+    }
 @endphp
 
-<article {{ $attributes->merge(['class' => 'card min-h-44 border shadow-sm '.$toneClasses['card']]) }}>
+<article {{ $attributes->merge(['class' => 'card border shadow-sm '.$toneClasses['card']]) }}>
     <div class="card-body gap-3 p-4">
         <div class="flex items-start justify-between gap-2">
             <div class="rounded-lg p-2 {{ $toneClasses['icon'] }}">
@@ -61,19 +85,9 @@
             </div>
         </div>
 
-        @if (filled($sparkline))
-            <svg class="h-11 w-full overflow-visible" viewBox="0 0 180 56" preserveAspectRatio="none" aria-hidden="true">
-                <polyline points="{{ $sparkline }}" fill="none" stroke="{{ $toneClasses['stroke'] }}" stroke-width="3" stroke-linecap="round"
-                    stroke-linejoin="round" opacity=".9" />
-            </svg>
-        @else
-            <div class="mt-auto flex h-11 items-end gap-1 pt-2" aria-hidden="true">
-                <span class="{{ $barClass }} h-4 w-1/5 rounded-t opacity-45"></span>
-                <span class="{{ $barClass }} h-7 w-1/5 rounded-t opacity-80"></span>
-                <span class="{{ $barClass }} h-5 w-1/5 rounded-t opacity-55"></span>
-                <span class="{{ $barClass }} h-8 w-1/5 rounded-t"></span>
-                <span class="{{ $barClass }} h-6 w-1/5 rounded-t opacity-70"></span>
-            </div>
-        @endif
+        <svg class="h-11 w-full overflow-visible" viewBox="0 0 180 56" preserveAspectRatio="none" aria-hidden="true">
+            <polyline points="{{ $sparkline }}" fill="none" stroke="{{ $toneClasses['stroke'] }}" stroke-width="3" stroke-linecap="round"
+                stroke-linejoin="round" opacity=".9" />
+        </svg>
     </div>
 </article>

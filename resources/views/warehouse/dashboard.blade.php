@@ -28,6 +28,11 @@
         </section>
 
         @php
+            $salesUnitsSeries = collect($monthlySalesUnits['products'])
+                ->map(fn ($units, $month) => $units + ($monthlySalesUnits['services'][$month] ?? 0))
+                ->values()
+                ->all();
+
             $operationalCards = [
                 [
                     'title' => __('Products'),
@@ -35,7 +40,7 @@
                     'suffix' => __('Items'),
                     'detail' => __('Services') . ': ' . formatNumber($inventory['servicesCount']),
                     'tone' => 'info',
-                    'bar' => 'bg-sky-500',
+                    'series' => [$inventory['servicesCount'], $inventory['productsCount']],
                 ],
                 [
                     'title' => __('Stock on hand'),
@@ -43,7 +48,7 @@
                     'suffix' => __('Items'),
                     'detail' => __('Oversell') . ': ' . formatNumber($inventory['oversellEnabledCount']),
                     'tone' => 'success',
-                    'bar' => 'bg-emerald-500',
+                    'series' => array_values($monthlyMovement['net']),
                 ],
                 [
                     'title' => __('Low stock'),
@@ -51,7 +56,7 @@
                     'suffix' => __('Products'),
                     'detail' => __('Warning limit'),
                     'tone' => 'warning',
-                    'bar' => 'bg-amber-500',
+                    'series' => [$inventory['productsCount'], $inventory['lowStockCount']],
                 ],
                 [
                     'title' => __('Negative stock'),
@@ -59,7 +64,7 @@
                     'suffix' => __('Products'),
                     'detail' => __('Needs review'),
                     'tone' => 'error',
-                    'bar' => 'bg-rose-500',
+                    'series' => [$inventory['lowStockCount'], $inventory['negativeStockCount']],
                 ],
                 [
                     'title' => __('Net sold units'),
@@ -67,7 +72,7 @@
                     'suffix' => __('Items'),
                     'detail' => __('Invoices') . ': ' . formatNumber($sales['approvedSellInvoices']),
                     'tone' => 'secondary',
-                    'bar' => 'bg-violet-500',
+                    'series' => $salesUnitsSeries,
                 ],
                 [
                     'title' => __('Pending work'),
@@ -75,7 +80,7 @@
                     'suffix' => __('Items'),
                     'detail' => __('Invoices and ancillary costs that still need approval'),
                     'tone' => 'primary',
-                    'bar' => 'bg-primary',
+                    'series' => [$workflow['readyToApproveInvoices'], $workflow['unapprovedInvoices'], $workflow['unapprovedAncillaryCosts']],
                 ],
             ];
         @endphp
