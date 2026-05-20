@@ -21,16 +21,13 @@
 
 </head>
 
-<body class="relative min-h-screen overflow-x-hidden bg-base-100 text-base-content" dir="{{ app()->getLocale() == 'fa' ? 'rtl' : 'ltr' }}">
+<body class="relative min-h-screen overflow-x-hidden bg-base-200 text-base-content" dir="{{ app()->getLocale() == 'fa' ? 'rtl' : 'ltr' }}">
 
-    <div class="app-background" aria-hidden="true"></div>
-    <div x-data="{ open: false }" class="relative z-10">
-        <x-header />
+    <x-header />
 
-        <main class="min-[1430px]:w-[1430px] mx-auto">
-            {{ $slot }}
-        </main>
-    </div>
+    <main class="min-[1430px]:w-[1430px] mx-auto">
+        {{ $slot }}
+    </main>
     @stack('scripts')
 
     @stack('footer')
