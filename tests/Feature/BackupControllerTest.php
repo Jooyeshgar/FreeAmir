@@ -3,14 +3,21 @@
 namespace Tests\Feature;
 
 use App\Enums\FiscalYearSection;
+use App\Enums\PayrollStatus;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
 use App\Models\DocumentFile;
+use App\Models\Employee;
 use App\Models\Invoice;
+use App\Models\OrganizationUnit;
+use App\Models\Payroll;
+use App\Models\PayrollStatusHistory;
 use App\Models\Scopes\FiscalYearScope;
 use App\Models\User;
+use App\Models\WorkShift;
+use App\Models\WorkSite;
 use App\Services\DocumentService;
 use App\Services\FiscalYearService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -834,5 +841,362 @@ class BackupControllerTest extends TestCase
         }
 
         $this->assertDatabaseMissing('documents', ['id' => $document->id]);
+    }
+
+    public function test_employees_section_export_includes_organization_units(): void
+    {
+        OrganizationUnit::factory()->create([
+            'company_id' => $this->company->id,
+            'name' => 'Engineering',
+            'code' => 'ENG-01',
+        ]);
+
+        $exportData = FiscalYearService::exportData($this->company->id, [FiscalYearSection::EMPLOYEES->value]);
+
+        $this->assertArrayHasKey('organization_units', $exportData);
+        $this->assertCount(1, $exportData['organization_units']);
+        $this->assertSame('Engineering', $exportData['organization_units'][0]['name']);
+    }
+
+    public function test_organization_unit_ids_are_remapped_on_employee_import(): void
+    {
+        $payload = [
+            'org_charts' => [],
+            'work_sites' => [
+                ['id' => 10, 'name' => 'HQ', 'code' => 'HQ-01', 'company_id' => 0, 'address' => null, 'phone' => null, 'is_active' => true],
+            ],
+            'work_site_contracts' => [],
+            'work_shifts' => [
+                ['id' => 20, 'name' => 'Day Shift', 'company_id' => 0, 'start_time' => '08:00', 'end_time' => '17:00', 'float' => 0, 'break' => 0, 'paid_leave' => 1200, 'is_active' => true],
+            ],
+            'organization_units' => [
+                ['id' => 30, 'name' => 'HR Department', 'code' => 'HR-01', 'company_id' => 0, 'parent_id' => null, 'description' => null, 'is_active' => true],
+            ],
+            'employees' => [
+                $this->makeMinimalEmployeeData(40, 10, 20, 30),
+            ],
+        ];
+
+        $newCompany = FiscalYearService::importData($payload, ['name' => 'Org Unit Remap Co', 'fiscal_year' => 1404]);
+
+        $newOrgUnit = OrganizationUnit::withoutGlobalScope(FiscalYearScope::class)
+            ->where('company_id', $newCompany->id)
+            ->where('name', 'HR Department')
+            ->first();
+
+        $this->assertNotNull($newOrgUnit, 'Org unit should be created in the new company');
+        $this->assertNotSame(30, $newOrgUnit->id, 'Org unit ID must be remapped, not kept from source');
+
+        $employee = Employee::withoutGlobalScope(FiscalYearScope::class)
+            ->where('company_id', $newCompany->id)
+            ->first();
+
+        $this->assertNotNull($employee);
+        $this->assertSame($newOrgUnit->id, $employee->organization_unit_id, 'Employee must point to new org unit ID, not source ID');
+    }
+
+    public function test_organization_unit_parent_child_hierarchy_preserved_on_import(): void
+    {
+        $payload = [
+            'org_charts' => [],
+            'work_sites' => [
+                ['id' => 1, 'name' => 'HQ', 'code' => 'HQ-01', 'company_id' => 0, 'address' => null, 'phone' => null, 'is_active' => true],
+            ],
+            'work_site_contracts' => [],
+            'work_shifts' => [
+                ['id' => 1, 'name' => 'Day', 'company_id' => 0, 'start_time' => '08:00', 'end_time' => '17:00', 'float' => 0, 'break' => 0, 'paid_leave' => 1200, 'is_active' => true],
+            ],
+            'organization_units' => [
+                ['id' => 1, 'name' => 'Company Root', 'code' => 'ROOT', 'company_id' => 0, 'parent_id' => null, 'description' => null, 'is_active' => true],
+                ['id' => 2, 'name' => 'Engineering', 'code' => 'ENG', 'company_id' => 0, 'parent_id' => 1, 'description' => null, 'is_active' => true],
+            ],
+            'employees' => [
+                $this->makeMinimalEmployeeData(1, 1, 1, 2), // assigned to child unit (id=2)
+            ],
+        ];
+
+        $newCompany = FiscalYearService::importData($payload, ['name' => 'Hierarchy Co', 'fiscal_year' => 1404]);
+
+        $parentUnit = OrganizationUnit::withoutGlobalScope(FiscalYearScope::class)
+            ->where('company_id', $newCompany->id)->where('name', 'Company Root')->first();
+        $childUnit = OrganizationUnit::withoutGlobalScope(FiscalYearScope::class)
+            ->where('company_id', $newCompany->id)->where('name', 'Engineering')->first();
+
+        $this->assertNotNull($parentUnit);
+        $this->assertNotNull($childUnit);
+        $this->assertNull($parentUnit->parent_id, 'Root unit must have no parent');
+        $this->assertSame($parentUnit->id, $childUnit->parent_id, 'Child must point to new parent ID, not source parent ID');
+
+        $employee = Employee::withoutGlobalScope(FiscalYearScope::class)
+            ->where('company_id', $newCompany->id)->first();
+        $this->assertSame($childUnit->id, $employee->organization_unit_id);
+    }
+
+    public function test_employee_with_null_organization_unit_imports_with_null(): void
+    {
+        $payload = [
+            'org_charts' => [],
+            'work_sites' => [
+                ['id' => 1, 'name' => 'HQ', 'code' => 'HQ-01', 'company_id' => 0, 'address' => null, 'phone' => null, 'is_active' => true],
+            ],
+            'work_site_contracts' => [],
+            'work_shifts' => [
+                ['id' => 1, 'name' => 'Day', 'company_id' => 0, 'start_time' => '08:00', 'end_time' => '17:00', 'float' => 0, 'break' => 0, 'paid_leave' => 1200, 'is_active' => true],
+            ],
+            'organization_units' => [],
+            'employees' => [
+                $this->makeMinimalEmployeeData(1, 1, 1, null), // no org unit
+            ],
+        ];
+
+        $newCompany = FiscalYearService::importData($payload, ['name' => 'Null OrgUnit Co', 'fiscal_year' => 1404]);
+
+        $employee = Employee::withoutGlobalScope(FiscalYearScope::class)
+            ->where('company_id', $newCompany->id)->first();
+
+        $this->assertNotNull($employee);
+        $this->assertNull($employee->organization_unit_id);
+    }
+
+    public function test_full_export_import_roundtrip_preserves_organization_unit_assignment(): void
+    {
+        $orgUnit = OrganizationUnit::factory()->create([
+            'company_id' => $this->company->id,
+            'name' => 'Finance Department',
+        ]);
+        $workSite = WorkSite::factory()->create(['company_id' => $this->company->id]);
+        $workShift = WorkShift::factory()->create(['company_id' => $this->company->id]);
+        Employee::factory()->create([
+            'company_id' => $this->company->id,
+            'work_site_id' => $workSite->id,
+            'work_shift_id' => $workShift->id,
+            'organization_unit_id' => $orgUnit->id,
+        ]);
+
+        $exportData = FiscalYearService::exportData($this->company->id, [FiscalYearSection::EMPLOYEES->value]);
+
+        $this->assertArrayHasKey('organization_units', $exportData);
+        $this->assertNotEmpty($exportData['organization_units']);
+
+        $newCompany = FiscalYearService::importData($exportData, ['name' => 'Roundtrip OrgUnit Co', 'fiscal_year' => 1405]);
+
+        $newOrgUnit = OrganizationUnit::withoutGlobalScope(FiscalYearScope::class)
+            ->where('company_id', $newCompany->id)->where('name', 'Finance Department')->first();
+
+        $this->assertNotNull($newOrgUnit, 'Org unit must be recreated in new company');
+        $this->assertNotSame($orgUnit->id, $newOrgUnit->id, 'New org unit must have a new ID');
+
+        $newEmployee = Employee::withoutGlobalScope(FiscalYearScope::class)
+            ->where('company_id', $newCompany->id)->first();
+
+        $this->assertNotNull($newEmployee);
+        $this->assertSame($newOrgUnit->id, $newEmployee->organization_unit_id, 'Employee must be linked to the new org unit, not the source one');
+    }
+
+    public function test_payrolls_section_export_includes_status_histories(): void
+    {
+        $workSite = WorkSite::factory()->create(['company_id' => $this->company->id]);
+        $workShift = WorkShift::factory()->create(['company_id' => $this->company->id]);
+        $employee = Employee::factory()->create([
+            'company_id' => $this->company->id,
+            'work_site_id' => $workSite->id,
+            'work_shift_id' => $workShift->id,
+        ]);
+        $payroll = Payroll::withoutGlobalScopes()->create([
+            'company_id' => $this->company->id,
+            'employee_id' => $employee->id,
+            'year' => 1404, 'month' => 1,
+            'total_earnings' => 10_000_000, 'total_deductions' => 1_000_000, 'net_payment' => 9_000_000,
+            'employer_insurance' => 2_000_000, 'tax_base_amount' => 9_000_000, 'income_tax_amount' => 500_000,
+            'status' => PayrollStatus::PendingManagerApproval,
+        ]);
+        PayrollStatusHistory::create([
+            'payroll_id' => $payroll->id,
+            'from_status' => PayrollStatus::Draft->value,
+            'to_status' => PayrollStatus::PendingManagerApproval->value,
+            'changed_by' => null,
+            'note' => 'Submitted for review',
+        ]);
+
+        $exportData = FiscalYearService::exportData($this->company->id, [FiscalYearSection::PAYROLLS->value]);
+
+        $this->assertArrayHasKey('payroll_status_histories', $exportData);
+        $this->assertCount(1, $exportData['payroll_status_histories']);
+        $this->assertSame(PayrollStatus::Draft->value, $exportData['payroll_status_histories'][0]['from_status']);
+        $this->assertSame(PayrollStatus::PendingManagerApproval->value, $exportData['payroll_status_histories'][0]['to_status']);
+        $this->assertSame('Submitted for review', $exportData['payroll_status_histories'][0]['note']);
+    }
+
+    public function test_payrolls_section_export_includes_no_status_histories_when_there_are_none(): void
+    {
+        $workSite = WorkSite::factory()->create(['company_id' => $this->company->id]);
+        $workShift = WorkShift::factory()->create(['company_id' => $this->company->id]);
+        $employee = Employee::factory()->create([
+            'company_id' => $this->company->id,
+            'work_site_id' => $workSite->id,
+            'work_shift_id' => $workShift->id,
+        ]);
+        Payroll::withoutGlobalScopes()->create([
+            'company_id' => $this->company->id,
+            'employee_id' => $employee->id,
+            'year' => 1404, 'month' => 2,
+            'total_earnings' => 5_000_000, 'total_deductions' => 500_000, 'net_payment' => 4_500_000,
+            'employer_insurance' => 1_000_000, 'tax_base_amount' => 4_500_000, 'income_tax_amount' => 200_000,
+            'status' => PayrollStatus::Draft,
+        ]);
+
+        $exportData = FiscalYearService::exportData($this->company->id, [FiscalYearSection::PAYROLLS->value]);
+
+        $this->assertArrayHasKey('payroll_status_histories', $exportData);
+        $this->assertEmpty($exportData['payroll_status_histories']);
+    }
+
+    public function test_payroll_status_history_payroll_ids_are_remapped_on_import(): void
+    {
+        $payload = $this->makeMinimalPayrollPayload([
+            'payroll_status_histories' => [
+                [
+                    'id' => 1, 'payroll_id' => 1,
+                    'from_status' => PayrollStatus::Draft->value,
+                    'to_status' => PayrollStatus::PendingManagerApproval->value,
+                    'changed_by' => null, 'changed_at' => '2025-01-15 10:00:00', 'note' => 'Ready for review',
+                ],
+            ],
+        ]);
+
+        $newCompany = FiscalYearService::importData($payload, ['name' => 'PSH Remap Co', 'fiscal_year' => 1404]);
+
+        $newPayroll = Payroll::withoutGlobalScopes()->where('company_id', $newCompany->id)->first();
+        $this->assertNotNull($newPayroll);
+        $this->assertNotSame(1, $newPayroll->id, 'Payroll ID must be remapped');
+
+        $history = PayrollStatusHistory::where('payroll_id', $newPayroll->id)->first();
+        $this->assertNotNull($history, 'Status history must be created using the new payroll ID');
+        $this->assertSame(PayrollStatus::Draft->value, $history->from_status->value);
+        $this->assertSame(PayrollStatus::PendingManagerApproval->value, $history->to_status->value);
+        $this->assertSame('Ready for review', $history->note);
+    }
+
+    public function test_payroll_status_history_with_unknown_payroll_id_is_skipped_gracefully(): void
+    {
+        $payload = $this->makeMinimalPayrollPayload([
+            'payroll_status_histories' => [
+                [
+                    'id' => 99, 'payroll_id' => 9999, // unknown — not in the payload's payrolls list
+                    'from_status' => PayrollStatus::Draft->value,
+                    'to_status' => PayrollStatus::PendingManagerApproval->value,
+                    'changed_by' => null, 'changed_at' => '2025-01-15 10:00:00', 'note' => null,
+                ],
+            ],
+        ]);
+
+        $newCompany = FiscalYearService::importData($payload, ['name' => 'PSH Skip Co', 'fiscal_year' => 1404]);
+
+        $newPayroll = Payroll::withoutGlobalScopes()->where('company_id', $newCompany->id)->first();
+        $this->assertNotNull($newPayroll);
+
+        $this->assertSame(
+            0,
+            PayrollStatusHistory::where('payroll_id', $newPayroll->id)->count(),
+            'Status history with unknown payroll_id must be skipped without exception'
+        );
+    }
+
+    public function test_multiple_payroll_status_histories_are_all_imported_with_correct_mapping(): void
+    {
+        $payload = $this->makeMinimalPayrollPayload([
+            'payroll_status_histories' => [
+                [
+                    'id' => 1, 'payroll_id' => 1,
+                    'from_status' => PayrollStatus::Draft->value,
+                    'to_status' => PayrollStatus::PendingManagerApproval->value,
+                    'changed_by' => null, 'changed_at' => '2025-01-10 09:00:00', 'note' => 'First transition',
+                ],
+                [
+                    'id' => 2, 'payroll_id' => 1,
+                    'from_status' => PayrollStatus::PendingManagerApproval->value,
+                    'to_status' => PayrollStatus::Approved->value,
+                    'changed_by' => null, 'changed_at' => '2025-01-12 14:00:00', 'note' => 'Approved',
+                ],
+            ],
+        ]);
+
+        $newCompany = FiscalYearService::importData($payload, ['name' => 'Multi PSH Co', 'fiscal_year' => 1404]);
+
+        $newPayroll = Payroll::withoutGlobalScopes()->where('company_id', $newCompany->id)->first();
+        $this->assertNotNull($newPayroll);
+
+        $histories = PayrollStatusHistory::where('payroll_id', $newPayroll->id)
+            ->orderBy('changed_at')
+            ->get();
+
+        $this->assertCount(2, $histories);
+        $this->assertSame(PayrollStatus::Draft->value, $histories[0]->from_status->value);
+        $this->assertSame(PayrollStatus::PendingManagerApproval->value, $histories[0]->to_status->value);
+        $this->assertSame('First transition', $histories[0]->note);
+        $this->assertSame(PayrollStatus::PendingManagerApproval->value, $histories[1]->from_status->value);
+        $this->assertSame(PayrollStatus::Approved->value, $histories[1]->to_status->value);
+        $this->assertSame('Approved', $histories[1]->note);
+    }
+
+    private function makeMinimalEmployeeData(int $id, int $workSiteId, int $workShiftId, ?int $orgUnitId, string $code = 'EMP-001'): array
+    {
+        return [
+            'id' => $id, 'code' => $code, 'first_name' => 'Ali', 'last_name' => 'Ahmadi',
+            'father_name' => null, 'national_code' => null, 'passport_number' => null,
+            'nationality' => 'iranian', 'gender' => 'male', 'marital_status' => null,
+            'children_count' => 0, 'birth_date' => null, 'birth_place' => null,
+            'duty_status' => null, 'phone' => null, 'address' => null,
+            'insurance_number' => null, 'insurance_type' => null,
+            'bank_name' => null, 'bank_account' => null, 'card_number' => null, 'shaba_number' => null,
+            'education_level' => null, 'field_of_study' => null, 'employment_type' => null,
+            'contract_start_date' => null, 'contract_end_date' => null,
+            'org_chart_id' => null, 'organization_unit_id' => $orgUnitId,
+            'work_site_id' => $workSiteId, 'work_shift_id' => $workShiftId, 'contract_framework_id' => null,
+            'user_id' => null, 'is_active' => true, 'company_id' => 0,
+            'device_id' => null, 'leave_remain' => 1200,
+        ];
+    }
+
+    private function makeMinimalPayrollPayload(array $extra = []): array
+    {
+        return array_merge([
+            'org_charts' => [],
+            'work_sites' => [
+                ['id' => 1, 'name' => 'HQ', 'code' => 'HQ-01', 'company_id' => 0, 'address' => null, 'phone' => null, 'is_active' => true],
+            ],
+            'work_site_contracts' => [],
+            'work_shifts' => [
+                ['id' => 1, 'name' => 'Day', 'company_id' => 0, 'start_time' => '08:00', 'end_time' => '17:00', 'float' => 0, 'break' => 0, 'paid_leave' => 1200, 'is_active' => true],
+            ],
+            'organization_units' => [],
+            'employees' => [
+                $this->makeMinimalEmployeeData(1, 1, 1, null),
+            ],
+            'salary_decrees' => [
+                ['id' => 1, 'employee_id' => 1, 'company_id' => 0, 'name' => 'Decree 2025',
+                    'start_date' => '2025-01-01', 'end_date' => null, 'daily_wage' => '1000000.00', 'description' => null, 'is_active' => true],
+            ],
+            'monthly_attendances' => [
+                ['id' => 1, 'employee_id' => 1, 'company_id' => 0, 'year' => 1404, 'month' => 1,
+                    'start_date' => '2025-03-21', 'duration' => 26, 'work_days' => 26, 'present_days' => 26,
+                    'absent_days' => 0, 'overtime' => 0, 'auto_overtime' => 0, 'undertime' => 0,
+                    'mission' => 0, 'paid_leave' => 0, 'unpaid_leave' => 0, 'remote_work' => 0, 'friday' => 0, 'holiday' => 0],
+            ],
+            'payrolls' => [
+                ['id' => 1, 'employee_id' => 1, 'company_id' => 0, 'decree_id' => 1, 'monthly_attendance_id' => 1,
+                    'year' => 1404, 'month' => 1, 'total_earnings' => '10000000.00', 'total_deductions' => '1000000.00',
+                    'net_payment' => '9000000.00', 'employer_insurance' => '2000000.00',
+                    'tax_base_amount' => '9000000.00', 'income_tax_amount' => '500000.00',
+                    'status' => PayrollStatus::Draft->value, 'issue_date' => '2025-04-01 00:00:00',
+                    'accounting_voucher_id' => null, 'description' => null],
+            ],
+            'payroll_elements' => [],
+            'payroll_items' => [],
+            'decree_benefits' => [],
+            'attendance_logs' => [],
+            'personnel_requests' => [],
+            'payroll_status_histories' => [],
+        ], $extra);
     }
 }
