@@ -1254,6 +1254,8 @@
     "Salary decree created successfully.": "Salary decree created successfully.",
     "Salary decree deleted successfully.": "Salary decree deleted successfully.",
     "Salary decree updated successfully.": "Salary decree updated successfully.",
+    "Salary approved": "Salary approved",
+    "Salary not approved": "Salary not approved",
     "Sales": "Sales",
     "Sales Returns": "Sales Returns",
     "Sales Returns Subject": "Sales Returns Subject",

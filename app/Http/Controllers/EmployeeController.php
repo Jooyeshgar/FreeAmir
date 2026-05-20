@@ -28,20 +28,30 @@ class EmployeeController extends Controller
     public function index(Request $request): View
     {
         $employees = $this->filteredEmployeeQuery($request)
-            ->withCount('salaryDecrees')
             ->paginate(15)
             ->withQueryString();
         $workSites = WorkSite::orderBy('name')->get(['id', 'name']);
         $workSiteContracts = WorkSiteContract::orderBy('name')->get(['id', 'name']);
 
-        $totalCount = Employee::count();
-        $activeCount = Employee::where('is_active', true)->count();
-        $fullTimeCount = Employee::where('employment_type', EmployeeEmploymentType::PERMANENT->value)->count();
-        $flexibleCount = Employee::whereIn('employment_type', [
-            EmployeeEmploymentType::CONTRACT->value,
-            EmployeeEmploymentType::OTHER->value,
-        ])->count();
-        $newHiresCount = Employee::where('contract_start_date', '>=', now()->subDays(30)->toDateString())->count();
+        $stats = Employee::selectRaw(
+            'COUNT(*) as total_count,
+            SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active_count,
+            SUM(CASE WHEN employment_type = ? THEN 1 ELSE 0 END) as full_time_count,
+            SUM(CASE WHEN employment_type IN (?, ?) THEN 1 ELSE 0 END) as flexible_count,
+            SUM(CASE WHEN contract_start_date >= ? THEN 1 ELSE 0 END) as new_hires_count',
+            [
+                EmployeeEmploymentType::PERMANENT->value,
+                EmployeeEmploymentType::CONTRACT->value,
+                EmployeeEmploymentType::OTHER->value,
+                now()->subDays(30)->toDateString(),
+            ]
+        )->first();
+
+        $totalCount = (int) $stats->total_count;
+        $activeCount = (int) $stats->active_count;
+        $fullTimeCount = (int) $stats->full_time_count;
+        $flexibleCount = (int) $stats->flexible_count;
+        $newHiresCount = (int) $stats->new_hires_count;
         $withoutSalaryDecreeCount = Employee::doesntHave('salaryDecrees')->count();
 
         return view('employees.index', compact(
@@ -82,7 +92,6 @@ class EmployeeController extends Controller
             ]);
 
             $this->filteredEmployeeQuery($request)
-                ->withCount('salaryDecrees')
                 ->chunk(200, function ($employees) use ($file) {
                     foreach ($employees as $employee) {
                         fputcsv($file, [
@@ -179,7 +188,11 @@ class EmployeeController extends Controller
 
     private function filteredEmployeeQuery(Request $request): Builder
     {
-        $query = Employee::with(['workSite', 'orgChart', 'workSiteContract'])
+        $query = Employee::with(['workSite', 'orgChart', 'workSiteContract', 'organizationUnit'])
+            ->withCount([
+                'salaryDecrees',
+                'salaryDecrees as active_salary_decrees_count' => fn ($q) => $q->where('is_active', true),
+            ])
             ->orderBy('code');
 
         if ($request->filled('search')) {

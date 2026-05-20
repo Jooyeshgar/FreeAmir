@@ -153,7 +153,8 @@
                                 $avatarTone = $avatarTones[$employee->id % count($avatarTones)];
                                 $hasExpiredContract = $employee->is_active && $employee->contract_end_date && $employee->contract_end_date->lt(today());
                                 $hasNoSalaryDecree = (int) $employee->salary_decrees_count === 0;
-                                $needsAttention = $hasExpiredContract || $hasNoSalaryDecree;
+                                $hasInactiveSalaryDecree = !$hasNoSalaryDecree && (int) $employee->active_salary_decrees_count === 0;
+                                $needsAttention = $hasExpiredContract || $hasNoSalaryDecree || $hasInactiveSalaryDecree;
                             @endphp
                             <div
                                 class="card rounded-lg border {{ $needsAttention ? 'border-error bg-error/5' : 'border-base-200 bg-base-100 dark:bg-base-200/40' }} shadow-sm transition hover:border-primary/30 hover:shadow-md">
@@ -181,6 +182,14 @@
                                                     d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m4 0h4" />
                                             </svg>
                                             <span>{{ $employee->workSite?->name ?? __('No work site') }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/35" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+                                            </svg>
+                                            <span>{{ $employee->organizationUnit?->name ?? __('No unit') }}</span>
                                         </div>
                                         <div class="flex items-center gap-2">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/35" fill="none" viewBox="0 0 24 24"
@@ -215,6 +224,14 @@
                                         @if ($hasNoSalaryDecree)
                                             <span class="badge badge-error badge-outline badge-sm">
                                                 {{ __('No salary decree') }}
+                                            </span>
+                                        @elseif ($hasInactiveSalaryDecree)
+                                            <span class="badge badge-warning badge-outline badge-sm">
+                                                {{ __('Salary not approved') }}
+                                            </span>
+                                        @else
+                                            <span class="badge badge-success badge-outline badge-sm">
+                                                {{ __('Salary approved') }}
                                             </span>
                                         @endif
                                     </div>

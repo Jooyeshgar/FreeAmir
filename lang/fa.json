@@ -1256,6 +1256,8 @@
     "Salary decree created successfully.": "حکم کارگزینی با موفقیت ایجاد شد.",
     "Salary decree deleted successfully.": "حکم کارگزینی با موفقیت حذف شد.",
     "Salary decree updated successfully.": "حکم کارگزینی با موفقیت بروزرسانی شد.",
+    "Salary approved": "حقوق تایید شده",
+    "Salary not approved": "حقوق تایید نشده",
     "Sales": "فروش ها",
     "Sales Returns": "بازگشت از فروش",
     "Sales Returns Subject": "سرفصل برگشت از فروش",
