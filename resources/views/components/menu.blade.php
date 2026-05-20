@@ -145,6 +145,7 @@
             <summary>{{ __('HR') }}</summary>
             <ul class="{{ $topDropdownContentClass }}">
                 @can('salary.payrolls.index')
+                    <li><a href="{{ route('salary.payrolls.dashboard') }}">{{ __('Payroll Dashboard') }}</a></li>
                     <li><a href="{{ route('salary.payrolls.index') }}">{{ __('Payrolls') }}</a></li>
                 @endcan
                 @can('hr.employees.index')
