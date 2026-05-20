@@ -4,13 +4,13 @@
             <a href="/" class="flex shrink-0 items-center rounded-lg p-1.5 transition-colors hover:bg-base-200" aria-label="{{ config('app.name') }}">
                 <img src="/images/logo.png" alt="Logo" class="h-9 w-9 object-contain">
             </a>
-            <ul class="app-main-menu menu menu-sm px-1 lg:menu-horizontal lg:flex-nowrap" data-main-menu>
+            <ul class="app-main-menu menu px-1 lg:menu-horizontal lg:flex-nowrap" data-main-menu>
                 <x-menu />
             </ul>
         </nav>
 
         <nav aria-label="{{ __('User menu') }}">
-            <ul class="app-main-menu flex shrink-0 items-center menu menu-sm menu-horizontal px-1" data-main-menu>
+            <ul class="app-main-menu flex shrink-0 items-center menu menu-horizontal px-1" data-main-menu>
                 <li>
                     <label class="flex cursor-pointer gap-2 px-3 py-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"

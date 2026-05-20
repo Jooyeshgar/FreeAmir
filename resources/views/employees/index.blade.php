@@ -18,12 +18,15 @@
                 </a>
             @endcan
 
-            <button type="button" class="btn btn-sm btn-outline gap-1.5" dir="rtl">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14" />
-                </svg>
-                {{ __('Excel Export') }}
-            </button>
+            @can('hr.employees.export')
+                <a href="{{ route('hr.employees.export', request()->only(['search', 'is_active', 'work_site_id', 'contract_framework_id'])) }}"
+                    class="btn btn-sm btn-outline gap-1.5" dir="rtl">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14" />
+                    </svg>
+                    {{ __('CSV Export') }}
+                </a>
+            @endcan
 
             <form action="{{ route('hr.employees.index') }}" method="GET" class="flex flex-wrap items-center gap-2">
                 @if (request()->filled('search'))
@@ -148,9 +151,12 @@
                                     'bg-cyan-600 text-white',
                                 ];
                                 $avatarTone = $avatarTones[$employee->id % count($avatarTones)];
+                                $hasExpiredContract = $employee->is_active && $employee->contract_end_date && $employee->contract_end_date->lt(today());
+                                $hasNoSalaryDecree = (int) $employee->salary_decrees_count === 0;
+                                $needsAttention = $hasExpiredContract || $hasNoSalaryDecree;
                             @endphp
                             <div
-                                class="card rounded-lg border border-base-200 bg-base-100 shadow-sm transition hover:border-primary/30 hover:shadow-md dark:bg-base-200/40">
+                                class="card rounded-lg border {{ $needsAttention ? 'border-error bg-error/5' : 'border-base-200 bg-base-100 dark:bg-base-200/40' }} shadow-sm transition hover:border-primary/30 hover:shadow-md">
                                 <div class="card-body gap-4 p-4">
                                     <div class="flex items-center gap-3">
                                         <div class="avatar placeholder shrink-0">
@@ -201,6 +207,16 @@
                                         <span class="badge badge-info badge-outline badge-sm">
                                             {{ $employee->employment_type?->label() ?? __('No type') }}
                                         </span>
+                                        @if ($hasExpiredContract)
+                                            <span class="badge badge-error badge-sm">
+                                                {{ __('Expired contract') }}
+                                            </span>
+                                        @endif
+                                        @if ($hasNoSalaryDecree)
+                                            <span class="badge badge-error badge-outline badge-sm">
+                                                {{ __('No salary decree') }}
+                                            </span>
+                                        @endif
                                     </div>
 
                                     <div class="card-actions items-center justify-between border-t border-base-200 pt-3">

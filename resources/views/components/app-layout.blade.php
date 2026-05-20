@@ -30,7 +30,7 @@
     </main>
 
     <footer class="mt-8 text-center text-xs opacity-60 pb-4">
-        {{ __('Integrated Accounting and Human Resources System') }} · {{ __('Version :version', ['version' => config('app.version')]) }}
+        {{ __('Integrated Accounting and Human Resources System') }} {{ __('Version :version', ['version' => config('app.version')]) }}
     </footer>
 
     @stack('scripts')

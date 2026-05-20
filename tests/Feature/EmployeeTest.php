@@ -7,6 +7,7 @@ use App\Enums\EmployeeGender;
 use App\Enums\EmployeeNationality;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\SalaryDecree;
 use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
@@ -130,6 +131,63 @@ class EmployeeTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Active');
         $response->assertDontSee('Inactive');
+    }
+
+    public function test_index_marks_active_employees_with_expired_contract(): void
+    {
+        $this->makeEmployee([
+            'first_name' => 'Expired',
+            'last_name' => 'Contract',
+            'is_active' => true,
+            'contract_end_date' => now()->subDay()->toDateString(),
+        ]);
+
+        $response = $this->get(route('hr.employees.index'));
+
+        $response->assertStatus(200);
+        $response->assertSee(__('Expired contract'));
+    }
+
+    public function test_index_marks_employees_without_salary_decree(): void
+    {
+        $employee = $this->makeEmployee([
+            'first_name' => 'No',
+            'last_name' => 'Decree',
+        ]);
+
+        $response = $this->get(route('hr.employees.index', ['search' => $employee->code]));
+
+        $response->assertStatus(200);
+        $response->assertSee(__('No salary decree'));
+    }
+
+    public function test_export_downloads_csv_with_current_filters(): void
+    {
+        $matching = $this->makeEmployee([
+            'first_name' => 'Reza',
+            'last_name' => 'Ahmadi',
+            'code' => 'EMP-001',
+        ]);
+        $this->makeEmployee([
+            'first_name' => 'Sara',
+            'last_name' => 'Karimi',
+            'code' => 'EMP-002',
+        ]);
+        SalaryDecree::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $matching->id,
+        ]);
+
+        $response = $this->get(route('hr.employees.export', ['search' => 'Ahmadi']));
+
+        $response->assertStatus(200);
+        $response->assertDownload();
+
+        $csv = $response->streamedContent();
+        $this->assertStringContainsString('EMP-001', $csv);
+        $this->assertStringContainsString('Ahmadi', $csv);
+        $this->assertStringNotContainsString('EMP-002', $csv);
+        $this->assertStringNotContainsString('Karimi', $csv);
     }
 
     // ----------------------------------------------------------------

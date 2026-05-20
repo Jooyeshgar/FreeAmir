@@ -214,6 +214,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'hr.employees.create',
             'hr.employees.store',
             'hr.employees.show',
+            'hr.employees.export',
             'hr.employees.edit',
             'hr.employees.update',
             'hr.employees.destroy',
