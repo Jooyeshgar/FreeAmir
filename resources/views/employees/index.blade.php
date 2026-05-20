@@ -18,34 +18,51 @@
     </div>
 
     {{-- Stats Row --}}
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 px-1">
-        <div class="stat bg-base-100 rounded-xl shadow-sm border border-base-200 py-4">
-            <div class="stat-figure text-primary opacity-70">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-            </div>
-            <div class="stat-title text-xs">{{ __('Total Employees') }}</div>
-            <div class="stat-value text-primary text-3xl">{{ $totalCount }}</div>
-        </div>
-        <div class="stat bg-base-100 rounded-xl shadow-sm border border-base-200 py-4">
-            <div class="stat-figure text-success opacity-70">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            </div>
-            <div class="stat-title text-xs">{{ __('Active') }}</div>
-            <div class="stat-value text-success text-3xl">{{ $activeCount }}</div>
-        </div>
-        <div class="stat bg-base-100 rounded-xl shadow-sm border border-base-200 py-4">
-            <div class="stat-figure text-error opacity-70">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            </div>
-            <div class="stat-title text-xs">{{ __('Inactive') }}</div>
-            <div class="stat-value text-error text-3xl">{{ $inactiveCount }}</div>
-        </div>
+    <div class="mb-6 px-1">
+        <x-stat-strip :items="[
+            [
+                'title' => __('Total Employees'),
+                'value' => convertToFarsi($totalCount),
+                'description' => __('Registered in system'),
+                'icon' => 'users',
+                'tone' => 'indigo',
+            ],
+            [
+                'title' => __('Active'),
+                'value' => convertToFarsi($activeCount),
+                'description' => __('Currently working'),
+                'icon' => 'check',
+                'tone' => 'green',
+            ],
+            [
+                'title' => __('Full Time'),
+                'value' => convertToFarsi($fullTimeCount),
+                'description' => __('Official contract'),
+                'icon' => 'briefcase',
+                'tone' => 'sky',
+            ],
+            [
+                'title' => __('Remote / Part Time'),
+                'value' => convertToFarsi($flexibleCount),
+                'description' => __('Flexible'),
+                'icon' => 'cup',
+                'tone' => 'cyan',
+            ],
+            [
+                'title' => __('New Hires'),
+                'value' => convertToFarsi($newHiresCount),
+                'description' => __('In last 30 days'),
+                'icon' => 'plus',
+                'tone' => 'amber',
+            ],
+            [
+                'title' => __('Waiting for Salary Decree'),
+                'value' => convertToFarsi($withoutSalaryDecreeCount),
+                'description' => __('Needs review'),
+                'icon' => 'document',
+                'tone' => 'red',
+            ],
+        ]" />
     </div>
 
     {{-- Main Card --}}

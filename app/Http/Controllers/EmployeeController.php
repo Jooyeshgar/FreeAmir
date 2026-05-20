@@ -46,9 +46,23 @@ class EmployeeController extends Controller
 
         $totalCount = Employee::count();
         $activeCount = Employee::where('is_active', true)->count();
-        $inactiveCount = Employee::where('is_active', false)->count();
+        $fullTimeCount = Employee::where('employment_type', EmployeeEmploymentType::PERMANENT->value)->count();
+        $flexibleCount = Employee::whereIn('employment_type', [
+            EmployeeEmploymentType::CONTRACT->value,
+            EmployeeEmploymentType::OTHER->value,
+        ])->count();
+        $newHiresCount = Employee::where('contract_start_date', '>=', now()->subDays(30)->toDateString())->count();
+        $withoutSalaryDecreeCount = Employee::doesntHave('salaryDecrees')->count();
 
-        return view('employees.index', compact('employees', 'totalCount', 'activeCount', 'inactiveCount'));
+        return view('employees.index', compact(
+            'employees',
+            'totalCount',
+            'activeCount',
+            'fullTimeCount',
+            'flexibleCount',
+            'newHiresCount',
+            'withoutSalaryDecreeCount'
+        ));
     }
 
     public function create(): View

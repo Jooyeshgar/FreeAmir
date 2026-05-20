@@ -27,7 +27,7 @@
                 </li>
                 <li>
                     <details class="app-main-menu-dropdown" data-main-menu-dropdown>
-                        <summary class="font-medium text-sm">
+                        <summary class="text-sm">
                             {{ cookie('active-company-id') ? config('active-company-name') . ' - ' . config('active-company-fiscal-year') : __('Please Select a Company') }}
                         </summary>
                         <ul class="app-main-menu-panel z-50 w-52">
