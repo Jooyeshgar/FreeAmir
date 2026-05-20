@@ -41,14 +41,6 @@
   @apply text-2xl font-bold text-slate-800 dark:text-slate-50;
 }
 
-@utility warehouse-kpi-card {
-  @apply min-h-44 rounded-lg border p-4 shadow-xs shadow-slate-200/70 dark:shadow-none;
-}
-
-@utility warehouse-kpi-icon {
-  @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/80 text-current dark:bg-slate-950/40;
-}
-
 @utility warehouse-panel {
   @apply rounded-lg border border-slate-200/80 bg-white/95 shadow-xs shadow-slate-200/70 dark:border-slate-700/80 dark:bg-slate-900/95 dark:shadow-none;
 }

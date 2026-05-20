@@ -30,80 +30,59 @@
         @php
             $operationalCards = [
                 [
-                    'label' => __('Products'),
-                    'value' => formatNumber($inventory['productsCount']),
-                    'unit' => __('Items'),
+                    'title' => __('Products'),
+                    'value' => $inventory['productsCount'],
+                    'suffix' => __('Items'),
                     'detail' => __('Services') . ': ' . formatNumber($inventory['servicesCount']),
-                    'tone' => 'border-sky-500/35 bg-sky-500/10 text-sky-600 dark:text-sky-300',
+                    'tone' => 'info',
                     'bar' => 'bg-sky-500',
                 ],
                 [
-                    'label' => __('Stock on hand'),
-                    'value' => formatNumber($inventory['totalQuantity']),
-                    'unit' => __('Items'),
+                    'title' => __('Stock on hand'),
+                    'value' => $inventory['totalQuantity'],
+                    'suffix' => __('Items'),
                     'detail' => __('Oversell') . ': ' . formatNumber($inventory['oversellEnabledCount']),
-                    'tone' => 'border-emerald-500/35 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300',
+                    'tone' => 'success',
                     'bar' => 'bg-emerald-500',
                 ],
                 [
-                    'label' => __('Low stock'),
-                    'value' => formatNumber($inventory['lowStockCount']),
-                    'unit' => __('Products'),
+                    'title' => __('Low stock'),
+                    'value' => $inventory['lowStockCount'],
+                    'suffix' => __('Products'),
                     'detail' => __('Warning limit'),
-                    'tone' => 'border-amber-500/35 bg-amber-500/10 text-amber-600 dark:text-amber-300',
+                    'tone' => 'warning',
                     'bar' => 'bg-amber-500',
                 ],
                 [
-                    'label' => __('Negative stock'),
-                    'value' => formatNumber($inventory['negativeStockCount']),
-                    'unit' => __('Products'),
+                    'title' => __('Negative stock'),
+                    'value' => $inventory['negativeStockCount'],
+                    'suffix' => __('Products'),
                     'detail' => __('Needs review'),
-                    'tone' => 'border-rose-500/35 bg-rose-500/10 text-rose-600 dark:text-rose-300',
+                    'tone' => 'error',
                     'bar' => 'bg-rose-500',
                 ],
                 [
-                    'label' => __('Net sold units'),
-                    'value' => formatNumber($sales['netProductUnits'] + $sales['netServiceUnits']),
-                    'unit' => __('Items'),
+                    'title' => __('Net sold units'),
+                    'value' => $sales['netProductUnits'] + $sales['netServiceUnits'],
+                    'suffix' => __('Items'),
                     'detail' => __('Invoices') . ': ' . formatNumber($sales['approvedSellInvoices']),
-                    'tone' => 'border-violet-500/35 bg-violet-500/10 text-violet-600 dark:text-violet-300',
+                    'tone' => 'secondary',
                     'bar' => 'bg-violet-500',
                 ],
                 [
-                    'label' => __('Pending work'),
-                    'value' => formatNumber($workflow['readyToApproveInvoices'] + $workflow['unapprovedInvoices'] + $workflow['unapprovedAncillaryCosts']),
-                    'unit' => __('Items'),
+                    'title' => __('Pending work'),
+                    'value' => $workflow['readyToApproveInvoices'] + $workflow['unapprovedInvoices'] + $workflow['unapprovedAncillaryCosts'],
+                    'suffix' => __('Items'),
                     'detail' => __('Invoices and ancillary costs that still need approval'),
-                    'tone' => 'border-cyan-500/35 bg-cyan-500/10 text-cyan-600 dark:text-cyan-300',
-                    'bar' => 'bg-cyan-500',
+                    'tone' => 'primary',
+                    'bar' => 'bg-primary',
                 ],
             ];
         @endphp
 
         <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
             @foreach ($operationalCards as $card)
-                <article class="warehouse-kpi-card {{ $card['tone'] }}">
-                    <div class="flex items-start justify-between gap-3">
-                        <div>
-                            <div class="text-xs font-medium text-slate-500 dark:text-slate-400">{{ $card['label'] }}</div>
-                            <div class="mt-5 flex items-end gap-2">
-                                <span class="text-2xl font-bold text-slate-900 dark:text-white">{{ $card['value'] }}</span>
-                                <span class="pb-1 text-xs text-slate-500 dark:text-slate-400">{{ $card['unit'] }}</span>
-                            </div>
-                        </div>
-                        <div class="warehouse-kpi-icon">
-                            <span class="h-4 w-4 rounded-sm border-2 border-current"></span>
-                        </div>
-                    </div>
-                    <div class="mt-3 text-xs text-slate-500 dark:text-slate-400">{{ $card['detail'] }}</div>
-                    <div class="mt-4 flex h-8 items-end gap-1">
-                        <span class="{{ $card['bar'] }} h-4 w-1/5 rounded-t opacity-45"></span>
-                        <span class="{{ $card['bar'] }} h-7 w-1/5 rounded-t opacity-80"></span>
-                        <span class="{{ $card['bar'] }} h-5 w-1/5 rounded-t opacity-55"></span>
-                        <span class="{{ $card['bar'] }} h-8 w-1/5 rounded-t"></span>
-                        <span class="{{ $card['bar'] }} h-6 w-1/5 rounded-t opacity-70"></span>
-                    </div>
-                </article>
+                <x-metric-card :card="$card" />
             @endforeach
         </section>
 
