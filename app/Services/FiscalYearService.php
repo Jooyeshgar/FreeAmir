@@ -23,9 +23,11 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\MonthlyAttendance;
 use App\Models\OrgChart;
+use App\Models\OrganizationUnit;
 use App\Models\Payroll;
 use App\Models\PayrollElement;
 use App\Models\PayrollItem;
+use App\Models\PayrollStatusHistory;
 use App\Models\PersonnelRequest;
 use App\Models\Product;
 use App\Models\ProductGroup;
@@ -526,14 +528,18 @@ class FiscalYearService
                     if (isset($importData['work_shifts'])) {
                         $idMappings['work_shifts'] = self::_importWorkShifts($importData['work_shifts'], $targetYearId);
                     }
+                    if (isset($importData['organization_units'])) {
+                        $idMappings['organization_units'] = self::_importOrganizationUnits($importData['organization_units'], $targetYearId);
+                    }
                     if (isset($importData['employees'])) {
                         $orgChartMapping = $idMappings['org_charts'] ?? [];
                         $workSiteMapping = $idMappings['work_sites'] ?? [];
                         $workShiftMapping = $idMappings['work_shifts'] ?? [];
                         $work_site_contracts = $idMappings['work_site_contracts'] ?? [];
+                        $organizationUnitMapping = $idMappings['organization_units'] ?? [];
 
                         if (! empty($workSiteMapping) && ! empty($workShiftMapping)) {
-                            $idMappings['employees'] = self::_importEmployees($importData['employees'], $targetYearId, $orgChartMapping, $workSiteMapping, $workShiftMapping, $work_site_contracts);
+                            $idMappings['employees'] = self::_importEmployees($importData['employees'], $targetYearId, $orgChartMapping, $workSiteMapping, $workShiftMapping, $work_site_contracts, $organizationUnitMapping);
                         } else {
                             Log::warning('Skipping employee import due to missing work site or work shift mappings.',
                                 [
@@ -638,6 +644,15 @@ class FiscalYearService
                                     'has_employee_mapping' => ! empty($employeeMapping),
                                     'has_payroll_mapping' => ! empty($payrollMapping),
                                 ]);
+                        }
+                    }
+                    if (isset($importData['payroll_status_histories'])) {
+                        $payrollMapping = $idMappings['payrolls'] ?? [];
+
+                        if (! empty($payrollMapping)) {
+                            self::_importPayrollStatusHistories($importData['payroll_status_histories'], $payrollMapping);
+                        } else {
+                            Log::warning('Skipping payroll status history import due to missing payroll mapping.', ['target_year_id' => $targetYearId]);
                         }
                     }
                 }
@@ -772,6 +787,11 @@ class FiscalYearService
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
 
+            $sourceData['organization_units'] = OrganizationUnit::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
+                ->orderBy('parent_id')
+                ->get()->toArray();
+
             $sourceData['work_sites'] = WorkSite::withoutGlobalScope(FiscalYearScope::class)
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
@@ -804,6 +824,10 @@ class FiscalYearService
             $elementIds = collect($sourceData['payroll_elements'])->pluck('id')->toArray();
             $sourceData['payroll_items'] = ! empty($payrollIds) && ! empty($elementIds) ?
                 PayrollItem::whereIn('payroll_id', $payrollIds)->whereIn('element_id', $elementIds)->get()->toArray() : [];
+
+            $sourceData['payroll_status_histories'] = ! empty($payrollIds)
+                ? PayrollStatusHistory::whereIn('payroll_id', $payrollIds)->get()->toArray()
+                : [];
 
             $salaryDecreeIds = collect($sourceData['salary_decrees'])->pluck('id')->toArray();
             $sourceData['decree_benefits'] = ! empty($salaryDecreeIds) && ! empty($elementIds) ?
@@ -898,6 +922,52 @@ class FiscalYearService
                 $mapping[$childData['id']] = $newOrgChart->id;
                 if ($orgChartsByOldParentId->has($childData['id'])) {
                     self::_processOrgChartChildren($childData['id'], $orgChartsByOldParentId, $targetYearId, $mapping);
+                }
+            }
+        }
+    }
+
+    /**
+     * Import OrganizationUnits, handling parent-child relationships and returning ID mapping.
+     *
+     * @param  array  $orgUnitsData  Array of organization unit data from import.
+     * @return array<int, int> Mapping of old OrganizationUnit ID to new OrganizationUnit ID.
+     */
+    protected static function _importOrganizationUnits(array $orgUnitsData, int $targetYearId): array
+    {
+        $mapping = [];
+        $orgUnitsByOldParentId = collect($orgUnitsData)->groupBy('parent_id');
+
+        $rootOrgUnits = $orgUnitsByOldParentId->get(null, collect())->merge($orgUnitsByOldParentId->get(0, collect()));
+        foreach ($rootOrgUnits as $orgUnitData) {
+            $newOrgUnit = self::_createOrganizationUnit($orgUnitData, $targetYearId, $mapping);
+            $mapping[$orgUnitData['id']] = $newOrgUnit->id;
+            self::_processOrganizationUnitChildren($orgUnitData['id'], $orgUnitsByOldParentId, $targetYearId, $mapping);
+        }
+
+        return $mapping;
+    }
+
+    protected static function _createOrganizationUnit(array $orgUnitData, int $targetYearId, array &$mapping): OrganizationUnit
+    {
+        $newOrgUnit = new OrganizationUnit;
+        $newOrgUnit->fill(collect($orgUnitData)->except(['id', 'parent_id', 'company_id'])->toArray());
+        $newOrgUnit->company_id = $targetYearId;
+        $newOrgUnit->parent_id = ($orgUnitData['parent_id'] == 0 || $orgUnitData['parent_id'] === null) ? null : ($mapping[$orgUnitData['parent_id']] ?? null);
+        $newOrgUnit->save();
+
+        return $newOrgUnit;
+    }
+
+    protected static function _processOrganizationUnitChildren($oldParentId, $orgUnitsByOldParentId, int $targetYearId, array &$mapping): void
+    {
+        $children = $orgUnitsByOldParentId->get($oldParentId, collect());
+        foreach ($children as $childData) {
+            if (! isset($mapping[$childData['id']])) {
+                $newOrgUnit = self::_createOrganizationUnit($childData, $targetYearId, $mapping);
+                $mapping[$childData['id']] = $newOrgUnit->id;
+                if ($orgUnitsByOldParentId->has($childData['id'])) {
+                    self::_processOrganizationUnitChildren($childData['id'], $orgUnitsByOldParentId, $targetYearId, $mapping);
                 }
             }
         }
@@ -1020,6 +1090,28 @@ class FiscalYearService
         }
 
         return $mapping;
+    }
+
+    /**
+     * Import PayrollStatusHistories.
+     *
+     * @param  array  $payrollMapping  Mapping of old payroll ID to new payroll ID.
+     */
+    protected static function _importPayrollStatusHistories(array $payrollStatusHistoriesData, array $payrollMapping): void
+    {
+        foreach ($payrollStatusHistoriesData as $psh) {
+            $oldPayrollId = $psh['payroll_id'] ?? null;
+            if ($oldPayrollId === null || ! isset($payrollMapping[$oldPayrollId])) {
+                Log::warning('Skipping payroll status history import due to missing payroll mapping.', ['old_payroll_id' => $oldPayrollId]);
+
+                continue;
+            }
+
+            $newPsh = new PayrollStatusHistory;
+            $newPsh->fill(collect($psh)->except(['id', 'payroll_id'])->toArray());
+            $newPsh->payroll_id = $payrollMapping[$oldPayrollId];
+            $newPsh->save();
+        }
     }
 
     /**
@@ -1271,7 +1363,7 @@ class FiscalYearService
      * @param  array  $work_site_contracts  Mapping of old contract framwork ID to new contract framwork ID.
      * @return array<int, int> Mapping of old employee ID to new employee ID.
      */
-    protected static function _importEmployees(array $employeesData, int $targetYearId, array $orgChartMapping, array $workSiteMapping, array $workShiftMapping, array $work_site_contracts): array
+    protected static function _importEmployees(array $employeesData, int $targetYearId, array $orgChartMapping, array $workSiteMapping, array $workShiftMapping, array $work_site_contracts, array $organizationUnitMapping = []): array
     {
         $mapping = [];
         foreach ($employeesData as $employeeData) {
@@ -1279,6 +1371,7 @@ class FiscalYearService
             $oldWorkSiteId = $employeeData['work_site_id'] ?? null;
             $oldWorkShiftId = $employeeData['work_shift_id'] ?? null;
             $oldContractFrameworkId = $employeeData['contract_framework_id'] ?? null;
+            $oldOrganizationUnitId = $employeeData['organization_unit_id'] ?? null;
 
             // if ($oldOrgChartId === null || ! isset($orgChartMapping[$oldOrgChartId])) {
             //     Log::warning('Skipping employee import due to missing org chart mapping.', ['old_employee_id' => $employeeData['id'] ?? 'N/A', 'old_org_chart_id' => $oldOrgChartId, 'target_year_id' => $targetYearId]);
@@ -1302,9 +1395,10 @@ class FiscalYearService
             // }
 
             $newEmp = new Employee;
-            $newEmp->fill(collect($employeeData)->except(['id', 'org_chart_id', 'work_site_id', 'work_shift_id', 'contract_framework_id'])->toArray());
+            $newEmp->fill(collect($employeeData)->except(['id', 'org_chart_id', 'organization_unit_id', 'work_site_id', 'work_shift_id', 'contract_framework_id'])->toArray());
             $newEmp->company_id = $targetYearId;
             $newEmp->org_chart_id = $orgChartMapping[$oldOrgChartId] ?? null;
+            $newEmp->organization_unit_id = $oldOrganizationUnitId ? ($organizationUnitMapping[$oldOrganizationUnitId] ?? null) : null;
             $newEmp->work_site_id = $workSiteMapping[$oldWorkSiteId] ?? null;
             $newEmp->work_shift_id = $workShiftMapping[$oldWorkShiftId] ?? null;
             $newEmp->contract_framework_id = $work_site_contracts[$oldContractFrameworkId] ?? null;
