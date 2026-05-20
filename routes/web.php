@@ -28,6 +28,9 @@ Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee
 Route::get('salary/payrolls/dashboard', [Controllers\PayrollController::class, 'dashboard'])
     ->middleware(['auth', 'check-permission:salary.payrolls.index'])
     ->name('salary.payrolls.dashboard');
+Route::get('warehouse/dashboard', [Controllers\WarehouseDashboardController::class, 'index'])
+    ->middleware(['auth', 'check-permission:products.index'])
+    ->name('warehouse.dashboard');
 
 Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('api-tokens', [Controllers\ApiTokenController::class, 'index'])->name('api-tokens.index');
