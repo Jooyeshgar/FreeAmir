@@ -6,8 +6,10 @@
         @include('home.database-actions')
 
         @include('home.header')
+        @include('home.quick-access')
 
         @if ($hasBusinessPerms)
+
             @if ($canFinancial)
                 @include('home.financial-metrics')
             @endif
@@ -47,8 +49,6 @@
                     @include('home.sold-amount')
                 </section>
             @endif
-
-            @include('home.quick-access')
         @endif
 
         @if ($canSeePersonalPortal)
