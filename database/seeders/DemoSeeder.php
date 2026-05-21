@@ -17,6 +17,11 @@ class DemoSeeder extends Seeder
             ProductSeeder::class,
             ServiceSeeder::class,
             InvoiceSeeder::class,
+            CommentSeeder::class,
+            DocumentFileSeeder::class,
+            AttendanceLogDemoSeeder::class,
+            PayrollDemoSeeder::class,
+            PersonnelRequestDemoSeeder::class,
             HomeSeeder::class,
         ]);
     }
