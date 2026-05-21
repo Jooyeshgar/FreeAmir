@@ -14,8 +14,7 @@ class WarehouseDashboardController extends Controller
     {
         $validated = $request->validate([
             'period' => ['nullable', 'string', 'in:month,quarter,year'],
-            'category_ids' => ['nullable', 'array'],
-            'category_ids.*' => ['integer', 'exists:product_groups,id'],
+            'category_id' => ['nullable', 'integer', 'exists:product_groups,id'],
             'status' => ['nullable', 'string', 'in:below_reorder,stagnant,normal'],
         ]);
 

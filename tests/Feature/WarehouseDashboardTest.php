@@ -139,7 +139,7 @@ class WarehouseDashboardTest extends TestCase
             'average_cost' => 50,
         ]);
 
-        $data = app(WarehouseDashboardService::class)->dashboard(['category_ids' => [$widgets->id]]);
+        $data = app(WarehouseDashboardService::class)->dashboard(['category_id' => $widgets->id]);
 
         $this->assertEquals(1, $data['summary']['total_item_count']);
         $this->assertEquals(500.0, $data['summary']['total_inventory_value']);
