@@ -1,315 +1,605 @@
+@php
+    $selectedCategoryIds = $filters['category_ids'] ?? [];
+    $period = $filters['period'] ?? 'year';
+    $statusFilter = $filters['status'] ?? null;
+    $categoryLinkParams = array_filter([
+        'group_name' => count($selectedCategoryIds) === 1
+            ? optional($productGroups->firstWhere('id', $selectedCategoryIds[0]))->name
+            : null,
+    ]);
+
+    $summaryCards = [
+        [
+            'title' => __('Total Inventory Value'),
+            'value' => $summary['total_inventory_value'],
+            'suffix' => __('Rial'),
+            'detail' => __('Based on average cost'),
+            'tone' => 'info',
+            'series' => collect($monthlyMovement['in'] ?? [])
+                ->zip($monthlyMovement['out'] ?? [])
+                ->map(fn ($pair) => ($pair[0] ?? 0) - ($pair[1] ?? 0))
+                ->all(),
+        ],
+        [
+            'title' => __('Items in Stock'),
+            'value' => $summary['total_item_count'],
+            'suffix' => __('Items'),
+            'detail' => __('Total quantity: :qty', ['qty' => formatNumber($summary['total_stock_quantity'])]),
+            'tone' => 'primary',
+            'series' => $monthlyMovement['in'] ?? [],
+        ],
+        [
+            'title' => __('Below Reorder Point'),
+            'value' => $summary['below_reorder_count'],
+            'suffix' => __('Products'),
+            'detail' => __('Needs replenishment'),
+            'tone' => $summary['below_reorder_count'] > 0 ? 'warning' : 'success',
+            'series' => [$summary['total_item_count'], $summary['below_reorder_count']],
+        ],
+        [
+            'title' => __('Stagnant Items'),
+            'value' => $summary['stagnant_count'],
+            'suffix' => __('Products'),
+            'detail' => __('No movement in :days days', ['days' => formatNumber($stagnant_days)]),
+            'tone' => $summary['stagnant_count'] > 0 ? 'error' : 'success',
+            'series' => [$summary['total_item_count'], $summary['stagnant_count']],
+        ],
+        [
+            'title' => __('Inventory Turnover'),
+            'value' => formatNumber(round($summary['avg_turnover_ratio'], 2)),
+            'suffix' => __('Times'),
+            'detail' => __('Avg holding: :days days', ['days' => formatNumber($summary['avg_holding_days'])]),
+            'tone' => 'secondary',
+            'series' => $monthlyMovement['out'] ?? [],
+        ],
+        [
+            'title' => __('Period Outflow'),
+            'value' => array_sum($monthlyMovement['out'] ?? [0]),
+            'suffix' => __('Items'),
+            'detail' => __('Period Inflow: :qty', ['qty' => formatNumber(array_sum($monthlyMovement['in'] ?? [0]))]),
+            'tone' => 'success',
+            'series' => $monthlyMovement['out'] ?? [],
+        ],
+    ];
+@endphp
+
 <x-app-layout :title="__('Warehouse Dashboard')">
     <x-show-message-bags />
 
-    @php
-        $localizedPeriodLabel = in_array(app()->getLocale(), ['fa', 'fa_IR'], true) ? convertToFarsi($periodLabel) : $periodLabel;
-    @endphp
-
-    <main class="warehouse-dashboard">
-        <section class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+    <main class="mt-8 space-y-4">
+        <section class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
-                <h1 class="warehouse-page-title">{{ __('Warehouse Dashboard') }}</h1>
-                <p class="text-sm text-slate-500 dark:text-slate-400">
-                    {{ __('Stock, movement, and sales overview for fiscal year :year', ['year' => $localizedPeriodLabel]) }}
+                <h1 class="text-2xl font-bold text-base-content">{{ __('Warehouse Dashboard') }}</h1>
+                <p class="mt-1 text-sm text-base-content/60">
+                    {{ __('Inventory, movement, and performance KPIs - :period', ['period' => $periodLabel]) }}
                 </p>
             </div>
 
-            <div class="flex flex-wrap gap-2">
+            <form action="{{ route('warehouse.dashboard') }}" method="GET" class="flex flex-wrap items-end gap-2">
+                <label class="form-control w-40">
+                    <span class="label-text mb-1 text-xs">{{ __('Time Period') }}</span>
+                    <select name="period" class="select select-sm select-bordered">
+                        @foreach ($periodOptions as $value => $label)
+                            <option value="{{ $value }}" @selected($period === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </label>
+
+                <label class="form-control w-56">
+                    <span class="label-text mb-1 text-xs">{{ __('Product Categories') }}</span>
+                    <select name="category_ids[]" class="select select-sm select-bordered" multiple size="1">
+                        @foreach ($productGroups as $group)
+                            <option value="{{ $group->id }}" @selected(in_array($group->id, $selectedCategoryIds, true))>{{ $group->name }}</option>
+                        @endforeach
+                    </select>
+                </label>
+
+                <label class="form-control w-44">
+                    <span class="label-text mb-1 text-xs">{{ __('Inventory Status') }}</span>
+                    <select name="status" class="select select-sm select-bordered">
+                        <option value="">{{ __('All') }}</option>
+                        @foreach ($statusOptions as $value => $label)
+                            <option value="{{ $value }}" @selected($statusFilter === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </label>
+
+                <button type="submit" class="btn btn-sm btn-neutral">{{ __('Apply') }}</button>
+                <a href="{{ route('warehouse.dashboard') }}" class="btn btn-sm btn-ghost">{{ __('Reset') }}</a>
+
                 @can('products.index')
-                    <a href="{{ route('products.index') }}" class="btn btn-sm btn-primary">{{ __('Products') }}</a>
+                    <a href="{{ route('products.index') }}" class="btn btn-sm btn-info">{{ __('Products List') }}</a>
                 @endcan
-                @can('services.index')
-                    <a href="{{ route('services.index') }}" class="btn btn-sm btn-outline">{{ __('Services') }}</a>
-                @endcan
-                @can('ancillary-costs.index')
-                    <a href="{{ route('ancillary-costs.index') }}" class="btn btn-sm btn-outline">{{ __('Ancillary Costs') }}</a>
-                @endcan
-            </div>
+            </form>
         </section>
 
-        @php
-            $salesUnitsSeries = collect($monthlySalesUnits['products'])
-                ->map(fn ($units, $month) => $units + ($monthlySalesUnits['services'][$month] ?? 0))
-                ->values()
-                ->all();
-
-            $operationalCards = [
-                [
-                    'title' => __('Products'),
-                    'value' => $inventory['productsCount'],
-                    'suffix' => __('Items'),
-                    'detail' => __('Services') . ': ' . formatNumber($inventory['servicesCount']),
-                    'tone' => 'info',
-                    'series' => [$inventory['servicesCount'], $inventory['productsCount']],
-                ],
-                [
-                    'title' => __('Stock on hand'),
-                    'value' => $inventory['totalQuantity'],
-                    'suffix' => __('Items'),
-                    'detail' => __('Oversell') . ': ' . formatNumber($inventory['oversellEnabledCount']),
-                    'tone' => 'success',
-                    'series' => array_values($monthlyMovement['net']),
-                ],
-                [
-                    'title' => __('Low stock'),
-                    'value' => $inventory['lowStockCount'],
-                    'suffix' => __('Products'),
-                    'detail' => __('Warning limit'),
-                    'tone' => 'warning',
-                    'series' => [$inventory['productsCount'], $inventory['lowStockCount']],
-                ],
-                [
-                    'title' => __('Negative stock'),
-                    'value' => $inventory['negativeStockCount'],
-                    'suffix' => __('Products'),
-                    'detail' => __('Needs review'),
-                    'tone' => 'error',
-                    'series' => [$inventory['lowStockCount'], $inventory['negativeStockCount']],
-                ],
-                [
-                    'title' => __('Net sold units'),
-                    'value' => $sales['netProductUnits'] + $sales['netServiceUnits'],
-                    'suffix' => __('Items'),
-                    'detail' => __('Invoices') . ': ' . formatNumber($sales['approvedSellInvoices']),
-                    'tone' => 'secondary',
-                    'series' => $salesUnitsSeries,
-                ],
-                [
-                    'title' => __('Pending work'),
-                    'value' => $workflow['readyToApproveInvoices'] + $workflow['unapprovedInvoices'] + $workflow['unapprovedAncillaryCosts'],
-                    'suffix' => __('Items'),
-                    'detail' => __('Invoices and ancillary costs that still need approval'),
-                    'tone' => 'primary',
-                    'series' => [$workflow['readyToApproveInvoices'], $workflow['unapprovedInvoices'], $workflow['unapprovedAncillaryCosts']],
-                ],
-            ];
-        @endphp
-
         <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
-            @foreach ($operationalCards as $card)
+            @foreach ($summaryCards as $card)
                 <x-metric-card :card="$card" />
             @endforeach
         </section>
 
         <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <article class="warehouse-panel xl:col-span-2">
-                <div class="warehouse-panel-header">
-                    <div>
-                        <h2 class="warehouse-panel-title">{{ __('Warehouse movement') }}</h2>
-                        <p class="warehouse-panel-subtitle">{{ __('Incoming Stock') }} / {{ __('Outgoing Stock') }} / {{ __('Net Movement') }}</p>
+            <article class="card border border-base-300 bg-base-100/90 shadow-sm">
+                <div class="card-body">
+                    <h2 class="card-title text-base">{{ __('Inventory Value by Category') }}</h2>
+                    <p class="text-xs text-base-content/55">{{ __('Share of total stock value (at average cost)') }}</p>
+                    <div class="mt-3 h-64">
+                        <canvas id="inventoryValueChart" class="h-full w-full"></canvas>
                     </div>
-                </div>
-                <div class="p-3">
-                    <x-charts.bar-chart chart-id="warehouseMovementChart" heightClass="h-80" :show-legend="true" :datasets="[
-                        ['label' => __('Incoming Stock'), 'data' => $monthlyMovement['incoming'], 'backgroundColor' => '#22c55e99', 'borderColor' => '#22c55e'],
-                        ['label' => __('Outgoing Stock'), 'data' => $monthlyMovement['outgoing'], 'backgroundColor' => '#f43f5e99', 'borderColor' => '#f43f5e'],
-                        ['label' => __('Net Movement'), 'data' => $monthlyMovement['net'], 'backgroundColor' => '#38bdf899', 'borderColor' => '#38bdf8', 'negativeColor' => '#fb718599'],
-                    ]" />
                 </div>
             </article>
 
-            <article class="warehouse-panel">
-                <div class="warehouse-panel-header">
-                    <div>
-                        <h2 class="warehouse-panel-title">{{ __('Sales flow') }}</h2>
-                        <p class="warehouse-panel-subtitle">{{ __('Product units') }} / {{ __('Service units') }}</p>
+            <article class="card border border-base-300 bg-base-100/90 shadow-sm">
+                <div class="card-body">
+                    <h2 class="card-title text-base">{{ __('Turnover Ratio by Category') }}</h2>
+                    <p class="text-xs text-base-content/55">{{ __('Period COGS divided by current inventory value') }}</p>
+                    <div class="mt-3 h-64">
+                        <canvas id="turnoverChart" class="h-full w-full"></canvas>
                     </div>
                 </div>
-                <div class="p-3">
-                    <x-charts.bar-chart chart-id="warehouseSalesUnitsChart" heightClass="h-80" :show-legend="true" :datasets="[
-                        ['label' => __('Product units'), 'data' => $monthlySalesUnits['products'], 'backgroundColor' => '#0ea5e999', 'borderColor' => '#0ea5e9'],
-                        ['label' => __('Service units'), 'data' => $monthlySalesUnits['services'], 'backgroundColor' => '#a855f799', 'borderColor' => '#a855f7'],
-                    ]" />
+            </article>
+
+            <article class="card border border-base-300 bg-base-100/90 shadow-sm">
+                <div class="card-body">
+                    <h2 class="card-title text-base">{{ __('Items per Category') }}</h2>
+                    <p class="text-xs text-base-content/55">{{ __('How many distinct products live in each category') }}</p>
+                    <div class="mt-3 h-64">
+                        <canvas id="itemsPerCategoryChart" class="h-full w-full"></canvas>
+                    </div>
                 </div>
             </article>
         </section>
 
-        <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <article class="warehouse-panel xl:col-span-2">
-                <div class="warehouse-panel-header">
-                    <div>
-                        <h2 class="warehouse-panel-title">{{ __('Top selling items') }}</h2>
-                        <p class="warehouse-panel-subtitle">{{ __('Net sold units') }}</p>
+        <section class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(20rem,0.8fr)]">
+            <article class="card border border-base-300 bg-base-100/90 shadow-sm">
+                <div class="card-body">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <h2 class="card-title text-base">{{ __('Inbound / Outbound Trend') }}</h2>
+                            <p class="text-xs text-base-content/55">{{ __('Monthly approved warehouse movement') }}</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 h-72">
+                        <canvas id="movementTrendChart" class="h-full w-full"></canvas>
                     </div>
                 </div>
-                <div class="overflow-x-auto p-4">
-                    <table class="warehouse-table">
+            </article>
+
+            <article class="card border border-base-300 bg-base-100/90 shadow-sm">
+                <div class="card-body">
+                    <h2 class="card-title text-base">{{ __('Alerts & Reminders') }}</h2>
+                    <p class="text-xs text-base-content/55">{{ __('Items that need attention') }}</p>
+                    <div class="mt-3 space-y-3">
+                        @foreach ($alerts as $alert)
+                            @php
+                                $alertClass = match ($alert['tone']) {
+                                    'warning' => 'bg-warning/10 text-warning',
+                                    'info' => 'bg-info/10 text-info',
+                                    'success' => 'bg-success/10 text-success',
+                                    'error' => 'bg-error/10 text-error',
+                                    default => 'bg-base-200 text-base-content/70',
+                                };
+                            @endphp
+                            <div class="flex items-center gap-3 rounded-lg bg-base-200/70 p-3">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg {{ $alertClass }}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+                                    </svg>
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                    <div class="truncate text-sm font-semibold">{{ $alert['title'] }}</div>
+                                    <div class="truncate text-xs text-base-content/55">{{ $alert['description'] }}</div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </article>
+        </section>
+
+        <section class="card border border-base-300 bg-base-100/90 shadow-sm">
+            <div class="card-body">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h2 class="card-title text-base">{{ __('Inbound / Outbound by Main Categories') }}</h2>
+                        <p class="text-xs text-base-content/55">{{ __('Top categories tracked across the selected period') }}</p>
+                    </div>
+                </div>
+                <div class="mt-3 h-80">
+                    <canvas id="categoryTrendChart" class="h-full w-full"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <article class="card border border-base-300 bg-base-100/90 shadow-sm">
+                <div class="card-body p-0">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-base-300 p-4">
+                        <div>
+                            <h2 class="card-title text-base">{{ __('Below Reorder Point') }}</h2>
+                            <p class="text-xs text-base-content/55">{{ __('Lowest stock items first') }}</p>
+                        </div>
+                        @can('products.index')
+                            <a href="{{ route('products.index', $categoryLinkParams) }}" class="btn btn-xs btn-outline">{{ __('Open in Products') }}</a>
+                        @endcan
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>{{ __('Code') }}</th>
+                                    <th>{{ __('Product') }}</th>
+                                    <th>{{ __('Category') }}</th>
+                                    <th class="text-right">{{ __('Quantity') }}</th>
+                                    <th class="text-right">{{ __('Reorder Point') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($belowReorderItems as $row)
+                                    <tr>
+                                        <td>{{ convertToFarsi($row['code']) }}</td>
+                                        <td>
+                                            @can('products.index')
+                                                <a class="link link-primary" href="{{ route('products.show', $row['id']) }}">{{ $row['name'] }}</a>
+                                            @else
+                                                {{ $row['name'] }}
+                                            @endcan
+                                        </td>
+                                        <td>
+                                            @can('products.index')
+                                                <a class="link link-hover" href="{{ route('products.index', ['group_name' => $row['group']]) }}">{{ $row['group'] }}</a>
+                                            @else
+                                                {{ $row['group'] }}
+                                            @endcan
+                                        </td>
+                                        <td class="text-right font-medium {{ $row['quantity'] < 0 ? 'text-error' : 'text-warning' }}">{{ formatNumber($row['quantity']) }}</td>
+                                        <td class="text-right">{{ formatNumber($row['quantity_warning']) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="5" class="py-6 text-center text-base-content/55">{{ __('All items are above their reorder points.') }}</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </article>
+
+            <article class="card border border-base-300 bg-base-100/90 shadow-sm">
+                <div class="card-body p-0">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-base-300 p-4">
+                        <div>
+                            <h2 class="card-title text-base">{{ __('Stagnant Items') }}</h2>
+                            <p class="text-xs text-base-content/55">{{ __('No movement for at least :days days', ['days' => formatNumber($stagnant_days)]) }}</p>
+                        </div>
+                        @can('products.index')
+                            <a href="{{ route('products.index', $categoryLinkParams) }}" class="btn btn-xs btn-outline">{{ __('Open in Products') }}</a>
+                        @endcan
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>{{ __('Code') }}</th>
+                                    <th>{{ __('Product') }}</th>
+                                    <th>{{ __('Category') }}</th>
+                                    <th class="text-right">{{ __('Quantity') }}</th>
+                                    <th class="text-right">{{ __('Days Idle') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($stagnantItems as $row)
+                                    <tr>
+                                        <td>{{ convertToFarsi($row['code']) }}</td>
+                                        <td>
+                                            @can('products.index')
+                                                <a class="link link-primary" href="{{ route('products.show', $row['id']) }}">{{ $row['name'] }}</a>
+                                            @else
+                                                {{ $row['name'] }}
+                                            @endcan
+                                        </td>
+                                        <td>{{ $row['group'] }}</td>
+                                        <td class="text-right font-medium">{{ formatNumber($row['quantity']) }}</td>
+                                        <td class="text-right">{{ $row['days_idle'] === null ? __('Never') : formatNumber($row['days_idle']) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="5" class="py-6 text-center text-base-content/55">{{ __('No stagnant inventory in the selected scope.') }}</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </article>
+        </section>
+
+        <section class="card border border-base-300 bg-base-100/90 shadow-sm">
+            <div class="card-body p-0">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-base-300 p-4">
+                    <div>
+                        <h2 class="card-title text-base">{{ __('Top 10 Best Sellers') }}</h2>
+                        <p class="text-xs text-base-content/55">{{ __('Approved sells minus returns, within the selected period') }}</p>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra">
                         <thead>
                             <tr>
                                 <th>{{ __('Code') }}</th>
-                                <th>{{ __('Name') }}</th>
-                                <th>{{ __('Type') }}</th>
-                                <th>{{ __('Quantity') }}</th>
+                                <th>{{ __('Product') }}</th>
+                                <th>{{ __('Category') }}</th>
+                                <th class="text-right">{{ __('Net Units') }}</th>
+                                <th class="text-right">{{ __('Net Revenue') }}</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse ($topSellingItems as $item)
+                            @forelse ($topSellers as $row)
                                 <tr>
-                                    <td>{{ convertToFarsi($item['code']) }}</td>
+                                    <td>{{ convertToFarsi($row['code']) }}</td>
                                     <td>
-                                        <a href="{{ route($item['route'], $item['id']) }}" class="warehouse-link">{{ $item['name'] }}</a>
+                                        @can('products.index')
+                                            <a class="link link-primary" href="{{ route('products.show', $row['id']) }}">{{ $row['name'] }}</a>
+                                        @else
+                                            {{ $row['name'] }}
+                                        @endcan
                                     </td>
-                                    <td>{{ $item['type'] }}</td>
-                                    <td>{{ formatNumber($item['quantity']) }}</td>
+                                    <td>
+                                        @can('products.index')
+                                            <a class="link link-hover" href="{{ route('products.index', ['group_name' => $row['group']]) }}">{{ $row['group'] }}</a>
+                                        @else
+                                            {{ $row['group'] }}
+                                        @endcan
+                                    </td>
+                                    <td class="text-right font-medium">{{ formatNumber($row['units']) }}</td>
+                                    <td class="text-right">{{ formatNumber($row['revenue']) }} {{ __('Rial') }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="py-8 text-center text-slate-500">{{ __('No selling activity yet.') }}</td>
+                                    <td colspan="5" class="py-6 text-center text-base-content/55">{{ __('No sales found in the selected period.') }}</td>
                                 </tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
-            </article>
-
-            <article class="warehouse-panel">
-                <div class="warehouse-panel-header">
-                    <div>
-                        <h2 class="warehouse-panel-title">{{ __('Low stock watchlist') }}</h2>
-                        <p class="warehouse-panel-subtitle">{{ __('Current qty') }} / {{ __('Warning limit') }}</p>
-                    </div>
-                </div>
-                <div class="space-y-3 p-4">
-                    @forelse ($lowStockProducts as $product)
-                        <div class="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/70">
-                            <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <a href="{{ route('products.show', $product['id']) }}" class="warehouse-link font-semibold">{{ $product['name'] }}</a>
-                                    <div class="mt-1 text-xs text-slate-500">{{ convertToFarsi($product['code']) }} - {{ $product['group'] }}</div>
-                                </div>
-                                <span class="rounded-md bg-amber-500/15 px-2 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
-                                    {{ formatNumber($product['quantity']) }} / {{ formatNumber($product['quantityWarning']) }}
-                                </span>
-                            </div>
-                        </div>
-                    @empty
-                        <div class="py-8 text-center text-sm text-slate-500">{{ __('No low stock products found.') }}</div>
-                    @endforelse
-                </div>
-            </article>
+            </div>
         </section>
 
-        <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <article class="warehouse-panel">
-                <div class="warehouse-panel-header">
-                    <div>
-                        <h2 class="warehouse-panel-title">{{ __('Workflow queue') }}</h2>
-                        <p class="warehouse-panel-subtitle">{{ __('Pending work') }}</p>
+        @if ($statusFilter)
+            <section class="card border border-base-300 bg-base-100/90 shadow-sm">
+                <div class="card-body p-0">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-base-300 p-4">
+                        <div>
+                            <h2 class="card-title text-base">{{ __('Filtered: :label', ['label' => $statusOptions[$statusFilter] ?? $statusFilter]) }}</h2>
+                            <p class="text-xs text-base-content/55">{{ __('Items matching the current inventory status filter') }}</p>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>{{ __('Code') }}</th>
+                                    <th>{{ __('Product') }}</th>
+                                    <th>{{ __('Category') }}</th>
+                                    <th class="text-right">{{ __('Quantity') }}</th>
+                                    <th class="text-right">{{ __('Inventory Value') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($statusFilteredItems as $row)
+                                    <tr>
+                                        <td>{{ convertToFarsi($row['code']) }}</td>
+                                        <td>
+                                            @can('products.index')
+                                                <a class="link link-primary" href="{{ route('products.show', $row['id']) }}">{{ $row['name'] }}</a>
+                                            @else
+                                                {{ $row['name'] }}
+                                            @endcan
+                                        </td>
+                                        <td>{{ $row['group'] }}</td>
+                                        <td class="text-right font-medium">{{ formatNumber($row['quantity']) }}</td>
+                                        <td class="text-right">{{ formatNumber($row['inventory_value']) }} {{ __('Rial') }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="5" class="py-6 text-center text-base-content/55">{{ __('No items match the selected status.') }}</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <div class="space-y-4 p-4">
-                    <div>
-                        <div class="mb-1 flex items-center justify-between text-sm">
-                            <span>{{ __('Ready to approve invoices') }}</span>
-                            <span class="font-bold">{{ formatNumber($workflow['readyToApproveInvoices']) }}</span>
-                        </div>
-                        <progress class="progress progress-info w-full" value="{{ $workflow['readyToApproveInvoices'] }}" max="{{ max(1, $workflow['readyToApproveInvoices'] + $workflow['unapprovedInvoices'] + $workflow['unapprovedAncillaryCosts']) }}"></progress>
-                    </div>
-                    <div>
-                        <div class="mb-1 flex items-center justify-between text-sm">
-                            <span>{{ __('Unapproved invoices') }}</span>
-                            <span class="font-bold">{{ formatNumber($workflow['unapprovedInvoices']) }}</span>
-                        </div>
-                        <progress class="progress progress-warning w-full" value="{{ $workflow['unapprovedInvoices'] }}" max="{{ max(1, $workflow['readyToApproveInvoices'] + $workflow['unapprovedInvoices'] + $workflow['unapprovedAncillaryCosts']) }}"></progress>
-                    </div>
-                    <div>
-                        <div class="mb-1 flex items-center justify-between text-sm">
-                            <span>{{ __('Unapproved ancillary costs') }}</span>
-                            <span class="font-bold">{{ formatNumber($workflow['unapprovedAncillaryCosts']) }}</span>
-                        </div>
-                        <progress class="progress progress-error w-full" value="{{ $workflow['unapprovedAncillaryCosts'] }}" max="{{ max(1, $workflow['readyToApproveInvoices'] + $workflow['unapprovedInvoices'] + $workflow['unapprovedAncillaryCosts']) }}"></progress>
-                    </div>
-                </div>
-            </article>
-
-            @if ($canViewAccounting && $accounting)
-                <article class="warehouse-panel xl:col-span-2">
-                    <div class="warehouse-panel-header">
-                        <div>
-                            <h2 class="warehouse-panel-title">{{ __('Accounting KPIs') }}</h2>
-                            <p class="warehouse-panel-subtitle">{{ __('Visible to reports and documents users') }}</p>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
-                        <div class="warehouse-mini-stat">
-                            <span>{{ __('Inventory Value') }}</span>
-                            <strong>{{ formatNumber($accounting['inventoryValue']) }}</strong>
-                            <small>{{ config('amir.currency') ?? __('Rial') }}</small>
-                        </div>
-                        <div class="warehouse-mini-stat">
-                            <span>{{ __('Net Sales') }}</span>
-                            <strong>{{ formatNumber($accounting['netSales']) }}</strong>
-                            <small>{{ config('amir.currency') ?? __('Rial') }}</small>
-                        </div>
-                        <div class="warehouse-mini-stat">
-                            <span>{{ __('Product Gross Profit') }}</span>
-                            <strong>{{ formatNumber($accounting['productGrossProfit']) }}</strong>
-                            <small>{{ config('amir.currency') ?? __('Rial') }}</small>
-                        </div>
-                        <div class="warehouse-mini-stat">
-                            <span>{{ __('Gross Margin') }}</span>
-                            <strong>{{ formatNumber($accounting['grossMargin']) }}%</strong>
-                            <small>{{ __('Product') }}</small>
-                        </div>
-                        <div class="warehouse-mini-stat">
-                            <span>{{ __('Purchase Value') }}</span>
-                            <strong>{{ formatNumber($accounting['purchaseValue']) }}</strong>
-                            <small>{{ config('amir.currency') ?? __('Rial') }}</small>
-                        </div>
-                        <div class="warehouse-mini-stat">
-                            <span>{{ __('Approved Ancillary Costs') }}</span>
-                            <strong>{{ formatNumber($accounting['approvedAncillaryCosts']) }}</strong>
-                            <small>{{ config('amir.currency') ?? __('Rial') }}</small>
-                        </div>
-                    </div>
-                </article>
-            @endif
-        </section>
-
-        @if ($canViewAccounting && $accounting)
-            <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
-                <article class="warehouse-panel xl:col-span-2">
-                    <div class="warehouse-panel-header">
-                        <div>
-                            <h2 class="warehouse-panel-title">{{ __('Net Sales') }} / {{ __('Product Gross Profit') }}</h2>
-                            <p class="warehouse-panel-subtitle">{{ __('Accounting KPIs') }}</p>
-                        </div>
-                    </div>
-                    <div class="p-3">
-                        <x-charts.bar-chart chart-id="warehouseAccountingChart" heightClass="h-80" :show-legend="true" :datasets="[
-                            ['label' => __('Net Sales'), 'data' => $accounting['monthlyNetSales'], 'backgroundColor' => '#06b6d499', 'borderColor' => '#06b6d4', 'negativeColor' => '#fb718599'],
-                            ['label' => __('Product Gross Profit'), 'data' => $accounting['monthlyProductGrossProfit'], 'backgroundColor' => '#f59e0b99', 'borderColor' => '#f59e0b', 'negativeColor' => '#fb718599'],
-                        ]" />
-                    </div>
-                </article>
-
-                <article class="warehouse-panel">
-                    <div class="warehouse-panel-header">
-                        <div>
-                            <h2 class="warehouse-panel-title">{{ __('Inventory value by product') }}</h2>
-                            <p class="warehouse-panel-subtitle">{{ __('Weighted moving average cost') }}</p>
-                        </div>
-                    </div>
-                    <div class="space-y-3 p-4">
-                        @forelse ($accounting['topInventoryValueProducts'] as $product)
-                            <div>
-                                <div class="mb-1 flex items-center justify-between gap-3 text-sm">
-                                    <a href="{{ route('products.show', $product['id']) }}" class="warehouse-link">{{ $product['name'] }}</a>
-                                    <span class="font-semibold">{{ formatNumber($product['value']) }}</span>
-                                </div>
-                                <div class="h-2 rounded-full bg-slate-200 dark:bg-slate-800">
-                                    <div class="h-2 rounded-full bg-emerald-500" style="width: {{ min(100, max(4, ($product['value'] / max(1, $accounting['inventoryValue'])) * 100)) }}%"></div>
-                                </div>
-                                <div class="mt-1 text-xs text-slate-500">
-                                    {{ __('Quantity') }}: {{ formatNumber($product['quantity']) }} - {{ __('Average Cost') }}: {{ formatNumber($product['averageCost']) }}
-                                </div>
-                            </div>
-                        @empty
-                            <div class="py-8 text-center text-sm text-slate-500">{{ __('No inventory value yet.') }}</div>
-                        @endforelse
-                    </div>
-                </article>
             </section>
         @endif
     </main>
+
+    @push('scripts')
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const breakdown = @json($categoryBreakdown);
+                const movement = @json($monthlyMovement);
+                const categoryMovement = @json($monthlyMovementByCategory);
+                const palette = ['#38bdf8', '#34d399', '#fbbf24', '#fb7185', '#a78bfa', '#22d3ee', '#f97316', '#10b981'];
+                const numberFormatter = (value) => {
+                    const locale = document.documentElement.lang === 'fa' ? 'fa-IR' : 'en-US';
+                    return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
+                };
+
+                let charts = {};
+
+                const render = () => {
+                    if (!window.Chart) return;
+
+                    const theme = window.getFreeAmirChartTheme ? window.getFreeAmirChartTheme() : {
+                        textColor: '#475569',
+                        mutedTextColor: '#64748b',
+                        gridColor: 'rgba(148, 163, 184, 0.24)',
+                    };
+
+                    Object.values(charts).forEach((c) => c?.destroy());
+                    charts = {};
+
+                    const inventoryCanvas = document.getElementById('inventoryValueChart');
+                    if (inventoryCanvas && breakdown.length > 0) {
+                        charts.inventory = new Chart(inventoryCanvas, {
+                            type: 'doughnut',
+                            data: {
+                                labels: breakdown.map((b) => b.name),
+                                datasets: [{
+                                    data: breakdown.map((b) => b.inventory_value),
+                                    backgroundColor: breakdown.map((_, i) => palette[i % palette.length]),
+                                    borderColor: 'transparent',
+                                }],
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                cutout: '60%',
+                                plugins: {
+                                    legend: { position: 'bottom', labels: { color: theme.textColor, boxWidth: 10 } },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: (ctx) => `${ctx.label}: ${numberFormatter(ctx.parsed)}`,
+                                        },
+                                    },
+                                },
+                            },
+                        });
+                    }
+
+                    const turnoverCanvas = document.getElementById('turnoverChart');
+                    if (turnoverCanvas && breakdown.length > 0) {
+                        charts.turnover = new Chart(turnoverCanvas, {
+                            type: 'bar',
+                            data: {
+                                labels: breakdown.map((b) => b.name),
+                                datasets: [{
+                                    label: @json(__('Turnover Ratio')),
+                                    data: breakdown.map((b) => b.turnover_ratio),
+                                    backgroundColor: '#34d399',
+                                    borderRadius: 6,
+                                }],
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    x: { ticks: { color: theme.mutedTextColor }, grid: { display: false } },
+                                    y: { beginAtZero: true, ticks: { color: theme.mutedTextColor }, grid: { color: theme.gridColor } },
+                                },
+                            },
+                        });
+                    }
+
+                    const itemsCanvas = document.getElementById('itemsPerCategoryChart');
+                    if (itemsCanvas && breakdown.length > 0) {
+                        charts.itemsPer = new Chart(itemsCanvas, {
+                            type: 'bar',
+                            data: {
+                                labels: breakdown.map((b) => b.name),
+                                datasets: [{
+                                    label: @json(__('Items')),
+                                    data: breakdown.map((b) => b.item_count),
+                                    backgroundColor: '#38bdf8',
+                                    borderRadius: 6,
+                                }],
+                            },
+                            options: {
+                                indexAxis: 'y',
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    x: { beginAtZero: true, ticks: { color: theme.mutedTextColor }, grid: { color: theme.gridColor } },
+                                    y: { ticks: { color: theme.mutedTextColor }, grid: { display: false } },
+                                },
+                            },
+                        });
+                    }
+
+                    const trendCanvas = document.getElementById('movementTrendChart');
+                    if (trendCanvas && (movement.labels || []).length > 0) {
+                        charts.movement = new Chart(trendCanvas, {
+                            type: 'line',
+                            data: {
+                                labels: movement.labels,
+                                datasets: [
+                                    {
+                                        label: @json(__('Inbound')),
+                                        data: movement.in,
+                                        borderColor: '#34d399',
+                                        backgroundColor: 'rgba(52, 211, 153, 0.18)',
+                                        fill: true,
+                                        tension: 0.3,
+                                    },
+                                    {
+                                        label: @json(__('Outbound')),
+                                        data: movement.out,
+                                        borderColor: '#fb7185',
+                                        backgroundColor: 'rgba(251, 113, 133, 0.18)',
+                                        fill: true,
+                                        tension: 0.3,
+                                    },
+                                ],
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { position: 'top', align: 'end', labels: { color: theme.textColor } } },
+                                scales: {
+                                    x: { ticks: { color: theme.mutedTextColor }, grid: { display: false } },
+                                    y: { beginAtZero: true, ticks: { color: theme.mutedTextColor }, grid: { color: theme.gridColor } },
+                                },
+                            },
+                        });
+                    }
+
+                    const categoryTrendCanvas = document.getElementById('categoryTrendChart');
+                    if (categoryTrendCanvas && (categoryMovement.labels || []).length > 0 && (categoryMovement.datasets || []).length > 0) {
+                        const datasets = categoryMovement.datasets.flatMap((d, idx) => {
+                            const color = palette[idx % palette.length];
+                            return [
+                                {
+                                    label: `${d.name} - ${@json(__('Inbound'))}`,
+                                    data: d.in,
+                                    borderColor: color,
+                                    backgroundColor: 'transparent',
+                                    borderDash: [],
+                                    tension: 0.3,
+                                },
+                                {
+                                    label: `${d.name} - ${@json(__('Outbound'))}`,
+                                    data: d.out,
+                                    borderColor: color,
+                                    backgroundColor: 'transparent',
+                                    borderDash: [4, 4],
+                                    tension: 0.3,
+                                },
+                            ];
+                        });
+
+                        charts.categoryTrend = new Chart(categoryTrendCanvas, {
+                            type: 'line',
+                            data: { labels: categoryMovement.labels, datasets },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { position: 'bottom', labels: { color: theme.textColor, boxWidth: 10 } } },
+                                scales: {
+                                    x: { ticks: { color: theme.mutedTextColor }, grid: { display: false } },
+                                    y: { beginAtZero: true, ticks: { color: theme.mutedTextColor }, grid: { color: theme.gridColor } },
+                                },
+                            },
+                        });
+                    }
+                };
+
+                render();
+                window.addEventListener('theme:changed', render);
+            });
+        </script>
+    @endpush
 </x-app-layout>

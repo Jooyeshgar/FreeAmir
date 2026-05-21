@@ -12,18 +12,15 @@ class WarehouseDashboardController extends Controller
 
     public function index(Request $request): View
     {
-        $canViewAccounting = $request->user()->canAny([
-            'documents.index',
-            'documents.show',
-            'reports.documents',
-            'reports.journal',
-            'reports.ledger',
-            'reports.trial-balance',
+        $validated = $request->validate([
+            'period' => ['nullable', 'string', 'in:month,quarter,year'],
+            'category_ids' => ['nullable', 'array'],
+            'category_ids.*' => ['integer', 'exists:product_groups,id'],
+            'status' => ['nullable', 'string', 'in:below_reorder,stagnant,normal'],
         ]);
 
-        return view('warehouse.dashboard', [
-            ...$this->dashboardService->dashboard($canViewAccounting),
-            'canViewAccounting' => $canViewAccounting,
-        ]);
+        $data = $this->dashboardService->dashboard($validated);
+
+        return view('warehouse.dashboard', $data);
     }
 }
