@@ -1,12 +1,14 @@
 @php
-    $selectedCategoryIds = $filters['category_ids'] ?? [];
+    $selectedCategoryId = $filters['category_id'] ?? null;
     $period = $filters['period'] ?? 'year';
     $statusFilter = $filters['status'] ?? null;
     $categoryLinkParams = array_filter([
-        'group_name' => count($selectedCategoryIds) === 1
-            ? optional($productGroups->firstWhere('id', $selectedCategoryIds[0]))->name
+        'group_name' => $selectedCategoryId
+            ? optional($productGroups->firstWhere('id', $selectedCategoryId))->name
             : null,
     ]);
+
+    $flatLine = [1, 1];
 
     $summaryCards = [
         [
@@ -26,7 +28,7 @@
             'suffix' => __('Items'),
             'detail' => __('Total quantity: :qty', ['qty' => formatNumber($summary['total_stock_quantity'])]),
             'tone' => 'primary',
-            'series' => $monthlyMovement['in'] ?? [],
+            'series' => $flatLine,
         ],
         [
             'title' => __('Below Reorder Point'),
@@ -34,7 +36,7 @@
             'suffix' => __('Products'),
             'detail' => __('Needs replenishment'),
             'tone' => $summary['below_reorder_count'] > 0 ? 'warning' : 'success',
-            'series' => [$summary['total_item_count'], $summary['below_reorder_count']],
+            'series' => $flatLine,
         ],
         [
             'title' => __('Stagnant Items'),
@@ -42,7 +44,7 @@
             'suffix' => __('Products'),
             'detail' => __('No movement in :days days', ['days' => formatNumber($stagnant_days)]),
             'tone' => $summary['stagnant_count'] > 0 ? 'error' : 'success',
-            'series' => [$summary['total_item_count'], $summary['stagnant_count']],
+            'series' => $flatLine,
         ],
         [
             'title' => __('Inventory Turnover'),
@@ -86,10 +88,11 @@
                 </label>
 
                 <label class="form-control w-56">
-                    <span class="label-text mb-1 text-xs">{{ __('Product Categories') }}</span>
-                    <select name="category_ids[]" class="select select-sm select-bordered" multiple size="1">
+                    <span class="label-text mb-1 text-xs">{{ __('Product Category') }}</span>
+                    <select name="category_id" class="select select-sm select-bordered">
+                        <option value="">{{ __('All Categories') }}</option>
                         @foreach ($productGroups as $group)
-                            <option value="{{ $group->id }}" @selected(in_array($group->id, $selectedCategoryIds, true))>{{ $group->name }}</option>
+                            <option value="{{ $group->id }}" @selected((int) $selectedCategoryId === (int) $group->id)>{{ $group->name }}</option>
                         @endforeach
                     </select>
                 </label>

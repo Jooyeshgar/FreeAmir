@@ -48,9 +48,9 @@ class WarehouseDashboardService
             ->with('productGroup:id,name')
             ->get();
 
-        $itemsInPeriod = $this->invoiceItemsBetween($from, $to, $filters['category_ids']);
+        $itemsInPeriod = $this->invoiceItemsBetween($from, $to, $filters['category_id']);
         $movementMap = $this->aggregateMovement($itemsInPeriod);
-        $lastMovementByProduct = $this->lastMovementDates($filters['category_ids']);
+        $lastMovementByProduct = $this->lastMovementDates($filters['category_id']);
 
         $categoryBuckets = $this->bucketByCategory($products, $movementMap, $productGroups);
 
@@ -103,11 +103,9 @@ class WarehouseDashboardService
             ? $raw['period']
             : self::PERIOD_YEAR;
 
-        $categoryIds = collect($raw['category_ids'] ?? [])
-            ->map(fn ($id) => (int) $id)
-            ->filter(fn (int $id) => $id > 0)
-            ->values()
-            ->all();
+        $categoryId = isset($raw['category_id']) && (int) $raw['category_id'] > 0
+            ? (int) $raw['category_id']
+            : null;
 
         $status = in_array($raw['status'] ?? null, [self::STATUS_BELOW_REORDER, self::STATUS_STAGNANT, self::STATUS_NORMAL], true)
             ? $raw['status']
@@ -115,7 +113,7 @@ class WarehouseDashboardService
 
         return [
             'period' => $period,
-            'category_ids' => $categoryIds,
+            'category_id' => $categoryId,
             'status' => $status,
         ];
     }
@@ -135,11 +133,11 @@ class WarehouseDashboardService
     private function productsQuery(array $filters): Builder
     {
         return Product::query()
-            ->when(! empty($filters['category_ids']), fn (Builder $q) => $q->whereIn('group', $filters['category_ids']))
+            ->when($filters['category_id'], fn (Builder $q, int $id) => $q->where('group', $id))
             ->orderBy('code');
     }
 
-    private function invoiceItemsBetween(Carbon $from, Carbon $to, array $categoryIds): Collection
+    private function invoiceItemsBetween(Carbon $from, Carbon $to, ?int $categoryId): Collection
     {
         return InvoiceItem::query()
             ->where('itemable_type', Product::class)
@@ -148,8 +146,8 @@ class WarehouseDashboardService
                     ->whereIn('invoice_type', array_merge(self::STOCK_IN_TYPES, self::STOCK_OUT_TYPES))
                     ->whereBetween('date', [$from->toDateString(), $to->toDateString()]);
             })
-            ->when(! empty($categoryIds), function (Builder $q) use ($categoryIds) {
-                $q->whereHasMorph('itemable', Product::class, fn (Builder $p) => $p->whereIn('group', $categoryIds));
+            ->when($categoryId, function (Builder $q, int $id) {
+                $q->whereHasMorph('itemable', Product::class, fn (Builder $p) => $p->where('group', $id));
             })
             ->with([
                 'invoice:id,date,invoice_type,status,number',
@@ -192,7 +190,7 @@ class WarehouseDashboardService
         return $map;
     }
 
-    private function lastMovementDates(array $categoryIds): array
+    private function lastMovementDates(?int $categoryId): array
     {
         return InvoiceItem::query()
             ->selectRaw('invoice_items.itemable_id as product_id, MAX(invoices.date) as last_date')
@@ -201,9 +199,9 @@ class WarehouseDashboardService
             ->where('invoices.status', InvoiceStatus::APPROVED->value)
             ->whereIn('invoices.invoice_type', array_map(fn (InvoiceType $t) => $t->value, array_merge(self::STOCK_IN_TYPES, self::STOCK_OUT_TYPES)))
             ->where('invoices.company_id', getActiveCompany())
-            ->when(! empty($categoryIds), function ($q) use ($categoryIds) {
+            ->when($categoryId, function ($q, int $id) {
                 $q->join('products', 'products.id', '=', 'invoice_items.itemable_id')
-                    ->whereIn('products.group', $categoryIds);
+                    ->where('products.group', $id);
             })
             ->groupBy('invoice_items.itemable_id')
             ->pluck('last_date', 'product_id')
