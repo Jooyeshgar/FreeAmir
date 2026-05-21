@@ -1,8 +1,6 @@
 @php
     $currency = config('amir.currency') ?? __('Rial');
     $totalSales = $canSales ? collect($monthlySellAmount ?? [])->sum() : 0;
-    $totalWarehouse = $canInventory ? collect($monthlyWarehouse ?? [])->sum() : 0;
-    $topItem = $canPopularItems ? collect($popularProductsAndServices ?? [])->first() : null;
 
     $cards = [];
 
@@ -19,20 +17,20 @@
     if ($canInventory) {
         $cards[] = [
             'title' => __('Warehouse'),
-            'value' => $totalWarehouse,
+            'value' => $totalWarehouseValue ?? 0,
             'suffix' => $currency,
             'tone' => 'warning',
             'icon' => 'M3 7l9-4 9 4v10l-9 4-9-4V7zm9-4v18M3 7l9 4 9-4',
         ];
     }
 
-    if ($topItem) {
+    if ($canSales) {
         $cards[] = [
-            'title' => __('Most popular products and services'),
-            'value' => (int) ($topItem['quantity'] ?? 0),
-            'suffix' => $topItem['name'] ?? '-',
+            'title' => __('Buy') . ' (' . __('Year to date') . ')',
+            'value' => $totalBuyAmount ?? 0,
+            'suffix' => $currency,
             'tone' => 'secondary',
-            'icon' => 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+            'icon' => 'M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-1.6-8M7 13l-2 7m12-7l2 7M9 21h.01M19 21h.01',
         ];
     }
 @endphp

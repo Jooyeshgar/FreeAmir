@@ -108,10 +108,12 @@ class HomeController extends Controller
         if ($canSales) {
             $data['monthlySellAmount'] = $this->service->getMonthlyProductsStat();
             $data['sellAmountPerProducts'] = $this->service->getSellAmountPerProducts();
+            $data['totalBuyAmount'] = $this->service->totalBuyAmount();
         }
 
         if ($canInventory) {
             $data['monthlyWarehouse'] = $this->service->getMonthlyWarehouse();
+            $data['totalWarehouseValue'] = $this->service->totalWarehouseValue();
         }
 
         if ($canPopularItems) {

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\Employee;
+use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\MonthlyAttendance;
 use App\Models\Payroll;
@@ -364,6 +365,24 @@ class HomeService
                 'quantity' => (int) $item->total_quantity,
                 'type' => $item->itemable_type === Product::class ? 'products' : 'services',
             ]);
+    }
+
+    public function totalWarehouseValue(): float
+    {
+        $total = 0.0;
+        foreach (Product::pluck('inventory_subject_id') as $inventorySubjectId) {
+            $total += $this->subjectService->sumSubject(Subject::find($inventorySubjectId));
+        }
+
+        return $total;
+    }
+
+    public function totalBuyAmount(): float
+    {
+        return (float) Invoice::query()
+            ->where('invoice_type', InvoiceType::BUY)
+            ->where('status', InvoiceStatus::APPROVED)
+            ->sum('amount');
     }
 
     public function topTenBanksAccountBalances()
