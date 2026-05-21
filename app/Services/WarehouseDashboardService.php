@@ -4,394 +4,539 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\AncillaryCost;
-use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
-use App\Models\Service;
+use App\Models\ProductGroup;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class WarehouseDashboardService
 {
-    /**
-     * Build the read-only warehouse dashboard data.
-     *
-     * Accounting figures are intentionally optional so users with only product
-     * access never receive financial values in the rendered page payload.
-     */
-    public function dashboard(bool $includeAccounting = false): array
+    private const PERIOD_MONTH = 'month';
+
+    private const PERIOD_QUARTER = 'quarter';
+
+    private const PERIOD_YEAR = 'year';
+
+    private const STATUS_BELOW_REORDER = 'below_reorder';
+
+    private const STATUS_STAGNANT = 'stagnant';
+
+    private const STATUS_NORMAL = 'normal';
+
+    private const STAGNANT_DAYS = 60;
+
+    private const STOCK_IN_TYPES = [
+        InvoiceType::BUY,
+        InvoiceType::RETURN_SELL,
+        InvoiceType::VOID,
+    ];
+
+    private const STOCK_OUT_TYPES = [
+        InvoiceType::SELL,
+        InvoiceType::RETURN_BUY,
+    ];
+
+    public function dashboard(array $rawFilters = []): array
     {
-        $months = $this->months();
-        $products = Product::query()
+        $filters = $this->normalizeFilters($rawFilters);
+        [$from, $to] = $this->periodRange($filters['period']);
+
+        $productGroups = ProductGroup::orderBy('name')->get(['id', 'name']);
+        $products = $this->productsQuery($filters)
             ->with('productGroup:id,name')
-            ->orderBy('code')
-            ->get([
-                'id',
-                'code',
-                'name',
-                'group',
-                'quantity',
-                'quantity_warning',
-                'oversell',
-                'selling_price',
-                'average_cost',
-            ]);
+            ->get();
 
-        $approvedItems = $this->approvedInvoiceItems();
-        $productItems = $approvedItems->where('itemable_type', Product::class);
-        $serviceItems = $approvedItems->where('itemable_type', Service::class);
+        $itemsInPeriod = $this->invoiceItemsBetween($from, $to, $filters['category_ids']);
+        $movementMap = $this->aggregateMovement($itemsInPeriod);
+        $lastMovementByProduct = $this->lastMovementDates($filters['category_ids']);
 
-        $monthlyMovement = $this->monthlyStockMovement($productItems, $months);
-        $monthlySalesUnits = $this->monthlySalesUnits($approvedItems, $months);
+        $categoryBuckets = $this->bucketByCategory($products, $movementMap, $productGroups);
+
+        $totalInventoryValue = $products->sum(fn (Product $p) => (float) $p->quantity * (float) $p->average_cost);
+        $belowReorder = $products->filter(fn (Product $p) => $this->isBelowReorder($p));
+        $stagnantStandalone = $this->stagnantProducts($products, $lastMovementByProduct);
+
+        $statusFiltered = $this->applyStatusFilter($products, $belowReorder, $stagnantStandalone, $filters['status']);
+
+        $topSellers = $this->topSellers($itemsInPeriod, 10);
+        $monthlyMovement = $this->monthlyMovement($itemsInPeriod, $from, $to);
+        $monthlyMovementByCategory = $this->monthlyMovementByCategory($itemsInPeriod, $from, $to, $categoryBuckets);
+
+        $overallTurnover = $this->turnoverRatio(
+            $products->sum(fn (Product $p) => (float) $p->quantity * (float) $p->average_cost),
+            $categoryBuckets->sum('cogs_period')
+        );
 
         return [
-            'periodLabel' => config('active-company-fiscal-year') ?? toEnglish(jdate('Y')),
-            'inventory' => $this->inventorySummary($products),
-            'sales' => $this->salesSummary($productItems, $serviceItems),
-            'workflow' => $this->workflowSummary(),
+            'filters' => $filters,
+            'periodLabel' => $this->periodLabel($filters['period'], $from, $to),
+            'periodRange' => ['from' => $from->copy(), 'to' => $to->copy()],
+            'productGroups' => $productGroups,
+            'periodOptions' => $this->periodOptions(),
+            'statusOptions' => $this->statusOptions(),
+            'summary' => [
+                'total_inventory_value' => (float) $totalInventoryValue,
+                'total_item_count' => $products->count(),
+                'total_stock_quantity' => (float) $products->sum(fn (Product $p) => (float) $p->quantity),
+                'below_reorder_count' => $belowReorder->count(),
+                'stagnant_count' => $stagnantStandalone->count(),
+                'avg_turnover_ratio' => (float) $overallTurnover,
+                'avg_holding_days' => $this->holdingDays($overallTurnover, $from, $to),
+            ],
+            'categoryBreakdown' => $categoryBuckets->values(),
             'monthlyMovement' => $monthlyMovement,
-            'monthlySalesUnits' => $monthlySalesUnits,
-            'topSellingItems' => $this->topSellingItems($approvedItems),
-            'lowStockProducts' => $this->lowStockProducts($products),
-            'accounting' => $includeAccounting
-                ? $this->accountingSummary($products, $productItems, $serviceItems, $months)
-                : null,
+            'monthlyMovementByCategory' => $monthlyMovementByCategory,
+            'belowReorderItems' => $this->mapProductRows($belowReorder->sortBy(fn (Product $p) => (float) $p->quantity)->take(15)),
+            'stagnantItems' => $this->mapStagnantRows($stagnantStandalone->take(15), $lastMovementByProduct),
+            'topSellers' => $topSellers,
+            'statusFilteredItems' => $this->mapProductRows($statusFiltered->take(15)),
+            'alerts' => $this->alerts($belowReorder, $stagnantStandalone, $itemsInPeriod->isEmpty()),
+            'stagnant_days' => self::STAGNANT_DAYS,
         ];
     }
 
-    private function inventorySummary(Collection $products): array
+    private function normalizeFilters(array $raw): array
     {
-        return [
-            'productsCount' => $products->count(),
-            'servicesCount' => Service::count(),
-            'totalQuantity' => (float) $products->sum(fn (Product $product) => (float) $product->quantity),
-            'lowStockCount' => $this->lowStockCollection($products)->count(),
-            'negativeStockCount' => $products->filter(fn (Product $product) => (float) $product->quantity < 0)->count(),
-            'oversellEnabledCount' => $products->filter(fn (Product $product) => (bool) $product->oversell)->count(),
-        ];
-    }
+        $period = in_array($raw['period'] ?? null, [self::PERIOD_MONTH, self::PERIOD_QUARTER, self::PERIOD_YEAR], true)
+            ? $raw['period']
+            : self::PERIOD_YEAR;
 
-    private function salesSummary(Collection $productItems, Collection $serviceItems): array
-    {
-        $netProductUnits = $productItems->sum(fn (InvoiceItem $item) => $this->salesSign($item->invoice->invoice_type) * (float) $item->quantity);
-        $netServiceUnits = $serviceItems->sum(fn (InvoiceItem $item) => $this->salesSign($item->invoice->invoice_type) * (float) $item->quantity);
-        $returnedProductUnits = $productItems
-            ->filter(fn (InvoiceItem $item) => in_array($item->invoice->invoice_type, [InvoiceType::RETURN_SELL, InvoiceType::VOID], true))
-            ->sum(fn (InvoiceItem $item) => (float) $item->quantity);
+        $categoryIds = collect($raw['category_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id) => $id > 0)
+            ->values()
+            ->all();
+
+        $status = in_array($raw['status'] ?? null, [self::STATUS_BELOW_REORDER, self::STATUS_STAGNANT, self::STATUS_NORMAL], true)
+            ? $raw['status']
+            : null;
 
         return [
-            'approvedSellInvoices' => Invoice::where('status', InvoiceStatus::APPROVED)
-                ->where('invoice_type', InvoiceType::SELL)
-                ->count(),
-            'netProductUnits' => (float) $netProductUnits,
-            'netServiceUnits' => (float) $netServiceUnits,
-            'returnedProductUnits' => (float) $returnedProductUnits,
+            'period' => $period,
+            'category_ids' => $categoryIds,
+            'status' => $status,
         ];
     }
 
-    private function workflowSummary(): array
+    private function periodRange(string $period): array
     {
-        return [
-            'readyToApproveInvoices' => Invoice::where('status', InvoiceStatus::READY_TO_APPROVE)->count(),
-            'unapprovedInvoices' => Invoice::whereIn('status', [
-                InvoiceStatus::PENDING,
-                InvoiceStatus::PRE_INVOICE,
-                InvoiceStatus::UNAPPROVED,
-                InvoiceStatus::REJECTED,
-            ])->count(),
-            'unapprovedAncillaryCosts' => AncillaryCost::where('status', '!=', InvoiceStatus::APPROVED)->count(),
-        ];
+        $to = Carbon::now()->endOfDay();
+        $from = match ($period) {
+            self::PERIOD_MONTH => Carbon::now()->subDays(30)->startOfDay(),
+            self::PERIOD_QUARTER => Carbon::now()->subDays(90)->startOfDay(),
+            default => Carbon::now()->subDays(365)->startOfDay(),
+        };
+
+        return [$from, $to];
     }
 
-    private function accountingSummary(Collection $products, Collection $productItems, Collection $serviceItems, array $months): array
+    private function productsQuery(array $filters): Builder
     {
-        $productSales = $this->signedSalesAmount($productItems);
-        $serviceSales = $this->signedSalesAmount($serviceItems);
-        $productCogs = $this->signedProductCogs($productItems);
-        $productGrossProfit = $productSales - $productCogs;
-
-        return [
-            'inventoryValue' => $products->sum(fn (Product $product) => (float) $product->quantity * (float) $product->average_cost),
-            'netSales' => $productSales + $serviceSales,
-            'productSales' => $productSales,
-            'serviceSales' => $serviceSales,
-            'productGrossProfit' => $productGrossProfit,
-            'grossMargin' => $productSales != 0.0 ? ($productGrossProfit / $productSales) * 100 : 0,
-            'purchaseValue' => $this->signedPurchaseAmount($productItems),
-            'approvedAncillaryCosts' => (float) AncillaryCost::where('status', InvoiceStatus::APPROVED)->sum('amount'),
-            'monthlyNetSales' => $this->monthlyNetSales($productItems->concat($serviceItems), $months),
-            'monthlyProductGrossProfit' => $this->monthlyProductGrossProfit($productItems, $months),
-            'topInventoryValueProducts' => $this->topInventoryValueProducts($products),
-        ];
+        return Product::query()
+            ->when(! empty($filters['category_ids']), fn (Builder $q) => $q->whereIn('group', $filters['category_ids']))
+            ->orderBy('code');
     }
 
-    private function approvedInvoiceItems(): Collection
+    private function invoiceItemsBetween(Carbon $from, Carbon $to, array $categoryIds): Collection
     {
         return InvoiceItem::query()
-            ->whereHas('invoice', fn ($query) => $query
-                ->where('status', InvoiceStatus::APPROVED)
-                ->whereIn('invoice_type', [
-                    InvoiceType::BUY,
-                    InvoiceType::SELL,
-                    InvoiceType::RETURN_BUY,
-                    InvoiceType::RETURN_SELL,
-                    InvoiceType::VOID,
-                ]))
+            ->where('itemable_type', Product::class)
+            ->whereHas('invoice', function (Builder $q) use ($from, $to) {
+                $q->where('status', InvoiceStatus::APPROVED)
+                    ->whereIn('invoice_type', array_merge(self::STOCK_IN_TYPES, self::STOCK_OUT_TYPES))
+                    ->whereBetween('date', [$from->toDateString(), $to->toDateString()]);
+            })
+            ->when(! empty($categoryIds), function (Builder $q) use ($categoryIds) {
+                $q->whereHasMorph('itemable', Product::class, fn (Builder $p) => $p->whereIn('group', $categoryIds));
+            })
             ->with([
                 'invoice:id,date,invoice_type,status,number',
-                'itemable',
+                'itemable:id,code,name,group,quantity,quantity_warning,average_cost,selling_price',
+                'itemable.productGroup:id,name',
             ])
             ->get();
     }
 
-    private function monthlyStockMovement(Collection $productItems, array $months): array
+    private function aggregateMovement(Collection $items): array
     {
-        $incoming = array_fill_keys(array_values($months), 0.0);
-        $outgoing = array_fill_keys(array_values($months), 0.0);
-        $net = array_fill_keys(array_values($months), 0.0);
-
-        foreach ($productItems as $item) {
-            $month = $this->monthName($item);
-            if ($month === null) {
-                continue;
-            }
-
-            $quantity = (float) $item->quantity;
-            $stockSign = $this->stockSign($item->invoice->invoice_type);
-
-            if ($stockSign > 0) {
-                $incoming[$month] += $quantity;
-            } elseif ($stockSign < 0) {
-                $outgoing[$month] += $quantity;
-            }
-
-            $net[$month] += $stockSign * $quantity;
-        }
-
-        return [
-            'incoming' => $this->roundedSeries($incoming),
-            'outgoing' => $this->roundedSeries($outgoing),
-            'net' => $this->roundedSeries($net),
-        ];
-    }
-
-    private function monthlySalesUnits(Collection $items, array $months): array
-    {
-        $products = array_fill_keys(array_values($months), 0.0);
-        $services = array_fill_keys(array_values($months), 0.0);
+        $map = [];
 
         foreach ($items as $item) {
-            $salesSign = $this->salesSign($item->invoice->invoice_type);
-            if ($salesSign === 0) {
-                continue;
+            $productId = (int) $item->itemable_id;
+            $type = $item->invoice->invoice_type;
+            $qty = (float) $item->quantity;
+            $cogs = $qty * (float) ($item->cog_after ?? $item->itemable->average_cost ?? 0);
+            $rev = (float) $item->amount - (float) ($item->vat ?? 0);
+
+            if (! isset($map[$productId])) {
+                $map[$productId] = ['in' => 0.0, 'out' => 0.0, 'cogs' => 0.0, 'revenue' => 0.0];
             }
 
-            $month = $this->monthName($item);
-            if ($month === null) {
-                continue;
+            if (in_array($type, self::STOCK_IN_TYPES, true)) {
+                $map[$productId]['in'] += $qty;
+            } elseif (in_array($type, self::STOCK_OUT_TYPES, true)) {
+                $map[$productId]['out'] += $qty;
             }
 
-            $quantity = $salesSign * (float) $item->quantity;
-            if ($item->itemable_type === Product::class) {
-                $products[$month] += $quantity;
-            } elseif ($item->itemable_type === Service::class) {
-                $services[$month] += $quantity;
-            }
-        }
-
-        return [
-            'products' => $this->roundedSeries($products),
-            'services' => $this->roundedSeries($services),
-        ];
-    }
-
-    private function monthlyNetSales(Collection $items, array $months): array
-    {
-        $sales = array_fill_keys(array_values($months), 0.0);
-
-        foreach ($items as $item) {
-            $salesSign = $this->salesSign($item->invoice->invoice_type);
-            if ($salesSign === 0) {
-                continue;
-            }
-
-            $month = $this->monthName($item);
-            if ($month !== null) {
-                $sales[$month] += $salesSign * $this->netAmount($item);
+            if ($type === InvoiceType::SELL) {
+                $map[$productId]['cogs'] += $cogs;
+                $map[$productId]['revenue'] += $rev;
+            } elseif ($type === InvoiceType::RETURN_SELL) {
+                $map[$productId]['cogs'] -= $cogs;
+                $map[$productId]['revenue'] -= $rev;
             }
         }
 
-        return $this->roundedSeries($sales);
+        return $map;
     }
 
-    private function monthlyProductGrossProfit(Collection $productItems, array $months): array
+    private function lastMovementDates(array $categoryIds): array
     {
-        $profit = array_fill_keys(array_values($months), 0.0);
-
-        foreach ($productItems as $item) {
-            $salesSign = $this->salesSign($item->invoice->invoice_type);
-            if ($salesSign === 0) {
-                continue;
-            }
-
-            $month = $this->monthName($item);
-            if ($month !== null) {
-                $profit[$month] += $salesSign * ($this->netAmount($item) - $this->productCogs($item));
-            }
-        }
-
-        return $this->roundedSeries($profit);
+        return InvoiceItem::query()
+            ->selectRaw('invoice_items.itemable_id as product_id, MAX(invoices.date) as last_date')
+            ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
+            ->where('invoice_items.itemable_type', Product::class)
+            ->where('invoices.status', InvoiceStatus::APPROVED->value)
+            ->whereIn('invoices.invoice_type', array_map(fn (InvoiceType $t) => $t->value, array_merge(self::STOCK_IN_TYPES, self::STOCK_OUT_TYPES)))
+            ->where('invoices.company_id', getActiveCompany())
+            ->when(! empty($categoryIds), function ($q) use ($categoryIds) {
+                $q->join('products', 'products.id', '=', 'invoice_items.itemable_id')
+                    ->whereIn('products.group', $categoryIds);
+            })
+            ->groupBy('invoice_items.itemable_id')
+            ->pluck('last_date', 'product_id')
+            ->all();
     }
 
-    private function topSellingItems(Collection $items): Collection
+    private function bucketByCategory(Collection $products, array $movementMap, Collection $productGroups): Collection
     {
-        return $items
-            ->filter(fn (InvoiceItem $item) => $this->salesSign($item->invoice->invoice_type) !== 0)
-            ->groupBy(fn (InvoiceItem $item) => $item->itemable_type.'-'.$item->itemable_id)
-            ->map(function (Collection $group) {
-                $first = $group->first();
-                $quantity = $group->sum(fn (InvoiceItem $item) => $this->salesSign($item->invoice->invoice_type) * (float) $item->quantity);
-                $amount = $group->sum(fn (InvoiceItem $item) => $this->salesSign($item->invoice->invoice_type) * $this->netAmount($item));
+        $byGroupId = $products->groupBy(fn (Product $p) => (int) ($p->group ?? 0));
+        $groupNames = $productGroups->keyBy('id');
+
+        return $byGroupId
+            ->map(function (Collection $groupProducts, int $groupId) use ($movementMap, $groupNames) {
+                $value = (float) $groupProducts->sum(fn (Product $p) => (float) $p->quantity * (float) $p->average_cost);
+                $cogsPeriod = 0.0;
+                $unitsOut = 0.0;
+                $unitsIn = 0.0;
+
+                foreach ($groupProducts as $p) {
+                    $m = $movementMap[$p->id] ?? null;
+                    if ($m === null) {
+                        continue;
+                    }
+                    $cogsPeriod += $m['cogs'];
+                    $unitsOut += $m['out'];
+                    $unitsIn += $m['in'];
+                }
+
+                $turnover = $this->turnoverRatio($value, $cogsPeriod);
 
                 return [
-                    'id' => $first->itemable_id,
-                    'name' => $first->itemable?->name ?? __('Unknown'),
-                    'code' => $first->itemable?->code ?? '-',
-                    'type' => $first->itemable_type === Product::class ? __('Product') : __('Services'),
-                    'route' => $first->itemable_type === Product::class ? 'products.show' : 'services.show',
-                    'quantity' => (float) $quantity,
-                    'amount' => (float) $amount,
+                    'id' => $groupId,
+                    'name' => $groupId === 0 ? __('Uncategorized') : ($groupNames->get($groupId)?->name ?? __('Unknown')),
+                    'item_count' => $groupProducts->count(),
+                    'inventory_value' => $value,
+                    'units_in' => $unitsIn,
+                    'units_out' => $unitsOut,
+                    'cogs_period' => $cogsPeriod,
+                    'turnover_ratio' => $turnover,
                 ];
             })
-            ->filter(fn (array $item) => $item['quantity'] > 0)
-            ->sortByDesc('quantity')
-            ->take(8)
-            ->values();
+            ->sortByDesc('inventory_value');
     }
 
-    private function lowStockProducts(Collection $products): Collection
+    private function turnoverRatio(float $inventoryValue, float $cogsInPeriod): float
     {
-        return $this->lowStockCollection($products)
-            ->sortBy(fn (Product $product) => (float) $product->quantity)
-            ->take(8)
-            ->map(fn (Product $product) => [
-                'id' => $product->id,
-                'code' => $product->code,
-                'name' => $product->name,
-                'group' => $product->productGroup?->name ?? '-',
-                'quantity' => (float) $product->quantity,
-                'quantityWarning' => (float) $product->quantity_warning,
-            ])
-            ->values();
-    }
-
-    private function lowStockCollection(Collection $products): Collection
-    {
-        return $products->filter(fn (Product $product) => $product->quantity_warning !== null
-            && (float) $product->quantity_warning > 0
-            && (float) $product->quantity <= (float) $product->quantity_warning);
-    }
-
-    private function topInventoryValueProducts(Collection $products): Collection
-    {
-        return $products
-            ->map(fn (Product $product) => [
-                'id' => $product->id,
-                'code' => $product->code,
-                'name' => $product->name,
-                'quantity' => (float) $product->quantity,
-                'averageCost' => (float) $product->average_cost,
-                'value' => (float) $product->quantity * (float) $product->average_cost,
-            ])
-            ->filter(fn (array $product) => $product['value'] > 0)
-            ->sortByDesc('value')
-            ->take(6)
-            ->values();
-    }
-
-    private function signedSalesAmount(Collection $items): float
-    {
-        return (float) $items->sum(fn (InvoiceItem $item) => $this->salesSign($item->invoice->invoice_type) * $this->netAmount($item));
-    }
-
-    private function signedPurchaseAmount(Collection $productItems): float
-    {
-        return (float) $productItems->sum(fn (InvoiceItem $item) => $this->purchaseSign($item->invoice->invoice_type) * $this->netAmount($item));
-    }
-
-    private function signedProductCogs(Collection $productItems): float
-    {
-        return (float) $productItems->sum(fn (InvoiceItem $item) => $this->salesSign($item->invoice->invoice_type) * $this->productCogs($item));
-    }
-
-    private function netAmount(InvoiceItem $item): float
-    {
-        return (float) $item->amount - (float) ($item->vat ?? 0);
-    }
-
-    private function productCogs(InvoiceItem $item): float
-    {
-        return (float) ($item->cog_after ?? 0) * (float) $item->quantity;
-    }
-
-    private function monthName(InvoiceItem $item): ?string
-    {
-        $date = $item->invoice?->date;
-        if (! $date) {
-            return null;
+        if ($inventoryValue <= 0) {
+            return 0.0;
         }
 
-        $month = (int) toEnglish(jdate('m', $date->timestamp));
-
-        return $this->months()[$month] ?? null;
+        return round($cogsInPeriod / $inventoryValue, 2);
     }
 
-    private function stockSign(InvoiceType $invoiceType): int
+    private function holdingDays(float $turnover, Carbon $from, Carbon $to): float
     {
-        return match ($invoiceType) {
-            InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID => 1,
-            InvoiceType::SELL, InvoiceType::RETURN_BUY => -1,
+        if ($turnover <= 0) {
+            return 0.0;
+        }
+
+        $days = max(1, $from->diffInDays($to));
+
+        return round($days / $turnover, 1);
+    }
+
+    private function isBelowReorder(Product $product): bool
+    {
+        $warning = $product->quantity_warning;
+        if ($warning === null || (float) $warning <= 0) {
+            return false;
+        }
+
+        return (float) $product->quantity <= (float) $warning;
+    }
+
+    private function stagnantProducts(Collection $products, array $lastMovementByProduct): Collection
+    {
+        $threshold = Carbon::now()->subDays(self::STAGNANT_DAYS);
+
+        return $products->filter(function (Product $product) use ($lastMovementByProduct, $threshold) {
+            if ((float) $product->quantity <= 0) {
+                return false;
+            }
+
+            $lastRaw = $lastMovementByProduct[$product->id] ?? null;
+            if ($lastRaw === null) {
+                return true;
+            }
+
+            return Carbon::parse($lastRaw)->lt($threshold);
+        })->values();
+    }
+
+    private function applyStatusFilter(Collection $products, Collection $belowReorder, Collection $stagnant, ?string $status): Collection
+    {
+        return match ($status) {
+            self::STATUS_BELOW_REORDER => $belowReorder->values(),
+            self::STATUS_STAGNANT => $stagnant->values(),
+            self::STATUS_NORMAL => $products
+                ->reject(fn (Product $p) => $this->isBelowReorder($p) || $stagnant->contains('id', $p->id))
+                ->values(),
+            default => collect(),
         };
     }
 
-    private function salesSign(InvoiceType $invoiceType): int
+    private function monthlyMovement(Collection $items, Carbon $from, Carbon $to): array
     {
-        return match ($invoiceType) {
-            InvoiceType::SELL => 1,
-            InvoiceType::RETURN_SELL, InvoiceType::VOID => -1,
-            default => 0,
-        };
+        $buckets = $this->monthlyBuckets($from, $to);
+
+        foreach ($items as $item) {
+            $key = $this->monthKey($item->invoice->date);
+            if (! isset($buckets[$key])) {
+                continue;
+            }
+
+            $qty = (float) $item->quantity;
+            $type = $item->invoice->invoice_type;
+            if (in_array($type, self::STOCK_IN_TYPES, true)) {
+                $buckets[$key]['in'] += $qty;
+            } elseif (in_array($type, self::STOCK_OUT_TYPES, true)) {
+                $buckets[$key]['out'] += $qty;
+            }
+        }
+
+        return [
+            'labels' => array_keys($buckets),
+            'in' => array_map(fn ($b) => round($b['in'], 2), array_values($buckets)),
+            'out' => array_map(fn ($b) => round($b['out'], 2), array_values($buckets)),
+        ];
     }
 
-    private function purchaseSign(InvoiceType $invoiceType): int
+    private function monthlyMovementByCategory(Collection $items, Carbon $from, Carbon $to, Collection $categoryBuckets): array
     {
-        return match ($invoiceType) {
-            InvoiceType::BUY => 1,
-            InvoiceType::RETURN_BUY => -1,
-            default => 0,
-        };
+        $topCategories = $categoryBuckets->take(5)->pluck('id')->all();
+        if (empty($topCategories)) {
+            return ['labels' => array_keys($this->monthlyBuckets($from, $to)), 'datasets' => []];
+        }
+
+        $monthBuckets = $this->monthlyBuckets($from, $to);
+        $datasets = [];
+
+        foreach ($topCategories as $groupId) {
+            $datasets[$groupId] = [
+                'name' => $categoryBuckets->firstWhere('id', $groupId)['name'],
+                'in' => array_fill_keys(array_keys($monthBuckets), 0.0),
+                'out' => array_fill_keys(array_keys($monthBuckets), 0.0),
+            ];
+        }
+
+        foreach ($items as $item) {
+            $product = $item->itemable;
+            if (! $product) {
+                continue;
+            }
+            $groupId = (int) ($product->group ?? 0);
+            if (! isset($datasets[$groupId])) {
+                continue;
+            }
+
+            $monthKey = $this->monthKey($item->invoice->date);
+            if (! isset($monthBuckets[$monthKey])) {
+                continue;
+            }
+
+            $qty = (float) $item->quantity;
+            $type = $item->invoice->invoice_type;
+            if (in_array($type, self::STOCK_IN_TYPES, true)) {
+                $datasets[$groupId]['in'][$monthKey] += $qty;
+            } elseif (in_array($type, self::STOCK_OUT_TYPES, true)) {
+                $datasets[$groupId]['out'][$monthKey] += $qty;
+            }
+        }
+
+        return [
+            'labels' => array_keys($monthBuckets),
+            'datasets' => collect($datasets)->map(fn ($d) => [
+                'name' => $d['name'],
+                'in' => array_map(fn ($v) => round($v, 2), array_values($d['in'])),
+                'out' => array_map(fn ($v) => round($v, 2), array_values($d['out'])),
+            ])->values()->all(),
+        ];
     }
 
-    private function roundedSeries(array $series): array
+    private function monthlyBuckets(Carbon $from, Carbon $to): array
     {
-        return array_map(fn (float $value) => round($value, 2), $series);
+        $cursor = $from->copy()->startOfMonth();
+        $end = $to->copy()->startOfMonth();
+        $buckets = [];
+
+        while ($cursor->lte($end)) {
+            $key = $this->jalaliMonthKey($cursor);
+            $buckets[$key] = ['in' => 0.0, 'out' => 0.0];
+            $cursor->addMonthNoOverflow();
+        }
+
+        return $buckets;
     }
 
-    private function months(): array
+    private function monthKey($date): string
+    {
+        $carbon = $date instanceof Carbon ? $date : Carbon::parse($date);
+
+        return $this->jalaliMonthKey($carbon);
+    }
+
+    private function jalaliMonthKey(Carbon $date): string
+    {
+        return toEnglish(jdate('Y/m', $date->timestamp));
+    }
+
+    private function topSellers(Collection $items, int $limit): Collection
+    {
+        return $items
+            ->filter(fn (InvoiceItem $i) => in_array($i->invoice->invoice_type, [InvoiceType::SELL, InvoiceType::RETURN_SELL], true))
+            ->groupBy('itemable_id')
+            ->map(function (Collection $group) {
+                $first = $group->first();
+                $product = $first->itemable;
+                $units = $group->sum(function (InvoiceItem $i) {
+                    $sign = $i->invoice->invoice_type === InvoiceType::SELL ? 1 : -1;
+
+                    return $sign * (float) $i->quantity;
+                });
+                $revenue = $group->sum(function (InvoiceItem $i) {
+                    $sign = $i->invoice->invoice_type === InvoiceType::SELL ? 1 : -1;
+
+                    return $sign * ((float) $i->amount - (float) ($i->vat ?? 0));
+                });
+
+                return [
+                    'id' => (int) $first->itemable_id,
+                    'code' => $product?->code ?? '-',
+                    'name' => $product?->name ?? __('Unknown'),
+                    'group' => $product?->productGroup?->name ?? '-',
+                    'units' => (float) $units,
+                    'revenue' => (float) $revenue,
+                ];
+            })
+            ->filter(fn (array $row) => $row['units'] > 0)
+            ->sortByDesc('units')
+            ->take($limit)
+            ->values();
+    }
+
+    private function mapProductRows(Collection $products): Collection
+    {
+        return $products->map(fn (Product $p) => [
+            'id' => $p->id,
+            'code' => $p->code,
+            'name' => $p->name,
+            'group' => $p->productGroup?->name ?? '-',
+            'quantity' => (float) $p->quantity,
+            'quantity_warning' => (float) ($p->quantity_warning ?? 0),
+            'average_cost' => (float) $p->average_cost,
+            'inventory_value' => (float) $p->quantity * (float) $p->average_cost,
+        ])->values();
+    }
+
+    private function mapStagnantRows(Collection $products, array $lastMovementByProduct): Collection
+    {
+        return $products->map(function (Product $p) use ($lastMovementByProduct) {
+            $last = $lastMovementByProduct[$p->id] ?? null;
+            $lastCarbon = $last ? Carbon::parse($last) : null;
+
+            return [
+                'id' => $p->id,
+                'code' => $p->code,
+                'name' => $p->name,
+                'group' => $p->productGroup?->name ?? '-',
+                'quantity' => (float) $p->quantity,
+                'inventory_value' => (float) $p->quantity * (float) $p->average_cost,
+                'last_movement' => $lastCarbon,
+                'days_idle' => $lastCarbon ? $lastCarbon->diffInDays(Carbon::now()) : null,
+            ];
+        })->values();
+    }
+
+    private function alerts(Collection $belowReorder, Collection $stagnant, bool $noMovement): array
     {
         return [
-            1 => 'فروردین',
-            2 => 'اردیبهشت',
-            3 => 'خرداد',
-            4 => 'تیر',
-            5 => 'مرداد',
-            6 => 'شهریور',
-            7 => 'مهر',
-            8 => 'آبان',
-            9 => 'آذر',
-            10 => 'دی',
-            11 => 'بهمن',
-            12 => 'اسفند',
+            [
+                'title' => $belowReorder->isNotEmpty()
+                    ? __(':count item(s) are at or below their reorder point', ['count' => formatNumber($belowReorder->count())])
+                    : __('All stock levels are above their reorder points'),
+                'description' => $belowReorder->isNotEmpty()
+                    ? __('Review the below-reorder table and trigger purchase orders.')
+                    : __('Nothing needs replenishment right now.'),
+                'tone' => $belowReorder->isNotEmpty() ? 'warning' : 'success',
+            ],
+            [
+                'title' => $stagnant->isNotEmpty()
+                    ? __(':count item(s) have had no movement in the last :days days', ['count' => formatNumber($stagnant->count()), 'days' => formatNumber(self::STAGNANT_DAYS)])
+                    : __('No stagnant inventory detected'),
+                'description' => $stagnant->isNotEmpty()
+                    ? __('Consider discounts, bundles, or write-offs for these items.')
+                    : __('Items are turning regularly across the selected categories.'),
+                'tone' => $stagnant->isNotEmpty() ? 'info' : 'success',
+            ],
+            [
+                'title' => $noMovement
+                    ? __('No approved warehouse movement in the selected period')
+                    : __('Warehouse movement data is up to date'),
+                'description' => $noMovement
+                    ? __('Approve pending invoices or widen the time range to see trends.')
+                    : __('Charts reflect approved buy, sell, and return invoices.'),
+                'tone' => $noMovement ? 'placeholder' : 'success',
+            ],
         ];
+    }
+
+    private function periodOptions(): array
+    {
+        return [
+            self::PERIOD_MONTH => __('Last 30 days'),
+            self::PERIOD_QUARTER => __('Last quarter'),
+            self::PERIOD_YEAR => __('All time'),
+        ];
+    }
+
+    private function statusOptions(): array
+    {
+        return [
+            self::STATUS_BELOW_REORDER => __('Below reorder point'),
+            self::STATUS_STAGNANT => __('Stagnant'),
+            self::STATUS_NORMAL => __('Normal'),
+        ];
+    }
+
+    private function periodLabel(string $period, Carbon $from, Carbon $to): string
+    {
+        $label = $this->periodOptions()[$period] ?? $period;
+        $fromJ = toEnglish(jdate('Y/m/d', $from->timestamp));
+        $toJ = toEnglish(jdate('Y/m/d', $to->timestamp));
+
+        return $label.' ('.$fromJ.' - '.$toJ.')';
     }
 }
