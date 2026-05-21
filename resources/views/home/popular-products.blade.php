@@ -1,44 +1,53 @@
-    <div class="home-card w-1/2 max-[1200px]:w-full">
-        <div class="home-card-header">
+<article class="card border border-base-300 bg-base-100/90 shadow-sm">
+    <div class="card-body p-4">
+        <div class="flex flex-wrap items-start justify-between gap-2">
             <div>
-                <h2 class="home-card-title">{{ __('Most popular products and services') }}</h2>
+                <h2 class="card-title text-base">{{ __('Most popular products and services') }}</h2>
+                <p class="text-xs text-base-content/55">{{ __('Top items by sold quantity') }}</p>
             </div>
-            <div class="flex m-1 gap-2 overflow-hidden">
-                <a href="{{ route('products.index') }}" class="home-card-action">
-                    {{ __('Products') }}</a>
-                <a href="{{ route('services.index') }}" class="home-card-action">
-                    {{ __('Services') }}</a>
+            <div class="flex flex-wrap gap-2">
+                @can('products.index')
+                    <a href="{{ route('products.index') }}" class="btn btn-xs btn-ghost">{{ __('Products') }}</a>
+                @endcan
+                @can('services.index')
+                    <a href="{{ route('services.index') }}" class="btn btn-xs btn-ghost">{{ __('Services') }}</a>
+                @endcan
             </div>
         </div>
-        <div class="home-card-body mt-4 overflow-x-auto p-4">
-            <table class="home-table">
-                <tr>
-                    <th>{{ __('Code') }}</th>
-                    <th>{{ __('Product/Service name') }}</th>
-                    <th>{{ __('Selling Price') }}</th>
-                    <th>{{ __('Average Cost') }}</th>
-                    <th>{{ __('Quantity') }}</th>
-                </tr>
-                @foreach ($popularProductsAndServices as $popularProductAndService)
+
+        <div class="mt-3 overflow-x-auto">
+            <table class="table table-zebra table-sm">
+                <thead>
                     <tr>
-                        <td class="p-2">
-                            {{ $popularProductAndService['code'] }}
-                        </td>
-                        <td class="text-right">
-                            <a href="{{ route($popularProductAndService['type'] . '.show', $popularProductAndService['id']) }}" class="home-link">
-                                {{ $popularProductAndService['name'] }}</a>
-                        </td>
-                        <td>
-                            {{ convertToFarsi(number_format($popularProductAndService['selling_price'])) }}
-                        </td>
-                        <td>
-                            {{ convertToFarsi(number_format($popularProductAndService['average_cost'])) }}
-                        </td>
-                        <td>
-                            {{ convertToFarsi(number_format($popularProductAndService['quantity'])) }}
-                        </td>
+                        <th>{{ __('Code') }}</th>
+                        <th>{{ __('Product/Service name') }}</th>
+                        <th>{{ __('Selling Price') }}</th>
+                        <th>{{ __('Average Cost') }}</th>
+                        <th>{{ __('Quantity') }}</th>
                     </tr>
-                @endforeach
+                </thead>
+                <tbody>
+                    @forelse ($popularProductsAndServices as $item)
+                        <tr>
+                            <td>{{ $item['code'] }}</td>
+                            <td>
+                                <a href="{{ route($item['type'] . '.show', $item['id']) }}" class="link link-hover">
+                                    {{ $item['name'] }}
+                                </a>
+                            </td>
+                            <td>{{ convertToFarsi(number_format($item['selling_price'])) }}</td>
+                            <td>{{ convertToFarsi(number_format($item['average_cost'])) }}</td>
+                            <td>{{ convertToFarsi(number_format($item['quantity'])) }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="py-6 text-center text-sm text-base-content/55">
+                                {{ __('No sales recorded yet.') }}
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
             </table>
         </div>
     </div>
+</article>

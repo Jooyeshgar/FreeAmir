@@ -1,21 +1,19 @@
-@can('documents.show')
-    <div class="home-card w-1/3 max-[850px]:w-full">
-        <div class="home-card-header max-[850px]:flex-col max-[850px]:items-stretch max-[850px]:pt-4">
+<article class="card border border-base-300 bg-base-100/90 shadow-sm">
+    <div class="card-body p-4">
+        <div class="flex flex-wrap items-start justify-between gap-2">
             <div>
-                <h2 class="home-card-title">
-                    {{ __('Cash and banks balances') }}
-                </h2>
+                <h2 class="card-title text-base">{{ __('Cash and banks balances') }}</h2>
+                <p class="text-xs text-base-content/55">{{ __('Trend across the selected period') }}</p>
             </div>
 
-            <div class="flex m-2 justify-between overflow-hidden" x-data="cashTypesSelectHandler()" x-init="initializeCashBook()">
-                <select x-model="selectedCashType" x-on:change="handleCashBookChange" class="select ml-2 ">
+            <div class="flex gap-2" x-data="cashTypesSelectHandler()" x-init="initializeCashBook()">
+                <select x-model="selectedCashType" x-on:change="handleCashBookChange" class="select select-xs select-bordered">
                     @foreach ($cashTypes as $cashTypeName)
-                        <option {{ $loop->first ? 'selected' : '' }} value="{{ $cashTypeName }}">
-                            {{ __($cashTypeName) }}</option>
+                        <option value="{{ $cashTypeName }}" {{ $loop->first ? 'selected' : '' }}>{{ __($cashTypeName) }}</option>
                     @endforeach
                 </select>
 
-                <select x-model="selectedDuration" x-on:change="handleCashBookChange" class="select ">
+                <select x-model="selectedDuration" x-on:change="handleCashBookChange" class="select select-xs select-bordered">
                     <option value="1">{{ '۳ ' . __('Month') }}</option>
                     <option value="2">{{ '۶ ' . __('Month') }}</option>
                     <option value="3">{{ '۹ ' . __('Month') }}</option>
@@ -24,11 +22,11 @@
             </div>
         </div>
 
-        <div class="p-2">
+        <div class="mt-3">
             <x-charts.cash-balance-chart :labels="[]" :datas="[]" />
         </div>
     </div>
-@endcan
+</article>
 
 @pushOnce('footer')
     <script>
@@ -44,16 +42,13 @@
                 handleCashBookChange() {
                     try {
                         const route = "{{ route('home.cash-banks') }}";
-                        const response = fetch(`${route}?type=${this.selectedCashType}&duration=${this.selectedDuration}`)
+                        fetch(`${route}?type=${this.selectedCashType}&duration=${this.selectedDuration}`)
                             .then(res => res.json())
                             .then(data => {
-                                const labels = data.labels;
-                                const datas = data.datas;
-                                const sum = data.sum;
                                 this.updateData({
-                                    labels,
-                                    datas,
-                                    sum,
+                                    labels: data.labels,
+                                    datas: data.datas,
+                                    sum: data.sum,
                                 });
                             });
                     } catch (error) {
@@ -64,10 +59,8 @@
                     const formattedLabels = data.labels.map(label => {
                         if (label.match(/^\d{4}-\d{2}-\d{2}$/)) {
                             const [year, month, day] = label.split('-');
-
                             return convertToLocaleDigits(convertToJalali(year, month, day));
                         }
-
                         return label;
                     });
 
