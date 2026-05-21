@@ -4,16 +4,60 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Models\Employee;
 use App\Models\InvoiceItem;
+use App\Models\MonthlyAttendance;
+use App\Models\Payroll;
 use App\Models\Product;
 use App\Models\Service;
 use App\Models\Subject;
 use App\Models\Transaction;
+use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 
 class HomeService
 {
     public function __construct(private readonly SubjectService $subjectService) {}
+
+    /**
+     * Build the personal portal payload for an employee user.
+     *
+     * Returns null when the user is not linked to an employee record.
+     *
+     * @return array{employee: Employee, recentLogs: Collection, requestsCount: array<string,int>, lastMonthlyAttendance: ?MonthlyAttendance, lastPayroll: ?Payroll}|null
+     */
+    public function employeePersonalData(User $user): ?array
+    {
+        $employee = $user->employee;
+
+        if (! $employee) {
+            return null;
+        }
+
+        $recentLogs = $employee->attendanceLogs()
+            ->orderByDesc('log_date')
+            ->limit(5)
+            ->get();
+
+        $requestsCount = $employee->personnelRequests()
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->toArray();
+
+        $lastMonthlyAttendance = $employee->monthlyAttendances()
+            ->orderByDesc('year')
+            ->orderByDesc('month')
+            ->first();
+
+        $lastPayroll = $employee->payrolls()
+            ->orderByDesc('year')
+            ->orderByDesc('month')
+            ->first();
+
+        return compact('employee', 'recentLogs', 'requestsCount', 'lastMonthlyAttendance', 'lastPayroll');
+    }
 
     public function getSellAmountPerProducts()
     {
