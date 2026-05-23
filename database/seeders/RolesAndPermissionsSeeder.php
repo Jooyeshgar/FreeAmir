@@ -130,12 +130,15 @@ class RolesAndPermissionsSeeder extends Seeder
             'salary.payroll-elements' => self::CRUD_NO_SHOW,
             'salary.salary-decrees' => self::CRUD_NO_SHOW,
             'salary.payrolls' => [
-                'index', 'show', 'destroy',
+                'index', 'show', 'destroy', 'dashboard',
                 'transition.draft-to-pending-manager-approval',
                 'transition.pending-manager-approval-to-approved',
                 'transition.approved-to-paid',
             ],
             'salary.payroll-items' => ['edit', 'update'],
+
+            // Warehouse
+            'warehouse' => ['dashboard'],
 
             // Comments
             'comments' => self::CRUD_NO_SHOW,
@@ -202,6 +205,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 ->where(fn ($q) => $q
                     ->where('name', 'LIKE', 'products.%')
                     ->orWhere('name', 'LIKE', 'product-groups.%')
+                    ->orWhere('name', 'LIKE', 'warehouse.%')
                     ->orWhere('name', 'LIKE', 'home%'))
                 ->pluck('name')
                 ->toArray()

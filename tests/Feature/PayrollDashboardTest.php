@@ -42,9 +42,9 @@ class PayrollDashboardTest extends TestCase
         $this->withCookies(['active-company-id' => $this->companyId]);
     }
 
-    public function test_payroll_index_permission_can_view_dashboard(): void
+    public function test_payroll_dashboard_permission_can_view_dashboard(): void
     {
-        $this->grant('salary.payrolls.index');
+        $this->grant('salary.payrolls.dashboard');
         $this->makePayroll();
 
         $response = $this->get(route('salary.payrolls.dashboard', [
@@ -53,12 +53,12 @@ class PayrollDashboardTest extends TestCase
         ]));
 
         $response->assertOk();
-        $response->assertSee('داشبورد حقوق و دستمزد', false);
+        $response->assertSee('میز کار حقوق و دستمزد', false);
         $response->assertSee('Amir Payroll', false);
         $response->assertSee('درآمد کل ناخالص', false);
     }
 
-    public function test_dashboard_requires_payroll_index_permission(): void
+    public function test_dashboard_requires_payroll_dashboard_permission(): void
     {
         $this->makePayroll();
 

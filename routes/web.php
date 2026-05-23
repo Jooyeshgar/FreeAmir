@@ -25,10 +25,6 @@ Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee
     Route::delete('/personnel-requests/{personnel_request}', [Controllers\EmployeePortalController::class, 'destroyPersonnelRequest'])->name('personnel-requests.destroy');
 });
 
-Route::get('salary/payrolls/dashboard', [Controllers\PayrollController::class, 'dashboard'])
-    ->middleware(['auth', 'check-permission:salary.payrolls.index'])
-    ->name('salary.payrolls.dashboard');
-
 Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('api-tokens', [Controllers\ApiTokenController::class, 'index'])->name('api-tokens.index');
     Route::get('api-tokens/create', [Controllers\ApiTokenController::class, 'create'])->name('api-tokens.create');
@@ -142,6 +138,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     });
 
     Route::group(['prefix' => 'salary', 'as' => 'salary.'], function () {
+        Route::get('payrolls/dashboard', [Controllers\PayrollController::class, 'dashboard'])->name('payrolls.dashboard');
         Route::resource('tax-slabs', Controllers\TaxSlabController::class);
         Route::resource('work-sites', Controllers\WorkSiteController::class)->except(['show']);
         Route::resource('work-site-contracts', Controllers\WorkSiteContractController::class)->except(['show']);
@@ -157,6 +154,8 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('payroll-items/{payroll_item}/edit', [Controllers\PayrollController::class, 'editItem'])->name('payroll-items.edit');
         Route::put('payroll-items/{payroll_item}', [Controllers\PayrollController::class, 'updateItem'])->name('payroll-items.update');
     });
+    Route::get('warehouse/dashboard', [Controllers\WarehouseDashboardController::class, 'index'])->name('warehouse.dashboard');
+
     Route::group(['prefix' => 'reports', 'as' => 'reports.'], function () {
         Route::get('ledger', [Controllers\ReportsController::class, 'ledger'])->name('ledger');
         Route::get('journal', [Controllers\ReportsController::class, 'journal'])->name('journal');

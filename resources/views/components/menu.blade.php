@@ -117,11 +117,14 @@
     </li>
 @endcanany
 
-@canany(['products.index', 'product-groups.index', 'services.index', 'service-groups.index'])
+@canany(['warehouse.dashboard', 'products.index', 'product-groups.index', 'services.index', 'service-groups.index'])
     <li>
         <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('Warehouse') }}</summary>
             <ul class="{{ $topDropdownContentClass }}">
+                @can('warehouse.dashboard')
+                    <li><a href="{{ route('warehouse.dashboard') }}">{{ __('Warehouse Dashboard') }}</a></li>
+                @endcan
                 @can('products.index')
                     <li><a href="{{ route('products.index') }}">{{ __('Products') }}</a></li>
                 @endcan
@@ -139,13 +142,15 @@
     </li>
 @endcanany
 
-@canany(['hr.employees.index', 'hr.personnel-requests.index', 'attendance.attendance-logs.index', 'attendance.monthly-attendances.index', 'salary.payrolls.index'])
+@canany(['salary.payrolls.dashboard', 'salary.payrolls.index', 'hr.employees.index', 'hr.personnel-requests.index', 'attendance.attendance-logs.index', 'attendance.monthly-attendances.index'])
     <li>
         <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('HR') }}</summary>
             <ul class="{{ $topDropdownContentClass }}">
-                @can('salary.payrolls.index')
+                @can('salary.payrolls.dashboard')
                     <li><a href="{{ route('salary.payrolls.dashboard') }}">{{ __('Payroll Dashboard') }}</a></li>
+                @endcan
+                @can('salary.payrolls.index')
                     <li><a href="{{ route('salary.payrolls.index') }}">{{ __('Payrolls') }}</a></li>
                 @endcan
                 @can('hr.employees.index')
