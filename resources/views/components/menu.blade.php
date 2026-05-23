@@ -123,7 +123,7 @@
             <summary>{{ __('Warehouse') }}</summary>
             <ul class="{{ $topDropdownContentClass }}">
                 @can('products.index')
-                    <li><a href="{{ route('warehouse.dashboard') }}">{{ __('Dashboard') }}</a></li>
+                    <li><a href="{{ route('warehouse.dashboard') }}">{{ __('Warehouse Dashboard') }}</a></li>
                     <li><a href="{{ route('products.index') }}">{{ __('Products') }}</a></li>
                 @endcan
                 @can('product-groups.index')
