@@ -1,0 +1,178 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\PayrollElement;
+use Illuminate\Database\Seeder;
+
+class PayrollElementSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $elements = [
+            [
+                'title' => 'حق مسکن',
+                'system_code' => 'HOUSING_ALLOWANCE',
+                'category' => 'earning',
+                'calc_type' => 'fixed',
+                'formula' => null,
+                'default_amount' => 30_000_000,
+                'is_taxable' => false,
+                'is_insurable' => true,
+                'show_in_payslip' => true,
+                'is_system_locked' => true,
+            ],
+            [
+                'title' => 'حق خواروبار',
+                'system_code' => 'FOOD_ALLOWANCE',
+                'category' => 'earning',
+                'calc_type' => 'fixed',
+                'formula' => null,
+                'default_amount' => 30_000_000,
+                'is_taxable' => false,
+                'is_insurable' => true,
+                'show_in_payslip' => true,
+                'is_system_locked' => true,
+            ],
+            [
+                'title' => 'حق اولاد',
+                'system_code' => 'CHILD_ALLOWANCE',
+                'category' => 'earning',
+                'calc_type' => 'fixed',
+                'formula' => null,
+                'default_amount' => 20_000_000,
+                'is_taxable' => false,
+                'is_insurable' => false,
+                'show_in_payslip' => true,
+                'is_system_locked' => false,
+            ],
+            [
+                'title' => 'حق عائله‌مندی',
+                'system_code' => 'MARRIAGE_ALLOWANCE',
+                'category' => 'earning',
+                'calc_type' => 'fixed',
+                'formula' => null,
+                'default_amount' => 15_000_000,
+                'is_taxable' => false,
+                'is_insurable' => false,
+                'show_in_payslip' => true,
+                'is_system_locked' => false,
+            ],
+            [
+                'title' => 'اضافه کاری',
+                'system_code' => 'OVERTIME',
+                'category' => 'earning',
+                'calc_type' => 'formula',
+                'formula' => null,
+                'default_amount' => null,
+                'is_taxable' => true,
+                'is_insurable' => true,
+                'show_in_payslip' => true,
+                'is_system_locked' => true,
+            ],
+            [
+                'title' => 'اضافه کاری اتوماتیک',
+                'system_code' => 'AUTO_OVERTIME',
+                'category' => 'earning',
+                'calc_type' => 'formula',
+                'formula' => null,
+                'default_amount' => null,
+                'is_taxable' => true,
+                'is_insurable' => true,
+                'show_in_payslip' => true,
+                'is_system_locked' => true,
+            ],
+            [
+                'title' => 'جمعه کاری',
+                'system_code' => 'FRIDAY_PAY',
+                'category' => 'earning',
+                'calc_type' => 'formula',
+                'formula' => null,
+                'default_amount' => null,
+                'is_taxable' => true,
+                'is_insurable' => true,
+                'show_in_payslip' => true,
+                'is_system_locked' => true,
+            ],
+            [
+                'title' => 'تعطیل کاری',
+                'system_code' => 'HOLIDAY_PAY',
+                'category' => 'earning',
+                'calc_type' => 'formula',
+                'formula' => null,
+                'default_amount' => null,
+                'is_taxable' => true,
+                'is_insurable' => true,
+                'show_in_payslip' => true,
+                'is_system_locked' => true,
+            ],
+            [
+                'title' => 'ماموریت',
+                'system_code' => 'MISSION_PAY',
+                'category' => 'earning',
+                'calc_type' => 'formula',
+                'formula' => null,
+                'default_amount' => null,
+                'is_taxable' => true,
+                'is_insurable' => true,
+                'show_in_payslip' => true,
+                'is_system_locked' => true,
+            ],
+            [
+                'title' => 'بیمه سهم کارمند',
+                'system_code' => 'INSURANCE_EMP',
+                'category' => 'deduction',
+                'calc_type' => 'percentage',
+                'formula' => null,
+                'default_amount' => 7,
+                'is_taxable' => true,
+                'is_insurable' => false,
+                'show_in_payslip' => true,
+                'is_system_locked' => true,
+            ],
+            [
+                'title' => 'مالیات حقوق',
+                'system_code' => 'INCOME_TAX',
+                'category' => 'deduction',
+                'calc_type' => 'percentage',
+                'formula' => null,
+                'default_amount' => 10,
+                'is_taxable' => false,
+                'is_insurable' => false,
+                'show_in_payslip' => true,
+                'is_system_locked' => true,
+            ],
+            [
+                'title' => 'کسری غیبت',
+                'system_code' => 'ABSENCE_DEDUCTION',
+                'category' => 'deduction',
+                'calc_type' => 'formula',
+                'formula' => null,
+                'default_amount' => null,
+                'is_taxable' => false,
+                'is_insurable' => false,
+                'show_in_payslip' => true,
+                'is_system_locked' => true,
+            ],
+            [
+                'title' => 'کسری کار',
+                'system_code' => 'UNDERTIME',
+                'category' => 'deduction',
+                'calc_type' => 'formula',
+                'formula' => null,
+                'default_amount' => null,
+                'is_taxable' => false,
+                'is_insurable' => false,
+                'show_in_payslip' => true,
+                'is_system_locked' => true,
+            ],
+        ];
+
+        foreach ($elements as $data) {
+            PayrollElement::withoutGlobalScopes()->updateOrCreate(
+                ['company_id' => 1, 'system_code' => $data['system_code']],
+                array_merge($data, ['company_id' => 1])
+            );
+        }
+    }
+}

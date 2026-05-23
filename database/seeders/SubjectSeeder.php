@@ -9,9 +9,27 @@ class SubjectSeeder extends Seeder
 {
     /**
      * Run the database seeds.
+     *
+     * `is_permanent` distinguishes balance-sheet subjects (assets, liabilities,
+     * equity, memorandum/contingent) from income-statement subjects (revenue,
+     * expenses, COGS, sales returns/discounts). Non-permanent subjects are the
+     * ones that should reset each fiscal year and feed the profit calculation.
      */
     public function run(): void
     {
+        // Root subjects classified as non-permanent (income statement / temporary).
+        // Their children inherit the same flag.
+        $nonPermanentRoots = [
+            2,   // 040 هزینه ها
+            17,  // 062 خرید
+            18,  // 060 فروش
+            23,  // 050 درآمدها
+            25,  // 061 برگشت از فروش و تخفیفات
+            88,  // 041 قیمت تمام شده کالای فروش رفته
+            97,  // 066 تخفیفات نقدی
+            102, // 070 بهای تمام شده
+        ];
+
         $subjectData = [
             ['id' => 1, 'code' => '010', 'name' => 'بانکها', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 2, 'code' => '040', 'name' => 'هزینه ها', 'parent_id' => null, 'type' => 'debtor', 'company_id' => 1],
@@ -123,6 +141,19 @@ class SubjectSeeder extends Seeder
 
             ['id' => 37, 'code' => '068001', 'name' => 'جاری شرکا', 'parent_id' => 8, 'type' => 'creditor', 'company_id' => 1],
         ];
-        DB::table('subjects')->upsert($subjectData, ['id'], ['code', 'name', 'parent_id', 'type', 'company_id']);
+
+        // Mark every row with the inherited `is_permanent` based on its root ancestor.
+        $nonPermanentLookup = array_flip($nonPermanentRoots);
+        foreach ($subjectData as &$row) {
+            $rootId = $row['parent_id'] ?? $row['id'];
+            $row['is_permanent'] = ! isset($nonPermanentLookup[$rootId]);
+        }
+        unset($row);
+
+        DB::table('subjects')->upsert(
+            $subjectData,
+            ['id'],
+            ['code', 'name', 'parent_id', 'type', 'company_id', 'is_permanent']
+        );
     }
 }
