@@ -394,6 +394,51 @@ class HomeServiceChartTest extends TestCase
         }
     }
 
+    public function test_total_warehouse_value_sums_inventory_subject_balances(): void
+    {
+        $product = $this->makeProduct();
+        $inventorySubject = Subject::withoutGlobalScopes()->find($product->inventory_subject_id);
+
+        $doc = $this->makeDocument(jalali_to_gregorian(1405, 5, 10, '-'));
+        Transaction::create([
+            'value' => 1500,
+            'subject_id' => $inventorySubject->id,
+            'document_id' => $doc->id,
+            'user_id' => $this->user->id,
+            'desc' => 'inventory value',
+        ]);
+
+        $this->assertSame(1500.0, $this->service()->totalWarehouseValue());
+    }
+
+    public function test_total_warehouse_value_aggregates_across_multiple_products(): void
+    {
+        $productA = $this->makeProduct();
+        $productB = $this->makeProduct();
+
+        $subjectA = Subject::withoutGlobalScopes()->find($productA->inventory_subject_id);
+        $subjectB = Subject::withoutGlobalScopes()->find($productB->inventory_subject_id);
+
+        $doc = $this->makeDocument(jalali_to_gregorian(1405, 3, 1, '-'));
+        Transaction::create(['value' => 600, 'subject_id' => $subjectA->id, 'document_id' => $doc->id, 'user_id' => $this->user->id, 'desc' => 'a']);
+        Transaction::create(['value' => 400, 'subject_id' => $subjectB->id, 'document_id' => $doc->id, 'user_id' => $this->user->id, 'desc' => 'b']);
+
+        $this->assertSame(1000.0, $this->service()->totalWarehouseValue());
+    }
+
+    public function test_total_warehouse_value_is_zero_when_no_products_exist(): void
+    {
+        $this->assertSame(0.0, $this->service()->totalWarehouseValue());
+    }
+
+    public function test_total_warehouse_value_skips_products_without_inventory_subject(): void
+    {
+        $product = $this->makeProduct();
+        $product->update(['inventory_subject_id' => null]);
+
+        $this->assertSame(0.0, $this->service()->totalWarehouseValue());
+    }
+
     private function service(): HomeService
     {
         return new HomeService(new SubjectService);

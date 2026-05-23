@@ -231,7 +231,11 @@ class HomeService
     {
         $year = config('active-company-fiscal-year') ?? toEnglish(jdate('Y'));
         $startDate = jalali_to_gregorian($year, 1, 1, '-');
-        $endDate = jalali_to_gregorian($year, 12, 29, '-');
+        // Esfand (month 12) has 30 days in a Jalali leap year, 29 in a common year.
+        // Formula matches jdf.php jcheckdate() to avoid overflowing into the next fiscal year.
+        $y = (int) $year;
+        $lastDayOfYear = ($y % 33 % 4 - 1) === (int) ($y % 33 * 0.05) ? 30 : 29;
+        $endDate = jalali_to_gregorian($year, 12, $lastDayOfYear, '-');
 
         $invoiceItems = \DB::table('invoice_items')
             ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
@@ -370,8 +374,8 @@ class HomeService
     public function totalWarehouseValue(): float
     {
         $total = 0.0;
-        foreach (Product::pluck('inventory_subject_id') as $inventorySubjectId) {
-            $total += $this->subjectService->sumSubject(Subject::find($inventorySubjectId));
+        foreach (Product::whereNotNull('inventory_subject_id')->pluck('inventory_subject_id') as $inventorySubjectId) {
+            $total += $this->subjectService->sumSubject($inventorySubjectId);
         }
 
         return $total;
