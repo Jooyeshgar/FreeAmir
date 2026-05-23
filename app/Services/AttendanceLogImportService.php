@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Storage;
 
 class AttendanceLogImportService
 {
+    public function __construct(private readonly AttendanceService $attendanceService) {}
+
     /**
      * Parse and import the attendance file.
      * $file may be an UploadedFile (from a fresh upload) or a Storage-relative path string (from temp storage).
@@ -192,7 +194,7 @@ class AttendanceLogImportService
                         $skipped++;
                     }
                 } else {
-                    AttendanceLog::create([
+                    $log = AttendanceLog::create([
                         'company_id' => $companyId,
                         'employee_id' => $employeeId,
                         'log_date' => $logDate,
@@ -200,6 +202,8 @@ class AttendanceLogImportService
                         'exit_time' => $times['exit_time'],
                         'is_manual' => false,
                     ]);
+
+                    $this->attendanceService->recalculateLog($log);
 
                     $imported++;
                 }

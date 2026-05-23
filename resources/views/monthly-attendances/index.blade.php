@@ -55,8 +55,11 @@
                 </a>
             </form>
 
-            <div class="flex justify-end mb-2">
+            <div class="flex justify-end items-center gap-2">
                 @can('attendance.monthly-attendances.create')
+                    <a href="{{ route('attendance.monthly-attendances.bulk-create') }}" class="btn btn-secondary btn-sm">
+                        {{ __('Bulk Create') }}
+                    </a>
                     <a href="{{ route('attendance.monthly-attendances.create') }}" class="btn btn-primary btn-circle" title="{{ __('Create Monthly Attendance') }}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />

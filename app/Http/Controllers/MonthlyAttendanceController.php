@@ -72,6 +72,43 @@ class MonthlyAttendanceController extends Controller
             ->with('success', __('Monthly attendance calculated successfully.'));
     }
 
+    public function bulkCreate(): View
+    {
+        $employees = Employee::orderBy('first_name')->get();
+
+        return view('monthly-attendances.bulk-create', compact('employees'));
+    }
+
+    public function bulkStore(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'employee_ids' => ['required', 'array', 'min:1'],
+            'employee_ids.*' => ['required', 'integer', 'exists:employees,id'],
+            'start_date' => ['required', 'date'],
+            'duration' => ['required', 'integer', 'min:28', 'max:31'],
+        ]);
+
+        [$jalaliYear, $jalaliMonth] = array_map('intval', explode('/', $validated['start_date']));
+
+        $startDate = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($validated['start_date']));
+
+        foreach ($validated['employee_ids'] as $employeeId) {
+            $monthlyAttendance = $this->attendanceService->calculateAndStore(
+                (int) $employeeId,
+                $startDate->copy(),
+                (int) $validated['duration'],
+                $jalaliYear,
+                $jalaliMonth,
+            );
+
+            $totalPaidLeave = $monthlyAttendance->employee->workShift->paid_leave + $monthlyAttendance->employee->leave_remain;
+            $monthlyAttendance->employee->leave_remain = $totalPaidLeave - $monthlyAttendance->paid_leave;
+            $monthlyAttendance->employee->save();
+        }
+
+        return redirect()->route('attendance.monthly-attendances.index')->with('success', __('Monthly attendance calculated successfully for all selected employees.'));
+    }
+
     public function show(MonthlyAttendance $monthlyAttendance): View
     {
         $monthlyAttendance->load([

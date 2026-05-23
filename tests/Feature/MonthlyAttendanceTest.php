@@ -160,6 +160,119 @@ class MonthlyAttendanceTest extends TestCase
     }
 
     // ----------------------------------------------------------------
+    // bulk store
+    // ----------------------------------------------------------------
+
+    private function validBulkPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'employee_ids' => [$this->employee->id],
+            'start_date' => '2025/10/23',
+            'duration' => 30,
+        ], $overrides);
+    }
+
+    public function test_bulk_create_returns_200(): void
+    {
+        $response = $this->get(route('attendance.monthly-attendances.bulk-create'));
+
+        $response->assertStatus(200);
+    }
+
+    public function test_bulk_store_creates_attendance_for_each_selected_employee(): void
+    {
+        $workSite2 = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $workShift2 = WorkShift::factory()->create(['company_id' => $this->companyId]);
+        $employee2 = Employee::factory()->create([
+            'company_id' => $this->companyId,
+            'work_site_id' => $workSite2->id,
+            'work_shift_id' => $workShift2->id,
+        ]);
+
+        $response = $this->post(
+            route('attendance.monthly-attendances.bulk-store'),
+            $this->validBulkPayload(['employee_ids' => [$this->employee->id, $employee2->id]])
+        );
+
+        $response->assertRedirect(route('attendance.monthly-attendances.index'));
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('monthly_attendances', [
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+        ]);
+        $this->assertDatabaseHas('monthly_attendances', [
+            'company_id' => $this->companyId,
+            'employee_id' => $employee2->id,
+        ]);
+    }
+
+    public function test_bulk_store_only_creates_for_selected_employees(): void
+    {
+        $workSite2 = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $workShift2 = WorkShift::factory()->create(['company_id' => $this->companyId]);
+        $unselectedEmployee = Employee::factory()->create([
+            'company_id' => $this->companyId,
+            'work_site_id' => $workSite2->id,
+            'work_shift_id' => $workShift2->id,
+        ]);
+
+        $this->post(
+            route('attendance.monthly-attendances.bulk-store'),
+            $this->validBulkPayload(['employee_ids' => [$this->employee->id]])
+        );
+
+        $this->assertDatabaseHas('monthly_attendances', [
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+        ]);
+        $this->assertDatabaseMissing('monthly_attendances', [
+            'company_id' => $this->companyId,
+            'employee_id' => $unselectedEmployee->id,
+        ]);
+    }
+
+    public function test_bulk_store_validates_employee_ids_required(): void
+    {
+        $response = $this->post(
+            route('attendance.monthly-attendances.bulk-store'),
+            ['start_date' => '2025/10/23', 'duration' => 30]
+        );
+
+        $response->assertSessionHasErrors(['employee_ids']);
+    }
+
+    public function test_bulk_store_validates_start_date_required(): void
+    {
+        $response = $this->post(
+            route('attendance.monthly-attendances.bulk-store'),
+            ['employee_ids' => [$this->employee->id], 'duration' => 30]
+        );
+
+        $response->assertSessionHasErrors(['start_date']);
+    }
+
+    public function test_bulk_store_validates_duration_range(): void
+    {
+        $response = $this->post(
+            route('attendance.monthly-attendances.bulk-store'),
+            $this->validBulkPayload(['duration' => 10])
+        );
+
+        $response->assertSessionHasErrors(['duration']);
+    }
+
+    public function test_bulk_store_rejects_nonexistent_employee_id(): void
+    {
+        $response = $this->post(
+            route('attendance.monthly-attendances.bulk-store'),
+            $this->validBulkPayload(['employee_ids' => [99999]])
+        );
+
+        $response->assertSessionHasErrors(['employee_ids.0']);
+    }
+
+    // ----------------------------------------------------------------
     // create / store
     // ----------------------------------------------------------------
 

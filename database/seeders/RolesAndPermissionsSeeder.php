@@ -119,7 +119,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'recalculate', 'recalculate-all',
                 'import', 'import.preview', 'import.store',
             ],
-            'attendance.monthly-attendances' => [...self::CRUD, 'recalculate', 'payroll.store'],
+            'attendance.monthly-attendances' => [...self::CRUD, 'recalculate', 'payroll.store', 'bulk-create', 'bulk-store'],
             'attendance.work-shifts' => self::CRUD_NO_SHOW,
 
             // Salary / Payroll

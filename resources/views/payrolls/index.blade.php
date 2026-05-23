@@ -130,7 +130,7 @@
                                     <div class="text-xs text-base-content/70">{{ $payroll->employee?->code ?? '' }}</div>
                                 </td>
                                 <td>{{ formatDate($payroll->issue_date?->format('Y/m/d')) }}</td>
-                                <td>
+                                <td class="whitespace-nowrap">
                                     @if ($payroll->monthlyAttendance)
                                         <div class="text-sm">
                                             {{ __('Duration') }}:
@@ -157,7 +157,7 @@
                                 <td>{{ formatNumber($payroll->total_deductions) }}</td>
                                 <td>{{ formatNumber($payroll->employer_insurance) }}</td>
                                 <td>{{ formatNumber($payroll->net_payment) }}</td>
-                                <td>
+                                <td class="whitespace-nowrap">
                                     <span class="badge {{ $payroll->statusBadgeClass() }} badge-sm">{{ $payroll->statusLabel() }}</span>
                                 </td>
                                 <td>
