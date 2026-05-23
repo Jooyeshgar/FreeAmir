@@ -19,9 +19,12 @@ class DemoSeeder extends Seeder
             InvoiceSeeder::class,
             CommentSeeder::class,
             DocumentFileSeeder::class,
-            AttendanceLogDemoSeeder::class,
-            PayrollDemoSeeder::class,
-            PersonnelRequestDemoSeeder::class,
+            AttendanceLogSeeder::class,
+            PersonnelRequestSeeder::class,
+            PayrollElementSeeder::class,
+            SalaryDecreeSeeder::class,
+            MonthlyAttendanceSeeder::class,
+            PayrollSeeder::class,
             HomeSeeder::class,
         ]);
     }
