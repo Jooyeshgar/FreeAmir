@@ -3,7 +3,7 @@
         <div class="flex items-start justify-between gap-2">
             <div>
                 <h2 class="card-title text-base">{{ __('Warehouse') }}</h2>
-                <p class="text-xs text-base-content/55">{{ __('Monthly inventory value') }}</p>
+                <p class="text-xs text-base-content/55">{{ __('Monthly warehouse stock') }}</p>
             </div>
         </div>
 
