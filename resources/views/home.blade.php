@@ -1,41 +1,58 @@
 <x-app-layout :title="__('Dashboard')">
     <x-show-message-bags />
 
-    <main class="home-dashboard">
+    <main class="mt-6 space-y-4">
 
         @include('home.database-actions')
 
-        <div>
-            <h1 class="home-page-title">
-                {{ __('Dashboard') }}
-            </h1>
-        </div>
+        @include('home.header')
+        @include('home.quick-access')
 
-        <section class="flex gap-4 max-[850px]:flex-wrap mb-4">
-            @include('home.cash-and-banks')
+        @if ($hasBusinessPerms)
 
-            @can('documents.show')
-                @include('home.income')
-                @include('home.profit')
-            @elsecan('products.index')
-                @include('home.sell')
-                @include('home.sold-amount')
-                @include('home.quick-access')
-            @endcan
-        </section>
+            @if ($canFinancial)
+                @include('home.financial-metrics')
+            @endif
 
-        @can('documents.show')
-            <section class="relative z-[3] flex max-[1200px]:flex-wrap gap-4 mb-4">
-                @include('home.bank-account-list')
-                @include('home.bank-account-chart')
-            </section>
-        @endcan
-        @canany(['documents.show', 'products.index', 'services.index'])
-            <section class="relative z-[3] flex max-[1200px]:flex-wrap gap-4 mb-4">
-                @include('home.popular-products')
-                @include('home.warehouse')
-            </section>
-        @endcanany
+            @if ($canSales || $canInventory)
+                @include('home.sales-metrics')
+            @endif
+
+            @if ($canFinancial)
+                <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+                    @include('home.cash-and-banks')
+                    @include('home.income')
+                    @include('home.profit')
+                </section>
+
+                <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                    @include('home.bank-account-list')
+                    @include('home.bank-account-chart')
+                </section>
+            @endif
+
+            @if ($canPopularItems || $canInventory)
+                <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                    @if ($canInventory)
+                        @include('home.warehouse')
+                    @endif
+
+                    @if ($canPopularItems)
+                        @include('home.popular-products')
+                    @endif
+                </section>
+            @endif
+
+            @if ($canSales)
+                <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                    @include('home.sell')
+                    @include('home.sold-amount')
+                </section>
+            @endif
+        @endif
+
+        @if ($canSeePersonalPortal)
+            @include('home.personal-portal')
+        @endif
     </main>
-
 </x-app-layout>

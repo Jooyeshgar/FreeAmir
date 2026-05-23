@@ -4,16 +4,61 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Models\Employee;
+use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Models\MonthlyAttendance;
+use App\Models\Payroll;
 use App\Models\Product;
 use App\Models\Service;
 use App\Models\Subject;
 use App\Models\Transaction;
+use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 
 class HomeService
 {
     public function __construct(private readonly SubjectService $subjectService) {}
+
+    /**
+     * Build the personal portal payload for an employee user.
+     *
+     * Returns null when the user is not linked to an employee record.
+     *
+     * @return array{employee: Employee, recentLogs: Collection, requestsCount: array<string,int>, lastMonthlyAttendance: ?MonthlyAttendance, lastPayroll: ?Payroll}|null
+     */
+    public function employeePersonalData(User $user): ?array
+    {
+        $employee = $user->employee;
+
+        if (! $employee) {
+            return null;
+        }
+
+        $recentLogs = $employee->attendanceLogs()
+            ->orderByDesc('log_date')
+            ->limit(5)
+            ->get();
+
+        $requestsCount = $employee->personnelRequests()
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->toArray();
+
+        $lastMonthlyAttendance = $employee->monthlyAttendances()
+            ->orderByDesc('year')
+            ->orderByDesc('month')
+            ->first();
+
+        $lastPayroll = $employee->payrolls()
+            ->orderByDesc('year')
+            ->orderByDesc('month')
+            ->first();
+
+        return compact('employee', 'recentLogs', 'requestsCount', 'lastMonthlyAttendance', 'lastPayroll');
+    }
 
     public function getSellAmountPerProducts()
     {
@@ -186,7 +231,11 @@ class HomeService
     {
         $year = config('active-company-fiscal-year') ?? toEnglish(jdate('Y'));
         $startDate = jalali_to_gregorian($year, 1, 1, '-');
-        $endDate = jalali_to_gregorian($year, 12, 30, '-');
+        // Esfand (month 12) has 30 days in a Jalali leap year, 29 in a common year.
+        // Formula matches jdf.php jcheckdate() to avoid overflowing into the next fiscal year.
+        $y = (int) $year;
+        $lastDayOfYear = ($y % 33 % 4 - 1) === (int) ($y % 33 * 0.05) ? 30 : 29;
+        $endDate = jalali_to_gregorian($year, 12, $lastDayOfYear, '-');
 
         $invoiceItems = \DB::table('invoice_items')
             ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
@@ -295,7 +344,7 @@ class HomeService
         return response()->json([
             'labels' => array_keys($dailyBalances),
             'datas' => $values,
-            'sum' => end($dailyBalances) ? end($dailyBalances) : $initialBalance,
+            'sum' => $runningBalance,
             'start_date' => jdate('Y/m/d', $startDate->timestamp, tr_num: 'en'),
             'end_date' => jdate('Y/m/d', $endDate->timestamp, tr_num: 'en'),
         ]);
@@ -320,6 +369,24 @@ class HomeService
                 'quantity' => (int) $item->total_quantity,
                 'type' => $item->itemable_type === Product::class ? 'products' : 'services',
             ]);
+    }
+
+    public function totalWarehouseValue(): float
+    {
+        $total = 0.0;
+        foreach (Product::whereNotNull('inventory_subject_id')->pluck('inventory_subject_id') as $inventorySubjectId) {
+            $total += $this->subjectService->sumSubject($inventorySubjectId);
+        }
+
+        return $total;
+    }
+
+    public function totalBuyAmount(): float
+    {
+        return (float) Invoice::query()
+            ->where('invoice_type', InvoiceType::BUY)
+            ->where('status', InvoiceStatus::APPROVED)
+            ->sum('amount');
     }
 
     public function topTenBanksAccountBalances()

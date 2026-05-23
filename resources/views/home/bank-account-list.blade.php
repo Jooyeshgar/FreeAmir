@@ -1,42 +1,39 @@
-    <div class="home-card w-1/2 max-[1200px]:w-full">
-        <div class="home-card-header">
+<article class="card border border-base-300 bg-base-100/90 shadow-sm">
+    <div class="card-body p-4">
+        <div class="flex items-start justify-between gap-2">
             <div>
-                <h2 class="home-card-title">
-                    {{ __('Bank Account Balance') }}
-                </h2>
+                <h2 class="card-title text-base">{{ __('Bank Account Balance') }}</h2>
+                <p class="text-xs text-base-content/55">{{ __('Top accounts by balance') }}</p>
             </div>
 
-            <div class="flex m-1 overflow-hidden">
-                <a href="{{ route('documents.index') }}" class="home-card-action">
+            @can('documents.show')
+                <a href="{{ route('documents.index') }}" class="btn btn-xs btn-ghost">
                     {{ __('Documents') }}
                 </a>
-            </div>
+            @endcan
         </div>
 
-        <div class="home-card-body mt-4">
-            <div class="flex justify-between mx-4 border-b border-b-slate-200 pb-3 mb-4 text-xs font-semibold text-slate-500 dark:border-b-slate-700 dark:text-slate-400">
-                <p>
-                    {{ __('Bank Name') }}
-                </p>
-
-                <p>
-                    {{ __('Balance') }}
-                </p>
+        <div class="mt-3 space-y-2 text-sm">
+            <div class="flex items-center justify-between border-b border-base-300 pb-2 text-xs font-semibold text-base-content/55">
+                <span>{{ __('Bank Name') }}</span>
+                <span>{{ __('Balance') }}</span>
             </div>
 
-            <div class="text-[13px]">
-                @foreach ($topTenBankAccountBalances as $bankAccountId => $balance)
-                    <div class="flex justify-between mx-4 mb-4">
-                        <p>
-                            <a href="{{ route('transactions.index', ['subject_id' => $bankAccountId]) }}" class="home-link">
-                                {{ $bankAccounts->find($bankAccountId)->name }}
-                            </a>
-                        </p>
-                        <p>
-                            {{ convertToFarsi(number_format(-1 * $topTenBankAccountBalances[$bankAccountId] ?? 0)) }}
-                        </p>
-                    </div>
-                @endforeach
-            </div>
+            @forelse ($topTenBankAccountBalances as $bankAccountId => $balance)
+                <div class="flex items-center justify-between rounded-lg p-2 hover:bg-base-200/70 transition">
+                    <a href="{{ route('transactions.index', ['subject_id' => $bankAccountId]) }}"
+                        class="link link-hover font-medium">
+                        {{ $bankAccounts->find($bankAccountId)?->name ?? '-' }}
+                    </a>
+                    <span class="font-mono">
+                        {{ convertToFarsi(number_format(-1 * $balance)) }}
+                    </span>
+                </div>
+            @empty
+                <div class="rounded-lg border border-dashed border-base-300 bg-base-200/50 p-5 text-center text-sm text-base-content/60">
+                    {{ __('No bank accounts found.') }}
+                </div>
+            @endforelse
         </div>
     </div>
+</article>

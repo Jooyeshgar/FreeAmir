@@ -1,8 +1,14 @@
-    <div class="home-card w-1/2 max-[1200px]:w-full">
-        <div class="home-card-header">
-            <h2 class="home-card-title">{{ __('Warehouse') }}</h2>
+<article class="card border border-base-300 bg-base-100/90 shadow-sm">
+    <div class="card-body p-4">
+        <div class="flex items-start justify-between gap-2">
+            <div>
+                <h2 class="card-title text-base">{{ __('Warehouse') }}</h2>
+                <p class="text-xs text-base-content/55">{{ __('Monthly warehouse stock') }}</p>
+            </div>
         </div>
-        <div class="p-2">
+
+        <div class="mt-3">
             <x-charts.warehouse-chart :datas="$monthlyWarehouse" />
         </div>
     </div>
+</article>

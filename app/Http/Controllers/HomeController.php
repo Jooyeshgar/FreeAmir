@@ -9,6 +9,21 @@ use Illuminate\Support\Facades\Artisan;
 
 class HomeController extends Controller
 {
+    /**
+     * Permissions that mark a user as a "business" user. When any of these
+     * are present, the personal portal section is hidden so the dashboard
+     * stays focused on the user's higher-priority responsibilities.
+     */
+    private const BUSINESS_PERMISSIONS = [
+        'documents.show',
+        'products.index',
+        'services.index',
+        'invoices.index',
+        'customers.index',
+        'bank-accounts.index',
+        'reports.ledger',
+    ];
+
     public function __construct(private readonly HomeService $service) {}
 
     public function seedDemoData()
@@ -43,49 +58,80 @@ class HomeController extends Controller
 
     public function index()
     {
-        if (! (auth()->user()->can('documents.show') or auth()->user()->can('products.index'))) {
-            if (auth()->user()->can('employee-portal.dashboard')) {
-                return redirect()->route('employee-portal.dashboard');
-            }
+        $user = auth()->user();
+
+        // Use can() (not Spatie's hasAnyPermission) so AppServiceProvider's Gate::before
+        // hook for Super-Admin is honored.
+        $hasBusinessPerms = collect(self::BUSINESS_PERMISSIONS)->contains(fn ($perm) => $user->can($perm));
+        $canSeePersonalPortal = $user->can('employee-portal.dashboard') && ! $hasBusinessPerms;
+
+        $canFinancial = $user->can('documents.show');
+        $canSales = $user->can('invoices.index') || $user->can('products.index');
+        $canInventory = $user->can('products.index');
+        $canPopularItems = $user->can('products.index') || $user->can('services.index');
+
+        if (! $hasBusinessPerms && ! $canSeePersonalPortal) {
             abort(403);
         }
 
         $cashTypes = ['both', 'bank', 'cash_book'];
 
-        [$bankAccounts, $topTenBankAccountBalances] = $this->service->topTenBanksAccountBalances();
+        $data = [
+            'cashTypes' => $cashTypes,
+            'hasBusinessPerms' => $hasBusinessPerms,
+            'canSeePersonalPortal' => $canSeePersonalPortal,
+            'canFinancial' => $canFinancial,
+            'canSales' => $canSales,
+            'canInventory' => $canInventory,
+            'canPopularItems' => $canPopularItems,
+            'hasDocument' => Document::exists(),
+            'isDebugMode' => config('app.debug') && ! app()->isProduction(),
+        ];
 
-        $monthlyIncome = $this->service->getMonthlyIncome();
-        $monthlyCost = $this->service->getMonthlyCost();
+        if ($canFinancial) {
+            [$bankAccounts, $topTenBankAccountBalances] = $this->service->topTenBanksAccountBalances();
 
-        $monthlySellAmount = $this->service->getMonthlyProductsStat();
-        $monthlyWarehouse = $this->service->getMonthlyWarehouse();
+            ['incomeData' => $totalIncomesData, 'costData' => $totalCostsData, 'profit' => $profit] =
+                $this->service->profitFromNonPermanentSubjects();
 
-        $popularProductsAndServices = $this->service->popularProductsAndServices();
+            $data += [
+                'bankAccounts' => $bankAccounts,
+                'topTenBankAccountBalances' => $topTenBankAccountBalances,
+                'monthlyIncome' => $this->service->getMonthlyIncome(),
+                'monthlyCost' => $this->service->getMonthlyCost(),
+                'totalIncomesData' => $totalIncomesData,
+                'totalCostsData' => $totalCostsData,
+                'profit' => $profit,
+            ];
+        }
 
-        $sellAmountPerProducts = $this->service->getSellAmountPerProducts();
+        if ($canSales) {
+            $data['monthlySellAmount'] = $this->service->getMonthlyProductsStat();
+            $data['sellAmountPerProducts'] = $this->service->getSellAmountPerProducts();
+            $data['totalBuyAmount'] = $this->service->totalBuyAmount();
+        }
 
-        ['incomeData' => $totalIncomesData, 'costData' => $totalCostsData, 'profit' => $profit] =
-            $this->service->profitFromNonPermanentSubjects();
+        if ($canInventory) {
+            $data['monthlyWarehouse'] = $this->service->getMonthlyWarehouse();
+            $data['totalWarehouseValue'] = $this->service->totalWarehouseValue();
+        }
 
-        $hasDocument = Document::exists();
-        $isDebugMode = config('app.debug') && ! app()->isProduction();
+        if ($canPopularItems) {
+            $data['popularProductsAndServices'] = $this->service->popularProductsAndServices();
+        }
 
-        return view('home', compact(
-            'hasDocument',
-            'isDebugMode',
-            'cashTypes',
-            'bankAccounts',
-            'topTenBankAccountBalances',
-            'monthlyIncome',
-            'monthlyCost',
-            'monthlySellAmount',
-            'monthlyWarehouse',
-            'popularProductsAndServices',
-            'sellAmountPerProducts',
-            'totalIncomesData',
-            'totalCostsData',
-            'profit',
-        ));
+        if ($canSeePersonalPortal) {
+            $personal = $this->service->employeePersonalData($user);
+
+            if ($personal) {
+                $data += $personal;
+                $data['hasPersonalData'] = true;
+            } else {
+                $data['hasPersonalData'] = false;
+            }
+        }
+
+        return view('home', $data);
     }
 
     public function cashAndBanksBalances(Request $request)
