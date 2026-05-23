@@ -49,9 +49,9 @@ class WarehouseDashboardTest extends TestCase
         $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['company_id' => $this->companyId]);
     }
 
-    public function test_user_with_products_index_can_view_warehouse_dashboard(): void
+    public function test_user_with_warehouse_dashboard_can_view_warehouse_dashboard(): void
     {
-        $this->grant('products.index');
+        $this->grant('warehouse.dashboard');
 
         $response = $this->actingAs($this->user)->get(route('warehouse.dashboard'));
 
@@ -64,7 +64,7 @@ class WarehouseDashboardTest extends TestCase
         $response->assertViewHas('stagnantItems');
     }
 
-    public function test_user_without_products_index_cannot_view_warehouse_dashboard(): void
+    public function test_user_without_warehouse_dashboard_cannot_view_warehouse_dashboard(): void
     {
         $response = $this->actingAs($this->user)->get(route('warehouse.dashboard'));
 
