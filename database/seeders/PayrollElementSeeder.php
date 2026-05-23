@@ -23,7 +23,7 @@ class PayrollElementSeeder extends Seeder
                 'is_system_locked' => true,
             ],
             [
-                'title' => 'حق خوارو بار',
+                'title' => 'حق خواروبار',
                 'system_code' => 'FOOD_ALLOWANCE',
                 'category' => 'earning',
                 'calc_type' => 'fixed',
@@ -47,7 +47,7 @@ class PayrollElementSeeder extends Seeder
                 'is_system_locked' => false,
             ],
             [
-                'title' => 'حق عائله مندی',
+                'title' => 'حق عائله‌مندی',
                 'system_code' => 'MARRIAGE_ALLOWANCE',
                 'category' => 'earning',
                 'calc_type' => 'fixed',

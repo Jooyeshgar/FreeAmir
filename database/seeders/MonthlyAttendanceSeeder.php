@@ -51,7 +51,7 @@ class MonthlyAttendanceSeeder extends Seeder
                     fn (AttendanceLog $log) => $log->log_date instanceof Carbon ? $log->log_date->toDateString() : (string) $log->log_date
                 );
 
-                $workDays = $effectiveDays;
+                $workDays = 0;
                 $presentDays = 0;
                 $absentDays = 0;
                 $overtimeMin = 0;
@@ -67,6 +67,10 @@ class MonthlyAttendanceSeeder extends Seeder
                     $day = $startDate->copy()->addDays($i);
                     $dateStr = $day->toDateString();
                     $isFriday = $day->dayOfWeek === Carbon::FRIDAY;
+
+                    if (! $isFriday) {
+                        $workDays++;
+                    }
 
                     if (! isset($logsByDate[$dateStr])) {
                         if (! $isFriday) {

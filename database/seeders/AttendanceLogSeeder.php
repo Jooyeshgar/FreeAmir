@@ -44,6 +44,8 @@ class AttendanceLogSeeder extends Seeder
             $worked = 0;
             $entry = null;
             $exit = null;
+            $delay = 0;
+            $overtime = 0;
         }
 
         AttendanceLog::withoutGlobalScopes()->updateOrCreate(
