@@ -231,7 +231,7 @@ class HomeService
     {
         $year = config('active-company-fiscal-year') ?? toEnglish(jdate('Y'));
         $startDate = jalali_to_gregorian($year, 1, 1, '-');
-        $endDate = jalali_to_gregorian($year, 12, 30, '-');
+        $endDate = jalali_to_gregorian($year, 12, 29, '-');
 
         $invoiceItems = \DB::table('invoice_items')
             ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
@@ -340,7 +340,7 @@ class HomeService
         return response()->json([
             'labels' => array_keys($dailyBalances),
             'datas' => $values,
-            'sum' => end($dailyBalances) ? end($dailyBalances) : $initialBalance,
+            'sum' => $runningBalance,
             'start_date' => jdate('Y/m/d', $startDate->timestamp, tr_num: 'en'),
             'end_date' => jdate('Y/m/d', $endDate->timestamp, tr_num: 'en'),
         ]);
