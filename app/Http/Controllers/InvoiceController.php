@@ -18,6 +18,9 @@ use App\Services\GroupActionService;
 use App\Services\InvoiceService;
 use App\Services\MoadianService;
 use DB;
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use PDF;
 
@@ -32,7 +35,7 @@ class InvoiceController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory
+     * @return View|Factory
      */
     public function index(Request $request)
     {
@@ -119,7 +122,7 @@ class InvoiceController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory|\Illuminate\Http\RedirectResponse
+     * @return View|Factory|RedirectResponse
      */
     public function create(Request $request)
     {
@@ -222,7 +225,7 @@ class InvoiceController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function store(StoreInvoiceRequest $request)
     {
@@ -253,6 +256,7 @@ class InvoiceController extends Controller
 
         $isServiceBuy = $invoice->invoice_type === InvoiceType::BUY && $invoice->items->where('itemable_type', Product::class)->isEmpty();
         $isReturnServiceBuy = $invoice->invoice_type === InvoiceType::RETURN_BUY && $invoice->items->where('itemable_type', Product::class)->isEmpty();
+        $isMoadianSendable = in_array($invoice->invoice_type, [InvoiceType::SELL, InvoiceType::RETURN_SELL, InvoiceType::VOID]);
 
         $invoice->load([
             'customer',
@@ -268,7 +272,7 @@ class InvoiceController extends Controller
             'moadianHistories',
         ]);
 
-        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy'));
+        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable'));
     }
 
     public function print(Invoice $invoice)
@@ -287,7 +291,7 @@ class InvoiceController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory|\Illuminate\Http\RedirectResponse
+     * @return View|Factory|RedirectResponse
      */
     public function edit(Invoice $invoice)
     {
@@ -361,7 +365,7 @@ class InvoiceController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function update(StoreInvoiceRequest $request, Invoice $invoice)
     {

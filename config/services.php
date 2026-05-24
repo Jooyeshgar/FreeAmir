@@ -14,10 +14,6 @@ return [
     |
     */
 
-    'moadian' => [
-        'tax_id' => env('TAX_ID'),
-    ],
-
     'mailgun' => [
         'domain' => env('MAILGUN_DOMAIN'),
         'secret' => env('MAILGUN_SECRET'),

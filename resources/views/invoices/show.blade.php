@@ -27,7 +27,7 @@
                     {{ $invoice->status->label() }}
                 </span>
 
-                @if ($invoice->invoice_type->isMoadianSendable() && $invoice->status->isApproved())
+                @if ($isMoadianSendable && $invoice->status->isApproved())
                     <a class="badge badge-lg link" href="{{ route('invoices.moadian-histories.show', $invoice) }}">{{ __('Moadian Histories') }}</a>
                 @endif
 
@@ -601,7 +601,7 @@
                     @endphp
 
                     @can('invoices.send-moadian')
-                        @if ($invoice->invoice_type->isMoadianSendable())
+                        @if ($isMoadianSendable)
                             @if ($invoice->status->isApproved() && ! $hasMoadianSuccess)
                                 <a class="btn btn-success" href="{{ route('invoices.moadian-form', $invoice) }}">{{ __('Send Moadian') }}</a>
                             @elseif ($hasMoadianSuccess)

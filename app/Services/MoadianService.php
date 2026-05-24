@@ -33,7 +33,7 @@ class MoadianService
     public function sendInvoice(Invoice $invoice, ?string $transaction_reference_number, string $transaction_date): bool
     {
         $this->moadian_username = config('moadian.username');
-        $this->taxID = config('services.moadian.tax_id');
+        $this->taxID = env('TAX_ID');
 
         $this->transaction_reference_number = $transaction_reference_number;
         $this->transaction_date = $transaction_date;
@@ -66,7 +66,7 @@ class MoadianService
             $decision->addMessage('error', __('Cannot send an unapproved invoice to moadian.'));
         }
 
-        if (! $invoice->invoice_type->isMoadianSendable()) {
+        if (! in_array($invoice->invoice_type, [InvoiceType::SELL, InvoiceType::RETURN_SELL, InvoiceType::VOID])) {
             $decision->addMessage('error', __('Cannot send a buy or return buy invoice to moadian.'));
         }
 
