@@ -50,6 +50,14 @@ if [ ! -f .env ]; then
 
 fi
 
+# Sync runtime environment variables into .env so config:cache reflects them
+echo "🔄 Syncing environment variables into .env..."
+for var in APP_ENV APP_DEBUG APP_URL; do
+    if [ -n "${!var}" ]; then
+        sed -i "s|^${var}=.*|${var}=${!var}|" .env
+    fi
+done
+
 if ! grep -q "APP_KEY=base64:" .env; then
     echo "🔑 Generating application key..."
     php artisan key:generate --force
@@ -78,6 +86,12 @@ else
     echo "♻️ Existing installation detected - running migrations..."
     php artisan migrate --force
 fi
+
+# Clear stale caches from previous runs
+echo "🧹 Clearing old caches..."
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
 
 if [ "${APP_ENV:-production}" = "production" ]; then
     echo "⚡ Optimizing for production..."
