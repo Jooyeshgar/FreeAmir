@@ -7,6 +7,8 @@ Route::get('/login', [Controllers\Auth\LoginController::class, 'showLoginForm'])
 Route::post('/login', [Controllers\Auth\LoginController::class, 'login']);
 Route::get('/logout', [Controllers\Auth\LoginController::class, 'logout'])->name('logout');
 
+Route::get('/about', [Controllers\AboutController::class, 'index'])->name('about')->middleware('auth');
+
 Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee-portal', 'as' => 'employee-portal.'], function () {
     Route::get('/employee', [Controllers\EmployeePortalController::class, 'employeeShow'])->name('employee.show');
     Route::get('/change-employee-information', [Controllers\EmployeePortalController::class, 'changeEmployeeInformation'])->name('change-employee-information');

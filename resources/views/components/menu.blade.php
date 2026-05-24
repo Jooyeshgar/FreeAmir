@@ -284,7 +284,7 @@
                 </li>
             @endcanany
 
-            <li><a href="https://github.com/Jooyeshgar/FreeAmir/issues">{{ __('Support') }}</a></li>
+            <li><a href="{{ route('about') }}">{{ __('about.about') }}</a></li>
         </ul>
     </details>
 </li>
