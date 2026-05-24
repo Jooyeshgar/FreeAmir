@@ -16,13 +16,13 @@
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.2",
         "laravel/tinker": "^2.10",
-        "spatie/laravel-permission": "^6.4"
+        "spatie/laravel-permission": "^6.4",
+        "barryvdh/laravel-debugbar": "^3.13",
+        "fakerphp/faker": "^1.9.1",
+        "kasraghoreyshi/persian-faker": "^1.04"
     },
     "require-dev": {
-        "barryvdh/laravel-debugbar": "^3.13",
         "barryvdh/laravel-translation-manager": "*",
-        "fakerphp/faker": "^1.9.1",
-        "kasraghoreyshi/persian-faker": "^1.04",
         "laravel/envoy": "^2.9",
         "laravel/pint": "^1.0",
         "laravel/sail": "^1.44",
