@@ -133,6 +133,8 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::post('monthly-attendances/{monthly_attendance}/attendance-logs/recalculate', [Controllers\AttendanceLogController::class, 'recalculateAll'])->name('attendance-logs.recalculate-all');
         Route::post('monthly-attendances/{monthly_attendance}/recalculate', [Controllers\MonthlyAttendanceController::class, 'recalculate'])->name('monthly-attendances.recalculate');
         Route::post('monthly-attendances/{monthly_attendance}/payroll', [Controllers\PayrollController::class, 'store'])->name('monthly-attendances.payroll.store');
+        Route::get('monthly-attendances-bulk/create', [Controllers\MonthlyAttendanceController::class, 'bulkCreate'])->name('monthly-attendances.bulk-create');
+        Route::post('monthly-attendances-bulk', [Controllers\MonthlyAttendanceController::class, 'bulkStore'])->name('monthly-attendances.bulk-store');
         Route::resource('monthly-attendances', Controllers\MonthlyAttendanceController::class);
         Route::resource('work-shifts', Controllers\WorkShiftController::class)->except(['show']);
     });

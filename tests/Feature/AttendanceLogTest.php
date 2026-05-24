@@ -2,11 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AttendanceImportType;
 use App\Models\AttendanceLog;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\User;
+use App\Models\WorkShift;
 use App\Models\WorkSite;
+use App\Services\AttendanceLogImportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -37,6 +40,7 @@ class AttendanceLogTest extends TestCase
 
         $this->actingAs($this->user);
         $this->withCookies(['active-company-id' => $this->companyId]);
+        config(['active-company-id' => $this->companyId]);
 
         $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
 
@@ -280,5 +284,106 @@ class AttendanceLogTest extends TestCase
         $response = $this->get(route('attendance.attendance-logs.index'));
 
         $response->assertRedirect(route('login'));
+    }
+
+    // ----------------------------------------------------------------
+    // bulk import — recalculate per created row
+    // ----------------------------------------------------------------
+
+    private function makeTsvContent(string $deviceId, string $date, string $entryTime, string $exitTime): string
+    {
+        $checkIn = "{$date} {$entryTime}:00";
+        $checkOut = "{$date} {$exitTime}:00";
+
+        return implode("\n", [
+            implode("\t", [$deviceId, $checkIn, '0', '0', '0', '0']),
+            implode("\t", [$deviceId, $checkOut, '0', '1', '0', '0']),
+        ]);
+    }
+
+    public function test_import_recalculates_each_created_attendance_log(): void
+    {
+        $workShift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'break' => 60,
+            'float' => 0,
+            'max_auto_overtime' => 0,
+        ]);
+
+        $deviceId = 'DEVICE-001';
+        $this->employee->update([
+            'device_id' => $deviceId,
+            'work_shift_id' => $workShift->id,
+        ]);
+
+        $logDate = '2026-02-10'; // not a Friday
+        $tsv = $this->makeTsvContent($deviceId, $logDate, '08:00', '17:00');
+
+        $tmpPath = tempnam(sys_get_temp_dir(), 'tsv_');
+        file_put_contents($tmpPath, $tsv);
+        $uploadedFile = new \Illuminate\Http\UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
+
+        /** @var AttendanceLogImportService $service */
+        $service = app(AttendanceLogImportService::class);
+        $result = $service->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->companyId);
+
+        $this->assertEquals(1, $result['imported']);
+
+        $log = AttendanceLog::where('employee_id', $this->employee->id)
+            ->where('log_date', $logDate)
+            ->first();
+
+        $this->assertNotNull($log);
+        // worked = raw clock-on time: 17:00 - 08:00 = 540 minutes (break not deducted by the service)
+        $this->assertEquals(540, $log->worked);
+        $this->assertEquals(0, $log->delay);
+        $this->assertEquals(0, $log->early_leave);
+    }
+
+    public function test_import_skips_recalculate_for_duplicate_ignored_rows(): void
+    {
+        $workShift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'break' => 60,
+            'float' => 0,
+            'max_auto_overtime' => 0,
+        ]);
+
+        $deviceId = 'DEVICE-002';
+        $this->employee->update([
+            'device_id' => $deviceId,
+            'work_shift_id' => $workShift->id,
+        ]);
+
+        $logDate = '2026-02-11';
+        AttendanceLog::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'log_date' => $logDate,
+            'worked' => 999,
+        ]);
+
+        $tsv = $this->makeTsvContent($deviceId, $logDate, '08:00', '17:00');
+
+        $tmpPath = tempnam(sys_get_temp_dir(), 'tsv_');
+        file_put_contents($tmpPath, $tsv);
+        $uploadedFile = new \Illuminate\Http\UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
+
+        /** @var AttendanceLogImportService $service */
+        $service = app(AttendanceLogImportService::class);
+        $result = $service->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->companyId, null, null, 'ignore');
+
+        $this->assertEquals(0, $result['imported']);
+
+        // existing row should be untouched
+        $this->assertDatabaseHas('attendance_logs', [
+            'employee_id' => $this->employee->id,
+            'log_date' => $logDate,
+            'worked' => 999,
+        ]);
     }
 }
