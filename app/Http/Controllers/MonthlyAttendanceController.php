@@ -84,7 +84,7 @@ class MonthlyAttendanceController extends Controller
     {
         $validated = $request->validate([
             'employee_ids' => ['required', 'array', 'min:1'],
-            'employee_ids.*' => ['required', 'integer', 'exists:employees,id'],
+            'employee_ids.*' => ['required', 'integer', 'exists:employees,id', 'distinct'],
             'start_date' => ['required', 'regex:/^\d{4}\/\d{1,2}\/\d{1,2}$/'],
             'duration' => ['required', 'integer', 'min:28', 'max:31'],
         ]);
