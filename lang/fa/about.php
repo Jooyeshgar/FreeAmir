@@ -2,7 +2,7 @@
 
 return [
     'about' => 'درباره',
-    'about_freeamir' => 'درباره نرم افزار حسابداری آزاد امیر',
+    'about_freeamir' => 'درباره نرم‌افزار حسابداری آزاد امیر',
     'version' => 'نسخه',
     'system_information' => 'اطلاعات سیستم',
     'environment' => 'محیط اجرا',
