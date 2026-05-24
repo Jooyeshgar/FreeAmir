@@ -11,6 +11,7 @@ use App\Services\AttendanceService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class MonthlyAttendanceController extends Controller
@@ -52,7 +53,7 @@ class MonthlyAttendanceController extends Controller
     {
         $validated = $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
-            'start_date' => ['required', 'date'],
+            'start_date' => ['required', 'regex:/^\d{4}\/\d{1,2}\/\d{1,2}$/'],
             'duration' => ['required', 'integer', 'min:28', 'max:31'],
         ]);
 
@@ -84,7 +85,7 @@ class MonthlyAttendanceController extends Controller
         $validated = $request->validate([
             'employee_ids' => ['required', 'array', 'min:1'],
             'employee_ids.*' => ['required', 'integer', 'exists:employees,id'],
-            'start_date' => ['required', 'date'],
+            'start_date' => ['required', 'regex:/^\d{4}\/\d{1,2}\/\d{1,2}$/'],
             'duration' => ['required', 'integer', 'min:28', 'max:31'],
         ]);
 
@@ -92,19 +93,21 @@ class MonthlyAttendanceController extends Controller
 
         $startDate = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($validated['start_date']));
 
-        foreach ($validated['employee_ids'] as $employeeId) {
-            $monthlyAttendance = $this->attendanceService->calculateAndStore(
-                (int) $employeeId,
-                $startDate->copy(),
-                (int) $validated['duration'],
-                $jalaliYear,
-                $jalaliMonth,
-            );
+        DB::transaction(function () use ($validated, $startDate, $jalaliYear, $jalaliMonth) {
+            foreach ($validated['employee_ids'] as $employeeId) {
+                $monthlyAttendance = $this->attendanceService->calculateAndStore(
+                    (int) $employeeId,
+                    $startDate->copy(),
+                    (int) $validated['duration'],
+                    $jalaliYear,
+                    $jalaliMonth,
+                );
 
-            $totalPaidLeave = $monthlyAttendance->employee->workShift->paid_leave + $monthlyAttendance->employee->leave_remain;
-            $monthlyAttendance->employee->leave_remain = $totalPaidLeave - $monthlyAttendance->paid_leave;
-            $monthlyAttendance->employee->save();
-        }
+                $totalPaidLeave = $monthlyAttendance->employee->workShift->paid_leave + $monthlyAttendance->employee->leave_remain;
+                $monthlyAttendance->employee->leave_remain = $totalPaidLeave - $monthlyAttendance->paid_leave;
+                $monthlyAttendance->employee->save();
+            }
+        });
 
         return redirect()->route('attendance.monthly-attendances.index')->with('success', __('Monthly attendance calculated successfully for all selected employees.'));
     }
