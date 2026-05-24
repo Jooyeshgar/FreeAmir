@@ -56,7 +56,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'documents' => [
                 ...self::CRUD,
                 'print', 'duplicate', 'change-status', 'approve-all',
-                'search-account-balance',
+                'search-account-balance', 'export', 'export.download', 'import', 'import.store',
                 'sort-numbers', 'sort-numbers.start', 'sort-numbers.process',
             ],
             'documents.files' => ['create', 'store', 'edit', 'update', 'destroy', 'view', 'download'],

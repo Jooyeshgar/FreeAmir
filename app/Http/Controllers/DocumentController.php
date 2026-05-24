@@ -6,16 +6,23 @@ use App\Http\Requests\StoreTransactionRequest;
 use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
+use App\Services\DocumentImportExportService;
 use App\Services\DocumentNumberService;
 use App\Services\DocumentService;
 use App\Services\SubjectService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DocumentController extends Controller
 {
-    public function __construct(private readonly DocumentNumberService $documentNumberService) {}
+    public function __construct(
+        private readonly DocumentNumberService $documentNumberService,
+        private readonly DocumentImportExportService $documentImportExportService
+    ) {}
 
     public function index()
     {
@@ -242,7 +249,7 @@ class DocumentController extends Controller
      * Update the specified document and its transactions.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function update(StoreTransactionRequest $request, $id)
     {
@@ -266,7 +273,7 @@ class DocumentController extends Controller
      * Duplicate the specified document with all its transactions.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function duplicate($id)
     {
@@ -301,6 +308,45 @@ class DocumentController extends Controller
             ->with('success', __('Document duplicated successfully.'));
     }
 
+    public function exportForm()
+    {
+        return view('documents.export');
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $data = $this->documentImportExportService->validateExportRequest($request);
+
+        return $this->documentImportExportService->export($data);
+    }
+
+    public function importForm()
+    {
+        return view('documents.import');
+    }
+
+    public function import(Request $request): RedirectResponse
+    {
+        $this->documentImportExportService->validateImportRequest($request);
+
+        $file = $request->file('file');
+        $user = $request->user();
+
+        $result = $this->documentImportExportService->importCsv($file, $user);
+
+        $message = __(':docs documents and :subjects subjects imported successfully.', [
+            'docs' => $result['documents_created'] ?? 0,
+            'subjects' => $result['subjects_created'] ?? 0,
+        ]);
+
+        if (! empty($result['errors'])) {
+            $errorList = implode(' | ', array_slice($result['errors'], 0, 5));
+            $message .= ' '.__('Errors').': '.$errorList;
+        }
+
+        return redirect()->route('documents.index')->with('success', $message);
+    }
+
     public function fields($customers): array
     {
         return [
@@ -327,7 +373,7 @@ class DocumentController extends Controller
      * Prepares a collection of transaction data for further display.
      *
      * @param  iterable  $transactions
-     * @return \Illuminate\Support\Collection
+     * @return Collection
      */
     private static function prepareTransactions($transactions)
     {
