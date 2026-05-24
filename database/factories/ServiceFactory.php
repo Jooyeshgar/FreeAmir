@@ -30,7 +30,7 @@ class ServiceFactory extends Factory
 
         return [
             'code' => $code,
-            'name' => $this->faker->words(3, true),
+            'name' => $this->faker->persianServiceName(),
             'sstid' => $this->faker->optional()->word,
             'group' => null,
             'selling_price' => $this->faker->randomFloat(2, 0, 10000),

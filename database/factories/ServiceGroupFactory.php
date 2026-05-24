@@ -14,7 +14,7 @@ class ServiceGroupFactory extends Factory
         $companyId = Company::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveCompany() ?? Company::factory()->create()->id;
 
         return [
-            'name' => $this->faker?->name,
+            'name' => $this->faker?->persianServiceGroupName(),
             'vat' => 0,
             'sstid' => $this->faker?->optional()->word,
             'company_id' => $companyId,
