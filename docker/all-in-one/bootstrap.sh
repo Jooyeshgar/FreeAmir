@@ -24,6 +24,14 @@ if [ ! -f /var/www/html/.env ]; then
     cp /var/www/html/.env.example /var/www/html/.env
 fi
 
+# Sync runtime environment variables into .env so config:cache reflects them
+echo "[bootstrap] Syncing environment variables into .env..."
+for var in APP_ENV APP_DEBUG APP_URL; do
+    if [ -n "${!var}" ]; then
+        sed -i "s|^${var}=.*|${var}=${!var}|" /var/www/html/.env
+    fi
+done
+
 # Generate app key if not set in .env file
 if ! grep -q "^APP_KEY=base64:" /var/www/html/.env; then
     echo "[bootstrap] Generating application key..."
@@ -48,6 +56,12 @@ if [ "$FIRST_RUN" = true ]; then
 else
     echo "[bootstrap] Database already initialized, skipping seed"
 fi
+
+# Clear stale caches from previous runs
+echo "[bootstrap] Clearing old caches..."
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
 
 # Optimize only in production
 if [ "${APP_ENV:-production}" = "production" ]; then
