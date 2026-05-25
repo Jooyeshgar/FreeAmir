@@ -1,4 +1,4 @@
-<input type="hidden" name="report_for" value="{{ $type }}">
+<x-input name="report_for" value="{{ $type }}" hidden />
 
 <hr class="{{ $type == 'Journal' ? 'hidden' : '' }}">
 

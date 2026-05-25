@@ -28,7 +28,7 @@
                             selectedValue = 'customer-' + customer_id;
                         }" placeholder="{{ __('Select Customer') }}" hint='{!! $hint !!}'
                         @selected="customer_id = $event.detail.id;" />
-                    <input type="hidden" x-bind:value="customer_id" name="customer_id">
+                    <x-input x-bind:value="customer_id" name="customer_id" hidden />
                 </div>
             </div>
             <div class="flex w-1/8 hidden">
@@ -48,7 +48,7 @@
                                 selectedValue = 'invoice-' + invoice_id;
                             }" placeholder="{{ __('Select Invoice') }}"
                             @selected="invoice_id = $event.detail.id; loadInvoiceProducts(invoice_id);" />
-                        <input type="hidden" x-bind:value="invoice_id" name="invoice_id">
+                        <x-input x-bind:value="invoice_id" name="invoice_id" hidden />
                     </div>
                 </div>
             </div>

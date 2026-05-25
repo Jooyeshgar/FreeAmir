@@ -37,7 +37,7 @@
                 x-init="if (!selectedValue && bank_id) { selectedValue = 'bank-' + bank_id; }" placeholder="{{ __('Select Bank') }}" hint='{!! $hint !!}'
                 @selected="bank_id = $event.detail.id;" />
 
-            <input type="hidden" x-bind:value="bank_id" name="bank_id">
+            <x-input x-bind:value="bank_id" name="bank_id" hidden />
         </div>
     </div>
     <div class="col-span-2 md:col-span-1">

@@ -2,7 +2,7 @@
     <div class="card bg-base-100 shadow-xl">
         <form action="{{ route('hr.personnel-requests.store') }}" method="POST">
             @csrf
-            <input type="hidden" name="tab" value="{{ $tab }}">
+            <x-input name="tab" value="{{ $tab }}" hidden />
             <div class="card-body">
                 <h2 class="card-title">{{ $title }}</h2>
                 <x-show-message-bags />

@@ -253,13 +253,13 @@
                         </div>
 
                         <form action="{{ route('salary.payrolls.dashboard') }}" method="GET" class="flex items-center gap-2">
-                            <input type="hidden" name="year" value="{{ $year }}">
-                            <input type="hidden" name="month" value="{{ $month }}">
+                            <x-input name="year" value="{{ $year }}" hidden />
+                            <x-input name="month" value="{{ $month }}" hidden />
                             @if ($organizationUnitId)
-                                <input type="hidden" name="organization_unit_id" value="{{ $organizationUnitId }}">
+                                <x-input name="organization_unit_id" value="{{ $organizationUnitId }}" hidden />
                             @endif
                             @if ($statusFilter)
-                                <input type="hidden" name="status" value="{{ $statusFilter }}">
+                                <x-input name="status" value="{{ $statusFilter }}" hidden />
                             @endif
                             <x-text-input input_class="input-sm" type="search" name="q" value="{{ $search }}" placeholder="{{ __('Search name or unit...') }}" />
                             <button type="submit" class="btn btn-sm btn-ghost">{{ __('Search') }}</button>
@@ -359,13 +359,13 @@
                         </p>
                     </div>
                     <form action="{{ route('salary.payrolls.dashboard') }}" method="GET" class="flex flex-wrap items-end gap-2">
-                        <input type="hidden" name="year" value="{{ $year }}">
-                        <input type="hidden" name="month" value="{{ $month }}">
+                        <x-input name="year" value="{{ $year }}" hidden />
+                        <x-input name="month" value="{{ $month }}" hidden />
                         @if ($statusFilter)
-                            <input type="hidden" name="status" value="{{ $statusFilter }}">
+                            <x-input name="status" value="{{ $statusFilter }}" hidden />
                         @endif
                         @if ($search)
-                            <input type="hidden" name="q" value="{{ $search }}">
+                            <x-input name="q" value="{{ $search }}" hidden />
                         @endif
                         <label class="form-control w-44">
                             <span class="label-text mb-1 text-xs">{{ __('Organization Unit') }}</span>

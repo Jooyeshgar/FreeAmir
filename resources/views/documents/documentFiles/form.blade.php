@@ -1,6 +1,6 @@
 <div class="grid grid-cols-2 gap-4">
-    <input type="hidden" name="document_id" value="{{ $document->id }}">
-    <input type="hidden" name="user_id" value="{{ auth()->id() }}">
+    <x-input name="document_id" value="{{ $document->id }}" hidden />
+    <x-input name="user_id" value="{{ auth()->id() }}" hidden />
 
     <div class="col-span-2 md:col-span-1">
         <x-input title="{{ __('Title') }}" name="title" id="title" :value="old('title', $documentFile->title ?? '')" />

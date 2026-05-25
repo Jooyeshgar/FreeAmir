@@ -3,7 +3,7 @@
         <form action="{{ route('hr.personnel-requests.update', $personnelRequest) }}" method="POST">
             @csrf
             @method('PUT')
-            <input type="hidden" name="tab" value="{{ $tab }}">
+            <x-input name="tab" value="{{ $tab }}" hidden />
             <div class="card-body">
                 <h2 class="card-title">{{ $personnelRequest->request_type?->label() }}</h2>
                 <x-show-message-bags />

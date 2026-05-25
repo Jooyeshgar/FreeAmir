@@ -34,11 +34,10 @@
                         selectedValue = 'customer-' + customer_id;
                     }" placeholder="{{ __('Select Customer') }}" hint='{!! $hint !!}'
                     @selected="customer_id = $event.detail.id;" />
-                <input type="hidden" x-bind:value="customer_id" name="customer_id">
+                <x-input x-bind:value="customer_id" name="customer_id" hidden />
             </div>
         </div>
-        <input type="hidden" id="invoice_type" name="invoice_type"
-            value="{{ $invoice->invoice_type ?? $invoice_type }}">
+        <x-input id="invoice_type" name="invoice_type" value="{{ $invoice->invoice_type ?? $invoice_type }}" hidden />
         <div class="flex w-1/3">
             <x-text-input input_name="title" title="{{ __('Invoice Name') }}"
                 input_value="{{ old('title') ?? ($invoice->title ?? '') }}" placeholder="{{ __('Invoice Name') }}"
@@ -52,7 +51,7 @@
         @if (!$invoice->exists)
             <x-text-input disabled="true" input_value="{{ formatDocumentNumber($previousInvoiceNumber) }}" title="{{ __('Previous Invoice Number') }}" 
                 placeholder="{{ __('Previous Invoice Number') }}" label_text_class="text-gray-500 text-nowrap" >
-                <input type="hidden" name="previous_invoice_number" value="{{ $previousInvoiceNumber }}">
+                <x-input name="previous_invoice_number" value="{{ $previousInvoiceNumber }}" hidden />
             </x-text-input>
         @endif
 
