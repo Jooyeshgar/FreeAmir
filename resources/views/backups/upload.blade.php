@@ -17,7 +17,7 @@
                             placeholder="{{ convertToFarsi('1405') }}"
                             x-on:input="fiscalYear = $store.utils.cleanupNumber($event.target.value)"
                             x-effect="$el.value = $store.utils.convertToFarsi($store.utils.cleanupNumber(fiscalYear) || '')" />
-                        <input type="hidden" name="fiscal_year" x-bind:value="fiscalYear" />
+                        <x-input name="fiscal_year" x-bind:value="fiscalYear" hidden />
                     </div>
                     <div class="col-span-2 md:col-span-1 w-64 max-w-md">
                         <x-input type="file" name="file" title="{{ __('File') }} ({{ __('zip') }})"

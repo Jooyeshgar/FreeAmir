@@ -35,10 +35,10 @@
                     }" placeholder="{{ __('Select Customer') }}" hint='{!! $hint !!}'
                     @selected="customer_id = $event.detail.id;" />
 
-                <input type="hidden" x-bind:value="customer_id" name="customer_id">
+                <x-input x-bind:value="customer_id" name="customer_id" hidden />
             </div>
         </div>
-        <input type="hidden" id="invoice_type" name="invoice_type" value="buy">
+        <x-input id="invoice_type" name="invoice_type" value="buy" hidden />
         <div class="flex w-1/3">
             <x-text-input input_name="title" title="{{ __('Invoice Name') }}"
                 input_value="{{ old('title') ?? ($invoice->title ?? '') }}" placeholder="{{ __('Invoice Name') }}"

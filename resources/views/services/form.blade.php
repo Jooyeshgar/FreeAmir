@@ -13,7 +13,7 @@
                 x-init="if (!selectedValue && group_id) { selectedValue = 'group-' + group_id; }" placeholder="{{ __('Select Service group') }}" hint='{!! $hint !!}'
                 @selected="group_id = $event.detail.id;" />
 
-            <input type="hidden" x-bind:value="group_id" name="group">
+            <x-input x-bind:value="group_id" name="group" hidden />
         </div>
     </div>
 

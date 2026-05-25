@@ -37,11 +37,11 @@
                         }
                     "
                     :disabled="$disableReturnedInvoiceSelect" />
-                <input type="hidden" name="returned_invoice_id" x-bind:value="returnedInvoiceId">
+                <x-input name="returned_invoice_id" x-bind:value="returnedInvoiceId" hidden />
             </div>
         </div>
 
-        <input type="hidden" id="invoice_type" name="invoice_type" value="return_sell">
+        <x-input id="invoice_type" name="invoice_type" value="return_sell" hidden />
         <div class="flex w-1/3">
             <x-text-input input_name="title" title="{{ __('Invoice Name') }}"
                 input_value="{{ old('title') ?? ($invoice->title ?? '') }}" placeholder="{{ __('Invoice Name') }}"
@@ -101,7 +101,7 @@
                         hint='{!! $hint !!}' @selected="customer_id = $event.detail.id;" :disabled="true" />
                 </template>
 
-                <input type="hidden" x-bind:value="customer_id" name="customer_id">
+                <x-input x-bind:value="customer_id" name="customer_id" hidden />
             </div>
         </div>
     </div>

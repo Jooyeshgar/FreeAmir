@@ -37,7 +37,7 @@
                 placeholder="1.40" />
         </div>
         <div>
-            <input type="hidden" name="auto_overtime_enabled" value="0">
+            <x-input name="auto_overtime_enabled" value="0" hidden />
             <x-checkbox name="auto_overtime_enabled" value="1" id="auto_overtime_enabled" title="{{ __('Enable Automatic Overtime') }}" x-model="autoOvertimeEnabled"
                 :checked="old('auto_overtime_enabled', (($workShift->auto_overtime_coefficient ?? 1.4) > 0 || ($workShift->max_auto_overtime ?? 300) > 0))" />
         </div>
