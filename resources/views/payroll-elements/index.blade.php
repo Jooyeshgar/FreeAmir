@@ -14,8 +14,7 @@
             <form action="{{ route('salary.payroll-elements.index') }}" method="GET">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3 w-full md:w-3/5">
                     <div class="relative">
-                        <input type="text" name="title" value="{{ request('title') }}" placeholder="{{ __('Filter by title') }}"
-                            class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
+                        <x-input type="text" name="title" value="{{ request('title') }}" placeholder="{{ __('Filter by title') }}" />
                     </div>
                     <div class="relative">
                         <select name="category" class="select w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">

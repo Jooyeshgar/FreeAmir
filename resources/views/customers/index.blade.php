@@ -24,15 +24,13 @@
                         <span class="absolute inset-y-0 left-2 flex items-center text-gray-400 text-sm">
                             <i class="fa-solid fa-box"></i>
                         </span>
-                        <input type="text" name="name" value="{{ request('name') }}" placeholder="{{ __('Customer Name') }}"
-                            class="w-full pl-8 pr-2 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
+                        <x-input type="text" name="name" value="{{ request('name') }}" placeholder="{{ __('Customer Name') }}" />
                     </div>
                     <div class="relative">
                         <span class="absolute inset-y-0 left-2 flex items-center text-gray-400 text-sm">
                             <i class="fa-solid fa-box"></i>
                         </span>
-                        <input type="text" name="subject_code" value="{{ request('subject_code') }}" placeholder="{{ __('Subject Code') }}"
-                            class="w-full pl-8 pr-2 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
+                        <x-input type="text" name="subject_code" value="{{ request('subject_code') }}" placeholder="{{ __('Subject Code') }}" />
                     </div>
 
                     <div class="flex items-center">

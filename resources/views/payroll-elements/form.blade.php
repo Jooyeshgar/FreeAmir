@@ -74,16 +74,7 @@
         <label class="label" for="default_amount">
             <span class="font-medium" id="default_amount_label">{{ __('Default Amount') }}</span>
         </label>
-        <input
-            type="number"
-            name="default_amount"
-            id="default_amount"
-            class="input w-full"
-            value="{{ old('default_amount', $payrollElement->default_amount ?? '') }}"
-            placeholder="0"
-            step="0.01"
-            min="0"
-        />
+        <x-input type="number" name="default_amount" id="default_amount" value="{{ old('default_amount', $payrollElement->default_amount ?? '') }}" placeholder="0" min="0" />
         @error('default_amount')
             <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
         @enderror

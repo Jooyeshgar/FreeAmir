@@ -261,8 +261,7 @@
                             @if ($statusFilter)
                                 <input type="hidden" name="status" value="{{ $statusFilter }}">
                             @endif
-                            <input type="search" name="q" value="{{ $search }}" class="input input-sm input-bordered w-52"
-                                placeholder="{{ __('Search name or unit...') }}" />
+                            <x-text-input input_class="input-sm" type="search" name="q" value="{{ $search }}" placeholder="{{ __('Search name or unit...') }}" />
                             <button type="submit" class="btn btn-sm btn-ghost">{{ __('Search') }}</button>
                         </form>
 
