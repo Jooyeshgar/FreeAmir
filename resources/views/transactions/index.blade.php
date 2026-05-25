@@ -1,12 +1,4 @@
-<x-app-layout title="{{ $currentSubject->formattedCode() }}">
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Transactions') }}
-            @if ($currentSubject)
-                - {{ $currentSubject->name }} ({{ $currentSubject->formattedCode() }})
-            @endif
-        </h2>
-    </x-slot>
+<x-app-layout :title="__('Transactions') . ($currentSubject ? ' - ' . $currentSubject->name . ' (' . $currentSubject->formattedCode() . ')' : '')">
     <x-show-message-bags />
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">

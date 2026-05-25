@@ -1,10 +1,4 @@
 <x-app-layout :title="__('My Portal')">
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('My Portal') }}
-        </h2>
-    </x-slot>
-
     <x-show-message-bags />
 
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">

@@ -1,9 +1,4 @@
 <x-app-layout :title="__('Invoices')">
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Invoices') }}
-        </h2>
-    </x-slot>
     <x-show-message-bags />
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">

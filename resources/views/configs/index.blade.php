@@ -1,5 +1,4 @@
 <x-app-layout :title="__('Configs')">
-    <x-show-message-bags />
     <div class="card bg-base-100 shadow-xl">
         <x-card class="bg-yellow-50 border-l-4 border-yellow-400 mb-5">
             <div class="flex">
@@ -22,13 +21,6 @@
         <div class="card-body">
             <div class="card-body">
                 <div class="card-title">{{ __('Edit Config') }}</div>
-                <x-show-message-bags />
-
-                <x-slot name="header">
-                    <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                        {{ __('Configs') }}
-                    </h2>
-                </x-slot>
                 <x-show-message-bags />
                 <div class="card-body">
                     <table class="table w-full mt-4 overflow-auto">

@@ -11,26 +11,22 @@
     </div>
 
     <div class="col-span-2 md:col-span-1" x-data="{ rating: {{ $rating }} }">
-        <label class="block text-sm font-medium text-gray-700 mb-2">
-            {{ __('Rating') }}
-        </label>
+        <label class="label">{{ __('Rating') }}</label>
 
-        <div class="flex items-center gap-3">
-            <div class="rating rating-m rating-half">
+        <div x-data="{ rating: {{ $comment->rating ?? 0 }} }" class="flex items-center gap-3">
+            <button type="button" class="text-xs text-gray-500 cursor-pointer dark:text-gray-300 hover:underline" @click="rating = 0" >{{ __('Reset') }}</button>
 
-                <input type="radio" name="rating" value="0" @click="rating = 0" :checked="rating === 0" hidden />
-
-                <input class="text-sm text-gray-400 w-12" type="reset" name="reset-rating" value="{{__('Reset')}}" @click="rating = 0" />
+            <div class="rating rating-sm rating-half">
+                <input type="radio" class="rating-hidden" name="rating" value="0" x-model="rating" />
 
                 @for ($i = 1; $i <= 10; $i++)
                     @php $starValue = $i * 0.5; @endphp
 
-                    <input type="radio" name="rating" value="{{ $starValue }}"
-                        class="mask mask-star-2 bg-yellow-400 hover:bg-yellow-500 cursor-pointer
-                        {{ $i % 2 == 1 ? 'mask-half-1' : 'mask-half-2' }}"
-                        @click="rating = {{ $starValue }}" :checked="rating === {{ $starValue }}" />
+                    <input type="radio" name="rating" value="{{ $starValue }}" x-model="rating" class="mask mask-star-2 cursor-pointer
+                            bg-yellow-400 hover:bg-yellow-500 dark:bg-sky-400 dark:hover:bg-sky-500 {{ $i % 2 ? 'mask-half-1' : 'mask-half-2' }}" />
                 @endfor
             </div>
+            <input type="hidden" name="rating" :value="rating">
         </div>
 
         <p class="text-xs text-gray-400 mt-2">

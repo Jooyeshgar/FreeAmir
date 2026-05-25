@@ -1,9 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Comments') }}
-        </h2>
-    </x-slot>
+<x-app-layout :title="__('Comments')">
     <x-show-message-bags />
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
@@ -40,8 +35,8 @@
                                             $starValue = $i / 2;
                                             $isFilled = $starValue <= $comment->rating;
                                         @endphp
-                                        <input type="radio" disabled
-                                            class="pointer-events-none mask mask-star-2 @if ($i % 2 == 1) mask-half-1 @else mask-half-2 @endif @if ($isFilled) bg-orange-400 @else bg-orange-250 @endif" />
+                                        <input type="radio" disabled class="pointer-events-none mask mask-star-2 {{ $i % 2 ? 'mask-half-1' : 'mask-half-2' }} 
+                                            {{ $isFilled ? 'bg-orange-400 dark:bg-sky-400' : 'bg-gray-300 dark:bg-gray-600' }}" />
                                     @endfor
                                 </div>
                             </td>
@@ -112,7 +107,7 @@
                     const starValue = i / 2;
                     const isFilled = starValue <= ratingValue;
                     const halfClass = i % 2 === 1 ? 'mask-half-1' : 'mask-half-2';
-                    const colorClass = isFilled ? 'bg-orange-400' : 'bg-orange-250';
+                    const colorClass = isFilled ? 'bg-orange-400 dark:bg-sky-400' : 'bg-gray-300 dark:bg-gray-600';
                     stars += `<input type="radio" disabled class="pointer-events-none mask mask-star-2 ${halfClass} ${colorClass}">`;
                 }
                 return `<div class="rating rating-sm rating-half">${stars}</div>`;

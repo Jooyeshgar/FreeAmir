@@ -1,9 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Create Comment') }}
-        </h2>
-    </x-slot>
+<x-app-layout :title="__('Create Comment')">
     <div class="card bg-base-100 shadow-xl">
         <form action="{{ route('comments.store', $customer->id) }}" method="POST">
             @csrf
@@ -13,7 +8,8 @@
 
                 @include('customers.comments.form')
                 <div class="card-actions justify-end">
-                    <button type="submit" class="btn btn-pr"> {{ __('Create') }} </button>
+                    <a href="{{ route('comments.index', $customer) }}" class="btn">{{ __('cancel') }}</a>
+                    <button type="submit" class="btn btn-primary"> {{ __('Create') }} </button>
                 </div>
             </div>
         </form>

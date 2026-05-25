@@ -1,10 +1,4 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Transaction Details') }} #{{ $transaction->id }}
-        </h2>
-    </x-slot>
-
+<x-app-layout :title="__('Transaction Details') . ' #' . $transaction->id">
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
