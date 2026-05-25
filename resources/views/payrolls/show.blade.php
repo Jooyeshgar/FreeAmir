@@ -146,8 +146,7 @@
                                 <label for="note" class="label">
                                     <span class="label-text-alt text-gray-500">{{ __('Optional') }}</span>
                                 </label>
-                                <input type="text" name="note" id="note" value="{{ old('note') }}" class="input input-sm input-bordered w-full"
-                                    placeholder="{{ __('Example: Approved after reviewing attendance and deductions.') }}" />
+                                <x-text-input name="note" id="note" value="{{ old('note') }}" input_class="input-sm" placeholder="{{ __('Example: Approved after reviewing attendance and deductions.') }}" />
                             </div>
                             <button type="submit" class="btn btn-sm {{ $transitionAction['class'] }}">
                                 {{ $transitionAction['label'] }}

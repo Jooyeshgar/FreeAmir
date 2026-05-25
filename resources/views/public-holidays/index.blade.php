@@ -5,8 +5,7 @@
         <div class="card-body">
             <div class="flex items-center justify-between gap-3">
                 <form action="{{ route('salary.public-holidays.index') }}" method="GET" class="flex items-center gap-2">
-                    <input type="text" name="name" value="{{ request('name') }}" placeholder="{{ __('Filter by name') }}"
-                        class="px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
+                    <x-input type="text" name="name" value="{{ request('name') }}" placeholder="{{ __('Filter by name') }}" />
                     <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 text-sm rounded-lg shadow transition-all">
                         {{ __('Search') }}
                     </button>
