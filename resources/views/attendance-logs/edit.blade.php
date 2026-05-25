@@ -5,6 +5,7 @@
             @method('PUT')
             {{-- is_manual is always forced to true when editing a log manually --}}
             <input type="hidden" name="is_manual" value="1" />
+            <input type="hidden" name="redirect_to" value="{{ $redirectTo }}" />
             <div class="card-body">
                 <h2 class="card-title">{{ __('Edit Attendance Log') }}</h2>
                 <x-show-message-bags />
@@ -75,7 +76,7 @@
                 </div>
 
                 <div class="card-actions justify-end">
-                    <a href="{{ route('attendance.attendance-logs.index') }}" class="btn btn-ghost">
+                    <a href="{{ $redirectTo }}" class="btn btn-ghost">
                         {{ __('Cancel') }}
                     </a>
                     <button type="submit" class="btn btn-primary">{{ __('Update') }}</button>

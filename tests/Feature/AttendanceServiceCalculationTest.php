@@ -629,6 +629,99 @@ class AttendanceServiceCalculationTest extends TestCase
     }
 
     // -----------------------------------------------------------------------
+    // Early check-in overtime tests
+    // -----------------------------------------------------------------------
+
+    public function test_early_checkin_before_shift_start_counts_as_auto_overtime(): void
+    {
+        $shift = $this->makeShift([
+            'start_time' => '07:30:00',
+            'end_time' => '15:30:00',
+            'break' => 0,
+            'float' => 0,
+            'max_auto_overtime' => 120,
+        ]);
+        $employee = $this->makeEmployee($shift);
+
+        // Check-in 30 min early, checkout exactly at shift end
+        $log = $this->insertLog($employee, '2025-03-03', [
+            'entry_time' => '07:00:00',
+            'exit_time' => '15:30:00',
+        ]);
+
+        $this->assertSame(0, $log->delay);
+        $this->assertSame(0, $log->early_leave);
+        $this->assertSame(30, $log->auto_overtime, 'Early check-in of 30 min should be counted as auto overtime');
+    }
+
+    public function test_early_checkin_and_late_checkout_combine_as_overtime(): void
+    {
+        $shift = $this->makeShift([
+            'start_time' => '07:30:00',
+            'end_time' => '15:30:00',
+            'break' => 0,
+            'float' => 0,
+            'max_auto_overtime' => 120,
+        ]);
+        $employee = $this->makeEmployee($shift);
+
+        // Check-in 30 min early, checkout 15 min late → 45 min total auto overtime
+        $log = $this->insertLog($employee, '2025-03-03', [
+            'entry_time' => '07:00:00',
+            'exit_time' => '15:45:00',
+        ]);
+
+        $this->assertSame(0, $log->delay);
+        $this->assertSame(0, $log->early_leave);
+        $this->assertSame(45, $log->auto_overtime, '30 min early + 15 min late = 45 min auto overtime');
+    }
+
+    public function test_early_checkin_auto_overtime_is_capped_by_shift_limit(): void
+    {
+        $shift = $this->makeShift([
+            'start_time' => '07:30:00',
+            'end_time' => '15:30:00',
+            'break' => 0,
+            'float' => 0,
+            'max_auto_overtime' => 20,
+        ]);
+        $employee = $this->makeEmployee($shift);
+
+        $log = $this->insertLog($employee, '2025-03-03', [
+            'entry_time' => '07:00:00', // 30 min early
+            'exit_time' => '15:45:00',  // 15 min late
+        ]);
+
+        $this->assertSame(20, $log->auto_overtime, 'Auto overtime should be capped at max_auto_overtime');
+    }
+
+    public function test_late_checkin_with_leave_coverage_and_late_checkout(): void
+    {
+        // shift 07:30–15:30, check-in 08:15 (45 min delay covered by leave),
+        // check-out 15:45 (15 min overtime) → worked=7h30m, paid_leave=45, auto_overtime=15
+        $shift = $this->makeShift([
+            'start_time' => '07:30:00',
+            'end_time' => '15:30:00',
+            'break' => 0,
+            'float' => 0,
+            'max_auto_overtime' => 120,
+        ]);
+        $employee = $this->makeEmployee($shift);
+
+        $log = $this->insertLog($employee, '2025-03-03', [
+            'entry_time' => '08:15:00',
+            'exit_time' => '15:45:00',
+            'paid_leave' => 45,
+        ]);
+
+        $this->assertSame(0, $log->delay, 'Delay should be 0 — covered by paid leave');
+        $this->assertSame(0, $log->early_leave);
+        $this->assertSame(45, $log->paid_leave);
+        $this->assertSame(15, $log->auto_overtime, '15 min late checkout → 15 min auto overtime');
+        $this->assertSame(450, $log->worked, 'Physical presence 08:15–15:45 = 450 min (7h30m)');
+    }
+
+    // -----------------------------------------------------------------------
     // Essential system tests (kept)
     // -----------------------------------------------------------------------
 

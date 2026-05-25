@@ -95,7 +95,9 @@ class AttendanceLogController extends Controller
             ? substr($attendanceLog->exit_time, 0, 5)
             : null;
 
-        return view('attendance-logs.edit', compact('attendanceLog', 'employees'));
+        $redirectTo = url()->previous(route('attendance.attendance-logs.index'));
+
+        return view('attendance-logs.edit', compact('attendanceLog', 'employees', 'redirectTo'));
     }
 
     public function update(Request $request, AttendanceLog $attendanceLog): RedirectResponse
@@ -128,7 +130,10 @@ class AttendanceLogController extends Controller
             ['is_manual' => true]
         ));
 
-        return redirect()->back()->with('success', __('Attendance log updated successfully.'));
+        $redirectTo = $request->input('redirect_to');
+        $target = $redirectTo && str_starts_with($redirectTo, url('/')) ? $redirectTo : route('attendance.attendance-logs.index');
+
+        return redirect()->to($target)->with('success', __('Attendance log updated successfully.'));
     }
 
     public function destroy(AttendanceLog $attendanceLog): RedirectResponse
