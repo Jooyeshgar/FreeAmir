@@ -61,12 +61,12 @@ class TrialBalanceExportTest extends TestCase
         $response->sendContent();
         $csv = ob_get_clean();
 
-        $this->assertStringContainsString(__('KolCode'), $csv);
-        $this->assertStringContainsString(__('KolName'), $csv);
-        $this->assertStringContainsString(__('SumBed'), $csv);
-        $this->assertStringContainsString(__('SumBes'), $csv);
-        $this->assertStringContainsString(__('RemainBed'), $csv);
-        $this->assertStringContainsString(__('RemainBes'), $csv);
+        $this->assertStringContainsString(__('Account Code'), $csv);
+        $this->assertStringContainsString(__('Account Name'), $csv);
+        $this->assertStringContainsString(__('Sum Debit'), $csv);
+        $this->assertStringContainsString(__('Sum Credit'), $csv);
+        $this->assertStringContainsString(__('Remaining Debit'), $csv);
+        $this->assertStringContainsString(__('Remaining Credit'), $csv);
     }
 
     public function test_trial_balance_export_includes_root_subjects_with_balances(): void
