@@ -3,8 +3,8 @@
 @endphp
 
 <div class="grid grid-cols-2 gap-4">
-    <x-input type="hidden" name="user_id" value="{{ Auth::id() ?? '' }}" />
-    <x-input type="hidden" name="customer_id" value="{{ $comment->customer_id ?? ($customer->id ?? '') }}" />
+    <x-input name="user_id" value="{{ Auth::id() ?? '' }}" hidden />
+    <x-input name="customer_id" value="{{ $comment->customer_id ?? ($customer->id ?? '') }}" hidden />
 
     <div class="col-span-2 md:col-span-1 w-1/3">
         <x-input disabled="true" title="{{ __('Customer') }}" name="customer" id="customer" :value="old('customer', $comment->customer->name ?? ($customer->name ?? ''))" />
@@ -26,7 +26,6 @@
                             bg-yellow-400 hover:bg-yellow-500 dark:bg-sky-400 dark:hover:bg-sky-500 {{ $i % 2 ? 'mask-half-1' : 'mask-half-2' }}" />
                 @endfor
             </div>
-            <x-input name="rating" :value="rating" hidden />
         </div>
 
         <p class="text-xs text-gray-400 mt-2">

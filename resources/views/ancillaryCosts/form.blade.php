@@ -112,10 +112,10 @@
 
                             <div class="flex-1 min-w-48 text-center">
                                 <span class="text-gray-500" x-text="product.name"></span>
-                                <input type="hidden" x-bind:name="'ancillaryCosts[' + index + '][product_id]'"
-                                    x-bind:value="product.id">
-                                <input type="hidden" x-bind:name="'ancillaryCosts[' + index + '][description]'"
-                                    x-bind:value="selectedCostType">
+                                <x-input name="" x-bind:name="'ancillaryCosts[' + index + '][product_id]'"
+                                    x-bind:value="product.id" hidden />
+                                <x-input name="" x-bind:name="'ancillaryCosts[' + index + '][description]'"
+                                    x-bind:value="selectedCostType" hidden />
                             </div>
 
                             <div class="flex-1 min-w-32 max-w-32">

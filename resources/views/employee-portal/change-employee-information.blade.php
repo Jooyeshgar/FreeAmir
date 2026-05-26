@@ -13,7 +13,7 @@
                     <x-input name="email" id="email" title="{{ __('Email') }}" :value="old('email', $employee->user->email ?? '')" />
                     <x-input name="password" id="password" title="{{ __('Password') }}" :type="'password'" />
                     <x-input name="password_confirmation" id="password_confirmation" title="{{ __('Confirm Password') }}" :type="'password'" />
-                    <x-input name="employee_id" type="hidden" :value="$employee->id" />
+                    <x-input name="employee_id" :value="$employee->id" hidden />
                 </div>
 
                 <div class="card-actions justify-end mt-4">
