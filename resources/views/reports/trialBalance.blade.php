@@ -10,9 +10,14 @@
                         {{ __('Trial Balance at General Level') }}
                     @endif
                 </h3>
-                @if($currentParent)
-                    <a href="{{ route('reports.trial-balance', array_merge(request()->query(), ['parent_id' => $currentParent->parent_id])) }}" class="btn btn-outline btn-sm">{{ __('Go Up').' - '.( !is_null($currentParent->parent) ? $currentParent->parent->name : __('General Level') ) }} </a>
-                @endif
+                <div class="flex items-center gap-2">
+                    @if($currentParent)
+                        <a href="{{ route('reports.trial-balance', array_merge(request()->query(), ['parent_id' => $currentParent->parent_id])) }}" class="btn btn-outline btn-sm">{{ __('Go Up').' - '.( !is_null($currentParent->parent) ? $currentParent->parent->name : __('General Level') ) }}</a>
+                    @endif
+                    @can('reports.trial-balance.export-csv')
+                        <a href="{{ route('reports.trial-balance.export-csv', request()->query()) }}" class="btn btn-outline btn-sm">{{ __('Export CSV') }}</a>
+                    @endcan
+                </div>
             </div>
             <form action="{{ route('reports.trial-balance') }}" method="get">
                 @if($currentParent)

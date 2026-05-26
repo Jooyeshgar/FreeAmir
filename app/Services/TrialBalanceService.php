@@ -3,9 +3,12 @@
 namespace App\Services;
 
 use App\Models\Subject;
+use App\Models\Transaction;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TrialBalanceService
 {
@@ -56,6 +59,44 @@ class TrialBalanceService
         ];
     }
 
+    public function exportCsv(Request $request): StreamedResponse
+    {
+        $filters = $this->normalizeTrialBalanceFilters($request);
+        $subjects = Subject::whereIsRoot()->orderBy('code')->get();
+        $filename = 'trial_balance_'.Carbon::now()->format('Ymd_His').'.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ];
+
+        return response()->stream(function () use ($subjects, $filters) {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            fputcsv($handle, [__('Account Code'), __('Account Name'), __('Sum Debit'), __('Sum Credit'), __('Remaining Debit'), __('Remaining Credit')]);
+
+            foreach ($subjects as $subject) {
+                [$debitSum, $creditSum] = $this->aggregateSubjectColumns($subject, $filters);
+
+                $sumBed = abs($debitSum);
+                $sumBes = $creditSum;
+                $net = $debitSum + $creditSum;
+
+                fputcsv($handle, [
+                    $subject->code,
+                    $subject->name,
+                    csvNumber((int) $sumBed),
+                    csvNumber((int) $sumBes),
+                    csvNumber($net < 0 ? (int) abs($net) : 0),
+                    csvNumber($net > 0 ? (int) $net : 0),
+                ]);
+            }
+
+            fclose($handle);
+        }, 200, $headers);
+    }
+
     private function validateTrialBalanceFilters(Request $request): void
     {
         Validator::make($request->all(), [
@@ -92,7 +133,7 @@ class TrialBalanceService
     {
         $ids = $subject->getAllDescendantIds();
 
-        $query = \App\Models\Transaction::query()->whereIn('transactions.subject_id', $ids)->join('documents', 'documents.id', '=', 'transactions.document_id');
+        $query = Transaction::query()->whereIn('transactions.subject_id', $ids)->join('documents', 'documents.id', '=', 'transactions.document_id');
 
         if ($documentNumbers !== null) {
             $query->whereIn('documents.number', $documentNumbers);

@@ -27,7 +27,7 @@ class DocumentImportExportTest extends TestCase
 
     private function buildCsv(array $rows): UploadedFile
     {
-        $headers = 'record_type,doc_number,doc_date,doc_title,doc_type,doc_status,subject_code,subject_name,subject_parent_code,transaction_desc,debit,credit';
+        $headers = 'record_type,doc_number,doc_date,doc_title,doc_type,doc_status,subject_root_code,subject_code,subject_name,subject_parent_code,transaction_desc,debit,credit';
         $lines = [$headers];
 
         foreach ($rows as $row) {
@@ -88,6 +88,16 @@ class DocumentImportExportTest extends TestCase
         $response->assertSee(__('Export Documents'));
     }
 
+    public function test_export_form_shows_csv_column_headers(): void
+    {
+        $response = $this->get(route('documents.export'));
+        $response->assertOk();
+
+        foreach (['record_type', 'doc_number', 'doc_date', 'subject_code', 'debit', 'credit'] as $col) {
+            $response->assertSee($col);
+        }
+    }
+
     public function test_export_download_returns_csv_content_type(): void
     {
         $response = $this->post(route('documents.export.download'));
@@ -122,10 +132,10 @@ class DocumentImportExportTest extends TestCase
     public function test_csv_import_creates_subjects_and_documents(): void
     {
         $csv = $this->buildCsv([
-            ['SUBJECT', '', '', '', '', '', '001', 'Assets', '', '', '', ''],
-            ['SUBJECT', '', '', '', '', '', '001001', 'Bank', '001', '', '', ''],
-            ['TRANSACTION', '1', '2026-01-15', 'Test Doc', 'manual', 'unapproved', '001001', 'Bank', '001', 'Payment', '5000', '0'],
-            ['TRANSACTION', '1', '2026-01-15', 'Test Doc', 'manual', 'unapproved', '001001', 'Bank', '001', 'Offset',  '0',    '5000'],
+            ['SUBJECT',     '', '', '',         '',       '',          '001', '001', 'Assets', '',    '',        '',     ''],
+            ['SUBJECT',     '', '', '',         '',       '',          '001', '002', 'Bank',   '001', '',        '',     ''],
+            ['TRANSACTION', '1', '2026-01-15', 'Test Doc', 'manual', 'unapproved', '001', '002', 'Bank', '001', 'Payment', '5000', '0'],
+            ['TRANSACTION', '1', '2026-01-15', 'Test Doc', 'manual', 'unapproved', '001', '002', 'Bank', '001', 'Offset',  '0',    '5000'],
         ]);
 
         $result = $this->runCsvImport($csv);
@@ -139,8 +149,8 @@ class DocumentImportExportTest extends TestCase
     public function test_imported_documents_have_is_imported_flag_set(): void
     {
         $csv = $this->buildCsv([
-            ['SUBJECT', '', '', '', '', '', '001', 'Assets', '', '', '', ''],
-            ['TRANSACTION', '5', '2026-02-01', 'Imported Doc', 'manual', 'unapproved', '001', 'Assets', '', 'Test', '100', '100'],
+            ['SUBJECT',     '',  '',           '',             '',       '',           '001', '001', 'Assets', '', '',     '',    ''],
+            ['TRANSACTION', '5', '2026-02-01', 'Imported Doc', 'manual', 'unapproved', '001', '001', 'Assets', '', 'Test', '100', '100'],
         ]);
 
         $this->runCsvImport($csv);
@@ -155,8 +165,8 @@ class DocumentImportExportTest extends TestCase
     public function test_csv_import_is_idempotent_for_documents(): void
     {
         $csv = $this->buildCsv([
-            ['SUBJECT', '', '', '', '', '', '001', 'Assets', '', '', '', ''],
-            ['TRANSACTION', '7', '2026-03-01', 'Doc', 'manual', 'unapproved', '001', 'Assets', '', 'Desc', '100', '100'],
+            ['SUBJECT',     '',  '',           '',    '',       '',           '001', '001', 'Assets', '', '',     '',    ''],
+            ['TRANSACTION', '7', '2026-03-01', 'Doc', 'manual', 'unapproved', '001', '001', 'Assets', '', 'Desc', '100', '100'],
         ]);
 
         $this->runCsvImport($csv);
@@ -170,11 +180,13 @@ class DocumentImportExportTest extends TestCase
 
     public function test_csv_import_preserves_subject_hierarchy(): void
     {
+        // Use distinct 3-char segments so reconstruction is unambiguous:
+        // Assets=011, Bank=011004 (own=004), Mellat=011004001 (own=001)
         $csv = $this->buildCsv([
-            ['SUBJECT', '', '', '', '', '', '001',       'Assets', '',       '', '', ''],
-            ['SUBJECT', '', '', '', '', '', '001001',    'Bank',   '001',    '', '', ''],
-            ['SUBJECT', '', '', '', '', '', '001001001', 'Mellat', '001001', '', '', ''],
-            ['TRANSACTION', '2', '2026-01-10', 'T', 'manual', 'unapproved', '001001001', 'Mellat', '001001', 'x', '0', '0'],
+            ['SUBJECT',     '', '', '', '', '', '011', '011', 'Assets', '',    '', '', ''],
+            ['SUBJECT',     '', '', '', '', '', '011', '004', 'Bank',   '011', '', '', ''],
+            ['SUBJECT',     '', '', '', '', '', '011', '001', 'Mellat', '004', '', '', ''],
+            ['TRANSACTION', '2', '2026-01-10', 'T', 'manual', 'unapproved', '011', '001', 'Mellat', '004', 'x', '0', '0'],
         ]);
 
         $this->runCsvImport($csv);
@@ -363,5 +375,142 @@ class DocumentImportExportTest extends TestCase
         $countAfterSecond = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count();
 
         $this->assertSame($countAfterFirst, $countAfterSecond, 'Importing same subjects twice must not create duplicates');
+    }
+
+    private function buildParsianCsv(array $rows): UploadedFile
+    {
+        $header = 'ID,IsNote,Sanad_Num,Factor_Num,Tick,SanadDate,KolCode,MoeenCode,TafsiliCode,Bed,Bes,Comment,HesabName,ChkNum,IsRecPayChk,CostCenterCode';
+        $lines = [$header];
+        foreach ($rows as $row) {
+            $lines[] = implode(',', array_map(fn ($v) => '"'.str_replace('"', '""', (string) $v).'"', $row));
+        }
+
+        return UploadedFile::fake()->createWithContent('parsian.csv', implode("\n", $lines));
+    }
+
+    private function buildParsianTrialBalanceCsv(array $rows): UploadedFile
+    {
+        $header = 'KolCode,KolName,SumBed,SumBes,RemainBed,RemainBes';
+        $lines = [$header];
+        foreach ($rows as $row) {
+            $lines[] = implode(',', array_map(fn ($v) => '"'.str_replace('"', '""', (string) $v).'"', $row));
+        }
+
+        return UploadedFile::fake()->createWithContent('trial_balance.csv', implode("\n", $lines));
+    }
+
+    // ID,IsNote,Sanad_Num,Factor_Num,Tick,SanadDate,KolCode,MoeenCode,TafsiliCode,Bed,Bes,Comment,HesabName,ChkNum,IsRecPayChk,CostCenterCode
+    private function parsianRow(int $sanadNum, string $date, int $kol, int $moen, int $taf, float $bed, float $bes, string $comment, string $hesabName): array
+    {
+        return [0, 'FALSE', $sanadNum, '', '', $date, $kol, $moen, $taf, $bed, $bes, $comment, $hesabName, '', 'FALSE', ''];
+    }
+
+    public function test_parsian_csv_import_creates_documents(): void
+    {
+        $csv = $this->buildParsianCsv([
+            $this->parsianRow(503, '1404/12/21', 11, 4, 0, 1080000000, 0, 'Charge bank', 'بانک پاسارگاد'),
+            $this->parsianRow(503, '1404/12/21', 19, 7, 0, 0, 1080000000, 'Charge bank', 'سایر پرداختنی'),
+        ]);
+
+        $result = $this->runCsvImport($csv);
+
+        $this->assertSame(1, $result['documents_created']);
+        $this->assertSame(0, count($result['errors']));
+
+        $doc = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('number', 503)->first();
+        $this->assertNotNull($doc);
+        $this->assertSame('imported', $doc->document_type);
+        $this->assertCount(2, $doc->transactions);
+    }
+
+    public function test_parsian_csv_import_builds_two_level_subject_hierarchy(): void
+    {
+        $csv = $this->buildParsianCsv([
+            $this->parsianRow(503, '1404/12/21', 11, 4, 0, 1000, 0, 'desc', 'بانک پاسارگاد'),
+            $this->parsianRow(503, '1404/12/21', 11, 3, 0, 0, 1000, 'desc', 'بانک ملی'),
+        ]);
+
+        $this->runCsvImport($csv);
+
+        $pasargad = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '011004')->first();
+        $melli = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '011003')->first();
+        $kol11 = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '011')->first();
+
+        $this->assertNotNull($pasargad);
+        $this->assertSame('بانک پاسارگاد', $pasargad->name);
+        $this->assertSame($kol11->id, $pasargad->parent_id);
+
+        $this->assertNotNull($melli);
+        $this->assertSame('بانک ملی', $melli->name);
+        $this->assertSame($kol11->id, $melli->parent_id);
+    }
+
+    public function test_parsian_csv_import_builds_three_level_subject_hierarchy(): void
+    {
+        $csv = $this->buildParsianCsv([
+            $this->parsianRow(503, '1404/12/21', 19, 7, 1, 0, 1000, 'desc', 'شریک - آقای امین‌زاده'),
+            $this->parsianRow(503, '1404/12/21', 11, 4, 0, 1000, 0, 'desc', 'بانک پاسارگاد'),
+        ]);
+
+        $this->runCsvImport($csv);
+
+        $leaf = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '019007001')->first();
+        $mid = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '019007')->first();
+        $root = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '019')->first();
+
+        $this->assertNotNull($leaf);
+        $this->assertSame('شریک - آقای امین‌زاده', $leaf->name);
+        $this->assertNotNull($mid);
+        $this->assertSame($mid->id, $leaf->parent_id);
+        $this->assertNotNull($root);
+        $this->assertSame($root->id, $mid->parent_id);
+    }
+
+    public function test_parsian_csv_import_is_idempotent(): void
+    {
+        $csv = $this->buildParsianCsv([
+            $this->parsianRow(503, '1404/12/21', 11, 4, 0, 1000, 0, 'desc', 'بانک پاسارگاد'),
+            $this->parsianRow(503, '1404/12/21', 19, 7, 0, 0, 1000, 'desc', 'سایر'),
+        ]);
+
+        $this->runCsvImport($csv);
+        $docsAfterFirst = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count();
+
+        $this->runCsvImport($csv);
+        $docsAfterSecond = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count();
+
+        $this->assertSame($docsAfterFirst, $docsAfterSecond, 'Re-importing same Parsian CSV must not create duplicates');
+    }
+
+    public function test_parsian_trial_balance_import_creates_kol_subjects(): void
+    {
+        $csv = $this->buildParsianTrialBalanceCsv([
+            [11, 'بانک ها', 60000000, 58000000, 2000000, 0],
+            [19, 'سایر حسابهای پرداختنی', 20000000, 24000000, 0, 4000000],
+        ]);
+
+        $result = $this->runCsvImport($csv);
+
+        $this->assertSame(2, $result['subjects_created']);
+
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '011', 'name' => 'بانک ها']);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '019', 'name' => 'سایر حسابهای پرداختنی']);
+    }
+
+    public function test_parsian_transaction_import_uses_trial_balance_kol_names(): void
+    {
+        $trialBalanceCsv = $this->buildParsianTrialBalanceCsv([
+            [11, 'بانک ها', 0, 0, 0, 0],
+        ]);
+        $this->runCsvImport($trialBalanceCsv);
+
+        $transactionCsv = $this->buildParsianCsv([
+            $this->parsianRow(503, '1404/12/21', 11, 4, 0, 1000, 0, 'desc', 'بانک پاسارگاد'),
+            $this->parsianRow(503, '1404/12/21', 11, 3, 0, 0, 1000, 'desc', 'بانک ملی'),
+        ]);
+        $this->runCsvImport($transactionCsv);
+
+        $kol11 = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '011')->first();
+        $this->assertSame('بانک ها', $kol11->name);
     }
 }

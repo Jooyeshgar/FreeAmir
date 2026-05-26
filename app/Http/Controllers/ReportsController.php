@@ -53,6 +53,11 @@ class ReportsController extends Controller
         return view('reports.trialBalance', $trialBalanceService->getTrialBalanceData($request));
     }
 
+    public function exportTrialBalanceCsv(Request $request, TrialBalanceService $trialBalanceService): StreamedResponse
+    {
+        return $trialBalanceService->exportCsv($request);
+    }
+
     public function printTrialBalance(Request $request, TrialBalanceService $trialBalanceService)
     {
         return view('reports.trialBalancePrint', $trialBalanceService->getTrialBalanceData($request));
@@ -97,7 +102,7 @@ class ReportsController extends Controller
                 return $this->documentImportExportService->export($request->only([
                     'start_document_number', 'end_document_number',
                     'start_date', 'end_date', 'search',
-                ]), 'csv');
+                ]));
             }
 
             $documents = Document::query();

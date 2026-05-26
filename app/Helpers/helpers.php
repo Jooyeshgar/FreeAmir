@@ -147,6 +147,19 @@ function formatMinutesAsTime($minutes): string
 }
 
 /**
+ * Format a number for CSV export: returns Farsi digits when locale is fa/fa_IR, otherwise the value as-is.
+ */
+function csvNumber(int|float|string $value): string
+{
+    $locale = App::getLocale();
+    if ($locale === 'fa' || $locale === 'fa_IR') {
+        return convertToFarsi((string) $value);
+    }
+
+    return (string) $value;
+}
+
+/**
  * Convert a number string to Farsi digits.
  *
  * @param  string  $number

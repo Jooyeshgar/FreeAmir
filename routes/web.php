@@ -181,6 +181,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('sub-ledger', [Controllers\ReportsController::class, 'subLedger'])->name('sub-ledger');
         Route::get('trial-balance', [Controllers\ReportsController::class, 'trialBalance'])->name('trial-balance');
         Route::get('trial-balance.print', [Controllers\ReportsController::class, 'printTrialBalance'])->name('trial-balance.print');
+        Route::get('trial-balance/export-csv', [Controllers\ReportsController::class, 'exportTrialBalanceCsv'])->name('trial-balance.export-csv');
         Route::get('documents', [Controllers\ReportsController::class, 'documents'])->name('documents');
         Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
         Route::post('documents/export', [Controllers\DocumentController::class, 'export'])->name('documents.export');
