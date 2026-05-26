@@ -27,8 +27,8 @@
         label_class="w-full" input_class="border-white subject_name codeSelectBox" model_name="selectedName">
     </x-input>
 
-    <input type="hidden" x-bind:value="selectedId" name="{{ $id_field }}">
-    <input type="hidden" x-bind:value="selectedCode" name="{{ $code_field }}">
+    <x-input name="{{ $id_field }}" x-bind:value="selectedId" hidden />
+    <x-input name="{{ $code_field }}" x-bind:value="selectedCode" hidden />
 
     <div class="selfSelectBox absolute z-[3] top-[40px] w-full h-[300px] bg-white overflow-auto px-4 pb-4 rounded-[16px] shadow-[0px_43px_27px_0px_#00000012]"
         x-show="isSelectBoxOpen" x-transition x-data="searchComponent({{ $allSelectable ? 'true' : 'false' }})" class="subject-select-box">

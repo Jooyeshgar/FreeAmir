@@ -15,21 +15,21 @@
                     <label class="label">
                         <span>{{ __('Amount') }}</span>
                     </label>
-                    <x-input type="number" step="0.01" name="calculated_amount" value="{{ old('calculated_amount', $payrollItem->calculated_amount) }}" required />
+                    <x-input type="number" name="calculated_amount" value="{{ old('calculated_amount', $payrollItem->calculated_amount) }}" required />
                 </div>
 
                 <div class="fieldset mb-4">
                     <label class="label">
                         <span>{{ __('Unit Count') }}</span>
                     </label>
-                    <x-input type="number" step="0.01" name="unit_count" value="{{ old('unit_count', $payrollItem->unit_count) }}" />
+                    <x-input type="number" name="unit_count" value="{{ old('unit_count', $payrollItem->unit_count) }}" />
                 </div>
 
                 <div class="fieldset mb-4">
                     <label class="label">
                         <span>{{ __('Unit Rate') }}</span>
                     </label>
-                    <x-input type="number" step="0.01" name="unit_rate" value="{{ old('unit_rate', $payrollItem->unit_rate) }}" />
+                    <x-input type="number" name="unit_rate" value="{{ old('unit_rate', $payrollItem->unit_rate) }}" />
                 </div>
 
                 <div class="fieldset mb-6">
