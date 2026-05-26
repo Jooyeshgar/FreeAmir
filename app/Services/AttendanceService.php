@@ -512,9 +512,14 @@ class AttendanceService
         $floatCutoff = $shiftStart->copy()->addMinutes($float);
         $lateMinutes = (int) $floatCutoff->diffInMinutes($entry, false);
 
+        // Minutes employee arrived before shift start (positive = early arrival). These count as overtime.
+        $earlyArrivalMinutes = 0;
+
         if ($lateMinutes <= 0) {
-            // Within grace window: shift end extends proportionally
-            $offset = max(0, (int) $shiftStart->diffInMinutes($entry, false));
+            // Within or before the grace window.
+            $rawOffset = (int) $shiftStart->diffInMinutes($entry, false);
+            $earlyArrivalMinutes = max(0, -$rawOffset); // > 0 only when arrived before shift start
+            $offset = max(0, $rawOffset);               // > 0 only when arrived after start but within float
             $adjustedEnd = $shiftEnd->copy()->addMinutes($offset);
             $arrivalDelay = 0;
         } else {
@@ -527,7 +532,7 @@ class AttendanceService
         return [
             'delay' => $arrivalDelay,
             'early_leave' => max(0, -$exitOffset),
-            'overtime' => max(0, $exitOffset),
+            'overtime' => max(0, $exitOffset) + $earlyArrivalMinutes,
         ];
     }
 
