@@ -94,15 +94,15 @@
                 @if ($preview['total'] > 0)
                     <form action="{{ route('attendance.attendance-logs.import.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
-                        <input type="hidden" name="import_type" value="{{ $type->value }}">
+                        <x-input name="import_type" value="{{ $type->value }}" hidden />
                         @if ($dateFrom)
-                            <input type="hidden" name="date_from_gregorian" value="{{ $dateFrom }}">
+                            <x-input name="date_from_gregorian" value="{{ $dateFrom }}" hidden />
                         @endif
                         @if ($dateTo)
-                            <input type="hidden" name="date_to_gregorian" value="{{ $dateTo }}">
+                            <x-input name="date_to_gregorian" value="{{ $dateTo }}" hidden />
                         @endif
-                        <input type="hidden" name="tmp_path" value="{{ $path }}">
-                        <input type="hidden" name="duplicate_mode" value="{{ $duplicateMode }}">
+                        <x-input name="tmp_path" value="{{ $path }}" hidden />
+                        <x-input name="duplicate_mode" value="{{ $duplicateMode }}" hidden />
 
                         <button type="submit" class="btn btn-primary">
                             {{ __('Confirm Import') }}

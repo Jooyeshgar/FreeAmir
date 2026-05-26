@@ -14,8 +14,7 @@
             <form action="{{ route('salary.work-site-contracts.index') }}" method="GET">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full md:w-2/5">
                     <div class="relative">
-                        <input type="text" name="search" value="{{ $search }}" placeholder="{{ __('Search by name or code') }}"
-                            class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
+                        <x-input type="text" name="search" value="{{ $search }}" placeholder="{{ __('Search by name or code') }}" />
                     </div>
                     <div class="flex items-center">
                         <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 text-sm rounded-lg shadow transition-all">

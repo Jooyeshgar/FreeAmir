@@ -4,8 +4,8 @@
             @csrf
             @method('PUT')
             {{-- is_manual is always forced to true when editing a log manually --}}
-            <input type="hidden" name="is_manual" value="1" />
-            <input type="hidden" name="redirect_to" value="{{ $redirectTo }}" />
+            <x-input name="is_manual" value="1" hidden />
+            <x-input name="redirect_to" value="{{ $redirectTo }}" hidden />
             <div class="card-body">
                 <h2 class="card-title">{{ __('Edit Attendance Log') }}</h2>
                 <x-show-message-bags />
@@ -20,7 +20,7 @@
                         <div class="input  flex items-center bg-base-200 text-base-content/70 cursor-not-allowed">
                             {{ $attendanceLog->employee->first_name }} {{ $attendanceLog->employee->last_name }}
                         </div>
-                        <input type="hidden" name="employee_id" value="{{ $attendanceLog->employee_id }}" />
+                        <x-input name="employee_id" value="{{ $attendanceLog->employee_id }}" hidden />
                     </div>
 
                     <div>

@@ -22,7 +22,7 @@
 
     <div class="md:col-span-2 flex items-center gap-3 mt-1">
         <label class="label cursor-pointer gap-2">
-            <input type="hidden" name="is_manual" value="0" />
+            <x-input name="is_manual" value="0" hidden />
             <input type="checkbox" name="is_manual" id="is_manual" value="1" class="checkbox checkbox-warning"
                 @php
 $isManualChecked = old('is_manual') !== null

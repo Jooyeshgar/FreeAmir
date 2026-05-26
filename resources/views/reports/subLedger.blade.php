@@ -124,8 +124,8 @@
                         selectedCode = normalize($event.detail.code);
                         selectedId = $event.detail.id;
                     " />
-                <input type="hidden" name="subject_id" x-bind:value="selectedId">
-                <input type="hidden" name="code" x-bind:value="selectedCode">
+                <x-input name="subject_id" x-bind:value="selectedId" hidden />
+                <x-input name="code" x-bind:value="selectedCode" hidden />
             </div>
 
             @include('reports.form', ['type' => 'subLedger'])

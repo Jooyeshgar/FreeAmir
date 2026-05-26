@@ -16,7 +16,7 @@
             </div>
             <form action="{{ route('reports.trial-balance') }}" method="get">
                 @if($currentParent)
-                    <input type="hidden" name="parent_id" value="{{ $currentParent->id }}">
+                    <x-input name="parent_id" value="{{ $currentParent->id }}" hidden />
                 @endif
 
                 <div class="grid grid-cols-8 gap-3 items-end">
@@ -120,7 +120,7 @@
             <div class="flex justify-end mt-4">
                 <form action="{{ route('reports.trial-balance.print') }}" method="get" target="_blank">
                     @foreach(request()->all() as $key => $value)
-                        <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                        <x-input name="{{ $key }}" value="{{ $value }}" hidden />
                     @endforeach
 
                     <button type="submit" class="btn btn-outline">{{ __('Print') }}</button>

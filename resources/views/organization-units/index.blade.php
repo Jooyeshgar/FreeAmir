@@ -4,9 +4,8 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="flex flex-wrap items-end justify-between gap-3">
-                <form action="{{ route('hr.organization-units.index') }}" method="GET" class="flex flex-wrap gap-2">
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="{{ __('Search by name or code') }}"
-                        class="input input-sm w-80" />
+                <form action="{{ route('hr.organization-units.index') }}" method="GET" class="flex flex-wrap gap-2 w-full">
+                    <x-text-input input_class="input-sm w-80" name="search" value="{{ request('search') }}" placeholder="{{ __('Search by name or code') }}" />
 
                     <select name="is_active" class="select select-sm">
                         <option value="">{{ __('All Statuses') }}</option>

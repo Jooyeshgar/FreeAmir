@@ -9,9 +9,8 @@
                 <button class="btn btn-primary">{{ __('Add new Role') }}</button>
             </a>
             <form class="right" method="GET" action="{{ route('roles.index') }}">
-                <input type="text" name="search" placeholder="{{ __('Search') }}"
-                    class="input  w-full max-w-xs">
-                <button type="submit" class="right btn-flat"><i class=" icon-search"></i></button>
+                <x-text-input label_class="max-w-xs" type="text" name="search" placeholder="{{ __('Search') }}" />
+                <button type="submit" class="right btn-flat"><i class="icon-search"></i></button>
             </form>
 
             <table class='table w-full mt-4 overflow-auto'>

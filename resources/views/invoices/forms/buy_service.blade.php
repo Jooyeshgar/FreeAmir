@@ -34,11 +34,10 @@
                         selectedValue = 'customer-' + customer_id;
                     }" placeholder="{{ __('Select Customer') }}" hint='{!! $hint !!}'
                     @selected="customer_id = $event.detail.id;" />
-                <input type="hidden" x-bind:value="customer_id" name="customer_id">
+                <x-input x-bind:value="customer_id" name="customer_id" hidden />
             </div>
         </div>
-        <input type="hidden" id="invoice_type" name="invoice_type"
-            value="{{ $invoice->invoice_type ?? $invoice_type }}">
+        <x-input id="invoice_type" name="invoice_type" value="{{ $invoice->invoice_type ?? $invoice_type }}" hidden />
         <div class="flex w-1/3">
             <x-text-input input_name="title" title="{{ __('Invoice Name') }}"
                 input_value="{{ old('title') ?? ($invoice->title ?? '') }}" placeholder="{{ __('Invoice Name') }}"
@@ -52,7 +51,7 @@
         @if (!$invoice->exists)
             <x-text-input disabled="true" input_value="{{ formatDocumentNumber($previousInvoiceNumber) }}" title="{{ __('Previous Invoice Number') }}" 
                 placeholder="{{ __('Previous Invoice Number') }}" label_text_class="text-gray-500 text-nowrap" >
-                <input type="hidden" name="previous_invoice_number" value="{{ $previousInvoiceNumber }}">
+                <x-input name="previous_invoice_number" value="{{ $previousInvoiceNumber }}" hidden />
             </x-text-input>
         @endif
 
@@ -137,12 +136,9 @@
                             @selected="selectItem(transaction, $event.detail.type, $event.detail.id)"
                             hint='{!! $hint !!}' />
 
-                        <input type="hidden" x-bind:value="transaction.product_id || ''"
-                            x-bind:name="'transactions[' + index + '][product_id]'">
-                        <input type="hidden" x-bind:value="transaction.service_id || ''"
-                            x-bind:name="'transactions[' + index + '][service_id]'">
-                        <input type="hidden" x-bind:value="transaction.item_id || ''"
-                            x-bind:name="'transactions[' + index + '][item_id]'">
+                        <x-input name="" x-bind:name="'transactions[' + index + '][product_id]'" x-bind:value="transaction.product_id || ''" hidden />
+                        <x-input name="" x-bind:name="'transactions[' + index + '][service_id]'" x-bind:value="transaction.service_id || ''" hidden />
+                        <x-input name="" x-bind:name="'transactions[' + index + '][item_id]'" x-bind:value="transaction.item_id || ''" hidden />
                     </div>
                     <div class="flex-1 w-[200px]">
                         <x-text-input x-bind:value="transaction.desc" placeholder="{{ __('description') }}"

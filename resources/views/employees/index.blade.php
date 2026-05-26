@@ -30,10 +30,10 @@
 
             <form action="{{ route('hr.employees.index') }}" method="GET" class="flex flex-wrap items-center gap-2">
                 @if (request()->filled('search'))
-                    <input type="hidden" name="search" value="{{ request('search') }}">
+                    <x-input name="search" value="{{ request('search') }}" hidden />
                 @endif
                 @if (request()->filled('is_active'))
-                    <input type="hidden" name="is_active" value="{{ request('is_active') }}">
+                    <x-input name="is_active" value="{{ request('is_active') }}" hidden />
                 @endif
                 <select name="contract_framework_id" class="select select-sm w-36" dir="rtl" onchange="this.form.submit()">
                     <option value="">{{ __('All Contracts') }}</option>
@@ -117,13 +117,13 @@
                 <div class="flex flex-wrap items-center gap-2" dir="ltr">
                     <form action="{{ route('hr.employees.index') }}" method="GET" class="join">
                         @if (request()->filled('work_site_id'))
-                            <input type="hidden" name="work_site_id" value="{{ request('work_site_id') }}">
+                            <x-input name="work_site_id" value="{{ request('work_site_id') }}" hidden />
                         @endif
                         @if (request()->filled('contract_framework_id'))
-                            <input type="hidden" name="contract_framework_id" value="{{ request('contract_framework_id') }}">
+                            <x-input name="contract_framework_id" value="{{ request('contract_framework_id') }}" hidden />
                         @endif
                         @if (request()->filled('is_active'))
-                            <input type="hidden" name="is_active" value="{{ request('is_active') }}">
+                            <x-input name="is_active" value="{{ request('is_active') }}" hidden />
                         @endif
                         <label class="input input-sm join-item flex w-64 max-w-full items-center gap-2 bg-base-100" dir="rtl">
                             <input type="search" name="search" value="{{ request('search') }}" class="grow"

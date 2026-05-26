@@ -34,12 +34,12 @@
                     selectedCode = $event.detail.code;
                     selectedId = $event.detail.id;
                 " />
-            <input type="hidden" name="parent_id" x-bind:value="selectedId">
+            <x-input name="parent_id" x-bind:value="selectedId" hidden />
         </div>
     @else
         <div>
             <x-input name="parent_name" id="parent_name" title="{{ __('Subject') }}" :value="$parentSubject->name ?? __('Main Subject')" disabled />
-            <input type="hidden" name="parent_id" value="{{ $parentSubject->id ?? null }}">
+            <x-input name="parent_id" value="{{ $parentSubject->id ?? null }}" hidden />
         </div>
     @endif
 

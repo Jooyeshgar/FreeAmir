@@ -29,7 +29,7 @@
                                 selectedCode = $event.detail.code;
                                 selectedId = $event.detail.id;
                             " />
-                        <input type="hidden" name="subject_id" x-bind:value="selectedId">
+                        <x-input name="subject_id" x-bind:value="selectedId" hidden />
                     </div>
                     <div class="col-span-6 sm:col-span-3 lg:col-span-2">
                         <x-date-picker name="start_date" value="{{ request('start_date') }}" class="w-full" placeholder="{{ __('Start date') }}" />
