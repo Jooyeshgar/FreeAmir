@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Enums\PersonnelRequestType;
 use App\Models\AttendanceLog;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\PersonnelRequest;
 use App\Models\PublicHoliday;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
@@ -738,5 +740,151 @@ class AttendanceServiceCalculationTest extends TestCase
 
         $this->assertSame($first->id, $second->id);
         $this->assertSame(2, $second->present_days);
+    }
+
+    // -----------------------------------------------------------------------
+    // Remote work merged with local work — uses REMOTE_WORK PersonnelRequest
+    // start/end times to compute delay / early_leave / overtime, matching
+    // local work semantics.
+    // -----------------------------------------------------------------------
+
+    public function test_remote_only_with_late_start_produces_delay(): void
+    {
+        // Shift 09:00–17:00 (480 min). Remote work 10:00–17:00 → delay = 60.
+        $shift = $this->makeShift([
+            'start_time' => '09:00:00',
+            'end_time' => '17:00:00',
+            'break' => 0,
+            'float' => 0,
+            'max_auto_overtime' => 0,
+        ]);
+        $employee = $this->makeEmployee($shift);
+
+        $log = $this->insertLog($employee, '2025-03-10', [], false);
+
+        $request = PersonnelRequest::factory()->create([
+            'company_id' => $this->company->id,
+            'employee_id' => $employee->id,
+            'request_type' => PersonnelRequestType::REMOTE_WORK->value,
+            'start_date' => '2025-03-10 10:00:00',
+            'end_date' => '2025-03-10 17:00:00',
+            'status' => 'approved',
+        ]);
+        $this->service->syncPersonnelRequestLogs($request);
+
+        $log = $log->fresh();
+
+        $this->assertSame(420, (int) $log->remote_work, '7h of remote work recorded');
+        $this->assertSame(420, (int) $log->worked, 'worked = remote minutes');
+        $this->assertSame(60, (int) $log->delay, 'late remote start = 60 min delay');
+        $this->assertSame(0, (int) $log->early_leave);
+        $this->assertSame(0, (int) $log->auto_overtime);
+    }
+
+    public function test_remote_only_with_early_end_produces_early_leave(): void
+    {
+        // Shift 09:00–17:00. Remote 09:00–15:00 → early_leave = 120.
+        $shift = $this->makeShift([
+            'start_time' => '09:00:00',
+            'end_time' => '17:00:00',
+            'break' => 0,
+            'float' => 0,
+            'max_auto_overtime' => 0,
+        ]);
+        $employee = $this->makeEmployee($shift);
+
+        $log = $this->insertLog($employee, '2025-03-10', [], false);
+
+        $request = PersonnelRequest::factory()->create([
+            'company_id' => $this->company->id,
+            'employee_id' => $employee->id,
+            'request_type' => PersonnelRequestType::REMOTE_WORK->value,
+            'start_date' => '2025-03-10 09:00:00',
+            'end_date' => '2025-03-10 15:00:00',
+            'status' => 'approved',
+        ]);
+        $this->service->syncPersonnelRequestLogs($request);
+
+        $log = $log->fresh();
+
+        $this->assertSame(360, (int) $log->remote_work);
+        $this->assertSame(360, (int) $log->worked);
+        $this->assertSame(0, (int) $log->delay);
+        $this->assertSame(120, (int) $log->early_leave, 'early end = 120 min early_leave');
+    }
+
+    public function test_remote_past_shift_end_generates_auto_overtime(): void
+    {
+        // Shift 09:00–17:00. Remote 09:00–19:00 → 120 min auto_overtime (capped).
+        $shift = $this->makeShift([
+            'start_time' => '09:00:00',
+            'end_time' => '17:00:00',
+            'break' => 0,
+            'float' => 0,
+            'max_auto_overtime' => 120,
+        ]);
+        $employee = $this->makeEmployee($shift);
+
+        $log = $this->insertLog($employee, '2025-03-10', [], false);
+
+        $request = PersonnelRequest::factory()->create([
+            'company_id' => $this->company->id,
+            'employee_id' => $employee->id,
+            'request_type' => PersonnelRequestType::REMOTE_WORK->value,
+            'start_date' => '2025-03-10 09:00:00',
+            'end_date' => '2025-03-10 19:00:00',
+            'status' => 'approved',
+        ]);
+        $this->service->syncPersonnelRequestLogs($request);
+
+        $log = $log->fresh();
+
+        $this->assertSame(600, (int) $log->remote_work);
+        $this->assertSame(0, (int) $log->delay);
+        $this->assertSame(0, (int) $log->early_leave);
+        $this->assertSame(0, (int) $log->overtime);
+        $this->assertSame(120, (int) $log->auto_overtime, '2h past shift end = 120 min auto overtime');
+    }
+
+    public function test_office_and_remote_merged_calculation(): void
+    {
+        // User's example:
+        //   shift 09:00–17:00 (480 min)
+        //   office 10:00–12:00 (2h, 60min late)
+        //   remote 13:00–16:00 (3h)
+        // Expected: worked = 300, delay = 60, early_leave = shift - worked = 180.
+        $shift = $this->makeShift([
+            'start_time' => '09:00:00',
+            'end_time' => '17:00:00',
+            'break' => 0,
+            'float' => 0,
+            'max_auto_overtime' => 0,
+        ]);
+        $employee = $this->makeEmployee($shift);
+
+        $log = $this->insertLog($employee, '2025-03-10', [
+            'entry_time' => '10:00:00',
+            'exit_time' => '12:00:00',
+        ], false);
+
+        $request = PersonnelRequest::factory()->create([
+            'company_id' => $this->company->id,
+            'employee_id' => $employee->id,
+            'request_type' => PersonnelRequestType::REMOTE_WORK->value,
+            'start_date' => '2025-03-10 13:00:00',
+            'end_date' => '2025-03-10 16:00:00',
+            'status' => 'approved',
+        ]);
+        $this->service->syncPersonnelRequestLogs($request);
+
+        $log = $log->fresh();
+
+        $this->assertSame(180, (int) $log->remote_work, '3h remote recorded');
+        $this->assertSame(300, (int) $log->worked, 'office 2h + remote 3h = 5h');
+        $this->assertSame(60, (int) $log->delay, '1h delay from late office entry');
+        // Missing time = shift(480) - worked(300) = 180; split between delay(60)
+        // and the rest (mid-gap 60 + early end 60). delay is tracked separately,
+        // early_leave covers the remaining 120.
+        $this->assertSame(120, (int) $log->early_leave, 'mid-gap + early end = 120');
     }
 }

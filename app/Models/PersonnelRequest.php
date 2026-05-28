@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\PersonnelRequestType;
 use App\Models\Scopes\FiscalYearScope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -48,5 +49,21 @@ class PersonnelRequest extends Model
     public function payroll(): BelongsTo
     {
         return $this->belongsTo(Payroll::class, 'payroll_id');
+    }
+
+    public function scopeOfType(Builder $query, PersonnelRequestType $type): Builder
+    {
+        return $query->where('request_type', $type);
+    }
+
+    public function scopeApproved(Builder $query): Builder
+    {
+        return $query->where('status', 'approved');
+    }
+
+    public function scopeCoveringDate(Builder $query, string $date): Builder
+    {
+        return $query->whereDate('start_date', '<=', $date)
+            ->whereDate('end_date', '>=', $date);
     }
 }
