@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Scopes\FiscalYearScope;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -23,5 +24,12 @@ class PublicHoliday extends Model
     public static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope);
+    }
+
+    public function setDateAttribute($value): void
+    {
+        $this->attributes['date'] = $value
+            ? Carbon::parse($value)->format('Y-m-d')
+            : null;
     }
 }

@@ -62,6 +62,27 @@ class WorkShift extends Model
         static::addGlobalScope(new FiscalYearScope);
     }
 
+    public function setStartTimeAttribute($value): void
+    {
+        $this->attributes['start_time'] = $value
+            ? Carbon::parse($value)->format('H:i:s')
+            : null;
+    }
+
+    public function setEndTimeAttribute($value): void
+    {
+        $this->attributes['end_time'] = $value
+            ? Carbon::parse($value)->format('H:i:s')
+            : null;
+    }
+
+    public function setThursdayExitTimeAttribute($value): void
+    {
+        $this->attributes['thursday_exit_time'] = $value
+            ? Carbon::parse($value)->format('H:i:s')
+            : null;
+    }
+
     public function employees(): HasMany
     {
         return $this->hasMany(Employee::class, 'work_shift_id');
