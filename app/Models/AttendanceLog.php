@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Scopes\FiscalYearScope;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -53,6 +54,27 @@ class AttendanceLog extends Model
     public static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope);
+    }
+
+    public function setLogDateAttribute($value): void
+    {
+        $this->attributes['log_date'] = $value
+            ? Carbon::parse($value)->format('Y-m-d')
+            : null;
+    }
+
+    public function setEntryTimeAttribute($value): void
+    {
+        $this->attributes['entry_time'] = $value
+            ? Carbon::parse($value)->format('H:i:s')
+            : null;
+    }
+
+    public function setExitTimeAttribute($value): void
+    {
+        $this->attributes['exit_time'] = $value
+            ? Carbon::parse($value)->format('H:i:s')
+            : null;
     }
 
     public function employee(): BelongsTo

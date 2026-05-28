@@ -36,6 +36,12 @@ class Product extends Model
         'average_cost',
     ];
 
+    protected $casts = [
+        'average_cost' => 'decimal:2',
+        'selling_price' => 'decimal:2',
+        'vat' => 'decimal:2',
+    ];
+
     protected static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope);
