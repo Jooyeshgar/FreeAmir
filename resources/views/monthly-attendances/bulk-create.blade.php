@@ -17,25 +17,22 @@
                 </div>
 
                 <div class="mt-4">
-                    <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center justify-between">
                         <span class="font-semibold">{{ __('Employees') }}</span>
-                        <label class="cursor-pointer flex items-center gap-2">
-                            <input type="checkbox" id="bulk-select-all" class="checkbox checkbox-sm" checked
-                                onchange="document.querySelectorAll('.bulk-employee-cb').forEach(cb => cb.checked = this.checked)" />
-                            <span class="text-sm">{{ __('Select All') }}</span>
-                        </label>
+                        <x-checkbox id="bulk-select-all" name="" title="{{ __('Select All') }}" :checked="true"
+                            onchange="document.querySelectorAll('#employee-list input[type=checkbox]').forEach(cb => cb.checked = this.checked)" />
                     </div>
-                    <div class="border border-base-300 rounded-box max-h-96 overflow-y-auto p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
+                    <div id="employee-list" class="border grid grid-cols-3 p-2">
                         @foreach ($employees as $employee)
-                            <label class="flex items-center gap-2 cursor-pointer p-2 hover:bg-base-200 rounded">
-                                <input type="checkbox" name="employee_ids[]" value="{{ $employee->id }}"
-                                    class="checkbox checkbox-sm bulk-employee-cb"
-                                    {{ $employee->is_active ? 'checked' : '' }} />
-                                <span class="text-sm">{{ $employee->first_name }} {{ $employee->last_name }}</span>
-                                @if (!$employee->is_active)
-                                    <span class="badge badge-error badge-xs">{{ __('Inactive') }}</span>
+                            <div 
+                                @if (!$employee->is_active) 
+                                    x-data
+                                    x-init="() => { const lbl = $el.querySelector('.label'); if (lbl) { lbl.classList.add('tooltip', 'text-error'); lbl.dataset.tip = '{{ __('Inactive') }}'; } }"
                                 @endif
-                            </label>
+                            >
+                                <x-checkbox name="employee_ids[]" :id="'employee-' . $employee->id" :value="$employee->id"
+                                    title="{{ $employee->first_name }} {{ $employee->last_name }}" :checked="$employee->is_active" />
+                            </div>
                         @endforeach
                     </div>
                 </div>
