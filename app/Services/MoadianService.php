@@ -140,27 +140,26 @@ class MoadianService
         $header->setTaxID(Carbon::parse($this->invoice->date), $this->invoice->number);
 
         if ($this->invoice->invoice_type === InvoiceType::SELL) {
-            $header->inty = 1;
             $header->ins = 1;
-            $header->irtaxid = null;
+            $header->inty = match ($this->invoice->customer->type) {
+                CustomerType::INDIVIDUAL => $this->invoice->customer->ecnmcs_code ? 1 : 2,
+                CustomerType::LEGAL_ENTITY => 1,
+            };
         } elseif ($this->invoice->invoice_type === InvoiceType::RETURN_SELL) {
             $isVoid = $this->voidInvoice();
             $refInvoice = Invoice::find($this->invoice->returned_invoice_id);
 
             $header->irtaxid = $refInvoice->taxID;
-            $header->inty = $isVoid ? 3 : 4;
             $header->ins = $isVoid ? 3 : 4;
         } elseif ($this->invoice->invoice_type === InvoiceType::VOID) {
             $refInvoice = Invoice::find($this->invoice->returned_invoice_id);
 
             $header->irtaxid = $refInvoice?->taxID;
-            $header->inty = 3;
             $header->ins = 3;
         }
 
         $header->indatim = $timestamp;
         $header->indati2m = $timestamp;
-        $header->inno = $this->invoice->number;
         $header->inp = 1;
         $header->tins = $this->taxID;
         $header->tob = match ($this->invoice->customer->type) {
@@ -175,9 +174,9 @@ class MoadianService
 
         $amount = $this->invoice->amount;
         $discount = $this->invoice->items->sum('unit_discount');
-        $header->tprdis = $amount + $discount;
+        $header->tprdis = $amount + $discount - $this->invoice->vat;
         $header->tdis = $discount;
-        $header->tadis = $amount;
+        $header->tadis = $amount - $this->invoice->vat;
         $header->tvam = $this->invoice->vat;
         $header->todam = 0;
         $header->tbill = $amount;
@@ -200,7 +199,7 @@ class MoadianService
             $body->prdis = $item->unit_price * $item->quantity;
             $body->dis = $item->unit_discount;
             $body->adis = $amountAfterDiscount;
-            $body->vra = $amountAfterDiscount > 0 ? $item->vat / ($amountAfterDiscount) : 0.0;
+            $body->vra = $amountAfterDiscount > 0 ? ($item->vat / ($amountAfterDiscount)) * 100 : 0.0;
             $body->vam = $item->vat;
             $body->tsstam = $item->amount;
             $this->moadianInvoice->addItem($body);

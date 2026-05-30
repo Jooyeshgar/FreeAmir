@@ -9,7 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('invoices', function (Blueprint $table) {
-            $table->string('taxID', 128)->nullable()->after('company_id');
+            $table->string('taxID')->nullable()->after('company_id');
+            $table->date('pay_date')->nullable()->after('taxID');
+            $table->string('pay_reference_number')->nullable()->after('pay_date');
         });
 
         Schema::create('moadian_histories', function (Blueprint $table) {
@@ -25,7 +27,7 @@ return new class extends Migration
         Schema::dropIfExists('moadian_histories');
 
         Schema::table('invoices', function (Blueprint $table) {
-            $table->dropColumn('taxID');
+            $table->dropColumn(['taxID', 'pay_date', 'pay_reference_number']);
         });
     }
 };

@@ -754,15 +754,16 @@ class InvoiceController extends Controller
         }
 
         $date = convertToGregorian($validated['transaction_date']);
+        $transaction_reference_number = convertToInt($validated['transaction_reference_number']);
 
         if (! $invoice->pay_date) {
             $invoice->update([
                 'pay_date' => $date,
-                'pay_reference_number' => $validated['transaction_reference_number'] ?? null,
+                'pay_reference_number' => $transaction_reference_number ?? null,
             ]);
         }
 
-        $success = $moadianService->sendInvoice($invoice, $validated['transaction_reference_number'] ?? null, $date);
+        $success = $moadianService->sendInvoice($invoice, $transaction_reference_number ?? null, $date);
 
         if ($success) {
             return redirect()->route('invoices.show', $invoice)->with('success', __('Invoice sent to Moadian successfully.'));
