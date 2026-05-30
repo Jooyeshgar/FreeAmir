@@ -72,7 +72,14 @@ class AttendanceService
         $isThursday = $logDate->dayOfWeek === Carbon::THURSDAY;
         $isHoliday = PublicHoliday::where('date', $logDate->toDateString())->exists();
 
-        $columns = $this->computeLogColumns($log, $workShift, $isFriday, $isHoliday, $isThursday);
+        $remoteRequest = $employee?->personnelRequests()
+            ->ofType(PersonnelRequestType::REMOTE_WORK)
+            ->approved()
+            ->coveringDate($logDate->toDateString())
+            ->orderByDesc('id')
+            ->first();
+
+        $columns = $this->computeLogColumns($log, $workShift, $isFriday, $isHoliday, $isThursday, $remoteRequest);
 
         $log->update($columns);
 
@@ -100,7 +107,7 @@ class AttendanceService
      *     is_holiday?:bool
      * }
      */
-    public function computeLogColumns(AttendanceLog $log, ?WorkShift $workShift, bool $isFriday = false, bool $isHoliday = false, bool $isThursday = false): array
+    public function computeLogColumns(AttendanceLog $log, ?WorkShift $workShift, bool $isFriday = false, bool $isHoliday = false, bool $isThursday = false, ?PersonnelRequest $remoteRequest = null): array
     {
         // ── Thursday handling ──────────────────────────────────────────────
         $thursdayStatus = $isThursday ? ($workShift?->thursday_status ?? ThursdayStatus::FULL_DAY) : null;
@@ -141,6 +148,24 @@ class AttendanceService
                 'is_friday' => $isFriday,
                 'is_holiday' => $isHoliday,
             ];
+        }
+
+        // ── Approved REMOTE_WORK request → merge with office clock data ────
+        // Remote work has explicit start/end times (from the PersonnelRequest)
+        // so it must contribute to delay/early_leave/overtime exactly like
+        // local work. Falls back to the legacy paths below when no request is
+        // attached (e.g. seeded fixtures or pre-existing logs).
+        if ($remoteRequest !== null && $workShift !== null) {
+            return $this->computeMergedRemoteColumns(
+                $log,
+                $workShift,
+                $remoteRequest,
+                $paidLeave,
+                $mission,
+                $approvedOvertimeInput,
+                $isFriday,
+                $isHoliday,
+            );
         }
 
         // ── No clock data ──────────────────────────────────────────────────
@@ -461,6 +486,122 @@ class AttendanceService
     // ══════════════════════════════════════════════════════════════════════
     // PRIVATE: calculation helpers
     // ══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Compute columns when an approved REMOTE_WORK request exists for the day.
+     *
+     * The request's start_date / end_date supply the remote-work time window,
+     * which is merged with any office entry/exit to drive delay, early_leave
+     * and overtime — the same way local clock data does. Coverage from
+     * paid_leave / mission still absorbs delay and early_leave; remote_work
+     * is NOT coverage (it's real work, just from home).
+     *
+     * @return array{worked:int, delay:int, early_leave:int, overtime:int, auto_overtime:int, mission:int, remote_work:int, is_friday:bool, is_holiday:bool}
+     */
+    private function computeMergedRemoteColumns(
+        AttendanceLog $log,
+        WorkShift $workShift,
+        PersonnelRequest $remoteRequest,
+        int $paidLeave,
+        int $mission,
+        int $approvedOvertimeInput,
+        bool $isFriday,
+        bool $isHoliday,
+    ): array {
+        $shiftMinutes = $this->shiftWorkMinutes($workShift);
+        $autoOvertimeCap = max(0, (int) ($workShift->max_auto_overtime ?? 0));
+        $float = max(0, (int) ($workShift->float ?? 0));
+
+        $shiftStart = $this->parseTime($workShift->start_time);
+        $shiftEnd = $this->parseTime($workShift->end_time);
+
+        $officeEntry = $log->entry_time !== null ? $this->parseTime($log->entry_time) : null;
+        $officeExit = $log->exit_time !== null ? $this->parseTime($log->exit_time) : null;
+        $officeRaw = ($officeEntry !== null && $officeExit !== null)
+            ? max(0, (int) $officeEntry->diffInMinutes($officeExit, false))
+            : 0;
+
+        $remoteStart = $this->parseTime(Carbon::parse($remoteRequest->start_date)->format('H:i:s'));
+        $remoteEnd = $this->parseTime(Carbon::parse($remoteRequest->end_date)->format('H:i:s'));
+        $remoteMinutes = ($remoteStart !== null && $remoteEnd !== null)
+            ? max(0, (int) $remoteStart->diffInMinutes($remoteEnd, false))
+            : 0;
+
+        $starts = array_values(array_filter([$officeEntry, $remoteStart]));
+        $ends = array_values(array_filter([$officeExit, $remoteEnd]));
+        $mergedStart = empty($starts) ? null : min($starts);
+        $mergedEnd = empty($ends) ? null : max($ends);
+
+        // When both windows exist, compute their intersection so overlapping
+        // minutes are not counted twice in either worked or effectiveInShift.
+        $windowOverlapRaw = 0;
+        $windowOverlapInShift = 0;
+        if ($officeEntry !== null && $officeExit !== null && $remoteStart !== null && $remoteEnd !== null) {
+            $intersectStart = $officeEntry->greaterThan($remoteStart) ? $officeEntry : $remoteStart;
+            $intersectEnd = $officeExit->lessThan($remoteEnd) ? $officeExit : $remoteEnd;
+            $windowOverlapRaw = max(0, (int) $intersectStart->diffInMinutes($intersectEnd, false));
+            if ($windowOverlapRaw > 0 && $shiftStart !== null && $shiftEnd !== null) {
+                $windowOverlapInShift = $this->overlapMinutes($intersectStart, $intersectEnd, $shiftStart, $shiftEnd);
+            }
+        }
+
+        $effectiveInShift = 0;
+        if ($officeEntry !== null && $officeExit !== null && $shiftStart !== null && $shiftEnd !== null) {
+            $effectiveInShift += $this->overlapMinutes($officeEntry, $officeExit, $shiftStart, $shiftEnd);
+        }
+        if ($remoteStart !== null && $remoteEnd !== null && $shiftStart !== null && $shiftEnd !== null) {
+            $effectiveInShift += $this->overlapMinutes($remoteStart, $remoteEnd, $shiftStart, $shiftEnd);
+        }
+        $effectiveInShift = min($shiftMinutes, $effectiveInShift - $windowOverlapInShift);
+
+        $delayTime = 0;
+        $overtimeTime = 0;
+        if ($mergedStart !== null && $mergedEnd !== null && $shiftStart !== null && $shiftEnd !== null) {
+            $floatCutoff = $shiftStart->copy()->addMinutes($float);
+            $delayTime = max(0, (int) $floatCutoff->diffInMinutes($mergedStart, false));
+            $earlyArrival = max(0, (int) $mergedStart->diffInMinutes($shiftStart, false));
+            $lateExit = max(0, (int) $shiftEnd->diffInMinutes($mergedEnd, false));
+            $overtimeTime = $earlyArrival + $lateExit;
+        }
+
+        // Missing shift time, excluding the delay portion (delay is reported
+        // separately). Remaining gap becomes early_leave.
+        $earlyLeaveTime = max(0, $shiftMinutes - $effectiveInShift - $delayTime);
+
+        $coverage = min($shiftMinutes, $paidLeave + $mission);
+        $netDelay = max(0, $delayTime - $coverage);
+        $remainingCoverage = max(0, $coverage - $delayTime);
+        $netEarlyLeave = max(0, $earlyLeaveTime - $remainingCoverage);
+
+        $approvedOvertime = min($approvedOvertimeInput, $overtimeTime);
+        $remainingOvertime = max(0, $overtimeTime - $approvedOvertime);
+        $autoOvertime = min($remainingOvertime, $autoOvertimeCap);
+
+        return [
+            'worked' => $officeRaw + $remoteMinutes - $windowOverlapRaw,
+            'delay' => $netDelay,
+            'early_leave' => $netEarlyLeave,
+            'overtime' => $approvedOvertime,
+            'auto_overtime' => $autoOvertime,
+            'mission' => $mission,
+            'remote_work' => $remoteMinutes,
+            'is_friday' => $isFriday,
+            'is_holiday' => $isHoliday,
+        ];
+    }
+
+    private function parseTime(string $time): ?Carbon
+    {
+        return Carbon::createFromFormat('H:i:s', $time) ?: Carbon::createFromFormat('H:i', $time) ?: null;
+    }
+
+    private function overlapMinutes(Carbon $start, Carbon $end, Carbon $shiftStart, Carbon $shiftEnd): int
+    {
+        $effStart = $start->greaterThan($shiftStart) ? $start : $shiftStart;
+        $effEnd = $end->lessThan($shiftEnd) ? $end : $shiftEnd;
+
+        return max(0, (int) $effStart->diffInMinutes($effEnd, false));
+    }
 
     /**
      * Raw worked minutes = (exit − entry) − break, with no leave/mission logic.
