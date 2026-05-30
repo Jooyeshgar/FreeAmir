@@ -119,14 +119,13 @@
                             </div>
 
                             <div class="flex-1 min-w-32 max-w-32">
-                                <input type="text" x-bind:value="product.quantity ?? 0" readonly
-                                    class="mt-1 block w-full rounded-md border-gray-200 text-gray-500 px-3 py-2 text-center" />
+                                <x-text-input x-bind:value="product.quantity ?? 0" readonly
+                                    label_class="w-full" input_class="border-gray-200 text-gray-500 text-center" />
                             </div>
 
                             <div class="flex-1 min-w-32 max-w-48">
-                                <input type="text"
-                                    x-bind:value="calculateAmountPerUnit(product.id, product.quantity)" readonly
-                                    class="mt-1 block w-full rounded-md border-gray-200 text-gray-500 px-3 py-2 text-center" />
+                                <x-text-input x-bind:value="calculateAmountPerUnit(product.id, product.quantity)" readonly
+                                    label_class="w-full" input_class="border-gray-200 text-gray-500 text-center" />
                             </div>
 
                             <div class="flex-1 min-w-32 max-w-48">

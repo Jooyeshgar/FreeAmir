@@ -44,12 +44,7 @@
                 </div>
 
                 <div class="w-28">
-                    <label class="w-full">
-                        <div class="label">
-                            <span>{{ __('Year') }}</span>
-                        </div>
-                        <input type="number" name="year" value="{{ request('year') }}" placeholder="{{ __('Year') }}" class="input  input-sm" />
-                    </label>
+                    <x-text-input input_name="year" input_value="{{ request('year') }}" input_class="input-sm" label_text_class="label" title="{{ __('Year') }}" placeholder="{{ __('Year') }}" />
                 </div>
 
                 <div class="w-36">
