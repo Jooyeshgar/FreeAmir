@@ -532,6 +532,19 @@ class AttendanceService
         $mergedStart = empty($starts) ? null : min($starts);
         $mergedEnd = empty($ends) ? null : max($ends);
 
+        // When both windows exist, compute their intersection so overlapping
+        // minutes are not counted twice in either worked or effectiveInShift.
+        $windowOverlapRaw = 0;
+        $windowOverlapInShift = 0;
+        if ($officeEntry !== null && $officeExit !== null && $remoteStart !== null && $remoteEnd !== null) {
+            $intersectStart = $officeEntry->greaterThan($remoteStart) ? $officeEntry : $remoteStart;
+            $intersectEnd = $officeExit->lessThan($remoteEnd) ? $officeExit : $remoteEnd;
+            $windowOverlapRaw = max(0, (int) $intersectStart->diffInMinutes($intersectEnd, false));
+            if ($windowOverlapRaw > 0 && $shiftStart !== null && $shiftEnd !== null) {
+                $windowOverlapInShift = $this->overlapMinutes($intersectStart, $intersectEnd, $shiftStart, $shiftEnd);
+            }
+        }
+
         $effectiveInShift = 0;
         if ($officeEntry !== null && $officeExit !== null && $shiftStart !== null && $shiftEnd !== null) {
             $effectiveInShift += $this->overlapMinutes($officeEntry, $officeExit, $shiftStart, $shiftEnd);
@@ -539,7 +552,7 @@ class AttendanceService
         if ($remoteStart !== null && $remoteEnd !== null && $shiftStart !== null && $shiftEnd !== null) {
             $effectiveInShift += $this->overlapMinutes($remoteStart, $remoteEnd, $shiftStart, $shiftEnd);
         }
-        $effectiveInShift = min($shiftMinutes, $effectiveInShift);
+        $effectiveInShift = min($shiftMinutes, $effectiveInShift - $windowOverlapInShift);
 
         $delayTime = 0;
         $overtimeTime = 0;
@@ -565,7 +578,7 @@ class AttendanceService
         $autoOvertime = min($remainingOvertime, $autoOvertimeCap);
 
         return [
-            'worked' => $officeRaw + $remoteMinutes,
+            'worked' => $officeRaw + $remoteMinutes - $windowOverlapRaw,
             'delay' => $netDelay,
             'early_leave' => $netEarlyLeave,
             'overtime' => $approvedOvertime,

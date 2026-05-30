@@ -846,6 +846,120 @@ class AttendanceServiceCalculationTest extends TestCase
         $this->assertSame(120, (int) $log->auto_overtime, '2h past shift end = 120 min auto overtime');
     }
 
+    // -----------------------------------------------------------------------
+    // OVERLAP DEDUPLICATION: office window and remote window share time
+    // -----------------------------------------------------------------------
+
+    public function test_partial_overlap_office_and_remote_deduplicates_worked_and_early_leave(): void
+    {
+        // Shift 09:00–17:00 (480 min).
+        // Office 09:00–12:00 (180 min).  Remote 10:00–15:00 (300 min).
+        // Overlap window 10:00–12:00 = 120 min.
+        // Union 09:00–15:00 = 360 min.
+        // Expected: worked = 360, delay = 0, early_leave = 120 (480 - 360).
+        $shift = $this->makeShift([
+            'start_time' => '09:00:00',
+            'end_time' => '17:00:00',
+            'break' => 0,
+            'float' => 0,
+            'max_auto_overtime' => 0,
+        ]);
+        $employee = $this->makeEmployee($shift);
+
+        $log = $this->insertLog($employee, '2025-03-10', [
+            'entry_time' => '09:00:00',
+            'exit_time' => '12:00:00',
+        ], false);
+
+        PersonnelRequest::factory()->create([
+            'company_id' => $this->company->id,
+            'employee_id' => $employee->id,
+            'request_type' => PersonnelRequestType::REMOTE_WORK->value,
+            'start_date' => '2025-03-10 10:00:00',
+            'end_date' => '2025-03-10 15:00:00',
+            'status' => 'approved',
+        ]);
+
+        $log = $this->service->recalculateLog($log);
+
+        $this->assertSame(360, (int) $log->worked, 'union of 09:00–12:00 and 10:00–15:00 = 360 min, not 480');
+        $this->assertSame(300, (int) $log->remote_work, 'remote_work stores the full request duration');
+        $this->assertSame(0, (int) $log->delay);
+        $this->assertSame(120, (int) $log->early_leave, '480 − 360 = 120 min short');
+    }
+
+    public function test_remote_fully_contains_office_deduplicates_worked(): void
+    {
+        // Shift 09:00–17:00 (480 min).
+        // Office 10:00–13:00 (180 min).  Remote 09:00–17:00 (480 min, full day).
+        // Overlap = 180 min.  Union = 09:00–17:00 = 480 min.
+        // Expected: worked = 480, delay = 0, early_leave = 0.
+        $shift = $this->makeShift([
+            'start_time' => '09:00:00',
+            'end_time' => '17:00:00',
+            'break' => 0,
+            'float' => 0,
+            'max_auto_overtime' => 0,
+        ]);
+        $employee = $this->makeEmployee($shift);
+
+        $log = $this->insertLog($employee, '2025-03-10', [
+            'entry_time' => '10:00:00',
+            'exit_time' => '13:00:00',
+        ], false);
+
+        PersonnelRequest::factory()->create([
+            'company_id' => $this->company->id,
+            'employee_id' => $employee->id,
+            'request_type' => PersonnelRequestType::REMOTE_WORK->value,
+            'start_date' => '2025-03-10 09:00:00',
+            'end_date' => '2025-03-10 17:00:00',
+            'status' => 'approved',
+        ]);
+
+        $log = $this->service->recalculateLog($log);
+
+        $this->assertSame(480, (int) $log->worked, '180 office + 480 remote − 180 overlap = 480');
+        $this->assertSame(480, (int) $log->remote_work);
+        $this->assertSame(0, (int) $log->delay);
+        $this->assertSame(0, (int) $log->early_leave);
+    }
+
+    public function test_identical_office_and_remote_windows_deduplicates_fully(): void
+    {
+        // Shift 09:00–17:00 (480 min).  Both office and remote cover 09:00–17:00.
+        // Overlap = 480 min.  Union = 480 min.
+        // Expected: worked = 480, not 960.
+        $shift = $this->makeShift([
+            'start_time' => '09:00:00',
+            'end_time' => '17:00:00',
+            'break' => 0,
+            'float' => 0,
+            'max_auto_overtime' => 0,
+        ]);
+        $employee = $this->makeEmployee($shift);
+
+        $log = $this->insertLog($employee, '2025-03-10', [
+            'entry_time' => '09:00:00',
+            'exit_time' => '17:00:00',
+        ], false);
+
+        PersonnelRequest::factory()->create([
+            'company_id' => $this->company->id,
+            'employee_id' => $employee->id,
+            'request_type' => PersonnelRequestType::REMOTE_WORK->value,
+            'start_date' => '2025-03-10 09:00:00',
+            'end_date' => '2025-03-10 17:00:00',
+            'status' => 'approved',
+        ]);
+
+        $log = $this->service->recalculateLog($log);
+
+        $this->assertSame(480, (int) $log->worked, '480 + 480 − 480 overlap = 480');
+        $this->assertSame(0, (int) $log->delay);
+        $this->assertSame(0, (int) $log->early_leave);
+    }
+
     public function test_office_and_remote_merged_calculation(): void
     {
         // User's example:
