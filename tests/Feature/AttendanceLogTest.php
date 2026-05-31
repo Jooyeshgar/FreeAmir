@@ -3,9 +3,11 @@
 namespace Tests\Feature;
 
 use App\Enums\AttendanceImportType;
+use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\PublicHoliday;
 use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
@@ -340,6 +342,243 @@ class AttendanceLogTest extends TestCase
         $this->assertEquals(540, $log->worked);
         $this->assertEquals(0, $log->delay);
         $this->assertEquals(0, $log->early_leave);
+    }
+
+    // ----------------------------------------------------------------
+    // bulk create
+    // ----------------------------------------------------------------
+
+    private function validBulkPayload(array $overrides = []): array
+    {
+        // Jalali 1404/11/12 = Gregorian 2026-02-01 (Sunday)
+        // 28-day window covers Feb 1–28 2026
+        // Fridays: Feb 6, 13, 20, 27  |  Thursdays: Feb 5, 12, 19, 26
+        return array_merge([
+            'employee_ids' => [$this->employee->id],
+            'start_date' => '1404/11/12',
+            'duration' => 28,
+        ], $overrides);
+    }
+
+    public function test_bulk_create_returns_200(): void
+    {
+        $response = $this->get(route('attendance.attendance-logs.bulk-create'));
+
+        $response->assertStatus(200);
+    }
+
+    public function test_bulk_store_creates_logs_for_each_selected_employee(): void
+    {
+        $workSite2 = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $employee2 = Employee::factory()->create([
+            'company_id' => $this->companyId,
+            'work_site_id' => $workSite2->id,
+        ]);
+
+        $response = $this->post(
+            route('attendance.attendance-logs.bulk-store'),
+            $this->validBulkPayload(['employee_ids' => [$this->employee->id, $employee2->id]])
+        );
+
+        $response->assertRedirect(route('attendance.attendance-logs.index'));
+        $response->assertSessionHas('success');
+
+        // Monday 2026-02-02 is a regular workday — log must exist for both
+        $this->assertDatabaseHas('attendance_logs', [
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-02-02',
+        ]);
+        $this->assertDatabaseHas('attendance_logs', [
+            'company_id' => $this->companyId,
+            'employee_id' => $employee2->id,
+            'log_date' => '2026-02-02',
+        ]);
+    }
+
+    public function test_bulk_store_only_creates_for_selected_employees(): void
+    {
+        $workSite2 = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $unselected = Employee::factory()->create([
+            'company_id' => $this->companyId,
+            'work_site_id' => $workSite2->id,
+        ]);
+
+        $this->post(
+            route('attendance.attendance-logs.bulk-store'),
+            $this->validBulkPayload(['employee_ids' => [$this->employee->id]])
+        );
+
+        $this->assertDatabaseHas('attendance_logs', [
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-02-02',
+        ]);
+        $this->assertDatabaseMissing('attendance_logs', [
+            'company_id' => $this->companyId,
+            'employee_id' => $unselected->id,
+        ]);
+    }
+
+    public function test_bulk_store_skips_fridays(): void
+    {
+        $this->post(route('attendance.attendance-logs.bulk-store'), $this->validBulkPayload());
+
+        // 2026-02-06 is a Friday — no log
+        $this->assertDatabaseMissing('attendance_logs', [
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-02-06',
+        ]);
+        // 2026-02-02 is a Monday — log exists
+        $this->assertDatabaseHas('attendance_logs', [
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-02-02',
+        ]);
+    }
+
+    public function test_bulk_store_skips_public_holidays(): void
+    {
+        // Mark Tuesday 2026-02-03 as a public holiday
+        PublicHoliday::factory()->create([
+            'company_id' => $this->companyId,
+            'date' => '2026-02-03',
+        ]);
+
+        $this->post(route('attendance.attendance-logs.bulk-store'), $this->validBulkPayload());
+
+        $this->assertDatabaseMissing('attendance_logs', [
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-02-03',
+        ]);
+    }
+
+    public function test_bulk_store_skips_thursday_when_shift_is_holiday(): void
+    {
+        $workShift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'thursday_status' => ThursdayStatus::HOLIDAY,
+        ]);
+        $this->employee->update(['work_shift_id' => $workShift->id]);
+
+        $this->post(route('attendance.attendance-logs.bulk-store'), $this->validBulkPayload());
+
+        // 2026-02-05 is a Thursday — skipped because shift marks it as holiday
+        $this->assertDatabaseMissing('attendance_logs', [
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-02-05',
+        ]);
+    }
+
+    public function test_bulk_store_creates_thursday_log_when_shift_is_full_day(): void
+    {
+        $workShift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'thursday_status' => ThursdayStatus::FULL_DAY,
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+        ]);
+        $this->employee->update(['work_shift_id' => $workShift->id]);
+
+        $this->post(route('attendance.attendance-logs.bulk-store'), $this->validBulkPayload());
+
+        $this->assertDatabaseHas('attendance_logs', [
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-02-05',
+            'entry_time' => '08:00:00',
+            'exit_time' => '17:00:00',
+        ]);
+    }
+
+    public function test_bulk_store_uses_thursday_exit_time_for_half_day(): void
+    {
+        $workShift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'thursday_status' => ThursdayStatus::HALF_DAY,
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'thursday_exit_time' => '12:00:00',
+        ]);
+        $this->employee->update(['work_shift_id' => $workShift->id]);
+
+        $this->post(route('attendance.attendance-logs.bulk-store'), $this->validBulkPayload());
+
+        // Thursday gets early exit per shift config
+        $this->assertDatabaseHas('attendance_logs', [
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-02-05',
+            'entry_time' => '08:00:00',
+            'exit_time' => '12:00:00',
+        ]);
+    }
+
+    public function test_bulk_store_uses_shift_times_for_entry_and_exit(): void
+    {
+        $workShift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'start_time' => '08:30:00',
+            'end_time' => '16:30:00',
+        ]);
+        $this->employee->update(['work_shift_id' => $workShift->id]);
+
+        $this->post(route('attendance.attendance-logs.bulk-store'), $this->validBulkPayload());
+
+        $this->assertDatabaseHas('attendance_logs', [
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-02-02',
+            'entry_time' => '08:30:00',
+            'exit_time' => '16:30:00',
+        ]);
+    }
+
+    // ----------------------------------------------------------------
+    // bulk store — validation
+    // ----------------------------------------------------------------
+
+    public function test_bulk_store_validates_employee_ids_required(): void
+    {
+        $response = $this->post(
+            route('attendance.attendance-logs.bulk-store'),
+            ['start_date' => formatDate('2026-02-01'), 'duration' => 28]
+        );
+
+        $response->assertSessionHasErrors(['employee_ids']);
+    }
+
+    public function test_bulk_store_validates_start_date_required(): void
+    {
+        $response = $this->post(
+            route('attendance.attendance-logs.bulk-store'),
+            ['employee_ids' => [$this->employee->id], 'duration' => 28]
+        );
+
+        $response->assertSessionHasErrors(['start_date']);
+    }
+
+    public function test_bulk_store_validates_duration_range(): void
+    {
+        $response = $this->post(
+            route('attendance.attendance-logs.bulk-store'),
+            $this->validBulkPayload(['duration' => 10])
+        );
+
+        $response->assertSessionHasErrors(['duration']);
+    }
+
+    public function test_bulk_store_rejects_nonexistent_employee_id(): void
+    {
+        $response = $this->post(
+            route('attendance.attendance-logs.bulk-store'),
+            $this->validBulkPayload(['employee_ids' => [99999]])
+        );
+
+        $response->assertSessionHasErrors(['employee_ids.0']);
     }
 
     public function test_import_skips_recalculate_for_duplicate_ignored_rows(): void
