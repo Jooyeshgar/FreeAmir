@@ -13,9 +13,14 @@ class CustomerService
     {
         $data['company_id'] ??= getActiveCompany();
 
+        // Optional explicit subject code portion (last 3 digits, relative to the group subject).
+        // Used by the CSV importer; the normal create flow leaves it null and auto-generates.
+        $subjectCode = $data['subject_code'] ?? null;
+        unset($data['subject_code']);
+
         $customer = Customer::create($data);
 
-        $this->syncSubject($customer);
+        $this->syncSubject($customer, $subjectCode);
 
         return $customer;
     }
@@ -39,7 +44,7 @@ class CustomerService
         });
     }
 
-    protected function syncSubject(Customer $customer): void
+    protected function syncSubject(Customer $customer, ?string $subjectCode = null): void
     {
         $customer->loadMissing('group', 'subject');
 
@@ -56,11 +61,17 @@ class CustomerService
         $targetName = $customer->name;
 
         if (! $subject) {
-            $subject = $this->subjectService->createSubject([
+            $attributes = [
                 'name' => $targetName,
                 'parent_id' => $parentId,
                 'company_id' => $companyId,
-            ]);
+            ];
+
+            if ($subjectCode !== null && $subjectCode !== '') {
+                $attributes['code'] = $subjectCode;
+            }
+
+            $subject = $this->subjectService->createSubject($attributes);
         }
 
         $needsSave = false;
