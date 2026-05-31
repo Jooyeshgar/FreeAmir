@@ -30,15 +30,14 @@
         'secondary' => ['card' => 'border-violet-500/25 bg-violet-500/10', 'icon' => 'bg-violet-500/15 text-violet-500', 'stroke' => '#a78bfa'],
     ][$tone] ?? ['card' => 'border-base-300 bg-base-200', 'icon' => 'bg-base-300 text-base-content', 'stroke' => '#64748b'];
 
-    if (blank($sparkline)) {
-        $values = collect(is_iterable($series) ? $series : [0, 0])
+    $hasSeries = is_iterable($series) && collect($series)->isNotEmpty();
+    $hasChart = filled($sparkline) || $hasSeries;
+
+    if (blank($sparkline) && $hasSeries) {
+        $values = collect($series)
             ->values()
             ->map(fn ($value) => (float) $value)
             ->all();
-
-        if (empty($values)) {
-            $values = [0, 0];
-        }
 
         $width = 180;
         $height = 56;
@@ -57,8 +56,14 @@
     }
 @endphp
 
-<article {{ $attributes->merge(['class' => 'card border shadow-sm '.$toneClasses['card']]) }}>
-    <div class="card-body gap-3 p-4">
+<article {{ $attributes->merge(['class' => 'relative overflow-hidden card border shadow-sm '.$toneClasses['card']]) }}>
+    @if ($hasChart)
+        <svg class="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 w-full opacity-50" viewBox="0 0 180 56" preserveAspectRatio="none" aria-hidden="true">
+            <polyline points="{{ $sparkline }}" fill="none" stroke="{{ $toneClasses['stroke'] }}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+    @endif
+
+    <div class="card-body relative gap-2 p-4">
         <div class="flex items-start justify-between gap-2">
             <div class="rounded-lg p-2 {{ $toneClasses['icon'] }}">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -69,25 +74,29 @@
         </div>
 
         <div>
-            <div class="text-xl font-bold leading-8 text-base-content">
+            <div class="text-xl font-bold leading-7 text-base-content">
                 {{ $displayValue }}
             </div>
-            <div class="flex items-center justify-between gap-2 text-xs">
-                <span class="shrink-0 text-base-content/60">{{ $suffix }}</span>
-                @if ($change === null)
-                    <span class="min-w-0 truncate text-base-content/50">{{ $detail ?: __('No change') }}</span>
-                @else
-                    <span class="shrink-0 {{ $change >= 0 ? 'text-success' : 'text-error' }}">
-                        {{ $change >= 0 ? '↑' : '↓' }}
-                        {{ formatNumber(abs($change)) }}{{ __('Percent sign') }}
-                    </span>
-                @endif
-            </div>
+            @if (filled($suffix))
+                <div class="text-xs text-base-content/60">{{ $suffix }}</div>
+            @endif
         </div>
 
-        <svg class="h-11 w-full overflow-visible" viewBox="0 0 180 56" preserveAspectRatio="none" aria-hidden="true">
-            <polyline points="{{ $sparkline }}" fill="none" stroke="{{ $toneClasses['stroke'] }}" stroke-width="3" stroke-linecap="round"
-                stroke-linejoin="round" opacity=".9" />
-        </svg>
+        <div class="mt-auto flex items-center justify-between gap-2 text-xs">
+            @if ($change !== null)
+                <span class="shrink-0 {{ $change >= 0 ? 'text-success' : 'text-error' }}">
+                    {{ $change >= 0 ? '↑' : '↓' }}
+                    {{ formatNumber(abs($change)) }}{{ __('Percent sign') }}
+                </span>
+            @else
+                <span></span>
+            @endif
+
+            @if (filled($detail))
+                <span class="min-w-0 truncate text-base-content/50">{{ $detail }}</span>
+            @elseif ($change === null)
+                <span class="min-w-0 truncate text-base-content/50">{{ __('No change') }}</span>
+            @endif
+        </div>
     </div>
 </article>
