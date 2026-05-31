@@ -7,6 +7,7 @@ use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Services\DocumentImportExportService;
+use App\Services\DocumentImportFormatRegistry;
 use App\Services\DocumentNumberService;
 use App\Services\DocumentService;
 use App\Services\SubjectService;
@@ -322,7 +323,9 @@ class DocumentController extends Controller
 
     public function importForm()
     {
-        return view('documents.import');
+        $formats = (new DocumentImportFormatRegistry)->options();
+
+        return view('documents.import', compact('formats'));
     }
 
     public function import(Request $request): RedirectResponse
@@ -332,7 +335,7 @@ class DocumentController extends Controller
         $file = $request->file('file');
         $user = $request->user();
 
-        $result = $this->documentImportExportService->importCsv($file, $user);
+        $result = $this->documentImportExportService->importCsv($file, $user, $request->input('format'));
 
         $message = __(':docs documents and :subjects subjects imported successfully.', [
             'docs' => $result['documents_created'] ?? 0,

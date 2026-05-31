@@ -9,8 +9,10 @@ use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\DocumentImportExportService;
+use App\Services\ImportSubjectResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Tests\TestCase;
@@ -24,6 +26,8 @@ class DocumentImportExportTest extends TestCase
     private Company $company;
 
     private DocumentImportExportService $service;
+
+    private ImportSubjectResolver $resolver;
 
     private function buildCsv(array $rows): UploadedFile
     {
@@ -54,12 +58,12 @@ class DocumentImportExportTest extends TestCase
         return ob_get_clean() ?: '';
     }
 
-    private function runCsvImport(UploadedFile $file, ?Company $company = null): array
+    private function runCsvImport(UploadedFile $file, string $format = 'free_amir', ?Company $company = null): array
     {
         $targetCompany = $company ?? $this->company;
         config(['active-company-id' => $targetCompany->id]);
 
-        return $this->service->importCsv($file, $this->user);
+        return $this->service->importCsv($file, $this->user, $format);
     }
 
     protected function setUp(): void
@@ -79,6 +83,7 @@ class DocumentImportExportTest extends TestCase
         config(['active-company-id' => $this->company->id]);
 
         $this->service = new DocumentImportExportService;
+        $this->resolver = new ImportSubjectResolver;
     }
 
     public function test_export_form_renders(): void
@@ -88,13 +93,25 @@ class DocumentImportExportTest extends TestCase
         $response->assertSee(__('Export Documents'));
     }
 
-    public function test_export_form_shows_csv_column_headers(): void
+    public function test_export_form_shows_optional_columns_only(): void
     {
         $response = $this->get(route('documents.export'));
         $response->assertOk();
 
-        foreach (['record_type', 'doc_number', 'doc_date', 'subject_code', 'debit', 'credit'] as $col) {
-            $response->assertSee($col);
+        // Optional (non-mandatory) columns are selectable.
+        foreach (['doc_title', 'doc_type', 'doc_status', 'subject_root_code', 'subject_parent_code', 'transaction_desc'] as $col) {
+            $response->assertSee('col-'.$col);
+        }
+    }
+
+    public function test_export_form_hides_mandatory_columns(): void
+    {
+        $response = $this->get(route('documents.export'));
+        $response->assertOk();
+
+        // Mandatory columns must not be rendered as selectable checkboxes.
+        foreach (DocumentImportExportService::MANDATORY_COLUMNS as $col) {
+            $response->assertDontSee('col-'.$col);
         }
     }
 
@@ -215,7 +232,7 @@ class DocumentImportExportTest extends TestCase
         $newCompany = Company::factory()->create();
         config(['active-company-id' => $newCompany->id]);
 
-        $result = $this->runCsvImport($this->makeCsvFile($csv), $newCompany);
+        $result = $this->runCsvImport($this->makeCsvFile($csv), 'free_amir', $newCompany);
 
         $this->assertSame(1, $result['documents_created'], 'One document should be imported');
 
@@ -305,7 +322,7 @@ class DocumentImportExportTest extends TestCase
     public function test_finds_existing_subject_by_code(): void
     {
         $existing = Subject::factory()->create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets']);
-        $result = $this->service->findOrCreate('001', 'Assets', '');
+        $result = $this->resolver->findOrCreate('001', 'Assets', '');
 
         $this->assertSame($existing->id, $result->id);
         $this->assertSame(1, Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '001')->count());
@@ -314,7 +331,7 @@ class DocumentImportExportTest extends TestCase
     public function test_creates_root_subject_when_not_found(): void
     {
         $this->assertDatabaseMissing('subjects', ['code' => '099', 'company_id' => $this->company->id]);
-        $result = $this->service->findOrCreate('099', 'NewRoot', '');
+        $result = $this->resolver->findOrCreate('099', 'NewRoot', '');
 
         $this->assertNotNull($result->id);
         $this->assertSame('NewRoot', $result->name);
@@ -323,7 +340,7 @@ class DocumentImportExportTest extends TestCase
     public function test_creates_child_subject_with_existing_parent(): void
     {
         $parent = Subject::create(['company_id' => $this->company->id, 'code' => '100', 'name' => 'Assets', 'parent_id' => null, 'type' => 'both']);
-        $child = $this->service->findOrCreate('100002', 'Bank', '100');
+        $child = $this->resolver->findOrCreate('100002', 'Bank', '100');
 
         $this->assertNotNull($child->id);
         $this->assertSame('Bank', $child->name);
@@ -334,7 +351,7 @@ class DocumentImportExportTest extends TestCase
     {
         $parent = Subject::create(['company_id' => $this->company->id, 'code' => '200', 'name' => 'Liabilities', 'parent_id' => null, 'type' => 'both']);
         $existing = Subject::create(['company_id' => $this->company->id, 'code' => '200001', 'name' => 'Loans', 'parent_id' => $parent->id, 'type' => 'both']);
-        $result = $this->service->findOrCreate('200999', 'Loans', '200');
+        $result = $this->resolver->findOrCreate('200999', 'Loans', '200');
 
         $this->assertSame($existing->id, $result->id, 'Should match by name + parent_id when code differs');
     }
@@ -347,7 +364,7 @@ class DocumentImportExportTest extends TestCase
             ['code' => '001001001', 'name' => 'Mellat', 'parent_code' => '001001'],
         ];
 
-        $this->service->processSubjectRows($rows);
+        $this->resolver->processSubjectRows($rows);
         $mellat = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('name', 'Mellat')->first();
 
         $this->assertNotNull($mellat);
@@ -367,11 +384,11 @@ class DocumentImportExportTest extends TestCase
             ['code' => '001001', 'name' => 'Bank',   'parent_code' => '001'],
         ];
 
-        $this->service->processSubjectRows($rows);
+        $this->resolver->processSubjectRows($rows);
         $countAfterFirst = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count();
 
-        $this->service->resetCache();
-        $this->service->processSubjectRows($rows);
+        $this->resolver->reset();
+        $this->resolver->processSubjectRows($rows);
         $countAfterSecond = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count();
 
         $this->assertSame($countAfterFirst, $countAfterSecond, 'Importing same subjects twice must not create duplicates');
@@ -412,7 +429,7 @@ class DocumentImportExportTest extends TestCase
             $this->parsianRow(503, '1404/12/21', 19, 7, 0, 0, 1080000000, 'Charge bank', 'سایر پرداختنی'),
         ]);
 
-        $result = $this->runCsvImport($csv);
+        $result = $this->runCsvImport($csv, 'parsian');
 
         $this->assertSame(1, $result['documents_created']);
         $this->assertSame(0, count($result['errors']));
@@ -430,7 +447,7 @@ class DocumentImportExportTest extends TestCase
             $this->parsianRow(503, '1404/12/21', 11, 3, 0, 0, 1000, 'desc', 'بانک ملی'),
         ]);
 
-        $this->runCsvImport($csv);
+        $this->runCsvImport($csv, 'parsian');
 
         $pasargad = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '011004')->first();
         $melli = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '011003')->first();
@@ -452,7 +469,7 @@ class DocumentImportExportTest extends TestCase
             $this->parsianRow(503, '1404/12/21', 11, 4, 0, 1000, 0, 'desc', 'بانک پاسارگاد'),
         ]);
 
-        $this->runCsvImport($csv);
+        $this->runCsvImport($csv, 'parsian');
 
         $leaf = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '019007001')->first();
         $mid = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '019007')->first();
@@ -473,10 +490,10 @@ class DocumentImportExportTest extends TestCase
             $this->parsianRow(503, '1404/12/21', 19, 7, 0, 0, 1000, 'desc', 'سایر'),
         ]);
 
-        $this->runCsvImport($csv);
+        $this->runCsvImport($csv, 'parsian');
         $docsAfterFirst = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count();
 
-        $this->runCsvImport($csv);
+        $this->runCsvImport($csv, 'parsian');
         $docsAfterSecond = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count();
 
         $this->assertSame($docsAfterFirst, $docsAfterSecond, 'Re-importing same Parsian CSV must not create duplicates');
@@ -489,7 +506,7 @@ class DocumentImportExportTest extends TestCase
             [19, 'سایر حسابهای پرداختنی', 20000000, 24000000, 0, 4000000],
         ]);
 
-        $result = $this->runCsvImport($csv);
+        $result = $this->runCsvImport($csv, 'parsian');
 
         $this->assertSame(2, $result['subjects_created']);
 
@@ -502,15 +519,99 @@ class DocumentImportExportTest extends TestCase
         $trialBalanceCsv = $this->buildParsianTrialBalanceCsv([
             [11, 'بانک ها', 0, 0, 0, 0],
         ]);
-        $this->runCsvImport($trialBalanceCsv);
+        $this->runCsvImport($trialBalanceCsv, 'parsian');
 
         $transactionCsv = $this->buildParsianCsv([
             $this->parsianRow(503, '1404/12/21', 11, 4, 0, 1000, 0, 'desc', 'بانک پاسارگاد'),
             $this->parsianRow(503, '1404/12/21', 11, 3, 0, 0, 1000, 'desc', 'بانک ملی'),
         ]);
-        $this->runCsvImport($transactionCsv);
+        $this->runCsvImport($transactionCsv, 'parsian');
 
         $kol11 = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '011')->first();
         $this->assertSame('بانک ها', $kol11->name);
+    }
+
+    public function test_free_amir_format_rejects_parsian_file(): void
+    {
+        $parsianFile = $this->buildParsianCsv([
+            $this->parsianRow(503, '1404/12/21', 11, 4, 0, 1000, 0, 'desc', 'بانک پاسارگاد'),
+        ]);
+
+        try {
+            $this->runCsvImport($parsianFile, 'free_amir');
+            $this->fail('Expected a ValidationException for a mismatched file.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('file', $e->errors());
+        }
+
+        $this->assertSame(0, Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count());
+        $this->assertSame(0, Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count());
+    }
+
+    public function test_parsian_format_rejects_free_amir_file(): void
+    {
+        $freeAmirFile = $this->buildCsv([
+            ['SUBJECT',     '',  '',           '',    '',       '',           '001', '001', 'Assets', '', '',     '',    ''],
+            ['TRANSACTION', '7', '2026-03-01', 'Doc', 'manual', 'unapproved', '001', '001', 'Assets', '', 'Desc', '100', '100'],
+        ]);
+
+        try {
+            $this->runCsvImport($freeAmirFile, 'parsian');
+            $this->fail('Expected a ValidationException for a mismatched file.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('file', $e->errors());
+        }
+
+        $this->assertSame(0, Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count());
+        $this->assertSame(0, Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count());
+    }
+
+    public function test_import_requires_a_format_to_be_selected(): void
+    {
+        $file = $this->buildCsv([
+            ['SUBJECT', '', '', '', '', '', '001', '001', 'Assets', '', '', '', ''],
+        ]);
+
+        $response = $this->post(route('documents.import.store'), ['file' => $file]);
+
+        $response->assertSessionHasErrors('format');
+        $this->assertSame(0, Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count());
+    }
+
+    public function test_export_always_includes_mandatory_columns_even_when_none_selected(): void
+    {
+        $root = Subject::factory()->create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets']);
+        $document = Document::factory()->create(['company_id' => $this->company->id, 'number' => 1, 'date' => '2026-01-01']);
+        Transaction::create(['document_id' => $document->id, 'subject_id' => $root->id, 'value' => 1000, 'user_id' => $this->user->id]);
+
+        // Simulate the form submitting an explicit selection with no optional columns checked.
+        $csv = $this->exportCsvViaService(['columns_selected' => 1, 'columns' => []]);
+
+        $headerLine = strtok($csv, "\n");
+        foreach (DocumentImportExportService::MANDATORY_COLUMNS as $col) {
+            $this->assertStringContainsString(__($col), $headerLine, "Mandatory column {$col} must be in the export header.");
+        }
+    }
+
+    public function test_export_column_ordering_is_preserved(): void
+    {
+        $root = Subject::factory()->create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets']);
+        $document = Document::factory()->create(['company_id' => $this->company->id, 'number' => 1, 'date' => '2026-01-01']);
+        Transaction::create(['document_id' => $document->id, 'subject_id' => $root->id, 'value' => 1000, 'user_id' => $this->user->id]);
+
+        // Select a couple of optional columns in an arbitrary order; output must follow ALL_COLUMNS order.
+        $csv = $this->exportCsvViaService(['columns_selected' => 1, 'columns' => ['transaction_desc', 'doc_title']]);
+
+        $headerLine = trim(strtok($csv, "\n"), "\xEF\xBB\xBF\r\n");
+        $actual = array_map('trim', str_getcsv($headerLine));
+
+        $expectedColumns = array_values(array_filter(
+            DocumentImportExportService::ALL_COLUMNS,
+            fn ($col) => in_array($col, DocumentImportExportService::MANDATORY_COLUMNS, true)
+                || in_array($col, ['transaction_desc', 'doc_title'], true)
+        ));
+        $expected = array_map(fn ($col) => __($col), $expectedColumns);
+
+        $this->assertSame($expected, $actual);
     }
 }

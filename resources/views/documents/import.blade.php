@@ -11,20 +11,28 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                     <div>
-                        <p class="text-sm">{{ __('Subjects missing from the system will be created automatically, preserving the hierarchy.') }}</p>
+                        <p class="text-sm">{{ __('Any subjects not already present in the system will be created automatically, with the hierarchy preserved.') }}</p>
                         <p class="mt-1 text-sm">{{ __('Duplicate documents (same number + date) will be skipped.') }}</p>
                     </div>
                 </div>
 
-                <div class="mt-3">
+                <div class="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <label class="fieldset w-full">
+                        <div class="label">
+                            <span>{{ __('Import Format') }} <span class="text-error">*</span></span>
+                        </div>
+                        <select name="format" class="select w-full @error('format') select-error @enderror" required>
+                            <option value="" disabled @selected(! old('format'))>{{ __('— Select Format —') }}</option>
+                            @foreach($formats as $key => $label)
+                                <option value="{{ $key }}" @selected(old('format') === $key)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </label>
                     <label class="fieldset w-full">
                         <div class="label">
                             <span>{{ __('CSV File') }} <span class="text-error">*</span></span>
                         </div>
                         <input type="file" name="file" accept=".csv,.txt" class="file-input w-full @error('file') file-input-error @enderror" required />
-                        @error('file')
-                            <div class="label"><span class="text-xs text-error">{{ $message }}</span></div>
-                        @enderror
                     </label>
                 </div>
 

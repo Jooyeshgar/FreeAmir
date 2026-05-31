@@ -61,34 +61,26 @@
                 </div>
 
                 @php
-                    $allColumns = \App\Services\DocumentImportExportService::ALL_COLUMNS;
-                    $requiredCols = \App\Services\DocumentImportExportService::IMPORT_REQUIRED_COLUMNS;
-                    $selectedCols = old('columns', $allColumns);
-                    $initialState = array_combine(
-                        $allColumns,
-                        array_map(fn ($c) => in_array($c, $selectedCols), $allColumns)
-                    );
+                    $mandatoryCols = \App\Services\DocumentImportExportService::MANDATORY_COLUMNS;
+                    $optionalCols = array_values(array_diff(
+                        \App\Services\DocumentImportExportService::ALL_COLUMNS,
+                        $mandatoryCols
+                    ));
+                    $selectedCols = old('columns', $optionalCols);
                 @endphp
 
-                <div class="mt-2" x-data="{
-                         cols: @js($initialState),
-                         required: @js($requiredCols),
-                         get hasWarning() {
-                             return this.required.some(col => !this.cols[col]);
-                         }
-                     }">
-
+                <x-input name="columns_selected" value="1" hidden />
+                <div class="mt-2">
                     <p class="text-sm font-medium text-base-content/70 mb-2">{{ __('CSV Columns') }}</p>
 
-                    <div x-show="hasWarning" x-cloak class="alert alert-warning text-sm mb-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
-                        {{ __('Deselecting required columns will prevent re-importing this file correctly.') }}
+                    <div class="alert alert-info text-sm mb-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        {{ __('Required columns (:columns) are always included in the export.', ['columns' => implode(', ', array_map('__', $mandatoryCols))]) }}
                     </div>
 
                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                        @foreach($allColumns as $col)
-                            @php $isRequired = in_array($col, $requiredCols); @endphp
-                            <x-checkbox name="columns[]" :value="$col" :title="$col" :id="'col-'.$col" x-model="cols['{{ $col }}']" />
+                        @foreach($optionalCols as $col)
+                            <x-checkbox name="columns[]" :value="$col" :title="__($col)" :id="'col-'.$col" :checked="in_array($col, $selectedCols)" />
                         @endforeach
                     </div>
                 </div>
