@@ -13,6 +13,7 @@ class CostIncomeController extends Controller
         $summary = $this->service->summary();
         $monthly = $this->service->monthlyIncomeAndCost();
         $topCustomers = $this->service->topCustomers();
+        $invoices = $this->service->invoiceSummary();
 
         return view('reports.cost-income.index', [
             'totalIncome' => $summary['totalIncome'],
@@ -25,6 +26,7 @@ class CostIncomeController extends Controller
             'monthlyCost' => $monthly['cost'],
             'debtors' => $topCustomers['debtors'],
             'creditors' => $topCustomers['creditors'],
+            'invoices' => $invoices,
         ]);
     }
 }

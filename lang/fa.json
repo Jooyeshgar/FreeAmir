@@ -2084,5 +2084,19 @@
     "— None —": "— هیچ‌کدام —",
     "— Select Format —": "- انتخاب فرمت -",
     "— Select —": "— انتخاب کنید —",
-    "… and :remaining more records.": "… و :remaining رکوردهای بیشتر."
+    "… and :remaining more records.": "… و :remaining رکوردهای بیشتر.",
+    "Profitability, trade and payroll cost for the current fiscal year": "سودآوری، خرید و فروش و هزینه حقوق برای سال مالی جاری",
+    "Margin :percent%": "حاشیه سود :percent٪",
+    "Net Purchases": "خالص خرید",
+    "Trading Margin": "حاشیه سود بازرگانی",
+    "Net sales minus net purchases": "خالص فروش منهای خالص خرید",
+    ":count invoice(s)": ":count فاکتور",
+    "Sales and Purchases": "خرید و فروش",
+    "Trade activity sourced from invoices": "فعالیت بازرگانی برگرفته از فاکتورها",
+    "Sales vs Purchases": "فروش در برابر خرید",
+    "Invoice totals for the current fiscal year": "جمع فاکتورها برای سال مالی جاری",
+    "Salary Cost": "هزینه حقوق",
+    "Gross payroll + employer insurance": "ناخالص حقوق + بیمه کارفرما",
+    "Payroll Cost": "هزینه حقوق و دستمزد",
+    "Total employer payroll cost for the current fiscal year": "کل هزینه حقوق کارفرما برای سال مالی جاری"
 }
