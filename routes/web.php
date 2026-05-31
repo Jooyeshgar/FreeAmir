@@ -67,6 +67,9 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('services/search-service-group', [Controllers\ServiceController::class, 'searchServiceGroup'])->name('services.search-service-group');
     Route::resource('services', Controllers\ServiceController::class);
     Route::resource('service-groups', Controllers\ServiceGroupController::class);
+    Route::get('customers/export', [Controllers\CustomerController::class, 'export'])->name('customers.export');
+    Route::get('customers/import', [Controllers\CustomerController::class, 'importForm'])->name('customers.import');
+    Route::post('customers/import', [Controllers\CustomerController::class, 'import'])->name('customers.import.store');
     Route::resource('customers', Controllers\CustomerController::class);
     Route::resource('customer-groups', Controllers\CustomerGroupController::class);
     Route::resource('companies', Controllers\CompanyController::class);

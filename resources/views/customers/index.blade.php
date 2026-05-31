@@ -3,7 +3,11 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="card-actions flex justify-between gap-4 ">
-                <a href="{{ route('customers.create') }}" class="btn btn-primary ">{{ __('Create Customer') }}</a>
+                <div class="flex items-center gap-2">
+                    <a href="{{ route('customers.create') }}" class="btn btn-primary ">{{ __('Create Customer') }}</a>
+                    <a href="{{ route('customers.export') }}" class="btn btn-outline">{{ __('Export CSV') }}</a>
+                    <a href="{{ route('customers.import') }}" class="btn btn-outline">{{ __('Import CSV') }}</a>
+                </div>
 
                 <form method="GET" action="{{ route('customers.index') }}" class="flex items-center gap-2 ">
                     <label for="group_id" class="sr-only">{{ __('Customer Group') }}</label>

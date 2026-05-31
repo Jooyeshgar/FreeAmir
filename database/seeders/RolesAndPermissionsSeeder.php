@@ -70,7 +70,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'service-groups' => self::CRUD,
 
             // Customers
-            'customers' => self::CRUD,
+            'customers' => [...self::CRUD, 'export', 'import', 'import.store'],
             'customer-groups' => self::CRUD,
 
             // Companies + fiscal-year wizard
