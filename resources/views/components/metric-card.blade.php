@@ -93,6 +93,44 @@
             ->implode(' ');
     }
 
+    // Build a smooth Catmull-Rom spline path from the "x,y x,y ..." points.
+    $linePath = '';
+    $areaPath = '';
+    if ($hasChart) {
+        $points = collect(explode(' ', trim($sparkline)))
+            ->filter()
+            ->map(function ($pair) {
+                [$x, $y] = array_pad(explode(',', $pair), 2, 0);
+
+                return ['x' => (float) $x, 'y' => (float) $y];
+            })
+            ->values()
+            ->all();
+
+        $count = count($points);
+        if ($count > 0) {
+            $linePath = sprintf('M %.2f,%.2f', $points[0]['x'], $points[0]['y']);
+            for ($i = 0; $i < $count - 1; $i++) {
+                $p0 = $points[max($i - 1, 0)];
+                $p1 = $points[$i];
+                $p2 = $points[$i + 1];
+                $p3 = $points[min($i + 2, $count - 1)];
+
+                $linePath .= sprintf(
+                    ' C %.2f,%.2f %.2f,%.2f %.2f,%.2f',
+                    $p1['x'] + ($p2['x'] - $p0['x']) / 12,
+                    $p1['y'] + ($p2['y'] - $p0['y']) / 12,
+                    $p2['x'] - ($p3['x'] - $p1['x']) / 12,
+                    $p2['y'] - ($p3['y'] - $p1['y']) / 12,
+                    $p2['x'],
+                    $p2['y'],
+                );
+            }
+
+            $areaPath = sprintf('%s L %.2f,60 L %.2f,60 Z', $linePath, $points[$count - 1]['x'], $points[0]['x']);
+        }
+    }
+
     $chartId = 'metric-chart-' . substr(md5((string) $title . (string) $tone . (string) $sparkline), 0, 10);
 @endphp
 
@@ -101,20 +139,14 @@
     @if ($hasChart)
         <svg class="pointer-events-none absolute inset-x-0 bottom-0 h-[54%] w-full" viewBox="0 0 180 60" preserveAspectRatio="none" aria-hidden="true">
             <defs>
-                <linearGradient id="{{ $chartId }}-fill" x1="0" x2="0" y1="8" y2="60" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stop-color="{{ $toneClasses['stroke'] }}" stop-opacity="0.028" />
-                    <stop offset="58%" stop-color="{{ $toneClasses['stroke'] }}" stop-opacity="0.007" />
+                <linearGradient id="{{ $chartId }}-fill" x1="0" x2="0" y1="0" y2="60" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="{{ $toneClasses['stroke'] }}" stop-opacity="0.35" />
                     <stop offset="100%" stop-color="{{ $toneClasses['stroke'] }}" stop-opacity="0" />
                 </linearGradient>
-                <filter id="{{ $chartId }}-shadow" x="-4%" y="-10%" width="108%" height="125%" color-interpolation-filters="sRGB">
-                    <feGaussianBlur stdDeviation="0.9" />
-                </filter>
             </defs>
-            <polygon points="{{ $sparkline }} 180,60 0,60" fill="url(#{{ $chartId }}-fill)" />
-            <polyline points="{{ $sparkline }}" transform="translate(0 3.4)" fill="none" stroke="{{ $toneClasses['stroke'] }}" stroke-width="2.2"
-                stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.13" vector-effect="non-scaling-stroke" filter="url(#{{ $chartId }}-shadow)" />
-            <polyline points="{{ $sparkline }}" fill="none" stroke="{{ $toneClasses['stroke'] }}" stroke-width="1.15" stroke-linecap="round"
-                stroke-linejoin="round" stroke-opacity="0.52" vector-effect="non-scaling-stroke" />
+            <path d="{{ $areaPath }}" fill="url(#{{ $chartId }}-fill)" />
+            <path d="{{ $linePath }}" fill="none" stroke="{{ $toneClasses['stroke'] }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                stroke-opacity="0.6" vector-effect="non-scaling-stroke" />
         </svg>
     @endif
 
