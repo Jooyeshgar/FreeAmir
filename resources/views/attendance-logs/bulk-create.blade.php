@@ -48,9 +48,19 @@
                     </span>
                 </div>
 
+                <div class="alert alert-warning mt-2 text-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    </svg>
+                    <span>{{ __('If an attendance log already exists for a day, it will be overwritten with the shift times.') }}</span>
+                </div>
+
                 <div class="card-actions justify-end mt-4">
                     <a href="{{ route('attendance.attendance-logs.index') }}" class="btn btn-ghost">{{ __('Cancel') }}</a>
-                    <button type="submit" class="btn btn-primary">{{ __('Create Logs') }}</button>
+                    <button type="submit" class="btn btn-primary"
+                        onclick="return confirm('{{ __('Existing attendance logs for the selected period will be overwritten. Continue?') }}')">
+                        {{ __('Create Logs') }}
+                    </button>
                 </div>
             </div>
         </form>

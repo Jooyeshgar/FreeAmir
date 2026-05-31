@@ -420,6 +420,40 @@ class AttendanceLogTest extends TestCase
         ]);
     }
 
+    public function test_bulk_store_overwrites_existing_log_with_shift_times(): void
+    {
+        $workShift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+        ]);
+        $this->employee->update(['work_shift_id' => $workShift->id]);
+
+        AttendanceLog::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-02-02',
+            'entry_time' => '09:30:00',
+            'exit_time' => '18:30:00',
+        ]);
+
+        $this->post(route('attendance.attendance-logs.bulk-store'), $this->validBulkPayload());
+
+        // Existing log must be overwritten with shift times
+        $this->assertDatabaseHas('attendance_logs', [
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-02-02',
+            'entry_time' => '08:00:00',
+            'exit_time' => '17:00:00',
+        ]);
+        // Still only one row for that day
+        $this->assertSame(
+            1,
+            AttendanceLog::where('employee_id', $this->employee->id)->where('log_date', '2026-02-02')->count()
+        );
+    }
+
     public function test_bulk_store_skips_fridays(): void
     {
         $this->post(route('attendance.attendance-logs.bulk-store'), $this->validBulkPayload());
