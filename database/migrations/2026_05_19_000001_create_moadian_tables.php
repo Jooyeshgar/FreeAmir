@@ -8,6 +8,13 @@ return new class extends Migration
 {
     public function up(): void
     {
+        Schema::table('companies', function (Blueprint $table) {
+            $table->string('certificate_path')->nullable()->after('logo');
+            $table->string('private_key_path')->nullable()->after('certificate_path');
+            $table->string('moadian_username', 20)->nullable()->after('private_key_path');
+            $table->string('tax_id', 20)->nullable()->after('moadian_username');
+        });
+
         Schema::table('invoices', function (Blueprint $table) {
             $table->string('taxID')->nullable()->after('company_id');
             $table->date('pay_date')->nullable()->after('taxID');
@@ -28,6 +35,10 @@ return new class extends Migration
 
         Schema::table('invoices', function (Blueprint $table) {
             $table->dropColumn(['taxID', 'pay_date', 'pay_reference_number']);
+        });
+
+        Schema::table('companies', function (Blueprint $table) {
+            $table->dropColumn(['certificate_path', 'private_key_path', 'moadian_username', 'tax_id']);
         });
     }
 };

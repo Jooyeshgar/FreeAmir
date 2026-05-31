@@ -68,9 +68,9 @@
                                         {{ __($status) }}
                                     </span>
                                 </td>
-                                <td class="text-sm text-gray-500">{{ $history->data['referenceNumber'] ?? '-' }}</td>
-                                <td class="text-sm text-gray-500 text-xs break-all">{{ $history->data['uid'] ?? '-' }}</td>
-                                <td class="text-sm text-gray-500">{{ convertToFarsi($history->created_at->format('Y/m/d H:i')) }}</td>
+                                <td class="text-xs text-gray-500">{{ $history->data['referenceNumber'] ?? '-' }}</td>
+                                <td class="text-xs text-gray-500">{{ $history->data['uid'] ?? '-' }}</td>
+                                <td class="text-xs text-gray-500">{{ convertToFarsi($history->created_at->format('Y/m/d H:i')) }}</td>
                                 <td class="py-2">
                                     @if($isLatest)
                                         <div class="flex items-center justify-center gap-2">
@@ -86,6 +86,9 @@
                                                 @can('invoices.send-moadian')
                                                     <a href="{{ route('invoices.moadian-form', $history->invoice_id) }}" class="btn btn-xs btn-info">{{ __('Send Again') }}</a>
                                                 @endcan
+                                            @endif
+                                            @if($status === 'SUCCESS')
+                                                <button class="btn btn-xs btn-disabled">{{ __('Sent') }}</button>
                                             @endif
                                         </div>
                                     @endif

@@ -28,6 +28,8 @@ class CompanyController extends Controller
         'phone_number' => 'nullable|numeric|regex:/^09\d{9}$/',
         'fiscal_year' => 'required|numeric',
         'currency' => 'nullable|string|max:50',
+        'moadian_username' => 'nullable|string|max:50',
+        'tax_id' => 'nullable|string|max:20',
     ];
 
     public function __construct() {}
@@ -67,21 +69,34 @@ class CompanyController extends Controller
             'source_year_id' => 'required|exists:companies,id',
             'tables_to_copy' => 'array',
             'tables_to_copy.*' => 'string|in:'.implode(',', array_map(fn ($case) => $case->value, FiscalYearSection::cases())),
+            'certificate' => $this->certificateRules(),
+            'private_key' => $this->privateKeyRules(),
         ];
 
-        $validated = $request->validate(array_merge($this->rules, $fiscalYearRules));
+        $validated = $request->validate([...$this->rules, ...$fiscalYearRules]);
 
         if ($logo = $request->file('logo')) {
             $logo = $this->storeLogo($logo);
             $validated['logo'] = $logo;
         }
+
+        if ($certFile = $request->file('certificate')) {
+            $validated['certificate_path'] = $this->storeCertFile($certFile);
+        }
+        unset($validated['certificate']);
+
+        if ($keyFile = $request->file('private_key')) {
+            $validated['private_key_path'] = $this->storeCertFile($keyFile);
+        }
+        unset($validated['private_key']);
+
         $data = $validated;
         unset($data['source_year_id']);
         unset($data['tables_to_copy']);
 
         $data['currency'] ??= 'Rial'; // default
 
-        $company = FiscalYearService::createWithCopiedData(
+        FiscalYearService::createWithCopiedData(
             $data,
             $validated['source_year_id'],
             $validated['tables_to_copy'] ?? []
@@ -106,12 +121,27 @@ class CompanyController extends Controller
      */
     public function update(Request $request, Company $company): RedirectResponse
     {
-        $validated = $request->validate($this->rules);
+        $certRules = [
+            'certificate' => $this->certificateRules(),
+            'private_key' => $this->privateKeyRules(),
+        ];
+
+        $validated = $request->validate([...$this->rules, ...$certRules]);
 
         if ($logo = $request->file('logo')) {
             $logo = $this->storeLogo($logo, $company);
             $validated['logo'] = $logo;
         }
+
+        if ($certFile = $request->file('certificate')) {
+            $validated['certificate_path'] = $this->storeCertFile($certFile, $company->certificate_path);
+        }
+        unset($validated['certificate']);
+
+        if ($keyFile = $request->file('private_key')) {
+            $validated['private_key_path'] = $this->storeCertFile($keyFile, $company->private_key_path);
+        }
+        unset($validated['private_key']);
 
         $validated['currency'] ??= 'Rial'; // default
 
@@ -141,6 +171,12 @@ class CompanyController extends Controller
                     }
                 });
 
+                foreach ([$company->certificate_path, $company->private_key_path] as $keyPath) {
+                    if ($keyPath && Storage::exists($keyPath)) {
+                        Storage::delete($keyPath);
+                    }
+                }
+
                 $company->delete();
             });
 
@@ -150,6 +186,42 @@ class CompanyController extends Controller
             return redirect(route('companies.index'))
                 ->with('error', __('An error occurred, try again.'));
         }
+    }
+
+    private function certificateRules(): array
+    {
+        return ['nullable', 'file', 'extensions:crt', function ($_, $value, $fail) {
+            $content = file_get_contents($value->getRealPath());
+
+            // Try PEM as-is
+            $certificate = @openssl_x509_read($content);
+
+            if ($certificate === false) {
+                // Try bare base64 (base64 content without PEM headers)
+                $stripped = preg_replace('/\s+/', '', $content);
+                $pem = "-----BEGIN CERTIFICATE-----\n".chunk_split($stripped, 64, "\n")."-----END CERTIFICATE-----\n";
+                $certificate = @openssl_x509_read($pem);
+            }
+
+            if ($certificate === false) {
+                // Try DER (binary) format
+                $pem = "-----BEGIN CERTIFICATE-----\n".chunk_split(base64_encode($content), 64, "\n")."-----END CERTIFICATE-----\n";
+                $certificate = @openssl_x509_read($pem);
+            }
+
+            if ($certificate === false) {
+                $fail(__('The certificate file must contain a valid X.509 certificate.'));
+            }
+        }];
+    }
+
+    private function privateKeyRules(): array
+    {
+        return ['nullable', 'file', 'extensions:pem', function ($_, $value, $fail) {
+            if (! preg_match('/-----BEGIN\s+[\w\s]+-----/', file_get_contents($value->getRealPath()))) {
+                $fail(__('The private key file must contain valid PEM-formatted content.'));
+            }
+        }];
     }
 
     /**
@@ -170,6 +242,23 @@ class CompanyController extends Controller
         $storagePath = 'public/company_logos/'.$uniqueName;
         Storage::put($storagePath, file_get_contents($logo));
         $path = "company_logos/{$uniqueName}";
+
+        return $path;
+    }
+
+    /**
+     * Store a certificate or private key file under storage/app/keys.
+     */
+    protected function storeCertFile(UploadedFile $file, ?string $oldPath = null): string
+    {
+        if ($oldPath && Storage::exists($oldPath)) {
+            Storage::delete($oldPath);
+        }
+
+        $extension = $file->getClientOriginalExtension();
+        $uniqueName = uniqid().'.'.$extension;
+        $path = 'keys/'.$uniqueName;
+        Storage::put($path, file_get_contents($file));
 
         return $path;
     }
@@ -210,7 +299,7 @@ class CompanyController extends Controller
     /**
      * Show the multi-step year-end closing wizard.
      */
-    public function closingWizard(Company $company, Request $request): \Illuminate\Contracts\View\View
+    public function closingWizard(Company $company, Request $request): View
     {
         if (! $company->users->contains($request->user()->id)) {
             abort(403);

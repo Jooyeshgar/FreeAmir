@@ -5,6 +5,7 @@ namespace App\Services;
 use App\DTO\InvoiceStatusDecision;
 use App\Enums\CustomerType;
 use App\Enums\InvoiceType;
+use App\Models\Company;
 use App\Models\Invoice;
 use GuzzleHttp\Exception\ClientException;
 use Illuminate\Support\Carbon;
@@ -32,19 +33,24 @@ class MoadianService
 
     public function sendInvoice(Invoice $invoice, ?string $transaction_reference_number, string $transaction_date): bool
     {
-        $this->moadian_username = config('moadian.username');
-        $this->taxID = env('TAX_ID');
+        $company = Company::find(getActiveCompany());
+
+        $this->moadian_username = $company->moadian_username;
+        $this->taxID = $company->tax_id;
 
         $this->transaction_reference_number = $transaction_reference_number;
         $this->transaction_date = $transaction_date;
 
         $this->moadianData($invoice);
 
+        $privateKey = file_get_contents(storage_path("app/{$company->private_key_path}"));
+        $certificate = file_get_contents(storage_path("app/{$company->certificate_path}"));
+
         $info = [];
         $sentInvoiceToMoadianWithSuccess = true;
 
         try {
-            $info = Moadian::sendInvoice($this->moadianInvoice);
+            $info = Moadian::for($privateKey, $certificate, $this->moadian_username)->sendInvoice($this->moadianInvoice);
             $info = $info->getBody();
             $info = $info['result'][0];
         } catch (\Exception $e) {
