@@ -17,6 +17,7 @@
             'value' => $totalBankBalance,
             'suffix' => $currency,
             'tone' => 'primary',
+            'icon' => 'bank',
         ],
         [
             'title' => __('Income') . ' (' . __('Year to date') . ')',
@@ -24,6 +25,7 @@
             'suffix' => $currency,
             'tone' => 'success',
             'series' => $incomeSeries,
+            'icon' => 'income',
         ],
         [
             'title' => __('Cost') . ' (' . __('Year to date') . ')',
@@ -31,6 +33,7 @@
             'suffix' => $currency,
             'tone' => 'error',
             'series' => $costSeries,
+            'icon' => 'cost',
         ],
         [
             'title' => __('Profit and loss'),
@@ -38,6 +41,7 @@
             'suffix' => $profitValue >= 0 ? __('Profit') : __('Loss'),
             'tone' => $profitValue >= 0 ? 'success' : 'error',
             'series' => $profitSeries,
+            'icon' => 'profit',
         ],
     ];
 @endphp

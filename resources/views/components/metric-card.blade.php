@@ -8,6 +8,7 @@
     'sparkline' => null,
     'series' => null,
     'tone' => null,
+    'icon' => null,
 ])
 
 @php
@@ -19,7 +20,22 @@
     $sparkline = $sparkline ?? data_get($card, 'sparkline');
     $series = $series ?? data_get($card, 'series');
     $tone = $tone ?? data_get($card, 'tone', 'info');
+    $icon = $icon ?? data_get($card, 'icon');
     $displayValue = is_numeric($rawValue) ? formatNumber($rawValue) : $rawValue;
+
+    // Default icon set. `icon` may be either a named key below or a raw SVG path string.
+    $icons = [
+        'chart' => 'M4 19V5m0 14h16M8 15l3-3 3 2 4-6',
+        'sales' => 'M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-1.6-8M7 13l-2 7m12-7l2 7M9 21h.01M19 21h.01',
+        'buy' => 'M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-1.6-8M7 13l-2 7m12-7l2 7M9 21h.01M19 21h.01',
+        'warehouse' => 'M3 7l9-4 9 4v10l-9 4-9-4V7zm9-4v18M3 7l9 4 9-4',
+        'bank' => 'M3 21h18M4 10h16M5 10V7l7-4 7 4v3M6 10v8m4-8v8m4-8v8m4-8v8',
+        'income' => 'M12 1v22m5-18H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6',
+        'cost' => 'M12 1v22m5-18H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6',
+        'profit' => 'M3 17l6-6 4 4 8-8m0 0h-5m5 0v5',
+    ];
+
+    $iconPath = $icon ? ($icons[$icon] ?? $icon) : $icons['chart'];
 
     $toneClasses = [
         'info' => [
@@ -154,14 +170,14 @@
         <div class="flex flex-row-reverse items-start justify-between gap-2">
             <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1 {{ $toneClasses['icon'] }}">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-[1.15rem] w-[1.15rem]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 19V5m0 14h16M8 15l3-3 3 2 4-6" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="{{ $iconPath }}" />
                 </svg>
             </div>
             <span class="min-w-0 text-right text-xs font-medium leading-5 text-base-content/60 dark:text-slate-300/70">{{ $title }}</span>
         </div>
 
         <div class="min-w-0">
-            <div class="truncate text-2xl font-bold leading-8 text-base-content tabular-nums dark:text-slate-50">
+            <div class="truncate text-xl font-bold leading-8 text-base-content tabular-nums dark:text-slate-50">
                 {{ $displayValue }}
             </div>
             @if (filled($suffix))
