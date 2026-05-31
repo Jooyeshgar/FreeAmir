@@ -14,6 +14,7 @@ use App\Services\AttendanceService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Enum;
 use Illuminate\View\View;
@@ -267,6 +268,88 @@ class AttendanceLogController extends Controller
         }
 
         return redirect()->route('attendance.monthly-attendances.show', $monthlyAttendance)->with('success', __('All monthly Attendance logs recalculated successfully.'));
+    }
+
+    public function bulkCreate(): View
+    {
+        $employees = Employee::orderBy('first_name')->get();
+
+        return view('attendance-logs.bulk-create', compact('employees'));
+    }
+
+    public function bulkStore(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'employee_ids' => ['required', 'array', 'min:1'],
+            'employee_ids.*' => ['required', 'integer', 'exists:employees,id', 'distinct'],
+            'start_date' => ['required', 'regex:/^\d{4}\/\d{1,2}\/\d{1,2}$/'],
+            'duration' => ['required', 'integer', 'min:28', 'max:31'],
+        ]);
+
+        $startDate = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($validated['start_date']));
+        $endDate = $startDate->copy()->addDays((int) $validated['duration'] - 1);
+        $companyId = getActiveCompany();
+
+        $holidayDates = PublicHoliday::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->pluck('date')
+            ->map(fn ($d) => $d instanceof Carbon ? $d->toDateString() : (string) $d)
+            ->flip()
+            ->toArray();
+
+        $employees = Employee::with('workShift')->whereIn('id', $validated['employee_ids'])->get()->keyBy('id');
+
+        DB::transaction(function () use ($validated, $startDate, $companyId, $holidayDates, $employees) {
+            foreach ($validated['employee_ids'] as $employeeId) {
+                $employee = $employees->get($employeeId);
+                if (! $employee) {
+                    continue;
+                }
+
+                $workShift = $employee->workShift;
+                $defaultEntry = $workShift
+                    ? substr($workShift->start_time, 0, 5)
+                    : AttendanceService::DEFAULT_SHIFT_START;
+                $defaultExit = $workShift
+                    ? substr($workShift->end_time, 0, 5)
+                    : AttendanceService::DEFAULT_SHIFT_END;
+
+                for ($i = 0; $i < (int) $validated['duration']; $i++) {
+                    $date = $startDate->copy()->addDays($i);
+                    $dateStr = $date->toDateString();
+
+                    if ($date->dayOfWeek === Carbon::FRIDAY) {
+                        continue;
+                    }
+
+                    if (isset($holidayDates[$dateStr])) {
+                        continue;
+                    }
+
+                    $isThursday = $date->dayOfWeek === Carbon::THURSDAY;
+                    $exitTime = $defaultExit;
+                    if ($isThursday) {
+                        $thursdayStatus = $workShift?->thursday_status ?? ThursdayStatus::FULL_DAY;
+                        if ($thursdayStatus === ThursdayStatus::HOLIDAY) {
+                            continue;
+                        }
+                        if ($thursdayStatus === ThursdayStatus::HALF_DAY && $workShift?->thursday_exit_time) {
+                            $exitTime = substr($workShift->thursday_exit_time, 0, 5);
+                        }
+                    }
+
+                    $log = AttendanceLog::updateOrCreate(
+                        ['employee_id' => $employeeId, 'company_id' => $companyId, 'log_date' => $dateStr],
+                        ['entry_time' => $defaultEntry, 'exit_time' => $exitTime, 'is_manual' => false],
+                    );
+
+                    $this->attendanceService->recalculateLog($log->fresh());
+                }
+            }
+        });
+
+        return redirect()->route('attendance.attendance-logs.index')->with('success', __('Attendance logs created successfully for all selected employees.'));
     }
 
     public function importForm(): View
