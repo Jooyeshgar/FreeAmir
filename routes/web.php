@@ -168,6 +168,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('trial-balance.print', [Controllers\ReportsController::class, 'printTrialBalance'])->name('trial-balance.print');
         Route::get('documents', [Controllers\ReportsController::class, 'documents'])->name('documents');
         Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
+        Route::get('cost-income', [Controllers\CostIncomeController::class, 'index'])->name('cost-income');
     });
 
     Route::group(['prefix' => 'invoices', 'as' => 'invoices.index'], function () {
