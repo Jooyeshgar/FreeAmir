@@ -160,7 +160,7 @@ class TrialBalanceService
             SUM(CASE WHEN transactions.value > 0 THEN transactions.value ELSE 0 END) as credit_sum
         ')->first();
 
-        return [$sums->debit_sum ?? 0, $sums->credit_sum ?? 0];
+        return [(float) ($sums->debit_sum ?? 0), (float) ($sums->credit_sum ?? 0)];
     }
 
     private function buildTrialBalanceSubjects(?Subject $currentParent, bool $includeChildren, ?string $subjectName = null): Collection
