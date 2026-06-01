@@ -97,7 +97,7 @@ class CustomerController extends Controller
 
     public function show(Models\Customer $customer)
     {
-        $customer->load(['group', 'subject']);
+        $customer->load(['group', 'subject', 'comments.commentBy']);
         $subjectBalance = $customer->subject
             ? SubjectService::sumSubject($customer->subject->id)
             : 0;
