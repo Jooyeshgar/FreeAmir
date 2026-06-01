@@ -5,7 +5,7 @@
         <section class="flex flex-col gap-1">
             <h1 class="text-2xl font-bold text-base-content">{{ __('Cost and Income Dashboard') }}</h1>
             <p class="text-sm text-base-content/60">
-                {{ __('Profitability, trade and payroll cost for the current fiscal year') }}
+                {{ __('Profitability and trade for the current fiscal year') }}
             </p>
         </section>
 
