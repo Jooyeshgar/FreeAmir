@@ -173,6 +173,25 @@
     </li>
 @endcanany
 
+@canany(['crm.dashboard', 'customers.index', 'customer-groups.index'])
+    <li>
+        <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
+            <summary>{{ __('CRM') }}</summary>
+            <ul class="{{ $topDropdownContentClass }}">
+                @can('crm.dashboard')
+                    <li><a href="{{ route('crm.dashboard') }}">{{ __('CRM Dashboard') }}</a></li>
+                @endcan
+                @can('customers.index')
+                    <li><a href="{{ route('customers.index') }}">{{ __('Customers') }}</a></li>
+                @endcan
+                @can('customer-groups.index')
+                    <li><a href="{{ route('customer-groups.index') }}">{{ __('Customer Groups') }}</a></li>
+                @endcan
+            </ul>
+        </details>
+    </li>
+@endcanany
+
 <li>
     <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
         <summary>{{ __('Management') }}</summary>
@@ -211,23 +230,6 @@
                             @endcan
                             @can('salary.salary-decrees.index')
                                 <li><a href="{{ route('salary.salary-decrees.index') }}">{{ __('Salary Decrees') }}</a></li>
-                            @endcan
-                        </ul>
-                    </details>
-                </li>
-            @endcanany
-
-            {{-- Customers --}}
-            @canany(['customers.index', 'customer-groups.index'])
-                <li>
-                    <details>
-                        <summary>{{ __('Customers') }}</summary>
-                        <ul>
-                            @can('customers.index')
-                                <li><a href="{{ route('customers.index') }}">{{ __('Customers') }}</a></li>
-                            @endcan
-                            @can('customer-groups.index')
-                                <li><a href="{{ route('customer-groups.index') }}">{{ __('Customer Groups') }}</a></li>
                             @endcan
                         </ul>
                     </details>
