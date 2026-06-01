@@ -36,7 +36,7 @@
                             {{ $row['name'] }}
                         </a>
                         <span class="font-mono">
-                            {{ convertToFarsi(number_format($row['amount'])) }}
+                            {{ formatNumber($row['amount']) }}
                         </span>
                     </div>
                 @empty
