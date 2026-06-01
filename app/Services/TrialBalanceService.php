@@ -86,10 +86,10 @@ class TrialBalanceService
                 fputcsv($handle, [
                     $subject->code,
                     $subject->name,
-                    csvNumber((int) $sumBed),
-                    csvNumber((int) $sumBes),
-                    csvNumber($net < 0 ? (int) abs($net) : 0),
-                    csvNumber($net > 0 ? (int) $net : 0),
+                    csvNumber($sumBed),
+                    csvNumber($sumBes),
+                    csvNumber($net < 0 ? abs($net) : 0),
+                    csvNumber($net > 0 ? $net : 0),
                 ]);
             }
 

@@ -2222,5 +2222,6 @@
     "Sum Debit": "Sum Debit",
     "Sum Credit": "Sum Credit",
     "Remaining Debit": "Remaining Debit",
-    "Remaining Credit": "Remaining Credit"
+    "Remaining Credit": "Remaining Credit",
+    "Export CSV": "Export CSV"
 }
