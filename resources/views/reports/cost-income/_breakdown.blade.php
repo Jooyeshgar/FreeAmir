@@ -1,5 +1,4 @@
 @php
-    // Palette shared between the doughnut canvases and the legend swatches below.
     $breakdownPalette = ['#22c55e', '#3b82f6', '#f59e0b', '#a855f7', '#ec4899', '#06b6d4', '#ef4444', '#14b8a6', '#f97316', '#64748b'];
 
     $breakdownSections = [

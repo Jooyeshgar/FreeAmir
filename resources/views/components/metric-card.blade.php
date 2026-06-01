@@ -197,8 +197,6 @@
 
             @if (filled($detail))
                 <span class="min-w-0 truncate text-base-content/50 dark:text-slate-400/80">{{ $detail }}</span>
-            @elseif ($change === null)
-                <span class="min-w-0 truncate text-base-content/50 dark:text-slate-400/80">{{ __('No change') }}</span>
             @endif
         </div>
     </div>

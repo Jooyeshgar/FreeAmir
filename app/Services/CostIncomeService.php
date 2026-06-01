@@ -10,9 +10,6 @@ use App\Models\Transaction;
 
 class CostIncomeService
 {
-    /**
-     * Jalali month names indexed 1..12, used to label monthly series.
-     */
     private const MONTHS = [
         1 => 'فروردین',
         2 => 'اردیبهشت',
@@ -32,28 +29,10 @@ class CostIncomeService
 
     /**
      * Headline figures plus a per-subject breakdown for the active fiscal year.
-     *
-     * Sign convention (see App\Models\Transaction): a subject balance > 0 is
-     * income (credit), < 0 is cost (debit).
-     *
-     * Totals are taken from the non-permanent root (1st level) subjects so the
-     * net figures stay accurate, while the breakdown drills one level down: when
-     * a root has children, each child (2nd level) becomes its own slice so the
-     * chart is meaningful even when income/cost sits under a single parent. Roots
-     * without children fall back to charting the root itself.
-     *
-     * @return array{
-     *     totalIncome: int,
-     *     totalCost: int,
-     *     profit: int,
-     *     margin: int,
-     *     incomeBreakdown: array<string, int>,
-     *     costBreakdown: array<string, int>,
-     * }
+     * a subject balance > 0 is income (credit), < 0 is cost (debit).
      */
     public function summary(): array
     {
-        // FiscalYearScope (global scope) keeps this to the active fiscal year.
         $roots = Subject::where('is_permanent', false)->whereIsRoot()->orderBy('code')->get();
 
         $totalIncome = 0;
@@ -61,7 +40,6 @@ class CostIncomeService
         $incomeBreakdown = [];
         $costBreakdown = [];
 
-        /** @var Subject $root */
         foreach ($roots as $root) {
             $rootBalance = (int) $this->subjectService->sumSubject($root);
 
@@ -74,7 +52,6 @@ class CostIncomeService
             $children = $root->children;
 
             if ($children->isNotEmpty()) {
-                /** @var Subject $child */
                 foreach ($children as $child) {
                     $balance = (int) $this->subjectService->sumSubject($child);
                     $this->placeBreakdown($balance, $child->name, $incomeBreakdown, $costBreakdown);
@@ -95,9 +72,6 @@ class CostIncomeService
 
     /**
      * Route a signed balance into the income or cost breakdown bucket by sign.
-     *
-     * @param  array<string, int>  $income
-     * @param  array<string, int>  $cost
      */
     private function placeBreakdown(int $balance, string $name, array &$income, array &$cost): void
     {
@@ -109,11 +83,7 @@ class CostIncomeService
     }
 
     /**
-     * Monthly income vs cost across the active fiscal year, keyed by Jalali
-     * month name. Each non-permanent root subject is classified as income or
-     * cost by its overall balance sign, then its monthly amounts are bucketed.
-     *
-     * @return array{income: array<string, int>, cost: array<string, int>}
+     * Monthly income vs cost across the active fiscal year, keyed by Jalali month name.
      */
     public function monthlyIncomeAndCost(): array
     {
@@ -122,7 +92,6 @@ class CostIncomeService
 
         $nonPermanentSubjects = Subject::where('is_permanent', false)->whereIsRoot()->get();
 
-        /** @var Subject $subject */
         foreach ($nonPermanentSubjects as $subject) {
             $balance = (int) $this->subjectService->sumSubject($subject);
 
@@ -149,23 +118,9 @@ class CostIncomeService
 
     /**
      * Sales and purchases derived from invoices for the active fiscal year.
-     *
-     * Net figures subtract returns; void invoices are excluded. The trading
-     * margin is the gross result of buying and selling goods (net sales minus
-     * net purchases) and complements the ledger-driven profit figure.
-     *
-     * @return array{
-     *     netSales: int,
-     *     netPurchases: int,
-     *     tradingMargin: int,
-     *     tradingMarginPercent: int,
-     *     sellCount: int,
-     *     buyCount: int,
-     * }
      */
     public function invoiceSummary(): array
     {
-        // FiscalYearScope (global scope) keeps every query to the active fiscal year.
         $sell = (int) Invoice::where('invoice_type', InvoiceType::SELL)->sum('amount');
         $returnSell = (int) Invoice::where('invoice_type', InvoiceType::RETURN_SELL)->sum('amount');
         $buy = (int) Invoice::where('invoice_type', InvoiceType::BUY)->sum('amount');
@@ -184,15 +139,6 @@ class CostIncomeService
 
     /**
      * Top customers ranked by their subject balance.
-     *
-     * Sign convention: a customer subject balance < 0 means the customer owes
-     * the business (debtor / receivable); > 0 means the business owes the
-     * customer (creditor / payable). Returned amounts are absolute.
-     *
-     * @return array{
-     *     debtors: array<int, array{subject_id: int, name: string, amount: int}>,
-     *     creditors: array<int, array{subject_id: int, name: string, amount: int}>,
-     * }
      */
     public function topCustomers(int $limit = 10): array
     {
