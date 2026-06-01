@@ -12,9 +12,12 @@ use App\Models\PublicHoliday;
 use App\Services\AttendanceLogImportService;
 use App\Services\AttendanceService;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 use Illuminate\View\View;
 
@@ -267,6 +270,151 @@ class AttendanceLogController extends Controller
         }
 
         return redirect()->route('attendance.monthly-attendances.show', $monthlyAttendance)->with('success', __('All monthly Attendance logs recalculated successfully.'));
+    }
+
+    public function bulkCreate(): View
+    {
+        $employees = Employee::where('is_active', true)->orderBy('first_name')->limit(10)->get()
+            ->map(fn (Employee $e) => (object) ['id' => $e->id, 'name' => trim($e->first_name.' '.$e->last_name)]);
+
+        $preselectedIds = array_map('intval', (array) old('employee_ids', []));
+        $preselected = $preselectedIds ?
+            Employee::whereIn('id', $preselectedIds)->get()->map(fn (Employee $e) => ['id' => $e->id, 'name' => trim($e->first_name.' '.$e->last_name)])->values()
+            : collect();
+
+        return view('attendance-logs.bulk-create', compact('employees', 'preselected'));
+    }
+
+    public function searchEmployee(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'q' => ['required', 'string', 'max:100'],
+        ]);
+
+        $q = $validated['q'];
+
+        $employees = Employee::where('is_active', true)
+            ->where(function ($query) use ($q) {
+                $query->where('first_name', 'like', "%{$q}%")
+                    ->orWhere('last_name', 'like', "%{$q}%");
+            })
+            ->orderBy('first_name')
+            ->limit(30)
+            ->get();
+
+        if ($employees->isEmpty()) {
+            return response()->json([]);
+        }
+
+        $options = $employees->map(fn (Employee $e) => [
+            'id' => $e->id,
+            'groupId' => 0,
+            'groupName' => 'General',
+            'text' => trim($e->first_name.' '.$e->last_name),
+            'type' => 'employee',
+        ])->all();
+
+        return response()->json([[
+            'id' => 'group_employees',
+            'headerGroup' => 'employee',
+            'options' => (object) [0 => $options],
+        ]]);
+    }
+
+    public function bulkStore(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'employee_ids' => ['required', 'array', 'min:1'],
+            'employee_ids.*' => ['required', 'integer', 'distinct', Rule::exists('employees', 'id')->where('is_active', true)],
+            'start_date' => ['required', 'regex:/^\d{4}\/\d{1,2}\/\d{1,2}$/'],
+            'duration' => ['required', 'integer', 'min:29', 'max:31'],
+            'override' => ['nullable', 'boolean'],
+        ]);
+
+        $override = $request->boolean('override');
+
+        $startDate = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($validated['start_date']));
+        $endDate = $startDate->copy()->addDays((int) $validated['duration'] - 1);
+        $companyId = getActiveCompany();
+
+        $holidayDates = PublicHoliday::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->pluck('date')
+            ->map(fn ($d) => $d instanceof Carbon ? $d->toDateString() : (string) $d)
+            ->flip()
+            ->toArray();
+
+        $employees = Employee::with('workShift')->whereIn('id', $validated['employee_ids'])->get()->keyBy('id');
+
+        $existingLogs = [];
+        if (! $override) {
+            $existingLogs = AttendanceLog::where('company_id', $companyId)
+                ->whereIn('employee_id', $validated['employee_ids'])
+                ->whereBetween('log_date', [$startDate->toDateString(), $endDate->toDateString()])
+                ->get(['employee_id', 'log_date'])
+                ->mapWithKeys(function ($log) {
+                    $date = $log->log_date instanceof Carbon ? $log->log_date->toDateString() : (string) $log->log_date;
+
+                    return [$log->employee_id.'|'.$date => true];
+                })
+                ->toArray();
+        }
+
+        DB::transaction(function () use ($validated, $startDate, $companyId, $holidayDates, $employees, $override, $existingLogs) {
+            foreach ($validated['employee_ids'] as $employeeId) {
+                $employee = $employees->get($employeeId);
+                if (! $employee) {
+                    continue;
+                }
+
+                $workShift = $employee->workShift;
+                $defaultEntry = $workShift
+                    ? substr($workShift->start_time, 0, 5)
+                    : AttendanceService::DEFAULT_SHIFT_START;
+                $defaultExit = $workShift
+                    ? substr($workShift->end_time, 0, 5)
+                    : AttendanceService::DEFAULT_SHIFT_END;
+
+                for ($i = 0; $i < (int) $validated['duration']; $i++) {
+                    $date = $startDate->copy()->addDays($i);
+                    $dateStr = $date->toDateString();
+
+                    if ($date->dayOfWeek === Carbon::FRIDAY) {
+                        continue;
+                    }
+
+                    if (isset($holidayDates[$dateStr])) {
+                        continue;
+                    }
+
+                    if (! $override && isset($existingLogs[$employeeId.'|'.$dateStr])) {
+                        continue;
+                    }
+
+                    $isThursday = $date->dayOfWeek === Carbon::THURSDAY;
+                    $exitTime = $defaultExit;
+                    if ($isThursday) {
+                        $thursdayStatus = $workShift?->thursday_status ?? ThursdayStatus::FULL_DAY;
+                        if ($thursdayStatus === ThursdayStatus::HOLIDAY) {
+                            continue;
+                        }
+                        if ($thursdayStatus === ThursdayStatus::HALF_DAY && $workShift?->thursday_exit_time) {
+                            $exitTime = substr($workShift->thursday_exit_time, 0, 5);
+                        }
+                    }
+
+                    $log = AttendanceLog::updateOrCreate(
+                        ['employee_id' => $employeeId, 'company_id' => $companyId, 'log_date' => $dateStr],
+                        ['entry_time' => $defaultEntry, 'exit_time' => $exitTime, 'is_manual' => false],
+                    );
+
+                    $this->attendanceService->recalculateLog($log->fresh());
+                }
+            }
+        });
+
+        return redirect()->route('attendance.attendance-logs.index')->with('success', __('Attendance logs created successfully for all selected employees.'));
     }
 
     public function importForm(): View
