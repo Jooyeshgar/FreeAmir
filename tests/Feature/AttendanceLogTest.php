@@ -352,12 +352,12 @@ class AttendanceLogTest extends TestCase
     private function validBulkPayload(array $overrides = []): array
     {
         // Jalali 1404/11/12 = Gregorian 2026-02-01 (Sunday)
-        // 28-day window covers Feb 1–28 2026
-        // Fridays: Feb 6, 13, 20, 27  |  Thursdays: Feb 5, 12, 19, 26
+        // 29-day window covers Feb 1 2026 – Mar 1 2026 (Feb has 28 days in 2026)
+        // Fridays: Feb 6, 13, 20, 27  |  Thursdays: Feb 5, 12, 19, 26  |  Mar 1 = Sunday
         return array_merge([
             'employee_ids' => [$this->employee->id],
             'start_date' => '1404/11/12',
-            'duration' => 28,
+            'duration' => 29,
         ], $overrides);
     }
 
@@ -564,10 +564,10 @@ class AttendanceLogTest extends TestCase
     {
         $this->post(route('attendance.attendance-logs.bulk-store'), $this->validBulkPayload());
 
-        // Feb 1–28 2026 has 4 Fridays (6, 13, 20, 27); no holidays; no shift => Thursdays worked.
-        // 28 days − 4 Fridays = 24 worked days.
+        // Feb 1 2026 – Mar 1 2026 has 4 Fridays (6, 13, 20, 27); no holidays; no shift => Thursdays worked.
+        // 29 days − 4 Fridays = 25 worked days.
         $this->assertSame(
-            24,
+            25,
             AttendanceLog::where('employee_id', $this->employee->id)->count()
         );
         // Each created log carries the default shift times.
@@ -610,9 +610,9 @@ class AttendanceLogTest extends TestCase
             'exit_time' => '17:00:00',
             'is_manual' => false,
         ]);
-        // Total still equals the 24 worked days (1 kept + 23 created).
+        // Total still equals the 25 worked days (1 kept + 24 created).
         $this->assertSame(
-            24,
+            25,
             AttendanceLog::where('employee_id', $this->employee->id)->count()
         );
     }
@@ -646,7 +646,7 @@ class AttendanceLogTest extends TestCase
             'is_manual' => false,
         ]);
         $this->assertSame(
-            24,
+            25,
             AttendanceLog::where('employee_id', $this->employee->id)->count()
         );
     }
@@ -674,8 +674,8 @@ class AttendanceLogTest extends TestCase
         );
 
         // Both employees end up with the same number of worked days.
-        $this->assertSame(24, AttendanceLog::where('employee_id', $this->employee->id)->count());
-        $this->assertSame(24, AttendanceLog::where('employee_id', $employee2->id)->count());
+        $this->assertSame(25, AttendanceLog::where('employee_id', $this->employee->id)->count());
+        $this->assertSame(25, AttendanceLog::where('employee_id', $employee2->id)->count());
         // Employee1's existing day was overwritten.
         $this->assertDatabaseHas('attendance_logs', [
             'employee_id' => $this->employee->id,
@@ -810,7 +810,7 @@ class AttendanceLogTest extends TestCase
     {
         $response = $this->post(
             route('attendance.attendance-logs.bulk-store'),
-            ['start_date' => formatDate('2026-02-01'), 'duration' => 28]
+            ['start_date' => formatDate('2026-02-01'), 'duration' => 29]
         );
 
         $response->assertSessionHasErrors(['employee_ids']);
@@ -820,7 +820,7 @@ class AttendanceLogTest extends TestCase
     {
         $response = $this->post(
             route('attendance.attendance-logs.bulk-store'),
-            ['employee_ids' => [$this->employee->id], 'duration' => 28]
+            ['employee_ids' => [$this->employee->id], 'duration' => 29]
         );
 
         $response->assertSessionHasErrors(['start_date']);

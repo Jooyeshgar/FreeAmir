@@ -327,7 +327,7 @@ class AttendanceLogController extends Controller
             'employee_ids' => ['required', 'array', 'min:1'],
             'employee_ids.*' => ['required', 'integer', 'distinct', Rule::exists('employees', 'id')->where('is_active', true)],
             'start_date' => ['required', 'regex:/^\d{4}\/\d{1,2}\/\d{1,2}$/'],
-            'duration' => ['required', 'integer', 'min:28', 'max:31'],
+            'duration' => ['required', 'integer', 'min:29', 'max:31'],
             'override' => ['nullable', 'boolean'],
         ]);
 
