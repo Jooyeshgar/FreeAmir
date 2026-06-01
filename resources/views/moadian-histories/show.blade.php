@@ -33,9 +33,15 @@
 
                 <div>
                     @if ($latestHistoryStatus === 'UNKNOWN')
-                        <a href="{{ route('invoices.moadian-check-status', $invoice) }}" class="btn btn-sm btn-warning">{{ __('Check Status') }}</a>
+                        <form method="POST" action="{{ route('invoices.moadian-check-status', $invoice) }}">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-warning">{{ __('Check Status') }}</button>
+                        </form>
                     @elseif($latestHistoryStatus === 'FAILED')
-                        <a href="{{ route('invoices.send-moadian', $invoice) }}" class="btn btn-sm btn-secondary">{{ __('Send Again') }}</a>
+                        <form method="POST" action="{{ route('invoices.send-moadian', $invoice) }}">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-secondary">{{ __('Send Again') }}</button>
+                        </form>
                     @elseif($latestHistoryStatus === 'SUCCESS')
                         <span class="btn btn-sm btn-disabled">{{ __('Sent') }}</span>
                     @endif

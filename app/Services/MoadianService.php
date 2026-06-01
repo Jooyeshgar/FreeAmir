@@ -7,7 +7,6 @@ use App\Enums\CustomerType;
 use App\Enums\InvoiceType;
 use App\Models\Company;
 use App\Models\Invoice;
-use GuzzleHttp\Exception\ClientException;
 use Illuminate\Support\Carbon;
 use Jooyeshgar\Moadian\Facades\Moadian;
 use Jooyeshgar\Moadian\Invoice as MoadianInvoice;
@@ -89,10 +88,16 @@ class MoadianService
 
     public function moadianStatus(string $referenceNumber, Invoice $invoice): array
     {
+        $company = Company::find(getActiveCompany());
+
+        $privateKey = file_get_contents(storage_path("app/{$company->private_key_path}"));
+        $certificate = file_get_contents(storage_path("app/{$company->certificate_path}"));
+
         try {
-            $response = Moadian::inquiryByReferenceNumbers($referenceNumber);
+            $response = Moadian::for($privateKey, $certificate, $company->moadian_username)
+                ->inquiryByReferenceNumbers($referenceNumber);
             $statusData = $response->getBody()[0] ?? [];
-        } catch (ClientException $e) {
+        } catch (\Exception $e) {
             $statusData = ['status' => 'FAILED', 'error' => $e->getMessage()];
         }
 
@@ -141,6 +146,8 @@ class MoadianService
             $header->inty = match ($this->invoice->customer->type) {
                 CustomerType::INDIVIDUAL => $this->invoice->customer->ecnmcs_code ? 1 : 2,
                 CustomerType::LEGAL_ENTITY => 1,
+                CustomerType::CIVIL_PARTNERSHIP => null,
+                CustomerType::FOREIGN_NATIONAL => null,
             };
         } elseif ($this->invoice->invoice_type === InvoiceType::RETURN_SELL) {
             $isVoid = $this->voidInvoice();

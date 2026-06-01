@@ -88,7 +88,10 @@
                                                 @endcan
                                             @elseif($status === 'FAILED')
                                                 @can('invoices.send-moadian')
-                                                    <a href="{{ route('invoices.moadian-form', $history->invoice_id) }}" class="btn btn-xs btn-info">{{ __('Send Again') }}</a>
+                                                    <form method="POST" action="{{ route('invoices.send-moadian', $invoice) }}">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-xs btn-info">{{ __('Send Again') }}</button>
+                                                    </form>
                                                 @endcan
                                             @elseif($status === 'SUCCESS')
                                                 <button class="btn btn-xs btn-disabled">{{ __('Sent') }}</button>

@@ -743,17 +743,6 @@ class InvoiceController extends Controller
         return $map;
     }
 
-    public function showMoadianForm(Invoice $invoice, MoadianService $moadianService)
-    {
-        $decision = $moadianService->validateSendMoadian($invoice);
-
-        if ($decision->hasErrors()) {
-            return redirect()->route('invoices.show', $invoice)->withErrors($decision->messages->pluck('text')->all());
-        }
-
-        return view('invoices.moadian', compact('invoice'));
-    }
-
     public function sendMoadian(Invoice $invoice, MoadianService $moadianService)
     {
         $decision = $moadianService->validateSendMoadian($invoice);

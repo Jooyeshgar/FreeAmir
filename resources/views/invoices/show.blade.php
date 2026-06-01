@@ -603,7 +603,10 @@
                     @can('invoices.send-moadian')
                         @if ($isMoadianSendable)
                             @if ($invoice->status->isApproved() && ! $hasMoadianSuccess)
-                                <a class="btn btn-success" href="{{ route('invoices.moadian-form', $invoice) }}">{{ __('Send Moadian') }}</a>
+                                <form method="POST" action="{{ route('invoices.send-moadian', $invoice) }}">
+                                    @csrf
+                                    <button type="submit" class="btn btn-success">{{ __('Send Moadian') }}</button>
+                                </form>
                             @elseif ($hasMoadianSuccess)
                                 <span class="tooltip" data-tip="{{ __('This invoice has already been sent successfully to Moadian and cannot be sent again.') }}">
                                     <button class="btn btn-success btn-disabled cursor-not-allowed"
@@ -699,7 +702,7 @@
                             {{ __('Edit invoice') }}
                         </a>
                     @else
-                        <span class="tooltip" data-tip="{{ __('Editing is not allowed for approved invoices.') }}">
+                        <span class="tooltip" data-tip="{{ $invoice->invoice_type->isVoid() ? __('Editing is not allowed for void invoices.') : __('Editing is not allowed for approved invoices.') }}">
                             <button class="btn btn-primary gap-2 btn-disabled cursor-not-allowed">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

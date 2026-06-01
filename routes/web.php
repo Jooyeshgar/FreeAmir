@@ -102,7 +102,6 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('invoices/moadian-histories', [Controllers\MoadianHistoryController::class, 'index'])->name('invoices.moadian-histories.index');
     Route::resource('invoices', Controllers\InvoiceController::class);
     Route::get('invoices/{invoice}/moadian-histories', [Controllers\MoadianHistoryController::class, 'show'])->name('invoices.moadian-histories.show');
-    Route::get('invoices/{invoice}/moadian', [Controllers\InvoiceController::class, 'showMoadianForm'])->name('invoices.moadian-form');
     Route::post('invoices/{invoice}/send-moadian', [Controllers\InvoiceController::class, 'sendMoadian'])->name('invoices.send-moadian');
     Route::post('invoices/{invoice}/moadian-check-status', [Controllers\MoadianHistoryController::class, 'checkStatus'])->name('invoices.moadian-check-status');
     Route::get('invoices/{invoice}/conflicts', [Controllers\InvoiceController::class, 'conflicts'])->name('invoices.conflicts');
