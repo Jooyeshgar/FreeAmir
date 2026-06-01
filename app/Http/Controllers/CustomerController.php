@@ -14,7 +14,7 @@ class CustomerController extends Controller
 
     public function index(Request $request)
     {
-        $query = Models\Customer::with('subject', 'group')->orderBy('id', 'desc');
+        $query = Models\Customer::with('subject', 'group')->withCount('comments')->orderBy('id', 'desc');
 
         if (request()->has('name') && request('name')) {
             $query->where('name', 'like', '%'.request('name').'%');
@@ -31,13 +31,21 @@ class CustomerController extends Controller
             });
         }
 
+        if (request()->has('phone') && request('phone')) {
+            $phone = request('phone');
+            $query->where(function ($q) use ($phone) {
+                $q->where('phone', 'like', '%'.$phone.'%')
+                    ->orWhere('cell', 'like', '%'.$phone.'%');
+            });
+        }
+
         $groupId = $request->query('group_id');
 
         if ($groupId && $groupId !== 'all') {
             $query->where('group_id', $groupId);
         }
 
-        $customers = $query->paginate(30)->appends(['group_id' => $groupId]);
+        $customers = $query->paginate(30)->appends($request->query());
 
         $groups = Models\CustomerGroup::select('id', 'name')->orderBy('name')->get();
 
