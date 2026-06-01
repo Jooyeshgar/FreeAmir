@@ -83,11 +83,14 @@
         </details>
     </li>
 @endcanany
-@canany(['reports.documents', 'reports.journal', 'reports.ledger', 'reports.sub-ledger', 'reports.trial-balance'])
+@canany(['reports.documents', 'reports.journal', 'reports.ledger', 'reports.sub-ledger', 'reports.trial-balance', 'reports.cost-income'])
     <li>
         <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('Reports') }}</summary>
             <ul class="{{ $topDropdownContentClass }}">
+                @can('reports.cost-income')
+                    <li><a href="{{ route('reports.cost-income') }}">{{ __('Cost and Income Dashboard') }}</a></li>
+                @endcan
                 @canany(['reports.documents', 'reports.journal', 'reports.ledger', 'reports.sub-ledger', 'reports.trial-balance'])
                     <li>
                         <details>
