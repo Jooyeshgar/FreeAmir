@@ -179,7 +179,7 @@
                         <table class="table table-zebra">
                             <thead>
                                 <tr>
-                                    <th>{{ __('Number') }}</th>
+                                    <th>{{ __('Invoice Number') }}</th>
                                     <th>{{ __('Customer') }}</th>
                                     <th>{{ __('Date') }}</th>
                                     <th class="text-end">{{ __('Amount') }}</th>
@@ -190,7 +190,7 @@
                                     <tr class="hover">
                                         <td>
                                             <a class="link link-hover" href="{{ route('invoices.show', $invoice) }}">
-                                                {{ formatNumber($invoice->number) }}
+                                                {{ convertToFarsi($invoice->number) }}
                                             </a>
                                         </td>
                                         <td>{{ $invoice->customer?->name ?? '—' }}</td>
