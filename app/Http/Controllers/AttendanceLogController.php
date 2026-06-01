@@ -12,10 +12,12 @@ use App\Models\PublicHoliday;
 use App\Services\AttendanceLogImportService;
 use App\Services\AttendanceService;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 use Illuminate\View\View;
 
@@ -272,19 +274,64 @@ class AttendanceLogController extends Controller
 
     public function bulkCreate(): View
     {
-        $employees = Employee::orderBy('first_name')->get();
+        $employees = Employee::where('is_active', true)->orderBy('first_name')->limit(10)->get()
+            ->map(fn (Employee $e) => (object) ['id' => $e->id, 'name' => trim($e->first_name.' '.$e->last_name)]);
 
-        return view('attendance-logs.bulk-create', compact('employees'));
+        $preselectedIds = array_map('intval', (array) old('employee_ids', []));
+        $preselected = $preselectedIds ?
+            Employee::whereIn('id', $preselectedIds)->get()->map(fn (Employee $e) => ['id' => $e->id, 'name' => trim($e->first_name.' '.$e->last_name)])->values()
+            : collect();
+
+        return view('attendance-logs.bulk-create', compact('employees', 'preselected'));
+    }
+
+    public function searchEmployee(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'q' => ['required', 'string', 'max:100'],
+        ]);
+
+        $q = $validated['q'];
+
+        $employees = Employee::where('is_active', true)
+            ->where(function ($query) use ($q) {
+                $query->where('first_name', 'like', "%{$q}%")
+                    ->orWhere('last_name', 'like', "%{$q}%");
+            })
+            ->orderBy('first_name')
+            ->limit(30)
+            ->get();
+
+        if ($employees->isEmpty()) {
+            return response()->json([]);
+        }
+
+        $options = $employees->map(fn (Employee $e) => [
+            'id' => $e->id,
+            'groupId' => 0,
+            'groupName' => 'General',
+            'text' => trim($e->first_name.' '.$e->last_name),
+            'type' => 'employee',
+        ])->all();
+
+        return response()->json([[
+            'id' => 'group_employees',
+            'headerGroup' => 'employee',
+            'options' => (object) [0 => $options],
+        ]]);
     }
 
     public function bulkStore(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'employee_ids' => ['required', 'array', 'min:1'],
-            'employee_ids.*' => ['required', 'integer', 'exists:employees,id', 'distinct'],
+            'employee_ids.*' => ['required', 'integer', 'distinct', Rule::exists('employees', 'id')->where('is_active', true)],
             'start_date' => ['required', 'regex:/^\d{4}\/\d{1,2}\/\d{1,2}$/'],
             'duration' => ['required', 'integer', 'min:28', 'max:31'],
+            'override' => ['nullable', 'boolean'],
         ]);
+
+        $override = $request->boolean('override');
 
         $startDate = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($validated['start_date']));
         $endDate = $startDate->copy()->addDays((int) $validated['duration'] - 1);
@@ -300,7 +347,21 @@ class AttendanceLogController extends Controller
 
         $employees = Employee::with('workShift')->whereIn('id', $validated['employee_ids'])->get()->keyBy('id');
 
-        DB::transaction(function () use ($validated, $startDate, $companyId, $holidayDates, $employees) {
+        $existingLogs = [];
+        if (! $override) {
+            $existingLogs = AttendanceLog::where('company_id', $companyId)
+                ->whereIn('employee_id', $validated['employee_ids'])
+                ->whereBetween('log_date', [$startDate->toDateString(), $endDate->toDateString()])
+                ->get(['employee_id', 'log_date'])
+                ->mapWithKeys(function ($log) {
+                    $date = $log->log_date instanceof Carbon ? $log->log_date->toDateString() : (string) $log->log_date;
+
+                    return [$log->employee_id.'|'.$date => true];
+                })
+                ->toArray();
+        }
+
+        DB::transaction(function () use ($validated, $startDate, $companyId, $holidayDates, $employees, $override, $existingLogs) {
             foreach ($validated['employee_ids'] as $employeeId) {
                 $employee = $employees->get($employeeId);
                 if (! $employee) {
@@ -324,6 +385,10 @@ class AttendanceLogController extends Controller
                     }
 
                     if (isset($holidayDates[$dateStr])) {
+                        continue;
+                    }
+
+                    if (! $override && isset($existingLogs[$employeeId.'|'.$dateStr])) {
                         continue;
                     }
 

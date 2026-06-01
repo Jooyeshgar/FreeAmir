@@ -16,26 +16,44 @@
                     </div>
                 </div>
 
-                <div class="mt-4">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="font-semibold">{{ __('Employees') }}</span>
-                        <label class="cursor-pointer flex items-center gap-2">
-                            <input type="checkbox" id="bulk-select-all" class="checkbox checkbox-sm" checked
-                                onchange="document.querySelectorAll('.bulk-employee-cb').forEach(cb => cb.checked = this.checked)" />
-                            <span class="text-sm">{{ __('Select All') }}</span>
-                        </label>
+                <div class="mt-4 grid grid-cols-2 md:grid-cols-2 gap-4">
+                    <div x-data="{
+                        selectedValue: '',
+                        selected: @js($preselected),
+                        addEmployee(detail) {
+                            if (!detail || !detail.id) return;
+                            const id = parseInt(detail.id);
+                            if (!this.selected.some(e => e.id === id)) {
+                                this.selected.push({ id: id, name: detail.text });
+                            }
+                            this.$nextTick(() => { this.selectedValue = ''; });
+                        },
+                        remove(id) {
+                            this.selected = this.selected.filter(e => e.id !== id);
+                        },
+                    }">
+                        <span class="label">{{ __('Employees') }}</span>
+                        <x-select-box url="{{ route('attendance.attendance-logs.search-employee') }}"
+                            :options="[['headerGroup' => 'employee', 'options' => $employees]]" placeholder="{{ __('Select Employee') }}"
+                            x-model="selectedValue" @selected="addEmployee($event.detail)" />
+                        
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            <template x-for="emp in selected" :key="emp.id">
+                                <span class="badge badge-lg badge-outline text-xs">
+                                    <span x-text="emp.name"></span>
+                                    <button type="button" @click="remove(emp.id)" class="cursor-pointer text-error hover:text-error/70 transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                    <x-input name="employee_ids[]" x-bind:value="emp.id" hidden />
+                                </span>
+                            </template>
+                        </div>
                     </div>
-                    <div class="border border-base-300 rounded-box max-h-96 overflow-y-auto p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
-                        @foreach ($employees as $employee)
-                            <label class="flex items-center gap-2 cursor-pointer p-2 hover:bg-base-200 rounded">
-                                <input type="checkbox" name="employee_ids[]" value="{{ $employee->id }}" class="checkbox checkbox-sm bulk-employee-cb"
-                                    {{ $employee->is_active ? 'checked' : '' }} />
-                                <span class="text-sm">{{ $employee->first_name }} {{ $employee->last_name }}</span>
-                                @if (!$employee->is_active)
-                                    <span class="badge badge-error badge-xs">{{ __('Inactive') }}</span>
-                                @endif
-                            </label>
-                        @endforeach
+
+                    <div class="mt-4">
+                        <x-checkbox title="{{ __('Override existing attendance logs') }}" name="override" id="override" value="1" checked="{{ old('override') ? 'checked' : '' }}" />
                     </div>
                 </div>
 
@@ -48,19 +66,9 @@
                     </span>
                 </div>
 
-                <div class="alert alert-warning mt-2 text-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-5 h-5">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                    </svg>
-                    <span>{{ __('If an attendance log already exists for a day, it will be overwritten with the shift times.') }}</span>
-                </div>
-
                 <div class="card-actions justify-end mt-4">
                     <a href="{{ route('attendance.attendance-logs.index') }}" class="btn btn-ghost">{{ __('Cancel') }}</a>
-                    <button type="submit" class="btn btn-primary"
-                        onclick="return confirm('{{ __('Existing attendance logs for the selected period will be overwritten. Continue?') }}')">
-                        {{ __('Create Logs') }}
-                    </button>
+                    <button type="submit" class="btn btn-primary">{{ __('Create Logs') }}</button>
                 </div>
             </div>
         </form>

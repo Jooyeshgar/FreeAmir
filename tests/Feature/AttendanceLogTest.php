@@ -13,6 +13,7 @@ use App\Models\WorkShift;
 use App\Models\WorkSite;
 use App\Services\AttendanceLogImportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -325,7 +326,7 @@ class AttendanceLogTest extends TestCase
 
         $tmpPath = tempnam(sys_get_temp_dir(), 'tsv_');
         file_put_contents($tmpPath, $tsv);
-        $uploadedFile = new \Illuminate\Http\UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
+        $uploadedFile = new UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
 
         /** @var AttendanceLogImportService $service */
         $service = app(AttendanceLogImportService::class);
@@ -365,6 +366,32 @@ class AttendanceLogTest extends TestCase
         $response = $this->get(route('attendance.attendance-logs.bulk-create'));
 
         $response->assertStatus(200);
+    }
+
+    public function test_bulk_search_employee_returns_only_matching_active_employees(): void
+    {
+        $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $active = Employee::factory()->create([
+            'company_id' => $this->companyId,
+            'work_site_id' => $workSite->id,
+            'first_name' => 'Zahra',
+            'last_name' => 'Karimi',
+            'is_active' => true,
+        ]);
+        $inactive = Employee::factory()->create([
+            'company_id' => $this->companyId,
+            'work_site_id' => $workSite->id,
+            'first_name' => 'Zahra',
+            'last_name' => 'Inactive',
+            'is_active' => false,
+        ]);
+
+        $response = $this->getJson(route('attendance.attendance-logs.search-employee', ['q' => 'Zahra']));
+
+        $response->assertStatus(200);
+        $ids = collect($response->json('0.options.0'))->pluck('id')->all();
+        $this->assertContains($active->id, $ids);
+        $this->assertNotContains($inactive->id, $ids);
     }
 
     public function test_bulk_store_creates_logs_for_each_selected_employee(): void
@@ -420,7 +447,41 @@ class AttendanceLogTest extends TestCase
         ]);
     }
 
-    public function test_bulk_store_overwrites_existing_log_with_shift_times(): void
+    public function test_bulk_store_overwrites_existing_log_with_shift_times_when_override_enabled(): void
+    {
+        $workShift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+        ]);
+        $this->employee->update(['work_shift_id' => $workShift->id]);
+
+        AttendanceLog::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-02-02',
+            'entry_time' => '09:30:00',
+            'exit_time' => '18:30:00',
+        ]);
+
+        $this->post(route('attendance.attendance-logs.bulk-store'), $this->validBulkPayload(['override' => '1']));
+
+        // Existing log must be overwritten with shift times
+        $this->assertDatabaseHas('attendance_logs', [
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-02-02',
+            'entry_time' => '08:00:00',
+            'exit_time' => '17:00:00',
+        ]);
+        // Still only one row for that day
+        $this->assertSame(
+            1,
+            AttendanceLog::where('employee_id', $this->employee->id)->where('log_date', '2026-02-02')->count()
+        );
+    }
+
+    public function test_bulk_store_keeps_existing_log_when_override_disabled(): void
     {
         $workShift = WorkShift::factory()->create([
             'company_id' => $this->companyId,
@@ -439,19 +500,189 @@ class AttendanceLogTest extends TestCase
 
         $this->post(route('attendance.attendance-logs.bulk-store'), $this->validBulkPayload());
 
-        // Existing log must be overwritten with shift times
+        // Existing log must be left untouched (no override)
         $this->assertDatabaseHas('attendance_logs', [
             'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-02-02',
+            'entry_time' => '09:30:00',
+            'exit_time' => '18:30:00',
+        ]);
+        $this->assertSame(
+            1,
+            AttendanceLog::where('employee_id', $this->employee->id)->where('log_date', '2026-02-02')->count()
+        );
+    }
+
+    public function test_bulk_create_lists_only_active_employees(): void
+    {
+        $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $active = Employee::factory()->create([
+            'company_id' => $this->companyId,
+            'work_site_id' => $workSite->id,
+            'first_name' => 'Active',
+            'last_name' => 'Person',
+            'is_active' => true,
+        ]);
+        $inactive = Employee::factory()->create([
+            'company_id' => $this->companyId,
+            'work_site_id' => $workSite->id,
+            'first_name' => 'Inactive',
+            'last_name' => 'Person',
+            'is_active' => false,
+        ]);
+
+        $response = $this->get(route('attendance.attendance-logs.bulk-create'));
+
+        $response->assertStatus(200);
+        $response->assertSee('Active Person');
+        $response->assertDontSee('Inactive Person');
+    }
+
+    public function test_bulk_store_rejects_inactive_employee_id(): void
+    {
+        $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $inactive = Employee::factory()->create([
+            'company_id' => $this->companyId,
+            'work_site_id' => $workSite->id,
+            'is_active' => false,
+        ]);
+
+        $response = $this->post(
+            route('attendance.attendance-logs.bulk-store'),
+            $this->validBulkPayload(['employee_ids' => [$inactive->id]])
+        );
+
+        $response->assertSessionHasErrors(['employee_ids.0']);
+        $this->assertDatabaseMissing('attendance_logs', [
+            'company_id' => $this->companyId,
+            'employee_id' => $inactive->id,
+        ]);
+    }
+
+    public function test_bulk_store_creates_one_log_per_workday_for_the_whole_window(): void
+    {
+        $this->post(route('attendance.attendance-logs.bulk-store'), $this->validBulkPayload());
+
+        // Feb 1–28 2026 has 4 Fridays (6, 13, 20, 27); no holidays; no shift => Thursdays worked.
+        // 28 days − 4 Fridays = 24 worked days.
+        $this->assertSame(
+            24,
+            AttendanceLog::where('employee_id', $this->employee->id)->count()
+        );
+        // Each created log carries the default shift times.
+        $this->assertDatabaseHas('attendance_logs', [
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-02-02',
+            'entry_time' => '08:00:00',
+            'exit_time' => '17:00:00',
+            'is_manual' => false,
+        ]);
+    }
+
+    public function test_bulk_store_without_override_keeps_existing_and_fills_missing_days(): void
+    {
+        // Pre-existing manual log on Monday 2026-02-02
+        AttendanceLog::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-02-02',
+            'entry_time' => '09:30:00',
+            'exit_time' => '18:30:00',
+            'is_manual' => true,
+        ]);
+
+        $this->post(route('attendance.attendance-logs.bulk-store'), $this->validBulkPayload());
+
+        // Existing day is untouched...
+        $this->assertDatabaseHas('attendance_logs', [
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-02-02',
+            'entry_time' => '09:30:00',
+            'exit_time' => '18:30:00',
+            'is_manual' => true,
+        ]);
+        // ...while the remaining workdays are filled with shift times.
+        $this->assertDatabaseHas('attendance_logs', [
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-02-03',
+            'entry_time' => '08:00:00',
+            'exit_time' => '17:00:00',
+            'is_manual' => false,
+        ]);
+        // Total still equals the 24 worked days (1 kept + 23 created).
+        $this->assertSame(
+            24,
+            AttendanceLog::where('employee_id', $this->employee->id)->count()
+        );
+    }
+
+    public function test_bulk_store_with_override_overwrites_existing_and_creates_missing_days(): void
+    {
+        $workShift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+        ]);
+        $this->employee->update(['work_shift_id' => $workShift->id]);
+
+        AttendanceLog::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-02-02',
+            'entry_time' => '09:30:00',
+            'exit_time' => '18:30:00',
+            'is_manual' => true,
+        ]);
+
+        $this->post(route('attendance.attendance-logs.bulk-store'), $this->validBulkPayload(['override' => '1']));
+
+        // Existing day overwritten with shift times and reset to non-manual.
+        $this->assertDatabaseHas('attendance_logs', [
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-02-02',
+            'entry_time' => '08:00:00',
+            'exit_time' => '17:00:00',
+            'is_manual' => false,
+        ]);
+        $this->assertSame(
+            24,
+            AttendanceLog::where('employee_id', $this->employee->id)->count()
+        );
+    }
+
+    public function test_bulk_store_applies_independently_per_employee_with_override(): void
+    {
+        $workSite2 = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $employee2 = Employee::factory()->create([
+            'company_id' => $this->companyId,
+            'work_site_id' => $workSite2->id,
+        ]);
+
+        // Only employee1 has a pre-existing log on 2026-02-02.
+        AttendanceLog::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-02-02',
+            'entry_time' => '09:30:00',
+            'exit_time' => '18:30:00',
+        ]);
+
+        $this->post(
+            route('attendance.attendance-logs.bulk-store'),
+            $this->validBulkPayload(['employee_ids' => [$this->employee->id, $employee2->id], 'override' => '1'])
+        );
+
+        // Both employees end up with the same number of worked days.
+        $this->assertSame(24, AttendanceLog::where('employee_id', $this->employee->id)->count());
+        $this->assertSame(24, AttendanceLog::where('employee_id', $employee2->id)->count());
+        // Employee1's existing day was overwritten.
+        $this->assertDatabaseHas('attendance_logs', [
             'employee_id' => $this->employee->id,
             'log_date' => '2026-02-02',
             'entry_time' => '08:00:00',
             'exit_time' => '17:00:00',
         ]);
-        // Still only one row for that day
-        $this->assertSame(
-            1,
-            AttendanceLog::where('employee_id', $this->employee->id)->where('log_date', '2026-02-02')->count()
-        );
     }
 
     public function test_bulk_store_skips_fridays(): void
@@ -644,7 +875,7 @@ class AttendanceLogTest extends TestCase
 
         $tmpPath = tempnam(sys_get_temp_dir(), 'tsv_');
         file_put_contents($tmpPath, $tsv);
-        $uploadedFile = new \Illuminate\Http\UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
+        $uploadedFile = new UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
 
         /** @var AttendanceLogImportService $service */
         $service = app(AttendanceLogImportService::class);
