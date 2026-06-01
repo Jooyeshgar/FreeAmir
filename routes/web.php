@@ -130,6 +130,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('attendance-logs/{attendance_log}', [Controllers\AttendanceLogController::class, 'show'])->name('attendance-logs.show');
         Route::post('attendance-logs/{attendance_log}/recalculate', [Controllers\AttendanceLogController::class, 'recalculate'])->name('attendance-logs.recalculate');
         Route::get('attendance-logs-bulk/create', [Controllers\AttendanceLogController::class, 'bulkCreate'])->name('attendance-logs.bulk-create');
+        Route::get('attendance-logs-bulk/search-employee', [Controllers\AttendanceLogController::class, 'searchEmployee'])->name('attendance-logs.search-employee');
         Route::post('attendance-logs-bulk', [Controllers\AttendanceLogController::class, 'bulkStore'])->name('attendance-logs.bulk-store');
         Route::get('attendance-logs-import', [Controllers\AttendanceLogController::class, 'importForm'])->name('attendance-logs.import');
         Route::post('attendance-logs-import/preview', [Controllers\AttendanceLogController::class, 'importPreview'])->name('attendance-logs.import.preview');
