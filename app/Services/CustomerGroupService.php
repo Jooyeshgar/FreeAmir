@@ -2,12 +2,75 @@
 
 namespace App\Services;
 
+use App\Enums\InvoiceStatus;
+use App\Enums\InvoiceType;
+use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\Invoice;
 use DB;
 
 class CustomerGroupService
 {
     public function __construct(private readonly SubjectService $subjectService) {}
+
+    /**
+     * Gather aggregate statistics for a customer group's overview page.
+     */
+    public function getStats(CustomerGroup $customerGroup): array
+    {
+        $customerIds = $customerGroup->customers()->pluck('id');
+
+        $sellQuery = Invoice::query()
+            ->whereIn('customer_id', $customerIds)
+            ->where('invoice_type', InvoiceType::SELL)
+            ->where('status', InvoiceStatus::APPROVED);
+
+        $totalSales = (float) (clone $sellQuery)->sum('amount');
+        $invoicesCount = (clone $sellQuery)->count();
+
+        $totalReturns = (float) Invoice::query()
+            ->whereIn('customer_id', $customerIds)
+            ->where('invoice_type', InvoiceType::RETURN_SELL)
+            ->where('status', InvoiceStatus::APPROVED)
+            ->sum('amount');
+
+        $topCustomerRows = (clone $sellQuery)
+            ->selectRaw('customer_id, SUM(amount) as total_amount, COUNT(*) as invoices_count')
+            ->groupBy('customer_id')
+            ->orderByDesc('total_amount')
+            ->limit(5)
+            ->get();
+
+        $customers = Customer::whereIn('id', $topCustomerRows->pluck('customer_id'))->get()->keyBy('id');
+
+        $topCustomers = $topCustomerRows
+            ->map(fn ($row) => [
+                'customer' => $customers->get($row->customer_id),
+                'total' => (float) $row->total_amount,
+                'count' => (int) $row->invoices_count,
+            ])
+            ->filter(fn ($row) => $row['customer'])
+            ->values();
+
+        $recentInvoices = Invoice::with('customer')
+            ->whereIn('customer_id', $customerIds)
+            ->whereIn('invoice_type', [InvoiceType::SELL, InvoiceType::RETURN_SELL])
+            ->orderByDesc('date')
+            ->orderByDesc('id')
+            ->limit(8)
+            ->get();
+
+        return [
+            'customersCount' => $customerIds->count(),
+            'subjectBalance' => SubjectService::sumSubject($customerGroup->subject, true, false),
+            'totalSales' => $totalSales,
+            'totalReturns' => $totalReturns,
+            'netSales' => $totalSales - $totalReturns,
+            'invoicesCount' => $invoicesCount,
+            'topCustomers' => $topCustomers,
+            'recentInvoices' => $recentInvoices,
+        ];
+    }
 
     public function create(array $data): CustomerGroup
     {

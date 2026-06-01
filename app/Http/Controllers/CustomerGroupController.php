@@ -39,7 +39,9 @@ class CustomerGroupController extends Controller
 
     public function show(CustomerGroup $customerGroup)
     {
-        return view('customerGroups.show', compact('customerGroup'));
+        $stats = $this->service->getStats($customerGroup);
+
+        return view('customerGroups.show', compact('customerGroup', 'stats'));
     }
 
     public function edit(CustomerGroup $customerGroup)

@@ -23,7 +23,7 @@
         </details>
     </li>
 @endcan
-@canany(['invoices.index', 'invoices.inactive', 'customers.create', 'ancillary-costs.index'])
+@canany(['invoices.index', 'invoices.inactive', 'ancillary-costs.index'])
     <li>
         <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('Invoices') }}</summary>
@@ -60,9 +60,6 @@
                 @endcanany
                 @can('invoices.inactive')
                     <li><a href="{{ route('invoices.inactive') }}">{{ __('Activate Confirmed Invoices') }}</a></li>
-                @endcan
-                @can('customers.create')
-                    <li><a href="{{ route('customers.create') }}">{{ __('Add Customer') }}</a></li>
                 @endcan
             </ul>
         </details>
@@ -145,7 +142,8 @@
     </li>
 @endcanany
 
-@canany(['salary.payrolls.dashboard', 'salary.payrolls.index', 'hr.employees.index', 'hr.personnel-requests.index', 'attendance.attendance-logs.index', 'attendance.monthly-attendances.index'])
+@canany(['salary.payrolls.dashboard', 'salary.payrolls.index', 'hr.employees.index', 'hr.personnel-requests.index', 'attendance.attendance-logs.index',
+    'attendance.monthly-attendances.index'])
     <li>
         <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('HR') }}</summary>
@@ -167,6 +165,25 @@
                 @endcan
                 @can('attendance.monthly-attendances.index')
                     <li><a href="{{ route('attendance.monthly-attendances.index') }}">{{ __('Monthly Attendances') }}</a></li>
+                @endcan
+            </ul>
+        </details>
+    </li>
+@endcanany
+
+@canany(['crm.dashboard', 'customers.index', 'customer-groups.index'])
+    <li>
+        <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
+            <summary>{{ __('CRM') }}</summary>
+            <ul class="{{ $topDropdownContentClass }}">
+                @can('crm.dashboard')
+                    <li><a href="{{ route('crm.dashboard') }}">{{ __('CRM Dashboard') }}</a></li>
+                @endcan
+                @can('customers.index')
+                    <li><a href="{{ route('customers.index') }}">{{ __('Customers') }}</a></li>
+                @endcan
+                @can('customer-groups.index')
+                    <li><a href="{{ route('customer-groups.index') }}">{{ __('Customer Groups') }}</a></li>
                 @endcan
             </ul>
         </details>
@@ -211,23 +228,6 @@
                             @endcan
                             @can('salary.salary-decrees.index')
                                 <li><a href="{{ route('salary.salary-decrees.index') }}">{{ __('Salary Decrees') }}</a></li>
-                            @endcan
-                        </ul>
-                    </details>
-                </li>
-            @endcanany
-
-            {{-- Customers --}}
-            @canany(['customers.index', 'customer-groups.index'])
-                <li>
-                    <details>
-                        <summary>{{ __('Customers') }}</summary>
-                        <ul>
-                            @can('customers.index')
-                                <li><a href="{{ route('customers.index') }}">{{ __('Customers') }}</a></li>
-                            @endcan
-                            @can('customer-groups.index')
-                                <li><a href="{{ route('customer-groups.index') }}">{{ __('Customer Groups') }}</a></li>
                             @endcan
                         </ul>
                     </details>
