@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\DocumentImportExport;
 
 /**
  * Central catalogue of the supported document import formats.

@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
-use App\Services\DocumentImportExportService;
+use App\Services\DocumentImportExport\DocumentImportExportService;
 use App\Services\SubjectService;
 use App\Services\TrialBalanceService;
 use Illuminate\Http\Request;

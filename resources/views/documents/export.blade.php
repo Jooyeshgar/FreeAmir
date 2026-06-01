@@ -61,9 +61,9 @@
                 </div>
 
                 @php
-                    $mandatoryCols = \App\Services\DocumentImportExportService::MANDATORY_COLUMNS;
+                    $mandatoryCols = \App\Services\DocumentImportExport\DocumentImportExportService::MANDATORY_COLUMNS;
                     $optionalCols = array_values(array_diff(
-                        \App\Services\DocumentImportExportService::ALL_COLUMNS,
+                        \App\Services\DocumentImportExport\DocumentImportExportService::ALL_COLUMNS,
                         $mandatoryCols
                     ));
                     $selectedCols = old('columns', $optionalCols);

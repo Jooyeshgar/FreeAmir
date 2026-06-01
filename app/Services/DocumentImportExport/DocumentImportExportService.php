@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\DocumentImportExport;
 
 use App\Models\Document;
 use App\Models\Subject;
