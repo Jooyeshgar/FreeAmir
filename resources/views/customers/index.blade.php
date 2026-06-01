@@ -105,7 +105,7 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106a1.125 1.125 0 0 0-1.173.417l-.97 1.293a1.125 1.125 0 0 1-1.21.38 12.035 12.035 0 0 1-7.143-7.143 1.125 1.125 0 0 1 .38-1.21l1.293-.97a1.125 1.125 0 0 0 .417-1.173L6.963 3.102A1.125 1.125 0 0 0 5.872 2.25H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
                                             </svg>
-                                            <span>{{ $customer->phone ?: __('No phone number') }}</span>
+                                            <span>{{ convertToFarsi($customer->phone) ?: __('No phone number') }}</span>
                                         </div>
                                         <div class="flex items-center gap-2">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/35" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -128,7 +128,7 @@
                                             <span>
                                                 @if ($customer->subject)
                                                     <a href="{{ route('transactions.index', ['subject_id' => $customer->subject?->id]) }}" class="hover:text-primary">
-                                                        {{ app\Services\SubjectService::sumSubject($customer->subject) }}
+                                                        {{ formatNumber(app\Services\SubjectService::sumSubject($customer->subject)) }}
                                                     </a>
                                                 @else
                                                     —

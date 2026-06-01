@@ -187,7 +187,7 @@
                             <table class="table table-sm">
                                 <thead>
                                     <tr class="text-base-content/50">
-                                        <th>{{ __('Number') }}</th>
+                                        <th>{{ __('Invoice Number') }}</th>
                                         <th>{{ __('Customer') }}</th>
                                         <th>{{ __('Type') }}</th>
                                         <th>{{ __('Date') }}</th>
@@ -209,7 +209,7 @@
                                                 </span>
                                             </td>
                                             <td class="whitespace-nowrap text-base-content/60">{{ convertToFarsi(formatDate($invoice->date)) }}</td>
-                                            <td class="text-left font-semibold whitespace-nowrap">{{ convertToFarsi(formatNumber($invoice->amount)) }}</td>
+                                            <td class="text-left font-semibold whitespace-nowrap">{{ formatNumber($invoice->amount) }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>

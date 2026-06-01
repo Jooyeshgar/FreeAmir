@@ -10,22 +10,8 @@ use App\Models\Transaction;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
-/**
- * Aggregates read-only KPIs for the CRM dashboard.
- *
- * Sales figures count only APPROVED customer SELL invoices (posted to the
- * ledger), net of approved RETURN_SELL.
- *
- * NOTE on paid/unpaid: invoices do not yet carry a per-invoice payment record.
- * Until that exists, "unpaid" is derived from the customer's ledger balance
- * (the receivable on the customer's accounting subject) and the aging buckets
- * are approximated by allocating each customer's received credits to their
- * oldest open sell invoices first (FIFO). This whole computation is read-only
- * and will be replaced once invoice payments/payment-history are introduced.
- */
 class CrmDashboardService
 {
-    /** Aging bucket upper bounds, in days. The last bucket is open-ended. */
     private const AGING_BUCKETS = [30, 60, 90];
 
     public function dashboard(): array
@@ -168,10 +154,6 @@ class CrmDashboardService
     /**
      * Aging breakdown of outstanding receivables.
      *
-     * Approximation (until per-invoice payments exist): each customer's received
-     * credits are applied to their oldest open sell invoices first; the remaining
-     * open portions are bucketed by the age of the invoice that carries them.
-     *
      * @param  array<int, array{customer: Customer, outstanding: float, credit: float}>  $receivables
      */
     private function aging(array $receivables, Carbon $yearStart, Carbon $yearEnd): array
@@ -205,8 +187,7 @@ class CrmDashboardService
                 $allocatedToBuckets += $open;
             }
 
-            // Any outstanding not explained by open invoices (e.g. opening
-            // balances) falls into the oldest bucket so totals still reconcile.
+            // Any outstanding not explained by open invoices (e.g. opening balances) falls into the oldest bucket so totals still reconcile.
             $remainder = $row['outstanding'] - $allocatedToBuckets;
             if ($remainder > 0.01) {
                 $buckets[count($buckets) - 1]['amount'] += $remainder;
