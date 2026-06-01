@@ -73,6 +73,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'customers' => self::CRUD,
             'customer-groups' => self::CRUD,
 
+            // CRM
+            'crm' => ['dashboard'],
+
             // Companies + fiscal-year wizard
             'companies' => [
                 ...self::CRUD,
@@ -219,6 +222,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     ->orWhere('name', 'LIKE', 'ancillary-costs.%')
                     ->orWhere('name', 'LIKE', 'customers.%')
                     ->orWhere('name', 'LIKE', 'customer-groups.%')
+                    ->orWhere('name', 'LIKE', 'crm.%')
                     ->orWhere('name', '=', 'home'))
                 ->whereNotIn('name', [
                     'invoices.approve',
