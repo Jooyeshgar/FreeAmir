@@ -123,6 +123,23 @@ class CrmDashboardTest extends TestCase
         $this->assertEqualsWithDelta(600, $data['metrics']['paidThisMonth'], 0.001);
     }
 
+    public function test_yearly_sales_include_esfand_30_in_jalali_leap_years(): void
+    {
+        // 1403 is a Jalali leap year, so Esfand has 30 days. Esfand 30, 1403
+        // maps to 2025-03-20; the old fixed Esfand-29 end date excluded it.
+        config(['active-company-fiscal-year' => 1403]);
+
+        $this->makeSellInvoice('2025-03-20', 1000);
+
+        $data = app(CrmDashboardService::class)->dashboard();
+
+        // The Esfand-30 sale must appear in the yearly top buyers and the
+        // Esfand bucket (index 11) of the sales trend.
+        $this->assertSame('Acme Co', $data['topBuyersYear'][0]['name']);
+        $this->assertEqualsWithDelta(1000, $data['topBuyersYear'][0]['amount'], 0.001);
+        $this->assertEqualsWithDelta(1000, $data['salesTrend']['values'][11], 0.001);
+    }
+
     private function makeSellInvoice(string $date, float $amount, InvoiceType $type = InvoiceType::SELL): Invoice
     {
         return Invoice::create([

@@ -352,7 +352,9 @@ class CrmDashboardService
     private function fiscalYearRange(int $jYear): array
     {
         $start = Carbon::parse(jalali_to_gregorian($jYear, 1, 1, '/'))->startOfDay();
-        $end = Carbon::parse(jalali_to_gregorian($jYear, 12, 29, '/'))->endOfDay();
+        // Esfand has 30 days in Jalali leap years, so derive the last day from the
+        // first day of the next fiscal year rather than assuming a fixed Esfand 29.
+        $end = Carbon::parse(jalali_to_gregorian($jYear + 1, 1, 1, '/'))->subDay()->endOfDay();
 
         return [$start, $end];
     }
