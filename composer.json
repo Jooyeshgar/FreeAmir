@@ -15,7 +15,7 @@
         "doctrine/dbal": "^3.10",
         "fakerphp/faker": "^1.9.1",
         "guzzlehttp/guzzle": "^7.2",
-        "jooyeshgar/moadian": "^2.0",
+        "jooyeshgar/moadian": "^3.0",
         "kasraghoreyshi/persian-faker": "^1.04",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.2",

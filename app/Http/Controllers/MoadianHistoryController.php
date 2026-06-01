@@ -15,7 +15,7 @@ class MoadianHistoryController extends Controller
 
     public function index(Request $request): View
     {
-        $query = MoadianHistory::with('invoice')->whereIn('created_at', MoadianHistory::selectRaw('MAX(created_at)')->groupBy('invoice_id'));
+        $query = MoadianHistory::with('invoice');
 
         if ($request->filled('status')) {
             $query->where('data->status', $request->input('status'));
@@ -27,13 +27,18 @@ class MoadianHistoryController extends Controller
 
         $moadianHistories = $query->latest()->paginate(10)->withQueryString();
 
-        return view('moadian-histories.index', ['moadianHistories' => $moadianHistories, 'latestHistoryId' => null, 'latestHistoryStatus' => null]);
+        $latestHistoryIds = MoadianHistory::whereIn('invoice_id', $moadianHistories->pluck('invoice_id')->unique())
+            ->selectRaw('MAX(id) as id')
+            ->groupBy('invoice_id')
+            ->pluck('id')
+            ->all();
+
+        return view('moadian-histories.index', compact('moadianHistories', 'latestHistoryIds'));
     }
 
     public function show(Request $request, Invoice $invoice): View
     {
         $latestHistory = $invoice->moadianHistories()->latest()->first();
-        $latestHistoryId = $latestHistory?->id;
         $latestHistoryStatus = $latestHistory ? strtoupper($latestHistory->data['status'] ?? 'UNKNOWN') : null;
 
         $query = MoadianHistory::with('invoice')->where('invoice_id', $invoice->id);
@@ -48,7 +53,7 @@ class MoadianHistoryController extends Controller
 
         $moadianHistories = $query->latest()->paginate(10)->withQueryString();
 
-        return view('moadian-histories.index', compact('moadianHistories', 'invoice', 'latestHistoryId', 'latestHistoryStatus'));
+        return view('moadian-histories.show', compact('moadianHistories', 'invoice', 'latestHistoryStatus'));
     }
 
     public function checkStatus(Invoice $invoice): RedirectResponse

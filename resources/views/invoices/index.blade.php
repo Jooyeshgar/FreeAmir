@@ -34,7 +34,7 @@
                 @endif
 
                 <form action="{{ route('invoices.index') }}" method="GET" class="ml-auto">
-                    <div class="mt-4 mb-4 grid grid-cols-16 gap-3 items-end">
+                    <div class="mt-4 mb-4 grid grid-cols-18 gap-3 items-end">
                         <div class="hidden">
                             <x-input name="invoice_type" value="{{ request('invoice_type') }}" placeholder="{{ __('Invoice Type') }}" />
                             <x-input name="service_buy" value="{{ request('service_buy') }}" placeholder="{{ __('Service Buy') }}" />
@@ -71,6 +71,19 @@
                                 @endforeach
                             </select>
                         </div>
+                        @if (in_array(request('invoice_type'), ['sell', 'void']))
+                            <div class="col-span-2">
+                                <select name="moadian_status" id="moadian_status"
+                                    class="select block w-full rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2">
+                                    <option value="">{{ __('Moadian Status') }}</option>
+                                    @foreach (\App\Enums\MoadianStatus::cases() as $moadianStatusOption)
+                                        <option value="{{ $moadianStatusOption->value }}" @selected(request('moadian_status') === $moadianStatusOption->value)>
+                                            {{ $moadianStatusOption->label() }}</option>
+                                    @endforeach
+                                    <option value="not_sent" @selected(request('moadian_status') === 'not_sent')>{{ __('Not sent') }}</option>
+                                </select>
+                            </div>
+                        @endif
                         @if (request('invoice_type') === 'sell')
                             <label class="col-span-2 flex items-center gap-3 mb-2">
                                 <input type="checkbox" name="voided" value="1" class="checkbox checkbox-primary" @checked(request('voided') == '1') />
@@ -143,6 +156,9 @@
                 <x-stat-card :title="__('Invoices Amount')" :value="formatNumber($invoices->totalAmount)" />
             </div>
 
+            @php
+                $showMoadianStatus = in_array(request('invoice_type'), [\App\Enums\InvoiceType::SELL->value, \App\Enums\InvoiceType::VOID->value]);
+            @endphp
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <tr>
@@ -152,6 +168,9 @@
                         <th class="px-4 py-2">{{ __('Date') }}</th>
                         <th class="px-4 py-2">{{ __('Price') }} ({{ config('amir.currency') ?? __('Rial') }})</th>
                         <th class="px-4 py-2">{{ __('Status') }}</th>
+                        @if ($showMoadianStatus)
+                            <th class="px-4 py-2">{{ __('Moadian Status') }}</th>
+                        @endif
                         <th class="px-4 py-2">{{ __('Action') }}</th>
                     </tr>
                 </thead>
@@ -194,6 +213,20 @@
                             <td class="px-4 py-2">
                                 {{ $invoice->status?->label() ?? '' }}
                             </td>
+                            @if ($showMoadianStatus)
+                                <td class="px-4 py-2">
+                                    @php
+                                        $moadianStatus = \App\Enums\MoadianStatus::fromData($invoice->latestMoadianHistory?->data['status'] ?? null);
+                                    @endphp
+                                    @if ($invoice->latestMoadianHistory === null)
+                                        <span class="text-gray-400">{{ __('Not sent') }}</span>
+                                    @elseif ($moadianStatus !== null)
+                                        <span class="badge {{ $moadianStatus->color() }}">{{ $moadianStatus->label() }}</span>
+                                    @else
+                                        <span class="badge badge-warning">{{ __('UNKNOWN') }}</span>
+                                    @endif
+                                </td>
+                            @endif
                             <td class="px-4 py-2">
                                 @php
                                     $isVoided = (bool) $invoice->voidInvoice;

@@ -43,6 +43,10 @@ class InvoiceController extends Controller
             ->orderByDesc('date')
             ->orderByDesc('number');
 
+        $builder->when(in_array($request->invoice_type, [InvoiceType::SELL->value, InvoiceType::VOID->value]),
+            fn ($q) => $q->with('latestMoadianHistory')
+        );
+
         $builder->when($request->filled('invoice_type') &&
             in_array($request->invoice_type, ['buy', 'sell', 'return_buy', 'return_sell', 'void']),
             fn ($invoice) => $invoice->where('invoice_type', $request->invoice_type)
@@ -82,6 +86,16 @@ class InvoiceController extends Controller
         }));
 
         $builder->when($request->invoice_type === InvoiceType::SELL->value && $request->boolean('voided'), fn ($q) => $q->whereHas('voidInvoice'));
+
+        $builder->when($request->filled('moadian_status') && in_array($request->invoice_type, [InvoiceType::SELL->value, InvoiceType::VOID->value]),
+            function ($q) use ($request) {
+                if ($request->moadian_status === 'not_sent') {
+                    $q->whereDoesntHave('moadianHistories');
+                } else {
+                    $q->whereHas('latestMoadianHistory', fn ($h) => $h->where('data->status', $request->moadian_status));
+                }
+            }
+        );
 
         $statsBuilder = $builder->clone();
 
@@ -740,30 +754,15 @@ class InvoiceController extends Controller
         return view('invoices.moadian', compact('invoice'));
     }
 
-    public function sendMoadian(Request $request, Invoice $invoice, MoadianService $moadianService)
+    public function sendMoadian(Invoice $invoice, MoadianService $moadianService)
     {
-        $validated = $request->validate([
-            'transaction_date' => ['required', 'string'],
-            'transaction_reference_number' => ['nullable', 'string'],
-        ]);
-
         $decision = $moadianService->validateSendMoadian($invoice);
 
         if ($decision->hasErrors()) {
             return redirect()->route('invoices.show', $invoice)->withErrors($decision->messages->pluck('text')->all());
         }
 
-        $date = convertToGregorian($validated['transaction_date']);
-        $transaction_reference_number = convertToInt($validated['transaction_reference_number']);
-
-        if (! $invoice->pay_date) {
-            $invoice->update([
-                'pay_date' => $date,
-                'pay_reference_number' => $transaction_reference_number ?? null,
-            ]);
-        }
-
-        $success = $moadianService->sendInvoice($invoice, $transaction_reference_number ?? null, $date);
+        $success = $moadianService->sendInvoice($invoice);
 
         if ($success) {
             return redirect()->route('invoices.show', $invoice)->with('success', __('Invoice sent to Moadian successfully.'));

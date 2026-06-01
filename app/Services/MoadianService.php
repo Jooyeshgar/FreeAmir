@@ -13,7 +13,6 @@ use Jooyeshgar\Moadian\Facades\Moadian;
 use Jooyeshgar\Moadian\Invoice as MoadianInvoice;
 use Jooyeshgar\Moadian\InvoiceHeader;
 use Jooyeshgar\Moadian\InvoiceItem;
-use Jooyeshgar\Moadian\Payment;
 
 class MoadianService
 {
@@ -27,19 +26,12 @@ class MoadianService
 
     public MoadianInvoice $moadianInvoice;
 
-    private string $transaction_date;
-
-    private ?string $transaction_reference_number;
-
-    public function sendInvoice(Invoice $invoice, ?string $transaction_reference_number, string $transaction_date): bool
+    public function sendInvoice(Invoice $invoice): bool
     {
         $company = Company::find(getActiveCompany());
 
         $this->moadian_username = $company->moadian_username;
         $this->taxID = $company->tax_id;
-
-        $this->transaction_reference_number = $transaction_reference_number;
-        $this->transaction_date = $transaction_date;
 
         $this->moadianData($invoice);
 
@@ -117,7 +109,6 @@ class MoadianService
         $this->moadianInvoice = new MoadianInvoice($this->header);
 
         $this->moadianInvoiceItems();
-        $this->moadianInvoicePayments();
     }
 
     private function voidInvoice(): bool
@@ -210,13 +201,5 @@ class MoadianService
             $body->tsstam = $item->amount;
             $this->moadianInvoice->addItem($body);
         }
-    }
-
-    private function moadianInvoicePayments(): void
-    {
-        $payment = new Payment;
-        $payment->trn = $this->transaction_reference_number;
-        $payment->pdt = Carbon::parse($this->transaction_date)->timestamp * 1000;
-        $this->moadianInvoice->addPayment($payment);
     }
 }
