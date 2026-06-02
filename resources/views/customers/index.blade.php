@@ -25,14 +25,25 @@
         <div class="card-body p-0">
             {{-- Card Header: title + filters --}}
             <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-base-200">
-                <div class="flex items-center gap-3">
-                    <h2 class="text-base font-bold text-base-content">{{ __('Customer List') }}</h2>
+                <div class="flex flex-wrap items-center gap-3">
+                    <h2 class="text-base font-bold text-base-content">
+                        {{ $onlyDebtors ? __('Customers with debt') : __('Customer List') }}
+                    </h2>
                     <span class="badge badge-ghost">
                         {{ convertToFarsi($customers->total()) }} {{ __('records') }}
+                    </span>
+                    <span class="badge {{ $onlyDebtors ? 'badge-error badge-outline' : 'badge-ghost' }}">
+                        {{ formatNumber($balanceSum) }} {{ __('Rial') }}
                     </span>
                 </div>
 
                 <form action="{{ route('customers.index') }}" method="GET" class="flex flex-wrap items-center gap-2" dir="ltr">
+                    <label class="label cursor-pointer gap-2" dir="rtl">
+                        <input type="checkbox" name="debt" value="1" class="checkbox checkbox-sm checkbox-primary"
+                            @checked($onlyDebtors) onchange="this.form.submit()" />
+                        <span class="label-text text-sm">{{ __('Only debtors') }}</span>
+                    </label>
+
                     <select name="group_id" class="select select-sm w-40" dir="rtl" onchange="this.form.submit()">
                         <option value="all">{{ __('All Groups') }}</option>
                         @foreach ($groups as $g)

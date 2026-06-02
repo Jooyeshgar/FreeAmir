@@ -51,11 +51,28 @@ class CustomerController extends Controller
             $query->where('group_id', $groupId);
         }
 
+        $onlyDebtors = $request->boolean('debt');
+        if ($onlyDebtors) {
+            $query->whereIn('subject_id', $this->debtorSubjectIds());
+        }
+        $balanceSum = (float) Models\Transaction::query()->whereIn('subject_id', (clone $query)->whereNotNull('subject_id')->pluck('subject_id'))->sum('value');
+
         $customers = $query->paginate(30)->appends($request->query());
 
         $groups = Models\CustomerGroup::select('id', 'name')->orderBy('name')->get();
 
-        return view('customers.index', compact('customers', 'groups', 'groupId'));
+        return view('customers.index', compact('customers', 'groups', 'groupId', 'onlyDebtors', 'balanceSum'));
+    }
+
+    private function debtorSubjectIds()
+    {
+        $customerSubjectIds = Models\Customer::query()->whereNotNull('subject_id')->pluck('subject_id');
+
+        return Models\Transaction::query()
+            ->whereIn('subject_id', $customerSubjectIds)
+            ->groupBy('subject_id')
+            ->havingRaw('SUM(value) < 0')
+            ->pluck('subject_id');
     }
 
     public function create()
