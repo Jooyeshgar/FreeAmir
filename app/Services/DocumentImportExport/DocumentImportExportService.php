@@ -218,6 +218,8 @@ class DocumentImportExportService
         $rowsSkipped = $result['rows_skipped'] ?? 0;
         $errors = $result['errors'] ?? [];
 
+        $lines = [];
+
         if ($created === 0 && $skipped <= 0) {
             $lines[] = __('No documents were imported.');
         }

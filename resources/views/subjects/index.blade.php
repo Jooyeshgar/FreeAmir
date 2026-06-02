@@ -4,9 +4,13 @@
         <div class="card-body">
             <div class="card-actions ">
                 <div>
-                    <a href="{{ route('subjects.create', ['parent_id' => request('parent_id', null)]) }}" class="btn btn-primary">{{ __('Create Subject') }}</a>
+                    <a href="{{ route('subjects.create', ['parent_id' => request('parent_id', null)]) }}" class="btn btn-primary ">{{ __('Create Subject') }}</a>
                 </div>
-                @if($currentParent)
+                @if($importedDefaultName)
+                    <a href="{{ route('subjects.index') }}" class="btn btn-outline">
+                        {{ __('Back') }}
+                    </a>
+                @elseif($currentParent)
                     @php
                         $upUrl = route('subjects.index');
                         if ($currentParent->parent_id) {
@@ -19,6 +23,17 @@
                         {{ __('Back') }}
                     </a>
                 @endif
+                <div class="ml-auto">
+                    @if($importedDefaultName)
+                        <a href="{{ route('subjects.index') }}" class="btn btn-warning">
+                            {{ __('Imported with Default Name') }} ✕
+                        </a>
+                    @else
+                        <a href="{{ route('subjects.index', ['name_is_default' => 1]) }}" class="btn btn-outline">
+                            {{ __('Imported with Default Name') }}
+                        </a>
+                    @endif
+                </div>
             </div>
             <table class="table w-full mt-4">
                 <thead>

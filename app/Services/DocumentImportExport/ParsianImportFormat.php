@@ -63,7 +63,7 @@ class ParsianImportFormat extends DocumentImportFormat
             $taf = (int) ($row['TafsiliCode'] ?? 0);
             if ($taf === 0 && $kol > 0 && $moen > 0) {
                 $key = $kol.'.'.$moen;
-                if (! isset($moenNames[$key])) {
+                if (! isset($moenNames[$key]) && trim($row['HesabName'] ?? '') !== '') {
                     $moenNames[$key] = trim($row['HesabName'] ?? '');
                 }
             }
@@ -85,7 +85,7 @@ class ParsianImportFormat extends DocumentImportFormat
             try {
                 $this->importDocumentGroup($group, $user, $moenNames);
             } catch (\Throwable $e) {
-                $this->result['errors'][] = "Document {$key}: ".$e->getMessage();
+                $this->result['errors'][] = __('Document :key was not imported: :reason', ['key' => $key, 'reason' => $e->getMessage()]);
                 $this->result['documents_skipped']++;
                 Log::warning('ParsianImportFormat: skipped document '.$key.': '.$e->getMessage());
             }
@@ -146,11 +146,11 @@ class ParsianImportFormat extends DocumentImportFormat
         $kolCode = str_pad($kol, 3, '0', STR_PAD_LEFT);
         $moenCode = $kolCode.str_pad($moen, 3, '0', STR_PAD_LEFT);
 
-        $this->subjects->findOrCreate($kolCode, $kolCode, '');
+        $this->subjects->findOrCreate($kolCode, ImportSubjectResolver::synthesizeName($kolCode), '');
 
         if ($taf > 0) {
             $tafCode = $moenCode.str_pad($taf, 3, '0', STR_PAD_LEFT);
-            $moenName = $moenNames[$kol.'.'.$moen] ?? $moenCode;
+            $moenName = $moenNames[$kol.'.'.$moen] ?? ImportSubjectResolver::synthesizeName($moenCode);
             $this->subjects->findOrCreate($moenCode, $moenName, $kolCode);
 
             return $this->subjects->findOrCreate($tafCode, $name, $moenCode);

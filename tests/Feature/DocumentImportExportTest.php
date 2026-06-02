@@ -160,7 +160,7 @@ class DocumentImportExportTest extends TestCase
         $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'name' => 'Bank', 'code' => '001002']);
     }
 
-    public function test_csv_import_rejects_document_when_parent_subject_missing(): void
+    public function test_csv_import_auto_creates_missing_root_and_imports_document(): void
     {
         $csv = $this->buildCsv([
             ['1', '2026-01-15', 'Test Doc', 'manual', 'unapproved', '001', '002', '', 'Bank', 'Payment', '5000', '0'],
@@ -169,10 +169,14 @@ class DocumentImportExportTest extends TestCase
 
         $result = $this->runCsvImport($csv);
 
-        $this->assertSame(0, $result['documents_created']);
-        $this->assertSame(1, $result['documents_skipped']);
-        $this->assertNotEmpty($result['errors']);
-        $this->assertDatabaseMissing('documents', ['company_id' => $this->company->id, 'number' => 1]);
+        $this->assertSame(1, $result['documents_created']);
+        $this->assertDatabaseHas('documents', ['company_id' => $this->company->id, 'number' => 1]);
+
+        $root = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '001')->first();
+        $this->assertNotNull($root);
+        $this->assertNotSame('001', $root->name, 'Auto-created root must have a level-prefixed name, not bare code');
+
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001002', 'name' => 'Bank']);
     }
 
     public function test_csv_import_builds_missing_ancestor_from_a_later_row(): void
@@ -696,5 +700,178 @@ class DocumentImportExportTest extends TestCase
         $expected = array_map(fn ($col) => __($col), $expectedColumns);
 
         $this->assertSame($expected, $actual);
+    }
+
+    public function test_resolver_creates_four_level_chain_when_nothing_exists(): void
+    {
+        $rows = [
+            ['code' => '001',         'name' => 'Assets',     'parent_code' => ''],
+            ['code' => '001001',      'name' => 'Fixed',      'parent_code' => '001'],
+            ['code' => '001001001',   'name' => 'Machinery',  'parent_code' => '001001'],
+            ['code' => '001001001001', 'name' => 'CNC Lathes', 'parent_code' => '001001001'],
+        ];
+
+        $this->resolver->processSubjectRows($rows);
+
+        $leaf = Subject::withoutGlobalScope(FiscalYearScope::class)
+            ->where('company_id', $this->company->id)
+            ->where('code', '001001001001')
+            ->first();
+
+        $this->assertNotNull($leaf, '4th-level subject must be created');
+        $this->assertSame('CNC Lathes', $leaf->name);
+
+        $level3 = Subject::withoutGlobalScope(FiscalYearScope::class)->find($leaf->parent_id);
+        $this->assertSame('Machinery', $level3->name);
+
+        $level2 = Subject::withoutGlobalScope(FiscalYearScope::class)->find($level3->parent_id);
+        $this->assertSame('Fixed', $level2->name);
+
+        $root = Subject::withoutGlobalScope(FiscalYearScope::class)->find($level2->parent_id);
+        $this->assertSame('Assets', $root->name);
+        $this->assertNull($root->parent_id);
+    }
+
+    public function test_resolver_creates_five_level_chain_when_nothing_exists(): void
+    {
+        $rows = [
+            ['code' => '002',               'name' => 'L1', 'parent_code' => ''],
+            ['code' => '002001',            'name' => 'L2', 'parent_code' => '002'],
+            ['code' => '002001001',         'name' => 'L3', 'parent_code' => '002001'],
+            ['code' => '002001001001',      'name' => 'L4', 'parent_code' => '002001001'],
+            ['code' => '002001001001001',   'name' => 'L5', 'parent_code' => '002001001001'],
+        ];
+
+        $this->resolver->processSubjectRows($rows);
+
+        $leaf = Subject::withoutGlobalScope(FiscalYearScope::class)
+            ->where('company_id', $this->company->id)
+            ->where('code', '002001001001001')
+            ->first();
+
+        $this->assertNotNull($leaf);
+        $this->assertSame('L5', $leaf->name);
+
+        $current = $leaf;
+        $depth = 0;
+        while ($current->parent_id !== null) {
+            $current = Subject::withoutGlobalScope(FiscalYearScope::class)->find($current->parent_id);
+            $depth++;
+        }
+        $this->assertSame(4, $depth, 'Four ancestors must exist above the leaf');
+    }
+
+    public function test_resolver_auto_creates_missing_intermediate_with_level_name(): void
+    {
+        $rows = [
+            ['code' => '003',       'name' => 'Root', 'parent_code' => ''],
+            ['code' => '003001001', 'name' => 'Leaf', 'parent_code' => '003001'],
+        ];
+
+        $this->resolver->processSubjectRows($rows);
+
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '003']);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '003001001', 'name' => 'Leaf']);
+
+        $intermediate = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '003001')->first();
+        $this->assertNotNull($intermediate, 'Intermediate level must be auto-created');
+        $this->assertNotEmpty($intermediate->name);
+    }
+
+    public function test_resolver_handles_child_before_parent_without_throwing(): void
+    {
+        $rows = [
+            ['code' => '004001', 'name' => 'Child',  'parent_code' => '004'],
+            ['code' => '004',    'name' => 'Parent', 'parent_code' => ''],
+        ];
+
+        $this->resolver->processSubjectRows($rows);
+
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '004001', 'name' => 'Child']);
+        $parent = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '004')->first();
+        $this->assertNotNull($parent);
+        $this->assertNotSame('Parent', $parent->name);
+        $this->assertNotEmpty($parent->name);
+    }
+
+    public function test_parsian_creates_root_with_level_prefixed_name(): void
+    {
+        $csv = $this->buildParsianCsv([
+            $this->parsianRow(1, '1404/01/01', 11, 5, 0, 500, 0, '', 'بانک'),
+            $this->parsianRow(1, '1404/01/01', 11, 5, 0, 0, 500, '', 'بانک'),
+        ]);
+
+        $this->runCsvImport($csv, 'parsian');
+        $root = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '011')->first();
+
+        $this->assertNotNull($root);
+        $this->assertNotSame('011', $root->name, 'Parsian root must get a level-prefixed name, not the bare code');
+        $this->assertNotEmpty($root->name);
+    }
+
+    public function test_parsian_creates_moein_with_level_prefixed_name_when_all_rows_have_tafsili(): void
+    {
+        $csv = $this->buildParsianCsv([
+            $this->parsianRow(1, '1404/01/01', 19, 7, 1, 1000, 0, '', 'شریک الف'),
+            $this->parsianRow(1, '1404/01/01', 19, 7, 2, 0, 1000, '', 'شریک ب'),
+        ]);
+
+        $this->runCsvImport($csv, 'parsian');
+        $moein = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '019007')->first();
+
+        $this->assertNotNull($moein);
+        $this->assertNotSame('019007', $moein->name, 'Parsian moein must get a level-prefixed name, not the bare code');
+        $this->assertNotEmpty($moein->name);
+
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'name' => 'شریک الف']);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'name' => 'شریک ب']);
+    }
+
+    public function test_free_amir_export_drops_fourth_level_subject(): void
+    {
+        $l1 = Subject::create(['company_id' => $this->company->id, 'code' => '001',         'name' => 'L1', 'parent_id' => null,  'type' => 'both']);
+        $l2 = Subject::create(['company_id' => $this->company->id, 'code' => '001001',      'name' => 'L2', 'parent_id' => $l1->id, 'type' => 'both']);
+        $l3 = Subject::create(['company_id' => $this->company->id, 'code' => '001001001',   'name' => 'L3', 'parent_id' => $l2->id, 'type' => 'both']);
+        $l4 = Subject::create(['company_id' => $this->company->id, 'code' => '001001001001', 'name' => 'L4', 'parent_id' => $l3->id, 'type' => 'both']);
+
+        $document = Document::factory()->create(['company_id' => $this->company->id, 'number' => 99, 'date' => '2026-01-01']);
+        Transaction::create(['document_id' => $document->id, 'subject_id' => $l4->id, 'value' => 100, 'user_id' => $this->user->id]);
+        Transaction::create(['document_id' => $document->id, 'subject_id' => $l4->id, 'value' => -100, 'user_id' => $this->user->id]);
+
+        $csv = $this->exportCsvViaService([]);
+
+        $newCompany = Company::factory()->create();
+        Subject::create(['company_id' => $newCompany->id, 'code' => '001',       'name' => 'L1', 'parent_id' => null,  'type' => 'both']);
+        Subject::create(['company_id' => $newCompany->id, 'code' => '001001',    'name' => 'L2', 'parent_id' => null,  'type' => 'both']);
+        Subject::create(['company_id' => $newCompany->id, 'code' => '001001001', 'name' => 'L3', 'parent_id' => null,  'type' => 'both']);
+
+        $result = $this->runCsvImport($this->makeCsvFile($csv), 'free_amir', $newCompany);
+
+        $this->assertSame(1, $result['documents_created']);
+
+        $this->assertDatabaseMissing('subjects', [
+            'company_id' => $newCompany->id,
+            'code' => '001001001001',
+        ]);
+    }
+
+    public function test_name_is_code_filter_matches_synthesized_subjects_not_manually_named(): void
+    {
+        // Subjects created with synthesized names by the resolver (level-prefixed)
+        $synthesized = ImportSubjectResolver::synthesizeName('001');
+        Subject::create(['company_id' => $this->company->id, 'code' => '001', 'name' => $synthesized, 'type' => 'both', 'parent_id' => null]);
+
+        // Manually named subject — must NOT appear in the filter
+        Subject::create(['company_id' => $this->company->id, 'code' => '002', 'name' => 'Manually named', 'type' => 'both', 'parent_id' => null]);
+
+        // Subject whose name happens to equal the bare code — must NOT appear (the old broken logic)
+        Subject::create(['company_id' => $this->company->id, 'code' => '003', 'name' => '003', 'type' => 'both', 'parent_id' => null]);
+
+        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'subjects.index']));
+        $response = $this->get(route('subjects.index', ['name_is_code' => 1]));
+
+        $response->assertOk();
+        $response->assertSee($synthesized);
+        $response->assertDontSee('Manually named');
     }
 }

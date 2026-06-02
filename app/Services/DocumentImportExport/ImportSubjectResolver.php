@@ -47,26 +47,8 @@ class ImportSubjectResolver
             return $this->cache[$code];
         }
 
-        try {
-            $parent = $this->resolveParent($code, trim($parentCode));
-        } catch (\RuntimeException $e) {
-            // The parent cannot be resolved; an already-existing subject can still be matched by its code.
-            $existing = Subject::where('code', $code)->first();
-            if ($existing) {
-                return $this->cache[$code] = $existing;
-            }
-
-            throw $e;
-        }
-
+        $parent = $this->resolveParent(trim($parentCode));
         $parentId = $parent?->id;
-
-        // Match existing accounts by name within the same parent: the same account may carry a
-        // different code between systems, so the name (at the same position in the tree) is the
-        // more reliable identity. The parent scope keeps distinct same-named accounts apart
-        // (e.g. FreeAmir creates Product / ProductGroup / Service / ServiceGroup sharing one name).
-        // When the file itself reuses the name for several codes, the name is unreliable and we
-        // fall straight through to code matching.
         $nameIsReliable = $name !== '' && ! isset($this->ambiguousNames[$name]);
 
         $candidates = $nameIsReliable
@@ -81,8 +63,6 @@ class ImportSubjectResolver
         }
 
         if ($candidates->count() > 1) {
-            // Several accounts share this name under the same parent; the code disambiguates them.
-            // Only reuse one when its code also matches, otherwise keep the accounts distinct.
             $byCode = $candidates->firstWhere('code', $code);
 
             return $this->cache[$code] = $byCode ?? $this->createSubject($code, $name, $parent);
@@ -97,12 +77,30 @@ class ImportSubjectResolver
         return $this->cache[$code] = $this->createSubject($code, $name, $parent);
     }
 
+    public static function synthesizeName(string $code): string
+    {
+        $code = trim($code);
+        $level = $code === '' ? 1 : (int) ceil(strlen($code) / 3);
+        $formatted = formatCode($code);
+
+        return match ($level) {
+            1 => __('Kol :code', ['code' => $formatted]),
+            2 => __('Moein :code', ['code' => $formatted]),
+            3 => __('Tafsili :code', ['code' => $formatted]),
+            default => __('Level :n :code', ['n' => $level, 'code' => $formatted]),
+        };
+    }
+
     /**
-     * Resolve a subject's parent, building it (and its own ancestors, recursively) from the
-     * import file when it is not yet present in the database. Throws when the parent exists
-     * neither in the system nor anywhere in the file.
+     * Resolve a subject's parent, building it (and its own ancestors, recursively) when it is not yet present in the database.
+     *
+     * Order:
+     *   1. In-memory cache (already created this import session)
+     *   2. Database
+     *   3. knownSubjects map (names provided by other rows in the same file)
+     *   4. Synthesized name derived from the code's hierarchy level
      */
-    private function resolveParent(string $code, string $parentCode): ?Subject
+    private function resolveParent(string $parentCode): ?Subject
     {
         if ($parentCode === '') {
             return null;
@@ -113,22 +111,11 @@ class ImportSubjectResolver
             return $this->cache[$parentCode] = $parent;
         }
 
-        // Parent is missing from the system: try to find it among the other rows of the same file
-        // and create it first (recursing up the chain to the root as needed).
-        if (array_key_exists($parentCode, $this->knownSubjects)) {
-            return $this->findOrCreate($parentCode, $this->knownSubjects[$parentCode], self::parentCodeOf($parentCode));
-        }
+        $name = $this->knownSubjects[$parentCode] ?? self::synthesizeName($parentCode);
 
-        throw new \RuntimeException(__('Parent subject :parent for code :code was not found in the system or in the imported file.', [
-            'parent' => $parentCode,
-            'code' => $code,
-        ]));
+        return $this->findOrCreate($parentCode, $name, self::parentCodeOf($parentCode));
     }
 
-    /**
-     * The immediate parent code of a hierarchical code (each level is three digits).
-     * Returns an empty string for a top-level (root) code.
-     */
     public static function parentCodeOf(string $code): string
     {
         $code = trim($code);
