@@ -12,6 +12,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -249,7 +250,7 @@ class CompanyController extends Controller
     /**
      * Store a certificate or private key file under storage/app/keys.
      */
-    protected function storeCertFile(UploadedFile $file, ?string $oldPath = null): string
+    private function storeCertFile(UploadedFile $file, ?string $oldPath = null): string
     {
         if ($oldPath && Storage::exists($oldPath)) {
             Storage::delete($oldPath);
@@ -258,7 +259,7 @@ class CompanyController extends Controller
         $extension = $file->getClientOriginalExtension();
         $uniqueName = uniqid().'.'.$extension;
         $path = 'keys/'.$uniqueName;
-        Storage::put($path, file_get_contents($file));
+        Storage::put($path, Crypt::encryptString(file_get_contents($file)));
 
         return $path;
     }

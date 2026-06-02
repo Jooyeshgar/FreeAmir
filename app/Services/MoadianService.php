@@ -34,8 +34,8 @@ class MoadianService
 
         $this->moadianData($invoice);
 
-        $privateKey = file_get_contents(storage_path("app/{$company->private_key_path}"));
-        $certificate = file_get_contents(storage_path("app/{$company->certificate_path}"));
+        $privateKey = $company->decryptedPrivateKey();
+        $certificate = $company->decryptedCertificate();
 
         $info = [];
         $sentInvoiceToMoadianWithSuccess = true;
@@ -90,8 +90,8 @@ class MoadianService
     {
         $company = Company::find(getActiveCompany());
 
-        $privateKey = file_get_contents(storage_path("app/{$company->private_key_path}"));
-        $certificate = file_get_contents(storage_path("app/{$company->certificate_path}"));
+        $privateKey = $company->decryptedPrivateKey();
+        $certificate = $company->decryptedCertificate();
 
         try {
             $response = Moadian::for($privateKey, $certificate, $company->moadian_username)

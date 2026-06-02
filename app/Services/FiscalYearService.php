@@ -22,8 +22,8 @@ use App\Models\Employee;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\MonthlyAttendance;
-use App\Models\OrgChart;
 use App\Models\OrganizationUnit;
+use App\Models\OrgChart;
 use App\Models\Payroll;
 use App\Models\PayrollElement;
 use App\Models\PayrollItem;
@@ -204,7 +204,7 @@ class FiscalYearService
      * Fetch all document files for a specific company in a memory-efficient manner.
      *
      * @param  int  $companyId  The ID of the company to retrieve files for.
-     * @return \Illuminate\Support\LazyCollection<\App\Models\DocumentFile>
+     * @return LazyCollection<DocumentFile>
      */
     private static function getCompanyDocumentFiles(int $companyId): LazyCollection
     {
@@ -2482,10 +2482,34 @@ class FiscalYearService
         $sectionsToCopy = ['subjects', 'configs', 'banks', 'customers', 'products', 'services', 'employees']; // Sections to copy to the new fiscal year
         $newFiscalYear = self::createWithCopiedData($newFiscalYearData, $company->id, $sectionsToCopy);
 
+        self::copyMoadianKeys($company, $newFiscalYear);
+
         $userIds = $company->users()->pluck('users.id')->toArray();
         $newFiscalYear->users()->attach($userIds);
 
         return $newFiscalYear;
+    }
+
+    /**
+     * Duplicate the encrypted Moadian certificate/private key files so the new fiscal year
+     * owns independent copies rather than sharing the source year's files on disk.
+     */
+    protected static function copyMoadianKeys(Company $source, Company $target): void
+    {
+        $updates = [];
+
+        foreach (['certificate_path', 'private_key_path'] as $attr) {
+            $old = $source->{$attr};
+            if ($old && Storage::exists($old)) {
+                $new = 'keys/'.uniqid().'.'.pathinfo($old, PATHINFO_EXTENSION);
+                Storage::copy($old, $new);
+                $updates[$attr] = $new;
+            }
+        }
+
+        if ($updates) {
+            $target->forceFill($updates)->save();
+        }
     }
 
     /**
@@ -2511,7 +2535,7 @@ class FiscalYearService
      * Step 3 – Close permanent accounts, create the new fiscal year, and generate the opening document.
      * Requires Step 1 to have been completed and the Income Summary balance to be exactly 0.
      *
-     * @throws \Exception
+     * @throws Exception
      */
     public static function stepThreeCloseAndOpenNewYear(Company $company, User $user): Company
     {

@@ -2,8 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Storage;
 
 class Company extends Model
 {
@@ -18,6 +21,37 @@ class Company extends Model
         return $this->belongsToMany(User::class);
     }
 
+    /**
+     * Decrypted Moadian SSL certificate contents, or null if not set.
+     */
+    public function decryptedCertificate(): ?string
+    {
+        return $this->readKeyFile($this->certificate_path);
+    }
+
+    /**
+     * Decrypted Moadian private key contents, or null if not set.
+     */
+    public function decryptedPrivateKey(): ?string
+    {
+        return $this->readKeyFile($this->private_key_path);
+    }
+
+    private function readKeyFile(?string $path): ?string
+    {
+        if (! $path || ! Storage::exists($path)) {
+            return null;
+        }
+
+        $raw = Storage::get($path);
+
+        try {
+            return Crypt::decryptString($raw);
+        } catch (DecryptException $e) {
+            return $raw;
+        }
+    }
+
     public function closedBy()
     {
         return $this->belongsTo(User::class, 'closed_by');
@@ -28,7 +62,7 @@ class Company extends Model
      */
     public function plDocument()
     {
-        return $this->belongsTo(\App\Models\Document::class, 'pl_document_id');
+        return $this->belongsTo(Document::class, 'pl_document_id');
     }
 
     /**
@@ -36,6 +70,6 @@ class Company extends Model
      */
     public function closingDocument()
     {
-        return $this->belongsTo(\App\Models\Document::class, 'closing_document_id');
+        return $this->belongsTo(Document::class, 'closing_document_id');
     }
 }
