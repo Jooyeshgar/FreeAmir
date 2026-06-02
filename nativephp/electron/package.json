@@ -1,5 +1,5 @@
 {
-    "name": "freeamir-dev",
+    "name": "freeamir",
     "version": "1.0.0",
     "description": "An awesome app built with NativePHP",
     "main": "./out/main/index.js",
