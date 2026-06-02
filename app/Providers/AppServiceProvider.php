@@ -39,6 +39,17 @@ class AppServiceProvider extends ServiceProvider
      */
    public function boot(): void
     {
+        Paginator::defaultView('vendor.pagination.daisyui');
+        Paginator::defaultSimpleView('vendor.pagination.daisyui-simple');
+
+        App::setLocale(config('app.locale', 'fa'));
+
+        Gate::before(function ($user, $ability) {
+            if ($user->hasRole('Super-Admin')) {
+                return true;
+            }
+        });
+
         $dbPath = storage_path('nativephp.sqlite');
         
         if (!File::exists($dbPath)) {
