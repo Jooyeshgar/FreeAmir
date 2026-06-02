@@ -8,13 +8,15 @@
             <p class="text-sm text-base-content/50 mt-0.5">{{ __('Manage your customers and their accounts') }}</p>
         </div>
 
-        <div class="flex flex-wrap items-center justify-start gap-2" dir="ltr">
-            <a href="{{ route('customers.create') }}" class="btn btn-primary btn-sm gap-1.5" dir="rtl">
+        <div class="flex flex-wrap items-center justify-start gap-2">
+            <a href="{{ route('customers.create') }}" class="btn btn-primary btn-sm gap-1.5">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
                 {{ __('Create Customer') }}
             </a>
+            <a href="{{ route('customers.export') }}" class="btn btn-primary btn-sm gap-1.5">{{ __('Export CSV') }}</a>
+            <a href="{{ route('customers.import') }}" class="btn btn-primary btn-sm gap-1.5">{{ __('Import CSV') }}</a>
         </div>
     </div>
 
@@ -43,8 +45,7 @@
                     <label class="input input-sm flex w-44 max-w-full items-center gap-2 bg-base-100" dir="rtl">
                         <input type="search" name="name" value="{{ request('name') }}" class="grow" placeholder="{{ __('Customer Name') }}" />
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z" />
                         </svg>
                     </label>
 
@@ -58,8 +59,7 @@
 
                     <button type="submit" class="btn btn-sm btn-primary gap-1.5" dir="rtl">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z" />
                         </svg>
                         {{ __('Search') }}
                     </button>
@@ -82,7 +82,8 @@
                                 ];
                                 $avatarTone = $avatarTones[$customer->id % count($avatarTones)];
                             @endphp
-                            <div class="card rounded-lg border border-base-200 bg-base-100 dark:bg-base-200/40 shadow-sm transition hover:border-primary/30 hover:shadow-md">
+                            <div
+                                class="card rounded-lg border border-base-200 bg-base-100 dark:bg-base-200/40 shadow-sm transition hover:border-primary/30 hover:shadow-md">
                                 <div class="card-body gap-4 p-4">
                                     <div class="flex items-center gap-3">
                                         <div class="avatar placeholder shrink-0">
@@ -95,33 +96,38 @@
                                             <h3 class="truncate text-base font-bold text-base-content">
                                                 <a href="{{ route('customers.show', $customer) }}" class="hover:text-primary">{{ $customer->name }}</a>
                                             </h3>
-                                            <p class="truncate text-sm text-base-content/60">{{ $customer->subject?->formattedCode() ?: __('No subject code') }}</p>
+                                            <p class="truncate text-sm text-base-content/60">
+                                                {{ $customer->subject?->formattedCode() ?: __('No subject code') }}</p>
                                         </div>
                                     </div>
 
                                     <div class="space-y-2 text-sm text-base-content/65">
                                         <div class="flex items-center gap-2">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/35" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/35" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106a1.125 1.125 0 0 0-1.173.417l-.97 1.293a1.125 1.125 0 0 1-1.21.38 12.035 12.035 0 0 1-7.143-7.143 1.125 1.125 0 0 1 .38-1.21l1.293-.97a1.125 1.125 0 0 0 .417-1.173L6.963 3.102A1.125 1.125 0 0 0 5.872 2.25H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
                                             </svg>
                                             <span>{{ convertToFarsi($customer->phone) ?: __('No phone number') }}</span>
                                         </div>
                                         <div class="flex items-center gap-2">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/35" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/35" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M17 20h5v-2a3 3 0 0 0-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 0 1 5.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 0 1 9.288 0M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                                             </svg>
                                             <span>
                                                 @if ($customer->group)
-                                                    <a href="{{ route('customer-groups.show', $customer->group) }}" class="hover:text-primary">{{ $customer->group->name }}</a>
+                                                    <a href="{{ route('customer-groups.show', $customer->group) }}"
+                                                        class="hover:text-primary">{{ $customer->group->name }}</a>
                                                 @else
                                                     {{ __('No group') }}
                                                 @endif
                                             </span>
                                         </div>
                                         <div class="flex items-center gap-2">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/35" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/35" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                             </svg>
@@ -148,11 +154,10 @@
                                     </div>
 
                                     <div class="card-actions items-center justify-between border-t border-base-200 pt-3">
-                                        <button type="button" class="btn btn-xs btn-ghost gap-1 js-add-comment"
-                                            data-customer-id="{{ $customer->id }}" data-customer-name="{{ $customer->name }}">
+                                        <button type="button" class="btn btn-xs btn-ghost gap-1 js-add-comment" data-customer-id="{{ $customer->id }}"
+                                            data-customer-name="{{ $customer->name }}">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                                             </svg>
                                             {{ __('Add Comment') }}
                                         </button>
@@ -225,8 +230,8 @@
 
                 <div>
                     <label class="label" for="add-comment-content">{{ __('Content') }}</label>
-                    <textarea name="content" id="add-comment-content" rows="4" required maxlength="500"
-                        class="textarea textarea-bordered w-full" placeholder="{{ __('Content') }}"></textarea>
+                    <textarea name="content" id="add-comment-content" rows="4" required maxlength="500" class="textarea textarea-bordered w-full"
+                        placeholder="{{ __('Content') }}"></textarea>
                 </div>
 
                 <div>

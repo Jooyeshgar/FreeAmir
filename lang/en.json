@@ -2132,5 +2132,21 @@
     "— Select —": "— Select —",
     "… and :remaining more records.": "… and :remaining more records.",
     "Outstanding (unpaid)": "Outstanding (unpaid)",
-    "Over 90 days": "Over 90 days"
+    "Over 90 days": "Over 90 days",
+    "Export CSV": "Export CSV",
+    "Import CSV": "Import CSV",
+    "Import Customers": "Import Customers",
+    "Upload a CSV file with one customer per line. Required columns: name, group_name. If a group with the same name exists it is reused, otherwise it is created. Leave subject_code empty to auto-assign one.": "Upload a CSV file with one customer per line. Required columns: name, group_name. If a group with the same name exists it is reused, otherwise it is created. Leave subject_code empty to auto-assign one.",
+    "Import complete: :imported customers imported, :groups groups created.": "Import complete: :imported customers imported, :groups groups created.",
+    "Import complete: :imported customers imported, :updated updated, :groups groups created.": "Import complete: :imported customers imported, :updated updated, :groups groups created.",
+    "Line :line: subject code :code already belongs to a different customer.": "Line :line: subject code :code already belongs to a different customer.",
+    "The import file is empty or has no data rows.": "The import file is empty or has no data rows.",
+    "The import file must contain at least \"name\" and \"group_name\" columns.": "The import file must contain at least \"name\" and \"group_name\" columns.",
+    "Line :line: customer name is required.": "Line :line: customer name is required.",
+    "Line :line: group name is required.": "Line :line: group name is required.",
+    "Line :line: could not resolve the accounting subject for group \":group\".": "Line :line: could not resolve the accounting subject for group \":group\".",
+    "Line :line: subject code :code is not a child of group \":group\" subject :parent.": "Line :line: subject code :code is not a child of group \":group\" subject :parent.",
+    "Line :line: a customer named \":name\" already exists in group \":group\".": "Line :line: a customer named \":name\" already exists in group \":group\".",
+    "Line :line: subject code :code is already linked to another record.": "Line :line: subject code :code is already linked to another record.",
+    "Line :line: :message": "Line :line: :message"
 }

@@ -68,6 +68,9 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::resource('services', Controllers\ServiceController::class);
     Route::resource('service-groups', Controllers\ServiceGroupController::class);
     Route::get('crm/dashboard', [Controllers\CrmDashboardController::class, 'index'])->name('crm.dashboard');
+    Route::get('customers/export', [Controllers\CustomerController::class, 'export'])->name('customers.export');
+    Route::get('customers/import', [Controllers\CustomerController::class, 'importForm'])->name('customers.import');
+    Route::post('customers/import', [Controllers\CustomerController::class, 'import'])->name('customers.import.store');
     Route::resource('customers', Controllers\CustomerController::class);
     Route::resource('customer-groups', Controllers\CustomerGroupController::class);
     Route::resource('companies', Controllers\CompanyController::class);

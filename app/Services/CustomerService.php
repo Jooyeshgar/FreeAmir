@@ -13,9 +13,14 @@ class CustomerService
     {
         $data['company_id'] ??= getActiveCompany();
 
+        // Optional explicit subject code portion (last 3 digits, relative to the group subject).
+        // Used by the CSV importer; the normal create flow leaves it null and auto-generates.
+        $subjectCode = $data['subject_code'] ?? null;
+        unset($data['subject_code']);
+
         $customer = Customer::create($data);
 
-        $this->syncSubject($customer);
+        $this->syncSubject($customer, $subjectCode);
 
         return $customer;
     }
@@ -39,7 +44,7 @@ class CustomerService
         });
     }
 
-    protected function syncSubject(Customer $customer): void
+    protected function syncSubject(Customer $customer, ?string $subjectCode = null): void
     {
         $customer->loadMissing('group', 'subject');
 
@@ -52,36 +57,43 @@ class CustomerService
 
         $relation = 'subject';
         $subject = $customer->$relation;
-        $parentId = $group?->subject_id ?? null;
+        $parentId = $group?->subject_id ? (int) $group->subject_id : null;
         $targetName = $customer->name;
 
         if (! $subject) {
-            $subject = $this->subjectService->createSubject([
+            $attributes = [
                 'name' => $targetName,
                 'parent_id' => $parentId,
                 'company_id' => $companyId,
-            ]);
-        }
+            ];
 
-        $needsSave = false;
+            if ($subjectCode !== null && $subjectCode !== '') {
+                $attributes['code'] = $subjectCode;
+            }
 
-        if ($subject->name !== $targetName) {
-            $subject->name = $targetName;
-            $needsSave = true;
-        }
+            $subject = $this->subjectService->createSubject($attributes);
+        } else {
+            // Delegate name/parent changes to SubjectService so the hierarchical
+            // code (and any descendant codes) is regenerated when the group, and
+            // therefore the parent subject, changes.
+            $changes = [];
 
-        $normalizedParentId = $parentId ?: null;
-        if ($subject->parent_id !== $normalizedParentId) {
-            $subject->parent_id = $normalizedParentId;
-            $needsSave = true;
+            if ($subject->name !== $targetName) {
+                $changes['name'] = $targetName;
+            }
+
+            $currentParentId = $subject->parent_id !== null ? (int) $subject->parent_id : null;
+            if ($currentParentId !== $parentId) {
+                $changes['parent_id'] = $parentId;
+            }
+
+            if ($changes !== []) {
+                $subject = $this->subjectService->editSubject($subject, $changes);
+            }
         }
 
         if ($subject->subjectable_id !== $customer->id || $subject->subjectable_type !== $customer->getMorphClass()) {
             $subject->subjectable()->associate($customer);
-            $needsSave = true;
-        }
-
-        if ($needsSave) {
             $subject->save();
         }
 

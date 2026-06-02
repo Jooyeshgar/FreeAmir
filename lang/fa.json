@@ -2145,5 +2145,21 @@
     "— Select —": "— انتخاب کنید —",
     "… and :remaining more records.": "… و :remaining رکوردهای بیشتر.",
     "Outstanding (unpaid)": "مانده (پرداخت‌نشده)",
-    "Over 90 days": "بیش از ۹۰ روز"
+    "Over 90 days": "بیش از ۹۰ روز",
+    "Export CSV": "خروجی CSV",
+    "Import CSV": "وارد کردن CSV",
+    "Import Customers": "ورود مشتریان از فایل",
+    "Upload a CSV file with one customer per line. Required columns: name, group_name. If a group with the same name exists it is reused, otherwise it is created. Leave subject_code empty to auto-assign one.": "یک فایل CSV با یک مشتری در هر خط بارگذاری کنید. ستون‌های الزامی: name و group_name. اگر گروهی با همان نام وجود داشته باشد استفاده می‌شود، در غیر این صورت ساخته می‌شود. برای تخصیص خودکار کد سرفصل، ستون subject_code را خالی بگذارید.",
+    "Import complete: :imported customers imported, :groups groups created.": "ورود کامل شد: :imported مشتری وارد شد و :groups گروه ایجاد شد.",
+    "Import complete: :imported customers imported, :updated updated, :groups groups created.": "ورود کامل شد: :imported مشتری وارد شد، :updated مشتری به‌روزرسانی شد و :groups گروه ایجاد شد.",
+    "Line :line: subject code :code already belongs to a different customer.": "خط :line: کد سرفصل :code از قبل به مشتری دیگری تعلق دارد.",
+    "The import file is empty or has no data rows.": "فایل ورودی خالی است یا هیچ ردیف داده‌ای ندارد.",
+    "The import file must contain at least \"name\" and \"group_name\" columns.": "فایل ورودی باید حداقل شامل ستون‌های «name» و «group_name» باشد.",
+    "Line :line: customer name is required.": "خط :line: نام مشتری الزامی است.",
+    "Line :line: group name is required.": "خط :line: نام گروه الزامی است.",
+    "Line :line: could not resolve the accounting subject for group \":group\".": "خط :line: سرفصل حسابداری گروه «:group» یافت نشد.",
+    "Line :line: subject code :code is not a child of group \":group\" subject :parent.": "خط :line: کد سرفصل :code زیرمجموعهٔ سرفصل گروه «:group» («:parent») نیست.",
+    "Line :line: a customer named \":name\" already exists in group \":group\".": "خط :line: مشتری با نام «:name» در گروه «:group» از قبل وجود دارد.",
+    "Line :line: subject code :code is already linked to another record.": "خط :line: کد سرفصل :code از قبل به رکورد دیگری متصل است.",
+    "Line :line: :message": "خط :line: :message"
 }
