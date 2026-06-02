@@ -8,6 +8,7 @@ use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Invoice;
+use App\Models\MoadianHistory;
 use App\Models\ProductGroup;
 use App\Models\User;
 use App\Services\InvoiceService;
@@ -147,6 +148,8 @@ class VoidSellInvoiceTest extends TestCase
         $this->buy([$this->productItem($product, 10, 100)], true, 7041, '2026-07-01');
         $sell = $this->sell([$this->productItem($product, 4, 180)], true, 7042, '2026-07-02')['invoice'];
 
+        MoadianHistory::create(['invoice_id' => $sell->id, 'data' => ['status' => 'SUCCESS']]);
+
         $this->get(route('invoices.show', $sell))->assertOk()->assertSee(route('invoices.void-form', $sell));
 
         $this->post(route('invoices.void', $sell), ['date' => '1405/04/12', 'invoice_number' => 7043])->assertRedirect(); // 2026-07-03
@@ -181,10 +184,10 @@ class VoidSellInvoiceTest extends TestCase
         $this->buy([$this->productItem($product, 10, 100)], true, 7051, '2026-07-01');
         $sell = $this->sell([$this->productItem($product, 4, 180)], false, 7052, '2026-07-02')['invoice'];
 
-        $response = $this->from(route('invoices.show', $sell))->post(route('invoices.void', $sell), ['date' => '2026-07-03', 'invoice_number' => 7053]);
+        $response = $this->from(route('invoices.show', $sell))->post(route('invoices.void', $sell), ['date' => '1405/04/12', 'invoice_number' => 7053]); // 2026-07-03
 
         $response->assertRedirect(route('invoices.show', $sell));
-        $response->assertSessionHas('error', __('Invoice must be approved before voiding.'));
+        $response->assertSessionHas('error', [__('Invoice must be approved before voiding.')]);
         $this->assertFalse($this->findInvoice($sell->id)->voidInvoice()->exists());
     }
 
@@ -194,10 +197,10 @@ class VoidSellInvoiceTest extends TestCase
 
         $buy = $this->buy([$this->productItem($product, 10, 100)], true, 7061, '2026-07-01')['invoice'];
 
-        $response = $this->from(route('invoices.show', $buy))->post(route('invoices.void', $buy), ['date' => '2026-07-02', 'invoice_number' => 7062]);
+        $response = $this->from(route('invoices.show', $buy))->post(route('invoices.void', $buy), ['date' => '1405/04/11', 'invoice_number' => 7062]); // 2026-07-02
 
         $response->assertRedirect(route('invoices.show', $buy));
-        $response->assertSessionHas('error', __('Only sell invoices are eligible for voiding.'));
+        $response->assertSessionHas('error', [__('Only sell invoices are eligible for voiding.')]);
         $this->assertDatabaseMissing('invoices', ['invoice_type' => InvoiceType::VOID->value, 'returned_invoice_id' => $buy->id]);
     }
 
@@ -212,7 +215,7 @@ class VoidSellInvoiceTest extends TestCase
         $response = $this->from(route('invoices.show', $sell))->post(route('invoices.void', $sell), ['date' => '1405/04/13', 'invoice_number' => 7074]); // 2026-07-04
 
         $response->assertRedirect(route('invoices.show', $sell));
-        $response->assertSessionHas('error', __('Only sales invoices that have not been returned are eligible for voiding.'));
+        $response->assertSessionHas('error', [__('Only sales invoices that have not been returned are eligible for voiding.')]);
         $this->assertFalse($this->findInvoice($sell->id)->voidInvoice()->exists());
     }
 
@@ -228,7 +231,7 @@ class VoidSellInvoiceTest extends TestCase
         $response = $this->from(route('invoices.show', $sell))->post(route('invoices.void', $sell), ['date' => '1405/04/13', 'invoice_number' => 7084]); // 2026-07-04
 
         $response->assertRedirect(route('invoices.show', $sell));
-        $response->assertSessionHas('error', __('Invoice has voided already.'));
+        $response->assertSessionHas('error', [__('Invoice has voided already.')]);
 
         $voidInvoicesCount = Invoice::withoutGlobalScopes()->where('invoice_type', InvoiceType::VOID)->where('returned_invoice_id', $sell->id)->count();
 
@@ -245,7 +248,7 @@ class VoidSellInvoiceTest extends TestCase
         $response = $this->from(route('invoices.show', $sell))->post(route('invoices.void', $sell), ['date' => '2026-07-02', 'invoice_number' => 7093]);
 
         $response->assertRedirect(route('invoices.show', $sell));
-        $response->assertSessionHas('error', __('Void invoice date cannot be earlier than the invoice date.'));
+        $response->assertSessionHas('error', [__('Void invoice date cannot be earlier than the invoice date.')]);
         $this->assertFalse($this->findInvoice($sell->id)->voidInvoice()->exists());
     }
 
@@ -278,7 +281,7 @@ class VoidSellInvoiceTest extends TestCase
         $response = $this->from(route('invoices.show', $sell))->get(route('invoices.void-form', $sell));
 
         $response->assertRedirect(route('invoices.show', $sell));
-        $response->assertSessionHas('error', __('Invoice must be approved before voiding.'));
+        $response->assertSessionHas('error', [__('Invoice must be approved before voiding.')]);
     }
 
     public function test_show_page_disables_void_action_for_sell_invoice_with_return(): void

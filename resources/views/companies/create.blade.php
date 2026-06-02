@@ -62,14 +62,36 @@
                     <div class="col-span-2 md:col-span-1">
                         <x-input name="fiscal_year" id="fiscal_year" title="{{ __('Fiscal year') }}" :value="old('fiscal_year', $company->fiscal_year ?? '')" required />
                     </div>
-                    <div class="col-span-2 md:col-span-1">
-                        <label class="label" for="logo">
-                            {{ __('Company logo') }}
-                        </label>
-                        <input type="file" id="logo" name="logo" class="m-2 file-input w-full max-w-xs" accept="image/*" />
+                    <div class="flex flex-wrap gap-2">
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="label" for="logo">{{ __('Company logo') }}</label>
+                            <input type="file" id="logo" name="logo" class="file-input w-full max-w-xs" accept="image/*" />
+                        </div>
                     </div>
                     <div class="col-span-2 md:col-span-1">
                         <x-input name="currency" id="currency" title="{{ __('Currency') }}" :value="old('currency', $company->currency ?? '')" />
+                    </div>
+                    <div class="col-span-2 md:col-span-1">
+                        <x-input name="moadian_username" id="moadian_username" title="{{ __('Moadian Username') }}" :value="old('moadian_username', '')" />
+                    </div>
+                    <div class="col-span-2 md:col-span-1">
+                        <x-input name="tax_id" id="tax_id" title="{{ __('Tax ID') }}" :value="old('tax_id', '')" />
+                    </div>
+                    <div class="flex gap-2">
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="label" for="certificate">{{ __('SSL Certificate') }}</label>
+                            <input type="file" id="certificate" name="certificate" class="file-input w-full max-w-xs" accept=".crt" />
+                            @error('certificate')
+                                <p class="text-sm text-error mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="label" for="private_key">{{ __('Private Key') }}</label>
+                            <input type="file" id="private_key" name="private_key" class="file-input w-full max-w-xs" accept=".pem" />
+                            @error('private_key')
+                                <p class="text-sm text-error mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
                     </div>
                     <div class="col-span-2">
                         <div class="col-span-2">

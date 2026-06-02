@@ -16,7 +16,11 @@ use App\Models\ServiceGroup;
 use App\Services\AncillaryCostService;
 use App\Services\GroupActionService;
 use App\Services\InvoiceService;
+use App\Services\MoadianService;
 use DB;
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use PDF;
 
@@ -31,13 +35,17 @@ class InvoiceController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory
+     * @return View|Factory
      */
     public function index(Request $request)
     {
         $builder = Invoice::with(['customer', 'document', 'voidInvoice'])
             ->orderByDesc('date')
             ->orderByDesc('number');
+
+        $builder->when(in_array($request->invoice_type, [InvoiceType::SELL->value, InvoiceType::VOID->value]),
+            fn ($q) => $q->with('latestMoadianHistory')
+        );
 
         $builder->when($request->filled('invoice_type') &&
             in_array($request->invoice_type, ['buy', 'sell', 'return_buy', 'return_sell', 'void']),
@@ -79,6 +87,16 @@ class InvoiceController extends Controller
 
         $builder->when($request->invoice_type === InvoiceType::SELL->value && $request->boolean('voided'), fn ($q) => $q->whereHas('voidInvoice'));
 
+        $builder->when($request->filled('moadian_status') && in_array($request->invoice_type, [InvoiceType::SELL->value, InvoiceType::VOID->value]),
+            function ($q) use ($request) {
+                if ($request->moadian_status === 'not_sent') {
+                    $q->whereDoesntHave('moadianHistories');
+                } else {
+                    $q->whereHas('latestMoadianHistory', fn ($h) => $h->where('data->status', $request->moadian_status));
+                }
+            }
+        );
+
         $statsBuilder = $builder->clone();
 
         $builder->when($request->filled('status') &&
@@ -118,7 +136,7 @@ class InvoiceController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory|\Illuminate\Http\RedirectResponse
+     * @return View|Factory|RedirectResponse
      */
     public function create(Request $request)
     {
@@ -221,7 +239,7 @@ class InvoiceController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function store(StoreInvoiceRequest $request)
     {
@@ -252,6 +270,7 @@ class InvoiceController extends Controller
 
         $isServiceBuy = $invoice->invoice_type === InvoiceType::BUY && $invoice->items->where('itemable_type', Product::class)->isEmpty();
         $isReturnServiceBuy = $invoice->invoice_type === InvoiceType::RETURN_BUY && $invoice->items->where('itemable_type', Product::class)->isEmpty();
+        $isMoadianSendable = in_array($invoice->invoice_type, [InvoiceType::SELL, InvoiceType::RETURN_SELL, InvoiceType::VOID]);
 
         $invoice->load([
             'customer',
@@ -264,9 +283,10 @@ class InvoiceController extends Controller
             'ancillaryCosts.customer',
             'ancillaryCosts.document',
             'ancillaryCosts.items',
+            'moadianHistories',
         ]);
 
-        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy'));
+        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable'));
     }
 
     public function print(Invoice $invoice)
@@ -285,7 +305,7 @@ class InvoiceController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory|\Illuminate\Http\RedirectResponse
+     * @return View|Factory|RedirectResponse
      */
     public function edit(Invoice $invoice)
     {
@@ -359,7 +379,7 @@ class InvoiceController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function update(StoreInvoiceRequest $request, Invoice $invoice)
     {
@@ -723,15 +743,30 @@ class InvoiceController extends Controller
         return $map;
     }
 
+    public function sendMoadian(Invoice $invoice, MoadianService $moadianService)
+    {
+        $decision = $moadianService->validateSendMoadian($invoice);
+
+        if ($decision->hasErrors()) {
+            return redirect()->route('invoices.show', $invoice)->withErrors($decision->messages->pluck('text')->all());
+        }
+
+        $success = $moadianService->sendInvoice($invoice);
+
+        if ($success) {
+            return redirect()->route('invoices.show', $invoice)->with('success', __('Invoice sent to Moadian successfully.'));
+        }
+
+        return redirect()->route('invoices.show', $invoice)->with('error', __('Failed to send invoice to Moadian. Please try again.'));
+    }
+
     public function showVoidForm(Invoice $invoice)
     {
         $voidInvoiceDecision = $this->invoiceService->validateVoidingInvoice($invoice);
         $previousInvoiceNumber = floor(Invoice::where('invoice_type', InvoiceType::VOID)->max('number') ?? 0);
 
         if ($voidInvoiceDecision->hasErrors()) {
-            $error = $voidInvoiceDecision->messages->first(fn ($m) => $m->type === 'error');
-
-            return redirect()->route('invoices.show', $invoice)->with('error', $error?->text ?? __('Cannot void the invoice.'));
+            return redirect()->route('invoices.show', $invoice)->with('error', $voidInvoiceDecision->messages->pluck('text')->all());
         }
 
         return view('invoices.forms.void', compact('invoice', 'previousInvoiceNumber'));
@@ -754,9 +789,7 @@ class InvoiceController extends Controller
         $voidInvoiceDecision = $this->invoiceService->validateVoidingInvoice($invoice, $date);
 
         if ($voidInvoiceDecision->hasErrors()) {
-            $error = $voidInvoiceDecision->messages->first(fn ($m) => $m->type === 'error');
-
-            return redirect()->back()->with('error', $error?->text ?? __('Cannot void the invoice.'));
+            return redirect()->back()->with('error', $voidInvoiceDecision->messages->pluck('text')->all());
         }
 
         $voidInvoice = $this->invoiceService->voidInvoice($invoice, auth()->user(), $date, $number);

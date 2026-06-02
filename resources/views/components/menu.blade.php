@@ -23,7 +23,8 @@
         </details>
     </li>
 @endcan
-@canany(['invoices.index', 'invoices.inactive', 'ancillary-costs.index'])
+@canany(['invoices.index', 'invoices.inactive', 'customers.create', 'ancillary-costs.index',
+    'invoices.moadian-histories.index'])
     <li>
         <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('Invoices') }}</summary>
@@ -34,9 +35,18 @@
                             <summary>{{ __('Sales') }}</summary>
                             <ul>
                                 @can('invoices.index')
-                                    <li><a href="{{ route('invoices.index', ['invoice_type' => 'sell']) }}">{{ __('Sell List') }}</a></li>
-                                    <li><a href="{{ route('invoices.index', ['invoice_type' => 'return_sell']) }}">{{ __('Return Sell List') }}</a></li>
-                                    <li><a href="{{ route('invoices.index', ['invoice_type' => 'void']) }}">{{ __('Voided Sell') }}</a></li>
+                                    <li><a
+                                            href="{{ route('invoices.index', ['invoice_type' => 'sell']) }}">{{ __('Sell List') }}</a>
+                                    </li>
+                                    <li><a
+                                            href="{{ route('invoices.index', ['invoice_type' => 'return_sell']) }}">{{ __('Return Sell List') }}</a>
+                                    </li>
+                                    <li><a
+                                            href="{{ route('invoices.index', ['invoice_type' => 'void']) }}">{{ __('Voided Sell') }}</a>
+                                    </li>
+                                    <li><a
+                                            href="{{ route('invoices.moadian-histories.index') }}">{{ __('Moadian Histories') }}</a>
+                                    </li>
                                 @endcan
                             </ul>
                         </details>
@@ -47,10 +57,18 @@
                         <details>
                             <summary>{{ __('Purchases') }}</summary>
                             <ul>
-                                <li><a href="{{ route('invoices.index', ['invoice_type' => 'buy']) }}">{{ __('Buy List') }}</a></li>
-                                <li><a href="{{ route('invoices.index', ['invoice_type' => 'buy', 'service_buy' => '1']) }}">{{ __('Buy Service') }}</a></li>
-                                <li><a href="{{ route('invoices.index', ['invoice_type' => 'return_buy']) }}">{{ __('Return Buy List') }}</a></li>
-                                <li><a href="{{ route('invoices.index', ['invoice_type' => 'return_buy', 'service_buy' => '1']) }}">{{ __('Service Buy Return') }}</a></li>
+                                <li><a
+                                        href="{{ route('invoices.index', ['invoice_type' => 'buy']) }}">{{ __('Buy List') }}</a>
+                                </li>
+                                <li><a
+                                        href="{{ route('invoices.index', ['invoice_type' => 'buy', 'service_buy' => '1']) }}">{{ __('Buy Service') }}</a>
+                                </li>
+                                <li><a
+                                        href="{{ route('invoices.index', ['invoice_type' => 'return_buy']) }}">{{ __('Return Buy List') }}</a>
+                                </li>
+                                <li><a
+                                        href="{{ route('invoices.index', ['invoice_type' => 'return_buy', 'service_buy' => '1']) }}">{{ __('Service Buy Return') }}</a>
+                                </li>
                                 @can('ancillary-costs.index')
                                     <li><a href="{{ route('ancillary-costs.index') }}">{{ __('Ancillary Cost List') }}</a></li>
                                 @endcan
@@ -60,6 +78,9 @@
                 @endcanany
                 @can('invoices.inactive')
                     <li><a href="{{ route('invoices.inactive') }}">{{ __('Activate Confirmed Invoices') }}</a></li>
+                @endcan
+                @can('customers.create')
+                    <li><a href="{{ route('customers.create') }}">{{ __('Add Customer') }}</a></li>
                 @endcan
             </ul>
         </details>
@@ -80,7 +101,8 @@
         </details>
     </li>
 @endcanany
-@canany(['reports.documents', 'reports.journal', 'reports.ledger', 'reports.sub-ledger', 'reports.trial-balance', 'reports.cost-income'])
+@canany(['reports.documents', 'reports.journal', 'reports.ledger', 'reports.sub-ledger', 'reports.trial-balance',
+    'reports.cost-income'])
     <li>
         <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('Reports') }}</summary>
@@ -88,7 +110,8 @@
                 @can('reports.cost-income')
                     <li><a href="{{ route('reports.cost-income') }}">{{ __('Cost and Income Dashboard') }}</a></li>
                 @endcan
-                @canany(['reports.documents', 'reports.journal', 'reports.ledger', 'reports.sub-ledger', 'reports.trial-balance'])
+                @canany(['reports.documents', 'reports.journal', 'reports.ledger', 'reports.sub-ledger',
+                    'reports.trial-balance'])
                     <li>
                         <details>
                             <summary>{{ __('Accounting') }}</summary>
@@ -142,8 +165,8 @@
     </li>
 @endcanany
 
-@canany(['salary.payrolls.dashboard', 'salary.payrolls.index', 'hr.employees.index', 'hr.personnel-requests.index', 'attendance.attendance-logs.index',
-    'attendance.monthly-attendances.index'])
+@canany(['salary.payrolls.dashboard', 'salary.payrolls.index', 'hr.employees.index', 'hr.personnel-requests.index',
+    'attendance.attendance-logs.index', 'attendance.monthly-attendances.index'])
     <li>
         <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('HR') }}</summary>
@@ -196,8 +219,9 @@
         <ul class="{{ $scrollingTopDropdownContentClass }}">
 
             {{-- HR, Attendance & Salary --}}
-            @canany(['hr.org-charts.index', 'hr.organization-units.index', 'attendance.work-shifts.index', 'salary.tax-slabs.index', 'salary.work-sites.index',
-                'salary.work-site-contracts.index', 'salary.public-holidays.index', 'salary.payroll-elements.index', 'salary.salary-decrees.index'])
+            @canany(['hr.org-charts.index', 'attendance.work-shifts.index', 'salary.payrolls.index',
+                'salary.tax-slabs.index', 'salary.work-sites.index', 'salary.work-site-contracts.index',
+                'salary.public-holidays.index', 'salary.payroll-elements.index', 'salary.salary-decrees.index'])
                 <li>
                     <details>
                         <summary>{{ __('HR & Organization') }}</summary>
@@ -205,11 +229,11 @@
                             @can('hr.org-charts.index')
                                 <li><a href="{{ route('hr.org-charts.index') }}">{{ __('Organization Chart') }}</a></li>
                             @endcan
-                            @can('hr.organization-units.index')
-                                <li><a href="{{ route('hr.organization-units.index') }}">{{ __('Organization Units') }}</a></li>
-                            @endcan
                             @can('attendance.work-shifts.index')
                                 <li><a href="{{ route('attendance.work-shifts.index') }}">{{ __('Work Shifts') }}</a></li>
+                            @endcan
+                            @can('salary.payrolls.index')
+                                <li><a href="{{ route('salary.payrolls.index') }}">{{ __('Payrolls') }}</a></li>
                             @endcan
                             @can('salary.tax-slabs.index')
                                 <li><a href="{{ route('salary.tax-slabs.index') }}">{{ __('Yearly Tax Slabs') }}</a></li>
@@ -218,13 +242,17 @@
                                 <li><a href="{{ route('salary.work-sites.index') }}">{{ __('Work Sites') }}</a></li>
                             @endcan
                             @can('salary.work-site-contracts.index')
-                                <li><a href="{{ route('salary.work-site-contracts.index') }}">{{ __('Work Site Contracts') }}</a></li>
+                                <li><a
+                                        href="{{ route('salary.work-site-contracts.index') }}">{{ __('Work Site Contracts') }}</a>
+                                </li>
                             @endcan
                             @can('salary.public-holidays.index')
-                                <li><a href="{{ route('salary.public-holidays.index') }}">{{ __('Public Holidays') }}</a></li>
+                                <li><a href="{{ route('salary.public-holidays.index') }}">{{ __('Public Holidays') }}</a>
+                                </li>
                             @endcan
                             @can('salary.payroll-elements.index')
-                                <li><a href="{{ route('salary.payroll-elements.index') }}">{{ __('Payroll Elements') }}</a></li>
+                                <li><a href="{{ route('salary.payroll-elements.index') }}">{{ __('Payroll Elements') }}</a>
+                                </li>
                             @endcan
                             @can('salary.salary-decrees.index')
                                 <li><a href="{{ route('salary.salary-decrees.index') }}">{{ __('Salary Decrees') }}</a></li>
@@ -250,7 +278,8 @@
                                 <li><a href="{{ route('banks.index') }}">{{ __('Banks') }}</a></li>
                             @endcan
                             @can('documents.sort-numbers')
-                                <li><a href="{{ route('documents.sort-numbers') }}">{{ __('Sort Documents Number') }}</a></li>
+                                <li><a href="{{ route('documents.sort-numbers') }}">{{ __('Sort Documents Number') }}</a>
+                                </li>
                             @endcan
                         </ul>
                     </details>
@@ -258,7 +287,8 @@
             @endcanany
 
             {{-- System --}}
-            @canany(['companies.index', 'users.index', 'permissions.index', 'roles.index', 'configs.index', 'backups.create'])
+            @canany(['companies.index', 'users.index', 'permissions.index', 'roles.index', 'configs.index',
+                'backups.create'])
                 <li>
                     <details>
                         <summary>{{ __('System') }}</summary>
