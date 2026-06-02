@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\CustomerImportException;
+use App\Http\Requests\ImportCustomerRequest;
 use App\Http\Requests\StoreCustomerRequest;
 use App\Models;
 use App\Services\CustomerImportService;
@@ -171,12 +172,8 @@ class CustomerController extends Controller
         return view('customers.import');
     }
 
-    public function import(Request $request, CustomerImportService $importService): RedirectResponse
+    public function import(ImportCustomerRequest $request, CustomerImportService $importService): RedirectResponse
     {
-        $request->validate([
-            'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
-        ]);
-
         try {
             $result = $importService->import($request->file('file'), getActiveCompany());
         } catch (CustomerImportException $e) {
