@@ -6,6 +6,7 @@ use App\Enums\CustomerType;
 use App\Exceptions\CustomerImportException;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\Subject;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -62,8 +63,16 @@ class CustomerImportService
      * transaction: any row-level error aborts the import and rolls back every
      * change made so far.
      *
+     * Rows are matched to existing data by their accounting subject code:
+     *   - code resolves to a subject that already has a customer  -> the customer
+     *     (and its subject) is updated;
+     *   - code resolves to a subject with no customer attached     -> a customer is
+     *     created and linked to that subject;
+     *   - no usable code, or no subject carries that code yet       -> a brand-new
+     *     customer and subject are created.
+     *
      * @param  UploadedFile|string  $file  fresh upload or a Storage-relative path
-     * @return array{imported:int, groups_created:int}
+     * @return array{imported:int, updated:int, groups_created:int}
      *
      * @throws CustomerImportException
      */
@@ -77,6 +86,7 @@ class CustomerImportService
 
         return DB::transaction(function () use ($rows, $companyId) {
             $imported = 0;
+            $updated = 0;
             $groupsCreated = 0;
             $groupCache = [];
 
@@ -140,27 +150,12 @@ class CustomerImportService
                     $codePortion = substr($subjectCode, -3);
                 }
 
-                // 3. Reject duplicate customer names within the same group.
-                $duplicate = Customer::where('group_id', $group->id)
-                    ->where('name', $name)
-                    ->exists();
-
-                if ($duplicate) {
-                    throw new CustomerImportException(__('Line :line: a customer named ":name" already exists in group ":group".', [
-                        'line' => $line,
-                        'name' => $name,
-                        'group' => $groupName,
-                    ]));
-                }
-
-                // 4. Build and persist the customer. A null code auto-generates the next
-                //    available subject code under the group (same as creating a new customer).
+                // 3. Build the base customer attributes (the subject code is handled separately).
                 $data = [
                     'name' => $name,
                     'group_id' => $group->id,
                     'company_id' => $companyId,
                     'type' => $this->normalizeType($row['type'] ?? null)->value,
-                    'subject_code' => $codePortion,
                 ];
 
                 foreach (self::PLAIN_FIELDS as $field) {
@@ -170,8 +165,50 @@ class CustomerImportService
                     }
                 }
 
+                // 4. Find an existing subject for the supplied code, then upsert accordingly.
+                $existingSubject = $subjectCode !== null
+                    ? Subject::where('code', $subjectCode)->first()
+                    : null;
+
                 try {
-                    $this->customerService->create($data);
+                    if ($existingSubject) {
+                        $linked = $existingSubject->subjectable;
+
+                        if ($linked instanceof Customer) {
+                            // 4a. Subject already has a customer: update the customer and its subject.
+                            $this->customerService->update($linked, $data);
+                            $updated++;
+                        } elseif ($linked === null) {
+                            // 4b. Subject exists but has no customer: create one and link it.
+                            $customer = Customer::create($data);
+                            $customer->setRelation('subject', $existingSubject);
+                            $this->customerService->update($customer, []);
+                            $imported++;
+                        } else {
+                            throw new CustomerImportException(__('Line :line: subject code :code is already linked to another record.', [
+                                'line' => $line,
+                                'code' => formatCode($subjectCode),
+                            ]));
+                        }
+                    } else {
+                        // 4c. No subject for this code (or no code at all): create a new customer
+                        //     and subject. A null code auto-generates the next available code
+                        //     under the group. Guard against duplicate names within the group.
+                        $duplicate = Customer::where('group_id', $group->id)
+                            ->where('name', $name)
+                            ->exists();
+
+                        if ($duplicate) {
+                            throw new CustomerImportException(__('Line :line: a customer named ":name" already exists in group ":group".', [
+                                'line' => $line,
+                                'name' => $name,
+                                'group' => $groupName,
+                            ]));
+                        }
+
+                        $this->customerService->create($data + ['subject_code' => $codePortion]);
+                        $imported++;
+                    }
                 } catch (CustomerImportException $e) {
                     throw $e;
                 } catch (\Throwable $e) {
@@ -180,12 +217,11 @@ class CustomerImportService
                         'message' => $e->getMessage(),
                     ]), 0, $e);
                 }
-
-                $imported++;
             }
 
             return [
                 'imported' => $imported,
+                'updated' => $updated,
                 'groups_created' => $groupsCreated,
             ];
         });

@@ -145,6 +145,67 @@ class CustomerImportExportTest extends TestCase
         $this->assertDatabaseMissing('customers', ['name' => 'Bad Customer']);
     }
 
+    public function test_import_updates_existing_customer_when_subject_code_has_a_customer(): void
+    {
+        $existing = Customer::factory()
+            ->withGroup($this->customerGroup)
+            ->withSubject()
+            ->create(['company_id' => $this->companyId, 'name' => 'Old Name', 'phone' => '111']);
+
+        $code = $existing->subject->code;
+
+        $csv = "name,group_name,subject_code,phone\n".
+            "Updated Name,{$this->customerGroup->name},{$code},222\n";
+
+        $response = $this->actingAs($this->user)
+            ->post(route('customers.import.store'), ['file' => $this->upload($csv)]);
+
+        $response->assertRedirect(route('customers.index'));
+        $response->assertSessionHas('success');
+
+        // No new customer was created; the existing one was updated in place.
+        $this->assertSame(1, Customer::where('subject_id', $existing->subject->id)->count());
+
+        $existing->refresh();
+        $this->assertSame('Updated Name', $existing->name);
+        $this->assertSame('222', $existing->phone);
+        // The subject is kept (same code) but its name follows the customer.
+        $this->assertSame($code, $existing->subject->code);
+        $this->assertSame('Updated Name', $existing->subject->name);
+    }
+
+    public function test_import_links_customer_to_orphan_subject(): void
+    {
+        $this->customerGroup->loadMissing('subject');
+
+        // A subject under the group with no customer attached. The factory derives the
+        // child code from the parent, so we read it back for the CSV below.
+        $orphan = Subject::factory()
+            ->withParent($this->customerGroup->subject)
+            ->create([
+                'company_id' => $this->companyId,
+                'name' => 'Orphan Subject',
+            ]);
+
+        $csv = "name,group_name,subject_code\n".
+            "Linked Customer,{$this->customerGroup->name},{$orphan->code}\n";
+
+        $this->actingAs($this->user)
+            ->post(route('customers.import.store'), ['file' => $this->upload($csv)])
+            ->assertSessionHas('success');
+
+        $customer = Customer::where('name', 'Linked Customer')->first();
+        $this->assertNotNull($customer);
+
+        // The existing orphan subject is reused, not a new one.
+        $this->assertSame($orphan->id, $customer->subject_id);
+        $this->assertSame($orphan->code, $customer->subject->code);
+
+        $orphan->refresh();
+        $this->assertSame($customer->id, $orphan->subjectable_id);
+        $this->assertSame($customer->getMorphClass(), $orphan->subjectable_type);
+    }
+
     public function test_import_rejects_duplicate_customer_name_in_group(): void
     {
         Customer::factory()

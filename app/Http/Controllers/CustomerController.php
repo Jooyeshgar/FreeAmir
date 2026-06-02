@@ -183,8 +183,9 @@ class CustomerController extends Controller
             return redirect()->route('customers.import')->with('error', $e->getMessage());
         }
 
-        return redirect()->route('customers.index')->with('success', __('Import complete: :imported customers imported, :groups groups created.', [
+        return redirect()->route('customers.index')->with('success', __('Import complete: :imported customers imported, :updated updated, :groups groups created.', [
             'imported' => $result['imported'],
+            'updated' => $result['updated'],
             'groups' => $result['groups_created'],
         ]));
     }
