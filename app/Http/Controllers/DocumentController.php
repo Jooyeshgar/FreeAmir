@@ -336,18 +336,9 @@ class DocumentController extends Controller
         $user = $request->user();
 
         $result = $this->documentImportExportService->importCsv($file, $user, $request->input('format'));
+        ['type' => $type, 'lines' => $lines] = $this->documentImportExportService->buildImportFeedback($result);
 
-        $message = __(':docs documents and :subjects subjects imported successfully.', [
-            'docs' => $result['documents_created'] ?? 0,
-            'subjects' => $result['subjects_created'] ?? 0,
-        ]);
-
-        if (! empty($result['errors'])) {
-            $errorList = implode(' | ', array_slice($result['errors'], 0, 5));
-            $message .= ' '.__('Errors').': '.$errorList;
-        }
-
-        return redirect()->route('documents.index')->with('success', $message);
+        return redirect()->route('documents.index')->with($type, $lines);
     }
 
     public function fields($customers): array

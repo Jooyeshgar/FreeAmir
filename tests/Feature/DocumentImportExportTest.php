@@ -31,7 +31,7 @@ class DocumentImportExportTest extends TestCase
 
     private function buildCsv(array $rows): UploadedFile
     {
-        $headers = 'record_type,doc_number,doc_date,doc_title,doc_type,doc_status,subject_root_code,subject_code,subject_name,subject_parent_code,transaction_desc,debit,credit';
+        $headers = 'doc_number,doc_date,doc_title,doc_type,doc_status,subject_root_code,subject_moein_code,subject_tafsili_code,subject_name,transaction_desc,debit,credit';
         $lines = [$headers];
 
         foreach ($rows as $row) {
@@ -98,8 +98,7 @@ class DocumentImportExportTest extends TestCase
         $response = $this->get(route('documents.export'));
         $response->assertOk();
 
-        // Optional (non-mandatory) columns are selectable.
-        foreach (['doc_title', 'doc_type', 'doc_status', 'subject_root_code', 'subject_parent_code', 'transaction_desc'] as $col) {
+        foreach (['doc_title', 'doc_type', 'doc_status', 'subject_moein_code', 'subject_tafsili_code', 'transaction_desc'] as $col) {
             $response->assertSee('col-'.$col);
         }
     }
@@ -109,7 +108,6 @@ class DocumentImportExportTest extends TestCase
         $response = $this->get(route('documents.export'));
         $response->assertOk();
 
-        // Mandatory columns must not be rendered as selectable checkboxes.
         foreach (DocumentImportExportService::MANDATORY_COLUMNS as $col) {
             $response->assertDontSee('col-'.$col);
         }
@@ -131,7 +129,7 @@ class DocumentImportExportTest extends TestCase
         $response->assertSee(__('Import Documents'));
     }
 
-    public function test_export_csv_contains_subject_rows_for_used_accounts(): void
+    public function test_export_csv_contains_transaction_rows_for_used_accounts(): void
     {
         $root = Subject::factory()->create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets']);
         $child = Subject::factory()->create(['company_id' => $this->company->id, 'code' => '001001', 'name' => 'Bank', 'parent_id' => $root->id]);
@@ -140,34 +138,128 @@ class DocumentImportExportTest extends TestCase
 
         $csv = $this->exportCsvViaService([]);
 
-        $this->assertStringContainsString('SUBJECT', $csv);
-        $this->assertStringContainsString('Assets', $csv);
         $this->assertStringContainsString('Bank', $csv);
-        $this->assertStringContainsString('TRANSACTION', $csv);
+        $this->assertStringContainsString('001', $csv);
+        $this->assertStringNotContainsString('SUBJECT', $csv);
     }
 
     public function test_csv_import_creates_subjects_and_documents(): void
     {
+        Subject::factory()->create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets']);
+
         $csv = $this->buildCsv([
-            ['SUBJECT',     '', '', '',         '',       '',          '001', '001', 'Assets', '',    '',        '',     ''],
-            ['SUBJECT',     '', '', '',         '',       '',          '001', '002', 'Bank',   '001', '',        '',     ''],
-            ['TRANSACTION', '1', '2026-01-15', 'Test Doc', 'manual', 'unapproved', '001', '002', 'Bank', '001', 'Payment', '5000', '0'],
-            ['TRANSACTION', '1', '2026-01-15', 'Test Doc', 'manual', 'unapproved', '001', '002', 'Bank', '001', 'Offset',  '0',    '5000'],
+            ['1', '2026-01-15', 'Test Doc', 'manual', 'unapproved', '001', '002', '', 'Bank', 'Payment', '5000', '0'],
+            ['1', '2026-01-15', 'Test Doc', 'manual', 'unapproved', '001', '002', '', 'Bank', 'Offset',  '0',    '5000'],
         ]);
 
         $result = $this->runCsvImport($csv);
 
         $this->assertSame(1, $result['documents_created']);
+        $this->assertSame(0, count($result['errors']), 'No errors expected: '.implode(' | ', $result['errors']));
         $this->assertDatabaseHas('documents', ['company_id' => $this->company->id, 'number' => 1]);
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'name' => 'Assets']);
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'name' => 'Bank']);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'name' => 'Bank', 'code' => '001002']);
+    }
+
+    public function test_csv_import_rejects_document_when_parent_subject_missing(): void
+    {
+        $csv = $this->buildCsv([
+            ['1', '2026-01-15', 'Test Doc', 'manual', 'unapproved', '001', '002', '', 'Bank', 'Payment', '5000', '0'],
+            ['1', '2026-01-15', 'Test Doc', 'manual', 'unapproved', '001', '002', '', 'Bank', 'Offset',  '0',    '5000'],
+        ]);
+
+        $result = $this->runCsvImport($csv);
+
+        $this->assertSame(0, $result['documents_created']);
+        $this->assertSame(1, $result['documents_skipped']);
+        $this->assertNotEmpty($result['errors']);
+        $this->assertDatabaseMissing('documents', ['company_id' => $this->company->id, 'number' => 1]);
+    }
+
+    public function test_csv_import_builds_missing_ancestor_from_a_later_row(): void
+    {
+        $csv = $this->buildCsv([
+            ['1', '2026-01-01', 'D1', 'manual', 'unapproved', '001', '002', '003', 'Detail X', 'd', '100', '0'],
+            ['1', '2026-01-01', 'D1', 'manual', 'unapproved', '001', '002', '003', 'Detail X', 'd', '0', '100'],
+            ['2', '2026-01-02', 'D2', 'manual', 'unapproved', '001', '002', '', 'Bank', 'd', '50', '0'],
+            ['2', '2026-01-02', 'D2', 'manual', 'unapproved', '001', '', '', 'Assets', 'd', '0', '50'],
+        ]);
+
+        $result = $this->runCsvImport($csv);
+
+        $this->assertSame(2, $result['documents_created']);
+        $this->assertSame(0, count($result['errors']), 'No errors expected: '.implode(' | ', $result['errors']));
+
+        $detail = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('name', 'Detail X')->first();
+        $this->assertNotNull($detail);
+        $bank = Subject::withoutGlobalScope(FiscalYearScope::class)->find($detail->parent_id);
+        $this->assertSame('Bank', $bank->name);
+        $assets = Subject::withoutGlobalScope(FiscalYearScope::class)->find($bank->parent_id);
+        $this->assertSame('Assets', $assets->name);
+        $this->assertNull($assets->parent_id);
+    }
+
+    public function test_csv_import_reuses_existing_subject_by_name_when_code_differs(): void
+    {
+        $assets = Subject::create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets', 'parent_id' => null, 'type' => 'both']);
+        $existingCash = Subject::create(['company_id' => $this->company->id, 'code' => '001009', 'name' => 'Cash', 'parent_id' => $assets->id, 'type' => 'both']);
+
+        $csv = $this->buildCsv([
+            ['1', '2026-01-01', 'D', 'manual', 'unapproved', '001', '002', '', 'Cash', 'd', '100', '0'],
+            ['1', '2026-01-01', 'D', 'manual', 'unapproved', '001', '', '', 'Assets', 'd', '0', '100'],
+        ]);
+
+        $result = $this->runCsvImport($csv);
+
+        $this->assertSame(1, $result['documents_created']);
+        $this->assertSame(1, Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('name', 'Cash')->count(), 'No duplicate Cash subject should be created.');
+
+        $document = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('number', 1)->first();
+        $this->assertTrue($document->transactions->pluck('subject_id')->contains($existingCash->id));
+    }
+
+    public function test_csv_import_keeps_same_named_subjects_under_different_parents_distinct(): void
+    {
+        $products = Subject::create(['company_id' => $this->company->id, 'code' => '010', 'name' => 'Products', 'parent_id' => null, 'type' => 'both']);
+        $services = Subject::create(['company_id' => $this->company->id, 'code' => '020', 'name' => 'Services', 'parent_id' => null, 'type' => 'both']);
+        Subject::create(['company_id' => $this->company->id, 'code' => '010001', 'name' => 'Cash', 'parent_id' => $products->id, 'type' => 'both']);
+        Subject::create(['company_id' => $this->company->id, 'code' => '020001', 'name' => 'Cash', 'parent_id' => $services->id, 'type' => 'both']);
+
+        $csv = $this->buildCsv([
+            ['1', '2026-01-01', 'D', 'manual', 'unapproved', '010', '001', '', 'Cash', 'd', '100', '0'],
+            ['1', '2026-01-01', 'D', 'manual', 'unapproved', '010', '001', '', 'Cash', 'd', '0', '100'],
+        ]);
+
+        $result = $this->runCsvImport($csv);
+
+        $this->assertSame(1, $result['documents_created']);
+        $this->assertSame(2, Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('name', 'Cash')->count());
+
+        $document = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('number', 1)->first();
+        $usedSubject = Subject::withoutGlobalScope(FiscalYearScope::class)->find($document->transactions->first()->subject_id);
+        $this->assertSame($products->id, $usedSubject->parent_id, 'The Cash under Products must be used, not the one under Services.');
+    }
+
+    public function test_csv_import_matches_by_code_when_a_name_is_reused_for_several_codes_in_the_file(): void
+    {
+        Subject::create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets', 'parent_id' => null, 'type' => 'both']);
+
+        $csv = $this->buildCsv([
+            ['1', '2026-01-01', 'D', 'manual', 'unapproved', '001', '002', '', 'Widget', 'd', '100', '0'],
+            ['1', '2026-01-01', 'D', 'manual', 'unapproved', '001', '003', '', 'Widget', 'd', '0', '100'],
+        ]);
+
+        $result = $this->runCsvImport($csv);
+
+        $this->assertSame(1, $result['documents_created']);
+        $this->assertSame(2, Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('name', 'Widget')->count());
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001002', 'name' => 'Widget']);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001003', 'name' => 'Widget']);
     }
 
     public function test_imported_documents_have_is_imported_flag_set(): void
     {
         $csv = $this->buildCsv([
-            ['SUBJECT',     '',  '',           '',             '',       '',           '001', '001', 'Assets', '', '',     '',    ''],
-            ['TRANSACTION', '5', '2026-02-01', 'Imported Doc', 'manual', 'unapproved', '001', '001', 'Assets', '', 'Test', '100', '100'],
+            ['5', '2026-02-01', 'Imported Doc', 'manual', 'unapproved', '001', '', '', 'Assets', 'Test', '100', '100'],
         ]);
 
         $this->runCsvImport($csv);
@@ -182,8 +274,7 @@ class DocumentImportExportTest extends TestCase
     public function test_csv_import_is_idempotent_for_documents(): void
     {
         $csv = $this->buildCsv([
-            ['SUBJECT',     '',  '',           '',    '',       '',           '001', '001', 'Assets', '', '',     '',    ''],
-            ['TRANSACTION', '7', '2026-03-01', 'Doc', 'manual', 'unapproved', '001', '001', 'Assets', '', 'Desc', '100', '100'],
+            ['7', '2026-03-01', 'Doc', 'manual', 'unapproved', '001', '', '', 'Assets', 'Desc', '100', '100'],
         ]);
 
         $this->runCsvImport($csv);
@@ -197,13 +288,11 @@ class DocumentImportExportTest extends TestCase
 
     public function test_csv_import_preserves_subject_hierarchy(): void
     {
-        // Use distinct 3-char segments so reconstruction is unambiguous:
-        // Assets=011, Bank=011004 (own=004), Mellat=011004001 (own=001)
+        $assets = Subject::create(['company_id' => $this->company->id, 'code' => '011', 'name' => 'Assets', 'parent_id' => null, 'type' => 'both']);
+        Subject::create(['company_id' => $this->company->id, 'code' => '011004', 'name' => 'Bank', 'parent_id' => $assets->id, 'type' => 'both']);
+
         $csv = $this->buildCsv([
-            ['SUBJECT',     '', '', '', '', '', '011', '011', 'Assets', '',    '', '', ''],
-            ['SUBJECT',     '', '', '', '', '', '011', '004', 'Bank',   '011', '', '', ''],
-            ['SUBJECT',     '', '', '', '', '', '011', '001', 'Mellat', '004', '', '', ''],
-            ['TRANSACTION', '2', '2026-01-10', 'T', 'manual', 'unapproved', '011', '001', 'Mellat', '004', 'x', '0', '0'],
+            ['2', '2026-01-10', 'T', 'manual', 'unapproved', '011', '004', '001', 'Mellat', 'x', '0', '0'],
         ]);
 
         $this->runCsvImport($csv);
@@ -231,6 +320,7 @@ class DocumentImportExportTest extends TestCase
 
         $newCompany = Company::factory()->create();
         config(['active-company-id' => $newCompany->id]);
+        Subject::factory()->create(['company_id' => $newCompany->id, 'code' => '001', 'name' => 'Assets']);
 
         $result = $this->runCsvImport($this->makeCsvFile($csv), 'free_amir', $newCompany);
 
@@ -416,7 +506,6 @@ class DocumentImportExportTest extends TestCase
         return UploadedFile::fake()->createWithContent('trial_balance.csv', implode("\n", $lines));
     }
 
-    // ID,IsNote,Sanad_Num,Factor_Num,Tick,SanadDate,KolCode,MoeenCode,TafsiliCode,Bed,Bes,Comment,HesabName,ChkNum,IsRecPayChk,CostCenterCode
     private function parsianRow(int $sanadNum, string $date, int $kol, int $moen, int $taf, float $bed, float $bes, string $comment, string $hesabName): array
     {
         return [0, 'FALSE', $sanadNum, '', '', $date, $kol, $moen, $taf, $bed, $bes, $comment, $hesabName, '', 'FALSE', ''];
@@ -551,8 +640,7 @@ class DocumentImportExportTest extends TestCase
     public function test_parsian_format_rejects_free_amir_file(): void
     {
         $freeAmirFile = $this->buildCsv([
-            ['SUBJECT',     '',  '',           '',    '',       '',           '001', '001', 'Assets', '', '',     '',    ''],
-            ['TRANSACTION', '7', '2026-03-01', 'Doc', 'manual', 'unapproved', '001', '001', 'Assets', '', 'Desc', '100', '100'],
+            ['7', '2026-03-01', 'Doc', 'manual', 'unapproved', '001', '', '', 'Assets', 'Desc', '100', '100'],
         ]);
 
         try {
@@ -569,7 +657,7 @@ class DocumentImportExportTest extends TestCase
     public function test_import_requires_a_format_to_be_selected(): void
     {
         $file = $this->buildCsv([
-            ['SUBJECT', '', '', '', '', '', '001', '001', 'Assets', '', '', '', ''],
+            ['7', '2026-03-01', 'Doc', 'manual', 'unapproved', '001', '', '', 'Assets', 'Desc', '100', '100'],
         ]);
 
         $response = $this->post(route('documents.import.store'), ['file' => $file]);
@@ -583,8 +671,6 @@ class DocumentImportExportTest extends TestCase
         $root = Subject::factory()->create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets']);
         $document = Document::factory()->create(['company_id' => $this->company->id, 'number' => 1, 'date' => '2026-01-01']);
         Transaction::create(['document_id' => $document->id, 'subject_id' => $root->id, 'value' => 1000, 'user_id' => $this->user->id]);
-
-        // Simulate the form submitting an explicit selection with no optional columns checked.
         $csv = $this->exportCsvViaService(['columns_selected' => 1, 'columns' => []]);
 
         $headerLine = strtok($csv, "\n");
@@ -598,18 +684,15 @@ class DocumentImportExportTest extends TestCase
         $root = Subject::factory()->create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets']);
         $document = Document::factory()->create(['company_id' => $this->company->id, 'number' => 1, 'date' => '2026-01-01']);
         Transaction::create(['document_id' => $document->id, 'subject_id' => $root->id, 'value' => 1000, 'user_id' => $this->user->id]);
-
-        // Select a couple of optional columns in an arbitrary order; output must follow ALL_COLUMNS order.
         $csv = $this->exportCsvViaService(['columns_selected' => 1, 'columns' => ['transaction_desc', 'doc_title']]);
 
         $headerLine = trim(strtok($csv, "\n"), "\xEF\xBB\xBF\r\n");
         $actual = array_map('trim', str_getcsv($headerLine));
 
-        $expectedColumns = array_values(array_filter(
+        $expectedColumns = array_reverse(array_values(array_filter(
             DocumentImportExportService::ALL_COLUMNS,
-            fn ($col) => in_array($col, DocumentImportExportService::MANDATORY_COLUMNS, true)
-                || in_array($col, ['transaction_desc', 'doc_title'], true)
-        ));
+            fn ($col) => in_array($col, DocumentImportExportService::MANDATORY_COLUMNS, true) || in_array($col, ['transaction_desc', 'doc_title'], true)
+        )));
         $expected = array_map(fn ($col) => __($col), $expectedColumns);
 
         $this->assertSame($expected, $actual);

@@ -111,7 +111,7 @@ class DocumentImportExportService
     public function export(array $filters): StreamedResponse
     {
         $query = self::buildQuery($filters);
-        $filename = 'documents_export_'.Carbon::now()->format('Ymd_His').'.csv';
+        $filename = __('Documents report').'-'.formatDate(Carbon::now(), 'Y-m-d').'.csv';
         $columns = $this->resolveExportColumns($filters);
 
         return self::exportCsv($query, $filename, $columns);
@@ -135,47 +135,44 @@ class DocumentImportExportService
 
     private function exportCsv(Builder $query, string $filename, array $columns = self::ALL_COLUMNS): StreamedResponse
     {
+        $outputColumns = array_reverse($columns);
+
         $httpHeaders = [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Content-Disposition' => "attachment; filename=\"documents_export.csv\"; filename*=UTF-8''".rawurlencode($filename),
         ];
 
-        return response()->stream(function () use ($query, $columns) {
+        return response()->stream(function () use ($query, $outputColumns) {
             $handle = fopen('php://output', 'w');
 
             fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
 
-            fputcsv($handle, array_map(fn ($col) => __($col), $columns));
-
-            foreach (self::csvSubjectRows($query) as $row) {
-                fputcsv($handle, $this->filterRow($row, $columns));
-            }
+            fputcsv($handle, array_map(fn ($col) => __($col), $outputColumns));
 
             (clone $query)
                 ->with(['transactions.subject'])
                 ->orderBy('date')
                 ->orderBy('number')
-                ->chunk(200, function ($documents) use ($handle, $columns) {
+                ->chunk(200, function ($documents) use ($handle, $outputColumns) {
                     foreach ($documents as $document) {
                         foreach ($document->transactions as $transaction) {
                             $subject = $transaction->subject;
-                            [$rootOwn, $parentOwn, $ownCode] = FreeAmirImportFormat::parseSubjectCodes($subject->code ?? '');
+                            [$root, $moein, $tafsili] = FreeAmirImportFormat::parseSubjectCodes($subject->code ?? '');
                             $row = [
-                                'record_type' => 'TRANSACTION',
                                 'doc_number' => csvNumber(floor($document->number)),
-                                'doc_date' => $document->date->format('Y-m-d'),
+                                'doc_date' => formatDate($document->date),
                                 'doc_title' => $document->title ?? '',
-                                'doc_type' => $document->document_type,
-                                'doc_status' => $document->approved_at ? 'approved' : 'unapproved',
-                                'subject_root_code' => $rootOwn,
-                                'subject_code' => $ownCode,
+                                'doc_type' => __($document->document_type),
+                                'doc_status' => __($document->approved_at ? 'approved' : 'unapproved'),
+                                'subject_root_code' => $root,
+                                'subject_moein_code' => $moein,
+                                'subject_tafsili_code' => $tafsili,
                                 'subject_name' => $subject->name ?? '',
-                                'subject_parent_code' => $parentOwn,
                                 'transaction_desc' => $transaction->desc ?? '',
                                 'debit' => csvNumber($transaction->debit ?? 0),
                                 'credit' => csvNumber($transaction->credit ?? 0),
                             ];
-                            fputcsv($handle, $this->filterRow($row, $columns));
+                            fputcsv($handle, $this->filterRow($row, $outputColumns));
                         }
                     }
                 });
@@ -187,51 +184,6 @@ class DocumentImportExportService
     private function filterRow(array $row, array $columns): array
     {
         return array_map(fn ($col) => $row[$col] ?? '', $columns);
-    }
-
-    /**
-     * Collect every subject (including ancestors) touched by the filtered documents, ordered by code so parents always appear before children.
-     */
-    private function csvSubjectRows(Builder $query): array
-    {
-        $subjectIds = (clone $query)->join('transactions', 'documents.id', '=', 'transactions.document_id')->distinct()->pluck('transactions.subject_id')->filter();
-
-        if ($subjectIds->isEmpty()) {
-            return [];
-        }
-
-        $allIds = collect($subjectIds->toArray());
-        $subjects = Subject::withoutGlobalScopes()->whereIn('id', $subjectIds)->get();
-
-        foreach ($subjects as $subject) {
-            $current = $subject;
-            while ($current->parent_id) {
-                $allIds->push($current->parent_id);
-                $current = $current->parent;
-            }
-        }
-
-        $allSubjects = Subject::withoutGlobalScopes()->whereIn('id', $allIds->unique())->orderBy('code')->get();
-
-        return $allSubjects->map(function (Subject $subject) {
-            [$rootOwn, $parentOwn, $ownCode] = FreeAmirImportFormat::parseSubjectCodes($subject->code);
-
-            return [
-                'record_type' => 'SUBJECT',
-                'doc_number' => '',
-                'doc_date' => '',
-                'doc_title' => '',
-                'doc_type' => '',
-                'doc_status' => '',
-                'subject_root_code' => $rootOwn,
-                'subject_code' => $ownCode,
-                'subject_name' => $subject->name,
-                'subject_parent_code' => $parentOwn,
-                'transaction_desc' => '',
-                'debit' => '',
-                'credit' => '',
-            ];
-        })->values()->all();
     }
 
     /**
@@ -256,6 +208,52 @@ class DocumentImportExportService
         $result['rows_skipped'] = ($result['rows_skipped'] ?? 0) + $skipped;
 
         return $result;
+    }
+
+    public function buildImportFeedback(array $result): array
+    {
+        $created = $result['documents_created'] ?? 0;
+        $subjects = $result['subjects_created'] ?? 0;
+        $skipped = $result['documents_skipped'] ?? 0;
+        $rowsSkipped = $result['rows_skipped'] ?? 0;
+        $errors = $result['errors'] ?? [];
+
+        if ($created === 0 && $skipped <= 0) {
+            $lines[] = __('No documents were imported.');
+        }
+
+        if ($created !== 0) {
+            $lines = [
+                __(':docs documents and :subjects subjects imported successfully.', [
+                    'docs' => formatNumber($created),
+                    'subjects' => formatNumber($subjects),
+                ]),
+            ];
+        }
+
+        if ($skipped > 0) {
+            $lines[] = __(':skipped documents were skipped.', ['skipped' => formatNumber($skipped)]);
+        }
+
+        if ($rowsSkipped > 0) {
+            $lines[] = __(':rows rows were skipped because their column count did not match the header.', ['rows' => $rowsSkipped]);
+        }
+
+        foreach (array_slice($errors, 0, 5) as $error) {
+            $lines[] = $error;
+        }
+
+        if (count($errors) > 5) {
+            $lines[] = __('… and :n more.', ['n' => count($errors) - 5]);
+        }
+
+        $type = match (true) {
+            $created === 0 => 'error',
+            $skipped > 0 || $rowsSkipped > 0 || ! empty($errors) => 'warning',
+            default => 'success',
+        };
+
+        return ['type' => $type, 'lines' => $lines];
     }
 
     private function parseCsv(UploadedFile $file): array
