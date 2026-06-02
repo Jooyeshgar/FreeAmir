@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitLab Issue/MR Reader"
+  short_description: "Read GitLab issues and merge requests"
+  default_prompt: "Use $gitlab-issue-mr-reader to inspect my assigned GitLab issues and related merge requests before planning code changes."
