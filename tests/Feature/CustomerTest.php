@@ -160,6 +160,8 @@ class CustomerTest extends TestCase
 
         $this->assertNotNull($subject);
         $this->assertEquals($customer->name, $subject->name);
+        $this->assertEquals($this->customerGroup->subject_id, $subject->parent_id);
+        $this->assertStringStartsWith($this->customerGroup->subject->code, $subject->code);
 
         $newCustomerGroup = CustomerGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
 
@@ -176,6 +178,12 @@ class CustomerTest extends TestCase
 
         $this->assertNotNull($newSubject);
         $this->assertEquals($newCustomer->name, $newSubject->name);
+
+        // The subject must be re-parented to the new group's subject and its
+        // hierarchical code must be regenerated under that new parent.
+        $this->assertEquals($newCustomerGroup->subject_id, $newSubject->parent_id);
+        $this->assertStringStartsWith($newCustomerGroup->subject->code, $newSubject->code);
+        $this->assertStringStartsNotWith($this->customerGroup->subject->code, $newSubject->code);
 
         $this->assertDatabaseHas('subjects', ['name' => 'new name with new customer group']);
         $this->assertDatabaseHas('subjects', ['name' => 'new name with new customer group']);

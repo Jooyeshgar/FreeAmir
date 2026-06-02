@@ -57,7 +57,7 @@ class CustomerService
 
         $relation = 'subject';
         $subject = $customer->$relation;
-        $parentId = $group?->subject_id ?? null;
+        $parentId = $group?->subject_id ? (int) $group->subject_id : null;
         $targetName = $customer->name;
 
         if (! $subject) {
@@ -72,27 +72,28 @@ class CustomerService
             }
 
             $subject = $this->subjectService->createSubject($attributes);
-        }
+        } else {
+            // Delegate name/parent changes to SubjectService so the hierarchical
+            // code (and any descendant codes) is regenerated when the group, and
+            // therefore the parent subject, changes.
+            $changes = [];
 
-        $needsSave = false;
+            if ($subject->name !== $targetName) {
+                $changes['name'] = $targetName;
+            }
 
-        if ($subject->name !== $targetName) {
-            $subject->name = $targetName;
-            $needsSave = true;
-        }
+            $currentParentId = $subject->parent_id !== null ? (int) $subject->parent_id : null;
+            if ($currentParentId !== $parentId) {
+                $changes['parent_id'] = $parentId;
+            }
 
-        $normalizedParentId = $parentId ?: null;
-        if ($subject->parent_id !== $normalizedParentId) {
-            $subject->parent_id = $normalizedParentId;
-            $needsSave = true;
+            if ($changes !== []) {
+                $subject = $this->subjectService->editSubject($subject, $changes);
+            }
         }
 
         if ($subject->subjectable_id !== $customer->id || $subject->subjectable_type !== $customer->getMorphClass()) {
             $subject->subjectable()->associate($customer);
-            $needsSave = true;
-        }
-
-        if ($needsSave) {
             $subject->save();
         }
 
