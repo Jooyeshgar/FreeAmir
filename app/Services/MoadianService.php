@@ -43,7 +43,7 @@ class MoadianService
         try {
             $info = Moadian::for($privateKey, $certificate, $this->moadian_username)->sendInvoice($this->moadianInvoice);
             $info = $info->getBody();
-            $info = $info['result'][0];
+            $info = $info['result'][0] ?? $info;
         } catch (\Exception $e) {
             $sentInvoiceToMoadianWithSuccess = false;
             $info = ['status' => 'FAILED', 'error' => $e->getMessage()];
@@ -65,6 +65,12 @@ class MoadianService
 
         if (! in_array($invoice->invoice_type, [InvoiceType::SELL, InvoiceType::RETURN_SELL, InvoiceType::VOID])) {
             $decision->addMessage('error', __('Cannot send a buy or return buy invoice to moadian.'));
+        }
+
+        $company = Company::find(getActiveCompany());
+
+        if (! $company || ! $company->moadian_username || ! $company->tax_id || ! $company->decryptedPrivateKey() || ! $company->decryptedCertificate()) {
+            $decision->addMessage('error', __('Moadian credentials are not fully configured. Please set the username, tax ID, certificate and private key in company settings.'));
         }
 
         $hasMoadianSuccess = $invoice->moadianHistories->contains(function ($history) {

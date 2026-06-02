@@ -21,6 +21,10 @@ class MoadianHistoryController extends Controller
             $query->where('data->status', $request->input('status'));
         }
 
+        if ($request->filled('invoice_number')) {
+            $query->whereHas('invoice', fn ($invoice) => $invoice->where('number', $request->input('invoice_number')));
+        }
+
         if ($request->filled('date')) {
             $query->whereDate('created_at', $request->input('date'));
         }
@@ -64,7 +68,11 @@ class MoadianHistoryController extends Controller
             return redirect()->back()->with('error', __('No reference number available to check status.'));
         }
 
-        $this->moadianService->moadianStatus($latestHistory->data['referenceNumber'], $invoice);
+        $statusData = $this->moadianService->moadianStatus($latestHistory->data['referenceNumber'], $invoice);
+
+        if (strtoupper($statusData['status'] ?? '') === 'FAILED') {
+            return redirect()->back()->with('error', __('Failed to check status from Moadian. Please try again.'));
+        }
 
         return redirect()->back()->with('success', __('Status checked and updated successfully.'));
     }

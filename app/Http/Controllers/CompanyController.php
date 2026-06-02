@@ -29,7 +29,7 @@ class CompanyController extends Controller
         'phone_number' => 'nullable|numeric|regex:/^09\d{9}$/',
         'fiscal_year' => 'required|numeric',
         'currency' => 'nullable|string|max:50',
-        'moadian_username' => 'nullable|string|max:50',
+        'moadian_username' => 'nullable|string|max:20',
         'tax_id' => 'nullable|string|max:20',
     ];
 
