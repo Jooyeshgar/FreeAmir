@@ -855,20 +855,15 @@ class DocumentImportExportTest extends TestCase
         ]);
     }
 
-    public function test_name_is_code_filter_matches_synthesized_subjects_not_manually_named(): void
+    public function test_name_is_default_filter_matches_synthesized_subjects_not_manually_named(): void
     {
-        // Subjects created with synthesized names by the resolver (level-prefixed)
         $synthesized = ImportSubjectResolver::synthesizeName('001');
         Subject::create(['company_id' => $this->company->id, 'code' => '001', 'name' => $synthesized, 'type' => 'both', 'parent_id' => null]);
-
-        // Manually named subject — must NOT appear in the filter
         Subject::create(['company_id' => $this->company->id, 'code' => '002', 'name' => 'Manually named', 'type' => 'both', 'parent_id' => null]);
-
-        // Subject whose name happens to equal the bare code — must NOT appear (the old broken logic)
         Subject::create(['company_id' => $this->company->id, 'code' => '003', 'name' => '003', 'type' => 'both', 'parent_id' => null]);
 
         $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'subjects.index']));
-        $response = $this->get(route('subjects.index', ['name_is_code' => 1]));
+        $response = $this->get(route('subjects.index', ['name_is_default' => 1]));
 
         $response->assertOk();
         $response->assertSee($synthesized);
