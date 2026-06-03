@@ -24,13 +24,17 @@ use Illuminate\Support\Collection;
  *
  * Hourly-leave interaction rules
  * ─────────────────────────────
- * • Any hourly leave (start / middle / end of shift) makes
- *   worked = actual_worked + paid_leave_minutes  (≤ shiftMinutes)
- * • delay and early_leave are first computed against the ORIGINAL
- *   shift boundaries, then reduced by the leave/mission minutes
- *   (leave/mission covers the gap — no penalty).
- *   Net delay   = max(0, raw_delay − leave_minutes)
- *   Net early_leave = max(0, raw_early_leave − leave_minutes)
+ * • Hourly leave/mission taken MID-SHIFT (its time window overlaps the
+ *   clocked entry..exit window) is excluded from worked, because the raw
+ *   clocked duration already counts that time as present.
+ *   worked = (actual_clocked − mid_shift_leave_overlap) + remote_work
+ *   e.g. clock 08:00→16:00 with leave 11:00–13:00 → worked = 6h, leave = 2h.
+ * • Leave/mission that fills an EDGE gap (before entry / after exit, i.e. it
+ *   does not overlap the clocked window) instead absorbs delay/early_leave.
+ *   delay and early_leave are first computed against the ORIGINAL shift
+ *   boundaries, then reduced by that edge coverage (covers the gap — no penalty).
+ *   Net delay   = max(0, raw_delay − edge_coverage)
+ *   Net early_leave = max(0, raw_early_leave − remaining_edge_coverage)
  * • Daily leave / mission → worked = shiftMinutes, delay = 0, early_leave = 0.
  * • Daily remote work → worked = shiftMinutes, delay = 0, early_leave = 0
  *   (employee is fully present from home; an AttendanceLog is auto-created).
@@ -79,7 +83,18 @@ class AttendanceService
             ->orderByDesc('id')
             ->first();
 
-        $columns = $this->computeLogColumns($log, $workShift, $isFriday, $isHoliday, $isThursday, $remoteRequest);
+        // Approved hourly leave / mission requests with their exact time windows.
+        // Their overlap with the clocked presence window is what tells us how
+        // much of the leave/mission happened "while the employee was clocked in" (mid-shift),
+        // so it can be excluded from worked rather than being counted as both work and leave.
+        $hourlyCoverageRequests = $employee?->personnelRequests()->whereIn('request_type', [
+            PersonnelRequestType::LEAVE_HOURLY->value,
+            PersonnelRequestType::MISSION_HOURLY->value,
+        ])->approved()->coveringDate($logDate->toDateString())->get() ?? collect();
+
+        $midShiftCoverage = $this->midShiftCoverageMinutes($log, $hourlyCoverageRequests);
+
+        $columns = $this->computeLogColumns($log, $workShift, $isFriday, $isHoliday, $isThursday, $remoteRequest, $midShiftCoverage);
 
         $log->update($columns);
 
@@ -107,7 +122,7 @@ class AttendanceService
      *     is_holiday?:bool
      * }
      */
-    public function computeLogColumns(AttendanceLog $log, ?WorkShift $workShift, bool $isFriday = false, bool $isHoliday = false, bool $isThursday = false, ?PersonnelRequest $remoteRequest = null): array
+    public function computeLogColumns(AttendanceLog $log, ?WorkShift $workShift, bool $isFriday = false, bool $isHoliday = false, bool $isThursday = false, ?PersonnelRequest $remoteRequest = null, int $midShiftCoverage = 0): array
     {
         // ── Thursday handling ──────────────────────────────────────────────
         $thursdayStatus = $isThursday ? ($workShift?->thursday_status ?? ThursdayStatus::FULL_DAY) : null;
@@ -190,7 +205,13 @@ class AttendanceService
         // ── Normal working day ─────────────────────────────────────────────
         $bounds = $this->shiftDelayEarlyLeave($log, $workShift);
 
-        $coveredMinutes = min($shiftMinutes, $paidLeave + $mission + min($remoteWork, $shiftMinutes));
+        // Hourly leave/mission taken while the clock was running (mid-shift) is already inside the clocked window,
+        // so it must be removed from worked and is NOT available to absorb delay / early_leave (it covered the mid-shift gap, not the edges).
+        $totalCoverage = $paidLeave + $mission;
+        $midShift = max(0, min($midShiftCoverage, $totalCoverage));
+        $edgeCoverage = $totalCoverage - $midShift;
+
+        $coveredMinutes = min($shiftMinutes, $edgeCoverage + min($remoteWork, $shiftMinutes));
 
         $remainingCoverage = $coveredMinutes;
 
@@ -212,7 +233,7 @@ class AttendanceService
         $autoOvertime = min($remainingOvertime + $unusedCoverageForOvertime + $remoteExtra, $autoOvertimeCap);
 
         return [
-            'worked' => $rawWorked + $remoteWork,
+            'worked' => max(0, $rawWorked - $midShift) + $remoteWork,
             'delay' => $netDelay,
             'early_leave' => $netEarlyLeave,
             'overtime' => $approvedOvertime,
@@ -588,6 +609,42 @@ class AttendanceService
             'is_friday' => $isFriday,
             'is_holiday' => $isHoliday,
         ];
+    }
+
+    /**
+     * Minutes of approved hourly leave / mission whose time window overlaps the employee's clocked presence window.
+     *
+     * These minutes were spent on leave/mission "while the clock was running", so the raw clocked duration counts them as work.
+     * They must be excluded from `worked` and must not be reused as coverage to absorb delay / early_leave.
+     *
+     * @param  Collection<int,PersonnelRequest>  $requests
+     */
+    private function midShiftCoverageMinutes(AttendanceLog $log, Collection $requests): int
+    {
+        if ($log->entry_time === null || $log->exit_time === null || $requests->isEmpty()) {
+            return 0;
+        }
+
+        $entry = $this->parseTime($log->entry_time);
+        $exit = $this->parseTime($log->exit_time);
+
+        if ($entry === null || $exit === null) {
+            return 0;
+        }
+
+        $overlap = 0;
+        foreach ($requests as $request) {
+            $start = $this->parseTime(Carbon::parse($request->start_date)->format('H:i:s'));
+            $end = $this->parseTime(Carbon::parse($request->end_date)->format('H:i:s'));
+
+            if ($start === null || $end === null) {
+                continue;
+            }
+
+            $overlap += $this->overlapMinutes($start, $end, $entry, $exit);
+        }
+
+        return max(0, $overlap);
     }
 
     private function parseTime(string $time): ?Carbon

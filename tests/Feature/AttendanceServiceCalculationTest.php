@@ -1001,4 +1001,252 @@ class AttendanceServiceCalculationTest extends TestCase
         // early_leave covers the remaining 120.
         $this->assertSame(120, (int) $log->early_leave, 'mid-gap + early end = 120');
     }
+
+    // -----------------------------------------------------------------------
+    // MID-SHIFT HOURLY LEAVE — clocked window spans the leave window.
+    //
+    // 08:00→16:00 with hourly leave 11:00–13:00 reported 8h worked and 2h leave (the leave was double-counted as both work and leave).
+    // It must report 6h worked + 2h leave.
+    // -----------------------------------------------------------------------
+
+    /** Create an approved hourly request and apply it to the day's log. */
+    private function applyHourlyRequest(Employee $employee, PersonnelRequestType $type, string $start, string $end): void
+    {
+        $request = PersonnelRequest::factory()->create([
+            'company_id' => $this->company->id,
+            'employee_id' => $employee->id,
+            'request_type' => $type->value,
+            'start_date' => $start,
+            'end_date' => $end,
+            'status' => 'approved',
+        ]);
+
+        $this->service->syncPersonnelRequestLogs($request);
+    }
+
+    private function eightToFourShift(array $overrides = []): WorkShift
+    {
+        return $this->makeShift(array_merge([
+            'start_time' => '08:00:00',
+            'end_time' => '16:00:00',
+            'break' => 0,
+            'float' => 0,
+            'max_auto_overtime' => 120,
+        ], $overrides));
+    }
+
+    public function test_mid_shift_hourly_leave_is_excluded_from_worked(): void
+    {
+        // Shift 08:00–16:00 (480 min). Clock 08:00→16:00, leave 11:00–13:00.
+        // Expected: 6h worked + 2h leave, no delay / early_leave / overtime.
+        $employee = $this->makeEmployee($this->eightToFourShift());
+
+        $log = $this->insertLog($employee, '2025-03-10', [
+            'entry_time' => '08:00:00',
+            'exit_time' => '16:00:00',
+        ], false);
+
+        $this->applyHourlyRequest($employee, PersonnelRequestType::LEAVE_HOURLY, '2025-03-10 11:00:00', '2025-03-10 13:00:00');
+
+        $log = $log->fresh();
+
+        $this->assertSame(360, (int) $log->worked, '8h clocked − 2h mid-shift leave = 6h worked');
+        $this->assertSame(120, (int) $log->paid_leave);
+        $this->assertSame(0, (int) $log->delay);
+        $this->assertSame(0, (int) $log->early_leave);
+        $this->assertSame(0, (int) $log->overtime);
+        $this->assertSame(0, (int) $log->auto_overtime);
+    }
+
+    public function test_full_day_without_leave_records_full_worked(): void
+    {
+        // Control: same clock, no leave → 8h worked, nothing else.
+        $employee = $this->makeEmployee($this->eightToFourShift());
+
+        $log = $this->insertLog($employee, '2025-03-10', [
+            'entry_time' => '08:00:00',
+            'exit_time' => '16:00:00',
+        ]);
+
+        $this->assertSame(480, (int) $log->worked);
+        $this->assertSame(0, (int) $log->paid_leave);
+        $this->assertSame(0, (int) $log->delay);
+        $this->assertSame(0, (int) $log->early_leave);
+        $this->assertSame(0, (int) $log->auto_overtime);
+    }
+
+    public function test_mid_shift_leave_with_delay_keeps_delay(): void
+    {
+        // Late arrival 08:30 (30 min delay) + mid-shift leave 11:00–13:00. Mid-shift leave must NOT absorb the delay.
+        $employee = $this->makeEmployee($this->eightToFourShift());
+
+        $log = $this->insertLog($employee, '2025-03-10', [
+            'entry_time' => '08:30:00',
+            'exit_time' => '16:00:00',
+        ], false);
+
+        $this->applyHourlyRequest($employee, PersonnelRequestType::LEAVE_HOURLY, '2025-03-10 11:00:00', '2025-03-10 13:00:00');
+
+        $log = $log->fresh();
+
+        $this->assertSame(330, (int) $log->worked, 'presence 7h30m − 2h leave = 5h30m');
+        $this->assertSame(120, (int) $log->paid_leave);
+        $this->assertSame(30, (int) $log->delay, 'mid-shift leave does not cover the late arrival');
+        $this->assertSame(0, (int) $log->early_leave);
+    }
+
+    public function test_mid_shift_leave_with_early_leave_keeps_early_leave(): void
+    {
+        // Early departure 15:00 (60 min early) + mid-shift leave 11:00–13:00. Mid-shift leave must NOT absorb the early_leave.
+        $employee = $this->makeEmployee($this->eightToFourShift());
+
+        $log = $this->insertLog($employee, '2025-03-10', [
+            'entry_time' => '08:00:00',
+            'exit_time' => '15:00:00',
+        ], false);
+
+        $this->applyHourlyRequest($employee, PersonnelRequestType::LEAVE_HOURLY, '2025-03-10 11:00:00', '2025-03-10 13:00:00');
+
+        $log = $log->fresh();
+
+        $this->assertSame(300, (int) $log->worked, 'presence 7h − 2h leave = 5h');
+        $this->assertSame(120, (int) $log->paid_leave);
+        $this->assertSame(0, (int) $log->delay);
+        $this->assertSame(60, (int) $log->early_leave, 'left 1h early; mid-shift leave does not cover it');
+    }
+
+    public function test_edge_leave_at_start_still_absorbs_delay_and_keeps_worked(): void
+    {
+        // Leave 08:00–09:00 fills the start gap; clock 09:00→16:00.
+        // The leave is NOT mid-shift (no overlap with presence) so it absorbs the delay and does not reduce worked.
+        $employee = $this->makeEmployee($this->eightToFourShift());
+
+        $log = $this->insertLog($employee, '2025-03-10', [
+            'entry_time' => '09:00:00',
+            'exit_time' => '16:00:00',
+        ], false);
+
+        $this->applyHourlyRequest($employee, PersonnelRequestType::LEAVE_HOURLY, '2025-03-10 08:00:00', '2025-03-10 09:00:00');
+
+        $log = $log->fresh();
+
+        $this->assertSame(420, (int) $log->worked, 'edge leave does not reduce worked (presence 7h)');
+        $this->assertSame(60, (int) $log->paid_leave);
+        $this->assertSame(0, (int) $log->delay, 'start-gap leave absorbs the 1h delay');
+        $this->assertSame(0, (int) $log->early_leave);
+    }
+
+    public function test_mid_shift_leave_with_overtime(): void
+    {
+        // Clock 08:00→18:00 (2h past shift end) + mid-shift leave 11:00–13:00.
+        // worked = 8h in-shift presence − 2h leave + 2h overtime presence = 8h.
+        $employee = $this->makeEmployee($this->eightToFourShift());
+
+        $log = $this->insertLog($employee, '2025-03-10', [
+            'entry_time' => '08:00:00',
+            'exit_time' => '18:00:00',
+        ], false);
+
+        $this->applyHourlyRequest($employee, PersonnelRequestType::LEAVE_HOURLY, '2025-03-10 11:00:00', '2025-03-10 13:00:00');
+
+        $log = $log->fresh();
+
+        $this->assertSame(480, (int) $log->worked, '10h presence − 2h mid-shift leave = 8h');
+        $this->assertSame(120, (int) $log->paid_leave);
+        $this->assertSame(0, (int) $log->delay);
+        $this->assertSame(0, (int) $log->early_leave);
+        $this->assertSame(120, (int) $log->auto_overtime, '2h past shift end → auto overtime (capped at 120)');
+    }
+
+    public function test_mid_shift_mission_is_excluded_from_worked(): void
+    {
+        // Same as the leave case but with an hourly mission 11:00–13:00.
+        $employee = $this->makeEmployee($this->eightToFourShift());
+
+        $log = $this->insertLog($employee, '2025-03-10', [
+            'entry_time' => '08:00:00',
+            'exit_time' => '16:00:00',
+        ], false);
+
+        $this->applyHourlyRequest($employee, PersonnelRequestType::MISSION_HOURLY, '2025-03-10 11:00:00', '2025-03-10 13:00:00');
+
+        $log = $log->fresh();
+
+        $this->assertSame(360, (int) $log->worked, '8h clocked − 2h mid-shift mission = 6h worked');
+        $this->assertSame(120, (int) $log->mission);
+        $this->assertSame(0, (int) $log->delay);
+        $this->assertSame(0, (int) $log->early_leave);
+    }
+
+    public function test_mid_shift_leave_monthly_totals(): void
+    {
+        // The corrected day flows into the monthly aggregate: present, no undertime, 2h paid leave.
+        $employee = $this->makeEmployee($this->eightToFourShift());
+
+        $this->insertLog($employee, '2025-03-10', [
+            'entry_time' => '08:00:00',
+            'exit_time' => '16:00:00',
+        ], false);
+
+        $this->applyHourlyRequest($employee, PersonnelRequestType::LEAVE_HOURLY, '2025-03-10 11:00:00', '2025-03-10 13:00:00');
+
+        $attendance = $this->service->calculateAndStore($employee->id, $this->startDate, $this->durationDays, 1404, 1);
+
+        $this->assertSame(1, $attendance->present_days);
+        $this->assertSame(120, $attendance->paid_leave);
+        $this->assertSame(0, $attendance->undertime, 'no delay/early_leave when leave is mid-shift');
+    }
+
+    // -----------------------------------------------------------------------
+    // EARLY ARRIVAL → AUTO OVERTIME, combined with mid-shift hourly leave.
+    // Auto overtime must still be computed (and capped by max_auto_overtime)
+    // even when an hourly leave was taken mid-shift.
+    // -----------------------------------------------------------------------
+
+    public function test_early_arrival_generates_auto_overtime_with_mid_shift_leave(): void
+    {
+        // Shift 08:00–16:00 (480 min, cap 120). Clock 07:30→16:00 (30 min early),
+        // leave 11:00–13:00. Early arrival → 30 min auto overtime; mid-shift leave still excluded from worked.
+        $employee = $this->makeEmployee($this->eightToFourShift());
+
+        $log = $this->insertLog($employee, '2025-03-10', [
+            'entry_time' => '07:30:00',
+            'exit_time' => '16:00:00',
+        ], false);
+
+        $this->applyHourlyRequest($employee, PersonnelRequestType::LEAVE_HOURLY, '2025-03-10 11:00:00', '2025-03-10 13:00:00');
+
+        $log = $log->fresh();
+
+        $this->assertSame(390, (int) $log->worked, 'presence 8h30m − 2h mid-shift leave = 6h30m');
+        $this->assertSame(120, (int) $log->paid_leave);
+        $this->assertSame(0, (int) $log->delay);
+        $this->assertSame(0, (int) $log->early_leave);
+        $this->assertSame(0, (int) $log->overtime);
+        $this->assertSame(30, (int) $log->auto_overtime, '30 min early arrival → 30 min auto overtime');
+    }
+
+    public function test_early_arrival_and_late_departure_auto_overtime_capped_with_mid_shift_leave(): void
+    {
+        // Shift 08:00–16:00 (480 min), max_auto_overtime = 90.
+        // Clock 07:00→17:00 (60 min early + 60 min late = 120 min raw overtime),
+        // leave 11:00–13:00. Raw overtime 120 is capped to 90; the mid-shift leave is still excluded from worked.
+        $employee = $this->makeEmployee($this->eightToFourShift(['max_auto_overtime' => 90]));
+
+        $log = $this->insertLog($employee, '2025-03-10', [
+            'entry_time' => '07:00:00',
+            'exit_time' => '17:00:00',
+        ], false);
+
+        $this->applyHourlyRequest($employee, PersonnelRequestType::LEAVE_HOURLY, '2025-03-10 11:00:00', '2025-03-10 13:00:00');
+
+        $log = $log->fresh();
+
+        $this->assertSame(480, (int) $log->worked, 'presence 10h − 2h mid-shift leave = 8h');
+        $this->assertSame(120, (int) $log->paid_leave);
+        $this->assertSame(0, (int) $log->delay);
+        $this->assertSame(0, (int) $log->early_leave);
+        $this->assertSame(0, (int) $log->overtime);
+        $this->assertSame(90, (int) $log->auto_overtime, '60 early + 60 late = 120 raw, capped at max 90');
+    }
 }
