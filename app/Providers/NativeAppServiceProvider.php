@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use Native\Desktop\Facades\Window;
 use Native\Desktop\Contracts\ProvidesPhpIni;
+use App\Models\Config;
+use Illuminate\Support\Facades\Artisan;
 
 class NativeAppServiceProvider implements ProvidesPhpIni
 {
@@ -13,6 +15,20 @@ class NativeAppServiceProvider implements ProvidesPhpIni
      */
     public function boot(): void
     {
+        // if (Config::where('seeded', true)->count() !== 1) {
+        //     Artisan::call('db:seed');
+        // }
+        try {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+
+        if (!\Illuminate\Support\Facades\Schema::hasTable('configs') || \App\Models\Config::where('seeded', true)->count() !== 1) {
+            \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
+        }
+
+        } catch (\Exception $e) {
+        logger('Database error: ' . $e->getMessage());
+        }
+
         Window::open();
     }
 
@@ -22,6 +38,11 @@ class NativeAppServiceProvider implements ProvidesPhpIni
     public function phpIni(): array
     {
         return [
+              'memory_limit' => '512M',
+            'display_errors' => '1',
+            'error_reporting' => 'E_ALL',
+            'max_execution_time' => '0',
+            'max_input_time' => '0',
         ];
     }
 }
