@@ -567,7 +567,7 @@ class WarehouseDashboardService
                 'productGroup',
                 fn (Builder $g) => $g->where('name', 'like', '%'.$groupName.'%')
             ))
-            ->when($minQuantity !== null, fn (Builder $q) => $q->where('quantity', '>', $minQuantity))
+            ->when($minQuantity !== null, fn (Builder $q) => $q->where('quantity', '>=', $minQuantity))
             ->with(['productGroup:id,name', 'incomeSubject:id', 'cogsSubject:id', 'inventorySubject:id', 'salesReturnsSubject:id'])
             ->get();
 
@@ -712,7 +712,7 @@ class WarehouseDashboardService
         ];
 
         if ($minQuantity !== null) {
-            $summary[] = ['label' => __('Quantity greater than'), 'value' => formatNumber($minQuantity)];
+            $summary[] = ['label' => __('Min quantity'), 'value' => formatNumber($minQuantity)];
         }
 
         $summary[] = ['label' => __('Period'), 'value' => convertToFarsi($fromJ).' - '.convertToFarsi($toJ)];

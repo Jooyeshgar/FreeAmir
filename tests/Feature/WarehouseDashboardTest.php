@@ -171,6 +171,33 @@ class WarehouseDashboardTest extends TestCase
         $this->assertEquals($lowStock->id, $data['statusFilteredItems']->first()['id']);
     }
 
+    public function test_report_min_quantity_filter_is_inclusive(): void
+    {
+        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId, 'name' => 'Widgets']);
+
+        $atThreshold = Product::factory()->withGroup($group)->withSubjects()->create([
+            'company_id' => $this->companyId,
+            'code' => 'R-EQ',
+            'name' => 'At Threshold',
+            'quantity' => 10,
+            'average_cost' => 100,
+            'selling_price' => 150,
+        ]);
+        Product::factory()->withGroup($group)->withSubjects()->create([
+            'company_id' => $this->companyId,
+            'code' => 'R-LT',
+            'name' => 'Below Threshold',
+            'quantity' => 9,
+            'average_cost' => 100,
+            'selling_price' => 150,
+        ]);
+
+        $rows = app(WarehouseDashboardService::class)->report(['min_quantity' => 10])['rows'];
+
+        $this->assertCount(1, $rows);
+        $this->assertEquals($atThreshold->name, $rows->first()['name']);
+    }
+
     private function grant(string ...$permissions): void
     {
         $this->user->givePermissionTo(
