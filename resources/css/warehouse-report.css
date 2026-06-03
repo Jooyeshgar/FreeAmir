@@ -1,0 +1,116 @@
+@page {
+    header: html_reportHeader;
+    footer: html_reportFooter;
+}
+
+body {
+    color: #1e293b;
+}
+
+.report-header {
+    width: 100%;
+}
+
+.report-header .title {
+    font-size: 12pt;
+    font-weight: bold;
+    width: 34%;
+    text-align: center;
+    color: #0f172a;
+}
+
+.report-header .date {
+    font-size: 7pt;
+    width: 33%;
+    text-align: left;
+    color: #475569;
+}
+
+.report-header .company {
+    font-size: 10pt;
+    width: 33%;
+    font-weight: bold;
+    text-align: right;
+}
+
+.filters {
+    font-size: 7pt;
+    margin-top: 4pt;
+    margin-bottom: 8pt;
+    color: #475569;
+    background-color: #f1f5f9;
+    padding: 2pt;
+}
+
+.filters .chip {
+    font-weight: bold;
+    color: #0f172a;
+}
+
+table.report {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+table.report thead th {
+    background-color: #334155;
+    color: #ffffff;
+    border: 0.5pt solid #303d50;
+    padding: 2pt;
+    text-align: center;
+    font-weight: bold;
+    font-size: 8pt;
+}
+
+table.report tbody td {
+    border: 0.4pt solid #f1f5f9;
+    padding: 2pt;
+    font-size: 8pt;
+    text-align: center;
+}
+
+table.report .col-name,
+table.report .col-category {
+    width: 15%;
+    text-align: right;
+}
+
+table.report .col-desc {
+    width: 30%;
+}
+
+table.report .col-index {
+    font-size: 6pt;
+    width: 6mm;
+}
+
+table.report th.col-index {
+    text-rotate: 90;
+}
+
+table.report tbody tr.total-row td {
+    font-weight: bold;
+    font-size: 7pt;
+    background-color: #e2e8f0;
+    border-top: 1pt solid #f1f5f9;
+}
+
+table.report tbody tr.total-row td.total-label {
+    text-align: center;
+}
+
+.empty {
+    text-align: center;
+    padding: 5pt;
+    color: #334155;
+}
+
+.page-footer {
+    border-top: 1pt solid #f1f5f9;
+    width: 100%;
+    font-size: 7pt;
+    text-align: center;
+    padding: 2pt;
+    color: #475569;
+}

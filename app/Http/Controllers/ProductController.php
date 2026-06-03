@@ -8,12 +8,128 @@ use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Services\ProductService;
+use App\Services\WarehouseDashboardService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use PDF;
 
 class ProductController extends Controller
 {
     public function __construct(
         private readonly ProductService $productService,
     ) {}
+
+    public function report(Request $request, WarehouseDashboardService $reportService)
+    {
+        $validated = $request->validate([
+            'name' => ['nullable', 'string'],
+            'group_name' => ['nullable', 'string'],
+            'min_quantity' => ['nullable', 'numeric'],
+            'cols_submitted' => ['nullable'],
+            'columns' => ['nullable', 'array'],
+            'columns.*' => ['string'],
+        ]);
+
+        $data = $reportService->report($validated);
+        $layout = $this->reportColumnLayout($data['columns']);
+        $data = array_merge($data, $layout);
+        $totals = $this->reportTotals($data['rows'], $layout['numeric']);
+        $data['totalRow'] = $this->reportTotalRow($layout['visible'], $totals, $layout['addDesc']);
+
+        $config = [
+            'format' => 'A4',
+            'orientation' => $data['portrait'] ? 'P' : 'L',
+            'directionality' => 'rtl',
+            'margin_top' => 28,
+            'margin_bottom' => 18,
+            'margin_header' => 6,
+            'margin_footer' => 6,
+            'defaultPageNumStyle' => 'persian',
+        ];
+
+        return PDF::loadView('warehouse.report-pdf', $data, [], $config)->stream('warehouse-report.pdf');
+    }
+
+    private function reportColumnLayout(array $columns): array
+    {
+        $order = [
+            'name', 'code', 'category', 'inbound', 'outbound', 'stock',
+            'selling_price', 'cost_of_goods', 'last_item_cost', 'sales_profit',
+            'revenue_account', 'cogs_account', 'inventory_account', 'sales_return_account',
+        ];
+        $fixed = ['name', 'inbound', 'outbound', 'stock'];
+        $numeric = [
+            'inbound', 'outbound', 'stock', 'selling_price', 'cost_of_goods',
+            'last_item_cost', 'sales_profit', 'revenue_account', 'cogs_account',
+            'inventory_account', 'sales_return_account',
+        ];
+
+        $visible = array_values(array_filter(
+            $order,
+            fn ($c) => in_array($c, $fixed, true) || in_array($c, $columns, true),
+        ));
+
+        $count = count($visible);
+
+        return [
+            'visible' => $visible,
+            'numeric' => $numeric,
+            'addDesc' => $count < 9,
+            'portrait' => $count < 6,
+        ];
+    }
+
+    private function reportTotals(Collection $rows, array $numeric): array
+    {
+        $perUnit = ['selling_price', 'cost_of_goods', 'last_item_cost'];
+        $totals = [];
+
+        foreach ($numeric as $col) {
+            if (in_array($col, $perUnit, true)) {
+                continue;
+            }
+
+            $totals[$col] = (float) $rows->sum($col);
+        }
+
+        return $totals;
+    }
+
+    private function reportTotalRow(array $visible, array $totals, bool $addDesc): array
+    {
+        $slots = array_merge(['index'], $visible, $addDesc ? ['desc'] : []);
+
+        $segments = [];
+        $emptyRun = 0;
+        $labelUsed = false;
+
+        $flush = function () use (&$segments, &$emptyRun, &$labelUsed) {
+            if ($emptyRun === 0) {
+                return;
+            }
+
+            $segments[] = [
+                'type' => 'merge',
+                'colspan' => $emptyRun,
+                'label' => $labelUsed ? '' : __('Total'),
+            ];
+            $labelUsed = true;
+            $emptyRun = 0;
+        };
+
+        foreach ($slots as $slot) {
+            if (array_key_exists($slot, $totals)) {
+                $flush();
+                $segments[] = ['type' => 'value', 'col' => $slot, 'value' => $totals[$slot]];
+            } else {
+                $emptyRun++;
+            }
+        }
+
+        $flush();
+
+        return $segments;
+    }
 
     public function index()
     {
@@ -30,7 +146,11 @@ class ProductController extends Controller
             });
         }
 
-        $products = $query->paginate(12);
+        if (request()->filled('min_quantity') && is_numeric(request('min_quantity'))) {
+            $query->where('quantity', '>=', (float) request('min_quantity'));
+        }
+
+        $products = $query->paginate(12)->withQueryString();
 
         $products->transform(function ($product) {
             $product->unapprovedQuantity = $this->productService->unapprovedQuantity($product);
@@ -110,7 +230,7 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with('success', __('Product deleted successfully.'));
     }
 
-    public function searchProductGroup(\Illuminate\Http\Request $request)
+    public function searchProductGroup(Request $request)
     {
         $validated = $request->validate([
             'q' => 'required|string|max:100',

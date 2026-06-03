@@ -4,10 +4,76 @@
         <div class="card-body">
             <div class="card-actions">
                 <a href="{{ route('products.create') }}" class="btn btn-primary">{{ __('Create product') }}</a>
+                @can('products.report')
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('report-pdf-modal').showModal()">
+                        {{ __('Warehouse Report') }}
+                    </button>
+                @endcan
             </div>
 
+            @can('products.report')
+                @php
+                    $optionalColumns = [
+                        'category' => __('Category'),
+                        'code' => __('Product code'),
+                        'selling_price' => __('Sale price'),
+                        'cost_of_goods' => __('Cost of goods'),
+                        'last_item_cost' => __('Last item cost'),
+                        'sales_profit' => __('Sales profit'),
+                        'revenue_account' => __('Revenue account amount'),
+                        'cogs_account' => __('COGS account amount'),
+                        'inventory_account' => __('Inventory account amount'),
+                        'sales_return_account' => __('Sales return account amount'),
+                    ];
+                @endphp
+                <dialog id="report-pdf-modal" class="modal">
+                    <div class="modal-box max-w-2xl">
+                        <h3 class="text-lg font-bold">{{ __('Warehouse Report') }}</h3>
+
+                        <form action="{{ route('products.report') }}" method="GET" target="_blank">
+                            <x-input name="name" value="{{ request('name') }}" hidden />
+                            <x-input name="group_name" value="{{ request('group_name') }}" hidden />
+                            <x-input name="min_quantity" value="{{ request('min_quantity') }}" hidden />
+                            <x-input name="cols_submitted" value="1" hidden />
+
+                            <div class="text-info mt-2">
+                                {{ __('The columns :columns are always reported.', ['columns' => __('Product name') . '، ' . __('Inbound quantity') . '، ' . __('Outbound quantity') . '، ' . __('Current stock')]) }}
+                            </div>
+
+                            <div class="mt-4">
+                                <div class="mb-2 flex items-center justify-between">
+                                    <span class="text-sm font-semibold">{{ __('Optional columns') }}</span>
+                                    <label class="flex cursor-pointer items-center gap-2 text-xs">
+                                        <input type="checkbox" id="report-cols-toggle" class="checkbox checkbox-sm" checked
+                                            onchange="document.querySelectorAll('#report-pdf-modal input[name=&quot;columns[]&quot;]').forEach(cb => cb.checked = this.checked)">
+                                        <span>{{ __('Select All') }}</span>
+                                    </label>
+                                </div>
+                                <div class="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                                    @foreach ($optionalColumns as $key => $label)
+                                        <label class="flex cursor-pointer items-center gap-2">
+                                            <input type="checkbox" name="columns[]" value="{{ $key }}" class="checkbox checkbox-sm" checked
+                                                onchange="document.getElementById('report-cols-toggle').checked = document.querySelectorAll('#report-pdf-modal input[name=&quot;columns[]&quot;]:checked').length === document.querySelectorAll('#report-pdf-modal input[name=&quot;columns[]&quot;]').length">
+                                            <span class="label-text">{{ $label }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </div>
+
+                            <div class="modal-action">
+                                <button type="button" class="btn btn-ghost" onclick="document.getElementById('report-pdf-modal').close()">{{ __('Cancel') }}</button>
+                                <button type="submit" class="btn btn-primary">{{ __('Download PDF') }}</button>
+                            </div>
+                        </form>
+                    </div>
+                    <form method="dialog" class="modal-backdrop">
+                        <button aria-label="close"></button>
+                    </form>
+                </dialog>
+            @endcan
+
             <form action="{{ route('products.index') }}" method="GET">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full md:w-2/5">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 w-full md:w-3/5">
                     <div class="relative">
                         <span class="absolute inset-y-0 left-2 flex items-center text-gray-400 text-sm">
                             <i class="fa-solid fa-box"></i>
@@ -20,6 +86,13 @@
                             <i class="fa-solid fa-layer-group"></i>
                         </span>
                         <x-input type="text" name="group_name" value="{{ request('group_name') }}" placeholder="{{ __('Product Group Name') }}" />
+                    </div>
+
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-2 flex items-center text-gray-400 text-sm">
+                            <i class="fa-solid fa-warehouse"></i>
+                        </span>
+                        <x-input type="number" name="min_quantity" value="{{ request('min_quantity') }}" placeholder="{{ __('Min quantity') }}" />
                     </div>
 
                     <div class="flex items-center">

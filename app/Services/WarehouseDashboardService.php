@@ -4,15 +4,32 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Models\Company;
 use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\ProductGroup;
+use App\Models\Transaction;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class WarehouseDashboardService
 {
+    public function __construct(private readonly ProductService $productService) {}
+
+    public const OPTIONAL_COLUMNS = [
+        'category',
+        'code',
+        'selling_price',
+        'cost_of_goods',
+        'last_item_cost',
+        'sales_profit',
+        'revenue_account',
+        'cogs_account',
+        'inventory_account',
+        'sales_return_account',
+    ];
+
     private const PERIOD_MONTH = 'month';
 
     private const PERIOD_QUARTER = 'quarter';
@@ -536,5 +553,191 @@ class WarehouseDashboardService
         $toJ = toEnglish(jdate('Y/m/d', $to->timestamp));
 
         return $label.' ('.$fromJ.' - '.$toJ.')';
+    }
+
+    public function report(array $rawFilters = []): array
+    {
+        $name = trim((string) ($rawFilters['name'] ?? ''));
+        $groupName = trim((string) ($rawFilters['group_name'] ?? ''));
+        $minQuantity = is_numeric($rawFilters['min_quantity'] ?? null) ? (float) $rawFilters['min_quantity'] : null;
+        $columns = $this->normalizeColumns($rawFilters);
+
+        $products = Product::query()->orderBy('code')->when($name !== '', fn (Builder $q) => $q->where('name', 'like', '%'.$name.'%'))
+            ->when($groupName !== '', fn (Builder $q) => $q->whereHas(
+                'productGroup',
+                fn (Builder $g) => $g->where('name', 'like', '%'.$groupName.'%')
+            ))
+            ->when($minQuantity !== null, fn (Builder $q) => $q->where('quantity', '>', $minQuantity))
+            ->with(['productGroup:id,name', 'incomeSubject:id', 'cogsSubject:id', 'inventorySubject:id', 'salesReturnsSubject:id'])
+            ->get();
+
+        [$fyStart, $now] = $this->fiscalYearToDate();
+        $movement = $this->fiscalYearMovement($fyStart, $now, $products->pluck('id')->all());
+        $subjectTotals = $this->subjectTransactionTotals($products);
+        $needsLastCost = in_array('last_item_cost', $columns, true);
+
+        $rows = $products->map(function (Product $p) use ($movement, $subjectTotals, $needsLastCost) {
+            $m = $movement[$p->id] ?? ['in' => 0.0, 'out' => 0.0];
+            $revenue = abs($subjectTotals[$p->income_subject_id] ?? 0.0);
+            $cogs = abs($subjectTotals[$p->cogs_subject_id] ?? 0.0);
+            $inventory = abs($subjectTotals[$p->inventory_subject_id] ?? 0.0);
+            $salesReturn = abs($subjectTotals[$p->sales_returns_subject_id] ?? 0.0);
+
+            return [
+                'name' => $p->name,
+                'inbound' => $m['in'],
+                'outbound' => $m['out'],
+                'stock' => (float) $p->quantity,
+                'category' => $p->productGroup?->name ?? '-',
+                'code' => $p->code,
+                'selling_price' => (float) $p->selling_price,
+                'cost_of_goods' => (float) $p->average_cost,
+                'last_item_cost' => $needsLastCost ? (float) $this->productService->lastApprovedBuyInvoiceItemCOG($p) : 0.0,
+                'sales_profit' => $revenue - $cogs,
+                'revenue_account' => $revenue,
+                'cogs_account' => $cogs,
+                'inventory_account' => $inventory,
+                'sales_return_account' => $salesReturn,
+            ];
+        })->values();
+
+        return [
+            'columns' => $columns,
+            'columnLabels' => $this->columnLabels(),
+            'rows' => $rows,
+            'filterSummary' => $this->reportFilterSummary($name, $groupName, $minQuantity, $fyStart, $now),
+            'company' => Company::find(getActiveCompany()),
+            'logo' => $this->reportLogo(),
+            'generatedAtDate' => toEnglish(jdate('Y/m/d', $now->timestamp)),
+            'generatedAtTime' => toEnglish(jdate('H:i', $now->timestamp)),
+        ];
+    }
+
+    private function normalizeColumns(array $raw): array
+    {
+        if (! isset($raw['cols_submitted'])) {
+            return self::OPTIONAL_COLUMNS;
+        }
+
+        $requested = (array) ($raw['columns'] ?? []);
+
+        return array_values(array_intersect(self::OPTIONAL_COLUMNS, $requested));
+    }
+
+    private function columnLabels(): array
+    {
+        return [
+            'name' => __('Product name'),
+            'inbound' => __('Inbound'),
+            'outbound' => __('Outbound'),
+            'stock' => __('Stock'),
+            'category' => __('Category'),
+            'code' => __('Product code'),
+            'selling_price' => __('Sale price'),
+            'cost_of_goods' => __('Cost of goods'),
+            'last_item_cost' => __('Last item cost'),
+            'sales_profit' => __('Sales profit'),
+            'revenue_account' => __('Revenue account amount'),
+            'cogs_account' => __('COGS account amount'),
+            'inventory_account' => __('Inventory account amount'),
+            'sales_return_account' => __('Sales return account amount'),
+        ];
+    }
+
+    private function fiscalYearToDate(): array
+    {
+        $year = (int) (config('active-company-fiscal-year') ?? toEnglish(jdate('Y')));
+        $from = Carbon::parse(jalali_to_gregorian($year, 1, 1, '/'))->startOfDay();
+
+        return [$from, Carbon::now()->endOfDay()];
+    }
+
+    private function fiscalYearMovement(Carbon $from, Carbon $to, array $productIds): array
+    {
+        if (empty($productIds)) {
+            return [];
+        }
+
+        $items = InvoiceItem::query()->where('itemable_type', Product::class)->whereIn('itemable_id', $productIds)
+            ->whereHas('invoice', function (Builder $q) use ($from, $to) {
+                $q->where('status', InvoiceStatus::APPROVED)
+                    ->whereIn('invoice_type', array_merge(self::STOCK_IN_TYPES, self::STOCK_OUT_TYPES))
+                    ->whereBetween('date', [$from->toDateString(), $to->toDateString()]);
+            })->with('invoice:id,invoice_type')->get(['id', 'invoice_id', 'itemable_id', 'quantity']);
+
+        $map = [];
+
+        foreach ($items as $item) {
+            $productId = (int) $item->itemable_id;
+            $map[$productId] ??= ['in' => 0.0, 'out' => 0.0];
+
+            $type = $item->invoice->invoice_type;
+            $qty = (float) $item->quantity;
+
+            if (in_array($type, self::STOCK_IN_TYPES, true)) {
+                $map[$productId]['in'] += $qty;
+            } elseif (in_array($type, self::STOCK_OUT_TYPES, true)) {
+                $map[$productId]['out'] += $qty;
+            }
+        }
+
+        return $map;
+    }
+
+    private function subjectTransactionTotals(Collection $products): array
+    {
+        $subjectIds = $products->flatMap(fn (Product $p) => [
+            $p->income_subject_id,
+            $p->cogs_subject_id,
+            $p->inventory_subject_id,
+            $p->sales_returns_subject_id,
+        ])->filter()->unique()->values()->all();
+
+        if (empty($subjectIds)) {
+            return [];
+        }
+
+        return Transaction::query()->whereIn('subject_id', $subjectIds)->selectRaw('subject_id, SUM(value) as total')
+            ->groupBy('subject_id')->pluck('total', 'subject_id')->map(fn ($value) => (float) $value)->all();
+    }
+
+    private function reportFilterSummary(string $name, string $groupName, ?float $minQuantity, Carbon $from, Carbon $to): array
+    {
+        $fromJ = toEnglish(jdate('Y/m/d', $from->timestamp));
+        $toJ = toEnglish(jdate('Y/m/d', $to->timestamp));
+
+        $summary = [
+            ['label' => __('Product Name'), 'value' => $name !== '' ? $name : __('All Products')],
+            ['label' => __('Product Group Name'), 'value' => $groupName !== '' ? $groupName : __('All Groups')],
+        ];
+
+        if ($minQuantity !== null) {
+            $summary[] = ['label' => __('Quantity greater than'), 'value' => formatNumber($minQuantity)];
+        }
+
+        $summary[] = ['label' => __('Period'), 'value' => convertToFarsi($fromJ).' - '.convertToFarsi($toJ)];
+
+        return $summary;
+    }
+
+    private function reportLogo(): ?string
+    {
+        $company = Company::find(getActiveCompany());
+
+        $candidates = [];
+        if ($company?->logo) {
+            $candidates[] = storage_path('app/public/'.$company->logo);
+        }
+        $candidates[] = public_path('images/logo.png');
+
+        foreach ($candidates as $path) {
+            if (is_file($path)) {
+                $mime = str_ends_with(strtolower($path), '.svg') ? 'image/svg+xml' : 'image/png';
+
+                return 'data:'.$mime.';base64,'.base64_encode(file_get_contents($path));
+            }
+        }
+
+        return null;
     }
 }
