@@ -1434,9 +1434,11 @@ class FiscalYearService
     protected static function _createSubject(array $subjectData, int $targetYearId, array &$mapping): Subject
     {
         $newSubject = new Subject;
-        $newSubject->fill(collect($subjectData)->except(['id', 'parent_id', 'company_id', '_lft', '_rgt'])->toArray());
+        $newSubject->fill(collect($subjectData)->except(['id', 'parent_id', 'company_id', '_lft', '_rgt', 'subjectable_type', 'subjectable_id'])->toArray());
         $newSubject->company_id = $targetYearId;
         $newSubject->parent_id = ($subjectData['parent_id'] == 0) ? null : $mapping[$subjectData['parent_id']];
+        $newSubject->subjectable_type = null;
+        $newSubject->subjectable_id = null;
         $newSubject->save();
 
         return $newSubject;
