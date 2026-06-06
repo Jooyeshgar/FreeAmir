@@ -1473,6 +1473,7 @@
     "Return from Sell": "بازگشت از فروش",
     "Return invoice is linked to original invoice (:invoice)": "این فاکتور برگشتی به فاکتور اصلی (:invoice) مرتبط است",
     "Returned Bought Products Quantity": "تعداد محصولات بازگشتی از خرید",
+    "Returned Bought Services Quantity": "تعداد خدمات بازگشتی از خرید",
     "Returned Invoice": "فاکتور بازگشتی",
     "Returned Items": "موارد بازگشتی",
     "Returned Sold Products Quantity": "تعداد محصولات بازگشتی از فروش",
