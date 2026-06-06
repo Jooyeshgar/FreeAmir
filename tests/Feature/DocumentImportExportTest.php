@@ -98,7 +98,7 @@ class DocumentImportExportTest extends TestCase
         $response = $this->get(route('documents.export'));
         $response->assertOk();
 
-        foreach (['doc_title', 'doc_type', 'doc_status', 'subject_moein_code', 'subject_tafsili_code', 'transaction_desc'] as $col) {
+        foreach (['doc_title', 'doc_type', 'doc_status', 'subject_moein_code', 'subject_root_code', 'transaction_desc'] as $col) {
             $response->assertSee('col-'.$col);
         }
     }
