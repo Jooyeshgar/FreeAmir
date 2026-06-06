@@ -38,7 +38,7 @@
                 :suffix="__('Rial')"
                 :detail="__('Receipts from customers')"
                 tone="info" />
-            <a href="{{ route('customers.index', ['debt' => 1]) }}" class="block focus:outline-none">
+            <a href="{{ route('customers.index', ['balance' => 'debt']) }}" class="block focus:outline-none">
                 <x-metric-card
                     :title="__('Outstanding (unpaid)')"
                     :value="$metrics['totalUnpaid']"
@@ -46,7 +46,7 @@
                     :detail="__('Total receivable from customers')"
                     tone="error" />
             </a>
-            <a href="{{ route('customers.index', ['debt' => 1]) }}" class="block focus:outline-none">
+            <a href="{{ route('customers.index', ['balance' => 'debt']) }}" class="block focus:outline-none">
                 <x-metric-card
                     :title="__('Customers with debt')"
                     :value="$metrics['unpaidCustomersCount']"
