@@ -23,7 +23,7 @@
         </div>
     @endif
     <input {{ $attributes->whereStartsWith('x-')->merge() }} title="{{ $title }}" type="{{ $type }}" name="{{ $name }}" id="{{ $name }}"
-        value="{{ $value ?? '' }}" placeholder="{{ $placeholder ?? '' }}" class="input {{ $bordered ? '' : 'input-ghost' }} w-full max-w-full max-h-10"
+        value="{{ $value ?? '' }}" placeholder="{{ $placeholder ?? '' }}" class="input {{ $bordered ? 'border-slate-400' : 'input-ghost' }} w-full max-w-full max-h-10"
         {{ $required ? 'required' : '' }} {{ $disabled ? 'disabled' : '' }} {!! $model_name ? "x-model=\"$model_name\"" : '' !!} />
 
     @if ($errors->first($name))
