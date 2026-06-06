@@ -12,8 +12,8 @@
                     <p class="text-right">{{ __('Account') }}: {{ $subject->formattedName() }}</p>
                 </div>
                 <div class="w-1/4 text-sm ">
-                    <p>تاریخ گزارش: {{ formatDate(now()) }}</p>
-                    <p>صفحه: {{ formatNumber($current) }} از {{ formatNumber($pagecount) }}</p>
+                    <p>{{ __('Report Date') }}: {{ formatDate(now()) }}</p>
+                    <p>{{ __('Page :current of :total', ['current' => formatNumber($current), 'total' => formatNumber($pagecount)]) }}</p>
                 </div>
             </div>
             <table class="w-full border-collapse px-4 border-black max-w-full table-fixed break-inside-avoid-page">
@@ -41,8 +41,8 @@
                         <p class="text-right">{{ __('Account') }}: {{ $subject->formattedName() }}</p>
                     </div>
                     <div class="w-1/4 text-sm ">
-                        <p>تاریخ گزارش: {{ formatDate(now()) }}</p>
-                        <p>صفحه: {{ formatNumber($current) }} از {{ formatNumber($pagecount) }}</p>
+                        <p>{{ __('Report Date') }}: {{ formatDate(now()) }}</p>
+                        <p>{{ __('Page :current of :total', ['current' => formatNumber($current), 'total' => formatNumber($pagecount)]) }}</p>
                     </div>
                 </div>
                 <table class="w-full border-collapse px-4 border-black max-w-full table-fixed break-inside-avoid-page">
