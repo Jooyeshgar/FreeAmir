@@ -174,34 +174,32 @@
                 <div class="divider text-lg font-semibold">{{ __('Items') }}</div>
 
                 @if ($ancillaryCost->items->isNotEmpty())
-                    <div class="overflow-x-auto shadow-lg rounded-lg">
-                        <table class="table table-zebra w-full">
-                            <thead class="bg-base-300">
-                                <tr>
-                                    <th class="px-4 py-3">#</th>
-                                    <th class="px-4 py-3">{{ __('Product') }}</th>
-                                    <th class="px-4 py-3 text-right">{{ __('Amount') }}</th>
+                    <table class="table w-full">
+                        <thead class="bg-base-300">
+                            <tr>
+                                <th class="px-4 py-3">#</th>
+                                <th class="px-4 py-3">{{ __('Product') }}</th>
+                                <th class="px-4 py-3 text-right">{{ __('Amount') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($ancillaryCost->items as $index => $item)
+                                <tr class="hover:bg-base-300">
+                                    <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
+                                    <td class="px-4 py-3">
+                                        @if ($item->product)
+                                            <a href="{{ route('products.show', $item->product) }}" class="link link-hover link-primary">
+                                                {{ $item->product->name }}
+                                            </a>
+                                        @else
+                                            <span class="text-gray-500">{{ __('Removed product') }}</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3 text-right">{{ formatNumber((float) ($item->amount ?? 0)) }}</td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                @foreach ($ancillaryCost->items as $index => $item)
-                                    <tr class="hover:bg-base-300">
-                                        <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
-                                        <td class="px-4 py-3">
-                                            @if ($item->product)
-                                                <a href="{{ route('products.show', $item->product) }}" class="link link-hover link-primary">
-                                                    {{ $item->product->name }}
-                                                </a>
-                                            @else
-                                                <span class="text-gray-500">{{ __('Removed product') }}</span>
-                                            @endif
-                                        </td>
-                                        <td class="px-4 py-3 text-right">{{ formatNumber((float) ($item->amount ?? 0)) }}</td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
+                            @endforeach
+                        </tbody>
+                    </table>
                 @else
                     <div class="alert bg-base-200 shadow-sm">
                         <div>

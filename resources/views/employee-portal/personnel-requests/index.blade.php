@@ -97,7 +97,7 @@
                                         <a href="{{ route('employee-portal.personnel-requests.edit', ['tab' => $tab, 'personnel_request' => $req->id]) }}" class="btn btn-sm btn-info">
                                             {{ __('Edit') }}
                                         </a>
-                                        <form action="{{ route('employee-portal.personnel-requests.destroy', ['tab' => $tab, 'personnel_request' => $req->id]) }}" method="POST" class="inline-block m-0"
+                                        <form action="{{ route('employee-portal.personnel-requests.destroy', ['tab' => $tab, 'personnel_request' => $req->id]) }}" method="POST" class="inline-block"
                                             onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                             @csrf
                                             @method('DELETE')

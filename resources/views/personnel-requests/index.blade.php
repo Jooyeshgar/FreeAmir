@@ -161,7 +161,7 @@
                                     @endif
                                     @if($personnelRequest->status !== 'approved')
                                         @can('hr.personnel-requests.delete')
-                                            <form action="{{ route('hr.personnel-requests.destroy', ['tab' => $tab, 'personnel_request' => $personnelRequest->id]) }}" method="POST" class="inline-block m-0"
+                                            <form action="{{ route('hr.personnel-requests.destroy', ['tab' => $tab, 'personnel_request' => $personnelRequest->id]) }}" method="POST" class="inline-block"
                                                 onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                                 @csrf
                                                 @method('DELETE')

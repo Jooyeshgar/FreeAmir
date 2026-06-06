@@ -11,7 +11,7 @@
                 <fieldset id="companyForm" class="grid grid-cols-2 gap-6 border p-5 my-3">
                     <legend>{{ __('company') }}</legend>
                     <div class="col-span-2 md:col-span-1">
-                        <x-input name="name" id="name" title="{{ __('Company name') }}" :value="old('code', $company->name ?? '')" required />
+                        <x-input name="name" id="name" title="{{ __('Company name') }}" :value="old('name', $company->name ?? '')" required />
                     </div>
                     <div class="col-span-2 md:col-span-1">
                         <x-input name="fiscal_year" id="fiscal_year" title="{{ __('Fiscal year') }}" :value="old('fiscal_year', $company->fiscal_year ?? '')" required />
