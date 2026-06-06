@@ -62,7 +62,7 @@
 
                             <div class="modal-action">
                                 <button type="button" class="btn btn-ghost" onclick="document.getElementById('report-pdf-modal').close()">{{ __('Cancel') }}</button>
-                                <button type="submit" class="btn btn-primary">{{ __('Download PDF') }}</button>
+                                <button type="submit" class="btn btn-primary">{{ __('Print PDF') }}</button>
                             </div>
                         </form>
                     </div>

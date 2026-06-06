@@ -601,7 +601,7 @@ class WarehouseDashboardService
             ];
         })->values();
 
-        return [
+        $data = [
             'columns' => $columns,
             'columnLabels' => $this->columnLabels(),
             'rows' => $rows,
@@ -611,6 +611,94 @@ class WarehouseDashboardService
             'generatedAtDate' => toEnglish(jdate('Y/m/d', $now->timestamp)),
             'generatedAtTime' => toEnglish(jdate('H:i', $now->timestamp)),
         ];
+
+        $layout = $this->reportColumnLayout($data['columns']);
+        $data = array_merge($data, $layout);
+        $totals = $this->reportTotals($data['rows'], $layout['numeric']);
+        $data['totalRow'] = $this->reportTotalRow($layout['visible'], $totals, $layout['addDesc']);
+
+        return $data;
+    }
+
+    private function reportColumnLayout(array $columns): array
+    {
+        $order = [
+            'name', 'code', 'category', 'inbound', 'outbound', 'stock',
+            'selling_price', 'cost_of_goods', 'last_item_cost', 'sales_profit',
+            'revenue_account', 'cogs_account', 'inventory_account', 'sales_return_account',
+        ];
+        $fixed = ['name', 'inbound', 'outbound', 'stock'];
+        $numeric = [
+            'inbound', 'outbound', 'stock', 'selling_price', 'cost_of_goods',
+            'last_item_cost', 'sales_profit', 'revenue_account', 'cogs_account',
+            'inventory_account', 'sales_return_account',
+        ];
+
+        $visible = array_values(array_filter(
+            $order,
+            fn ($c) => in_array($c, $fixed, true) || in_array($c, $columns, true),
+        ));
+
+        $count = count($visible);
+
+        return [
+            'visible' => $visible,
+            'numeric' => $numeric,
+            'addDesc' => $count < 9,
+            'portrait' => $count < 6,
+        ];
+    }
+
+    private function reportTotals(Collection $rows, array $numeric): array
+    {
+        $perUnit = ['selling_price', 'cost_of_goods', 'last_item_cost'];
+        $totals = [];
+
+        foreach ($numeric as $col) {
+            if (in_array($col, $perUnit, true)) {
+                continue;
+            }
+
+            $totals[$col] = (float) $rows->sum($col);
+        }
+
+        return $totals;
+    }
+
+    private function reportTotalRow(array $visible, array $totals, bool $addDesc): array
+    {
+        $slots = array_merge(['index'], $visible, $addDesc ? ['desc'] : []);
+
+        $segments = [];
+        $emptyRun = 0;
+        $labelUsed = false;
+
+        $flush = function () use (&$segments, &$emptyRun, &$labelUsed) {
+            if ($emptyRun === 0) {
+                return;
+            }
+
+            $segments[] = [
+                'type' => 'merge',
+                'colspan' => $emptyRun,
+                'label' => $labelUsed ? '' : __('Total'),
+            ];
+            $labelUsed = true;
+            $emptyRun = 0;
+        };
+
+        foreach ($slots as $slot) {
+            if (array_key_exists($slot, $totals)) {
+                $flush();
+                $segments[] = ['type' => 'value', 'col' => $slot, 'value' => $totals[$slot]];
+            } else {
+                $emptyRun++;
+            }
+        }
+
+        $flush();
+
+        return $segments;
     }
 
     private function normalizeColumns(array $raw): array

@@ -10,16 +10,16 @@ use App\Models\ProductGroup;
 use App\Services\ProductService;
 use App\Services\WarehouseDashboardService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use PDF;
 
 class ProductController extends Controller
 {
     public function __construct(
         private readonly ProductService $productService,
+        private readonly WarehouseDashboardService $warehouseDashboardService
     ) {}
 
-    public function report(Request $request, WarehouseDashboardService $reportService)
+    public function report(Request $request)
     {
         $validated = $request->validate([
             'name' => ['nullable', 'string'],
@@ -30,11 +30,7 @@ class ProductController extends Controller
             'columns.*' => ['string'],
         ]);
 
-        $data = $reportService->report($validated);
-        $layout = $this->reportColumnLayout($data['columns']);
-        $data = array_merge($data, $layout);
-        $totals = $this->reportTotals($data['rows'], $layout['numeric']);
-        $data['totalRow'] = $this->reportTotalRow($layout['visible'], $totals, $layout['addDesc']);
+        $data = $this->warehouseDashboardService->report($validated);
 
         $config = [
             'format' => 'A4',
@@ -48,87 +44,6 @@ class ProductController extends Controller
         ];
 
         return PDF::loadView('warehouse.report-pdf', $data, [], $config)->stream('warehouse-report.pdf');
-    }
-
-    private function reportColumnLayout(array $columns): array
-    {
-        $order = [
-            'name', 'code', 'category', 'inbound', 'outbound', 'stock',
-            'selling_price', 'cost_of_goods', 'last_item_cost', 'sales_profit',
-            'revenue_account', 'cogs_account', 'inventory_account', 'sales_return_account',
-        ];
-        $fixed = ['name', 'inbound', 'outbound', 'stock'];
-        $numeric = [
-            'inbound', 'outbound', 'stock', 'selling_price', 'cost_of_goods',
-            'last_item_cost', 'sales_profit', 'revenue_account', 'cogs_account',
-            'inventory_account', 'sales_return_account',
-        ];
-
-        $visible = array_values(array_filter(
-            $order,
-            fn ($c) => in_array($c, $fixed, true) || in_array($c, $columns, true),
-        ));
-
-        $count = count($visible);
-
-        return [
-            'visible' => $visible,
-            'numeric' => $numeric,
-            'addDesc' => $count < 9,
-            'portrait' => $count < 6,
-        ];
-    }
-
-    private function reportTotals(Collection $rows, array $numeric): array
-    {
-        $perUnit = ['selling_price', 'cost_of_goods', 'last_item_cost'];
-        $totals = [];
-
-        foreach ($numeric as $col) {
-            if (in_array($col, $perUnit, true)) {
-                continue;
-            }
-
-            $totals[$col] = (float) $rows->sum($col);
-        }
-
-        return $totals;
-    }
-
-    private function reportTotalRow(array $visible, array $totals, bool $addDesc): array
-    {
-        $slots = array_merge(['index'], $visible, $addDesc ? ['desc'] : []);
-
-        $segments = [];
-        $emptyRun = 0;
-        $labelUsed = false;
-
-        $flush = function () use (&$segments, &$emptyRun, &$labelUsed) {
-            if ($emptyRun === 0) {
-                return;
-            }
-
-            $segments[] = [
-                'type' => 'merge',
-                'colspan' => $emptyRun,
-                'label' => $labelUsed ? '' : __('Total'),
-            ];
-            $labelUsed = true;
-            $emptyRun = 0;
-        };
-
-        foreach ($slots as $slot) {
-            if (array_key_exists($slot, $totals)) {
-                $flush();
-                $segments[] = ['type' => 'value', 'col' => $slot, 'value' => $totals[$slot]];
-            } else {
-                $emptyRun++;
-            }
-        }
-
-        $flush();
-
-        return $segments;
     }
 
     public function index()
