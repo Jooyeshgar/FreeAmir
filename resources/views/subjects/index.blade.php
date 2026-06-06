@@ -72,9 +72,20 @@
                             <td class="px-4 py-2">
                                 @if ($subject->subjectable)
                                     <a href="{{ route(model_route($subject->subjectable, 'edit'), $subject->subjectable) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                    <span class="btn btn-sm btn-disabled" title="{{ __('Cannot delete subject with relationships') }}">{{ __('Delete') }}</span>
                                 @else
                                     <a href="{{ route('subjects.edit', $subject) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                @endif
+
+                                @if ($subject->subjectable || $subject->hasChildren())
+                                    @php
+                                        $reasons = [];
+                                        if ($subject->subjectable) $reasons[] = __('Cannot delete subject with relationships');
+                                        if ($subject->hasChildren()) $reasons[] = __('Cannot delete subject with children');
+                                    @endphp
+                                    <span class="tooltip tooltip-left" data-tip="{{ implode(' | ', $reasons) }}">
+                                        <button class="btn btn-sm btn-error" disabled>{{ __('Delete') }}</button>
+                                    </span>
+                                @else
                                     <form action="{{ route('subjects.destroy', $subject) }}" method="POST" class="inline-block">
                                         @csrf
                                         @method('DELETE')

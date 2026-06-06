@@ -87,7 +87,7 @@ class InvoiceController extends Controller
 
         $builder->when($request->invoice_type === InvoiceType::SELL->value && $request->boolean('voided'), fn ($q) => $q->whereHas('voidInvoice'));
 
-        $builder->when($request->filled('moadian_status') && in_array($request->invoice_type, [InvoiceType::SELL->value, InvoiceType::VOID->value]),
+        $builder->when($request->filled('moadian_status') && in_array($request->invoice_type, [InvoiceType::SELL->value, InvoiceType::VOID->value, InvoiceType::RETURN_SELL->value]),
             function ($q) use ($request) {
                 if ($request->moadian_status === 'not_sent') {
                     $q->whereDoesntHave('moadianHistories');

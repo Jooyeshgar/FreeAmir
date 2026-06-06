@@ -20,7 +20,6 @@
             const data = {
                 labels: {!! json_encode($labels) !!},
                 datasets: [{
-                    label: 'نمودار درصدی',
                     data: {!! json_encode($datas) !!},
                     borderColor: function() {
                         return getTheme().isDark ? '#38bdf8' : '#0ea5e9';

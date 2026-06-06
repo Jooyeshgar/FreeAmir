@@ -2,7 +2,7 @@
     @if ($isDebugMode && !$hasDocument)
         <div class="alert alert-warning">
             <p>{{ __('Your database tables are empty. Do you want to load demo data into your database?') }}</p>
-            <form method="POST" action="{{ route('home.seed-demo-data') }}" class="inline-block m-0">
+            <form method="POST" action="{{ route('home.seed-demo-data') }}" class="inline-block">
                 @csrf
                 <button type="submit" class="btn btn-info">{{ __('Seed Demo Data') }}</button>
             </form>
@@ -12,8 +12,8 @@
     @if ($isDebugMode)
         <div role="alert" class="alert alert-warning flex flex-col mt-4 mb-4">
             <div class="w-full flex items-center gap-2">
-                <p class="m-0">{{ __('Do you want to refresh your database?') }}</p>
-                <form method="POST" action="{{ route('home.refresh-database') }}" class="inline-block m-0"
+                <p>{{ __('Do you want to refresh your database?') }}</p>
+                <form method="POST" action="{{ route('home.refresh-database') }}" class="inline-block"
                     onsubmit="return confirm('{{ __('Are you sure you want to refresh the database? This will delete all current tables and data and rebuild the database with demo data.') }}')">
                     @csrf
                     <button type="submit" class="btn btn-error btn-sm">{{ __('Refresh Database') }}</button>

@@ -98,7 +98,7 @@
                             $html .=
                                 '<form action="' .
                                 $deleteUrl .
-                                '" method="POST" class="inline-block m-0" onsubmit="return confirm(\'' .
+                                '" method="POST" class="inline-block" onsubmit="return confirm(\'' .
                                 e(__('Are you sure?')) .
                                 '\')">';
                             $html .= csrf_field();
