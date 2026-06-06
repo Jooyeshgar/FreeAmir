@@ -26,7 +26,7 @@
                                 <div class="label">
                                     <span>{{ __('From Document Number') }}</span>
                                 </div>
-                                <x-input name="start_document_number" type="number" value="{{ old('start_document_number') }}" />
+                                <x-input name="start_document_number" type="number" value="{{ old('start_document_number', request('start_document_number')) }}" />
                             </label>
                         </div>
 
@@ -35,18 +35,18 @@
                                 <div class="label">
                                     <span>{{ __('To Document Number') }}</span>
                                 </div>
-                                <x-input name="end_document_number" type="number" value="{{ old('end_document_number') }}" />
+                                <x-input name="end_document_number" type="number" value="{{ old('end_document_number', request('end_document_number')) }}" />
                             </label>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <x-date-picker name="start_date" id="start_date" title="{{ __('From Date') }}" :value="old('start_date')" />
+                            <x-date-picker name="start_date" id="start_date" title="{{ __('From Date') }}" :value="old('start_date', request('start_date'))" />
                         </div>
 
                         <div>
-                            <x-date-picker name="end_date" id="end_date" title="{{ __('To Date') }}" :value="old('end_date')" />
+                            <x-date-picker name="end_date" id="end_date" title="{{ __('To Date') }}" :value="old('end_date', request('end_date'))" />
                         </div>
                     </div>
 
@@ -55,7 +55,7 @@
                             <div class="label">
                                 <span>{{ __('By title or description') }}</span>
                             </div>
-                            <x-input name="text" value="{{ old('text') }}" />
+                            <x-input name="text" value="{{ old('text', request('text')) }}" />
                         </label>
                     </div>
                 </div>
@@ -66,7 +66,7 @@
                         \App\Services\DocumentImportExport\DocumentImportExportService::ALL_COLUMNS,
                         $mandatoryCols
                     ));
-                    $selectedCols = old('columns', $optionalCols);
+                    $selectedCols = old('columns', request()->has('columns_selected') ? request('columns', []) : $optionalCols);
                 @endphp
 
                 <x-input name="columns_selected" value="1" hidden />
@@ -75,7 +75,7 @@
 
                     <div class="alert alert-info text-sm mb-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        {{ __('Required columns (:columns) are always included in the export.', ['columns' => implode(', ', array_map('__', $mandatoryCols))]) }}
+                        {{ __('Required columns (:columns) are always included in the export.', ['columns' => implode('، ', array_map('__', $mandatoryCols))]) }}
                     </div>
 
                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">

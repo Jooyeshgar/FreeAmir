@@ -97,6 +97,18 @@ class ReportsController extends Controller
             }
         })->validate();
 
+        if ($request->report_for == 'Journal' && $request->input('action') === 'export_csv') {
+            return $this->documentImportExportService->export([
+                'start_document_number' => $request->input('start_document_number'),
+                'end_document_number' => $request->input('end_document_number'),
+                'start_date' => $request->input('start_date'),
+                'end_date' => $request->input('end_date'),
+                'text' => $request->input('search'),
+                'columns_selected' => $request->input('columns_selected'),
+                'columns' => $request->input('columns', []),
+            ]);
+        }
+
         if ($request->report_for == 'Document') {
             if ($request->input('action') === 'export_csv') {
                 return $this->documentImportExportService->export([
