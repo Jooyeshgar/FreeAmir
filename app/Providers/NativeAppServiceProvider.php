@@ -29,7 +29,12 @@ class NativeAppServiceProvider implements ProvidesPhpIni
         logger('Database error: ' . $e->getMessage());
         }
 
-        Window::open();
+        Window::open()
+        ->maximized() // Opens the window in full screen on launch
+        ->minWidth(1024)
+        ->minHeight(768)
+        ->showDevTools(false)
+        ->rememberState();
     }
 
     /**
