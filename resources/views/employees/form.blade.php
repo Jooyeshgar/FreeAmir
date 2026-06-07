@@ -188,8 +188,6 @@
 {{-- Active toggle --}}
 <div class="mt-4">
     <label class="label cursor-pointer justify-start gap-3">
-        <input type="checkbox" name="is_active" value="1" class="checkbox checkbox-primary"
-            {{ old('is_active', $employee->is_active ?? true) ? 'checked' : '' }} />
-        <span class=" font-medium">{{ __('Active') }}</span>
+        <x-checkbox name="is_active" id="is_active" :title="__('Active')" value="1" :checked="old('is_active', $employee->is_active ?? true)"/>
     </label>
 </div>

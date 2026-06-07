@@ -21,8 +21,7 @@
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <div class="col-span-2 md:col-span-1">
-                            <label class="label" for="logo">{{ __('Company logo') }}</label>
-                            <input type="file" id="logo" name="logo" class="file-input w-full max-w-xs" accept="image/*" />
+                            <x-file-input name="logo" title="{{ __('Company logo') }}" accept="image/*" />
                         </div>
                     </div>
                     <img class="block w-12 h-auto rounded-full" src="{{ asset("storage/{$company->logo}") }}">
@@ -34,15 +33,13 @@
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <div class="col-span-2 md:col-span-1">
-                            <label class="label" for="certificate">{{ __('SSL Certificate') }}</label>
-                            <input type="file" id="certificate" name="certificate" class="file-input w-full max-w-xs" accept=".crt" />
+                            <x-file-input name="certificate" title="{{ __('SSL Certificate') }}" accept=".crt" />
                             @if ($company->certificate_path)
                                 <p class="text-sm text-base-content/60 mt-1">{{ __('Current file') }}: {{ basename($company->certificate_path) }}</p>
                             @endif
                         </div>
                         <div class="col-span-2 md:col-span-1">
-                            <label class="label" for="private_key">{{ __('Private Key') }}</label>
-                            <input type="file" id="private_key" name="private_key" class="file-input w-full max-w-xs" accept=".pem" />
+                            <x-file-input name="private_key" title="{{ __('Private Key') }}" accept=".pem" />
                             @if ($company->private_key_path)
                                 <p class="text-sm text-base-content/60 mt-1">{{ __('Current file') }}: {{ basename($company->private_key_path) }}</p>
                             @endif
@@ -67,7 +64,7 @@
                     </div>
                 </fieldset>
                 <div class="card-actions">
-                    <button type="submit" class="btn btn-pr">{{ __('Edit') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ __('Edit') }}</button>
                 </div>
             </form>
         </div>

@@ -19,9 +19,6 @@
                                 </option>
                             @endforeach
                         </select>
-                        @error('import_type')
-                            <div class="label"><span class="text-xs text-error">{{ $message }}</span></div>
-                        @enderror
                     </label>
                 </div>
 
@@ -47,22 +44,11 @@
                                 {{ __('Replace (overwrite existing record)') }}
                             </option>
                         </select>
-                        @error('duplicate_mode')
-                            <div class="label"><span class="text-xs text-error">{{ $message }}</span></div>
-                        @enderror
                     </label>
                 </div>
 
                 <div class="mt-3">
-                    <label class="fieldset w-full">
-                        <div class="label">
-                            <span>{{ __('File') }} <span class="text-error">*</span></span>
-                        </div>
-                        <input type="file" name="file" class="file-input  w-full @error('file') file-input-error @enderror" required />
-                        @error('file')
-                            <div class="label"><span class="text-xs text-error">{{ $message }}</span></div>
-                        @enderror
-                    </label>
+                    <x-file-input name="file" title="{{ __('File') }}" required />
                 </div>
 
                 <div class="card-actions justify-end mt-4">

@@ -245,8 +245,8 @@
 
             <form id="add-comment-form" method="POST" action="" class="mt-4 space-y-4" x-data="{ rating: 0 }">
                 @csrf
-                <input type="hidden" name="user_id" value="{{ Auth::id() }}" />
-                <input type="hidden" name="customer_id" id="add-comment-customer-id" value="" />
+                <x-input type="hidden" name="user_id" :value="Auth::id()" />
+                <x-input type="hidden" name="customer_id" value="" />
 
                 <div>
                     <label class="label" for="add-comment-content">{{ __('Content') }}</label>
@@ -284,7 +284,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             const modal = document.getElementById('add-comment-modal');
             const form = document.getElementById('add-comment-form');
-            const customerIdInput = document.getElementById('add-comment-customer-id');
+            const customerIdInput = document.getElementById('customer_id');
             const customerLabel = document.getElementById('add-comment-customer');
             const contentInput = document.getElementById('add-comment-content');
             const actionTemplate = @json(route('comments.store', ['customer' => '__CUSTOMER_ID__']));

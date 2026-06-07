@@ -41,8 +41,7 @@
                                     @foreach (FiscalYearSection::ui() as $key => $value)
                                         <tr>
                                             <td>
-                                                <input type="checkbox" name="tables_to_copy[]" value="{{ $key }}" id="table_{{ $key }}"
-                                                    class="checkbox" {{ in_array($key, $oldTables) ? 'checked' : '' }}>
+                                                <x-checkbox name="tables_to_copy[]" :value="$key" id="table_{{ $key }}" :checked="true" title="" />
                                             </td>
                                             <td>
                                                 <label for="table_{{ $key }}">{{ $value }}</label>
@@ -65,8 +64,7 @@
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <div class="col-span-2 md:col-span-1">
-                            <label class="label" for="logo">{{ __('Company logo') }}</label>
-                            <input type="file" id="logo" name="logo" class="file-input w-full max-w-xs" accept="image/*" />
+                            <x-file-input name="logo" title="{{ __('Company logo') }}" accept="image/*" />
                         </div>
                     </div>
                     <div class="col-span-2 md:col-span-1">
@@ -80,18 +78,10 @@
                     </div>
                     <div class="flex gap-2">
                         <div class="col-span-2 md:col-span-1">
-                            <label class="label" for="certificate">{{ __('SSL Certificate') }}</label>
-                            <input type="file" id="certificate" name="certificate" class="file-input w-full max-w-xs" accept=".crt" />
-                            @error('certificate')
-                                <p class="text-sm text-error mt-1">{{ $message }}</p>
-                            @enderror
+                            <x-file-input name="certificate" title="{{ __('SSL Certificate') }}" accept=".crt" />
                         </div>
                         <div class="col-span-2 md:col-span-1">
-                            <label class="label" for="private_key">{{ __('Private Key') }}</label>
-                            <input type="file" id="private_key" name="private_key" class="file-input w-full max-w-xs" accept=".pem" />
-                            @error('private_key')
-                                <p class="text-sm text-error mt-1">{{ $message }}</p>
-                            @enderror
+                            <x-file-input name="private_key" title="{{ __('Private Key') }}" accept=".pem" />
                         </div>
                     </div>
                     <div class="col-span-2">
@@ -113,7 +103,7 @@
                     </div>
                 </fieldset>
                 <div class="card-actions">
-                    <button type="submit" class="btn btn-pr">{{ __('Create') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ __('Create') }}</button>
                 </div>
             </form>
         </div>

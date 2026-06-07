@@ -66,8 +66,7 @@
                             </select>
                         </td>
                         <td>
-                            <input type="number" :name="`benefits[${index}][value]`" x-model="benefit.value"
-                                class="input  w-full" placeholder="0" min="0" required />
+                            <x-input type="number" name="" x-bind="{ name: 'benefits[' + index + '][value]' }" x-model="benefit.value" placeholder="0" required />
                         </td>
                         <td>
                             <button type="button" @click="remove(index)" class="btn btn-sm btn-error btn-outline">

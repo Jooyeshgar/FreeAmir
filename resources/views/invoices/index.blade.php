@@ -5,21 +5,26 @@
             @switch(request('invoice_type'))
                 @case('sell')
                     @include('invoices.index.sell')
-                    @break
+                @break
+
                 @case('buy')
                     @include('invoices.index.buy')
-                    @break
+                @break
+
                 @case('return_sell')
                     @include('invoices.index.return_sell')
-                    @break
+                @break
+
                 @case('return_buy')
                     @include('invoices.index.return_buy')
-                    @break
+                @break
+
                 @case('void')
                     @include('invoices.index.void')
-                    @break
+                @break
+
                 @default
-                    <x-show-messages message="{{ __('Please select invoice type to show invoices') }}" type="info" />                    
+                    <x-show-messages message="{{ __('Please select invoice type to show invoices') }}" type="info" />
             @endswitch
         </div>
     </div>
@@ -28,7 +33,9 @@
             document.querySelectorAll('.change-status-form').forEach(form => {
                 form.addEventListener('submit', function(e) {
                     e.preventDefault();
-                    if (confirm('{{ __('This invoice has warnings for change its status, are you sure to change status?') }}')) {
+                    if (confirm(
+                            '{{ __('This invoice has warnings for change its status, are you sure to change status?') }}'
+                            )) {
                         this.submit();
                     }
                 });
