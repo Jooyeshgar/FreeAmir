@@ -3,11 +3,11 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             @if ($currentSubject)
-                <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div class="p-4 bg-info/10 border border-info/20 rounded-lg">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h3 class="text-lg font-medium text-blue-800">{{ __('Filtered by Subject') }} - {{ $currentSubject->formattedCode() }} </h3>
-                            <p class="text-blue-600">{{ $currentSubject->fullname() }}</p>
+                            <h3 class="text-lg font-medium text-base-content">{{ __('Filtered by Subject') }} - {{ $currentSubject->formattedCode() }} </h3>
+                            <p class="text-base-content/70">{{ $currentSubject->fullname() }}</p>
                         </div>
                         <a href="{{ route('transactions.index') }}" class="btn btn-outline btn-sm">
                             {{ __('Clear Filter') }}
@@ -81,10 +81,10 @@
                         </tr>
                     @endif
                     @foreach ($transactions as $transaction)
-                        <tr class="{{ $transaction->document->approved_at ? '' : 'text-gray-500' }}">
+                        <tr class="{{ $transaction->document->approved_at ? '' : 'text-base-content/40' }}">
                             <td class="p-2">{{ formatDate($transaction->document->date) }}</td>
                             <td class="p-2">
-                                <a href="{{ route('documents.show', $transaction->document->id) }}" class="text-blue-600 hover:text-blue-800">
+                                <a href="{{ route('documents.show', $transaction->document->id) }}" class="text-info hover:underline">
                                     {{ formatDocumentNumber($transaction->document->number) }}
                                 </a>
                             </td>
@@ -95,9 +95,9 @@
                                 {{ $transaction->subject?->name }}
                             </td>
                             <td class="p-2">{{ $transaction->desc }}</td>
-                            <td class="p-2 {{ $transaction->document->approved_at ? 'text-red-600' : 'text-red-400' }}">{{ $transaction->debit }}</td>
-                            <td class="p-2 {{ $transaction->document->approved_at ? 'text-green-600' : 'text-green-400' }}">{{ $transaction->credit }}</td>
-                            <td class="p-2 ">
+                            <td class="p-2 {{ $transaction->document->approved_at ? 'text-error' : 'text-error/50' }}">{{ $transaction->debit }}</td>
+                            <td class="p-2 {{ $transaction->document->approved_at ? 'text-success' : 'text-success/50' }}">{{ $transaction->credit }}</td>
+                            <td class="p-2 whitespace-nowrap">
                                 {{ formatNumber(abs($transaction->balance)) }} {{ $transaction->balance >= 0 ? __('Cre') : __('Deb') }}
                             </td>
                             <td class="p-2">

@@ -110,7 +110,7 @@
                                 @endphp
                                 @if ($document->documentable && $documentableRoute)
                                     <a href="{{ route($documentableRoute['name'], $documentableRoute['params']) }}" class="link link-hover">
-                                        {{ __(class_basename($document->documentable_type)) }} {{ $document->documentable->number }}
+                                        {{ __(class_basename($document->documentable_type)) }} {{ convertToFarsi($document->documentable->number) }}
                                     </a>
                                 @endif
                             </td>

@@ -579,6 +579,8 @@
     "Document": "Document",
     "Document #": "Document #",
     "Document Date": "Document Date",
+    "View :name": "View :name",
+    "View User": "View User",
     "Document Files": "Document Files",
     "Document Files requires Documents to be selected. If you proceed, Document Files will be excluded from the backup. Do you want to continue?": "Document Files requires Documents to be selected. If you proceed, Document Files will be excluded from the backup. Do you want to continue?",
     "Document Files will not be exported because Documents is not selected.": "Document Files will not be exported because Documents is not selected.",
