@@ -27,9 +27,9 @@
                     </div>
 
                     <div class="md:col-span-2 flex items-center gap-3 mt-1">
-                        <label class="label cursor-pointer gap-2">
+                        <label class="cursor-pointer gap-2">
                             <x-input name="is_manual" value="0" hidden />
-                            <x-checkbox name="is_manual" id="is_manual" :title="__('Manually Corrected')" value="1" checked="old('is_manual')" />
+                            <x-checkbox name="is_manual" id="is_manual" :title="__('Manually Corrected')" value="1" :checked="old('is_manual', true)" />
                         </label>
                     </div>
 
