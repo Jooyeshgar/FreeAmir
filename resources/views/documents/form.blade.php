@@ -9,7 +9,7 @@
         <x-text-input disabled="true" input_value="{{ formatDocumentNumber($previousDocumentNumber) }}" input_name=""
             title="{{ __('previous document number') }}" placeholder="{{ __('previous document number') }}"
             label_text_class="text-gray-500 text-nowrap"></x-text-input>
-        <x-text-input x-data="{ number: '{{ $document->exists ? formatDocumentNumber($document->number) : null }}' }"
+        <x-text-input x-data="{ number: '{{ old('number') ?? ($document->exists ? formatDocumentNumber($document->number) : null) }}' }"
             title="{{ __('current document number') }}" x-model.number="number" x-bind:name="'number'"
             placeholder="{{ __('current document number') }}" label_text_class="text-gray-500 text-nowrap"
             x-on:input="number = $store.utils.convertToEnglish($event.target.value);"
