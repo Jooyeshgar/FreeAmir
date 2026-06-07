@@ -125,14 +125,14 @@
                         @if (request()->filled('is_active'))
                             <x-input name="is_active" value="{{ request('is_active') }}" hidden />
                         @endif
-                        <label class="input input-sm join-item flex w-64 max-w-full items-center gap-2 bg-base-100" dir="rtl">
-                            <input type="search" name="search" value="{{ request('search') }}" class="grow"
-                                placeholder="{{ __('Search by name, code or national code') }}" />
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z" />
-                            </svg>
-                        </label>
+                        <div class="relative join-item w-64 max-w-full [&_.input]:input-sm" dir="rtl">
+                            <x-input type="text" name="search" value="{{ request('search') }}" placeholder="{{ __('Search by name, code or national code') }}" />
+                            <button type="submit" aria-label="{{ __('Search') }}" class="absolute inset-y-0 left-2 flex cursor-pointer items-center text-base-content/40 hover:text-base-content">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z" />
+                                </svg>
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
