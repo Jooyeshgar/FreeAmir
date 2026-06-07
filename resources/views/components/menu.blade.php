@@ -219,7 +219,7 @@
         <ul class="{{ $scrollingTopDropdownContentClass }}">
 
             {{-- HR, Attendance & Salary --}}
-            @canany(['hr.org-charts.index', 'attendance.work-shifts.index', 'salary.payrolls.index',
+            @canany(['hr.org-charts.index', 'hr.organization-units.index', 'attendance.work-shifts.index', 'salary.payrolls.index',
                 'salary.tax-slabs.index', 'salary.work-sites.index', 'salary.work-site-contracts.index',
                 'salary.public-holidays.index', 'salary.payroll-elements.index', 'salary.salary-decrees.index'])
                 <li>
@@ -228,6 +228,9 @@
                         <ul>
                             @can('hr.org-charts.index')
                                 <li><a href="{{ route('hr.org-charts.index') }}">{{ __('Organization Chart') }}</a></li>
+                            @endcan
+                            @can('hr.organization-units.index')
+                                <li><a href="{{ route('hr.organization-units.index') }}">{{ __('Organization Units') }}</a></li>
                             @endcan
                             @can('attendance.work-shifts.index')
                                 <li><a href="{{ route('attendance.work-shifts.index') }}">{{ __('Work Shifts') }}</a></li>
