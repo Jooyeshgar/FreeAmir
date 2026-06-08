@@ -46,7 +46,7 @@
                     </div>
 
                     <div class="col-span-2 md:col-span-1 text-center">
-                        <input type="submit" value="{{ __('Search') }}" class="btn btn-primary" />
+                        <button type="submit" class="btn btn-primary">{{ __('Search') }}</button>
                     </div>
                 </div>
             </form>

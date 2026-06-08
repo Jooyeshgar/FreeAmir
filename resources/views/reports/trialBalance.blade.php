@@ -41,8 +41,7 @@
                         <x-input name="end_document_number" value="{{ $end_document_number }}" class="w-full" placeholder="{{ __('Document end number') }}" />
                     </div>
                     <div class="col-span-1 flex items-center gap-3 mb-2">
-                        <input type="checkbox" name="include_children" value="1" class="checkbox checkbox-md" {{ $include_children ? 'checked' : '' }}>
-                        <span class="label">{{ __('Include 2 levels') }}</span>
+                        <x-checkbox name="include_children" id="include_children" :title="__('Include 2 levels')" value="1" :checked="$include_children == '1'" />
                     </div>
                     <div class="col-span-2 flex gap-2 justify-end">
                         <button type="submit" class="btn btn-primary text-white rounded-md">{{ __('Search') }}</button>

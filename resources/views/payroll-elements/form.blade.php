@@ -105,19 +105,19 @@
     </div>
 
     <div class="col-span-2 flex flex-wrap gap-6">
-        <label class="label cursor-pointer gap-2">
-            <input type="checkbox" name="is_taxable" value="1" class="checkbox" @checked(old('is_taxable', $payrollElement->is_taxable ?? false)) />
-            <span>{{ __('Is Taxable') }}</span>
-        </label>
+        <div class="cursor-pointer gap-2">
+            <x-input name="is_taxable" value="0" hidden />
+            <x-checkbox name="is_taxable" id="is_taxable" :title="__('Is Taxable')" value="1" :checked="old('is_taxable', $payrollElement->is_taxable ?? false)" />
+        </div>
 
-        <label class="label cursor-pointer gap-2">
-            <input type="checkbox" name="is_insurable" value="1" class="checkbox" @checked(old('is_insurable', $payrollElement->is_insurable ?? false)) />
-            <span>{{ __('Is Insurable') }}</span>
-        </label>
+        <div class="cursor-pointer gap-2">
+            <x-input name="is_insurable" value="0" hidden />
+            <x-checkbox name="is_insurable" id="is_insurable" :title="__('Is Insurable')" value="1" :checked="old('is_insurable', $payrollElement->is_insurable ?? false)" />
+        </div>
 
-        <label class="label cursor-pointer gap-2">
-            <input type="checkbox" name="show_in_payslip" value="1" class="checkbox" @checked(old('show_in_payslip', $payrollElement->show_in_payslip ?? true)) />
-            <span>{{ __('Show in Payslip') }}</span>
-        </label>
+        <div class="cursor-pointer gap-2">
+            <x-input name="show_in_payslip" value="0" hidden />
+            <x-checkbox name="show_in_payslip" id="show_in_payslip" :title="__('Show in Payslip')" value="1" :checked="old('show_in_payslip', $payrollElement->show_in_payslip ?? true)" />
+        </div>
     </div>
 </div>

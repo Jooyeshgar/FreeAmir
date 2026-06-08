@@ -69,16 +69,14 @@
                                         @php
                                             $isDocumentFiles = $key === FiscalYearSection::DOCUMENT_FILES->value;
                                             $isDocuments = $key === FiscalYearSection::DOCUMENTS->value;
+                                            $changeHandler = $isDocuments ? 'documentsChecked = $event.target.checked'
+                                                : ($isDocumentFiles ? 'documentFilesChecked = $event.target.checked; fetchSize()' 
+                                                    : '');
                                         @endphp
 
                                         <tr>
                                             <td class="w-1/3 px-4 py-3">
-                                                <input type="checkbox" name="tables_to_backup[]" value="{{ $key }}" id="table_{{ $key }}"
-                                                    class="h-4 w-4 rounded border-gray-300 " @checked(true)
-                                                    @if ($isDocuments) x-on:change="documentsChecked = $event.target.checked"
-                                                    @elseif ($isDocumentFiles) x-on:change="documentFilesChecked = $event.target.checked; fetchSize()"
-                                                    @endif
-                                                >
+                                                <x-checkbox name="tables_to_backup[]" :value="$key" id="table_{{ $key }}" :checked="true" title="" x-on:change="{{ $changeHandler }}" />
                                             </td>
 
                                             <td class="px-4 py-3">

@@ -56,8 +56,8 @@
                                                 <span class="truncate text-sm" title="{{ $permission }}">
                                                     {{ \Illuminate\Support\Str::headline(\Illuminate\Support\Str::after($permission, '.')) }}
                                                 </span>
-                                                <input name="permissions[]" id="permissions-{{ \Illuminate\Support\Str::slug($permission) }}" type="checkbox" class="checkbox checkbox-sm"
-                                                    value="{{ $permission }}" @checked(in_array($permission, old('permissions', []), true)) />
+                                                <x-checkbox name="permissions[]" id="permissions-{{ \Illuminate\Support\Str::slug($permission) }}"
+                                                    :value="$permission" :checked="in_array($permission, old('permissions', []), true)" title="" />
                                             </label>
                                         @endforeach
                                     </div>

@@ -97,7 +97,7 @@
                         </button>
                     </div>
                     <div class="flex-1 min-w-24 max-w-32">
-                        <input type="text" :value="$store.utils.formatCode(selectedCode)"
+                        <x-text-input x-bind:value="$store.utils.formatCode(selectedCode)"
                             @input="
                                 selectedCode = $store.subjects.normalizeForTyping($event.target.value);
                                 $event.target.value = $store.utils.formatCode(selectedCode);
@@ -114,7 +114,7 @@
                                 syncSubjectByCode();
                                 syncSubjectByCodeRemote();
                             "
-                            class="max-h-10 input  border-slate-400 disabled:background-slate-700 w-full max-w-42 border-white value codeInput" />
+                            label_class="w-full" input_class="max-w-42 border-white value codeInput" />
                     </div>
                     <div>
                         <x-subject-select :subjects="$subjects" data-subject-select x-bind:selected_id="selectedId" x-bind:selected_name="selectedName"

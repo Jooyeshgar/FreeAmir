@@ -12,13 +12,8 @@
     </div>
 
     <div class="col-span-2 md:col-span-1">
-        <label for="is_active" class="block text-sm font-medium label mb-1">
-            {{ __('Active') }}
-        </label>
-        <input type="checkbox" name="is_active" id="is_active" value="1" class="checkbox" {{ old('is_active', $workSite->is_active ?? true) ? 'checked' : '' }} />
-        @error('is_active')
-            <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
-        @enderror
+        <x-input name="is_active" value="0" hidden />
+        <x-checkbox name="is_active" id="is_active" :title="__('Active')" value="1" :checked="old('is_active', $workSite->is_active ?? true)"/>
     </div>
 
     <div class="col-span-2">
@@ -27,8 +22,5 @@
         </label>
         <textarea name="address" id="address" rows="3"
             class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" placeholder="{{ __('Optional address') }}">{{ old('address', $workSite->address ?? '') }}</textarea>
-        @error('address')
-            <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
-        @enderror
     </div>
 </div>
