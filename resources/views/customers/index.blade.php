@@ -25,14 +25,34 @@
         <div class="card-body p-0">
             {{-- Card Header: title + filters --}}
             <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-base-200">
-                <div class="flex items-center gap-3">
-                    <h2 class="text-base font-bold text-base-content">{{ __('Customer List') }}</h2>
+                <div class="flex flex-wrap items-center gap-3">
+                    <h2 class="text-base font-bold text-base-content">
+                        @switch($balanceFilter)
+                            @case('debt')
+                                {{ __('Customers with debt') }}
+                                @break
+                            @case('credit')
+                                {{ __('Customers with credit') }}
+                                @break
+                            @default
+                                {{ __('Customer List') }}
+                        @endswitch
+                    </h2>
                     <span class="badge badge-ghost">
                         {{ convertToFarsi($customers->total()) }} {{ __('records') }}
+                    </span>
+                    <span class="badge {{ $balanceFilter === 'debt' ? 'badge-error badge-outline' : ($balanceFilter === 'credit' ? 'badge-success badge-outline' : 'badge-ghost') }}">
+                        {{ formatNumber($balanceSum) }} {{ __('Rial') }}
                     </span>
                 </div>
 
                 <form action="{{ route('customers.index') }}" method="GET" class="flex flex-wrap items-center gap-2" dir="ltr">
+                    <select name="balance" class="select select-sm w-40" dir="rtl" onchange="this.form.submit()">
+                        <option value="all" @selected($balanceFilter === 'all')>{{ __('All Customers') }}</option>
+                        <option value="debt" @selected($balanceFilter === 'debt')>{{ __('Customers with debt') }}</option>
+                        <option value="credit" @selected($balanceFilter === 'credit')>{{ __('Customers with credit') }}</option>
+                    </select>
+
                     <select name="group_id" class="select select-sm w-40" dir="rtl" onchange="this.form.submit()">
                         <option value="all">{{ __('All Groups') }}</option>
                         @foreach ($groups as $g)

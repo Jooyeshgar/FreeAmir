@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Exceptions\CustomerImportException;
 use App\Http\Requests\ImportCustomerRequest;
 use App\Http\Requests\StoreCustomerRequest;
-use App\Models;
+use App\Models\Customer;
+use App\Models\CustomerGroup;
+use App\Models\Invoice;
+use App\Models\Transaction;
 use App\Services\CustomerImportService;
 use App\Services\CustomerService;
 use App\Services\SubjectService;
@@ -20,7 +23,16 @@ class CustomerController extends Controller
 
     public function index(Request $request)
     {
-        $query = Models\Customer::with('subject', 'group')->withCount('comments')->orderBy('id', 'desc');
+        $query = Customer::with('subject', 'group')
+            ->withCount('comments')
+            ->select('customers.*')
+            ->selectSub(
+                Transaction::query()
+                    ->selectRaw('COALESCE(SUM(value), 0)')
+                    ->whereColumn('transactions.subject_id', 'customers.subject_id'),
+                'balance'
+            )
+            ->orderBy('id', 'desc');
 
         if (request()->has('name') && request('name')) {
             $query->where('name', 'like', '%'.request('name').'%');
@@ -51,16 +63,41 @@ class CustomerController extends Controller
             $query->where('group_id', $groupId);
         }
 
+        $balanceFilter = $request->query('balance', 'all');
+        if (! in_array($balanceFilter, ['all', 'debt', 'credit'], true)) {
+            $balanceFilter = 'all';
+        }
+        if ($balanceFilter !== 'all') {
+            $query->whereIn('subject_id', $this->balanceSubjectIds($balanceFilter));
+            $query->reorder('balance', $balanceFilter === 'debt' ? 'asc' : 'desc');
+        }
+
+        $balanceSum = (float) Transaction::query()
+            ->whereIn('subject_id', (clone $query)->reorder()->whereNotNull('subject_id')->select('subject_id'))
+            ->sum('value');
+
         $customers = $query->paginate(30)->appends($request->query());
 
-        $groups = Models\CustomerGroup::select('id', 'name')->orderBy('name')->get();
+        $groups = CustomerGroup::select('id', 'name')->orderBy('name')->get();
 
-        return view('customers.index', compact('customers', 'groups', 'groupId'));
+        return view('customers.index', compact('customers', 'groups', 'groupId', 'balanceFilter', 'balanceSum'));
+    }
+
+    private function balanceSubjectIds(string $balanceFilter)
+    {
+        $customerSubjectIds = Customer::query()->whereNotNull('subject_id')->pluck('subject_id');
+        $comparison = $balanceFilter === 'credit' ? 'SUM(value) > 0' : 'SUM(value) < 0';
+
+        return Transaction::query()
+            ->whereIn('subject_id', $customerSubjectIds)
+            ->groupBy('subject_id')
+            ->havingRaw($comparison)
+            ->pluck('subject_id');
     }
 
     public function create()
     {
-        $groups = Models\CustomerGroup::select('id', 'name')->get();
+        $groups = CustomerGroup::select('id', 'name')->get();
 
         return view('customers.create', compact('groups'));
     }
@@ -74,14 +111,14 @@ class CustomerController extends Controller
         return redirect()->route('customers.index')->with('success', __('Customer created successfully.'));
     }
 
-    public function edit(Models\Customer $customer)
+    public function edit(Customer $customer)
     {
-        $groups = Models\CustomerGroup::select('id', 'name')->get();
+        $groups = CustomerGroup::select('id', 'name')->get();
 
         return view('customers.edit', compact('customer', 'groups'));
     }
 
-    public function update(StoreCustomerRequest $request, Models\Customer $customer)
+    public function update(StoreCustomerRequest $request, Customer $customer)
     {
         $validatedData = $request->validated();
 
@@ -90,7 +127,7 @@ class CustomerController extends Controller
         return redirect()->route('customers.index')->with('success', __('Customer updated successfully.'));
     }
 
-    public function destroy(Models\Customer $customer)
+    public function destroy(Customer $customer)
     {
         try {
             $this->service->delete($customer);
@@ -101,14 +138,14 @@ class CustomerController extends Controller
         }
     }
 
-    public function show(Models\Customer $customer)
+    public function show(Customer $customer)
     {
         $customer->load(['group', 'subject', 'comments.commentBy']);
         $subjectBalance = $customer->subject
             ? SubjectService::sumSubject($customer->subject->id)
             : 0;
 
-        $orders = Models\Invoice::query()
+        $orders = Invoice::query()
             ->where('customer_id', $customer->id)
             ->orderByDesc('date')
             ->orderByDesc('id')
@@ -128,7 +165,7 @@ class CustomerController extends Controller
             fwrite($file, "\xEF\xBB\xBF");
             fputcsv($file, CustomerImportService::COLUMNS);
 
-            Models\Customer::with('group', 'subject')
+            Customer::with('group', 'subject')
                 ->orderBy('id')
                 ->chunk(200, function ($customers) use ($file) {
                     foreach ($customers as $customer) {

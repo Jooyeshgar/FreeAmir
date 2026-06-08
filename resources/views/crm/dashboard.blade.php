@@ -38,18 +38,22 @@
                 :suffix="__('Rial')"
                 :detail="__('Receipts from customers')"
                 tone="info" />
-            <x-metric-card
-                :title="__('Outstanding (unpaid)')"
-                :value="$metrics['totalUnpaid']"
-                :suffix="__('Rial')"
-                :detail="__('Total receivable from customers')"
-                tone="error" />
-            <x-metric-card
-                :title="__('Customers with debt')"
-                :value="$metrics['unpaidCustomersCount']"
-                :suffix="__('person(s)')"
-                :detail="__('Have an open balance')"
-                tone="warning" />
+            <a href="{{ route('customers.index', ['balance' => 'debt']) }}" class="block focus:outline-none">
+                <x-metric-card
+                    :title="__('Outstanding (unpaid)')"
+                    :value="$metrics['totalUnpaid']"
+                    :suffix="__('Rial')"
+                    :detail="__('Total receivable from customers')"
+                    tone="error" />
+            </a>
+            <a href="{{ route('customers.index', ['balance' => 'debt']) }}" class="block focus:outline-none">
+                <x-metric-card
+                    :title="__('Customers with debt')"
+                    :value="$metrics['unpaidCustomersCount']"
+                    :suffix="__('person(s)')"
+                    :detail="__('Have an open balance')"
+                    tone="warning" />
+            </a>
         </section>
 
         {{-- Aging + Sales trend --}}
