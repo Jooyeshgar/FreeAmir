@@ -54,6 +54,10 @@ class ProductController extends Controller
             $query->where('name', 'like', '%'.request('name').'%');
         }
 
+        if (request()->has('code') && request('code')) {
+            $query->where('code', 'like', '%'.request('code').'%');
+        }
+
         if (request()->has('group_name') && request('group_name')) {
             $searchGroupName = request('group_name');
             $query->whereHas('productGroup', function ($groupName) use ($searchGroupName) {
