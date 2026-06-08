@@ -59,7 +59,7 @@
                         </svg>
                     </div>
                     <div class="stat-title">{{ __('Debit') }}</div>
-                    <div class="stat-value text-lg text-error">{{ $transaction->debit ? formatNumber((float) $transaction->debit) : '-' }}</div>
+                    <div class="stat-value text-lg text-error">{{ $transaction->debit ?: '-' }}</div>
                 </div>
 
                 <div class="stat">
@@ -69,7 +69,7 @@
                         </svg>
                     </div>
                     <div class="stat-title">{{ __('Credit') }}</div>
-                    <div class="stat-value text-lg text-success">{{ $transaction->credit ? formatNumber((float) $transaction->credit) : '-' }}</div>
+                    <div class="stat-value text-lg text-success">{{ $transaction->credit ?: '-' }}</div>
                 </div>
 
                 <div class="stat">
