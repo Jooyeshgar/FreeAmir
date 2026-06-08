@@ -8,12 +8,43 @@ use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Services\ProductService;
+use App\Services\WarehouseDashboardService;
+use Illuminate\Http\Request;
+use PDF;
 
 class ProductController extends Controller
 {
     public function __construct(
         private readonly ProductService $productService,
+        private readonly WarehouseDashboardService $warehouseDashboardService
     ) {}
+
+    public function report(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['nullable', 'string'],
+            'group_name' => ['nullable', 'string'],
+            'min_quantity' => ['nullable', 'numeric'],
+            'cols_submitted' => ['nullable'],
+            'columns' => ['nullable', 'array'],
+            'columns.*' => ['string'],
+        ]);
+
+        $data = $this->warehouseDashboardService->report($validated);
+
+        $config = [
+            'format' => 'A4',
+            'orientation' => $data['portrait'] ? 'P' : 'L',
+            'directionality' => 'rtl',
+            'margin_top' => 28,
+            'margin_bottom' => 18,
+            'margin_header' => 6,
+            'margin_footer' => 6,
+            'defaultPageNumStyle' => 'persian',
+        ];
+
+        return PDF::loadView('warehouse.report-pdf', $data, [], $config)->stream('warehouse-report.pdf');
+    }
 
     public function index()
     {
@@ -30,7 +61,11 @@ class ProductController extends Controller
             });
         }
 
-        $products = $query->paginate(12);
+        if (request()->filled('min_quantity') && is_numeric(request('min_quantity'))) {
+            $query->where('quantity', '>=', (float) request('min_quantity'));
+        }
+
+        $products = $query->paginate(12)->withQueryString();
 
         $products->transform(function ($product) {
             $product->unapprovedQuantity = $this->productService->unapprovedQuantity($product);
@@ -110,7 +145,7 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with('success', __('Product deleted successfully.'));
     }
 
-    public function searchProductGroup(\Illuminate\Http\Request $request)
+    public function searchProductGroup(Request $request)
     {
         $validated = $request->validate([
             'q' => 'required|string|max:100',

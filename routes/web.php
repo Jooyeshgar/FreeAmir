@@ -62,6 +62,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
 
     Route::resource('transactions', Controllers\TransactionController::class)->only(['index', 'show']);
     Route::get('products/search-product-group', [Controllers\ProductController::class, 'searchProductGroup'])->name('products.search-product-group');
+    Route::get('products/report', [Controllers\ProductController::class, 'report'])->name('products.report');
     Route::resource('products', Controllers\ProductController::class);
     Route::resource('product-groups', Controllers\ProductGroupController::class);
     Route::get('services/search-service-group', [Controllers\ServiceController::class, 'searchServiceGroup'])->name('services.search-service-group');
