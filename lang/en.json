@@ -2253,7 +2253,6 @@
     "transaction_desc": "Transaction Description",
     "manual": "Manual",
     "automatic": "Automatic",
-    "imported": "Imported",
     "Documents report": "Documents report",
     "No documents were imported.": "No documents were imported.",
     ":skipped documents were skipped.": ":skipped documents were skipped.",

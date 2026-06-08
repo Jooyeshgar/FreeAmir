@@ -240,7 +240,6 @@ class FreeAmirImportFormat extends DocumentImportFormat
             'number' => $number,
             'date' => $date,
             'title' => $title,
-            'is_imported' => true,
         ], $transactions);
 
         if ($this->isApprovedStatus((string) ($first['doc_status'] ?? ''))) {

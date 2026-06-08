@@ -135,7 +135,6 @@ class ParsianImportFormat extends DocumentImportFormat
             'number' => $number,
             'date' => $date,
             'title' => '',
-            'is_imported' => true,
         ], $transactions);
 
         $this->result['documents_created']++;

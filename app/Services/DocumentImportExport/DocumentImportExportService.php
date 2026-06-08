@@ -162,7 +162,7 @@ class DocumentImportExportService
                                 'doc_number' => csvNumber(floor($document->number)),
                                 'doc_date' => formatDate($document->date),
                                 'doc_title' => $document->title ?? '',
-                                'doc_type' => __($document->document_type),
+                                'doc_type' => $document->documentable ? __('automatic') : __('manual'),
                                 'doc_status' => __($document->approved_at ? 'approved' : 'unapproved'),
                                 'subject_root_code' => $root,
                                 'subject_moein_code' => $moein,

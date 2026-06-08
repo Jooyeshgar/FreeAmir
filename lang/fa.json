@@ -2266,7 +2266,6 @@
     "transaction_desc": "شرح ردیف",
     "manual": "دستی",
     "automatic": "خودکار",
-    "imported": "وارد شده",
     "Documents report": "گزارش اسناد",
     "No documents were imported.": "هیچ سندی وارد نشد.",
     ":skipped documents were skipped.": ":skipped سند نادیده گرفته شد.",

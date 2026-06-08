@@ -260,21 +260,6 @@ class DocumentImportExportTest extends TestCase
         $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001003', 'name' => 'Widget']);
     }
 
-    public function test_imported_documents_have_is_imported_flag_set(): void
-    {
-        $csv = $this->buildCsv([
-            ['5', '2026-02-01', 'Imported Doc', 'manual', 'unapproved', '001', '', '', 'Assets', 'Test', '100', '100'],
-        ]);
-
-        $this->runCsvImport($csv);
-
-        $document = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('number', 5)->first();
-
-        $this->assertNotNull($document);
-        $this->assertTrue((bool) $document->is_imported);
-        $this->assertSame('imported', $document->document_type);
-    }
-
     public function test_csv_import_is_idempotent_for_documents(): void
     {
         $csv = $this->buildCsv([
@@ -340,18 +325,6 @@ class DocumentImportExportTest extends TestCase
         $importedRoot = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $newCompany->id)->where('name', 'Assets')->first();
         $this->assertNotNull($importedRoot);
         $this->assertSame($importedRoot->id, $importedChild->parent_id);
-    }
-
-    public function test_document_type_is_manual_for_regular_documents(): void
-    {
-        $doc = Document::factory()->create(['company_id' => $this->company->id, 'is_imported' => false]);
-        $this->assertSame('manual', $doc->document_type);
-    }
-
-    public function test_document_type_is_imported_for_imported_documents(): void
-    {
-        $doc = Document::factory()->create(['company_id' => $this->company->id, 'is_imported' => true]);
-        $this->assertSame('imported', $doc->document_type);
     }
 
     public function test_build_query_returns_all_documents_with_no_filters(): void
@@ -529,7 +502,6 @@ class DocumentImportExportTest extends TestCase
 
         $doc = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('number', 503)->first();
         $this->assertNotNull($doc);
-        $this->assertSame('imported', $doc->document_type);
         $this->assertCount(2, $doc->transactions);
     }
 

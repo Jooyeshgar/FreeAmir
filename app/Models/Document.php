@@ -15,14 +15,12 @@ class Document extends Model
     protected $casts = [
         'date' => 'date',
         'approved_at' => 'date',
-        'is_imported' => 'boolean',
     ];
 
     protected $fillable = [
         'number',
         'date',
         'title',
-        'is_imported',
         'creator_id',
         'company_id',
         'documentable_id',
@@ -30,19 +28,6 @@ class Document extends Model
         'approved_at',
         'approver_id',
     ];
-
-    public function getDocumentTypeAttribute(): string
-    {
-        if ($this->documentable_id) {
-            return 'automatic';
-        }
-
-        if ($this->is_imported) {
-            return 'imported';
-        }
-
-        return 'manual';
-    }
 
     public static function booted(): void
     {
