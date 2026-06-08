@@ -9,7 +9,9 @@ use App\Models\Transaction;
 use App\Services\DocumentNumberService;
 use App\Services\DocumentService;
 use App\Services\SubjectService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
@@ -68,7 +70,7 @@ class DocumentController extends Controller
 
         $total = count($transactions);
         $document = new Document;
-        $previousDocumentNumber = floor(Document::orderBy('number')->first()?->number) ?? 0;
+        $previousDocumentNumber = Document::orderByDesc('number')->first()?->number ?? 0;
 
         return view('documents.create', compact('document', 'previousDocumentNumber', 'subjects', 'transactions', 'total'));
     }
@@ -230,7 +232,7 @@ class DocumentController extends Controller
             $subjects = $subjectsById->values();
             $subjects = (new SubjectService)->buildSubjectTreeFromCollection($subjects);
 
-            $previousDocumentNumber = Document::where('number', '<', $document->number)->orderBy('number', 'desc')->first()->number ?? 0;
+            $previousDocumentNumber = Document::where('number', '<', $document->number)->orderByDesc('number')->first()->number ?? 0;
 
             return view('documents.edit', compact('previousDocumentNumber', 'document', 'subjects', 'transactions', 'total'));
         } else {
@@ -242,7 +244,7 @@ class DocumentController extends Controller
      * Update the specified document and its transactions.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function update(StoreTransactionRequest $request, $id)
     {
@@ -266,7 +268,7 @@ class DocumentController extends Controller
      * Duplicate the specified document with all its transactions.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function duplicate($id)
     {
@@ -327,7 +329,7 @@ class DocumentController extends Controller
      * Prepares a collection of transaction data for further display.
      *
      * @param  iterable  $transactions
-     * @return \Illuminate\Support\Collection
+     * @return Collection
      */
     private static function prepareTransactions($transactions)
     {
