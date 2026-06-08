@@ -1,7 +1,6 @@
-<x-app-layout :title="__('Transaction Details') . ' #' . $transaction->id">
+<x-app-layout :title="__('Transaction Details') . ' #' . convertToFarsi($transaction->id)">
     <div class="mx-auto max-w-5xl space-y-6">
 
-        <!-- Hero header -->
         <div class="card overflow-hidden bg-base-100">
             <div class="border-b border-base-300 bg-gradient-to-l from-primary/10 to-base-100 p-6">
                 <div class="flex flex-wrap items-center justify-between gap-4">
@@ -52,7 +51,6 @@
                 </div>
             </div>
 
-            <!-- Financial summary -->
             <div class="stats stats-vertical rounded-none sm:stats-horizontal">
                 <div class="stat">
                     <div class="stat-figure text-error">
@@ -86,9 +84,7 @@
             </div>
         </div>
 
-        <!-- Detail cards -->
         <div class="grid gap-6 md:grid-cols-3">
-            <!-- Subject Information -->
             <div class="card h-full bg-base-100">
                 <div class="card-body gap-0 p-5">
                     <div class="mb-3 flex items-center gap-3">
@@ -125,7 +121,6 @@
                 </div>
             </div>
 
-            <!-- Document Information -->
             <div class="card h-full bg-base-100">
                 <div class="card-body gap-0 p-5">
                     <div class="mb-3 flex items-center gap-3">
@@ -145,11 +140,11 @@
                             </a>
                         </div>
                         <div class="flex items-center justify-between gap-3 py-2.5">
-                            <span class="text-sm text-base-content/60">{{ __('Document Title') }}</span>
+                            <span class="text-sm text-base-content/60">{{ __('Title') }}</span>
                             <span class="text-end font-medium text-base-content">{{ $transaction->document->title ?: __('No title') }}</span>
                         </div>
                         <div class="flex items-center justify-between gap-3 py-2.5">
-                            <span class="text-sm text-base-content/60">{{ __('Document Date') }}</span>
+                            <span class="text-sm text-base-content/60">{{ __('Date') }}</span>
                             <span class="font-medium text-base-content">{{ formatDate($transaction->document->date) }}</span>
                         </div>
                     </div>
@@ -160,7 +155,6 @@
                 </div>
             </div>
 
-            <!-- User Information -->
             <div class="card h-full bg-base-100">
                 <div class="card-body gap-0 p-5">
                     <div class="mb-3 flex items-center gap-3">
