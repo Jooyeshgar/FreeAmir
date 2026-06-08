@@ -51,22 +51,22 @@
                 </div>
             </form>
             <div class="mt-4 border border-gray-300 rounded-md overflow-auto">
-                <table class="table table-zebra w-full">
+                <table class="table w-full">
                     <thead>
                         <tr class="bg-base-200">
-                            <th rowspan="2" class="px-4 py-2 text-center border-r align-middle border-gray-400">{{ __('Code') }}</th>
-                            <th rowspan="2" class="px-4 py-2 text-center border-r align-middle border-gray-400">{{ __('Name') }}</th>
-                            <th colspan="2" class="px-4 py-2 text-center border-r border-gray-400">{{ __('Opening') }}</th>
-                            <th colspan="2" class="px-4 py-2 text-center border-r border-gray-400">{{ __('Turnover') }}</th>
-                            <th colspan="2" class="px-4 py-2 text-center border-r border-gray-400">{{ __('Balance') }}</th>
+                            <th rowspan="2" class="px-4 py-2 text-center align-middle border-gray-300">{{ __('Code') }}</th>
+                            <th rowspan="2" class="px-4 py-2 text-center border-r align-middle border-gray-300">{{ __('Name') }}</th>
+                            <th colspan="2" class="px-4 py-2 text-center border-r border-gray-300">{{ __('Opening') }}</th>
+                            <th colspan="2" class="px-4 py-2 text-center border-r border-gray-300">{{ __('Turnover') }}</th>
+                            <th colspan="2" class="px-4 py-2 text-center border-r border-gray-300">{{ __('Balance') }}</th>
                         </tr>
                         <tr class="bg-base-200">
-                                                    <th class="px-4 py-2 text-center border-r border-gray-400">{{ __('Debtor') }}</th>
-                            <th class="px-4 py-2 text-center border-r border-gray-400">{{ __('Creditor') }}</th>
-                            <th class="px-4 py-2 text-center border-r border-gray-400">{{ __('Debtor') }}</th>
-                            <th class="px-4 py-2 text-center border-r border-gray-400">{{ __('Creditor') }}</th>
-                            <th class="px-4 py-2 text-center border-r border-gray-400">{{ __('Debtor') }}</th>
-                            <th class="px-4 py-2 text-center border-r border-gray-400">{{ __('Creditor') }}</th>
+                            <th class="px-4 py-2 text-center border-r border-gray-300">{{ __('Debtor') }}</th>
+                            <th class="px-4 py-2 text-center border-r border-gray-300">{{ __('Creditor') }}</th>
+                            <th class="px-4 py-2 text-center border-r border-gray-300">{{ __('Debtor') }}</th>
+                            <th class="px-4 py-2 text-center border-r border-gray-300">{{ __('Creditor') }}</th>
+                            <th class="px-4 py-2 text-center border-r border-gray-300">{{ __('Debtor') }}</th>
+                            <th class="px-4 py-2 text-center border-r border-gray-300">{{ __('Creditor') }}</th>
                         </tr>
                     </thead>
                     <tbody id="tb-rows">
@@ -75,12 +75,12 @@
                                 $depth = $subject->getAttribute('depth') ?? 0;
                             @endphp
                             <tr class="hover:bg-base-300" data-lazy-row data-index="{{ $index }}">
-                                <td class="border-r border-gray-400 text-center">
+                                <td class="border-gray-300 text-center">
                                     <a href="{{ route('transactions.index', ['subject_id' => $subject->id]) }}" class="text-primary hover:underline" title="{{ __('View transactions for this subject') }}">
                                         {{ $subject->formattedCode() }}
                                     </a>
                                 </td>
-                                <td class="px-4 py-2 border-r border-gray-400">
+                                <td class="px-4 py-2 border-r border-gray-300">
                                     <div class="flex items-center gap-2" style="padding-left: {{ $depth * 12 }}px;">
                                         @if ($depth > 0)
                                             <span>-</span>
@@ -95,12 +95,12 @@
                                         @endif
                                     </div>
                                 </td>
-                                <td class="px-4 py-2 border-r border-gray-400">{{ $subject->opening < 0 ? formatNumber(abs($subject->opening)) : formatNumber(0) }}</td>
-                                <td class="px-4 py-2 border-r border-gray-400">{{ $subject->opening > 0 ? formatNumber(abs($subject->opening)) : formatNumber(0) }}</td>
-                                <td class="px-4 py-2 border-r border-gray-400">{{ formatNumber(abs($subject->turnover_debit)) }}</td>
-                                <td class="px-4 py-2 border-r border-gray-400">{{ formatNumber($subject->turnover_credit) }}</td>
-                                <td class="px-4 py-2 border-r border-gray-400">{{ $subject->balance < 0 ? formatNumber(abs($subject->balance)) : formatNumber(0) }}</td>
-                                <td class="px-4 py-2 border-r border-gray-400">{{ $subject->balance > 0 ? formatNumber(abs($subject->balance)) : formatNumber(0) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-300">{{ $subject->opening < 0 ? formatNumber(abs($subject->opening)) : formatNumber(0) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-300">{{ $subject->opening > 0 ? formatNumber(abs($subject->opening)) : formatNumber(0) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-300">{{ formatNumber(abs($subject->turnover_debit)) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-300">{{ formatNumber($subject->turnover_credit) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-300">{{ $subject->balance < 0 ? formatNumber(abs($subject->balance)) : formatNumber(0) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-300">{{ $subject->balance > 0 ? formatNumber(abs($subject->balance)) : formatNumber(0) }}</td>
                             </tr>
                         @empty
                             <tr>
@@ -109,13 +109,13 @@
                         @endforelse
                         @if($subjects->count())
                             <tr class="font-bold bg-base-200">
-                                <td class="px-4 py-2 border-r border-gray-400 text-center" colspan="2">{{ __('Total') }}</td>
-                                <td class="px-4 py-2 border-r border-gray-400">{{ formatNumber($subjects->sum(fn($s) => $s->opening < 0 ? abs($s->opening) : 0)) }}</td>
-                                <td class="px-4 py-2 border-r border-gray-400">{{ formatNumber($subjects->sum(fn($s) => $s->opening > 0 ? abs($s->opening) : 0)) }}</td>
-                                <td class="px-4 py-2 border-r border-gray-400">{{ formatNumber($subjects->sum(fn($s) => abs($s->turnover_debit))) }}</td>
-                                <td class="px-4 py-2 border-r border-gray-400">{{ formatNumber($subjects->sum(fn($s) => abs($s->turnover_credit))) }}</td>
-                                <td class="px-4 py-2 border-r border-gray-400">{{ formatNumber($subjects->sum(fn($s) => $s->balance < 0 ? abs($s->balance) : 0)) }}</td>
-                                <td class="px-4 py-2 border-r border-gray-400">{{ formatNumber($subjects->sum(fn($s) => $s->balance > 0 ? abs($s->balance) : 0)) }}</td>
+                                <td class="px-4 py-2 border-gray-300 text-center" colspan="2">{{ __('Total') }}</td>
+                                <td class="px-4 py-2 border-r border-gray-300">{{ formatNumber($subjects->sum(fn($s) => $s->opening < 0 ? abs($s->opening) : 0)) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-300">{{ formatNumber($subjects->sum(fn($s) => $s->opening > 0 ? abs($s->opening) : 0)) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-300">{{ formatNumber($subjects->sum(fn($s) => abs($s->turnover_debit))) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-300">{{ formatNumber($subjects->sum(fn($s) => abs($s->turnover_credit))) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-300">{{ formatNumber($subjects->sum(fn($s) => $s->balance < 0 ? abs($s->balance) : 0)) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-300">{{ formatNumber($subjects->sum(fn($s) => $s->balance > 0 ? abs($s->balance) : 0)) }}</td>
                             </tr>
                         @endif
                     </tbody>

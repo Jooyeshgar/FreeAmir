@@ -32,11 +32,11 @@
                     <div class="flex justify-between items-start p-4 border border-black rounded-lg">
                         <div class="text-center w-full">
                             <h1 class="text-xl font-bold">{{ config('active-company-name') }}</h1>
-                            <p class="text-lg">سند حسابداری</p>
+                            <p class="text-lg">{{ __('Accounting Document') }}</p>
                         </div>
                         <div class="text-sm text-right w-1/4">
-                            <p>تاریخ سند: {{ $document->formatted_date }}</p>
-                            <p>شماره سند: {{ formatDocumentNumber($document->number) }}</p>
+                            <p>{{ __('Document Date') }}: {{ $document->formatted_date }}</p>
+                            <p>{{ __('Document Number:') }} {{ formatDocumentNumber($document->number) }}</p>
                         </div>
                     </div>
                 </td>
@@ -104,12 +104,12 @@
             <tr>
                 <td colspan="5">
                     <div class="border border-black text-sm rounded-lg p-4">
-                        <p class="mb-2">شرح سند: {{ $document->title }}</p>
+                        <p class="mb-2">{{ __('Document Description') }}: {{ $document->title }}</p>
                         <div class="flex justify-between text-sm print:flex-wrap">
-                            <p>ایجاد کننده: {{ $document->creator->name }}</p>
-                            <p>تایید کننده: {{ $document->approver?->name }}</p>
-                            <p>تاریخ ایجاد: {{ formatDate($document->created_at) }}</p>
-                            <p>تاریخ تایید: {{ formatDate($document->approved_at) }}</p>
+                            <p>{{ __('Creator') }}: {{ $document->creator->name }}</p>
+                            <p>{{ __('Approver') }}: {{ $document->approver?->name }}</p>
+                            <p>{{ __('Creation Date') }}: {{ formatDate($document->created_at) }}</p>
+                            <p>{{ __('Approve date') }}: {{ formatDate($document->approved_at) }}</p>
                         </div>
                     </div>
                 </td>

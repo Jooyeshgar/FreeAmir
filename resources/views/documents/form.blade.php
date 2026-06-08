@@ -16,7 +16,7 @@
             x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(number));">
         </x-text-input>
         <x-text-input data-jdp title="{{ __('date') }}" input_name="date" placeholder="{{ __('date') }}"
-            input_value="{{ old('date') ?? convertToJalali($document->date ?? now()) }}"
+            input_value="{{ old('date') ?? convertToJalali($document->date ?? now(), true) }}"
             label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
     </div>
 </x-card>

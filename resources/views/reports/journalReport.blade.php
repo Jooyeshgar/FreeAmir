@@ -8,12 +8,12 @@
         <div class="bg-white px-2 print:pl-8">
             <div class="border border-gray-300 p-4 rounded mb-6 flex">
                 <div class="flex-grow text-center mb-4">
-                    <h1 class="text-xl font-bold">{{ config('app.name') }}</h1>
+                    <h1 class="text-xl font-bold">{{ config('active-company-name') }}</h1>
                     <p class="text-lg">{{ __('Journal Report') }}</p>
                 </div>
                 <div class="w-1/4 text-sm ">
-                    <p>تاریخ گزارش: {{ formatDate(now()) }}</p>
-                    <p>صفحه: {{ formatNumber($current) }} از {{ formatNumber($pagecount) }}</p>
+                    <p>{{ __('Report Date') }}: {{ formatDate(now()) }}</p>
+                    <p>{{ __('Page :current of :total', ['current' => formatNumber($current), 'total' => formatNumber($pagecount)]) }}</p>
                 </div>
             </div>
             <table class="w-full mb-6 border-collapse border border-gray-300 rounded">
@@ -34,12 +34,12 @@
             <div class="bg-white px-2 print:pl-8">
                 <div class="border border-gray-300 p-4 rounded mb-6 flex">
                     <div class="flex-grow text-center mb-4">
-                        <h1 class="text-xl font-bold">{{ config('app.name') }}</h1>
+                        <h1 class="text-xl font-bold">{{ config('active-company-name') }}</h1>
                         <p class="text-lg">{{ __('Journal Report') }}</p>
                     </div>
                     <div class="w-1/4 text-sm ">
-                        <p>تاریخ گزارش: {{ formatDate(now()) }}</p>
-                        <p>صفحه: {{ formatNumber($current) }} از {{ formatNumber($pagecount) }}</p>
+                        <p>{{ __('Report Date') }}: {{ formatDate(now()) }}</p>
+                        <p>{{ __('Page :current of :total', ['current' => formatNumber($current), 'total' => formatNumber($pagecount)]) }}</p>
                     </div>
                 </div>
                 <table class="w-full mb-6 border-collapse border border-gray-300 rounded">

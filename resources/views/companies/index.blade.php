@@ -36,7 +36,7 @@
                                         {{ __('Close Fiscal Year') }}
                                     </a>
                                 @endcan
-                                <form action="{{ route('companies.destroy', $company) }}" method="POST" class="inline-block m-0"
+                                <form action="{{ route('companies.destroy', $company) }}" method="POST" class="inline-block"
                                     onsubmit="return confirm('{{ __('Are you sure you want to delete this company?') }}');">
                                     @csrf
                                     @method('DELETE')

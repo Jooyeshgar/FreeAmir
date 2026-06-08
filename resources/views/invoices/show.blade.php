@@ -114,7 +114,7 @@
             @if ($invoice->description)
                 <div>
                     <div class="divider text-lg font-semibold">{{ __('Notes') }}</div>
-                    <div class="alert bg-base-200 shadow-sm">
+                    <div class="alert bg-base-200">
                         <div>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-info shrink-0 w-6 h-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -184,9 +184,9 @@
 
             <div>
                 <div class="divider text-lg font-semibold">{{ __('Items') }}</div>
-                <div class="overflow-x-auto shadow-lg rounded-lg">
-                    <table class="table table-zebra w-full">
-                        <thead class="bg-base-300">
+                <div>
+                    <table class="table w-full">
+                        <thead>
                             <tr>
                                 <th class="px-4 py-3">#</th>
                                 <th class="px-4 py-3 text-right">
@@ -231,7 +231,7 @@
                                 </tr>
                             @endforelse
                         </tbody>
-                        <tfoot class="bg-base-300">
+                        <tfoot>
                             <tr>
                                 <td colspan="8" class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
                                     {{ __('Total items: :count', ['count' => convertToFarsi($invoice->items->count())]) }}
@@ -248,8 +248,8 @@
                     @if ($invoice->getReturnInvoice())
                         <div class="divider text-lg font-semibold">{{ __('Invoice') }} {{ __('Return from') }}{{ $invoice->invoice_type->label() }}</div>
                         <div>
-                            <table class="table table-zebra w-full">
-                                <thead class="bg-base-300">
+                            <table class="table w-full">
+                                <thead>
                                     <tr>
                                         <th class="px-4 py-3">#</th>
                                         <th class="px-4 py-3 text-right">{{ __('Invoice Number') }}</th>
@@ -303,7 +303,7 @@
                     {{ $invoice->getReturnedInvoice()?->invoice_type->label() }}</div>
                 @if ($invoice->getReturnedInvoice())
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                        <div class="card bg-base-200 shadow-sm">
+                        <div class="card bg-base-200">
                             <div class="card-body p-4">
                                 <h3 class="card-title text-sm font-medium text-gray-500 dark:text-slate-300">{{ __('Title') }}
                                     {{ __('Invoice') }}</h3>
@@ -366,8 +366,8 @@
                         </div>
                     </div>
                     <div class="overflow-x-auto shadow-lg rounded-lg">
-                        <table class="table table-zebra w-full">
-                            <thead class="bg-base-300">
+                        <table class="table w-full">
+                            <thead>
                                 <tr>
                                     <th class="px-4 py-3">#</th>
                                     <th class="px-4 py-3 text-right">
@@ -415,7 +415,7 @@
                                     </tr>
                                 @endforelse
                             </tbody>
-                            <tfoot class="bg-base-300">
+                            <tfoot>
                                 <tr>
                                     <td colspan="8" class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
                                         {{ __('Total items: :count', ['count' => convertToFarsi($invoice->getReturnedInvoice()?->items->count() ?? 0)]) }}
@@ -425,7 +425,7 @@
                         </table>
                     </div>
                 @else
-                    <div class="alert bg-base-200 shadow-sm">
+                    <div class="alert bg-base-200">
                         <span>{{ __('This invoice has not any returned invoices.') }}</span>
                     </div>
                 @endif
@@ -476,7 +476,7 @@
                                                         @if ($ancillaryChangeStatusValidation['allowed'] ?? false)
                                                             <form method="POST"
                                                                 action="{{ route('ancillary-costs.change-status', [$ancillaryCost, $ancillaryCost->status?->isApproved() ? 'unapprove' : 'approve']) }}"
-                                                                class="m-0">
+                                                                class="inline-block">
                                                                 @csrf
                                                                 <button type="submit" x-data="{}"
                                                                     class="btn btn-xs {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }}">
@@ -529,7 +529,7 @@
 
                                                     @can('ancillary-costs.delete')
                                                         @if ($editDeleteAllowed)
-                                                            <form class="m-0" action="{{ route('invoices.ancillary-costs.destroy', [$invoice, $ancillaryCost]) }}"
+                                                            <form class="inline-block" action="{{ route('invoices.ancillary-costs.destroy', [$invoice, $ancillaryCost]) }}"
                                                                 method="POST">
                                                                 @csrf
                                                                 @method('DELETE')
@@ -553,7 +553,7 @@
                             </table>
                         </div>
                     @else
-                        <div class="alert bg-base-200 shadow-sm">
+                        <div class="alert bg-base-200">
                             <span>{{ __('No ancillary costs are attached to this invoice.') }}</span>
                         </div>
                     @endif

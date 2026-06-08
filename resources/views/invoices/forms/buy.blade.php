@@ -8,7 +8,7 @@
                 $hint =
                     '<a class="link text-blue-500 hover:underline dark:text-sky-300" href="' .
                     route('customers.create') .
-                    '">' .
+                    '" target="_blank">' .
                     __('Add Customer') .
                     '</a>';
             @endphp
@@ -18,7 +18,7 @@
                 selectedValue: '{{ $initialSelectedValue }}',
             }">
                 <span class="flex flex-wrap text-gray-500 w-full">{{ __('Customer') }}
-                    <a href="{{ route('customers.create') }}"
+                    <a href="{{ route('customers.create') }}" target="_blank"
                         class="btn btn-xs btn-ghost text-blue-500 hover:text-blue-700 dark:text-sky-300 dark:hover:text-sky-200 dark:hover:bg-sky-500/10"
                         title="{{ __('Add Customer') }}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
@@ -82,7 +82,7 @@
                 class="text-sm flex-1 min-w-24 max-w-64 text-center text-gray-500 pt-3 flex items-center justify-center gap-2">
                 <div class="flex items-center gap-3 ml-1">
                     {{ __('Product') }}
-                    <a href="{{ route('products.create') }}"
+                    <a href="{{ route('products.create') }}" target="_blank"
                         class="flex items-center gap-1 btn btn-xs btn-ghost text-blue-500 hover:text-blue-700 dark:text-sky-300 dark:hover:text-sky-200 dark:hover:bg-sky-500/10"
                         title="{{ __('Create Product') }}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
@@ -127,7 +127,7 @@
                             $hint =
                                 '<a class="link text-blue-500 dark:text-sky-300" href="' .
                                 route('products.create') .
-                                '">' .
+                                '" target="_blank">' .
                                 __('Create Product') .
                                 '</a>';
                         @endphp
@@ -261,9 +261,6 @@
 </div>
 
 @pushOnce('scripts')
-    <script type="module">
-        jalaliDatepicker.startWatch({'persianDigits': true});
-    </script>
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('transactionForm', () => ({
