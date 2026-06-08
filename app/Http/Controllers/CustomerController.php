@@ -23,7 +23,16 @@ class CustomerController extends Controller
 
     public function index(Request $request)
     {
-        $query = Customer::with('subject', 'group')->withCount('comments')->orderBy('id', 'desc');
+        $query = Customer::with('subject', 'group')
+            ->withCount('comments')
+            ->select('customers.*')
+            ->selectSub(
+                Transaction::query()
+                    ->selectRaw('COALESCE(SUM(value), 0)')
+                    ->whereColumn('transactions.subject_id', 'customers.subject_id'),
+                'balance'
+            )
+            ->orderBy('id', 'desc');
 
         if (request()->has('name') && request('name')) {
             $query->where('name', 'like', '%'.request('name').'%');
@@ -60,8 +69,12 @@ class CustomerController extends Controller
         }
         if ($balanceFilter !== 'all') {
             $query->whereIn('subject_id', $this->balanceSubjectIds($balanceFilter));
+            $query->reorder('balance', $balanceFilter === 'debt' ? 'asc' : 'desc');
         }
-        $balanceSum = (float) Transaction::query()->whereIn('subject_id', (clone $query)->whereNotNull('subject_id')->pluck('subject_id'))->sum('value');
+
+        $balanceSum = (float) Transaction::query()
+            ->whereIn('subject_id', (clone $query)->reorder()->whereNotNull('subject_id')->select('subject_id'))
+            ->sum('value');
 
         $customers = $query->paginate(30)->appends($request->query());
 
