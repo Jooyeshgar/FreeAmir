@@ -6,6 +6,8 @@ use App\Http\Requests\StoreTransactionRequest;
 use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
+use App\Services\DocumentImportExport\DocumentImportExportService;
+use App\Services\DocumentImportExport\DocumentImportFormatRegistry;
 use App\Services\DocumentNumberService;
 use App\Services\DocumentService;
 use App\Services\SubjectService;
@@ -14,10 +16,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DocumentController extends Controller
 {
-    public function __construct(private readonly DocumentNumberService $documentNumberService) {}
+    public function __construct(
+        private readonly DocumentNumberService $documentNumberService,
+        private readonly DocumentImportExportService $documentImportExportService
+    ) {}
 
     public function index()
     {
@@ -301,6 +307,38 @@ class DocumentController extends Controller
 
         return redirect()->route('documents.edit', $newDocument->id)
             ->with('success', __('Document duplicated successfully.'));
+    }
+
+    public function exportForm()
+    {
+        return view('documents.export');
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $data = $this->documentImportExportService->validateExportRequest($request);
+
+        return $this->documentImportExportService->export($data);
+    }
+
+    public function importForm()
+    {
+        $formats = (new DocumentImportFormatRegistry)->options();
+
+        return view('documents.import', compact('formats'));
+    }
+
+    public function import(Request $request): RedirectResponse
+    {
+        $this->documentImportExportService->validateImportRequest($request);
+
+        $file = $request->file('file');
+        $user = $request->user();
+
+        $result = $this->documentImportExportService->importCsv($file, $user, $request->input('format'));
+        ['type' => $type, 'lines' => $lines] = $this->documentImportExportService->buildImportFeedback($result);
+
+        return redirect()->route('documents.index')->with($type, $lines);
     }
 
     public function fields($customers): array

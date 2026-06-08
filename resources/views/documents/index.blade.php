@@ -15,6 +15,8 @@
                         </button>
                     </form>
                 @endcan
+                <x-button href="{{ route('documents.export') }}" class="btn-secondary">{{ __('Export') }}</x-button>
+                <x-button href="{{ route('documents.import') }}" class="btn-accent">{{ __('Import') }}</x-button>
             </div>
 
             <form action="{{ route('documents.index') }}" method="GET">

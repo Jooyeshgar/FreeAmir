@@ -56,7 +56,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'documents' => [
                 ...self::CRUD,
                 'print', 'duplicate', 'change-status', 'approve-all',
-                'search-account-balance',
+                'search-account-balance', 'export', 'export.download', 'import', 'import.store',
                 'sort-numbers', 'sort-numbers.start', 'sort-numbers.process',
             ],
             'documents.files' => ['create', 'store', 'edit', 'update', 'destroy', 'view', 'download'],
@@ -149,7 +149,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'comments' => self::CRUD_NO_SHOW,
 
             // Reports
-            'reports' => ['ledger', 'journal', 'sub-ledger', 'trial-balance', 'trial-balance.print', 'documents', 'result', 'cost-income'],
+            'reports' => ['ledger', 'journal', 'sub-ledger', 'trial-balance', 'trial-balance.print', 'trial-balance.export-csv', 'documents', 'result', 'cost-income'],
 
             // API
             'api-tokens' => ['index', 'create', 'store', 'destroy'],

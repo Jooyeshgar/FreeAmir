@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
+use App\Services\DocumentImportExport\DocumentImportExportService;
 use App\Services\SubjectService;
+use App\Services\TrialBalanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -14,7 +16,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportsController extends Controller
 {
-    public function __construct(private readonly SubjectService $subjectService) {}
+    public function __construct(
+        private readonly SubjectService $subjectService,
+        private readonly DocumentImportExportService $documentImportExportService
+    ) {}
 
     public function ledger()
     {
@@ -43,12 +48,17 @@ class ReportsController extends Controller
         return view('reports.documents');
     }
 
-    public function trialBalance(Request $request, \App\Services\TrialBalanceService $trialBalanceService)
+    public function trialBalance(Request $request, TrialBalanceService $trialBalanceService)
     {
         return view('reports.trialBalance', $trialBalanceService->getTrialBalanceData($request));
     }
 
-    public function printTrialBalance(Request $request, \App\Services\TrialBalanceService $trialBalanceService)
+    public function exportTrialBalanceCsv(Request $request, TrialBalanceService $trialBalanceService): StreamedResponse
+    {
+        return $trialBalanceService->exportCsv($request);
+    }
+
+    public function printTrialBalance(Request $request, TrialBalanceService $trialBalanceService)
     {
         return view('reports.trialBalancePrint', $trialBalanceService->getTrialBalanceData($request));
     }
@@ -87,7 +97,29 @@ class ReportsController extends Controller
             }
         })->validate();
 
+        if ($request->report_for == 'Journal' && $request->input('action') === 'export_csv') {
+            return $this->documentImportExportService->export([
+                'start_document_number' => $request->input('start_document_number'),
+                'end_document_number' => $request->input('end_document_number'),
+                'start_date' => $request->input('start_date'),
+                'end_date' => $request->input('end_date'),
+                'text' => $request->input('search'),
+                'columns_selected' => $request->input('columns_selected'),
+                'columns' => $request->input('columns', []),
+            ]);
+        }
+
         if ($request->report_for == 'Document') {
+            if ($request->input('action') === 'export_csv') {
+                return $this->documentImportExportService->export([
+                    'start_document_number' => $request->input('start_document_number'),
+                    'end_document_number' => $request->input('end_document_number'),
+                    'start_date' => $request->input('start_date'),
+                    'end_date' => $request->input('end_date'),
+                    'text' => $request->input('search'),
+                ]);
+            }
+
             $documents = Document::query();
             // Document number filters
             if ($request->filled('start_document_number') && $request->filled('end_document_number')) {

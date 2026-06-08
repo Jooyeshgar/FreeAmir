@@ -56,6 +56,10 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('documents/sort-numbers', [Controllers\DocumentController::class, 'sortNumbers'])->name('documents.sort-numbers');
     Route::post('documents/sort-numbers/start', [Controllers\DocumentController::class, 'startSorting'])->name('documents.sort-numbers.start');
     Route::post('documents/sort-numbers/process', [Controllers\DocumentController::class, 'processSorting'])->name('documents.sort-numbers.process');
+    Route::get('documents/export', [Controllers\DocumentController::class, 'exportForm'])->name('documents.export');
+    Route::post('documents/export', [Controllers\DocumentController::class, 'export'])->name('documents.export.download');
+    Route::get('documents/import', [Controllers\DocumentController::class, 'importForm'])->name('documents.import');
+    Route::post('documents/import', [Controllers\DocumentController::class, 'import'])->name('documents.import.store');
     Route::resource('documents', Controllers\DocumentController::class);
     Route::get('documents/{document}/print', [Controllers\DocumentController::class, 'print'])->name('documents.print');
     Route::get('documents/{document}/duplicate', [Controllers\DocumentController::class, 'duplicate'])->name('documents.duplicate');
@@ -178,8 +182,10 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('sub-ledger', [Controllers\ReportsController::class, 'subLedger'])->name('sub-ledger');
         Route::get('trial-balance', [Controllers\ReportsController::class, 'trialBalance'])->name('trial-balance');
         Route::get('trial-balance.print', [Controllers\ReportsController::class, 'printTrialBalance'])->name('trial-balance.print');
+        Route::get('trial-balance/export-csv', [Controllers\ReportsController::class, 'exportTrialBalanceCsv'])->name('trial-balance.export-csv');
         Route::get('documents', [Controllers\ReportsController::class, 'documents'])->name('documents');
         Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
+        Route::post('documents/export', [Controllers\DocumentController::class, 'export'])->name('documents.export');
         Route::get('cost-income', [Controllers\CostIncomeController::class, 'index'])->name('cost-income');
     });
 

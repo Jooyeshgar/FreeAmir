@@ -14,18 +14,31 @@ class SubjectController extends Controller
 
     public function index(Request $request)
     {
+        $importedDefaultName = (bool) $request->input('name_is_default', false);
         $currentParent = null;
 
-        if ($request->has('parent_id')) {
-            $currentParent = Subject::find($request->get('parent_id'));
-            $subjects = $currentParent->children()->with('subjectable');
+        if ($importedDefaultName) {
+            $prefixes = [
+                __('Kol :code', ['code' => '']),
+                __('Moein :code', ['code' => '']),
+                __('Tafsili :code', ['code' => '']),
+                explode(':n', __('Level :n :code'))[0],
+            ];
+            $subjects = Subject::where(function ($q) use ($prefixes) {
+                foreach ($prefixes as $prefix) {
+                    if ($prefix !== '') {
+                        $q->orWhere('name', 'like', "{$prefix}%");
+                    }
+                }
+            })->with('subjectable')->orderBy('code')->get();
+        } elseif ($request->has('parent_id')) {
+            $currentParent = Subject::find($request->input('parent_id'));
+            $subjects = $currentParent->children()->with('subjectable')->orderBy('code')->get();
         } else {
-            $subjects = Subject::whereIsRoot()->with('subjectable');
+            $subjects = Subject::whereIsRoot()->with('subjectable')->orderBy('code')->get();
         }
 
-        $subjects = $subjects->orderBy('code')->get();
-
-        return view('subjects.index', compact('subjects', 'currentParent'));
+        return view('subjects.index', compact('subjects', 'currentParent', 'importedDefaultName'));
     }
 
     public function create(Request $request)
