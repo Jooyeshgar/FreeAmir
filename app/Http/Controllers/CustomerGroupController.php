@@ -13,7 +13,9 @@ class CustomerGroupController extends Controller
 
     public function index()
     {
-        $customerGroups = CustomerGroup::paginate(12);
+        $customerGroups = CustomerGroup::with('subject')
+            ->withCount('customers')
+            ->paginate(12);
 
         return view('customerGroups.index', compact('customerGroups'));
     }

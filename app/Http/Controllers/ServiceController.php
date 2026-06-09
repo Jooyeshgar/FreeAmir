@@ -6,7 +6,12 @@ use App\Http\Requests\StoreServiceRequest;
 use App\Http\Requests\UpdateServiceRequest;
 use App\Models\Service;
 use App\Models\ServiceGroup;
+use App\Services\ServiceImportService;
 use App\Services\ServiceService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ServiceController extends Controller
 {
@@ -80,6 +85,59 @@ class ServiceController extends Controller
         $this->serviceService->delete($service);
 
         return redirect()->route('services.index')->with('success', __('Service deleted successfully.'));
+    }
+
+    public function export(): StreamedResponse
+    {
+        $filename = 'services_'.now()->format('YmdHis').'.csv';
+
+        return response()->streamDownload(function () {
+            $file = fopen('php://output', 'w');
+
+            // UTF-8 BOM so Excel reads Persian text correctly.
+            fwrite($file, "\xEF\xBB\xBF");
+            fputcsv($file, ServiceImportService::COLUMNS);
+
+            Service::with('serviceGroup')
+                ->orderBy('code')
+                ->chunk(200, function ($services) use ($file) {
+                    foreach ($services as $service) {
+                        fputcsv($file, [
+                            $service->code,
+                            $service->name,
+                            $service->serviceGroup?->name,
+                            $service->sstid,
+                            $service->selling_price,
+                            $service->vat,
+                            $service->description,
+                        ]);
+                    }
+                });
+
+            fclose($file);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    public function importForm(): View
+    {
+        return view('services.import');
+    }
+
+    public function import(Request $request, ServiceImportService $importService): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+        ]);
+
+        $result = $importService->import($request->file('file'), getActiveCompany());
+
+        return redirect()->route('services.index')->with('success', __('Import complete: :imported services imported, :updated updated, :groups groups created.', [
+            'imported' => $result['imported'],
+            'updated' => $result['updated'],
+            'groups' => $result['groups_created'],
+        ]));
     }
 
     public function searchServiceGroup()
