@@ -63,6 +63,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::resource('documents', Controllers\DocumentController::class);
     Route::get('documents/{document}/print', [Controllers\DocumentController::class, 'print'])->name('documents.print');
     Route::get('documents/{document}/duplicate', [Controllers\DocumentController::class, 'duplicate'])->name('documents.duplicate');
+    Route::post('documents/{document}/transfer', [Controllers\DocumentController::class, 'transfer'])->name('documents.transfer');
 
     Route::resource('transactions', Controllers\TransactionController::class)->only(['index', 'show']);
     Route::get('products/search-product-group', [Controllers\ProductController::class, 'searchProductGroup'])->name('products.search-product-group');
@@ -106,6 +107,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('{invoice}/ancillary-costs/{ancillary_cost}/edit', [Controllers\AncillaryCostController::class, 'edit'])->name('invoices.ancillary-costs.edit');
         Route::put('{invoice}/ancillary-costs/{ancillary_cost}', [Controllers\AncillaryCostController::class, 'update'])->name('invoices.ancillary-costs.update');
         Route::delete('{invoice}/ancillary-costs/{ancillary_cost}', [Controllers\AncillaryCostController::class, 'destroy'])->name('invoices.ancillary-costs.destroy');
+        Route::post('{invoice}/ancillary-costs/{ancillary_cost}/transfer', [Controllers\AncillaryCostController::class, 'transfer'])->name('invoices.ancillary-costs.transfer');
     });
     Route::get('invoices/moadian-histories', [Controllers\MoadianHistoryController::class, 'index'])->name('invoices.moadian-histories.index');
     Route::resource('invoices', Controllers\InvoiceController::class);
@@ -119,6 +121,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('invoices/{invoice}/void', [Controllers\InvoiceController::class, 'showVoidForm'])->name('invoices.void-form');
     Route::post('invoices/{invoice}/void', [Controllers\InvoiceController::class, 'voidInvoice'])->name('invoices.void');
     Route::post('invoices/{invoice}/change-status/{status}', [Controllers\InvoiceController::class, 'changeStatus'])->name('invoices.change-status');
+    Route::post('invoices/{invoice}/transfer', [Controllers\InvoiceController::class, 'transfer'])->name('invoices.transfer');
     Route::group(['prefix' => 'management'], function () {
         Route::post('users/{user}/create-employee', [Controllers\Management\UserController::class, 'createEmployee'])
             ->name('users.create-employee');

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreTransactionRequest;
+use App\Models\Company;
 use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
@@ -10,6 +11,7 @@ use App\Services\DocumentImportExport\DocumentImportExportService;
 use App\Services\DocumentImportExport\DocumentImportFormatRegistry;
 use App\Services\DocumentNumberService;
 use App\Services\DocumentService;
+use App\Services\FiscalYearTransferService;
 use App\Services\SubjectService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -131,7 +133,11 @@ class DocumentController extends Controller
 
     public function show(Document $document)
     {
-        return view('documents.show', compact('document'));
+        $fiscalYears = Company::whereHas('users', function ($q) {
+            $q->where('users.id', Auth::id());
+        })->where('id', '!=', getActiveCompany())->get();
+
+        return view('documents.show', compact('document', 'fiscalYears'));
     }
 
     public function print(Document $document)
@@ -387,6 +393,30 @@ class DocumentController extends Controller
                 'debit' => $isModel ? ($t->debit ?? 0) : ($t['debit'] ?? 0),
             ];
         });
+    }
+
+    public function transfer(Request $request, Document $document): RedirectResponse
+    {
+        $request->validate(['target_company_id' => 'required|integer|exists:companies,id']);
+
+        if ((int) $request->target_company_id === getActiveCompany()) {
+            return redirect()->route('documents.show', $document)->with('error', __('Cannot transfer to the same fiscal year.'));
+        }
+
+        $result = FiscalYearTransferService::transferDocument($document, $request->target_company_id, $request->user());
+
+        if (! $result['success']) {
+            return redirect()->route('documents.show', $document)->withErrors($result['errors']);
+        }
+
+        $redirect = redirect()->route('documents.show', $document)
+            ->with('success', __('Document transferred successfully to the target fiscal year.'));
+
+        if (! empty($result['warnings'])) {
+            $redirect = $redirect->with('warning', $result['warnings']);
+        }
+
+        return $redirect;
     }
 
     public function changeStatus(Document $document, Request $request)
