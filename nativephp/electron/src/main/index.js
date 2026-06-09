@@ -1,8 +1,7 @@
 import NativePHP from '#plugin';
-import { app } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import path from 'path';
-
-// Inherit User's PATH in Process & ChildProcess
+import { createSplash } from './splash.js';
 import fixPath from 'fix-path';
 fixPath();
 
@@ -14,7 +13,27 @@ const executable = process.platform === 'win32' ? 'php.exe' : 'php';
 const phpBinary = path.join(buildPath, 'php', executable);
 const appPath = path.join(buildPath, 'app');
 
-/**
- * Turn on the lights for the NativePHP app.
- */
-NativePHP.bootstrap(app, defaultIcon, phpBinary, certificate, appPath);
+let splashWindow;
+
+app.whenReady().then(() => {
+    try {
+        splashWindow = createSplash(appPath, import.meta.dirname);
+    } catch (error) {
+        console.error('Error creating splash screen:', error);
+    }
+
+    NativePHP.bootstrap(app, defaultIcon, phpBinary, certificate, appPath);
+});
+
+app.on('browser-window-created', (event, window) => {
+    if (splashWindow && window !== splashWindow) {
+        window.webContents.on('did-navigate', (evt, url) => {
+            if (url.startsWith('http://127.0.0.1') || url.startsWith('http://localhost')) {
+                if (splashWindow) {
+                    splashWindow.close();
+                    splashWindow = null;
+                }
+            }
+        });
+    }
+});
