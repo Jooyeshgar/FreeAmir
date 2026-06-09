@@ -136,6 +136,8 @@ class DocumentController extends Controller
 
     public function show(Document $document)
     {
+        $document->load('transactions.subject');
+
         $fiscalYears = Company::whereHas('users', function ($q) {
             $q->where('users.id', Auth::id());
         })->where('id', '!=', getActiveCompany())->get();
@@ -174,7 +176,7 @@ class DocumentController extends Controller
             ['title' => __('Creator'), 'value' => $document->creator?->name ?: '—'],
             ['title' => __('Approver'), 'value' => $document->approver?->name ?: '—'],
             ['title' => __('Creation Date'), 'value' => $document->created_at ? formatDate($document->created_at) : '—'],
-            ['title' => __('Approve date'), 'value' => $document->approved_at ? formatDate($document->approved_at) : '—'],
+            ['title' => __('Approval Date'), 'value' => $document->approved_at ? formatDate($document->approved_at) : '—'],
         ];
 
         return view('documents.show', compact('document', 'fiscalYears', 'sumCredit', 'sumDebit', 'documentFiles', 'imageExtensions', 'groupedTransactions', 'documentableRoute', 'isLinked', 'linkedType', 'details'));
