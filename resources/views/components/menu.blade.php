@@ -86,7 +86,7 @@
         </details>
     </li>
 @endcanany
-@canany(['documents.index', 'documents.create', 'documents.export', 'documents.import'])
+@canany(['documents.index', 'documents.create'])
     <li>
         <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('Accounting') }}</summary>
@@ -96,12 +96,6 @@
                 @endcan
                 @can('documents.index')
                     <li><a href="{{ route('documents.index') }}">{{ __('Document List') }}</a></li>
-                @endcan
-                @can('documents.export')
-                    <li><a href="{{ route('documents.export') }}">{{ __('Export Documents') }}</a></li>
-                @endcan
-                @can('documents.import')
-                    <li><a href="{{ route('documents.import') }}">{{ __('Import Documents') }}</a></li>
                 @endcan
             </ul>
         </details>
