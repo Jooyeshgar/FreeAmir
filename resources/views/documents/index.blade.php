@@ -101,7 +101,7 @@
                         <th class="p-2">{{ __('Title') }}</th>
                         <th class="p-2 w-40">{{ __('Date') }}</th>
                         <th class="p-2 w-40">{{ __('Relation') }}</th>
-                        <th class="p-2 w-40">{{ __('Approve date') }}</th>
+                        <th class="p-2 w-40">{{ __('Approval Date') }}</th>
                         <th class="p-2 w-40">{{ __('Approved By') }}</th>
                         <th class="p-2 w-60">{{ __('Action') }}</th>
                     </tr>

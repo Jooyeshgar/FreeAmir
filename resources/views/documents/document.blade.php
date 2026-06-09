@@ -109,7 +109,7 @@
                             <p>{{ __('Creator') }}: {{ $document->creator->name }}</p>
                             <p>{{ __('Approver') }}: {{ $document->approver?->name }}</p>
                             <p>{{ __('Creation Date') }}: {{ formatDate($document->created_at) }}</p>
-                            <p>{{ __('Approve date') }}: {{ formatDate($document->approved_at) }}</p>
+                            <p>{{ __('Approval Date') }}: {{ formatDate($document->approved_at) }}</p>
                         </div>
                     </div>
                 </td>
