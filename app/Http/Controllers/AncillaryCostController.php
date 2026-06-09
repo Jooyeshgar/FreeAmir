@@ -247,7 +247,7 @@ class AncillaryCostController extends Controller
         }
 
         $invoiceItems = $invoice->items()
-            ->where('itemable_type', Product::class)
+            ->where('itemable_type', \App\Models\Product::class)
             ->with('itemable')
             ->get();
 
