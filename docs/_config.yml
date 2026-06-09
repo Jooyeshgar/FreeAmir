@@ -1,0 +1,22 @@
+# تنظیمات Jekyll برای GitHub Pages (ساخت پیش‌فرض، بدون workflow سفارشی)
+
+title: امیر
+description: نرم‌افزار آزاد حسابداری لاراول برای کسب‌وکارهای ایرانی
+
+# افزودن پوسته به مستندات markdown برای تولید HTML بهتر
+theme: jekyll-theme-cayman
+
+# افزونه‌ی readme-index به‌صورت پیش‌فرض README.md را به‌جای README.html
+# به index.html تبدیل می‌کند و باعث می‌شود لینک‌های README.html کار نکنند.
+# با غیرفعال‌کردن آن، هر README.md به README.html تبدیل می‌شود تا لینک‌های
+# موجود در index.html و سایر فایل‌ها به‌درستی کار کنند.
+readme_index:
+  enabled: false
+
+# اعمال قالب پیش‌فرض پوسته روی همه‌ی صفحه‌های markdown تولیدشده.
+# (فایل index.html چون front matter ندارد به‌صورت فایل ثابت کپی می‌شود و دست‌نخورده می‌ماند.)
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default

@@ -1,0 +1,29 @@
+---
+---
+
+@import "{{ site.theme }}";
+
+/* فونت فارسی وزیرمتن و راست‌چین‌کردن محتوای مستندات */
+@import url("https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css");
+
+body {
+  font-family: "Vazirmatn", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.main-content {
+  direction: rtl;
+  text-align: right;
+}
+
+/* جدول‌ها تمام‌عرض و خوانا باشند */
+.main-content table {
+  display: table;
+  width: 100%;
+}
+
+/* کد و نمونه‌فرمان‌ها چپ‌چین بمانند */
+.main-content pre,
+.main-content code {
+  direction: ltr;
+  text-align: left;
+}
