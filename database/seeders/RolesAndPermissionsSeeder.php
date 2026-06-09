@@ -103,7 +103,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // Ancillary costs
             'ancillary-costs' => ['index', 'search-customer', 'search-invoice', 'get-products', 'approve', 'change-status'],
-            'invoices.ancillary-costs' => ['create', 'store', 'show', 'edit', 'update', 'destroy', 'transfer'],
+            'invoices.ancillary-costs' => ['create', 'store', 'show', 'edit', 'update', 'destroy'],
 
             // Users / Roles / Permissions / Configs
             'users' => [...self::CRUD, 'create-employee'],

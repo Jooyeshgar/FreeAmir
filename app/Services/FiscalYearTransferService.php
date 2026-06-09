@@ -22,26 +22,13 @@ class FiscalYearTransferService
     {
         $document->load(['documentable', 'transactions.subject']);
 
-        if ($document->documentable instanceof Invoice) {
-            $invoice = $document->documentable;
-            $invoice->load([
-                'customer', 'items.itemable', 'document.transactions.subject',
-                'ancillaryCosts.customer', 'ancillaryCosts.items.product',
-                'ancillaryCosts.document.transactions.subject',
-            ]);
-
-            return self::_executeInvoiceChainTransfer($invoice, $targetCompanyId, $user);
-        }
-
-        if ($document->documentable instanceof AncillaryCost) {
-            $ancillaryCost = $document->documentable;
-            $ancillaryCost->load([
-                'invoice.customer', 'invoice.items.itemable',
-                'invoice.document.transactions.subject',
-                'customer', 'items.product', 'document.transactions.subject',
-            ]);
-
-            return self::_executeAncillaryCostChainTransfer($ancillaryCost, $targetCompanyId, $user);
+        if ($document->documentable) {
+            return [
+                'success' => false,
+                'errors' => [__('This document is linked to :type and cannot be transferred on its own. Transfer the :type instead.', [
+                    'type' => __(class_basename($document->documentable_type)),
+                ])],
+            ];
         }
 
         return DB::transaction(function () use ($document, $targetCompanyId, $user) {
@@ -60,17 +47,6 @@ class FiscalYearTransferService
         ]);
 
         return self::_executeInvoiceChainTransfer($invoice, $targetCompanyId, $user);
-    }
-
-    public static function transferAncillaryCost(AncillaryCost $ancillaryCost, int $targetCompanyId, User $user): array
-    {
-        $ancillaryCost->load([
-            'invoice.customer', 'invoice.items.itemable',
-            'invoice.document.transactions.subject',
-            'customer', 'items.product', 'document.transactions.subject',
-        ]);
-
-        return self::_executeAncillaryCostChainTransfer($ancillaryCost, $targetCompanyId, $user);
     }
 
     private static function _executeInvoiceChainTransfer(Invoice $invoice, int $targetCompanyId, User $user): array
@@ -122,66 +98,6 @@ class FiscalYearTransferService
                     $newAc->document_id = $newAcDoc->id;
                     $newAc->save();
                 }
-            }
-
-            return ['success' => true, 'warnings' => $warnings];
-        });
-    }
-
-    private static function _executeAncillaryCostChainTransfer(AncillaryCost $ancillaryCost, int $targetCompanyId, User $user): array
-    {
-        $invoice = $ancillaryCost->invoice;
-
-        $existingTargetInvoice = Invoice::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $targetCompanyId)->where('number', $invoice->number)
-            ->where('invoice_type', $invoice->invoice_type)->first();
-
-        $invValidation = null;
-        $returnedCheck = null;
-
-        if (! $existingTargetInvoice) {
-            $invValidation = self::_validateInvoiceDependencies($invoice, $targetCompanyId);
-            $returnedCheck = self::_checkReturnedInvoiceDeps($invoice, $targetCompanyId);
-        }
-
-        $acValidation = self::_validateAncillaryCostItemsDependencies($ancillaryCost, $targetCompanyId);
-
-        $errors = array_merge($invValidation['errors'] ?? [], $returnedCheck['errors'] ?? [], $acValidation['errors']);
-        $errors = array_values(array_unique($errors));
-
-        if (! empty($errors)) {
-            return ['success' => false, 'errors' => $errors];
-        }
-
-        return DB::transaction(function () use ($ancillaryCost, $invoice, $targetCompanyId, $user, $existingTargetInvoice, $invValidation, $acValidation, $returnedCheck) {
-            $warnings = [];
-            $targetInvoice = $existingTargetInvoice;
-
-            if (! $targetInvoice) {
-                $returnedInvoiceId = null;
-
-                if ($returnedCheck && $returnedCheck['exists']) {
-                    $returnedInvoiceId = $returnedCheck['target_id'];
-                } elseif ($returnedCheck && $returnedCheck['needed']) {
-                    $newSource = self::_createInvoiceInTarget($returnedCheck['source'], $targetCompanyId, $user, $returnedCheck['validation']);
-                    $returnedInvoiceId = $newSource->id;
-                    $warnings[] = __('Source invoice #:number was created in the target fiscal year.', ['number' => $returnedCheck['source']->number]);
-                }
-
-                $targetInvoice = self::_createInvoiceInTarget($invoice, $targetCompanyId, $user, $invValidation, $returnedInvoiceId);
-
-                if ($invoice->document) {
-                    $newInvDoc = self::_transferDocumentOnly($invoice->document, $targetCompanyId, $user, $targetInvoice->id, Invoice::class);
-                    $targetInvoice->document_id = $newInvDoc->id;
-                    $targetInvoice->save();
-                }
-            }
-
-            $newAc = self::_createAncillaryCostInTarget($ancillaryCost, $targetCompanyId, $targetInvoice->id, $acValidation);
-
-            if ($ancillaryCost->document) {
-                $newAcDoc = self::_transferDocumentOnly($ancillaryCost->document, $targetCompanyId, $user, $newAc->id, AncillaryCost::class);
-                $newAc->document_id = $newAcDoc->id;
-                $newAc->save();
             }
 
             return ['success' => true, 'warnings' => $warnings];

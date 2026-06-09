@@ -54,8 +54,7 @@ class FiscalYearTransferTest extends TestCase
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'documents.transfer']),
-            Permission::firstOrCreate(['name' => 'invoices.transfer']),
-            Permission::firstOrCreate(['name' => 'invoices.ancillary-costs.transfer'])
+            Permission::firstOrCreate(['name' => 'invoices.transfer'])
         );
     }
 
@@ -379,13 +378,18 @@ class FiscalYearTransferTest extends TestCase
         $this->assertCount(0, $this->targetInvoices());
     }
 
-    public function test_invoice_transfer_carries_its_ancillary_costs(): void
+    public function test_invoice_transfer_carries_its_ancillary_costs_and_their_documents(): void
     {
         $customer = $this->makeCustomer($this->source, 'ACME');
         $product = $this->makeProduct($this->source, 'Widget', 'P1');
+        $subject = $this->makeSubject($this->source, '301', 'Shipping costs');
         $invoice = $this->makeInvoice($this->source, ['customer_id' => $customer->id, 'amount' => 100]);
         $this->addProductItem($invoice, $product);
         $ac = $this->makeAncillaryCost($this->source, $invoice, $product);
+
+        $acDocument = $this->makeDocument($this->source, [[$subject, 500]], documentable: $ac);
+        $ac->document_id = $acDocument->id;
+        $ac->save();
 
         $this->makeCustomer($this->target, 'ACME');
         $targetProduct = $this->makeProduct($this->target, 'Widget', 'P1');
@@ -403,6 +407,11 @@ class FiscalYearTransferTest extends TestCase
 
         $newAcItem = AncillaryCostItem::where('ancillary_cost_id', $newAc->id)->first();
         $this->assertSame($targetProduct->id, $newAcItem->product_id);
+        $newAcDoc = Document::withoutGlobalScopes()->find($newAc->document_id);
+        $this->assertNotNull($newAcDoc);
+        $this->assertSame($this->target->id, (int) $newAcDoc->company_id);
+        $this->assertSame(AncillaryCost::class, $newAcDoc->documentable_type);
+        $this->assertSame($newAc->id, $newAcDoc->documentable_id);
     }
 
     public function test_return_invoice_transfer_creates_the_source_invoice_in_target_with_a_warning(): void
@@ -466,67 +475,7 @@ class FiscalYearTransferTest extends TestCase
         $this->assertEmpty($result['warnings'] ?? []);
     }
 
-    public function test_transfers_an_ancillary_cost_and_creates_its_invoice_in_target(): void
-    {
-        $customer = $this->makeCustomer($this->source, 'ACME');
-        $product = $this->makeProduct($this->source, 'Widget', 'P1');
-        $invoice = $this->makeInvoice($this->source, ['customer_id' => $customer->id, 'amount' => 100]);
-        $this->addProductItem($invoice, $product);
-        $ac = $this->makeAncillaryCost($this->source, $invoice, $product);
-
-        $this->makeCustomer($this->target, 'ACME');
-        $this->makeProduct($this->target, 'Widget', 'P1');
-
-        $result = FiscalYearTransferService::transferAncillaryCost($ac, $this->target->id, $this->user);
-        $this->assertTrue($result['success'], json_encode($result));
-
-        $this->assertCount(1, $this->targetInvoices());
-        $this->assertCount(1, $this->targetAncillaryCosts());
-
-        $newAc = $this->targetAncillaryCosts()->first();
-        $this->assertSame($this->targetInvoices()->first()->id, $newAc->invoice_id);
-    }
-
-    public function test_ancillary_cost_transfer_reuses_existing_target_invoice(): void
-    {
-        $customer = $this->makeCustomer($this->source, 'ACME');
-        $product = $this->makeProduct($this->source, 'Widget', 'P1');
-        $invoice = $this->makeInvoice($this->source, ['customer_id' => $customer->id, 'number' => 8000, 'invoice_type' => InvoiceType::BUY, 'amount' => 100]);
-        $this->addProductItem($invoice, $product);
-        $ac = $this->makeAncillaryCost($this->source, $invoice, $product);
-
-        $targetCustomer = $this->makeCustomer($this->target, 'ACME');
-        $this->makeProduct($this->target, 'Widget', 'P1');
-
-        $existingInvoice = $this->makeInvoice($this->target, ['customer_id' => $targetCustomer->id, 'number' => 8000, 'invoice_type' => InvoiceType::BUY, 'amount' => 100]);
-
-        $result = FiscalYearTransferService::transferAncillaryCost($ac, $this->target->id, $this->user);
-        $this->assertTrue($result['success'], json_encode($result));
-
-        $this->assertCount(1, $this->targetInvoices(), 'existing target invoice must be reused');
-        $newAc = $this->targetAncillaryCosts()->first();
-        $this->assertSame($existingInvoice->id, $newAc->invoice_id);
-    }
-
-    public function test_ancillary_cost_transfer_fails_when_product_missing_in_target(): void
-    {
-        $customer = $this->makeCustomer($this->source, 'ACME');
-        $product = $this->makeProduct($this->source, 'Widget', 'P1');
-        $invoice = $this->makeInvoice($this->source, ['customer_id' => $customer->id, 'amount' => 100]);
-        $this->addProductItem($invoice, $product);
-        $ac = $this->makeAncillaryCost($this->source, $invoice, $product);
-
-        $this->makeCustomer($this->target, 'ACME');
-
-        $result = FiscalYearTransferService::transferAncillaryCost($ac, $this->target->id, $this->user);
-
-        $this->assertFalse($result['success']);
-        $this->assertStringContainsString('Widget', implode(' ', $result['errors']));
-        $this->assertCount(0, $this->targetAncillaryCosts());
-        $this->assertCount(0, $this->targetInvoices());
-    }
-
-    public function test_transfer_document_routes_invoice_documentable_through_invoice_chain(): void
+    public function test_transfer_document_rejects_a_document_linked_to_an_invoice(): void
     {
         $customer = $this->makeCustomer($this->source, 'ACME');
         $product = $this->makeProduct($this->source, 'Widget', 'P1');
@@ -543,17 +492,13 @@ class FiscalYearTransferTest extends TestCase
 
         $result = FiscalYearTransferService::transferDocument($document, $this->target->id, $this->user);
 
-        $this->assertTrue($result['success'], json_encode($result));
-        $this->assertCount(1, $this->targetInvoices());
-
-        $newInvoice = $this->targetInvoices()->first();
-        $newDoc = Document::withoutGlobalScopes()->find($newInvoice->document_id);
-        $this->assertNotNull($newDoc);
-        $this->assertSame(Invoice::class, $newDoc->documentable_type);
-        $this->assertSame($newInvoice->id, $newDoc->documentable_id);
+        $this->assertFalse($result['success']);
+        $this->assertNotEmpty($result['errors']);
+        $this->assertCount(0, $this->targetInvoices());
+        $this->assertSame(0, Document::withoutGlobalScopes()->where('company_id', $this->target->id)->count());
     }
 
-    public function test_transfer_document_routes_ancillary_documentable_through_ancillary_chain(): void
+    public function test_transfer_document_rejects_a_document_linked_to_an_ancillary_cost(): void
     {
         $customer = $this->makeCustomer($this->source, 'ACME');
         $product = $this->makeProduct($this->source, 'Widget', 'P1');
@@ -569,9 +514,10 @@ class FiscalYearTransferTest extends TestCase
 
         $result = FiscalYearTransferService::transferDocument($acDocument, $this->target->id, $this->user);
 
-        $this->assertTrue($result['success'], json_encode($result));
-        $this->assertCount(1, $this->targetAncillaryCosts());
-        $this->assertCount(1, $this->targetInvoices());
+        $this->assertFalse($result['success']);
+        $this->assertNotEmpty($result['errors']);
+        $this->assertCount(0, $this->targetAncillaryCosts());
+        $this->assertSame(0, Document::withoutGlobalScopes()->where('company_id', $this->target->id)->count());
     }
 
     public function test_document_transfer_endpoint_rejects_same_fiscal_year(): void
@@ -625,20 +571,21 @@ class FiscalYearTransferTest extends TestCase
         $this->assertCount(1, $this->targetInvoices());
     }
 
-    public function test_ancillary_cost_transfer_endpoint_succeeds(): void
+    public function test_document_transfer_endpoint_rejects_a_linked_document(): void
     {
         $customer = $this->makeCustomer($this->source, 'ACME');
         $product = $this->makeProduct($this->source, 'Widget', 'P1');
+        $subject = $this->makeSubject($this->source, '201', 'Purchases');
         $invoice = $this->makeInvoice($this->source, ['customer_id' => $customer->id, 'amount' => 100]);
         $this->addProductItem($invoice, $product);
-        $ac = $this->makeAncillaryCost($this->source, $invoice, $product);
+        $document = $this->makeDocument($this->source, [[$subject, 100]], documentable: $invoice);
 
         $this->makeCustomer($this->target, 'ACME');
         $this->makeProduct($this->target, 'Widget', 'P1');
 
-        $response = $this->post(route('invoices.ancillary-costs.transfer', [$invoice, $ac]), ['target_company_id' => $this->target->id]);
+        $response = $this->post(route('documents.transfer', $document), ['target_company_id' => $this->target->id]);
 
-        $response->assertSessionHas('success');
-        $this->assertCount(1, $this->targetAncillaryCosts());
+        $response->assertSessionHasErrors();
+        $this->assertSame(0, Document::withoutGlobalScopes()->where('company_id', $this->target->id)->count());
     }
 }

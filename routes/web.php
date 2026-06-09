@@ -113,7 +113,6 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('{invoice}/ancillary-costs/{ancillary_cost}/edit', [Controllers\AncillaryCostController::class, 'edit'])->name('invoices.ancillary-costs.edit');
         Route::put('{invoice}/ancillary-costs/{ancillary_cost}', [Controllers\AncillaryCostController::class, 'update'])->name('invoices.ancillary-costs.update');
         Route::delete('{invoice}/ancillary-costs/{ancillary_cost}', [Controllers\AncillaryCostController::class, 'destroy'])->name('invoices.ancillary-costs.destroy');
-        Route::post('{invoice}/ancillary-costs/{ancillary_cost}/transfer', [Controllers\AncillaryCostController::class, 'transfer'])->name('invoices.ancillary-costs.transfer');
     });
     Route::get('invoices/moadian-histories', [Controllers\MoadianHistoryController::class, 'index'])->name('invoices.moadian-histories.index');
     Route::resource('invoices', Controllers\InvoiceController::class);

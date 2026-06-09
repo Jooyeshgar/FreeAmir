@@ -5,13 +5,11 @@ namespace App\Http\Controllers;
 use App\Enums\InvoiceType;
 use App\Http\Requests\StoreAncillaryCostRequest;
 use App\Models\AncillaryCost;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Services\AncillaryCostService;
-use App\Services\FiscalYearTransferService;
 use Exception;
 use Illuminate\Http\Request;
 
@@ -46,11 +44,7 @@ class AncillaryCostController extends Controller
         $editDeleteStatus = AncillaryCostService::getEditDeleteStatus($ancillaryCost);
         $changeStatusValidation = AncillaryCostService::getChangeStatusValidation($ancillaryCost);
 
-        $fiscalYears = Company::whereHas('users', function ($q) {
-            $q->where('users.id', auth()->id());
-        })->where('id', '!=', getActiveCompany())->get();
-
-        return view('ancillaryCosts.show', compact('ancillaryCost', 'editDeleteStatus', 'changeStatusValidation', 'invoice', 'fiscalYears'));
+        return view('ancillaryCosts.show', compact('ancillaryCost', 'editDeleteStatus', 'changeStatusValidation', 'invoice'));
     }
 
     public function create(?Invoice $invoice = null)
@@ -287,32 +281,6 @@ class AncillaryCostController extends Controller
         $message = $status === 'approve' ? __('Ancillary Cost approved successfully.') : __('Ancillary Cost unapproved successfully.');
 
         return redirect()->route('invoices.ancillary-costs.show', [$ancillaryCost->invoice_id, $ancillaryCost])->with('success', value: __($message));
-    }
-
-    public function transfer(Request $request, Invoice $invoice, AncillaryCost $ancillaryCost)
-    {
-        $this->ensureInvoiceMatchesAncillaryCost($invoice, $ancillaryCost);
-
-        $request->validate(['target_company_id' => 'required|integer|exists:companies,id']);
-
-        if ((int) $request->target_company_id === getActiveCompany()) {
-            return redirect()->route('invoices.ancillary-costs.show', [$invoice, $ancillaryCost])->with('error', __('Cannot transfer to the same fiscal year.'));
-        }
-
-        $result = FiscalYearTransferService::transferAncillaryCost($ancillaryCost, $request->target_company_id, $request->user());
-
-        if (! $result['success']) {
-            return redirect()->route('invoices.ancillary-costs.show', [$invoice, $ancillaryCost])->withErrors($result['errors']);
-        }
-
-        $redirect = redirect()->route('invoices.ancillary-costs.show', [$invoice, $ancillaryCost])
-            ->with('success', __('Ancillary Cost transferred successfully to the target fiscal year.'));
-
-        if (! empty($result['warnings'])) {
-            $redirect = $redirect->with('warning', $result['warnings']);
-        }
-
-        return $redirect;
     }
 
     private function ensureInvoiceMatchesAncillaryCost(?Invoice $invoice, AncillaryCost $ancillaryCost): void
