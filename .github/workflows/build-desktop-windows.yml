@@ -1,0 +1,84 @@
+name: Build Windows Desktop App
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: {}   # lets you trigger a build manually from the Actions tab
+
+jobs:
+  build-windows:
+    runs-on: windows-latest        # build natively on Windows — no wine, signing works
+    permissions:
+      contents: write              # needed if you attach the .exe to a GitHub Release
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Same logic as your Docker workflow so the versions always match.
+      # bash is available on windows-latest (Git Bash).
+      - name: Determine app version
+        id: app-version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="nightly-$(date -u +'%Y%m%d')-${GITHUB_SHA::7}"
+          fi
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'        # MATCH the PHP version your app uses — NativePHP
+                                    # ships the matching PHP binary based on this
+          extensions: dom, curl, libxml, mbstring, zip, fileinfo, intl, sqlite3, pdo_sqlite
+          tools: composer:v2
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --no-progress --prefer-dist --optimize-autoloader
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build frontend assets
+        run: npm run build     # remove this step if your app has no Vite/JS build
+
+      - name: Prepare Laravel
+        run: |
+          copy .env.example .env
+          php artisan key:generate
+
+      - name: Build NativePHP app for Windows
+        run: php artisan native:build win
+        env:
+          # Make config/nativephp.php read this, e.g.:
+          #   'version' => env('NATIVEPHP_APP_VERSION', '1.0.0'),
+          # so the exe carries the same version as the tag / Docker image.
+          NATIVEPHP_APP_VERSION: ${{ steps.app-version.outputs.version }}
+          # Code signing (recommended for distribution): add cert + password
+          # as repo secrets and expose the env vars NativePHP expects, e.g.:
+          # NATIVEPHP_WIN_CERTIFICATE_FILE: ...
+          # NATIVEPHP_WIN_CERTIFICATE_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: freeamir-windows
+          path: dist/**          # NativePHP outputs installers here; adjust if needed
+
+      # Optional: attach the installer to a GitHub Release when you push a v* tag
+      - name: Publish to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/**
