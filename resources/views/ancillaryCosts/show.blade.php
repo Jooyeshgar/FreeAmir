@@ -215,6 +215,16 @@
                 </a>
 
                 <div class="flex flex-wrap gap-2">
+                    @can('invoices.ancillary-costs.transfer')
+                        @if ($fiscalYears->isNotEmpty())
+                            <button type="button" onclick="document.getElementById('ac-transfer-modal').showModal()" class="btn gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                </svg>
+                                {{ __('Transfer to another Fiscal Year') }}
+                            </button>
+                        @endif
+                    @endcan
                     @if (!empty($editDeleteStatus) && ($editDeleteStatus['allowed'] ?? false) && !$ancillaryCost->status?->isApproved())
                         @can('ancillary-costs.edit')
                             <a href="{{ route('invoices.ancillary-costs.edit', [$invoice ?? $ancillaryCost->invoice_id, $ancillaryCost]) }}" class="btn btn-primary gap-2">
@@ -226,4 +236,34 @@
             </div>
         </div>
     </div>
+    @can('invoices.ancillary-costs.transfer')
+        @if ($fiscalYears->isNotEmpty())
+            <dialog id="ac-transfer-modal" class="modal">
+                <div class="modal-box">
+                    <h3 class="font-bold text-lg">{{ __('Transfer to another Fiscal Year') }}</h3>
+                    <form action="{{ route('invoices.ancillary-costs.transfer', [$invoice ?? $ancillaryCost->invoice_id, $ancillaryCost]) }}" method="POST" class="mt-4">
+                        @csrf
+                        <div class="form-control w-full">
+                            <label class="label">
+                                <span class="label-text font-semibold">{{ __('Target Fiscal Year') }}</span>
+                            </label>
+                            <select name="target_company_id" class="select select-bordered w-full" required>
+                                <option value="">{{ __('-- Select fiscal year --') }}</option>
+                                @foreach ($fiscalYears as $year)
+                                    <option value="{{ $year->id }}">{{ $year->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="modal-action">
+                            <button type="button" onclick="document.getElementById('ac-transfer-modal').close()" class="btn">{{ __('Cancel') }}</button>
+                            <button type="submit" class="btn btn-primary gap-2">{{ __('Transfer') }}</button>
+                        </div>
+                    </form>
+                </div>
+                <form method="dialog" class="modal-backdrop">
+                    <button aria-label="{{ __('Close') }}"></button>
+                </form>
+            </dialog>
+        @endif
+    @endcan
 </x-app-layout>

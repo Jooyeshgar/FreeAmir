@@ -57,7 +57,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 ...self::CRUD,
                 'print', 'duplicate', 'change-status', 'approve-all',
                 'search-account-balance', 'export', 'export.download', 'import', 'import.store',
-                'sort-numbers', 'sort-numbers.start', 'sort-numbers.process',
+                'sort-numbers', 'sort-numbers.start', 'sort-numbers.process', 'transfer',
             ],
             'documents.files' => ['create', 'store', 'edit', 'update', 'destroy', 'view', 'download'],
 
@@ -98,12 +98,12 @@ class RolesAndPermissionsSeeder extends Seeder
                 'search-customer', 'search-product-service',
                 'inactive', 'inactive.approve',
                 'conflicts', 'conflicts.more',
-                'group-action', 'void-form', 'void',
+                'group-action', 'void-form', 'void', 'transfer',
             ],
 
             // Ancillary costs
             'ancillary-costs' => ['index', 'search-customer', 'search-invoice', 'get-products', 'approve', 'change-status'],
-            'invoices.ancillary-costs' => ['create', 'store', 'show', 'edit', 'update', 'destroy'],
+            'invoices.ancillary-costs' => ['create', 'store', 'show', 'edit', 'update', 'destroy', 'transfer'],
 
             // Users / Roles / Permissions / Configs
             'users' => [...self::CRUD, 'create-employee'],
@@ -234,6 +234,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'invoices.group-action',
                     'invoices.inactive',
                     'invoices.inactive.approve',
+                    'invoices.transfer',
                     'ancillary-costs.approve',
                     'ancillary-costs.change-status',
                 ])
