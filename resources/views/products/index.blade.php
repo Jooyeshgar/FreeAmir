@@ -20,6 +20,8 @@
                     {{ __('Warehouse Report') }}
                 </button>
             @endcan
+            <a href="{{ route('products.export') }}" class="btn btn-primary btn-sm gap-1.5">{{ __('Export CSV') }}</a>
+            <a href="{{ route('products.import') }}" class="btn btn-primary btn-sm gap-1.5">{{ __('Import CSV') }}</a>
         </div>
     </div>
 

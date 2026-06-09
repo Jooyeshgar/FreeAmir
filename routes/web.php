@@ -67,9 +67,15 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::resource('transactions', Controllers\TransactionController::class)->only(['index', 'show']);
     Route::get('products/search-product-group', [Controllers\ProductController::class, 'searchProductGroup'])->name('products.search-product-group');
     Route::get('products/report', [Controllers\ProductController::class, 'report'])->name('products.report');
+    Route::get('products/export', [Controllers\ProductController::class, 'export'])->name('products.export');
+    Route::get('products/import', [Controllers\ProductController::class, 'importForm'])->name('products.import');
+    Route::post('products/import', [Controllers\ProductController::class, 'import'])->name('products.import.store');
     Route::resource('products', Controllers\ProductController::class);
     Route::resource('product-groups', Controllers\ProductGroupController::class);
     Route::get('services/search-service-group', [Controllers\ServiceController::class, 'searchServiceGroup'])->name('services.search-service-group');
+    Route::get('services/export', [Controllers\ServiceController::class, 'export'])->name('services.export');
+    Route::get('services/import', [Controllers\ServiceController::class, 'importForm'])->name('services.import');
+    Route::post('services/import', [Controllers\ServiceController::class, 'import'])->name('services.import.store');
     Route::resource('services', Controllers\ServiceController::class);
     Route::resource('service-groups', Controllers\ServiceGroupController::class);
     Route::get('crm/dashboard', [Controllers\CrmDashboardController::class, 'index'])->name('crm.dashboard');

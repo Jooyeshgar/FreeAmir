@@ -7,10 +7,14 @@ use App\Http\Requests\UpdateProductRequest;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\ProductGroup;
+use App\Services\ProductImportService;
 use App\Services\ProductService;
 use App\Services\WarehouseDashboardService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 use PDF;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProductController extends Controller
 {
@@ -147,6 +151,64 @@ class ProductController extends Controller
         $this->productService->delete($product);
 
         return redirect()->route('products.index')->with('success', __('Product deleted successfully.'));
+    }
+
+    public function export(): StreamedResponse
+    {
+        $filename = 'products_'.now()->format('YmdHis').'.csv';
+
+        return response()->streamDownload(function () {
+            $file = fopen('php://output', 'w');
+
+            // UTF-8 BOM so Excel reads Persian text correctly.
+            fwrite($file, "\xEF\xBB\xBF");
+            fputcsv($file, ProductImportService::COLUMNS);
+
+            Product::with('productGroup')
+                ->orderBy('code')
+                ->chunk(200, function ($products) use ($file) {
+                    foreach ($products as $product) {
+                        fputcsv($file, [
+                            $product->code,
+                            $product->name,
+                            $product->productGroup?->name,
+                            $product->sstid,
+                            $product->location,
+                            $product->quantity,
+                            $product->quantity_warning,
+                            $product->oversell,
+                            $product->selling_price,
+                            $product->discount_formula,
+                            $product->description,
+                            $product->vat,
+                        ]);
+                    }
+                });
+
+            fclose($file);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    public function importForm(): View
+    {
+        return view('products.import');
+    }
+
+    public function import(Request $request, ProductImportService $importService): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+        ]);
+
+        $result = $importService->import($request->file('file'), getActiveCompany());
+
+        return redirect()->route('products.index')->with('success', __('Import complete: :imported products imported, :updated updated, :groups groups created.', [
+            'imported' => $result['imported'],
+            'updated' => $result['updated'],
+            'groups' => $result['groups_created'],
+        ]));
     }
 
     public function searchProductGroup(Request $request)
