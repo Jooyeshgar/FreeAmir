@@ -1,7 +1,7 @@
 <x-app-layout :title="__('Document') . ' #' . formatDocumentNumber($document->number)">
-    <div class="card bg-base-100 shadow-xl">
+    <div class="card bg-base-100">
         <div
-            class="card-header bg-gradient-to-r from-blue-50 to-indigo-50 dark:text-white dark:from-gray-800 dark:to-gray-700 px-6 py-4 rounded-t-2xl border-b-2 border-primary/20">
+            class="card-header bg-gradient-to-r from-blue-50 to-indigo-50 dark:text-white dark:from-gray-800 dark:to-gray-700 px-6 py-4 border-b-2 border-primary/20">
             <div>
                 <h2 class="text-2xl font-bold text-gray-800 dark:text-white">
                     {{ __('Document') }} #{{ formatDocumentNumber($document->number) }}
@@ -188,7 +188,7 @@
                                 $extension = strtolower(pathinfo($documentFile->path ?? '', PATHINFO_EXTENSION));
                                 $viewUrl = route('documents.files.view', [$document, $documentFile]);
                             @endphp
-                            <div class="card bg-base-100 border border-gray-200 hover:shadow-md transition-shadow dark:border-slate-700 dark:shadow-none dark:ring-1 dark:ring-white/5">
+                            <div class="card bg-base-100 border border-gray-200 transition-shadow dark:border-slate-700 dark:ring-1 dark:ring-white/5">
                                 <figure class="px-4 pt-4">
                                     <a href="{{ $viewUrl }}" class="block w-full h-48 overflow-hidden rounded-lg bg-gray-100 dark:bg-slate-800">
                                         @if (in_array($extension, $imageExtensions))
