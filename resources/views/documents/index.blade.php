@@ -1,69 +1,100 @@
 <x-app-layout :title="__('Documents')">
     <x-show-message-bags />
 
-    <div class="card bg-base-100 shadow-xl">
-        <div class="card-body">
-            <div class="card-actions">
-                <x-button href="{{ route('documents.create') }}" class="btn-primary">
-                    {{ __('Create Document') }}
-                </x-button>
-                @can('documents.approve')
-                    <form action="{{ route('documents.approve-all') }}" method="POST" class="inline-block" id="approve-all-form">
-                        @csrf
-                        <button type="submit" class="btn btn-success">
-                            {{ __('Approve All') }}
-                        </button>
-                    </form>
-                @endcan
-                <x-button href="{{ route('documents.export') }}" class="btn-secondary">{{ __('Export') }}</x-button>
-                <x-button href="{{ route('documents.import') }}" class="btn-accent">{{ __('Import') }}</x-button>
-            </div>
+    {{-- Page Header --}}
+    <div class="flex flex-wrap items-center justify-between gap-4 px-1 pb-5">
+        <div class="min-w-48">
+            <h1 class="text-xl font-bold text-base-content">{{ __('Documents') }}</h1>
+            <p class="text-sm text-base-content/50 mt-0.5">{{ __('Manage your accounting documents') }}</p>
+        </div>
 
-            <form action="{{ route('documents.index') }}" method="GET">
-                <div class="mt-4 mb-4 grid grid-cols-8 gap-6">
-                    <div class="col-span-4 md:col-span-1">
-                        <x-input name="number" value="{{ request('number') }}" placeholder="{{ __('Doc Number') }}" />
+        <div class="flex flex-wrap items-center justify-start gap-2">
+            <a href="{{ route('documents.create') }}" class="btn btn-primary btn-sm gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                {{ __('Create Document') }}
+            </a>
+            @can('documents.approve')
+                <form action="{{ route('documents.approve-all') }}" method="POST" class="inline-block" id="approve-all-form">
+                    @csrf
+                    <button type="submit" class="btn btn-success btn-sm">
+                        {{ __('Approve All') }}
+                    </button>
+                </form>
+            @endcan
+            @can('documents.export')
+                <a href="{{ route('documents.export') }}" class="btn btn-secondary btn-sm gap-1.5">{{ __('Export CSV') }}</a>
+            @endcan
+            @can('documents.import')
+                <a href="{{ route('documents.import') }}" class="btn btn-accent btn-sm gap-1.5">{{ __('Import CSV') }}</a>
+            @endcan
+        </div>
+    </div>
+
+    @php $status = request('status') ?? 'all'; @endphp
+
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body p-0">
+            {{-- Card Header: title + filters --}}
+            <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-base-200">
+                <div class="flex flex-wrap items-center gap-3">
+                    <h2 class="text-base font-bold text-base-content">
+                        @switch($status)
+                            @case('approved')
+                                {{ __('Approved Documents') }}
+                                @break
+                            @case('unapproved')
+                                {{ __('Unapproved Documents') }}
+                                @break
+                            @default
+                                {{ __('Document List') }}
+                        @endswitch
+                    </h2>
+                    <span class="badge badge-ghost">
+                        {{ convertToFarsi($documents->total()) }} {{ __('records') }}
+                    </span>
+                    <a href="{{ route('documents.index', array_merge(request()->except('page'), ['status' => 'approved'])) }}"
+                        class="badge {{ $status === 'approved' ? 'badge-success badge-outline' : 'badge-ghost' }}">
+                        {{ __('Approved') }}: {{ convertToFarsi($approvedDocumentsNumber) }}
+                    </a>
+                    <a href="{{ route('documents.index', array_merge(request()->except('page'), ['status' => 'unapproved'])) }}"
+                        class="badge {{ $status === 'unapproved' ? 'badge-error badge-outline' : 'badge-ghost' }}">
+                        {{ __('Not approved') }}: {{ convertToFarsi($unapprovedDocumentsNumber) }}
+                    </a>
+                </div>
+
+                <form action="{{ route('documents.index') }}" method="GET" class="flex flex-wrap items-center gap-2" dir="ltr">
+                    <div class="relative w-32 max-w-full [&_.input]:input-sm" dir="rtl">
+                        <x-input type="text" name="number" value="{{ request('number') }}" placeholder="{{ __('Doc Number') }}" />
                     </div>
 
-                    <div class="col-span-4 md:col-span-1">
+                    <div class="w-36 [&_.input]:input-sm" dir="rtl">
                         <x-date-picker name="date" placeholder="{{ __('date') }}" value="{{ request('date') }}" class="datePicker" />
                     </div>
 
-                    <div class="col-span-6 md:col-span-3">
-                        <x-input name="text" value="{{ request('text') }}" placeholder="{{ __('Search by document title or transaction description') }}" />
+                    <div class="relative w-56 max-w-full [&_.input]:input-sm" dir="rtl">
+                        <x-input type="text" name="text" value="{{ request('text') }}" placeholder="{{ __('Search by document title or transaction description') }}" />
                     </div>
 
-                    <div class="col-span-4 md:col-span-1">
-                        @php
-                            $status = request('status') ?? 'all';
-                        @endphp
-                        <select name="status" id="status"
-                            class="select block w-full rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2">
-                            <option value="all" @selected($status === 'all')>{{ __('All Documents') }}</option>
-                            <option value="approved" @selected($status === 'approved')>{{ __('Approved') }}</option>
-                            <option value="unapproved" @selected($status === 'unapproved')>{{ __('Not approved') }}</option>
-                        </select>
-                    </div>
+                    <select name="status" class="select select-sm w-40" dir="rtl" onchange="this.form.submit()">
+                        <option value="all" @selected($status === 'all')>{{ __('All Documents') }}</option>
+                        <option value="approved" @selected($status === 'approved')>{{ __('Approved') }}</option>
+                        <option value="unapproved" @selected($status === 'unapproved')>{{ __('Not approved') }}</option>
+                    </select>
 
-                    <div class="col-span-2 md:col-span-1 text-center">
-                        <button type="submit" class="btn btn-primary">{{ __('Search') }}</button>
-                    </div>
-                </div>
-            </form>
-
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <a href="{{ route('documents.index', array_merge(request()->except('page'), ['status' => 'approved'])) }}"
-                    class="block transition-transform hover:scale-105 {{ $status === 'approved' ? 'ring-2 ring-primary rounded-xl' : '' }}">
-                    <x-stat-card title="{{ __('Approved documents number') }}" :value="formatNumber($approvedDocumentsNumber)" />
-                </a>
-
-                <a href="{{ route('documents.index', array_merge(request()->except('page'), ['status' => 'unapproved'])) }}"
-                    class="block transition-transform hover:scale-105 {{ $status === 'unapproved' ? 'ring-2 ring-primary rounded-xl' : '' }}">
-                    <x-stat-card title="{{ __('Unapproved documents number') }}" :value="formatNumber($unapprovedDocumentsNumber)" />
-                </a>
+                    <button type="submit" class="btn btn-sm btn-primary gap-1.5" dir="rtl">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z" />
+                        </svg>
+                        {{ __('Search') }}
+                    </button>
+                </form>
             </div>
 
-            <table class="table w-full mt-4 overflow-auto">
+            {{-- Table --}}
+            @if ($documents->count())
+            <table class="table w-full overflow-auto">
                 <thead>
                     <tr>
                         <th class="p-2 w-12">{{ __('Doc Number') }}</th>
@@ -219,8 +250,22 @@
                     @endforeach
                 </tbody>
             </table>
+            @else
+                <div class="flex flex-col items-center justify-center py-16 text-base-content/35">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="mb-4 h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                    </svg>
+                    <p class="text-base font-medium">{{ __('No documents found.') }}</p>
+                    <p class="mt-1 text-sm text-base-content/30">{{ __('Try adjusting your search filters.') }}</p>
+                </div>
+            @endif
 
-            {{ $documents->withQueryString()->links() }}
+            {{-- Pagination --}}
+            @if ($documents->hasPages())
+                <div class="px-5 py-4 border-t border-base-200">
+                    {{ $documents->withQueryString()->links() }}
+                </div>
+            @endif
         </div>
     </div>
 
