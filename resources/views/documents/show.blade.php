@@ -1,9 +1,3 @@
-@php
-    $sumCredit = $document->transactions->where('value', '>', 0)->sum('value');
-    $sumDebit = $document->transactions->where('value', '<', 0)->reduce(fn($carry, $transaction) => $carry + abs($transaction->value), 0);
-    $documentFiles = $document->documentFiles ?? collect();
-@endphp
-
 <x-app-layout :title="__('Document') . ' #' . formatDocumentNumber($document->number)">
     <div class="card bg-base-100 shadow-xl">
         <div
@@ -27,26 +21,13 @@
                     </svg>
                     {{ __('Accounting Document') }}
                 </span>
-                @php
-                    $documentableRoute = match (true) {
-                        $document->documentable instanceof \App\Models\Invoice => [
-                            'name' => 'invoices.show',
-                            'params' => $document->documentable,
-                        ],
-                        $document->documentable instanceof \App\Models\AncillaryCost => [
-                            'name' => 'invoices.ancillary-costs.show',
-                            'params' => [$document->documentable->invoice_id ?? $document->documentable->invoice?->id, $document->documentable],
-                        ],
-                        default => null,
-                    };
-                @endphp
-                @if ($document->documentable && $documentableRoute)
+                @if ($isLinked && $documentableRoute)
                     <span class="badge badge-lg badge-info gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m2 8H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2z" />
                         </svg>
                         <a href="{{ route($documentableRoute['name'], $documentableRoute['params']) }}" class="link link-hover">
-                            {{ __(class_basename($document->documentable_type)) }}
+                            {{ $linkedType }}
                         </a>
                     </span>
                 @endif
@@ -61,99 +42,94 @@
 
         <div class="card-body space-y-8">
             <x-show-message-bags />
-
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div
-                    class="stats shadow bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60 dark:from-slate-800 dark:to-sky-950/40 dark:border-sky-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
-                    <div class="stat">
-                        <div class="stat-title text-blue-500 dark:text-sky-300">{{ __('Total Debit') }}
-                            ({{ config('amir.currency') ?? __('Rial') }})</div>
-                        <div class="stat-value text-blue-600 dark:text-sky-200 text-3xl">{{ formatNumber($sumDebit) }}</div>
-                        <div class="stat-desc text-blue-400 dark:text-sky-400/80">{{ __('Total debit in document') }}</div>
-                    </div>
-                </div>
-
-                <div
-                    class="stats shadow bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/60 dark:from-slate-800 dark:to-emerald-950/40 dark:border-emerald-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
-                    <div class="stat">
-                        <div class="stat-title text-emerald-500 dark:text-emerald-300">{{ __('Total Credit') }}
-                            ({{ config('amir.currency') ?? __('Rial') }})</div>
-                        <div class="stat-value text-emerald-600 dark:text-emerald-200 text-3xl">{{ formatNumber($sumCredit) }}</div>
-                        <div class="stat-desc text-emerald-400 dark:text-emerald-400/80">{{ __('Total credit in document') }}</div>
-                    </div>
-                </div>
-
-                <div
-                    class="stats shadow bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/60 dark:from-slate-800 dark:to-indigo-950/40 dark:border-indigo-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
-                    <div class="stat">
-                        <div class="stat-title text-indigo-500 dark:text-indigo-300">{{ __('Transactions') }}</div>
-                        <div class="stat-value text-indigo-600 dark:text-indigo-200 text-3xl">
-                            {{ formatNumber($document->transactions->count()) }}</div>
-                        <div class="stat-desc text-indigo-400 dark:text-indigo-400/80">{{ __('Entries in this document') }}</div>
-                    </div>
-                </div>
-            </div>
-
             <div>
                 <div class="divider text-lg font-semibold">{{ __('Transactions') }}</div>
                 <div class="overflow-x-auto">
-                    <table class="table w-full">
+                    <table class="table w-full border-collapse border border-base-300 [&_th]:border [&_th]:border-base-300 [&_td]:border [&_td]:border-base-300">
                         <thead>
                             <tr>
                                 <th class="px-4 py-3">#</th>
-                                <th class="px-4 py-3 text-right">{{ __('Code') }}</th>
-                                <th class="px-4 py-3 text-right">{{ __('Account') }}</th>
+                                <th class="px-4 py-3 text-center">{{ __('Code') }}</th>
                                 <th class="px-4 py-3 text-right">{{ __('Description') }}</th>
                                 <th class="px-4 py-3 text-right">{{ __('Debit') }}</th>
                                 <th class="px-4 py-3 text-right">{{ __('Credit') }}</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse ($document->transactions as $index => $transaction)
-                                <tr class="hover:bg-base-300">
-                                    <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
-                                    <td class="px-4 py-3">
-                                        <a href="{{ route('transactions.index', ['subject_id' => $transaction->subject_id]) }}" class="link link-hover"
-                                            title="{{ $transaction->subject?->fullname() }}">
-                                            {{ $transaction->subject?->formattedCode() ?? '—' }}
-                                        </a>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        {{ $transaction->subject?->name ?? '—' }}
-                                    </td>
-                                    <td class="px-4 py-3">{{ $transaction->desc ?? '—' }}</td>
-                                    <td class="px-4 py-3 text-right">
-                                        {{ $transaction->value < 0 ? formatNumber(abs($transaction->value)) : formatNumber(0) }}
-                                    </td>
-                                    <td class="px-4 py-3 text-right">
-                                        {{ $transaction->value > 0 ? formatNumber($transaction->value) : formatNumber(0) }}
-                                    </td>
+                            @php $row = 0; @endphp
+                            @forelse ($groupedTransactions as $group)
+                                @php
+                                    $first = $group->first();
+                                    $alignClass = $first?->value > 0 ? 'text-left' : 'text-right';
+                                @endphp
+                                <tr class="bg-base-200/70 font-semibold">
+                                    <td class="px-4 py-2"></td>
+                                    <td class="px-4 py-2 text-center">{{ formatCode($first?->subject?->ledger() ?? '') }}</td>
+                                    <td class="px-4 py-2 {{ $alignClass }}">{{ $first?->subject?->getRoot()?->name ?? '—' }}</td>
+                                    <td class="px-4 py-2"></td>
+                                    <td class="px-4 py-2"></td>
                                 </tr>
+                                @foreach ($group as $transaction)
+                                    <tr class="hover:bg-base-300">
+                                        <td class="px-4 py-3">{{ convertToFarsi(++$row) }}</td>
+                                        <td class="px-4 py-3 text-left">
+                                            <a href="{{ route('transactions.index', ['subject_id' => $transaction->subject_id]) }}" class="link link-hover"
+                                                title="{{ $transaction->subject?->fullname() }}">
+                                                {{ $transaction->subject?->formattedCode() ?? '—' }}
+                                            </a>
+                                        </td>
+                                        <td class="px-4 py-3 {{ $alignClass }}">
+                                            {{ $transaction->subject?->name ?? '—' }}
+                                            @if ($transaction->desc)
+                                                <small class="block truncate text-gray-500 dark:text-slate-400">{{ $transaction->desc }}</small>
+                                            @endif
+                                        </td>
+                                        <td class="px-4 py-3 text-right tabular-nums">
+                                            {{ $transaction->value < 0 ? formatNumber(abs($transaction->value)) : formatNumber(0) }}
+                                        </td>
+                                        <td class="px-4 py-3 text-right tabular-nums">
+                                            {{ $transaction->value > 0 ? formatNumber($transaction->value) : formatNumber(0) }}
+                                        </td>
+                                    </tr>
+                                @endforeach
                             @empty
                                 <tr>
-                                    <td colspan="6" class="px-4 py-6 text-center text-gray-500 dark:text-slate-400">
+                                    <td colspan="5" class="px-4 py-6 text-center text-gray-500 dark:text-slate-400">
                                         {{ __('There are no transactions in this document yet.') }}
                                     </td>
                                 </tr>
                             @endforelse
                         </tbody>
                         <tfoot>
-                            <tr>
-                                <td colspan="3" class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
+                            <tr class="font-semibold">
+                                <td colspan="2" class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
                                     {{ __('Total entries: :count', ['count' => convertToFarsi($document->transactions->count())]) }}
                                 </td>
-                                <td class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
+                                <td class="px-4 py-3 text-left text-sm text-gray-600 dark:text-slate-300">
                                     {{ __('Total Document:') }}
                                 </td>
-                                <td class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
+                                <td class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300 tabular-nums">
                                     {{ formatNumber($sumDebit) }}
                                 </td>
-                                <td class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
+                                <td class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300 tabular-nums">
                                     {{ formatNumber($sumCredit) }}
                                 </td>
                             </tr>
                         </tfoot>
                     </table>
+                </div>
+            </div>
+
+            <div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    @foreach ($details as $detail)
+                        <div class="card bg-base-200 shadow {{ ($detail['wide'] ?? false) ? 'md:col-span-2 lg:col-span-4' : '' }}">
+                            <div class="card-body p-4">
+                                <h3 class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">{{ $detail['title'] }}</h3>
+                                <p class="text-lg font-semibold text-gray-800 dark:text-slate-100">{{ $detail['value'] }}</p>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
             </div>
 
@@ -190,7 +166,7 @@
                                     <td class="px-4 py-3">
                                         {{ $document->invoice->date ? formatDate($document->invoice->date) : '—' }}
                                     </td>
-                                    <td class="px-4 py-3 text-right">
+                                    <td class="px-4 py-3 text-right tabular-nums">
                                         {{ formatNumber(($document->invoice->amount ?? 0) - ($document->invoice->subtraction ?? 0)) }}
                                     </td>
                                     <td class="px-4 py-3 text-center">
@@ -208,17 +184,15 @@
                 @if ($documentFiles->isNotEmpty())
                     <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
                         @foreach ($documentFiles as $documentFile)
+                            @php
+                                $extension = strtolower(pathinfo($documentFile->path ?? '', PATHINFO_EXTENSION));
+                                $viewUrl = route('documents.files.view', [$document, $documentFile]);
+                            @endphp
                             <div class="card bg-base-100 border border-gray-200 hover:shadow-md transition-shadow dark:border-slate-700 dark:shadow-none dark:ring-1 dark:ring-white/5">
                                 <figure class="px-4 pt-4">
-                                    <a href="{{ route('documents.files.view', [$document, $documentFile]) }}"
-                                        class="block w-full h-48 overflow-hidden rounded-lg bg-gray-100 dark:bg-slate-800">
-                                        @php
-                                            $extension = strtolower(pathinfo($documentFile->path ?? '', PATHINFO_EXTENSION));
-                                            $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
-                                        @endphp
+                                    <a href="{{ $viewUrl }}" class="block w-full h-48 overflow-hidden rounded-lg bg-gray-100 dark:bg-slate-800">
                                         @if (in_array($extension, $imageExtensions))
-                                            <img src="{{ route('documents.files.view', [$document, $documentFile]) }}" alt="{{ $documentFile->title }}"
-                                                class="w-full h-full object-cover">
+                                            <img src="{{ $viewUrl }}" alt="{{ $documentFile->title }}" class="w-full h-full object-cover">
                                         @else
                                             <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-800 dark:to-slate-900">
                                                 @if ($extension === 'pdf')
@@ -238,8 +212,7 @@
                                                         <path d="M14 2v6h6M9 15l2 2-2 2M15 15l-2 2 2 2" />
                                                     </svg>
                                                 @else
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-gray-400" fill="none" viewBox="0 0 24 24"
-                                                        stroke="currentColor">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                             d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                                     </svg>
@@ -287,6 +260,10 @@
                             </div>
                         @endforeach
                     </div>
+                @else
+                    <div class="alert bg-base-200">
+                        <span>{{ __('No files are attached to this document.') }}</span>
+                    </div>
                 @endif
                 <div class="mt-4 flex justify-end">
                     <a href="{{ route('documents.files.create', $document->id) }}" class="btn btn-primary gap-2">
@@ -315,9 +292,8 @@
                         {{ __('Print PDF') }}
                     </a>
 
-                    @if ($document->documentable)
-                        <span class="tooltip"
-                            data-tip="{{ __('Cannot edit this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
+                    @if ($isLinked)
+                        <span class="tooltip" data-tip="{{ __('Cannot edit this document because it is linked to') . ' ' . $linkedType . '.' }}">
                             <button class="btn btn-primary gap-2 btn-disabled cursor-not-allowed" disabled>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -326,14 +302,22 @@
                                 {{ __('Edit') }}
                             </button>
                         </span>
-                        <span class="tooltip"
-                            data-tip="{{ __('Cannot change status of this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
+                        <span class="tooltip" data-tip="{{ __('Cannot change status of this document because it is linked to') . ' ' . $linkedType . '.' }}">
                             <button class="btn btn-primary gap-2 btn-disabled cursor-not-allowed" disabled>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
                                 {{ $document->approved_at ? __('Unapprove') : __('Approve') }}
+                            </button>
+                        </span>
+                        <span class="tooltip" data-tip="{{ __('Cannot delete this document because it is linked to') . ' ' . $linkedType . '.' }}">
+                            <button class="btn btn-error gap-2 btn-disabled cursor-not-allowed" disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                {{ __('Delete') }}
                             </button>
                         </span>
                     @else
@@ -353,20 +337,6 @@
                                 {{ $document->approved_at ? __('Unapprove') : __('Approve') }}
                             </button>
                         </form>
-                    @endif
-
-                    @if ($document->documentable)
-                        <span class="tooltip"
-                            data-tip="{{ __('Cannot delete this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
-                            <button class="btn btn-error gap-2 btn-disabled cursor-not-allowed" disabled>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                                {{ __('Delete') }}
-                            </button>
-                        </span>
-                    @else
                         <form action="{{ route('documents.destroy', $document) }}" method="POST" class="inline-block"
                             onsubmit="return confirm('{{ __('Are you sure you want to delete this document?') }}')">
                             @csrf

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreTransactionRequest;
+use App\Models\AncillaryCost;
 use App\Models\Document;
+use App\Models\Invoice;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Services\DocumentImportExport\DocumentImportExportService;
@@ -131,7 +133,44 @@ class DocumentController extends Controller
 
     public function show(Document $document)
     {
-        return view('documents.show', compact('document'));
+        $sumCredit = $document->transactions->where('value', '>', 0)->sum('value');
+        $sumDebit = $document->transactions->where('value', '<', 0)->reduce(fn ($carry, $transaction) => $carry + abs($transaction->value), 0);
+
+        $documentFiles = $document->documentFiles ?? collect();
+        $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+
+        $transactions = $document->transactions;
+        foreach ($transactions as $transaction) {
+            $transaction->sign = $transaction->value > 0 ? 1 : 0;
+            $transaction->absValue = abs($transaction->value);
+            $transaction->ledgerSign = $transaction->sign.($transaction->subject?->ledger() ?? '');
+        }
+        $groupedTransactions = $transactions->sortByDesc(['sign', 'absValue'])->groupBy('ledgerSign')->sortKeys();
+
+        $documentableRoute = match (true) {
+            $document->documentable instanceof Invoice => [
+                'name' => 'invoices.show',
+                'params' => $document->documentable,
+            ],
+            $document->documentable instanceof AncillaryCost => [
+                'name' => 'invoices.ancillary-costs.show',
+                'params' => [$document->documentable->invoice_id ?? $document->documentable->invoice?->id, $document->documentable],
+            ],
+            default => null,
+        };
+
+        $isLinked = (bool) $document->documentable;
+        $linkedType = $isLinked ? __(class_basename($document->documentable_type)) : '';
+
+        $details = [
+            ['title' => __('Document Description'), 'value' => $document->title ?: '—', 'wide' => true],
+            ['title' => __('Creator'), 'value' => $document->creator?->name ?: '—'],
+            ['title' => __('Approver'), 'value' => $document->approver?->name ?: '—'],
+            ['title' => __('Creation Date'), 'value' => $document->created_at ? formatDate($document->created_at) : '—'],
+            ['title' => __('Approve date'), 'value' => $document->approved_at ? formatDate($document->approved_at) : '—'],
+        ];
+
+        return view('documents.show', compact('document', 'sumCredit', 'sumDebit', 'documentFiles', 'imageExtensions', 'groupedTransactions', 'documentableRoute', 'isLinked', 'linkedType', 'details'));
     }
 
     public function print(Document $document)
