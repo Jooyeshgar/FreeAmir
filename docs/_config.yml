@@ -4,7 +4,7 @@ title: امیر
 description: نرم‌افزار آزاد حسابداری لاراول برای کسب‌وکارهای ایرانی
 
 # افزودن پوسته به مستندات markdown برای تولید HTML بهتر
-theme: jekyll-theme-cayman
+theme: jekyll-theme-architect
 
 # افزونه‌ی readme-index به‌صورت پیش‌فرض README.md را به‌جای README.html
 # به index.html تبدیل می‌کند و باعث می‌شود لینک‌های README.html کار نکنند.
@@ -12,6 +12,13 @@ theme: jekyll-theme-cayman
 # موجود در index.html و سایر فایل‌ها به‌درستی کار کنند.
 readme_index:
   enabled: false
+
+# فایل‌های markdown محتوای خود را داخل تگ <div dir="rtl"> قرار داده‌اند.
+# kramdown به‌صورت پیش‌فرض markdown داخل تگ‌های HTML بلوکی را پردازش نمی‌کند و
+# همین باعث می‌شود محتوا به‌صورت متن خام (بدون قالب‌بندی) نمایش داده شود.
+# با فعال‌کردن parse_block_html، markdown داخل این تگ‌ها هم به HTML تبدیل می‌شود.
+kramdown:
+  parse_block_html: true
 
 # اعمال قالب پیش‌فرض پوسته روی همه‌ی صفحه‌های markdown تولیدشده.
 # (فایل index.html چون front matter ندارد به‌صورت فایل ثابت کپی می‌شود و دست‌نخورده می‌ماند.)

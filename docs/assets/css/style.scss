@@ -10,18 +10,24 @@ body {
   font-family: "Vazirmatn", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
+/* محتوای مستندات راست‌چین شود.
+   (architect از #main-content استفاده می‌کند، پوسته‌هایی مثل cayman از .main-content) */
+#main-content,
 .main-content {
   direction: rtl;
   text-align: right;
 }
 
 /* جدول‌ها تمام‌عرض و خوانا باشند */
+#main-content table,
 .main-content table {
   display: table;
   width: 100%;
 }
 
 /* کد و نمونه‌فرمان‌ها چپ‌چین بمانند */
+#main-content pre,
+#main-content code,
 .main-content pre,
 .main-content code {
   direction: ltr;
