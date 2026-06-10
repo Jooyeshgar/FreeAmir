@@ -1,7 +1,9 @@
 title: امیر
 description: نرم‌افزار آزاد حسابداری لاراول برای کسب‌وکارهای ایرانی
 
-# پوسته اختصاصی هماهنگ با صفحه اصلی (index.html) در _layouts/default.html تعریف شده است.
+exclude:
+  - README.md
+  - README.en.md
 
 kramdown:
   parse_block_html: true

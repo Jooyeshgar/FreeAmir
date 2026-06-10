@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Amir, a free Laravel accounting application for Iranian businesses">
+    <title>Amir | Free Laravel Accounting Software</title>
+    <link rel="alternate" hreflang="fa" href="index.html" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Vazirmatn', 'Tahoma', 'Arial', 'sans-serif'],
+                    },
+                    colors: {
+                        ink: '#16201c',
+                        mint: '#0f766e',
+                        amber: '#b45309',
+                        paper: '#fafaf7',
+                    },
+                    boxShadow: {
+                        soft: '0 18px 45px rgba(22, 32, 28, 0.10)',
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .hero-grid {
+            background-image:
+                linear-gradient(rgba(15, 118, 110, 0.09) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(15, 118, 110, 0.09) 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
+    </style>
+</head>
+
+<body class="bg-paper text-ink antialiased">
+    <div x-data="{ menuOpen: false }" class="min-h-screen overflow-hidden">
+        <header class="sticky top-0 z-50 border-b border-stone-200/80 bg-paper/90 backdrop-blur">
+            <nav class="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 lg:px-8" aria-label="Main navigation">
+                <a href="#top" class="flex items-center gap-3">
+                    <span
+                        class="grid h-11 w-11 place-items-center rounded-lg bg-ink text-lg font-black text-white">A</span>
+                    <span>
+                        <span class="block text-base font-black">Amir</span>
+                        <span class="block text-xs text-stone-500">Free accounting for Iran</span>
+                    </span>
+                </a>
+
+                <button type="button"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-stone-300 text-ink md:hidden"
+                    @click="menuOpen = !menuOpen" :aria-expanded="menuOpen.toString()" aria-controls="mobile-menu"
+                    aria-label="Open menu">
+                    <span class="text-xl leading-none" x-text="menuOpen ? '×' : '☰'"></span>
+                </button>
+
+                <div class="hidden items-center gap-7 text-sm font-semibold text-stone-700 md:flex">
+                    <a class="transition hover:text-mint" href="#intro">Introduction</a>
+                    <a class="transition hover:text-mint" href="#features">Features</a>
+                    <a class="transition hover:text-mint" href="#quickstart">Quick start</a>
+                    <a class="transition hover:text-mint" href="#docs">Documentation</a>
+                    <a class="transition hover:text-mint" href="#downloads">Downloads</a>
+                    <a class="rounded-lg border border-stone-300 px-3 py-1.5 transition hover:border-mint hover:text-mint"
+                        href="index.html" hreflang="fa">فارسی</a>
+                </div>
+            </nav>
+            <div id="mobile-menu" x-show="menuOpen" x-transition
+                class="border-t border-stone-200 bg-paper px-5 py-4 md:hidden">
+                <div class="grid gap-3 text-sm font-semibold text-stone-700">
+                    <a class="rounded-lg px-3 py-2 hover:bg-white" href="#intro"
+                        @click="menuOpen = false">Introduction</a>
+                    <a class="rounded-lg px-3 py-2 hover:bg-white" href="#features"
+                        @click="menuOpen = false">Features</a>
+                    <a class="rounded-lg px-3 py-2 hover:bg-white" href="#quickstart" @click="menuOpen = false">Quick
+                        start</a>
+                    <a class="rounded-lg px-3 py-2 hover:bg-white" href="#docs"
+                        @click="menuOpen = false">Documentation</a>
+                    <a class="rounded-lg px-3 py-2 hover:bg-white" href="#downloads"
+                        @click="menuOpen = false">Downloads</a>
+                    <a class="rounded-lg px-3 py-2 hover:bg-white" href="index.html" hreflang="fa"
+                        @click="menuOpen = false">نسخه فارسی</a>
+                </div>
+            </div>
+        </header>
+
+        <main id="top">
+            <section class="hero-grid relative border-b border-stone-200">
+                <div
+                    class="mx-auto grid min-h-[calc(100vh-76px)] max-w-7xl items-center gap-12 px-5 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-20">
+                    <div>
+                        <div
+                            class="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-800">
+                            Under active development; suited for review, contribution, and independent testing
+                        </div>
+                        <h1 class="max-w-4xl text-4xl font-black leading-tight text-ink sm:text-5xl lg:text-6xl">
+                            Amir, free Laravel accounting software
+                        </h1>
+                        <p class="mt-6 max-w-2xl text-lg leading-9 text-stone-700">
+                            Double-entry accounting, purchase and sales invoices, inventory management, cost of goods,
+                            fiscal years, and payroll for Iranian businesses.
+                        </p>
+                        <div class="mt-9 flex flex-col gap-3 sm:flex-row">
+                            <a href="INSTALLATION.en.html"
+                                class="inline-flex items-center justify-center rounded-lg bg-mint px-6 py-3 text-sm font-black text-white shadow-soft transition hover:bg-teal-800">
+                                Get started with installation
+                            </a>
+                            <a href="https://github.com/Jooyeshgar/FreeAmir"
+                                class="inline-flex items-center justify-center rounded-lg border border-stone-300 bg-white px-6 py-3 text-sm font-black text-ink transition hover:border-mint hover:text-mint">
+                                View on GitHub
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-soft">
+                            <div class="rounded-xl border border-stone-200 bg-stone-950 p-4 text-left text-sm text-stone-100"
+                                dir="ltr">
+                                <div class="mb-4 flex gap-2">
+                                    <span class="h-3 w-3 rounded-full bg-red-400"></span>
+                                    <span class="h-3 w-3 rounded-full bg-amber-300"></span>
+                                    <span class="h-3 w-3 rounded-full bg-emerald-400"></span>
+                                </div>
+                                <pre class="overflow-x-auto whitespace-pre-wrap leading-7"><code>docker run -d --name freeamir -p 80:80 hadi60/freeamir-all-in-one:main
+
+FreeAmir:
+  accounting: double-entry
+  inventory: moving-weighted-average
+  locale: fa_IR
+  license: GPL-3.0</code></pre>
+                            </div>
+                        </div>
+                        <div class="mt-4 grid grid-cols-3 gap-3">
+                            <div class="rounded-lg border border-stone-200 bg-white p-4 text-center shadow-sm">
+                                <div class="text-2xl font-black text-mint">Laravel 12</div>
+                                <div class="mt-1 text-xs text-stone-500">Core framework</div>
+                            </div>
+                            <div class="rounded-lg border border-stone-200 bg-white p-4 text-center shadow-sm">
+                                <div class="text-2xl font-black text-mint">Weighted avg.</div>
+                                <div class="mt-1 text-xs text-stone-500">Perpetual inventory</div>
+                            </div>
+                            <div class="rounded-lg border border-stone-200 bg-white p-4 text-center shadow-sm">
+                                <div class="text-2xl font-black text-mint">GPL-3</div>
+                                <div class="mt-1 text-xs text-stone-500">Open source</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="intro" class="mx-auto max-w-7xl px-5 py-16 lg:px-8">
+                <div class="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+                    <div>
+                        <p class="text-sm font-black text-mint">Introduction</p>
+                        <h2 class="mt-3 text-3xl font-black leading-tight">Free accounting for the real needs of Iranian
+                            businesses</h2>
+                    </div>
+                    <div class="rounded-2xl border border-stone-200 bg-white p-7 leading-9 text-stone-700 shadow-sm">
+                        <p>
+                            Amir is a free and open-source accounting application built on Laravel. The project focuses
+                            on double-entry postings, sales and purchase invoices, inventory management, fiscal-year
+                            operations, and a Persian-first user experience.
+                        </p>
+                        <p class="mt-4">
+                            The project is still under active development and should be evaluated with test data, each
+                            organization's needs, and independent accounting controls before production use.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="features" class="border-y border-stone-200 bg-white">
+                <div class="mx-auto max-w-7xl px-5 py-16 lg:px-8">
+                    <div class="max-w-2xl">
+                        <p class="text-sm font-black text-mint">Features</p>
+                        <h2 class="mt-3 text-3xl font-black">Amir's core capabilities</h2>
+                    </div>
+                    <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <article class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
+                            <h3 class="text-lg font-black">Accounting and reporting</h3>
+                            <p class="mt-3 leading-8 text-stone-600">Income and expense management, invoices and
+                                receipts, financial reports, and the foundations required for Iranian tax rules.</p>
+                        </article>
+                        <article class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
+                            <h3 class="text-lg font-black">Warehousing and goods</h3>
+                            <p class="mt-3 leading-8 text-stone-600">Product management, inventory, stock movements, and
+                                cost of goods using the perpetual moving weighted-average method.</p>
+                        </article>
+                        <article class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
+                            <h3 class="text-lg font-black">Fiscal year</h3>
+                            <p class="mt-3 leading-8 text-stone-600">Create, maintain, export, and import fiscal-year
+                                data while respecting accounting boundaries.</p>
+                        </article>
+                        <article class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
+                            <h3 class="text-lg font-black">Attendance</h3>
+                            <p class="mt-3 leading-8 text-stone-600">Clock-in and clock-out tracking, daily and monthly
+                                work tracking, and data import from external sources.</p>
+                        </article>
+                        <article class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
+                            <h3 class="text-lg font-black">Salary and payroll</h3>
+                            <p class="mt-3 leading-8 text-stone-600">Monthly salary calculation, management of deductions
+                                and benefits, payslips, and related reports.</p>
+                        </article>
+                        <article class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
+                            <h3 class="text-lg font-black">Open source and extensible</h3>
+                            <p class="mt-3 leading-8 text-stone-600">Free code with Laravel's service-oriented
+                                architecture for transparent contribution, review, and development.</p>
+                        </article>
+                    </div>
+                </div>
+            </section>
+
+            <section id="quickstart" class="mx-auto max-w-7xl px-5 py-16 lg:px-8">
+                <div class="grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
+                    <div>
+                        <p class="text-sm font-black text-mint">Quick start</p>
+                        <h2 class="mt-3 text-3xl font-black">Three installation paths, from quick test to production</h2>
+                        <p class="mt-5 leading-8 text-stone-600">The installation guide covers Docker Compose,
+                            single-command Docker, and a standard setup with PHP and MariaDB.</p>
+                        <a href="INSTALLATION.en.html"
+                            class="mt-7 inline-flex rounded-lg bg-ink px-5 py-3 text-sm font-black text-white transition hover:bg-stone-800">View
+                            the installation guide</a>
+                    </div>
+                    <div class="grid gap-4">
+                        <div class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+                            <div class="flex items-start gap-4">
+                                <span
+                                    class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-teal-50 font-black text-mint">1</span>
+                                <div>
+                                    <h3 class="font-black">Docker Compose for production</h3>
+                                    <p class="mt-2 leading-8 text-stone-600">Use the prebuilt images from the GitHub
+                                        Container Registry with an environment configuration file.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+                            <div class="flex items-start gap-4">
+                                <span
+                                    class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-teal-50 font-black text-mint">2</span>
+                                <div>
+                                    <h3 class="font-black">Single-command Docker for testing</h3>
+                                    <p class="mt-2 leading-8 text-stone-600">Quickly launch an all-in-one container for
+                                        initial evaluation and short-term testing.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+                            <div class="flex items-start gap-4">
+                                <span
+                                    class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-teal-50 font-black text-mint">3</span>
+                                <div>
+                                    <h3 class="font-black">Standard Laravel installation</h3>
+                                    <p class="mt-2 leading-8 text-stone-600">Set up with PHP, Composer, Node.js, and
+                                        MariaDB for development or custom deployment.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="docs" class="border-y border-stone-200 bg-white">
+                <div class="mx-auto max-w-7xl px-5 py-16 lg:px-8">
+                    <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+                        <div>
+                            <p class="text-sm font-black text-mint">Documentation</p>
+                            <h2 class="mt-3 text-3xl font-black">All project documentation files</h2>
+                            <p class="mt-4 max-w-2xl leading-8 text-stone-600">Links use GitHub Pages-compatible HTML
+                                paths, and the existing Markdown files remain unchanged.</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        <a href="README.en.html"
+                            class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                            <span class="text-xs font-black text-mint">English</span>
+                            <h3 class="mt-2 font-black group-hover:text-mint">Full documentation index</h3>
+                            <p class="mt-2 text-sm leading-7 text-stone-600">README.en.html</p>
+                        </a>
+                        <a href="INSTALLATION.en.html"
+                            class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                            <span class="text-xs font-black text-mint">English</span>
+                            <h3 class="mt-2 font-black group-hover:text-mint">Installation guide</h3>
+                            <p class="mt-2 text-sm leading-7 text-stone-600">INSTALLATION.en.html</p>
+                        </a>
+                        <a href="user/README.en.html"
+                            class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                            <span class="text-xs font-black text-mint">English</span>
+                            <h3 class="mt-2 font-black group-hover:text-mint">User guide</h3>
+                            <p class="mt-2 text-sm leading-7 text-stone-600">user/README.en.html</p>
+                        </a>
+                        <a href="accounting/README.en.html"
+                            class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                            <span class="text-xs font-black text-mint">English</span>
+                            <h3 class="mt-2 font-black group-hover:text-mint">Accounting concepts</h3>
+                            <p class="mt-2 text-sm leading-7 text-stone-600">accounting/README.en.html</p>
+                        </a>
+                        <a href="developer/README.en.html"
+                            class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                            <span class="text-xs font-black text-mint">English</span>
+                            <h3 class="mt-2 font-black group-hover:text-mint">Programmer guide</h3>
+                            <p class="mt-2 text-sm leading-7 text-stone-600">developer/README.en.html</p>
+                        </a>
+                        <a href="fiscal-year.en.html"
+                            class="group rounded-xl border border-stone-200 bg-paper p-5 shadow-sm transition hover:-translate-y-1 hover:border-mint hover:shadow-soft">
+                            <span class="text-xs font-black text-mint">English</span>
+                            <h3 class="mt-2 font-black group-hover:text-mint">Fiscal year</h3>
+                            <p class="mt-2 text-sm leading-7 text-stone-600">fiscal-year.en.html</p>
+                        </a>
+                    </div>
+                    <p class="mt-6 text-sm text-stone-500">Looking for the full Persian documentation set? Visit the
+                        <a class="font-black text-mint hover:text-teal-800" href="README.html">Persian documentation
+                            index</a>.</p>
+                </div>
+            </section>
+
+            <section id="downloads" class="mx-auto max-w-7xl px-5 py-16 lg:px-8">
+                <div class="grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
+                    <div>
+                        <p class="text-sm font-black text-mint">Downloads</p>
+                        <h2 class="mt-3 text-3xl font-black">Setup and download resources</h2>
+                        <p class="mt-5 leading-8 text-stone-600">These links are taken from the project's installation
+                            guide and can be used directly with GitHub Pages.</p>
+                    </div>
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <a href="https://github.com/Jooyeshgar/FreeAmir"
+                            class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm transition hover:border-mint hover:shadow-soft">
+                            <h3 class="font-black">GitHub repository</h3>
+                            <p class="mt-2 text-sm leading-7 text-stone-600">Source code, bug reports, and pull
+                                requests</p>
+                        </a>
+                        <a href="https://github.com/Jooyeshgar/FreeAmir/releases"
+                            class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm transition hover:border-mint hover:shadow-soft">
+                            <h3 class="font-black">Releases</h3>
+                            <p class="mt-2 text-sm leading-7 text-stone-600">Published versions and release notes</p>
+                        </a>
+                        <a href="https://github.com/orgs/Jooyeshgar/packages?repo_name=FreeAmir"
+                            class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm transition hover:border-mint hover:shadow-soft">
+                            <h3 class="font-black">Packages</h3>
+                            <p class="mt-2 text-sm leading-7 text-stone-600">Images and packages related to the FreeAmir
+                                repository</p>
+                        </a>
+                        <a href="https://raw.githubusercontent.com/Jooyeshgar/FreeAmir/main/docker/production/docker-compose.prebuilt.yml"
+                            class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm transition hover:border-mint hover:shadow-soft">
+                            <h3 class="font-black">docker-compose.prebuilt.yml</h3>
+                            <p class="mt-2 text-sm leading-7 text-stone-600">Docker Compose file for the prebuilt images
+                            </p>
+                        </a>
+                        <a href="https://raw.githubusercontent.com/Jooyeshgar/FreeAmir/main/docker/production/.env.example"
+                            class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm transition hover:border-mint hover:shadow-soft">
+                            <h3 class="font-black">Sample env file</h3>
+                            <p class="mt-2 text-sm leading-7 text-stone-600">Recommended environment variables for the
+                                Docker installation</p>
+                        </a>
+                        <a href="https://github.com/Jooyeshgar/FreeAmir/pkgs/container/freeamir-all-in-one"
+                            class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm transition hover:border-mint hover:shadow-soft">
+                            <h3 class="font-black">All-in-one image</h3>
+                            <p class="mt-2 text-sm leading-7 text-stone-600">Test container
+                                ghcr.io/jooyeshgar/freeamir-all-in-one</p>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <section id="contribute" class="border-y border-stone-200 bg-white">
+                <div class="mx-auto grid max-w-7xl gap-8 px-5 py-16 lg:grid-cols-2 lg:px-8">
+                    <div class="rounded-2xl border border-stone-200 bg-paper p-7 shadow-sm">
+                        <p class="text-sm font-black text-mint">Contributing</p>
+                        <h2 class="mt-3 text-2xl font-black">Building Amir with community contribution</h2>
+                        <p class="mt-4 leading-8 text-stone-600">To report bugs, suggest features, and submit pull
+                            requests, see the project's contribution guide. Changes that affect financial calculations
+                            must be accompanied by tests and accounting-domain review.</p>
+                        <a href="https://github.com/Jooyeshgar/FreeAmir/blob/main/CONTRIBUTING.md"
+                            class="mt-6 inline-flex rounded-lg border border-stone-300 bg-white px-5 py-3 text-sm font-black text-ink transition hover:border-mint hover:text-mint">Contribution
+                            guide</a>
+                    </div>
+                    <div class="rounded-2xl border border-stone-200 bg-paper p-7 shadow-sm">
+                        <p class="text-sm font-black text-mint">License</p>
+                        <h2 class="mt-3 text-2xl font-black">GPL-3.0</h2>
+                        <p class="mt-4 leading-8 text-stone-600">Amir is released under the GPL-3 license; using,
+                            reviewing, modifying, and contributing to the project is free under the terms of the
+                            license.</p>
+                        <a href="https://github.com/Jooyeshgar/FreeAmir/blob/main/LICENSE"
+                            class="mt-6 inline-flex rounded-lg border border-stone-300 bg-white px-5 py-3 text-sm font-black text-ink transition hover:border-mint hover:text-mint">View
+                            license</a>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="mx-auto max-w-7xl px-5 py-10 text-sm text-stone-500 lg:px-8">
+            <div
+                class="flex flex-col gap-4 border-t border-stone-200 pt-8 sm:flex-row sm:items-center sm:justify-between">
+                <p>Amir; a free Laravel accounting application for Iranian businesses.</p>
+                <div class="flex gap-5">
+                    <a class="hover:text-mint" href="#docs">Documentation</a>
+                    <a class="hover:text-mint" href="INSTALLATION.en.html">Install</a>
+                    <a class="hover:text-mint" href="index.html" hreflang="fa">فارسی</a>
+                    <a class="hover:text-mint" href="https://github.com/Jooyeshgar/FreeAmir">GitHub</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+</body>
+
+</html>

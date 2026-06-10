@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Amir documentation index — a free Laravel accounting application">
+    <title>Documentation Index | Amir</title>
+    <link rel="alternate" hreflang="fa" href="README.html" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Vazirmatn', 'Tahoma', 'Arial', 'sans-serif'],
+                    },
+                    colors: {
+                        ink: '#16201c',
+                        mint: '#0f766e',
+                        amber: '#b45309',
+                        paper: '#fafaf7',
+                    },
+                    boxShadow: {
+                        soft: '0 18px 45px rgba(22, 32, 28, 0.10)',
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .hero-grid {
+            background-image:
+                linear-gradient(rgba(15, 118, 110, 0.09) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(15, 118, 110, 0.09) 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
+
+        .prose-doc {
+            color: #44403c;
+            line-height: 1.9;
+            font-size: 1.0625rem;
+        }
+
+        .prose-doc h2 {
+            color: #16201c;
+            font-weight: 900;
+            font-size: 1.5rem;
+            margin: 2.25rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #e7e5e4;
+            scroll-margin-top: 6rem;
+        }
+
+        .prose-doc p {
+            margin: 0 0 1.1rem;
+        }
+
+        .prose-doc a {
+            color: #0f766e;
+            font-weight: 700;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(15, 118, 110, 0.35);
+            transition: color .15s, border-color .15s;
+        }
+
+        .prose-doc a:hover {
+            color: #115e59;
+            border-color: #115e59;
+        }
+
+        .prose-doc ul {
+            margin: 0 0 1.1rem;
+            padding-inline-start: 1.5rem;
+            list-style: disc;
+        }
+
+        .prose-doc li {
+            margin: 0.4rem 0;
+        }
+
+        .prose-doc table {
+            display: table;
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.25rem 0;
+            font-size: 0.95rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 0 0 1px #e7e5e4;
+        }
+
+        .prose-doc thead {
+            background: #16201c;
+            color: #fff;
+        }
+
+        .prose-doc th,
+        .prose-doc td {
+            padding: 0.7rem 0.9rem;
+            text-align: left;
+            border-bottom: 1px solid #e7e5e4;
+        }
+
+        .prose-doc tbody tr:nth-child(even) {
+            background: #fafaf7;
+        }
+
+        .prose-doc tbody tr:hover {
+            background: #f0fdfa;
+        }
+
+        .prose-doc code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.9em;
+            background: #f5f5f4;
+            color: #b45309;
+            padding: 0.15em 0.4em;
+            border-radius: 0.35rem;
+        }
+    </style>
+</head>
+
+<body class="bg-paper text-ink antialiased">
+    <div x-data="{ menuOpen: false }" class="min-h-screen overflow-hidden">
+        <header class="sticky top-0 z-50 border-b border-stone-200/80 bg-paper/90 backdrop-blur">
+            <nav class="mx-auto flex max-w-5xl items-center justify-between px-5 py-4 lg:px-8" aria-label="Main navigation">
+                <a href="index.en.html" class="flex items-center gap-3">
+                    <span
+                        class="grid h-11 w-11 place-items-center rounded-lg bg-ink text-lg font-black text-white">A</span>
+                    <span>
+                        <span class="block text-base font-black">Amir</span>
+                        <span class="block text-xs text-stone-500">Free accounting for Iran</span>
+                    </span>
+                </a>
+
+                <button type="button"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-stone-300 text-ink md:hidden"
+                    @click="menuOpen = !menuOpen" :aria-expanded="menuOpen.toString()" aria-controls="mobile-menu"
+                    aria-label="Open menu">
+                    <span class="text-xl leading-none" x-text="menuOpen ? '×' : '☰'"></span>
+                </button>
+
+                <div class="hidden items-center gap-7 text-sm font-semibold text-stone-700 md:flex">
+                    <a class="transition hover:text-mint" href="index.en.html">Home</a>
+                    <a class="transition hover:text-mint" href="index.en.html#features">Features</a>
+                    <a class="transition hover:text-mint" href="index.en.html#quickstart">Quick start</a>
+                    <a class="transition hover:text-mint" href="README.en.html">Docs</a>
+                    <a class="transition hover:text-mint" href="index.en.html#downloads">Downloads</a>
+                    <a class="rounded-lg border border-stone-300 px-3 py-1.5 transition hover:border-mint hover:text-mint"
+                        href="README.html" hreflang="fa">فارسی</a>
+                </div>
+            </nav>
+            <div id="mobile-menu" x-show="menuOpen" x-transition
+                class="border-t border-stone-200 bg-paper px-5 py-4 md:hidden">
+                <div class="grid gap-3 text-sm font-semibold text-stone-700">
+                    <a class="rounded-lg px-3 py-2 hover:bg-white" href="index.en.html"
+                        @click="menuOpen = false">Home</a>
+                    <a class="rounded-lg px-3 py-2 hover:bg-white" href="index.en.html#features"
+                        @click="menuOpen = false">Features</a>
+                    <a class="rounded-lg px-3 py-2 hover:bg-white" href="index.en.html#quickstart"
+                        @click="menuOpen = false">Quick start</a>
+                    <a class="rounded-lg px-3 py-2 hover:bg-white" href="README.en.html"
+                        @click="menuOpen = false">Docs</a>
+                    <a class="rounded-lg px-3 py-2 hover:bg-white" href="index.en.html#downloads"
+                        @click="menuOpen = false">Downloads</a>
+                    <a class="rounded-lg px-3 py-2 hover:bg-white" href="README.html" hreflang="fa"
+                        @click="menuOpen = false">نسخه فارسی</a>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <section class="hero-grid border-b border-stone-200">
+                <div class="mx-auto max-w-5xl px-5 py-10 lg:px-8">
+                    <nav class="text-xs font-semibold text-stone-500" aria-label="Breadcrumb">
+                        <a class="hover:text-mint" href="index.en.html">Home</a>
+                        <span class="px-2">/</span>
+                        <span>Docs</span>
+                    </nav>
+                    <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+                        <h1 class="text-3xl font-black leading-tight text-ink sm:text-4xl">Amir Documentation Index</h1>
+                        <a href="README.html" hreflang="fa"
+                            class="inline-flex items-center gap-2 rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-black text-ink transition hover:border-mint hover:text-mint">
+                            نسخه فارسی
+                        </a>
+                    </div>
+                    <p class="mt-2 text-sm text-stone-600">The Markdown documentation hub for Amir, a free Laravel
+                        accounting application.</p>
+                </div>
+            </section>
+
+            <section class="mx-auto max-w-5xl px-5 py-12 lg:px-8">
+                <article class="prose-doc rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-10">
+                    <p>
+                        This directory is the Markdown documentation hub for Amir. To keep languages aligned, Persian
+                        README files have no prefix, and the English version of the same README is named
+                        <code>README.en.md</code>.
+                    </p>
+
+                    <h2 id="main-paths">Main Paths</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Path</th>
+                                <th>Audience</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><a href="user/README.en.html">Ordinary user guide</a></td>
+                                <td>Non-developer users</td>
+                                <td>Day-to-day operations, attendance, salary, inventory, and fiscal years</td>
+                            </tr>
+                            <tr>
+                                <td><a href="accounting/README.en.html">Accounting concepts</a></td>
+                                <td>Users and developers</td>
+                                <td>Accounting concepts, COGS, purchase/sales returns, and fiscal years</td>
+                            </tr>
+                            <tr>
+                                <td><a href="developer/README.en.html">Programmer guide</a></td>
+                                <td>Developers</td>
+                                <td>Architecture, database, testing, and scripts</td>
+                            </tr>
+                            <tr>
+                                <td><a href="INSTALLATION.en.html">Installation guide</a></td>
+                                <td>System admins and developers</td>
+                                <td>Installation with Docker Compose, single-command Docker, or standard setup</td>
+                            </tr>
+                            <tr>
+                                <td><a href="fiscal-year.en.html">Fiscal year</a></td>
+                                <td>Everyone</td>
+                                <td>What a fiscal year is and how to create one in Amir</td>
+                            </tr>
+                            <tr>
+                                <td><a href="FiscalYearExportImport.html">Fiscal-year export/import</a></td>
+                                <td>System admins and developers</td>
+                                <td>The <code>fiscal-year:export</code> and <code>fiscal-year:import</code> commands</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h2 id="all-files">All Documentation Files</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>File</th>
+                                <th>Category</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><a href="INSTALLATION.html">INSTALLATION</a> / <a
+                                        href="INSTALLATION.en.html">EN</a></td>
+                                <td>Installation</td>
+                                <td>Persian and English installation guides</td>
+                            </tr>
+                            <tr>
+                                <td><a href="user/README.html">user/README</a> / <a href="user/README.en.html">EN</a>
+                                </td>
+                                <td>Ordinary user</td>
+                                <td>Secondary index for practical and accounting documentation</td>
+                            </tr>
+                            <tr>
+                                <td><a href="accounting/README.html">accounting/README</a> / <a
+                                        href="accounting/README.en.html">EN</a></td>
+                                <td>Accounting</td>
+                                <td>Accounting concepts index</td>
+                            </tr>
+                            <tr>
+                                <td><a href="developer/README.html">developer/README</a> / <a
+                                        href="developer/README.en.html">EN</a></td>
+                                <td>Programmer</td>
+                                <td>Secondary index for technical documentation</td>
+                            </tr>
+                            <tr>
+                                <td><a href="user/attendance/README.html">user/attendance/README</a> / <a
+                                        href="user/attendance/README.en.html">EN</a></td>
+                                <td>Attendance</td>
+                                <td>Work shifts, logs, imports, and monthly attendance</td>
+                            </tr>
+                            <tr>
+                                <td><a href="user/salary/README.html">user/salary/README</a> / <a
+                                        href="user/salary/README.en.html">EN</a></td>
+                                <td>Salary and payroll</td>
+                                <td>Payroll elements, salary decrees, and payrolls</td>
+                            </tr>
+                            <tr>
+                                <td><a href="user/inventory-costing.html">user/inventory-costing</a> / <a
+                                        href="user/inventory-costing.en.html">EN</a></td>
+                                <td>Inventory accounting</td>
+                                <td>COGS, costing methods, and Amir's selected method</td>
+                            </tr>
+                            <tr>
+                                <td><a href="fiscal-year.html">fiscal-year</a> / <a href="fiscal-year.en.html">EN</a>
+                                </td>
+                                <td>Fiscal year</td>
+                                <td>Fiscal-year concept and creation guide</td>
+                            </tr>
+                            <tr>
+                                <td><a href="FiscalYearExportImport.html">FiscalYearExportImport</a></td>
+                                <td>Fiscal year</td>
+                                <td>Exporting and importing fiscal-year data</td>
+                            </tr>
+                            <tr>
+                                <td><a href="accounting-basics.html">accounting-basics</a></td>
+                                <td>Accounting</td>
+                                <td>Accounting basics, debit, credit, and documents</td>
+                            </tr>
+                            <tr>
+                                <td><a href="return-sell-return-buy.html">return-sell-return-buy</a></td>
+                                <td>Inventory accounting</td>
+                                <td>Sales returns and purchase returns</td>
+                            </tr>
+                            <tr>
+                                <td><a href="project-structure.html">project-structure</a></td>
+                                <td>Technical</td>
+                                <td>Laravel project structure</td>
+                            </tr>
+                            <tr>
+                                <td><a href="database-guide.html">database-guide</a></td>
+                                <td>Technical</td>
+                                <td>Database structure and relationships</td>
+                            </tr>
+                            <tr>
+                                <td><a href="testing-guide.html">testing-guide</a></td>
+                                <td>Technical</td>
+                                <td>Testing guide and test execution</td>
+                            </tr>
+                            <tr>
+                                <td><a href="https://github.com/Jooyeshgar/FreeAmir/tree/main/script">script/README</a>
+                                </td>
+                                <td>Tools</td>
+                                <td>Migration and data script documentation</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h2 id="maintenance">Documentation Maintenance</h2>
+                    <ul>
+                        <li>Every Persian README should stay structurally aligned with its English README counterpart.
+                        </li>
+                        <li>When a new file is added under <code>docs/</code>, reference it here or in one of the two
+                            secondary indexes.</li>
+                        <li>If a document is useful to ordinary users, include it in <a
+                                href="user/README.en.html">user/README.en</a>.</li>
+                        <li>If a document is about development or internal structure, include it in <a
+                                href="developer/README.en.html">developer/README.en</a>.</li>
+                    </ul>
+                </article>
+            </section>
+        </main>
+
+        <footer class="mx-auto max-w-5xl px-5 py-10 text-sm text-stone-500 lg:px-8">
+            <div
+                class="flex flex-col gap-4 border-t border-stone-200 pt-8 sm:flex-row sm:items-center sm:justify-between">
+                <p>Amir; a free Laravel accounting application for Iranian businesses.</p>
+                <div class="flex gap-5">
+                    <a class="hover:text-mint" href="README.en.html">Docs</a>
+                    <a class="hover:text-mint" href="README.html" hreflang="fa">فارسی</a>
+                    <a class="hover:text-mint" href="https://github.com/Jooyeshgar/FreeAmir">GitHub</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+</body>
+
+</html>
