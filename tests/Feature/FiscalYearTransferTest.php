@@ -588,4 +588,32 @@ class FiscalYearTransferTest extends TestCase
         $response->assertSessionHasErrors();
         $this->assertSame(0, Document::withoutGlobalScopes()->where('company_id', $this->target->id)->count());
     }
+
+    public function test_document_transfer_endpoint_forbids_a_target_company_the_user_cannot_access(): void
+    {
+        $foreign = Company::factory()->create(['fiscal_year' => 1404]);
+        $foreign->users()->detach($this->user);
+        $cash = $this->makeSubject($this->source, '101', 'Cash');
+        $document = $this->makeDocument($this->source, [[$cash, 100]]);
+
+        $response = $this->post(route('documents.transfer', $document), ['target_company_id' => $foreign->id]);
+
+        $response->assertForbidden();
+        $this->assertSame(0, Document::withoutGlobalScopes()->where('company_id', $foreign->id)->count());
+    }
+
+    public function test_invoice_transfer_endpoint_forbids_a_target_company_the_user_cannot_access(): void
+    {
+        $foreign = Company::factory()->create(['fiscal_year' => 1404]);
+        $foreign->users()->detach($this->user);
+        $customer = $this->makeCustomer($this->source, 'ACME');
+        $product = $this->makeProduct($this->source, 'Widget', 'P1');
+        $invoice = $this->makeInvoice($this->source, ['customer_id' => $customer->id, 'amount' => 100]);
+        $this->addProductItem($invoice, $product);
+
+        $response = $this->post(route('invoices.transfer', $invoice), ['target_company_id' => $foreign->id]);
+
+        $response->assertForbidden();
+        $this->assertCount(0, Invoice::withoutGlobalScopes()->where('company_id', $foreign->id)->get());
+    }
 }

@@ -399,6 +399,10 @@ class DocumentController extends Controller
     {
         $request->validate(['target_company_id' => 'required|integer|exists:companies,id']);
 
+        if (! Auth::user()->companies->contains((int) $request->target_company_id)) {
+            abort(403);
+        }
+
         if ((int) $request->target_company_id === getActiveCompany()) {
             return redirect()->route('documents.show', $document)->with('error', __('Cannot transfer to the same fiscal year.'));
         }

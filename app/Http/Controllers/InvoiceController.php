@@ -24,6 +24,7 @@ use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use PDF;
 
 class InvoiceController extends Controller
@@ -756,6 +757,10 @@ class InvoiceController extends Controller
     public function transfer(Request $request, Invoice $invoice): RedirectResponse
     {
         $request->validate(['target_company_id' => 'required|integer|exists:companies,id']);
+
+        if (! Auth::user()->companies->contains((int) $request->target_company_id)) {
+            abort(403);
+        }
 
         if ((int) $request->target_company_id === getActiveCompany()) {
             return redirect()->route('invoices.show', $invoice)->with('error', __('Cannot transfer to the same fiscal year.'));
