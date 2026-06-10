@@ -52,15 +52,15 @@
                         @endswitch
                     </h2>
                     <span class="badge badge-ghost">
-                        {{ convertToFarsi($documents->total()) }} {{ __('records') }}
+                        {{ localizeNumber($documents->total()) }} {{ __('records') }}
                     </span>
                     <a href="{{ route('documents.index', array_merge(request()->except('page'), ['status' => 'approved'])) }}"
                         class="badge {{ $status === 'approved' ? 'badge-success badge-outline' : 'badge-ghost' }}">
-                        {{ __('Approved') }}: {{ convertToFarsi($approvedDocumentsNumber) }}
+                        {{ __('Approved') }}: {{ localizeNumber($approvedDocumentsNumber) }}
                     </a>
                     <a href="{{ route('documents.index', array_merge(request()->except('page'), ['status' => 'unapproved'])) }}"
                         class="badge {{ $status === 'unapproved' ? 'badge-error badge-outline' : 'badge-ghost' }}">
-                        {{ __('Not approved') }}: {{ convertToFarsi($unapprovedDocumentsNumber) }}
+                        {{ __('Not approved') }}: {{ localizeNumber($unapprovedDocumentsNumber) }}
                     </a>
                 </div>
 
@@ -143,7 +143,7 @@
                                 @endphp
                                 @if ($document->documentable && $documentableRoute)
                                     <a href="{{ route($documentableRoute['name'], $documentableRoute['params']) }}" class="link link-hover">
-                                        {{ __(class_basename($document->documentable_type)) }} {{ convertToFarsi($document->documentable->number) }}
+                                        {{ __(class_basename($document->documentable_type)) }} {{ localizeNumber($document->documentable->number) }}
                                     </a>
                                 @endif
                             </td>

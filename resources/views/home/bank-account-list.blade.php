@@ -26,7 +26,7 @@
                         {{ $bankAccounts->find($bankAccountId)?->name ?? '-' }}
                     </a>
                     <span class="font-mono">
-                        {{ convertToFarsi(number_format(-1 * $balance)) }}
+                        {{ localizeNumber(number_format(-1 * $balance)) }}
                     </span>
                 </div>
             @empty

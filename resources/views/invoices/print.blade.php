@@ -47,12 +47,12 @@
             </tr>
             <tr>
                 <td class="contractSection" width="33%">
-                    شماره ملی: {{ convertToFarsi('10840096498') }}<br />
-                    شماره تلفن: {{ convertToFarsi('031') }}<bdo dir="ltr">-</bdo>{{ convertToFarsi('32121091') }}
+                    شماره ملی: {{ localizeNumber('10840096498') }}<br />
+                    شماره تلفن: {{ localizeNumber('031') }}<bdo dir="ltr">-</bdo>{{ localizeNumber('32121091') }}
                 </td>
                 <td class="contractSection" width="30%">
-                    شماره اقتصادی: {{ convertToFarsi('411337894159') }}<br />
-                    کد پستی ۱۰ رقمی: {{ convertToFarsi('8136613699') }}
+                    شماره اقتصادی: {{ localizeNumber('411337894159') }}<br />
+                    کد پستی ۱۰ رقمی: {{ localizeNumber('8136613699') }}
                 </td>
                 <td class="contractSection" width="30%">
                     شرکت مهندسی جویشگر پردیس ارم<br />
@@ -76,15 +76,15 @@
             <tr>
                 <td class="contractSection">
                     شماره ملی:
-                    {{ isset($invoice->customer->personal_code) ? convertToFarsi($invoice->customer->personal_code) : '' }}<br />
+                    {{ isset($invoice->customer->personal_code) ? localizeNumber($invoice->customer->personal_code) : '' }}<br />
                     شماره تلفن: <bdo
-                        dir="ltr">{{ isset($invoice->customer->phone) ? convertToFarsi($invoice->customer->phone) : '' }}</bdo>
+                        dir="ltr">{{ isset($invoice->customer->phone) ? localizeNumber($invoice->customer->phone) : '' }}</bdo>
                 </td>
                 <td class="contractSection">
                     شماره اقتصادی:
-                    {{ isset($invoice->customer->ecnmcs_code) ? convertToFarsi($invoice->customer->ecnmcs_code) : '' }}<br />
+                    {{ isset($invoice->customer->ecnmcs_code) ? localizeNumber($invoice->customer->ecnmcs_code) : '' }}<br />
                     کد پستی ۱۰ رقمی:
-                    {{ isset($invoice->customer->postal_code) ? convertToFarsi($invoice->customer->postal_code) : '' }}
+                    {{ isset($invoice->customer->postal_code) ? localizeNumber($invoice->customer->postal_code) : '' }}
                 </td>
                 <td class="contractSection">
                     {{ $invoice->customer->name }}<br />
@@ -142,8 +142,8 @@
                     <td class="transactionsRow">
                         {{ $invoiceItem->description ?? ($invoiceItem->itemable?->name ?? '') }}
                     </td>
-                    <td class="transactionsRow">{{ convertToFarsi($code) }}</td>
-                    <td class="transactionsRow transactionsRowIndex">{{ convertToFarsi($index + 1) }}</td>
+                    <td class="transactionsRow">{{ localizeNumber($code) }}</td>
+                    <td class="transactionsRow transactionsRowIndex">{{ localizeNumber($index + 1) }}</td>
                 </tr>
             @endforeach
 

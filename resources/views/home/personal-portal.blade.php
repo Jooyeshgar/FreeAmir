@@ -14,15 +14,15 @@
                 'tone' => 'primary',
                 'title' => __('Full Name'),
                 'value' => $employee->first_name . ' ' . $employee->last_name,
-                'meta' => convertToFarsi($employee->national_code ?? '-'),
+                'meta' => localizeNumber($employee->national_code ?? '-'),
                 'href' => route('employee-portal.employee.show'),
                 'icon' => 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
             ],
             [
                 'tone' => 'warning',
                 'title' => __('Requests'),
-                'value' => convertToFarsi($approvedCount + $rejectedCount + $pendingCount),
-                'meta' => __('Approved') . ': ' . convertToFarsi($approvedCount) . ' • ' . __('In Pending') . ': ' . convertToFarsi($pendingCount) . ' • ' . __('rejected') . ': ' . convertToFarsi($rejectedCount),
+                'value' => localizeNumber($approvedCount + $rejectedCount + $pendingCount),
+                'meta' => __('Approved') . ': ' . localizeNumber($approvedCount) . ' • ' . __('In Pending') . ': ' . localizeNumber($pendingCount) . ' • ' . __('rejected') . ': ' . localizeNumber($rejectedCount),
                 'href' => route('employee-portal.personnel-requests.index'),
                 'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
             ],
@@ -30,7 +30,7 @@
                 'tone' => 'secondary',
                 'title' => __('Last Monthly Attendances'),
                 'value' => isset($lastMonthlyAttendance) ? ($monthNames[$lastMonthlyAttendance->month] ?? $lastMonthlyAttendance->month) : __('No monthly attendance records found.'),
-                'meta' => isset($lastMonthlyAttendance) ? convertToFarsi($lastMonthlyAttendance->year) : '',
+                'meta' => isset($lastMonthlyAttendance) ? localizeNumber($lastMonthlyAttendance->year) : '',
                 'href' => isset($lastMonthlyAttendance) ? route('employee-portal.monthly-attendances.show', $lastMonthlyAttendance) : null,
                 'icon' => 'M8 3v4m8-4v4M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2zm-2 5h18',
             ],
@@ -38,7 +38,7 @@
                 'tone' => 'info',
                 'title' => __('Last payslips'),
                 'value' => isset($lastPayroll) ? ($monthNames[$lastPayroll->month] ?? $lastPayroll->month) : __('No payslips records found.'),
-                'meta' => isset($lastPayroll) ? convertToFarsi($lastPayroll->year) : '',
+                'meta' => isset($lastPayroll) ? localizeNumber($lastPayroll->year) : '',
                 'href' => isset($lastPayroll) ? route('employee-portal.payrolls.show', $lastPayroll) : null,
                 'icon' => 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z',
             ],
@@ -115,8 +115,8 @@
                         @forelse ($recentLogs as $log)
                             <tr>
                                 <td>{{ formatDate($log->log_date) }}</td>
-                                <td>{{ $log->entry_time ? convertToFarsi($log->entry_time) : '—' }}</td>
-                                <td>{{ $log->exit_time ? convertToFarsi($log->exit_time) : '—' }}</td>
+                                <td>{{ $log->entry_time ? localizeNumber($log->entry_time) : '—' }}</td>
+                                <td>{{ $log->exit_time ? localizeNumber($log->exit_time) : '—' }}</td>
                                 <td>
                                     @if ($log->is_manual)
                                         <span class="badge badge-warning badge-sm">{{ __('Manual') }}</span>

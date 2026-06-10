@@ -14,9 +14,9 @@
                     </div>
                     <div class="col-span-2 md:col-span-1" x-data="{ fiscalYear: '{{ old('fiscal_year', '') }}' }">
                         <x-input name="fiscal_year" id="fiscal_year" title="{{ __('Fiscal year') }}"
-                            placeholder="{{ convertToFarsi('1405') }}"
+                            placeholder="{{ localizeNumber('1405') }}"
                             x-on:input="fiscalYear = $store.utils.cleanupNumber($event.target.value)"
-                            x-effect="$el.value = $store.utils.convertToFarsi($store.utils.cleanupNumber(fiscalYear) || '')" />
+                            x-effect="$el.value = $store.utils.localizeNumber($store.utils.cleanupNumber(fiscalYear) || '')" />
                         <x-input name="fiscal_year" x-bind:value="fiscalYear" hidden />
                     </div>
                     <div class="col-span-2 md:col-span-1 w-64 max-w-md">

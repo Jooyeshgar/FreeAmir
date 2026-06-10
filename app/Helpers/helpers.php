@@ -188,6 +188,28 @@ function toEnglish($number)
 }
 
 /**
+ * Localize a number's digits based on the current application locale.
+ *
+ * When the locale is Persian (fa/fa_IR) the digits are converted to Farsi,
+ * otherwise they are normalized to English. Centralizes the digit-localization
+ * logic that was previously scattered across views as direct convertToFarsi()
+ * calls.
+ *
+ * @param  string|int|float|null  $number
+ * @return string
+ */
+function localizeNumber($number)
+{
+    $locale = App::getLocale();
+
+    if ($locale === 'fa' || $locale === 'fa_IR') {
+        return convertToFarsi($number);
+    }
+
+    return toEnglish($number);
+}
+
+/**
  * Convert a string number from Persian or English to a float.
  *
  * @param  mixed  $number

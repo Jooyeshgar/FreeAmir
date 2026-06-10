@@ -53,7 +53,7 @@
                     <tbody>
                         @forelse ($payrolls as $payroll)
                             <tr>
-                                <td>{{ convertToFarsi($payroll->year) }}</td>
+                                <td>{{ localizeNumber($payroll->year) }}</td>
                                 <td>{{ \App\Models\MonthlyAttendance::MONTH_NAMES[$payroll->month] ?? $payroll->month }}</td>
                                 <td x-data="{ show: false }" @click="show = !show">
                                     <span x-show="!show">****</span>

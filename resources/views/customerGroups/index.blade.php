@@ -26,7 +26,7 @@
                 <div class="flex flex-wrap items-center gap-3">
                     <h2 class="text-base font-bold text-base-content">{{ __('Customer Groups') }}</h2>
                     <span class="badge badge-ghost">
-                        {{ convertToFarsi($customerGroups->total()) }} {{ __('records') }}
+                        {{ localizeNumber($customerGroups->total()) }} {{ __('records') }}
                     </span>
                 </div>
             </div>
@@ -60,7 +60,7 @@
                             <td class="px-4 py-2">
                                 <a href="{{ route('customers.index', ['group_name' => $customerGroup->name]) }}"
                                     class="hover:underline">
-                                    {{ convertToFarsi($customerGroup->customers_count) }}
+                                    {{ localizeNumber($customerGroup->customers_count) }}
                                 </a>
                             </td>
                             <td class="px-4 py-2">

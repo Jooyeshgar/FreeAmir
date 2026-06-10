@@ -10,7 +10,7 @@
                         {{ $payroll->employee?->last_name }}
                         &mdash;
                         {{ \App\Models\MonthlyAttendance::MONTH_NAMES[$payroll->month] ?? $payroll->month }}
-                        {{ convertToFarsi($payroll->year) }}
+                        {{ localizeNumber($payroll->year) }}
                     </h2>
                     <p class="text-sm text-gray-500">
                         {{ __('Decree') }}:

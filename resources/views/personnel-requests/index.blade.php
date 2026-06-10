@@ -114,7 +114,7 @@
                                             $hours = intdiv($totalMinutes, 60);
                                             $minutes = $totalMinutes % 60;
                                         @endphp
-                                        {{ convertToFarsi(str_pad($hours, 2, '0', STR_PAD_LEFT)) }}:{{ convertToFarsi(str_pad($minutes, 2, '0', STR_PAD_LEFT)) }}
+                                        {{ localizeNumber(str_pad($hours, 2, '0', STR_PAD_LEFT)) }}:{{ localizeNumber(str_pad($minutes, 2, '0', STR_PAD_LEFT)) }}
                                     @else
                                         —
                                     @endif

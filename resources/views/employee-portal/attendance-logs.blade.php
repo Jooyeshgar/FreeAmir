@@ -67,25 +67,25 @@
                                         <span class="badge badge-accent badge-xs ms-1">{{ __('Holiday') }}</span>
                                     @endif
                                 </td>
-                                <td>{{ $log->entry_time ? convertToFarsi(substr($log->entry_time, 0, 5)) : '—' }}</td>
-                                <td>{{ $log->exit_time ? convertToFarsi(substr($log->exit_time, 0, 5)) : '—' }}</td>
+                                <td>{{ $log->entry_time ? localizeNumber(substr($log->entry_time, 0, 5)) : '—' }}</td>
+                                <td>{{ $log->exit_time ? localizeNumber(substr($log->exit_time, 0, 5)) : '—' }}</td>
                                 <td>
                                     @if ($log->worked)
-                                        <span class="text-success font-medium">{{ convertToFarsi($log->worked) }}</span>
+                                        <span class="text-success font-medium">{{ localizeNumber($log->worked) }}</span>
                                     @else
                                         —
                                     @endif
                                 </td>
                                 <td>
                                     @if ($log->overtime)
-                                        <span class="text-info font-medium">{{ convertToFarsi($log->overtime) }}</span>
+                                        <span class="text-info font-medium">{{ localizeNumber($log->overtime) }}</span>
                                     @else
                                         —
                                     @endif
                                 </td>
                                 <td>
                                     @if ($log->delay)
-                                        <span class="text-warning font-medium">{{ convertToFarsi($log->delay) }}</span>
+                                        <span class="text-warning font-medium">{{ localizeNumber($log->delay) }}</span>
                                     @else
                                         —
                                     @endif

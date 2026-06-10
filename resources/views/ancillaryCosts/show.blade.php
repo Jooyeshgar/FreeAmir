@@ -112,7 +112,7 @@
                             <div class="card-body p-4">
                                 <h3 class="card-title text-xs uppercase tracking-wide text-gray-500">{{ __('Phone') }}</h3>
                                 <p class="text-lg font-semibold text-gray-800">
-                                    {{ $ancillaryCost->customer->phone ? convertToFarsi($ancillaryCost->customer->phone) : '—' }}
+                                    {{ $ancillaryCost->customer->phone ? localizeNumber($ancillaryCost->customer->phone) : '—' }}
                                 </p>
                             </div>
                         </div>
@@ -120,7 +120,7 @@
                             <div class="card-body p-4">
                                 <h3 class="card-title text-xs uppercase tracking-wide text-gray-500">{{ __('Economic code') }}</h3>
                                 <p class="text-lg font-semibold text-gray-800">
-                                    {{ $ancillaryCost->customer->ecnmcs_code ? convertToFarsi($ancillaryCost->customer->ecnmcs_code) : '—' }}
+                                    {{ $ancillaryCost->customer->ecnmcs_code ? localizeNumber($ancillaryCost->customer->ecnmcs_code) : '—' }}
                                 </p>
                             </div>
                         </div>
@@ -128,7 +128,7 @@
                             <div class="card-body p-4">
                                 <h3 class="card-title text-xs uppercase tracking-wide text-gray-500">{{ __('Postal code') }}</h3>
                                 <p class="text-lg font-semibold text-gray-800">
-                                    {{ $ancillaryCost->customer->postal_code ? convertToFarsi($ancillaryCost->customer->postal_code) : '—' }}
+                                    {{ $ancillaryCost->customer->postal_code ? localizeNumber($ancillaryCost->customer->postal_code) : '—' }}
                                 </p>
                             </div>
                         </div>
@@ -185,7 +185,7 @@
                         <tbody>
                             @foreach ($ancillaryCost->items as $index => $item)
                                 <tr class="hover:bg-base-300">
-                                    <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
+                                    <td class="px-4 py-3">{{ localizeNumber($index + 1) }}</td>
                                     <td class="px-4 py-3">
                                         @if ($item->product)
                                             <a href="{{ route('products.show', $item->product) }}" class="link link-hover link-primary">

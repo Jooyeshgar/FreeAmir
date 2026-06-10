@@ -23,8 +23,8 @@
 
         <div class="card-body">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
-                <x-stat-card :title="__('Account number')" :value="convertToFarsi($bankAccount->number)" type="success" />
-                <x-stat-card :title="__('Account type')" :value="convertToFarsi($bankAccount->type)" type="info" />
+                <x-stat-card :title="__('Account number')" :value="localizeNumber($bankAccount->number)" type="success" />
+                <x-stat-card :title="__('Account type')" :value="localizeNumber($bankAccount->type)" type="info" />
                 <x-stat-card :title="__('Owner')" :value="$bankAccount->owner ?? '-'" type="info" />
                 @can('reports.ledger')
                     <x-stat-card-link :title="__('Subject Balance')" :value="formatNumber(\App\Services\SubjectService::sumSubject($bankAccount->subject, true, false) ?? 0)"
@@ -36,7 +36,7 @@
             <div class="divider text-lg font-semibold">{{ __('Bank Info') }}</div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-3">
                 <x-stat-card :title="__('Name')" :value="$bankAccount->bank->name" type="info" />
-                <x-stat-card :title="__('Phone')" :value="convertToFarsi($bankAccount->bank_phone ?? '-')" type="info" />
+                <x-stat-card :title="__('Phone')" :value="localizeNumber($bankAccount->bank_phone ?? '-')" type="info" />
                 <x-stat-card :title="__('Website')" :value="$bankAccount->bank_web_page ?? '-'" type="info" />
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 mb-3">

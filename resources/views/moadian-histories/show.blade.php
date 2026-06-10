@@ -71,7 +71,7 @@
                                 </td>
                                 <td class="px-2 py-1 text-gray-500">{{ $history->data['referenceNumber'] ?? '-' }}</td>
                                 <td class="px-2 py-1 text-gray-500">{{ $history->data['uid'] ?? '-' }}</td>
-                                <td class="px-2 py-1 text-gray-500">{{ convertToFarsi($history->created_at->format('Y/m/d H:i')) }}</td>
+                                <td class="px-2 py-1 text-gray-500">{{ localizeNumber($history->created_at->format('Y/m/d H:i')) }}</td>
                             </tr>
                         @empty
                             <tr>
