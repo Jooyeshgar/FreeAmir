@@ -105,6 +105,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'ancillary-costs' => ['index', 'search-customer', 'search-invoice', 'get-products', 'approve', 'change-status'],
             'invoices.ancillary-costs' => ['create', 'store', 'show', 'edit', 'update', 'destroy'],
 
+            // Invoice payments
+            'invoices.payments' => ['store', 'destroy'],
+
             // Users / Roles / Permissions / Configs
             'users' => [...self::CRUD, 'create-employee'],
             'permissions' => self::CRUD_NO_SHOW,
@@ -236,6 +239,8 @@ class RolesAndPermissionsSeeder extends Seeder
                     'invoices.inactive.approve',
                     'ancillary-costs.approve',
                     'ancillary-costs.change-status',
+                    'invoices.payments.store',
+                    'invoices.payments.destroy',
                 ])
                 ->pluck('name')
                 ->toArray()

@@ -17,6 +17,7 @@ use App\Services\AncillaryCostService;
 use App\Services\GroupActionService;
 use App\Services\InvoiceService;
 use App\Services\MoadianService;
+use App\Services\PaymentService;
 use DB;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
@@ -39,7 +40,7 @@ class InvoiceController extends Controller
      */
     public function index(Request $request)
     {
-        $builder = Invoice::with(['customer', 'document', 'voidInvoice'])
+        $builder = Invoice::with(['customer', 'document', 'voidInvoice', 'payments'])
             ->orderByDesc('date')
             ->orderByDesc('number');
 
@@ -264,7 +265,7 @@ class InvoiceController extends Controller
             ->with($msgType, $msg);
     }
 
-    public function show(Invoice $invoice)
+    public function show(Invoice $invoice, PaymentService $paymentService)
     {
         $changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
 
@@ -284,9 +285,15 @@ class InvoiceController extends Controller
             'ancillaryCosts.document',
             'ancillaryCosts.items',
             'moadianHistories',
+            'payments.document.transactions.subject',
+            'payments.payer.subject',
+            'payments.creator',
         ]);
 
-        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable'));
+        $paymentDecision = $paymentService->validateInvoicePayment($invoice);
+        $settlementSubjects = $paymentService->settlementSubjects();
+
+        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects'));
     }
 
     public function print(Invoice $invoice)

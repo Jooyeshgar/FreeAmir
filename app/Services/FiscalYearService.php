@@ -24,6 +24,7 @@ use App\Models\InvoiceItem;
 use App\Models\MonthlyAttendance;
 use App\Models\OrganizationUnit;
 use App\Models\OrgChart;
+use App\Models\Payment;
 use App\Models\Payroll;
 use App\Models\PayrollElement;
 use App\Models\PayrollItem;
@@ -503,6 +504,14 @@ class FiscalYearService
                                 ]);
                         }
                     }
+
+                    if (isset($importData['payments'])) {
+                        if (! empty($idMappings['invoices'])) {
+                            self::_importPayments($importData['payments'], $idMappings['invoices'], $customerMapping, $documentMapping);
+                        } else {
+                            Log::warning('Skipping payment import due to missing invoice mapping.', ['target_year_id' => $targetYearId]);
+                        }
+                    }
                 }
                 if (in_array('tax_slabs', $sectionsToImport) && isset($importData['tax_slabs'])) {
                     self::_importTaxSlabs($importData['tax_slabs'], $targetYearId);
@@ -768,6 +777,8 @@ class FiscalYearService
 
             $ancillaryCostIds = collect($sourceData['ancillary_costs'])->pluck('id')->toArray();
             $sourceData['ancillary_cost_items'] = ! empty($ancillaryCostIds) ? AncillaryCostItem::whereIn('ancillary_cost_id', $ancillaryCostIds)->get()->toArray() : [];
+
+            $sourceData['payments'] = ! empty($invoiceIds) ? Payment::whereIn('invoice_id', $invoiceIds)->get()->toArray() : [];
         }
         // if (in_array('cheques', $sections)) {
         //     $sourceData['cheques'] = Cheque::withoutGlobalScope(FiscalYearScope::class)
@@ -2330,6 +2341,35 @@ class FiscalYearService
             $newAncillaryCostItem->ancillary_cost_id = $ancillaryCostMapping[$oldAncillaryCostId];
             $newAncillaryCostItem->product_id = $productMapping[$oldProductId];
             $newAncillaryCostItem->save();
+        }
+    }
+
+    /**
+     * Import invoice payments.
+     *
+     * @param  array  $invoiceMapping  Mapping of old invoice ID to new invoice ID.
+     * @param  array  $customerMapping  Mapping of old customer ID to new customer ID.
+     * @param  array  $documentMapping  Mapping of old document ID to new document ID.
+     */
+    protected static function _importPayments(array $paymentsData, array $invoiceMapping, array $customerMapping, array $documentMapping): void
+    {
+        foreach ($paymentsData as $paymentData) {
+            $oldInvoiceId = $paymentData['invoice_id'] ?? null;
+            if ($oldInvoiceId === null || ! isset($invoiceMapping[$oldInvoiceId])) {
+                Log::warning('Skipping payment import due to missing invoice mapping.', ['old_payment_id' => $paymentData['id'] ?? 'N/A', 'old_invoice_id' => $oldInvoiceId]);
+
+                continue;
+            }
+
+            $oldPayerId = $paymentData['payer_id'] ?? null;
+            $oldDocumentId = $paymentData['document_id'] ?? null;
+
+            $newPayment = new Payment;
+            $newPayment->fill(collect($paymentData)->except(['id', 'invoice_id', 'payer_id', 'document_id'])->toArray());
+            $newPayment->invoice_id = $invoiceMapping[$oldInvoiceId];
+            $newPayment->payer_id = $oldPayerId !== null ? ($customerMapping[$oldPayerId] ?? null) : null;
+            $newPayment->document_id = $oldDocumentId !== null ? ($documentMapping[$oldDocumentId] ?? null) : null;
+            $newPayment->save();
         }
     }
 

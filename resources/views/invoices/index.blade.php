@@ -168,6 +168,7 @@
                         <th class="px-4 py-2">{{ __('Date') }}</th>
                         <th class="px-4 py-2">{{ __('Price') }} ({{ config('amir.currency') ?? __('Rial') }})</th>
                         <th class="px-4 py-2">{{ __('Status') }}</th>
+                        <th class="px-4 py-2">{{ __('Payment Status') }}</th>
                         @if ($showMoadianStatus)
                             <th class="px-4 py-2">{{ __('Moadian Status') }}</th>
                         @endif
@@ -210,8 +211,22 @@
                             <td class="px-4 py-2">
                                 {{ isset($invoice->amount) ? formatNumber($invoice->amount - $invoice->subtraction) : '' }}
                             </td>
-                            <td class="px-4 py-2">
+                            <td class="px-4 py-2 whitespace-nowrap">
                                 {{ $invoice->status?->label() ?? '' }}
+                            </td>
+                            <td class="px-4 py-2">
+                                @if ($invoice->status->isApproved())
+                                    @php
+                                        $paymentStatusColor = match ($invoice->paymentStatus()) {
+                                            'unpaid' => 'text-error',
+                                            'partially_paid' => 'text-warning',
+                                            default => 'text-success',
+                                        };
+                                    @endphp
+                                    <span class="whitespace-nowrap font-medium {{ $paymentStatusColor }}">{{ $invoice->paymentStatusLabel() }}</span>
+                                @else
+                                    <span class="text-gray-400">—</span>
+                                @endif
                             </td>
                             @if ($showMoadianStatus)
                                 <td class="px-4 py-2">
@@ -227,7 +242,7 @@
                                     @endif
                                 </td>
                             @endif
-                            <td class="px-4 py-2">
+                            <td class="px-4 py-2 whitespace-nowrap">
                                 @php
                                     $isVoided = (bool) $invoice->voidInvoice;
                                     $isVoidInvoice = $invoice->invoice_type->isVoid();
