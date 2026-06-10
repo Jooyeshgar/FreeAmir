@@ -1,14 +1,7 @@
 title: امیر
 description: نرم‌افزار آزاد حسابداری لاراول برای کسب‌وکارهای ایرانی
 
-theme: jekyll-theme-architect
-
-plugins:
-  - jekyll-readme-index
-
-readme_index:
-  enabled: enabled
-  remove_originals: true
+# پوسته اختصاصی هماهنگ با صفحه اصلی (index.html) در _layouts/default.html تعریف شده است.
 
 kramdown:
   parse_block_html: true

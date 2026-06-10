@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="{{ page.description | default: site.description }}">
+    <title>{{ page.title | default: site.title }} | مستندات امیر</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" />
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Round-Dots/Vazirmatn-RD-font-face.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Vazirmatn', 'Tahoma', 'Arial', 'sans-serif'],
+                    },
+                    colors: {
+                        ink: '#16201c',
+                        mint: '#0f766e',
+                        amber: '#b45309',
+                        paper: '#fafaf7',
+                    },
+                    boxShadow: {
+                        soft: '0 18px 45px rgba(22, 32, 28, 0.10)',
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .hero-grid {
+            background-image:
+                linear-gradient(rgba(15, 118, 110, 0.09) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(15, 118, 110, 0.09) 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
+
+        /* استایل محتوای مستندات (Markdown) هماهنگ با صفحه اصلی */
+        .prose-doc {
+            color: #44403c;
+            line-height: 2;
+            font-size: 1.0625rem;
+        }
+
+        .prose-doc h1,
+        .prose-doc h2,
+        .prose-doc h3,
+        .prose-doc h4 {
+            color: #16201c;
+            font-weight: 900;
+            line-height: 1.3;
+            scroll-margin-top: 6rem;
+        }
+
+        .prose-doc h1 {
+            font-size: 2rem;
+            margin: 0 0 1.25rem;
+        }
+
+        .prose-doc h2 {
+            font-size: 1.5rem;
+            margin: 2.25rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #e7e5e4;
+        }
+
+        .prose-doc h3 {
+            font-size: 1.2rem;
+            margin: 1.75rem 0 0.75rem;
+        }
+
+        .prose-doc h4 {
+            font-size: 1.05rem;
+            margin: 1.5rem 0 0.5rem;
+        }
+
+        .prose-doc p {
+            margin: 0 0 1.1rem;
+        }
+
+        .prose-doc a {
+            color: #0f766e;
+            font-weight: 700;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(15, 118, 110, 0.35);
+            transition: color .15s, border-color .15s;
+        }
+
+        .prose-doc a:hover {
+            color: #115e59;
+            border-color: #115e59;
+        }
+
+        .prose-doc ul,
+        .prose-doc ol {
+            margin: 0 0 1.1rem;
+            padding-inline-start: 1.5rem;
+        }
+
+        .prose-doc ul {
+            list-style: disc;
+        }
+
+        .prose-doc ol {
+            list-style: decimal;
+        }
+
+        .prose-doc li {
+            margin: 0.4rem 0;
+        }
+
+        .prose-doc blockquote {
+            margin: 1.25rem 0;
+            padding: 0.75rem 1.25rem;
+            border-inline-start: 4px solid #0f766e;
+            background: #f0fdfa;
+            border-radius: 0.5rem;
+            color: #115e59;
+        }
+
+        .prose-doc blockquote p {
+            margin: 0;
+        }
+
+        .prose-doc hr {
+            border: 0;
+            border-top: 1px solid #e7e5e4;
+            margin: 2rem 0;
+        }
+
+        /* جدول‌ها تمام‌عرض و خوانا */
+        .prose-doc table {
+            display: table;
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.25rem 0;
+            font-size: 0.95rem;
+            overflow: hidden;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 0 #e7e5e4, 0 0 0 1px #e7e5e4;
+        }
+
+        .prose-doc thead {
+            background: #16201c;
+            color: #fff;
+        }
+
+        .prose-doc th,
+        .prose-doc td {
+            padding: 0.7rem 0.9rem;
+            text-align: right;
+            border-bottom: 1px solid #e7e5e4;
+        }
+
+        .prose-doc tbody tr:nth-child(even) {
+            background: #fafaf7;
+        }
+
+        .prose-doc tbody tr:hover {
+            background: #f0fdfa;
+        }
+
+        /* کد و نمونه‌فرمان‌ها چپ‌چین */
+        .prose-doc code {
+            direction: ltr;
+            unicode-bidi: embed;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.9em;
+            background: #f5f5f4;
+            color: #b45309;
+            padding: 0.15em 0.4em;
+            border-radius: 0.35rem;
+        }
+
+        .prose-doc pre {
+            direction: ltr;
+            text-align: left;
+            background: #0c0a09;
+            color: #e7e5e4;
+            padding: 1.1rem 1.25rem;
+            border-radius: 0.85rem;
+            overflow-x: auto;
+            margin: 1.25rem 0;
+            line-height: 1.7;
+        }
+
+        .prose-doc pre code {
+            background: transparent;
+            color: inherit;
+            padding: 0;
+            border-radius: 0;
+            font-size: 0.9rem;
+        }
+
+        .prose-doc img {
+            max-width: 100%;
+            border-radius: 0.75rem;
+            border: 1px solid #e7e5e4;
+        }
+    </style>
+</head>
+
+<body class="bg-paper text-ink antialiased">
+    <div x-data="{ menuOpen: false }" class="min-h-screen overflow-hidden">
+        <header class="sticky top-0 z-50 border-b border-stone-200/80 bg-paper/90 backdrop-blur">
+            <nav class="mx-auto flex max-w-5xl items-center justify-between px-5 py-4 lg:px-8" aria-label="ناوبری اصلی">
+                <a href="index.html" class="flex items-center gap-3">
+                    <span
+                        class="grid h-11 w-11 place-items-center rounded-lg bg-ink text-lg font-black text-white">ا</span>
+                    <span>
+                        <span class="block text-base font-black">امیر</span>
+                        <span class="block text-xs text-stone-500">حسابداری آزاد برای ایران</span>
+                    </span>
+                </a>
+
+                <button type="button"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-stone-300 text-ink md:hidden"
+                    @click="menuOpen = !menuOpen" :aria-expanded="menuOpen.toString()" aria-controls="mobile-menu"
+                    aria-label="باز کردن منو">
+                    <span class="text-xl leading-none" x-text="menuOpen ? '×' : '☰'"></span>
+                </button>
+
+                <div class="hidden items-center gap-7 text-sm font-semibold text-stone-700 md:flex">
+                    <a class="transition hover:text-mint" href="index.html">خانه</a>
+                    <a class="transition hover:text-mint" href="index.html#features">ویژگی ها</a>
+                    <a class="transition hover:text-mint" href="index.html#quickstart">شروع سریع</a>
+                    <a class="transition hover:text-mint" href="README.html">مستندات</a>
+                    <a class="transition hover:text-mint" href="index.html#downloads">دانلودها</a>
+                </div>
+            </nav>
+            <div id="mobile-menu" x-show="menuOpen" x-transition
+                class="border-t border-stone-200 bg-paper px-5 py-4 md:hidden">
+                <div class="grid gap-3 text-sm font-semibold text-stone-700">
+                    <a class="rounded-lg px-3 py-2 hover:bg-white" href="index.html" @click="menuOpen = false">خانه</a>
+                    <a class="rounded-lg px-3 py-2 hover:bg-white" href="index.html#features"
+                        @click="menuOpen = false">ویژگی ها</a>
+                    <a class="rounded-lg px-3 py-2 hover:bg-white" href="index.html#quickstart"
+                        @click="menuOpen = false">شروع سریع</a>
+                    <a class="rounded-lg px-3 py-2 hover:bg-white" href="README.html"
+                        @click="menuOpen = false">مستندات</a>
+                    <a class="rounded-lg px-3 py-2 hover:bg-white" href="index.html#downloads"
+                        @click="menuOpen = false">دانلودها</a>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <section class="hero-grid border-b border-stone-200">
+                <div class="mx-auto max-w-5xl px-5 py-10 lg:px-8">
+                    <nav class="text-xs font-semibold text-stone-500" aria-label="مسیر">
+                        <a class="hover:text-mint" href="index.html">خانه</a>
+                        <span class="px-2">/</span>
+                        <a class="hover:text-mint" href="README.html">مستندات</a>
+                    </nav>
+                    <h1 class="mt-3 text-3xl font-black leading-tight text-ink sm:text-4xl">
+                        {{ page.title | default: "مستندات امیر" }}
+                    </h1>
+                    <p class="mt-2 text-sm text-stone-600">مستندات پروژه امیر، نرم افزار آزاد حسابداری لاراول.</p>
+                </div>
+            </section>
+
+            <section class="mx-auto max-w-5xl px-5 py-12 lg:px-8">
+                <article class="prose-doc rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-10">
+                    {{ content }}
+                </article>
+            </section>
+        </main>
+
+        <footer class="mx-auto max-w-5xl px-5 py-10 text-sm text-stone-500 lg:px-8">
+            <div
+                class="flex flex-col gap-4 border-t border-stone-200 pt-8 sm:flex-row sm:items-center sm:justify-between">
+                <p>امیر؛ نرم افزار آزاد حسابداری لاراول برای کسب و کارهای ایرانی.</p>
+                <div class="flex gap-5">
+                    <a class="hover:text-mint" href="README.html">مستندات</a>
+                    <a class="hover:text-mint" href="INSTALLATION.html">نصب</a>
+                    <a class="hover:text-mint" href="https://github.com/Jooyeshgar/FreeAmir">GitHub</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+</body>
+
+</html>
