@@ -19,6 +19,7 @@ use App\Services\FiscalYearTransferService;
 use App\Services\GroupActionService;
 use App\Services\InvoiceService;
 use App\Services\MoadianService;
+use App\Services\PaymentService;
 use DB;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
@@ -42,7 +43,7 @@ class InvoiceController extends Controller
      */
     public function index(Request $request)
     {
-        $builder = Invoice::with(['customer', 'document', 'voidInvoice'])
+        $builder = Invoice::with(['customer', 'document', 'voidInvoice', 'payments'])
             ->orderByDesc('date')
             ->orderByDesc('number');
 
@@ -267,7 +268,7 @@ class InvoiceController extends Controller
             ->with($msgType, $msg);
     }
 
-    public function show(Invoice $invoice)
+    public function show(Invoice $invoice, PaymentService $paymentService)
     {
         $changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
 
@@ -287,17 +288,22 @@ class InvoiceController extends Controller
             'ancillaryCosts.document',
             'ancillaryCosts.items',
             'moadianHistories',
+            'payments.document.transactions.subject',
+            'payments.payer.subject',
+            'payments.creator',
         ]);
 
+        $paymentDecision = $paymentService->validateInvoicePayment($invoice);
+        $settlementSubjects = $paymentService->settlementSubjects();
+
         $ancillaryCostProductIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->unique()->values()->all();
-        $canCreateAncillaryCost = $invoice->invoice_type === InvoiceType::BUY && ! $isServiceBuy
-            && empty(InvoiceService::notAllowedInvoiceForAncillaryCosts($invoice, $ancillaryCostProductIds));
+        $canCreateAncillaryCost = $invoice->invoice_type === InvoiceType::BUY && ! $isServiceBuy && empty(InvoiceService::notAllowedInvoiceForAncillaryCosts($invoice, $ancillaryCostProductIds));
 
         $fiscalYears = Company::whereHas('users', function ($q) {
             $q->where('users.id', auth()->id());
         })->where('id', '!=', getActiveCompany())->get();
 
-        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'fiscalYears', 'canCreateAncillaryCost'));
+        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'fiscalYears', 'canCreateAncillaryCost'));
     }
 
     public function print(Invoice $invoice)

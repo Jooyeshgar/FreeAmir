@@ -27,6 +27,23 @@
                     {{ $invoice->status->label() }}
                 </span>
 
+                @if ($invoice->status->isApproved())
+                    @php
+                        $paymentStatusColor = match ($invoice->paymentStatus()) {
+                            'unpaid' => 'text-error',
+                            'partially_paid' => 'text-warning',
+                            default => 'text-success',
+                        };
+                    @endphp
+                    <span class="inline-flex items-center gap-2 font-medium {{ $paymentStatusColor }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        {{ $invoice->paymentStatusLabel() }}
+                    </span>
+                @endif
+
                 @if ($isMoadianSendable && $invoice->status->isApproved())
                     <a class="badge badge-lg link" href="{{ route('invoices.moadian-histories.show', $invoice) }}">{{ __('Moadian Histories') }}</a>
                 @endif
@@ -573,6 +590,194 @@
                 </div>
             @endif
 
+            <div>
+                <div class="divider text-lg font-semibold">{{ __('Payments') }}</div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                    <div class="card bg-base-200 shadow">
+                        <div class="card-body p-4">
+                            <h3 class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">{{ __('Invoice Total') }}</h3>
+                            <p class="text-lg font-bold">{{ formatNumber((float) $invoice->amount) }}</p>
+                        </div>
+                    </div>
+                    <div class="card bg-base-200 shadow">
+                        <div class="card-body p-4">
+                            <h3 class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">{{ __('Paid Amount') }}</h3>
+                            <p class="text-lg font-bold text-success">{{ formatNumber($invoice->paidAmount()) }}</p>
+                        </div>
+                    </div>
+                    <div class="card bg-base-200 shadow">
+                        <div class="card-body p-4">
+                            <h3 class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">{{ __('Remaining Amount') }}</h3>
+                            <p class="text-lg font-bold {{ $invoice->remainingAmount() > 0 ? 'text-error' : 'text-success' }}">{{ formatNumber($invoice->remainingAmount()) }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                @if ($invoice->payments->isNotEmpty())
+                    <div class="mt-4 overflow-x-auto">
+                        <table class="table w-full">
+                            <thead>
+                                <tr>
+                                    <th class="px-4 py-3">{{ __('Date') }}</th>
+                                    <th class="px-4 py-3">{{ __('Settlement Account') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ __('Amount') }}</th>
+                                    <th class="px-4 py-3">{{ __('Doc Number') }}</th>
+                                    <th class="px-4 py-3">{{ __('Description') }}</th>
+                                    <th class="px-4 py-3">{{ __('Action') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($invoice->payments as $payment)
+                                    <tr class="hover:bg-base-300">
+                                        <td class="px-4 py-3">{{ $payment->created_at ? formatDate($payment->created_at) : '—' }}</td>
+                                        <td class="px-4 py-3">{{ $payment->settlementSubject()?->fullname() ?? '—' }}</td>
+                                        <td class="px-4 py-3 text-right">{{ formatNumber((float) $payment->amount) }}</td>
+                                        <td class="px-4 py-3">
+                                            @if ($payment->document)
+                                                @can('documents.show')
+                                                    <a class="link" href="{{ route('documents.show', $payment->document) }}">
+                                                        {{ formatDocumentNumber($payment->document->number) }}
+                                                    </a>
+                                                @else
+                                                    {{ formatDocumentNumber($payment->document->number) }}
+                                                @endcan
+                                            @else
+                                                <span class="badge badge-ghost">{{ __('No accounting document') }}</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-4 py-3">{{ $payment->description ?? '—' }}</td>
+                                        <td class="px-4 py-3">
+                                            @can('invoices.payments.destroy')
+                                                <form class="m-0" method="POST"
+                                                    action="{{ route('invoices.payments.destroy', [$invoice, $payment]) }}"
+                                                    onsubmit="return confirm('{{ __('Are you sure you want to remove this payment? Its accounting document will be reversed.') }}')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-xs btn-error">{{ __('Delete') }}</button>
+                                                </form>
+                                            @endcan
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <div class="alert bg-base-200 shadow-sm">
+                        <span>{{ __('No payments have been recorded for this invoice.') }}</span>
+                    </div>
+                @endif
+
+                @can('invoices.payments.store')
+                    <div class="flex mt-4">
+                        @if ($paymentDecision->hasErrors())
+                            <span class="tooltip" data-tip="{{ $paymentDecision->messages->pluck('text')->implode(' ') }}">
+                                <button class="btn btn-primary btn-disabled cursor-not-allowed">{{ __('Record Payment') }}</button>
+                            </span>
+                        @else
+                            <button class="btn btn-primary gap-2" onclick="payment_modal.showModal()">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                </svg>
+                                {{ __('Record Payment') }}
+                            </button>
+                        @endif
+                    </div>
+
+                    <dialog id="payment_modal" class="modal">
+                        <div class="modal-box">
+                            <form method="dialog">
+                                <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+                            </form>
+                            <h3 class="text-lg font-bold mb-4">{{ __('Record Payment') }}</h3>
+                            @php
+                                $settlementGroups = $settlementSubjects
+                                    ->groupBy(fn ($subject) => $subject->parent?->name ?? __('Other'))
+                                    ->map(fn ($group, $label) => [
+                                        'label' => (string) $label,
+                                        'options' => $group->map(fn ($subject) => [
+                                            'id' => $subject->id,
+                                            'name' => $subject->name,
+                                            'code' => $subject->formattedCode(),
+                                        ])->values(),
+                                    ])->values();
+                            @endphp
+                            <form method="POST" action="{{ route('invoices.payments.store', $invoice) }}" class="space-y-4">
+                                @csrf
+                                <div>
+                                    <label class="label"><span class="label-text">{{ __('Settlement Account') }}</span></label>
+                                    <div x-data="settlementSelect(@js($settlementGroups))" @click.outside="open = false" class="relative">
+                                        <input type="hidden" name="subject_id" :value="selectedId">
+                                        <button type="button" @click="toggle()"
+                                            class="input input-bordered w-full flex items-center justify-between text-left">
+                                            <span class="block truncate" :class="{ 'text-gray-400': !selectedLabel }"
+                                                x-text="selectedLabel || '{{ __('Select an account') }}'"></span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition-transform"
+                                                :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-5 5-5-5" />
+                                            </svg>
+                                        </button>
+                                        <div x-show="open" x-cloak x-transition.opacity
+                                            class="absolute left-0 right-0 z-[100] mt-1 bg-base-100 border border-base-300 rounded-box shadow-xl max-h-60 flex flex-col overflow-hidden">
+                                            <div class="p-2 border-b border-base-200">
+                                                <input x-ref="settlementSearch" x-model="search" type="text"
+                                                    class="input input-sm w-full" placeholder="{{ __('Search') }}" @click.stop>
+                                            </div>
+                                            <ul class="overflow-y-auto p-1">
+                                                <template x-for="group in filteredGroups" :key="group.label">
+                                                    <li>
+                                                        <div class="px-3 pt-2 pb-1 text-xs font-semibold uppercase text-gray-500"
+                                                            x-text="group.label"></div>
+                                                        <template x-for="opt in group.options" :key="opt.id">
+                                                            <div @click="select(opt)"
+                                                                class="px-4 py-2 cursor-pointer hover:bg-base-200 rounded-btn flex justify-between items-center text-sm"
+                                                                :class="{ 'bg-primary text-primary-content': selectedId === opt.id }">
+                                                                <span class="block truncate" x-text="opt.name"></span>
+                                                                <span class="text-xs text-gray-500 ms-2" x-text="opt.code"></span>
+                                                            </div>
+                                                        </template>
+                                                    </li>
+                                                </template>
+                                                <li x-show="filteredGroups.length === 0"
+                                                    class="p-4 text-center text-gray-500 italic text-sm">
+                                                    {{ __('No bank or cash subjects are configured.') }}
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="label"><span class="label-text">{{ __('Amount') }}</span></label>
+                                    <input type="text" name="amount" value="{{ $invoice->remainingAmount() }}"
+                                        class="input input-bordered w-full" required />
+                                    <span class="text-xs text-gray-500">{{ __('Remaining Amount') }}: {{ formatNumber($invoice->remainingAmount()) }}</span>
+                                </div>
+                                <div>
+                                    <label class="label"><span class="label-text">{{ __('Date') }}</span></label>
+                                    <input type="text" name="date" data-jdp autocomplete="off"
+                                        value="{{ convertToJalali(now(), true) }}" class="input input-bordered w-full" />
+                                </div>
+                                <div>
+                                    <label class="label"><span class="label-text">{{ __('Reference Number') }}</span></label>
+                                    <input type="text" name="reference_number" class="input input-bordered w-full" maxlength="20" />
+                                </div>
+                                <div>
+                                    <label class="label"><span class="label-text">{{ __('Description') }}</span></label>
+                                    <textarea name="description" class="textarea textarea-bordered w-full" rows="2"></textarea>
+                                </div>
+                                <div class="modal-action">
+                                    <button type="submit" class="btn btn-primary">{{ __('Save') }}</button>
+                                    <button type="button" class="btn" onclick="payment_modal.close()">{{ __('Cancel') }}</button>
+                                </div>
+                            </form>
+                        </div>
+                        <form method="dialog" class="modal-backdrop">
+                            <button>{{ __('close') }}</button>
+                        </form>
+                    </dialog>
+                @endcan
+            </div>
+
             <div class="card-actions justify-between mt-4">
                 <a href="{{ route('invoices.index', ['invoice_type' => $invoice->invoice_type, 'service_buy' => $isServiceBuy]) }}" class="btn btn-ghost gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -772,6 +977,39 @@
     @endcan
 
     <script>
+        function settlementSelect(groups) {
+            return {
+                open: false,
+                search: '',
+                groups: groups || [],
+                selectedId: '',
+                selectedLabel: '',
+                toggle() {
+                    this.open = !this.open;
+                    if (this.open) {
+                        this.$nextTick(() => this.$refs.settlementSearch?.focus());
+                    }
+                },
+                get filteredGroups() {
+                    const q = this.search.trim().toLowerCase();
+                    if (!q) return this.groups;
+
+                    return this.groups
+                        .map(group => ({
+                            label: group.label,
+                            options: group.options.filter(opt => (opt.name + ' ' + opt.code).toLowerCase().includes(q)),
+                        }))
+                        .filter(group => group.options.length > 0);
+                },
+                select(opt) {
+                    this.selectedId = opt.id;
+                    this.selectedLabel = opt.name;
+                    this.open = false;
+                    this.search = '';
+                },
+            };
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             const changeStatusForms = document.querySelectorAll('.change-status-form');
 
