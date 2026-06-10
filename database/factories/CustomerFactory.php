@@ -52,7 +52,7 @@ class CustomerFactory extends Factory
             'commission' => $this->faker->randomFloat(2, 0, 100),
             'type' => $this->faker->randomElement(CustomerType::cases()),
             'marked' => $this->faker->boolean,
-            'reason' => $this->faker->text,
+            'reason' => $this->faker->persianSentence(),
             'disc_rate' => $this->faker->randomFloat(2, 0, 100),
         ];
     }
