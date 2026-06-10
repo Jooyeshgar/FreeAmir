@@ -11,9 +11,6 @@ class CommentFactory extends Factory
 {
     protected $model = Comment::class;
 
-    /**
-     * Realistic Persian customer comments/notes used for demo seeding.
-     */
     private const PERSIAN_COMMENTS = [
         'همکاری بسیار خوبی داشتیم و تسویه حساب به‌موقع انجام شد.',
         'مشتری خوش‌حساب و قابل اعتماد است.',
