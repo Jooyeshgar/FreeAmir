@@ -60,7 +60,7 @@ class HomeSeeder extends Seeder
                 $document = Document::create([
                     'number' => $documentNumber,
                     'date' => $date,
-                    'title' => 'Seeded cash/bank flow',
+                    'title' => __('Cash and bank fund flow'),
                     'creator_id' => $userId,
                     'approved_at' => $date->addDays(random_int(0, 5)),
                     'approver_id' => $userId,
@@ -74,7 +74,7 @@ class HomeSeeder extends Seeder
                     'document_id' => $document->id,
                     'user_id' => $userId,
                     'value' => -$value,
-                    'desc' => 'Seeded balance change',
+                    'desc' => __('Account balance flow entry'),
                 ]);
 
                 $randomSubject = Subject::withoutGlobalScopes()->whereNot('id', $subject->id)->orWhereNot('parent_id', $subject->id)->inRandomOrder()->first();
@@ -83,7 +83,7 @@ class HomeSeeder extends Seeder
                     'document_id' => $document->id,
                     'user_id' => $userId,
                     'value' => $value,
-                    'desc' => 'Seeded balance change',
+                    'desc' => __('Account balance flow entry'),
                 ]);
             }
         }

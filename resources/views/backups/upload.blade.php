@@ -20,10 +20,7 @@
                         <x-input name="fiscal_year" x-bind:value="fiscalYear" hidden />
                     </div>
                     <div class="col-span-2 md:col-span-1 w-64 max-w-md">
-                        <x-input type="file" name="file" title="{{ __('File') }} ({{ __('zip') }})"
-                            :bordered="false"
-                            class="block text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg
-                file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" />
+                        <x-file-input name="file" title="{{ __('File') }} ({{ __('zip') }})" accept=".zip" />
                     </div>
                 </div>
                 <div class="card-actions justify-end">
