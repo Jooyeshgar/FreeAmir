@@ -27,20 +27,35 @@ class InvoiceFactory extends Factory
     {
         $customer = Customer::inRandomOrder()->first() ?? Customer::factory()->withGroup()->withSubject()->create();
         $creator = User::inRandomOrder()->first() ?? User::factory()->create();
+        $invoiceType = $this->faker->randomElement([InvoiceType::BUY, InvoiceType::SELL]);
 
         return [
             'number' => $this->faker->unique()->numerify('#####'),
             'date' => $this->faker->dateTimeBetween(now()->startOfYear(), now()->endOfYear()),
-            'invoice_type' => $this->faker->randomElement([InvoiceType::BUY, InvoiceType::SELL]),
+            'invoice_type' => $invoiceType,
             'customer_id' => $customer->id,
             'creator_id' => $creator->id,
             'subtraction' => 0,
             'status' => $this->faker->randomElement([InvoiceStatus::APPROVED, InvoiceStatus::UNAPPROVED]),
             'vat' => 0,
-            'title' => $this->faker->sentence(4),
-            'description' => $this->faker->paragraph(),
+            'title' => $this->productInvoiceTitle($invoiceType),
+            'description' => $this->faker->persianSentence(8),
             'amount' => 0,
         ];
+    }
+
+    private function productInvoiceTitle(InvoiceType $type): string
+    {
+        $prefix = $type === InvoiceType::SELL ? __('Sell invoice') : __('Buy invoice');
+
+        return $prefix.' '.$this->faker->persianProductCategory();
+    }
+
+    private function serviceInvoiceTitle(InvoiceType $type): string
+    {
+        $prefix = $type === InvoiceType::SELL ? __('Service Sell Invoice') : __('Service Buy Invoice');
+
+        return $prefix.' '.$this->faker->persianServiceName();
     }
 
     public function configure(): static
@@ -51,6 +66,13 @@ class InvoiceFactory extends Factory
             $isBuyServicesOnly = Str::startsWith((string) $invoice->title, self::BUY_SERVICES_ONLY_MARKER);
             $isSellServicesOnly = Str::startsWith((string) $invoice->title, self::SELL_SERVICES_ONLY_MARKER);
             $isServicesOnly = $isBuyServicesOnly || $isSellServicesOnly;
+
+            $cleanTitle = (string) $invoice->title;
+            if ($isBuyServicesOnly) {
+                $cleanTitle = trim(Str::after($cleanTitle, self::BUY_SERVICES_ONLY_MARKER));
+            } elseif ($isSellServicesOnly) {
+                $cleanTitle = trim(Str::after($cleanTitle, self::SELL_SERVICES_ONLY_MARKER));
+            }
 
             $creator = User::find($invoice->creator_id) ?? User::factory()->create();
             auth()->setUser($creator);
@@ -174,6 +196,7 @@ class InvoiceFactory extends Factory
 
             $invoice->updateQuietly([
                 'status' => InvoiceStatus::UNAPPROVED,
+                'title' => $cleanTitle,
                 'vat' => $totalVat,
                 'amount' => $totalAmount,
             ]);
@@ -216,7 +239,7 @@ class InvoiceFactory extends Factory
     {
         return $this->state(fn () => [
             'invoice_type' => InvoiceType::BUY,
-            'title' => self::BUY_SERVICES_ONLY_MARKER.' '.$this->faker->sentence(3),
+            'title' => self::BUY_SERVICES_ONLY_MARKER.' '.$this->serviceInvoiceTitle(InvoiceType::BUY),
         ]);
     }
 
@@ -224,7 +247,7 @@ class InvoiceFactory extends Factory
     {
         return $this->state(fn () => [
             'invoice_type' => InvoiceType::SELL,
-            'title' => self::SELL_SERVICES_ONLY_MARKER.' '.$this->faker->sentence(3),
+            'title' => self::SELL_SERVICES_ONLY_MARKER.' '.$this->serviceInvoiceTitle(InvoiceType::SELL),
         ]);
     }
 }

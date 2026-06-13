@@ -34,7 +34,7 @@ class ServiceFactory extends Factory
             'sstid' => $this->faker->optional()->word,
             'group' => null,
             'selling_price' => $this->faker->randomFloat(2, 0, 10000),
-            'description' => $this->faker->sentence,
+            'description' => $this->faker->persianSentence(),
             'company_id' => $companyId,
             'vat' => 0,
         ];

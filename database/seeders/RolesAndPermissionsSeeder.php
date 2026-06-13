@@ -255,7 +255,7 @@ class RolesAndPermissionsSeeder extends Seeder
     private function seedDemoUsersAndEmployees(): void
     {
         $users = [
-            'admin' => [
+            'super-admin' => [
                 'roles' => ['Super-Admin', __('Employee')],
                 'org_chart' => 'مدیرعامل',
                 'org_unit' => 'مدیریت',
@@ -270,17 +270,17 @@ class RolesAndPermissionsSeeder extends Seeder
                 'org_chart' => 'کارشناس فروش',
                 'org_unit' => 'فروش و بازاریابی',
             ],
-            'warehouse' => [
+            'Warehousekeeper' => [
                 'roles' => [__('Warehousekeeper'), __('Employee')],
                 'org_chart' => 'سرپرست انبار',
                 'org_unit' => 'انبار و لجستیک',
             ],
-            'seller-warehouse' => [
+            'seller-Warehousekeeper' => [
                 'roles' => [__('Seller'), __('Warehousekeeper'), __('Employee')],
                 'org_chart' => 'کارشناس فروش',
                 'org_unit' => 'فروش و بازاریابی',
             ],
-            'accountant-seller-warehouse' => [
+            'accountant-seller-Warehousekeeper' => [
                 'roles' => [__('Accountant'), __('Seller'), __('Warehousekeeper'), __('Employee')],
                 'org_chart' => 'مدیر مالی',
                 'org_unit' => 'امور مالی',
@@ -320,10 +320,12 @@ class RolesAndPermissionsSeeder extends Seeder
         $orgUnits = OrganizationUnit::withoutGlobalScopes()->where('company_id', 1)->get()->keyBy('name');
 
         foreach ($users as $name => $config) {
+            $email = $name === 'super-admin' ? 'admin@example.com' : $name.'@example.com';
+
             $user = User::firstOrCreate(
-                ['email' => $name.'@example.com'],
+                ['email' => $email],
                 [
-                    'name' => $name,
+                    'name' => __($name),
                     'password' => bcrypt('password'),
                 ]
             );
@@ -345,8 +347,8 @@ class RolesAndPermissionsSeeder extends Seeder
             Employee::withoutGlobalScopes()->updateOrCreate(
                 ['user_id' => $user->id],
                 [
-                    'first_name' => $name,
-                    'last_name' => 'Demo',
+                    'first_name' => __($name),
+                    'last_name' => __('Demo'),
                     'user_id' => $user->id,
                     'company_id' => 1,
                     'code' => $employeeCode,
