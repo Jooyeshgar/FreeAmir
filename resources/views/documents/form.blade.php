@@ -10,10 +10,10 @@
             title="{{ __('previous document number') }}" placeholder="{{ __('previous document number') }}"
             label_text_class="text-gray-500 text-nowrap"></x-text-input>
         <x-text-input x-data="{ number: '{{ old('number') ?? ($document->exists ? formatDocumentNumber($document->number) : null) }}' }"
-            title="{{ __('current document number') }}" x-model.number="number" x-bind:name="'number'"
+            title="{{ __('current document number') }}" x-bind:name="'number'"
+            x-bind:value="$store.utils.localizeNumber($store.utils.formatNumber(number))"
             placeholder="{{ __('current document number') }}" label_text_class="text-gray-500 text-nowrap"
-            x-on:input="number = $store.utils.convertToEnglish($event.target.value);"
-            x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(number));">
+            x-on:input="number = $store.utils.cleanupNumber($event.target.value); $event.target.value = $store.utils.localizeNumber($store.utils.formatNumber(number));">
         </x-text-input>
         <x-text-input data-jdp title="{{ __('date') }}" input_name="date" placeholder="{{ __('date') }}"
             input_value="{{ old('date') ?? convertToJalali($document->date ?? now(), true) }}"
@@ -137,19 +137,19 @@
                             label_class="w-full" input_class="border-white "></x-text-input>
                     </div>
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input placeholder="{{ convertToFarsi('0') }}" x-model.number="transaction.debit"
+                        <x-text-input placeholder="{{ localizeNumber('0') }}"
+                            x-bind:value="$store.utils.localizeNumber($store.utils.formatNumber(transaction.debit))"
                             x-bind:name="'transactions[' + index + '][debit]'"
                             label_class="w-full" input_class="border-white"
-                            x-on:input="transaction.debit = $store.utils.convertToEnglish($event.target.value)"
-                            x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(transaction.debit))">
+                            x-on:input="transaction.debit = $store.utils.cleanupNumber($event.target.value); $event.target.value = $store.utils.localizeNumber($store.utils.formatNumber(transaction.debit))">
                         </x-text-input>
                     </div>
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input placeholder="{{ convertToFarsi('0') }}" x-model.number="transaction.credit"
+                        <x-text-input placeholder="{{ localizeNumber('0') }}"
+                            x-bind:value="$store.utils.localizeNumber($store.utils.formatNumber(transaction.credit))"
                             x-bind:name="'transactions[' + index + '][credit]'"
                             label_class="w-full" input_class="border-white"
-                            x-on:input="transaction.credit = $store.utils.convertToEnglish($event.target.value)"
-                            x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(transaction.credit))">
+                            x-on:input="transaction.credit = $store.utils.cleanupNumber($event.target.value); $event.target.value = $store.utils.localizeNumber($store.utils.formatNumber(transaction.credit))">
                         </x-text-input>
                     </div>
                 </div>
@@ -187,11 +187,11 @@
         <div class="flex items-center gap-2">
             <span class="text-gray-500">{{ __('Balance') }}:</span>
             <span class="min-w-24 text-center text-gray-500" id="diffSum" dir="ltr"
-                x-text="$store.utils.convertToFarsi(balance.toLocaleString())">0</span>
+                x-text="$store.utils.localizeNumber(balance.toLocaleString())">0</span>
         </div>
-        <span class="min-w-24 text-center text-gray-500" id="debitSum" x-text="$store.utils.convertToFarsi(debitTotal.toLocaleString())">0</span>
+        <span class="min-w-24 text-center text-gray-500" id="debitSum" x-text="$store.utils.localizeNumber(debitTotal.toLocaleString())">0</span>
         <span class="min-w-24 text-center text-gray-500" id="creditSum"
-            x-text="$store.utils.convertToFarsi(creditTotal.toLocaleString())">0</span>
+            x-text="$store.utils.localizeNumber(creditTotal.toLocaleString())">0</span>
     </div>
 </x-card>
 <div class="mt-4 flex gap-2 justify-end">

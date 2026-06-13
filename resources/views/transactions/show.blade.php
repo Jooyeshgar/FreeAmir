@@ -1,4 +1,4 @@
-<x-app-layout :title="__('Transaction Details') . ' #' . convertToFarsi($transaction->id)">
+<x-app-layout :title="__('Transaction Details') . ' #' . localizeNumber($transaction->id)">
     <div class="mx-auto max-w-5xl space-y-6">
 
         <div class="card overflow-hidden bg-base-100">
@@ -13,7 +13,7 @@
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
                                 <h1 class="text-2xl font-bold text-base-content">{{ __('Transaction Details') }}</h1>
-                                <span class="badge badge-primary badge-lg font-mono">#{{ convertToFarsi($transaction->id) }}</span>
+                                <span class="badge badge-primary badge-lg font-mono">#{{ localizeNumber($transaction->id) }}</span>
                             </div>
                             <p class="mt-1 text-base-content/60">{{ $transaction->desc ?: __('No description') }}</p>
                         </div>
@@ -44,7 +44,7 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                                 </svg>
-                                {{ __('View :name', ['name' => __(class_basename($transaction->document->documentable_type))]) }} {{ convertToFarsi($documentable->number) }}
+                                {{ __('View :name', ['name' => __(class_basename($transaction->document->documentable_type))]) }} {{ localizeNumber($documentable->number) }}
                             </a>
                         @endif
                     </div>

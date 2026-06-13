@@ -12,7 +12,7 @@
             <tr>
                 <td class="company">{{ $company?->name }}</td>
                 <td class="title">{{ __('Warehouse Report') }}</td>
-                <td class="date">{{ __('Report Date') }}: {{ convertToFarsi($generatedAtTime) }}  {{ convertToFarsi($generatedAtDate) }}</td>
+                <td class="date">{{ __('Report Date') }}: {{ localizeNumber($generatedAtTime) }}  {{ localizeNumber($generatedAtDate) }}</td>
             </tr>
         </table>
         <div class="filters">
@@ -46,12 +46,12 @@
         <tbody>
             @forelse ($rows as $row)
                 <tr class="{{ $loop->even ? 'even' : '' }}">
-                    <td class="col-index">{{ convertToFarsi($loop->iteration) }}</td>
+                    <td class="col-index">{{ localizeNumber($loop->iteration) }}</td>
                     @foreach ($visible as $col)
                         @if (in_array($col, $numeric, true))
                             <td class="col-{{ $col }}">{{ formatNumber($row[$col]) }}</td>
                         @elseif ($col === 'code')
-                            <td class="col-{{ $col }}"><bdi dir="rtl">{{ convertToFarsi($row['code']) }}</bdi></td>
+                            <td class="col-{{ $col }}"><bdi dir="rtl">{{ localizeNumber($row['code']) }}</bdi></td>
                         @else
                             <td class="col-{{ $col }}">{{ $row[$col] }}</td>
                         @endif

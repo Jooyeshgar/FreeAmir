@@ -457,9 +457,20 @@ Alpine.store('utils', {
         const formatted = input.match(/.{1,3}/g)?.join('/') || input;
         return ['fa', 'fa_IR'].includes('fa') ? this.convertToFarsi(formatted) : formatted;
     },
+    isPersianLocale() {
+        return (document.documentElement.lang || '').toLowerCase().startsWith('fa');
+    },
+    localizeNumber(number) {
+        const str = String(number ?? '');
+        if (this.isPersianLocale()) {
+            return this.convertToFarsi(str);
+        }
+        const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+        return str.replace(/[۰-۹]/g, digit => persianDigits.indexOf(digit));
+    },
     convertToFarsi(number) {
         const farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-        return number.replace(/\d/g, digit => farsiDigits[digit]);
+        return String(number).replace(/\d/g, digit => farsiDigits[digit]);
     },
     convertToEnglish(num) {
         if (!num) return '';

@@ -35,9 +35,9 @@
                                     {{ $item['name'] }}
                                 </a>
                             </td>
-                            <td>{{ convertToFarsi(number_format($item['selling_price'])) }}</td>
-                            <td>{{ convertToFarsi(number_format($item['average_cost'])) }}</td>
-                            <td>{{ convertToFarsi(number_format($item['quantity'])) }}</td>
+                            <td>{{ localizeNumber(number_format($item['selling_price'])) }}</td>
+                            <td>{{ localizeNumber(number_format($item['average_cost'])) }}</td>
+                            <td>{{ localizeNumber(number_format($item['quantity'])) }}</td>
                         </tr>
                     @empty
                         <tr>

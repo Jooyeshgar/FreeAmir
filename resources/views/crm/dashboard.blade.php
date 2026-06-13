@@ -194,7 +194,7 @@
                                     <tr class="hover">
                                         <td>
                                             <a class="link link-hover" href="{{ route('invoices.show', $invoice) }}">
-                                                {{ convertToFarsi($invoice->number) }}
+                                                {{ localizeNumber($invoice->number) }}
                                             </a>
                                         </td>
                                         <td>{{ $invoice->customer?->name ?? '—' }}</td>

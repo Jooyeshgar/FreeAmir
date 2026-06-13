@@ -60,42 +60,42 @@
         <x-stat-strip :items="[
             [
                 'title' => __('Total Employees'),
-                'value' => convertToFarsi($totalCount),
+                'value' => localizeNumber($totalCount),
                 'description' => __('Registered in system'),
                 'icon' => 'users',
                 'tone' => 'indigo',
             ],
             [
                 'title' => __('Active'),
-                'value' => convertToFarsi($activeCount),
+                'value' => localizeNumber($activeCount),
                 'description' => __('Currently working'),
                 'icon' => 'check',
                 'tone' => 'green',
             ],
             [
                 'title' => __('Full Time'),
-                'value' => convertToFarsi($fullTimeCount),
+                'value' => localizeNumber($fullTimeCount),
                 'description' => __('Official contract'),
                 'icon' => 'briefcase',
                 'tone' => 'sky',
             ],
             [
                 'title' => __('Remote / Part Time'),
-                'value' => convertToFarsi($flexibleCount),
+                'value' => localizeNumber($flexibleCount),
                 'description' => __('Flexible'),
                 'icon' => 'cup',
                 'tone' => 'cyan',
             ],
             [
                 'title' => __('New Hires'),
-                'value' => convertToFarsi($newHiresCount),
+                'value' => localizeNumber($newHiresCount),
                 'description' => __('In last 30 days'),
                 'icon' => 'plus',
                 'tone' => 'amber',
             ],
             [
                 'title' => __('Waiting for Salary Decree'),
-                'value' => convertToFarsi($withoutSalaryDecreeCount),
+                'value' => localizeNumber($withoutSalaryDecreeCount),
                 'description' => __('Needs review'),
                 'icon' => 'document',
                 'tone' => 'red',
@@ -110,7 +110,7 @@
                 <div class="flex items-center gap-3">
                     <h2 class="text-base font-bold text-base-content">{{ __('Employee List') }}</h2>
                     <span class="badge badge-ghost">
-                        {{ convertToFarsi($employees->total()) }} {{ __('records') }}
+                        {{ localizeNumber($employees->total()) }} {{ __('records') }}
                     </span>
                 </div>
 

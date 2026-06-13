@@ -26,7 +26,7 @@
                 <div class="flex flex-wrap items-center gap-3">
                     <h2 class="text-base font-bold text-base-content">{{ __('Products Group') }}</h2>
                     <span class="badge badge-ghost">
-                        {{ convertToFarsi($productGroups->total()) }} {{ __('records') }}
+                        {{ localizeNumber($productGroups->total()) }} {{ __('records') }}
                     </span>
                 </div>
             </div>

@@ -24,7 +24,7 @@
             $type = $statusTypes[$value] ?? 'info';
         @endphp
         <a href="{{ $url }}" class="block transition-transform hover:scale-105 {{ $isActive ? 'ring-2 ring-primary rounded-xl' : '' }}">
-            <x-stat-card :title="$status->label()" :value="convertToFarsi($count)" :type="$type" />
+            <x-stat-card :title="$status->label()" :value="localizeNumber($count)" :type="$type" />
         </a>
     @endforeach
     <x-stat-card :title="$quantityTitle" :value="$quantityValue" />

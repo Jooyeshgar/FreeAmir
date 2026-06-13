@@ -28,7 +28,7 @@
                 <div class="flex flex-wrap items-center gap-3">
                     <h2 class="text-base font-bold text-base-content">{{ __('Services') }}</h2>
                     <span class="badge badge-ghost">
-                        {{ convertToFarsi($services->total()) }} {{ __('records') }}
+                        {{ localizeNumber($services->total()) }} {{ __('records') }}
                     </span>
                 </div>
 
@@ -68,7 +68,7 @@
 
                     @foreach ($services as $service)
                         <tr>
-                            <td class="px-4 py-2">{{ convertToFarsi($service->code) }}</td>
+                            <td class="px-4 py-2">{{ localizeNumber($service->code) }}</td>
                             <td class="px-4 py-2">
                                 <a href="{{ route('services.show', $service) }}" class="text-primary">
                                     {{ $service->name }}</a>

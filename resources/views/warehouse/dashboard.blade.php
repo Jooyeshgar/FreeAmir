@@ -241,7 +241,7 @@
                             <tbody>
                                 @forelse ($belowReorderItems as $row)
                                     <tr>
-                                        <td>{{ convertToFarsi($row['code']) }}</td>
+                                        <td>{{ localizeNumber($row['code']) }}</td>
                                         <td>
                                             @can('products.index')
                                                 <a class="link link-primary" href="{{ route('products.show', $row['id']) }}">{{ $row['name'] }}</a>
@@ -295,7 +295,7 @@
                             <tbody>
                                 @forelse ($stagnantItems as $row)
                                     <tr>
-                                        <td>{{ convertToFarsi($row['code']) }}</td>
+                                        <td>{{ localizeNumber($row['code']) }}</td>
                                         <td>
                                             @can('products.index')
                                                 <a class="link link-primary" href="{{ route('products.show', $row['id']) }}">{{ $row['name'] }}</a>
@@ -341,7 +341,7 @@
                         <tbody>
                             @forelse ($topSellers as $row)
                                 <tr>
-                                    <td>{{ convertToFarsi($row['code']) }}</td>
+                                    <td>{{ localizeNumber($row['code']) }}</td>
                                     <td>
                                         @can('products.index')
                                             <a class="link link-primary" href="{{ route('products.show', $row['id']) }}">{{ $row['name'] }}</a>
@@ -393,7 +393,7 @@
                             <tbody>
                                 @forelse ($statusFilteredItems as $row)
                                     <tr>
-                                        <td>{{ convertToFarsi($row['code']) }}</td>
+                                        <td>{{ localizeNumber($row['code']) }}</td>
                                         <td>
                                             @can('products.index')
                                                 <a class="link link-primary" href="{{ route('products.show', $row['id']) }}">{{ $row['name'] }}</a>

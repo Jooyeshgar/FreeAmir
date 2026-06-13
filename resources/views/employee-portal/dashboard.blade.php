@@ -22,9 +22,9 @@
             </div>
             <div class="stat-title">{{ __('Requests') }}</div>
             <div class="stat-desc flex flex-col">
-                <span class="text-success">{{ convertToFarsi($requestsCount['approved'] ?? 0) }} {{ __('Request')  }} {{ __('Approved') }}</span>
-                <span class="text-error">{{ convertToFarsi($requestsCount['rejected'] ?? 0) }} {{ __('Request')  }} {{ __('rejected') }}</span>
-                <span class="text-warning">{{ convertToFarsi($requestsCount['pending'] ?? 0) }} {{ __('Request')  }} {{ __('In Pending') }}</span>
+                <span class="text-success">{{ localizeNumber($requestsCount['approved'] ?? 0) }} {{ __('Request')  }} {{ __('Approved') }}</span>
+                <span class="text-error">{{ localizeNumber($requestsCount['rejected'] ?? 0) }} {{ __('Request')  }} {{ __('rejected') }}</span>
+                <span class="text-warning">{{ localizeNumber($requestsCount['pending'] ?? 0) }} {{ __('Request')  }} {{ __('In Pending') }}</span>
             </div>
         </a>
 
@@ -104,8 +104,8 @@
                         @forelse ($recentLogs as $log)
                             <tr>
                                 <td>{{formatDate($log->log_date) }}</td>
-                                <td>{{ $log->entry_time ? convertToFarsi($log->entry_time) : '—' }}</td>
-                                <td>{{ $log->exit_time ? convertToFarsi($log->exit_time) : '—' }}</td>
+                                <td>{{ $log->entry_time ? localizeNumber($log->entry_time) : '—' }}</td>
+                                <td>{{ $log->exit_time ? localizeNumber($log->exit_time) : '—' }}</td>
                                 <td>
                                     @if ($log->is_manual)
                                         <span class="badge badge-warning badge-sm">{{ __('Manual') }}</span>

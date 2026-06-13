@@ -18,7 +18,7 @@
                         title="{{ __('Void Invoice Number') }}" x-model.number="invoice_number" x-bind:name="'invoice_number'"
                         placeholder="{{ __('Void Invoice Number') }}" label_text_class="text-gray-500 text-nowrap"
                         x-on:input="invoice_number = $store.utils.convertToEnglish($event.target.value);"
-                        x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(invoice_number));">
+                        x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(invoice_number));">
                     </x-text-input>
                 </div>
 

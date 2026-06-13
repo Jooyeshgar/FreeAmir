@@ -803,7 +803,7 @@ class WarehouseDashboardService
             $summary[] = ['label' => __('Min quantity'), 'value' => formatNumber($minQuantity)];
         }
 
-        $summary[] = ['label' => __('Period'), 'value' => convertToFarsi($fromJ).' - '.convertToFarsi($toJ)];
+        $summary[] = ['label' => __('Period'), 'value' => localizeNumber($fromJ).' - '.localizeNumber($toJ)];
 
         return $summary;
     }

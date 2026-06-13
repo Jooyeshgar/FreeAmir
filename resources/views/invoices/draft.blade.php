@@ -3,7 +3,7 @@
 
     <div class="invoice-container">
         <div class="invoice-top-left">
-            <span>{{ __('Invoice Number') }}: {{ convertToFarsi(intval($invoice->number ?? 0)) ?? '' }}</span>
+            <span>{{ __('Invoice Number') }}: {{ localizeNumber(intval($invoice->number ?? 0)) ?? '' }}</span>
             <span>{{ __('Date') }}: {{ formatDate($invoice->created_at) }}</span>
         </div>
 
@@ -25,11 +25,11 @@
             <div class="info-column">
                 <div class="info-row">
                     <span>{{ __('Phone') }}:</span>
-                    <span>{{ convertToFarsi($invoice->customer->phone) }}</span>
+                    <span>{{ localizeNumber($invoice->customer->phone) }}</span>
                 </div>
                 <div class="info-row">
                     <span>{{ __('Postal Code') }}:</span>
-                    <span>{{ convertToFarsi($invoice->customer->postal_code) }}</span>
+                    <span>{{ localizeNumber($invoice->customer->postal_code) }}</span>
                 </div>
             </div>
         </div>
@@ -56,7 +56,7 @@
                         $totalAmount += $lineTotal;
                     @endphp
                     <tr>
-                        <td>{{ convertToFarsi($index++) }}</td>
+                        <td>{{ localizeNumber($index++) }}</td>
                         <td>{{ $item->itemable->name }}</td>
                         <td>{{ formatNumber($item->quantity) }}</td>
                         <td>{{ formatNumber($item->unit_price) }}</td>
@@ -66,7 +66,7 @@
                 @endforeach
                 @for (; $index < 6; $index++)
                     <tr>
-                        <td>{{ convertToFarsi($index) }}</td>
+                        <td>{{ localizeNumber($index) }}</td>
                         <td> </td>
                         <td> </td>
                         <td> </td>

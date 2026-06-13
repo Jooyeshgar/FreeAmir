@@ -153,8 +153,8 @@
                     <p class="font-semibold">
                         @php
                             $shift = $employee?->workShift;
-                            $shiftStart = $shift ? convertToFarsi(substr($shift->start_time, 0, 5)) : \App\Services\AttendanceService::DEFAULT_SHIFT_START;
-                            $shiftEnd = $shift ? convertToFarsi(substr($shift->end_time, 0, 5)) : \App\Services\AttendanceService::DEFAULT_SHIFT_END;
+                            $shiftStart = $shift ? localizeNumber(substr($shift->start_time, 0, 5)) : \App\Services\AttendanceService::DEFAULT_SHIFT_START;
+                            $shiftEnd = $shift ? localizeNumber(substr($shift->end_time, 0, 5)) : \App\Services\AttendanceService::DEFAULT_SHIFT_END;
                         @endphp
                         @if ($employee->workShift)
                             <span>{{ $employee->workShift->name }}</span>

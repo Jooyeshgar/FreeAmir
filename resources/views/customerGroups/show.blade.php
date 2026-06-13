@@ -7,7 +7,7 @@
         $statItems = [
             [
                 'title' => __('Customers Count'),
-                'value' => convertToFarsi(formatNumber($stats['customersCount'])),
+                'value' => localizeNumber(formatNumber($stats['customersCount'])),
                 'description' => __('Members in this group'),
                 'icon' => 'users',
                 'tone' => 'indigo',
@@ -15,28 +15,28 @@
             ],
             [
                 'title' => __('Net Sales'),
-                'value' => convertToFarsi(formatNumber($stats['netSales'])),
+                'value' => localizeNumber(formatNumber($stats['netSales'])),
                 'description' => $currency,
                 'icon' => 'check',
                 'tone' => 'green',
             ],
             [
                 'title' => __('Total Sales'),
-                'value' => convertToFarsi(formatNumber($stats['totalSales'])),
+                'value' => localizeNumber(formatNumber($stats['totalSales'])),
                 'description' => $currency,
                 'icon' => 'briefcase',
                 'tone' => 'sky',
             ],
             [
                 'title' => __('Sales Returns'),
-                'value' => convertToFarsi(formatNumber($stats['totalReturns'])),
+                'value' => localizeNumber(formatNumber($stats['totalReturns'])),
                 'description' => $currency,
                 'icon' => 'document',
                 'tone' => 'amber',
             ],
             [
                 'title' => __('Invoices Count'),
-                'value' => convertToFarsi(formatNumber($stats['invoicesCount'])),
+                'value' => localizeNumber(formatNumber($stats['invoicesCount'])),
                 'description' => __('Approved sell invoices'),
                 'icon' => 'calendar',
                 'tone' => 'violet',
@@ -46,7 +46,7 @@
         if (auth()->user()?->can('reports.ledger') && $customerGroup->subject) {
             $statItems[] = [
                 'title' => __('Subject Balance'),
-                'value' => convertToFarsi(formatNumber($stats['subjectBalance'])),
+                'value' => localizeNumber(formatNumber($stats['subjectBalance'])),
                 'description' => $currency,
                 'icon' => 'clock',
                 'tone' => 'cyan',
@@ -136,7 +136,7 @@
                             @foreach ($stats['topCustomers'] as $rank => $row)
                                 @php $tone = $avatarTones[$row['customer']->id % count($avatarTones)]; @endphp
                                 <li class="flex items-center gap-3 rounded-lg border border-base-200 bg-base-100 p-3 transition hover:border-primary/30 hover:shadow-sm dark:bg-base-200/40">
-                                    <span class="text-sm font-bold text-base-content/40 w-5 text-center">{{ convertToFarsi($rank + 1) }}</span>
+                                    <span class="text-sm font-bold text-base-content/40 w-5 text-center">{{ localizeNumber($rank + 1) }}</span>
                                     <div class="avatar placeholder shrink-0">
                                         <div class="{{ $tone }} flex h-11 w-11 items-center justify-center rounded-xl">
                                             <span class="text-base font-bold leading-none">{{ mb_substr($row['customer']->name, 0, 1) }}</span>
@@ -147,11 +147,11 @@
                                             {{ $row['customer']->name }}
                                         </a>
                                         <span class="text-xs text-base-content/50">
-                                            {{ convertToFarsi(formatNumber($row['count'])) }} {{ __('invoices') }}
+                                            {{ localizeNumber(formatNumber($row['count'])) }} {{ __('invoices') }}
                                         </span>
                                     </div>
                                     <div class="text-left shrink-0">
-                                        <div class="font-bold text-emerald-600 dark:text-emerald-400 leading-none">{{ convertToFarsi(formatNumber($row['total'])) }}</div>
+                                        <div class="font-bold text-emerald-600 dark:text-emerald-400 leading-none">{{ localizeNumber(formatNumber($row['total'])) }}</div>
                                         <div class="mt-1 text-[10px] text-base-content/40">{{ $currency }}</div>
                                     </div>
                                 </li>
@@ -199,7 +199,7 @@
                                         <tr class="hover">
                                             <td>
                                                 <a href="{{ route('invoices.show', $invoice) }}" class="font-semibold text-primary hover:underline">
-                                                    {{ convertToFarsi($invoice->number) }}
+                                                    {{ localizeNumber($invoice->number) }}
                                                 </a>
                                             </td>
                                             <td class="max-w-40 truncate">{{ $invoice->customer?->name ?? '-' }}</td>
@@ -208,7 +208,7 @@
                                                     {{ $invoice->invoice_type->label() }}
                                                 </span>
                                             </td>
-                                            <td class="whitespace-nowrap text-base-content/60">{{ convertToFarsi(formatDate($invoice->date)) }}</td>
+                                            <td class="whitespace-nowrap text-base-content/60">{{ localizeNumber(formatDate($invoice->date)) }}</td>
                                             <td class="text-left font-semibold whitespace-nowrap">{{ formatNumber($invoice->amount) }}</td>
                                         </tr>
                                     @endforeach

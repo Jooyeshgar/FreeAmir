@@ -141,7 +141,7 @@
                                 <h3 class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">
                                     {{ __('Phone') }}</h3>
                                 <p class="text-lg font-semibold text-gray-800 dark:text-slate-100">
-                                    {{ $invoice->customer->phone ? convertToFarsi($invoice->customer->phone) : '—' }}
+                                    {{ $invoice->customer->phone ? localizeNumber($invoice->customer->phone) : '—' }}
                                 </p>
                             </div>
                         </div>
@@ -150,7 +150,7 @@
                                 <h3 class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">
                                     {{ __('Economic code') }}</h3>
                                 <p class="text-lg font-semibold text-gray-800 dark:text-slate-100">
-                                    {{ $invoice->customer->ecnmcs_code ? convertToFarsi($invoice->customer->ecnmcs_code) : '—' }}
+                                    {{ $invoice->customer->ecnmcs_code ? localizeNumber($invoice->customer->ecnmcs_code) : '—' }}
                                 </p>
                             </div>
                         </div>
@@ -159,7 +159,7 @@
                                 <h3 class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">
                                     {{ __('Postal code') }}</h3>
                                 <p class="text-lg font-semibold text-gray-800 dark:text-slate-100">
-                                    {{ $invoice->customer->postal_code ? convertToFarsi($invoice->customer->postal_code) : '—' }}
+                                    {{ $invoice->customer->postal_code ? localizeNumber($invoice->customer->postal_code) : '—' }}
                                 </p>
                             </div>
                         </div>
@@ -203,7 +203,7 @@
                         <tbody>
                             @forelse ($invoice->items as $index => $item)
                                 <tr class="hover:bg-base-300">
-                                    <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
+                                    <td class="px-4 py-3">{{ localizeNumber($index + 1) }}</td>
                                     <td class="px-4 py-3">
                                         @if ($item->itemable)
                                             <a href="{{ route($item->itemable instanceof App\Models\Product ? 'products.show' : 'services.show', $item->itemable) }}" class="link link-hover link-primary">
@@ -234,7 +234,7 @@
                         <tfoot>
                             <tr>
                                 <td colspan="8" class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
-                                    {{ __('Total items: :count', ['count' => convertToFarsi($invoice->items->count())]) }}
+                                    {{ __('Total items: :count', ['count' => localizeNumber($invoice->items->count())]) }}
                                 </td>
                             </tr>
                         </tfoot>
@@ -260,7 +260,7 @@
                                 <tbody>
                                     @forelse ($invoice->getReturnInvoice() as $index => $returnedInvoice)
                                         <tr class="hover:bg-base-300">
-                                            <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
+                                            <td class="px-4 py-3">{{ localizeNumber($index + 1) }}</td>
                                             <td class="px-4 py-3">
                                                 <a href="{{ route('invoices.show', $returnedInvoice) }}" class="link link-hover link-primary">
                                                     {{ formatDocumentNumber($returnedInvoice->number) }}
@@ -384,7 +384,7 @@
                             <tbody>
                                 @forelse ($invoice->getReturnedInvoice()?->items as $index => $item)
                                     <tr class="hover:bg-base-300">
-                                        <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
+                                        <td class="px-4 py-3">{{ localizeNumber($index + 1) }}</td>
                                         <td class="px-4 py-3">
                                             @if ($item->itemable)
                                                 <a href="{{ route($item->itemable instanceof App\Models\Product ? 'products.show' : 'services.show', $item->itemable) }}"
@@ -418,7 +418,7 @@
                             <tfoot>
                                 <tr>
                                     <td colspan="8" class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
-                                        {{ __('Total items: :count', ['count' => convertToFarsi($invoice->getReturnedInvoice()?->items->count() ?? 0)]) }}
+                                        {{ __('Total items: :count', ['count' => localizeNumber($invoice->getReturnedInvoice()?->items->count() ?? 0)]) }}
                                     </td>
                                 </tr>
                             </tfoot>

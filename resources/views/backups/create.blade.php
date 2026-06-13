@@ -85,7 +85,7 @@
 
                                                     @if ($isDocumentFiles)
                                                         <span x-show="docFileSizeMb !== null" x-cloak class="text-xs text-warning"
-                                                            x-text="`{{ __('Selecting this option will increase the backup size by approximately :size MB.') }}`.replace(':size', $store.utils.convertToFarsi(String(docFileSizeMb)))">
+                                                            x-text="`{{ __('Selecting this option will increase the backup size by approximately :size MB.') }}`.replace(':size', $store.utils.localizeNumber(String(docFileSizeMb)))">
                                                         </span>
                                                         <span x-show="showDepWarning" x-cloak class="text-xs text-error">
                                                             {{ __('Document Files will not be exported because Documents is not selected.') }}

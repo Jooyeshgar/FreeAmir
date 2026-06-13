@@ -13,7 +13,7 @@
         <tbody>
             @foreach ($conflicts as $conflict)
                 <tr>
-                    <td class="px-2 py-2">{{ convertToFarsi($loop->iteration) }}</td>
+                    <td class="px-2 py-2">{{ localizeNumber($loop->iteration) }}</td>
                     <td class="px-4 py-2">
                         <a class="text-primary link link-hover {{ !$conflict->oversell ? 'text-red-600' : '' }}"
                             title="{{ !$conflict->oversell ? __('Oversell not allowed') : '' }}"
@@ -42,7 +42,7 @@
         <tbody>
             @foreach ($conflicts as $conflict)
                 <tr>
-                    <td class="px-2 py-2">{{ convertToFarsi($loop->iteration) }}</td>
+                    <td class="px-2 py-2">{{ localizeNumber($loop->iteration) }}</td>
                     <td class="px-4 py-2">{{ $conflict->invoice_type?->label() ?? $conflict->type->label() }}</td>
                     <td class="px-4 py-2">
                         @if ($conflict->invoice)

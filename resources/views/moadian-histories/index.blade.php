@@ -75,7 +75,7 @@
                                 </td>
                                 <td class="text-gray-500">{{ $history->data['referenceNumber'] ?? '-' }}</td>
                                 <td class="text-gray-500">{{ $history->data['uid'] ?? '-' }}</td>
-                                <td class="text-gray-500">{{ convertToFarsi($history->created_at->format('Y/m/d H:i')) }}</td>
+                                <td class="text-gray-500">{{ localizeNumber($history->created_at->format('Y/m/d H:i')) }}</td>
                                 <td>
                                     <div class="flex items-center justify-center py-2">
                                         @if($isLatest)

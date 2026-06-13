@@ -59,14 +59,14 @@
             title="{{ __('Current Invoice Number') }}" x-model.number="invoice_number" x-bind:name="'invoice_number'"
             placeholder="{{ __('Current Invoice Number') }}" label_text_class="text-gray-500 text-nowrap"
             x-on:input="invoice_number = $store.utils.convertToEnglish($event.target.value);"
-            x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(invoice_number));">
+            x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(invoice_number));">
         </x-text-input>
  
         <x-text-input x-data="{ document_number: '{{ formatDocumentNumber($invoice->document?->number ?? $previousDocumentNumber + 1) }}' }"
             title="{{ __('current document number') }}" x-model.number="document_number" x-bind:name="'document_number'"
             placeholder="{{ __('current document number') }}" label_text_class="text-gray-500 text-nowrap"
             x-on:input="document_number = $store.utils.convertToEnglish($event.target.value);"
-            x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(document_number));">
+            x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(document_number));">
         </x-text-input>
 
         <x-text-input data-jdp title="{{ __('date') }}" input_name="date" placeholder="{{ __('date') }}" readonly
@@ -108,7 +108,7 @@
                     @click="activeTab = index">
                     <div class="relative flex-1 text-center max-w-8 pt-2 pb-2 transaction-count-container">
                         <span class="transaction-count block"
-                            x-text="$store.utils.convertToFarsi(String(index + 1))"></span>
+                            x-text="$store.utils.localizeNumber(String(index + 1))"></span>
                         <button @click.stop="transactions.splice(index, 1)" type="button"
                             class="absolute left-0 top-0 removeButton">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -149,46 +149,46 @@
                         </x-text-input>
                     </div>
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input placeholder="{{ convertToFarsi('0') }}" x-model.number="transaction.quantity"
+                        <x-text-input placeholder="{{ localizeNumber('0') }}" x-model.number="transaction.quantity"
                             x-bind:name="'transactions[' + index + '][quantity]'"
                             x-bind:disabled="!transaction.product_id" label_text_class="text-gray-500"
                             label_class="w-full" input_class="border-white"
                             x-on:input="transaction.quantity = $store.utils.cleanupNumber($event.target.value).split('.')[0]"
-                            x-effect="$el.value = $store.utils.convertToFarsi(($store.utils.cleanupNumber(transaction.quantity).split('.')[0]) || '')">
+                            x-effect="$el.value = $store.utils.localizeNumber(($store.utils.cleanupNumber(transaction.quantity).split('.')[0]) || '')">
                         </x-text-input>
                     </div>
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input placeholder="{{ convertToFarsi('0') }}" x-model.number="transaction.off"
+                        <x-text-input placeholder="{{ localizeNumber('0') }}" x-model.number="transaction.off"
                             x-bind:name="'transactions[' + index + '][off]'" x-bind:disabled="!transaction.product_id"
                             label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
                             x-on:input="transaction.off = $store.utils.convertToEnglish($event.target.value)"
-                            x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(transaction.off))">
+                            x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(transaction.off))">
                         </x-text-input>
                     </div>
 
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input placeholder="{{ convertToFarsi('0') }}" x-model.number="transaction.vat"
+                        <x-text-input placeholder="{{ localizeNumber('0') }}" x-model.number="transaction.vat"
                             x-bind:name="'transactions[' + index + '][vat]'" x-bind:disabled="!transaction.product_id"
                             label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
                             x-on:input="transaction.vat = $store.utils.convertToEnglish($event.target.value)"
-                            x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(transaction.vat))">
+                            x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(transaction.vat))">
                         </x-text-input>
                     </div>
 
                     <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input placeholder="{{ convertToFarsi('0') }}" x-model.number="transaction.unit"
+                        <x-text-input placeholder="{{ localizeNumber('0') }}" x-model.number="transaction.unit"
                             x-bind:name="'transactions[' + index + '][unit]'"
                             x-bind:disabled="!transaction.product_id" label_text_class="text-gray-500"
                             label_class="w-full" input_class="border-white"
                             x-on:input="transaction.unit = $store.utils.convertToEnglish($event.target.value)"
-                            x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(transaction.unit))">
+                            x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(transaction.unit))">
                         </x-text-input>
                     </div>
 
                     <div class="flex-1 min-w-32 max-w-32">
                         <x-text-input x-bind:value="calcTotal(transaction)"
                             x-bind:name="'transactions[' + index + '][total]'"
-                            placeholder="{{ convertToFarsi('0') }}" label_text_class="text-gray-500"
+                            placeholder="{{ localizeNumber('0') }}" label_text_class="text-gray-500"
                             label_class="w-full" input_class="border-white" readonly>
                         </x-text-input>
                     </div>
@@ -208,12 +208,12 @@
     <hr style="">
     <div class="flex flex-row justify-between" x-data="{ subtractionsInput: '{{ old('subtraction') ?? ($invoice->subtraction ?? 0) }}' }">
         <div class="flex justify-start px-4 gap-4 py-3 rounded-b-2xl">
-            <x-text-input placeholder="{{ convertToFarsi('0') }}" label_text_class="text-gray-500"
+            <x-text-input placeholder="{{ localizeNumber('0') }}" label_text_class="text-gray-500"
                 label_class="w-full" input_name="subtraction" title="{{ __('Subtractions') }}"
                 input_value="{{ old('subtraction') ?? ($invoice->subtraction ?? 0) }}" input_class="locale-number"
                 x-model="subtractionsInput"
                 @input="subtractionsInput = $store.utils.cleanupNumber($event.target.value)"
-                x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(subtractionsInput))">
+                x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(subtractionsInput))">
             </x-text-input>
         </div>
         <div class="flex justify-end px-4 gap-4 py-3 rounded-b-2xl">
@@ -221,7 +221,7 @@
                 class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 dark:border-slate-700 dark:shadow-none shadow-sm rounded-xl border border-gray-200">
                 <span class="text-sm font-medium text-gray-500 dark:text-slate-300">{{ __('Total Quantity') }}:</span>
                 <span class="text-lg font-bold text-indigo-600 dark:text-indigo-300"
-                    x-text="$store.utils.convertToFarsi($store.utils.cleanupNumber(String(transactions.reduce((sum, t) => sum + (Number($store.utils.convertToEnglish(t.quantity)) || 0), 0))))">{{ convertToFarsi('0') }}</span>
+                    x-text="$store.utils.localizeNumber($store.utils.cleanupNumber(String(transactions.reduce((sum, t) => sum + (Number($store.utils.convertToEnglish(t.quantity)) || 0), 0))))">{{ localizeNumber('0') }}</span>
             </div>
 
             <div
@@ -230,11 +230,11 @@
                     class="text-sm font-medium text-gray-500 dark:text-slate-300">{{ __('Total Sum') }}({{ config('amir.currency') ?? __('Rial') }}):
                 </span>
                 <span class="text-lg font-bold text-green-600 dark:text-emerald-300"
-                    x-text="$store.utils.convertToFarsi((
+                    x-text="$store.utils.localizeNumber((
                         transactions.reduce((sum, t) => sum + (Number($store.utils.convertToEnglish(t.total)) || 0), 0)
                         - (Number($store.utils.cleanupNumber(subtractionsInput) || 0))
                     ).toLocaleString())">
-                    {{ convertToFarsi('0') }}
+                    {{ localizeNumber('0') }}
                 </span>
             </div>
         </div>
@@ -340,7 +340,7 @@
                     const vatIsValue = this.isEditing;
                     t.total = vatIsValue ? subtotal - off + vat : subtotal + ((subtotal - off) * vat /
                         100) - off;
-                    return this.$store.utils.convertToFarsi(t.total.toLocaleString());
+                    return this.$store.utils.localizeNumber(t.total.toLocaleString());
                 }
             }));
         });

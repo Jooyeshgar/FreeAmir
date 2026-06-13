@@ -1,5 +1,5 @@
 <x-app-layout :title="$monthlyAttendance->employee?->first_name . ' ' . $monthlyAttendance->employee?->last_name . ' ' .
-            $monthlyAttendance->month_name . ' ' . convertToFarsi($monthlyAttendance->year)
+            $monthlyAttendance->month_name . ' ' . localizeNumber($monthlyAttendance->year)
     ">
     <x-show-message-bags />
 
@@ -12,13 +12,13 @@
                         {{ $monthlyAttendance->employee?->first_name }}
                         {{ $monthlyAttendance->employee?->last_name }}
                         &mdash;
-                        {{ $monthlyAttendance->month_name }} {{ convertToFarsi($monthlyAttendance->year) }}
+                        {{ $monthlyAttendance->month_name }} {{ localizeNumber($monthlyAttendance->year) }}
                     </h2>
                     <p class="text-sm text-gray-500">
                         @php
                             $shift = $monthlyAttendance->employee?->workShift;
-                            $shiftStart = $shift ? convertToFarsi(substr($shift->start_time, 0, 5)) : \App\Services\AttendanceService::DEFAULT_SHIFT_START;
-                            $shiftEnd = $shift ? convertToFarsi(substr($shift->end_time, 0, 5)) : \App\Services\AttendanceService::DEFAULT_SHIFT_END;
+                            $shiftStart = $shift ? localizeNumber(substr($shift->start_time, 0, 5)) : \App\Services\AttendanceService::DEFAULT_SHIFT_START;
+                            $shiftEnd = $shift ? localizeNumber(substr($shift->end_time, 0, 5)) : \App\Services\AttendanceService::DEFAULT_SHIFT_END;
                             $shiftName = $shift?->name;
                         @endphp
                         {{ __('Shift') }}:
@@ -61,15 +61,15 @@
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-4">
                 <div class="stat bg-base-200 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Work Days') }}</div>
-                    <div class="stat-value text-base">{{ convertToFarsi($monthlyAttendance->work_days) }}</div>
+                    <div class="stat-value text-base">{{ localizeNumber($monthlyAttendance->work_days) }}</div>
                 </div>
                 <div class="stat bg-success/20 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Present') }}</div>
-                    <div class="stat-value text-base text-success">{{ convertToFarsi($monthlyAttendance->present_days) }}</div>
+                    <div class="stat-value text-base text-success">{{ localizeNumber($monthlyAttendance->present_days) }}</div>
                 </div>
                 <div class="stat bg-error/20 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Absent') }}</div>
-                    <div class="stat-value text-base text-error">{{ convertToFarsi($monthlyAttendance->absent_days) }}</div>
+                    <div class="stat-value text-base text-error">{{ localizeNumber($monthlyAttendance->absent_days) }}</div>
                 </div>
                 <div class="stat bg-warning/20 rounded-box p-3">
                     <div class="stat-title text-xs">{{ __('Overtime') }}</div>
@@ -254,8 +254,8 @@
                                     <td>
                                         <a href="{{ route('attendance.attendance-logs.show', $log) }}">{{ formatDate($log->log_date) }}</a>
                                     </td>
-                                    <td>{{ $log->entry_time ? convertToFarsi($log->entry_time) : '—' }}</td>
-                                    <td>{{ $log->exit_time ? convertToFarsi($log->exit_time) : '—' }}</td>
+                                    <td>{{ $log->entry_time ? localizeNumber($log->entry_time) : '—' }}</td>
+                                    <td>{{ $log->exit_time ? localizeNumber($log->exit_time) : '—' }}</td>
                                     <td>{{ formatMinutesAsTime($log->worked) }}</td>
                                     <td>{{ formatMinutesAsTime($log->paid_leave) }}</td>
                                     <td>{{ formatMinutesAsTime($log->overtime + $log->auto_overtime) }}</td>

@@ -111,7 +111,7 @@
                         <tbody>
                             @forelse ($document->transactions as $index => $transaction)
                                 <tr class="hover:bg-base-300">
-                                    <td class="px-4 py-3">{{ convertToFarsi($index + 1) }}</td>
+                                    <td class="px-4 py-3">{{ localizeNumber($index + 1) }}</td>
                                     <td class="px-4 py-3">
                                         <a href="{{ route('transactions.index', ['subject_id' => $transaction->subject_id]) }}" class="link link-hover"
                                             title="{{ $transaction->subject?->fullname() }}">
@@ -140,7 +140,7 @@
                         <tfoot>
                             <tr>
                                 <td colspan="3" class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
-                                    {{ __('Total entries: :count', ['count' => convertToFarsi($document->transactions->count())]) }}
+                                    {{ __('Total entries: :count', ['count' => localizeNumber($document->transactions->count())]) }}
                                 </td>
                                 <td class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
                                     {{ __('Total Document:') }}

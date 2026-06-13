@@ -13,11 +13,11 @@
                             <dd class="text-sm font-semibold">
                                 @if ($statusCount == 0 || $isActiveStatus)
                                     <span class="text-gray-500">{{ $status->label() }} :
-                                        {{ convertToFarsi($statusCount) }}</span>
+                                        {{ localizeNumber($statusCount) }}</span>
                                 @else
                                     <a class="link link-hover" href="{{ route('ancillary-costs.index', ['status' => $status]) }}">
                                         {{ $status->label() }} :
-                                        {{ convertToFarsi($statusCount) }}
+                                        {{ localizeNumber($statusCount) }}
                                     </a>
                                 @endif
                             </dd>
