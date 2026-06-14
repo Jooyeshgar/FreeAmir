@@ -618,7 +618,7 @@
                     @endif
                     @can('ancillary-costs.create')
                         <div class="flex mt-2">
-                            @if (!$invoice->status->isApprovedOrSettled())
+                            @if ($canCreateAncillaryCost)
                                 <a href="{{ route('invoices.ancillary-costs.create', $invoice) }}"
                                     class="btn btn-primary">
                                     {{ __('Create Ancillary Cost') }}

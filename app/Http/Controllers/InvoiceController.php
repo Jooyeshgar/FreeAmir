@@ -104,7 +104,7 @@ class InvoiceController extends Controller
         $statsBuilder = $builder->clone();
 
         $builder->when($request->filled('status') &&
-            in_array($request->status, ['approved', 'unapproved', 'pending', 'approved_inactive', 'rejected', 'ready_to_approve', 'pre_invoice']),
+            in_array($request->status, ['approved', 'unapproved', 'pending', 'approved_inactive', 'rejected', 'ready_to_approve', 'pre_invoice', 'partially_paid', 'paid']),
             fn ($invoice) => $invoice->where('status', $request->status)
         );
 

@@ -22,13 +22,13 @@
                     || $invoice->status->isUnapproved()
                     || $invoice->status->isApprovedInactive();
                 $canUnapprove = $invoice->status->isApproved();
+                $isSettled = $invoice->status->isPartiallyPaid() || $invoice->status->isPaid();
                 $canChangeStatus = $canApprove || $canUnapprove;
-                $editDisabled = $isVoidWorkflow || $invoice->status->isApproved() || $isVoided;
-                $deleteDisabled = $invoice->status->isApproved() || $isVoided;
-                $editTooltip = $isVoidWorkflow
-                    ? __('Editing is not allowed for void invoices.')
-                    : ($isVoided ? __('Voided invoices cannot be edited') : __('Unapprove the invoice first to edit'));
-                $deleteTooltip = $isVoided ? __('Voided invoices cannot be deleted') : __('Unapprove the invoice first to delete');
+                $editDisabled = $isVoidWorkflow || $invoice->status->isApprovedOrSettled() || $isVoided;
+                $deleteDisabled = $invoice->status->isApprovedOrSettled() || $isVoided;
+                $settledTooltip = __('A paid or partially paid invoice cannot change its status until its payments (or their payment documents) are removed.');
+                $editTooltip = $isVoidWorkflow ? __('Editing is not allowed for void invoices.') : ($isVoided ? __('Voided invoices cannot be edited') : ($isSettled ? $settledTooltip : __('Unapprove the invoice first to edit')));
+                $deleteTooltip = $isVoided ? __('Voided invoices cannot be deleted') : ($isSettled ? $settledTooltip : __('Unapprove the invoice first to delete'));
                 $moadianStatus = $showMoadianColumn ? \App\Enums\MoadianStatus::fromData($invoice->latestMoadianHistory?->data['status'] ?? null) : null;
             @endphp
             <tr class="{{ $isVoided ? 'text-gray-500' : '' }}">
@@ -102,6 +102,10 @@
                                     </button>
                                 </form>
                             @endif
+                        @elseif ($isSettled)
+                            <span class="tooltip" data-tip="{{ $settledTooltip }}">
+                                <button class="btn btn-sm btn-warning btn-disabled cursor-not-allowed">{{ __('Unapprove') }}</button>
+                            </span>
                         @endif
                     @endcan
 

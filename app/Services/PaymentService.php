@@ -16,9 +16,6 @@ use Illuminate\Support\Facades\DB;
 
 class PaymentService
 {
-    /**
-     * Subjects that a payment can settle into: every bank account's subject plus the descendants of the cash_book subject.
-     */
     public function settlementSubjectIds(): array
     {
         $bankRootId = (int) config('amir.bank');
@@ -137,11 +134,7 @@ class PaymentService
     {
         $customerSubjectId = $invoice->customer->subject?->id ?? $invoice->customer->subject_id;
         $customerSign = in_array($invoice->invoice_type, [InvoiceType::SELL, InvoiceType::RETURN_BUY]) ? 1 : -1;
-
-        $settlementName = Subject::find($settlementSubjectId)?->name;
-        $desc = __('Payment of').' '.__('Invoice').' '.$invoice->invoice_type->label()
-            .' '.__(' with number ').' '.formatNumber($invoice->number ?? $invoice->id)
-            .($settlementName ? ' ('.$settlementName.')' : '');
+        $desc = __('Payment of').' '.__('Invoice').' '.$invoice->invoice_type->label().' '.__(' with number ').' '.localizeNumber($invoice->number ?? $invoice->id);
 
         $transactions = [
             [
@@ -158,7 +151,7 @@ class PaymentService
 
         $documentData = [
             'date' => $date ?? now()->toDateString(),
-            'title' => __('Payment of').' '.(__('Invoice #').($invoice->number ?? $invoice->id)),
+            'title' => __('Payment of').' '.(__('Invoice #').localizeNumber($invoice->number ?? $invoice->id)),
             'number' => null,
         ];
         $document = DocumentService::createDocument($user, $documentData, $transactions);
