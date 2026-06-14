@@ -24,8 +24,10 @@ class UserController extends Controller
     public function index()
     {
         $users = User::query()
-            ->whereHas('companies', function ($query) {
-                $query->where('companies.id', getActiveCompany());
+            ->unless(auth()->user()->can('users.edit'), function ($query) {
+                $query->whereHas('companies', function ($query) {
+                    $query->where('companies.id', getActiveCompany());
+                });
             })
             ->with('employee')
             ->paginate(30);

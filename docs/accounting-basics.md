@@ -558,7 +558,7 @@ php artisan fiscal-year:import exported_data.json --name="سال 1404" --year=14
 
 **در کد Laravel**:
 ```php
-$cashSubjectId = config('amir.cash');
+$cashSubjectId = config('amir.cash_book');
 
 // با مقدار پیش‌فرض
 $bankSubjectId = config('amir.bank', null);
@@ -567,7 +567,7 @@ $bankSubjectId = config('amir.bank', null);
 **برای تنظیمات خاص شرکت**:
 ```php
 $config = Config::where('company_id', session('active-company-id'))
-               ->where('key', 'cash')
+               ->where('key', 'cash_book')
                ->value('value');
 ```
 
