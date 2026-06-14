@@ -54,8 +54,8 @@
                     <thead>
                         <tr>
                             <th>{{ __('Type') }}</th>
-                            <th>{{ __('Entry Time') }}</th>
-                            <th>{{ __('Exit Time') }}</th>
+                            <th>{{ __('Start Date') }}</th>
+                            <th>{{ __('End Date') }}</th>
                             <th>{{ __('Duration') }}</th>
                             <th>{{ __('Status') }}</th>
                             <th>{{ __('Reason') }}</th>
