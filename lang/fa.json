@@ -2320,5 +2320,18 @@
     "Sum Debit": "جمع بدهکار",
     "Sum Credit": "جمع بستانکار",
     "Remaining Debit": "مانده بدهکار",
-    "Remaining Credit": "مانده بستانکار"
+    "Remaining Credit": "مانده بستانکار",
+    "Transfer": "انتقال",
+    "Transfer to another Fiscal Year": "انتقال به سال مالی دیگر",
+    "Target Fiscal Year": "سال مالی مقصد",
+    "-- Select fiscal year --": "-- انتخاب سال مالی --",
+    "Cannot transfer to the same fiscal year.": "انتقال به همان سال مالی ممکن نیست.",
+    "Customer \":name\" does not exist in the target fiscal year.": "مشتری \":name\" در سال مالی مقصد وجود ندارد.",
+    "Product \":name\" does not exist in the target fiscal year.": "کالای \":name\" در سال مالی مقصد وجود ندارد.",
+    "Service \":name\" does not exist in the target fiscal year.": "خدمت \":name\" در سال مالی مقصد وجود ندارد.",
+    "Customer \":name\" (ancillary cost) does not exist in the target fiscal year.": "مشتری \":name\" (هزینه جانبی) در سال مالی مقصد وجود ندارد.",
+    "Source invoice #:number was created in the target fiscal year.": "فاکتور مبدأ شماره #:number در سال مالی مقصد ایجاد شد.",
+    "Document transferred successfully to the target fiscal year.": "سند با موفقیت به سال مالی مقصد منتقل شد.",
+    "Invoice transferred successfully to the target fiscal year.": "فاکتور با موفقیت به سال مالی مقصد منتقل شد.",
+    "Ancillary Cost transferred successfully to the target fiscal year.": "هزینه جانبی با موفقیت به سال مالی مقصد منتقل شد."
 }

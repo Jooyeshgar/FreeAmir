@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Http\Requests\StoreInvoiceRequest;
+use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
@@ -14,6 +15,7 @@ use App\Models\ProductGroup;
 use App\Models\Service;
 use App\Models\ServiceGroup;
 use App\Services\AncillaryCostService;
+use App\Services\FiscalYearTransferService;
 use App\Services\GroupActionService;
 use App\Services\InvoiceService;
 use App\Services\MoadianService;
@@ -22,6 +24,7 @@ use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use PDF;
 
 class InvoiceController extends Controller
@@ -290,7 +293,11 @@ class InvoiceController extends Controller
         $canCreateAncillaryCost = $invoice->invoice_type === InvoiceType::BUY && ! $isServiceBuy
             && empty(InvoiceService::notAllowedInvoiceForAncillaryCosts($invoice, $ancillaryCostProductIds));
 
-        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'canCreateAncillaryCost'));
+        $fiscalYears = Company::whereHas('users', function ($q) {
+            $q->where('users.id', auth()->id());
+        })->where('id', '!=', getActiveCompany())->get();
+
+        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'fiscalYears', 'canCreateAncillaryCost'));
     }
 
     public function print(Invoice $invoice)
@@ -745,6 +752,34 @@ class InvoiceController extends Controller
         }
 
         return $map;
+    }
+
+    public function transfer(Request $request, Invoice $invoice): RedirectResponse
+    {
+        $request->validate(['target_company_id' => 'required|integer|exists:companies,id']);
+
+        if (! Auth::user()->companies->contains((int) $request->target_company_id)) {
+            abort(403);
+        }
+
+        if ((int) $request->target_company_id === getActiveCompany()) {
+            return redirect()->route('invoices.show', $invoice)->with('error', __('Cannot transfer to the same fiscal year.'));
+        }
+
+        $result = FiscalYearTransferService::transferInvoice($invoice, $request->target_company_id, $request->user());
+
+        if (! $result['success']) {
+            return redirect()->route('invoices.show', $invoice)->withErrors($result['errors']);
+        }
+
+        $redirect = redirect()->route('invoices.show', $invoice)
+            ->with('success', __('Invoice transferred successfully to the target fiscal year.'));
+
+        if (! empty($result['warnings'])) {
+            $redirect = $redirect->with('warning', $result['warnings']);
+        }
+
+        return $redirect;
     }
 
     public function sendMoadian(Invoice $invoice, MoadianService $moadianService)
