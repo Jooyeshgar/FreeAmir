@@ -67,7 +67,7 @@ class CompanyController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $fiscalYearRules = [
-            'source_year_id' => 'required|exists:companies,id',
+            'source_year_id' => 'nullable|exists:companies,id',
             'tables_to_copy' => 'array',
             'tables_to_copy.*' => 'string|in:'.implode(',', array_map(fn ($case) => $case->value, FiscalYearSection::cases())),
             'certificate' => $this->certificateRules(),
@@ -97,11 +97,15 @@ class CompanyController extends Controller
 
         $data['currency'] ??= 'Rial'; // default
 
-        FiscalYearService::createWithCopiedData(
-            $data,
-            $validated['source_year_id'],
-            $validated['tables_to_copy'] ?? []
-        );
+        if (! empty($validated['source_year_id'])) {
+            FiscalYearService::createWithCopiedData(
+                $data,
+                $validated['source_year_id'],
+                $validated['tables_to_copy'] ?? []
+            );
+        } else {
+            FiscalYearService::importData([], $data);
+        }
 
         return redirect(route('companies.index'))
             ->with('success', __('Company created successfully.'));
