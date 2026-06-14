@@ -16,7 +16,7 @@
                         <label for="source_year_id" class="label">
                             <span>{{ __('Copy Data From') }}</span>
                         </label>
-                        <select class="select  w-full" id="source_year_id" name="source_year_id" required>
+                        <select class="select  w-full" id="source_year_id" name="source_year_id">
                             <option value="">{{ __('Select Source Fiscal Year') }}</option>
                             @foreach ($previousYears as $year)
                                 <option value="{{ $year->id }}" {{ old('source_year_id') == $year->id ? 'selected' : '' }}>{{ $year->name }} - {{ $year->fiscal_year }}</option>
