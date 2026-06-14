@@ -61,6 +61,21 @@ class ServiceImportExportTest extends TestCase
         $this->assertStringContainsString((string) $service->code, $content);
     }
 
+    public function test_export_includes_all_subject_codes(): void
+    {
+        $service = Service::factory()->withGroup($this->serviceGroup)->withSubject()->create(['company_id' => $this->companyId, 'name' => 'Consulting', 'code' => 6002]);
+        $service->loadMissing('subject', 'cogsSubject', 'salesReturnsSubject');
+
+        $response = $this->actingAs($this->user)->get(route('services.export'));
+        $response->assertStatus(200);
+        $content = $response->streamedContent();
+
+        $this->assertStringContainsString('income_subject_code,cogs_subject_code,sales_returns_subject_code', $content);
+        $this->assertStringContainsString($service->subject->code, $content);
+        $this->assertStringContainsString($service->cogsSubject->code, $content);
+        $this->assertStringContainsString($service->salesReturnsSubject->code, $content);
+    }
+
     public function test_import_creates_new_group_and_service_with_auto_code(): void
     {
         $csv = "name,group_name,selling_price\n"."New Consulting,Brand New Group,2000\n";

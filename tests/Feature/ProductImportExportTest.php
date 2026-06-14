@@ -61,6 +61,22 @@ class ProductImportExportTest extends TestCase
         $this->assertStringContainsString((string) $product->code, $content);
     }
 
+    public function test_export_includes_all_subject_codes(): void
+    {
+        $product = Product::factory()->withGroup($this->productGroup)->withSubjects()->create(['company_id' => $this->companyId, 'name' => 'Widget', 'code' => '5002']);
+        $product->loadMissing('incomeSubject', 'cogsSubject', 'inventorySubject', 'salesReturnsSubject');
+
+        $response = $this->actingAs($this->user)->get(route('products.export'));
+        $response->assertStatus(200);
+        $content = $response->streamedContent();
+
+        $this->assertStringContainsString('income_subject_code,cogs_subject_code,inventory_subject_code,sales_returns_subject_code', $content);
+        $this->assertStringContainsString($product->incomeSubject->code, $content);
+        $this->assertStringContainsString($product->cogsSubject->code, $content);
+        $this->assertStringContainsString($product->inventorySubject->code, $content);
+        $this->assertStringContainsString($product->salesReturnsSubject->code, $content);
+    }
+
     public function test_import_creates_new_group_and_product_with_auto_code(): void
     {
         $csv = "name,group_name,selling_price\n"."Newest Widget,Brand New Group,1500\n";

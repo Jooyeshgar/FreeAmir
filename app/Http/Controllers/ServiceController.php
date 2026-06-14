@@ -98,7 +98,7 @@ class ServiceController extends Controller
             fwrite($file, "\xEF\xBB\xBF");
             fputcsv($file, ServiceImportService::COLUMNS);
 
-            Service::with('serviceGroup')
+            Service::with('serviceGroup', 'subject', 'cogsSubject', 'salesReturnsSubject')
                 ->orderBy('code')
                 ->chunk(200, function ($services) use ($file) {
                     foreach ($services as $service) {
@@ -106,6 +106,9 @@ class ServiceController extends Controller
                             $service->code,
                             $service->name,
                             $service->serviceGroup?->name,
+                            $service->subject?->code,
+                            $service->cogsSubject?->code,
+                            $service->salesReturnsSubject?->code,
                             $service->sstid,
                             $service->selling_price,
                             $service->vat,
