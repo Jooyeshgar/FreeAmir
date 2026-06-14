@@ -295,6 +295,8 @@ class InvoiceController extends Controller
 
         $paymentDecision = $paymentService->validateInvoicePayment($invoice);
         $settlementSubjects = $paymentService->settlementSubjects();
+        $paidAmount = $paymentService->paidAmount($invoice);
+        $remainingAmount = $paymentService->remainingAmount($invoice);
 
         $ancillaryCostProductIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->unique()->values()->all();
         $canCreateAncillaryCost = $invoice->invoice_type === InvoiceType::BUY && ! $isServiceBuy && empty(InvoiceService::notAllowedInvoiceForAncillaryCosts($invoice, $ancillaryCostProductIds));
@@ -303,7 +305,7 @@ class InvoiceController extends Controller
             $q->where('users.id', auth()->id());
         })->where('id', '!=', getActiveCompany())->get();
 
-        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'fiscalYears', 'canCreateAncillaryCost'));
+        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'paidAmount', 'remainingAmount', 'fiscalYears', 'canCreateAncillaryCost'));
     }
 
     public function print(Invoice $invoice)
@@ -650,6 +652,10 @@ class InvoiceController extends Controller
         if (! in_array($status, $allowedStatuses)) {
             return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])
                 ->with('error', __('Invalid status action.'));
+        }
+
+        if ($invoice->status->isPartiallyPaid() || $invoice->status->isPaid()) {
+            return redirect()->back()->with('error', __('Remove the recorded payments before changing the invoice status.'));
         }
 
         $decision = $this->invoiceService->getChangeStatusDecision($invoice, $status);

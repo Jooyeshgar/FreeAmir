@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::table('payments', function (Blueprint $table) {
             $table->foreignId('document_id')->nullable()->after('amount')->constrained('documents')->nullOnDelete();
             $table->foreignId('creator_id')->nullable()->after('document_id')->constrained('users')->nullOnDelete();
+            $table->foreignId('settlement_subject_id')->nullable()->after('document_id')->constrained('subjects')->nullOnDelete();
 
             $table->decimal('amount', 18, 2)->change();
             $table->date('date');
@@ -43,6 +44,7 @@ return new class extends Migration
 
             $table->dropConstrainedForeignId('document_id');
             $table->dropConstrainedForeignId('creator_id');
+            $table->dropConstrainedForeignId('settlement_subject_id');
             $table->dropColumn(['date', 'reference_number']);
 
             $table->decimal('amount', 10, 2)->change();

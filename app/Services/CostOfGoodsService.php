@@ -40,7 +40,7 @@ class CostOfGoodsService
             $product = $invoiceItem->itemable;
             $isReturnBuy = $invoice->invoice_type === InvoiceType::RETURN_BUY;
 
-            if ($isReturnBuy && ! $invoice->status->isApproved()) {
+            if ($isReturnBuy && ! $invoice->status->isApprovedOrSettled()) {
                 self::restoreAverageCostAfterUnapprovingReturnBuy($invoice, $invoiceItem, $product);
 
                 continue;
@@ -102,7 +102,7 @@ class CostOfGoodsService
     {
         // Voiding a sell invoice fully reverses the sale, so inventory returns at the
         // original COG snapshot stored on the sell item rather than the selling price.
-        if ($invoice->status->isApproved() && $invoice->invoice_type === InvoiceType::VOID) {
+        if ($invoice->status->isApprovedOrSettled() && $invoice->invoice_type === InvoiceType::VOID) {
             return [
                 'baseCost' => (float) $invoiceItem->cog_after * (float) $invoiceItem->quantity,
                 'availableQuantity' => (float) self::sumQuantityApprovedPreviousInvoices($invoice, $invoiceItem),
@@ -112,7 +112,7 @@ class CostOfGoodsService
         }
 
         // use current invoice item and invoice ancillary costs.
-        if ($invoice->status->isApproved()) {
+        if ($invoice->status->isApprovedOrSettled()) {
             return [
                 'baseCost' => (float) $invoiceItem->amount - (float) ($invoiceItem->vat ?? 0),
                 'availableQuantity' => (float) self::sumQuantityApprovedPreviousInvoices($invoice, $invoiceItem),
@@ -143,7 +143,7 @@ class CostOfGoodsService
     {
         $buildQuery = function (array $invoiceTypes) use ($invoice, $invoiceItem) {
             return Invoice::whereIn('invoice_type', $invoiceTypes)
-                ->where('status', InvoiceStatus::APPROVED)
+                ->whereIn('status', InvoiceStatus::approvedOrSettled())
                 ->where(function ($q) use ($invoice) {
                     $q->where('date', '<', $invoice->date)
                         ->orWhere(function ($q2) use ($invoice) {
@@ -189,7 +189,7 @@ class CostOfGoodsService
         }
 
         // Approved calculation uses the immediate previous invoice item's COG.
-        if ($invoice->status->isApproved()) {
+        if ($invoice->status->isApprovedOrSettled()) {
             $previousInvoiceItem = $previousInvoice->items->where('itemable_id', $productId)->first();
 
             return $previousInvoiceItem ? (float) $previousInvoiceItem->itemable->average_cost * $availableQuantity : 0.0;
@@ -281,7 +281,7 @@ class CostOfGoodsService
         };
 
         return Invoice::where('number', '<', $invoice->number)
-            ->where('status', InvoiceStatus::APPROVED)
+            ->whereIn('status', InvoiceStatus::approvedOrSettled())
             ->whereIn('invoice_type', $allowedInvoiceTypes)
             ->whereHas('items', fn ($query) => $query->where('itemable_id', $productId)
                                                                             && $query->where('itemable_type', Product::class))

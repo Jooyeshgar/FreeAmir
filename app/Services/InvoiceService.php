@@ -483,7 +483,7 @@ class InvoiceService
 
         $productIds = self::getProductIdsFromInvoice($invoice);
 
-        $nextStatus = $invoice->status->isApproved()
+        $nextStatus = $invoice->status->isApprovedOrSettled()
             ? InvoiceStatus::UNAPPROVED
             : InvoiceStatus::APPROVED;
 
@@ -565,7 +565,7 @@ class InvoiceService
         $query->whereHas('items', fn ($q) => $q->where('itemable_type', Product::class)
             ->whereIn('itemable_id', $productIds)
         )
-            ->where('status', InvoiceStatus::APPROVED);
+            ->whereIn('status', InvoiceStatus::approvedOrSettled());
 
         // Return collection of invoices (no exception here)
         return $query->get(['id', 'invoice_type', 'number', 'date']);
@@ -592,7 +592,7 @@ class InvoiceService
         $query->whereHas('items', fn ($q) => $q->where('itemable_type', Product::class)
             ->whereIn('itemable_id', $productIds)
         )
-            ->where('status', '!=', InvoiceStatus::APPROVED);
+            ->whereNotIn('status', InvoiceStatus::approvedOrSettled());
 
         // Return collection of invoices (no exception here)
         return $query->get(['id', 'invoice_type', 'number', 'date']);
@@ -712,7 +712,7 @@ class InvoiceService
             ]));
             $decision->addConflict($originalInvoice);
 
-            if (! $originalInvoice->status->isApproved()) {
+            if (! $originalInvoice->status->isApprovedOrSettled()) {
                 $decision->addMessage('error', __('Voided invoice is not approved', [
                     'invoice' => $originalInvoice->number,
                 ]));
@@ -738,7 +738,7 @@ class InvoiceService
 
     public static function notAllowedInvoiceForAncillaryCosts(Invoice $invoice, array $productIds): array
     {
-        if (! $invoice->status->isApproved()) {
+        if (! $invoice->status->isApprovedOrSettled()) {
             return [];
         }
 
@@ -758,7 +758,7 @@ class InvoiceService
         }
 
         $query = Invoice::whereIn('invoice_type', [InvoiceType::SELL, InvoiceType::RETURN_BUY])
-            ->where('status', '!=', InvoiceStatus::APPROVED)
+            ->whereNotIn('status', InvoiceStatus::approvedOrSettled())
             ->where(function ($q) use ($date, $invoiceNumber) {
                 $q->where('date', '<', $date)
                     ->orWhere(function ($sub) use ($date, $invoiceNumber) {
@@ -809,7 +809,7 @@ class InvoiceService
         $products = Product::whereIn('id', $productIds)->get();
 
         foreach ($products as $product) {
-            if ($invoice->status->isApproved()) {
+            if ($invoice->status->isApprovedOrSettled()) {
                 continue;
             }
 

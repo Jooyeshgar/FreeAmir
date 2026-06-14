@@ -13,6 +13,7 @@ class Payment extends Model
         'description',
         'payer_id',
         'document_id',
+        'settlement_subject_id',
         'creator_id',
         'invoice_id',
     ];
@@ -32,16 +33,21 @@ class Payment extends Model
         return $this->belongsTo(Document::class);
     }
 
-    /**
-     * The bank/cash settlement subject, derived from the accounting document:
-     * the transaction whose subject is not the payer (customer) subject.
-     */
+    public function settlementSubjectRelation()
+    {
+        return $this->belongsTo(Subject::class, 'settlement_subject_id');
+    }
+
     public function settlementSubject(): ?Subject
     {
-        $customerSubjectId = (int) ($this->payer?->subject?->id ?? $this->payer?->subject_id);
+        if ($this->settlement_subject_id) {
+            return $this->settlementSubjectRelation;
+        }
 
-        return $this->document?->transactions
-            ->first(fn ($transaction) => (int) $transaction->subject_id !== $customerSubjectId)?->subject;
+        $customerSubjectId = (int) ($this->payer?->subject?->id ?? $this->payer?->subject_id);
+        $transactions = $this->document?->transactions ?? collect();
+
+        return $transactions->first(fn ($transaction) => (int) $transaction->subject_id !== $customerSubjectId)?->subject;
     }
 
     public function creator()

@@ -64,7 +64,7 @@ class HomeService
     {
         $baseQuery = InvoiceItem::query()
             ->whereHas('invoice', fn ($q) => $q->where('invoice_type', InvoiceType::SELL)
-                ->where('status', InvoiceStatus::APPROVED)
+                ->whereIn('status', InvoiceStatus::approvedOrSettled())
             )
             ->with('itemable')
             ->selectRaw('itemable_type, itemable_id, SUM(amount) as total_amount')
@@ -353,7 +353,7 @@ class HomeService
     public function popularProductsAndServices()
     {
         return InvoiceItem::whereHas('invoice', fn ($q) => $q->where('invoice_type', InvoiceType::SELL)
-            ->where('status', InvoiceStatus::APPROVED)
+            ->whereIn('status', InvoiceStatus::approvedOrSettled())
         )->with('itemable')
             ->selectRaw('itemable_type, itemable_id, SUM(quantity) as total_quantity')
             ->groupBy('itemable_type', 'itemable_id')
@@ -385,7 +385,7 @@ class HomeService
     {
         return (float) Invoice::query()
             ->where('invoice_type', InvoiceType::BUY)
-            ->where('status', InvoiceStatus::APPROVED)
+            ->whereIn('status', InvoiceStatus::approvedOrSettled())
             ->sum('amount');
     }
 

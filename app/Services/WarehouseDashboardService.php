@@ -159,7 +159,7 @@ class WarehouseDashboardService
         return InvoiceItem::query()
             ->where('itemable_type', Product::class)
             ->whereHas('invoice', function (Builder $q) use ($from, $to) {
-                $q->where('status', InvoiceStatus::APPROVED)
+                $q->whereIn('status', InvoiceStatus::approvedOrSettled())
                     ->whereIn('invoice_type', array_merge(self::STOCK_IN_TYPES, self::STOCK_OUT_TYPES))
                     ->whereBetween('date', [$from->toDateString(), $to->toDateString()]);
             })
@@ -213,7 +213,7 @@ class WarehouseDashboardService
             ->selectRaw('invoice_items.itemable_id as product_id, MAX(invoices.date) as last_date')
             ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
             ->where('invoice_items.itemable_type', Product::class)
-            ->where('invoices.status', InvoiceStatus::APPROVED->value)
+            ->whereIn('invoices.status', array_map(fn (InvoiceStatus $s) => $s->value, InvoiceStatus::approvedOrSettled()))
             ->whereIn('invoices.invoice_type', array_map(fn (InvoiceType $t) => $t->value, array_merge(self::STOCK_IN_TYPES, self::STOCK_OUT_TYPES)))
             ->where('invoices.company_id', getActiveCompany())
             ->when($categoryId, function ($q, int $id) {

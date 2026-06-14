@@ -88,36 +88,6 @@ class Invoice extends Model
         return $this->hasMany(Payment::class, 'invoice_id');
     }
 
-    public function paidAmount(): float
-    {
-        return (float) $this->payments->whereNotNull('document_id')->sum('amount');
-    }
-
-    public function remainingAmount(): float
-    {
-        return max((float) $this->amount - $this->paidAmount(), 0.0);
-    }
-
-    public function paymentStatus(): string
-    {
-        $paid = $this->paidAmount();
-
-        return match (true) {
-            $paid <= 0 => 'unpaid',
-            $paid < (float) $this->amount => 'partially_paid',
-            default => 'paid',
-        };
-    }
-
-    public function paymentStatusLabel(): string
-    {
-        return match ($this->paymentStatus()) {
-            'unpaid' => __('Unpaid'),
-            'partially_paid' => __('Partially paid'),
-            default => __('Paid'),
-        };
-    }
-
     public function latestMoadianHistory()
     {
         return $this->hasOne(MoadianHistory::class, 'invoice_id')->latestOfMany();

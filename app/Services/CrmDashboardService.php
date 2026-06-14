@@ -61,7 +61,7 @@ class CrmDashboardService
     {
         $rows = Invoice::query()
             ->whereIn('invoice_type', [InvoiceType::SELL, InvoiceType::RETURN_SELL])
-            ->where('status', InvoiceStatus::APPROVED)
+            ->whereIn('status', InvoiceStatus::approvedOrSettled())
             ->whereBetween('date', [$from, $to])
             ->selectRaw('customer_id, invoice_type, SUM(amount) as total')
             ->groupBy('customer_id', 'invoice_type')
@@ -210,7 +210,7 @@ class CrmDashboardService
         return Invoice::query()
             ->whereIn('customer_id', $customerIds)
             ->where('invoice_type', InvoiceType::SELL)
-            ->where('status', InvoiceStatus::APPROVED)
+            ->whereIn('status', InvoiceStatus::approvedOrSettled())
             ->orderBy('date')
             ->orderBy('id')
             ->get(['id', 'customer_id', 'date', 'amount'])
@@ -275,7 +275,7 @@ class CrmDashboardService
     {
         $rows = Invoice::query()
             ->whereIn('invoice_type', [InvoiceType::SELL, InvoiceType::RETURN_SELL])
-            ->where('status', InvoiceStatus::APPROVED)
+            ->whereIn('status', InvoiceStatus::approvedOrSettled())
             ->whereBetween('date', [$yearStart, $yearEnd])
             ->get(['date', 'amount', 'invoice_type']);
 
@@ -303,7 +303,7 @@ class CrmDashboardService
     {
         return Invoice::query()
             ->where('invoice_type', InvoiceType::SELL)
-            ->where('status', InvoiceStatus::APPROVED)
+            ->whereIn('status', InvoiceStatus::approvedOrSettled())
             ->with('customer:id,name')
             ->orderByDesc('date')
             ->orderByDesc('id')

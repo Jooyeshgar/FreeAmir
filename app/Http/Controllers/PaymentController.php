@@ -26,12 +26,10 @@ class PaymentController extends Controller
             'reference_number' => ['nullable', 'string', 'max:20'],
         ]);
 
-        $decision = $this->paymentService->validateInvoicePayment($invoice, $validated);
+        $decision = $this->paymentService->createPayment($request->user(), $invoice, $validated);
         if ($decision->hasErrors()) {
             return redirect()->back()->with('error', $decision->messages->pluck('text')->all());
         }
-
-        $this->paymentService->createPayment($request->user(), $invoice, $validated);
 
         return redirect()->route('invoices.show', $invoice)->with('success', __('Payment recorded successfully.'));
     }
@@ -42,5 +40,25 @@ class PaymentController extends Controller
         $this->paymentService->deletePayment($payment);
 
         return redirect()->route('invoices.show', $invoice)->with('success', __('Payment removed successfully.'));
+    }
+
+    public function createDocument(Request $request, Invoice $invoice, Payment $payment)
+    {
+        abort_unless($payment->invoice_id === $invoice->id, 404);
+
+        $decision = $this->paymentService->createPaymentDocument($request->user(), $payment);
+        if ($decision->hasErrors()) {
+            return redirect()->route('invoices.show', $invoice)->with('error', $decision->messages->pluck('text')->all());
+        }
+
+        return redirect()->route('invoices.show', $invoice)->with('success', __('Payment document created successfully.'));
+    }
+
+    public function destroyDocument(Invoice $invoice, Payment $payment)
+    {
+        abort_unless($payment->invoice_id === $invoice->id, 404);
+        $this->paymentService->removePaymentDocument($payment);
+
+        return redirect()->route('invoices.show', $invoice)->with('success', __('Payment document removed successfully.'));
     }
 }
