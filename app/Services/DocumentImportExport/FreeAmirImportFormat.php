@@ -17,7 +17,7 @@ class FreeAmirImportFormat extends DocumentImportFormat
     ];
 
     public const MANDATORY_COLUMNS = [
-        'doc_number', 'doc_date', 'subject_tafsili_code', 'subject_name', 'debit', 'credit',
+        'doc_number', 'doc_date', 'subject_tafsili_code', 'subject_name', 'subject_type', 'subject_is_permanent', 'debit', 'credit',
     ];
 
     private const HEADER_NORMALIZE_MAP = [

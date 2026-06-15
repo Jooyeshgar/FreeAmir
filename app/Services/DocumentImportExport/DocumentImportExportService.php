@@ -168,7 +168,7 @@ class DocumentImportExportService
                                 'subject_moein_code' => $moein,
                                 'subject_tafsili_code' => $tafsili,
                                 'subject_name' => $subject->name ?? '',
-                                'subject_type' => $subject->type ?? '',
+                                'subject_type' => __($subject->type) ?? '',
                                 'subject_is_permanent' => __($subject->is_permanent ? 'Permanent' : 'Temporary'),
                                 'transaction_desc' => $transaction->desc ?? '',
                                 'debit' => csvNumber($transaction->debit ?? 0),
