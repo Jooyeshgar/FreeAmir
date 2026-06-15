@@ -2299,6 +2299,8 @@
     "subject_tafsili_code": "کد تفصیلی",
     "subject_code": "کد سرفصل تفصیلی",
     "subject_name": "نام سرفصل",
+    "subject_type": "نوع حساب",
+    "subject_is_permanent": "دائم/موقت",
     "subject_parent_code": "کد سرفصل معین",
     "transaction_desc": "شرح ردیف",
     "manual": "دستی",

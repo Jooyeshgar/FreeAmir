@@ -10,6 +10,28 @@ use Illuminate\Support\Facades\Log;
 
 class ParsianImportFormat extends DocumentImportFormat
 {
+    private const ROOT_SUBJECTS = [
+        '010' => ['name' => 'صندوق', 'is_permanent' => true, 'type' => 'both'],
+        '011' => ['name' => 'بانک ها', 'is_permanent' => true, 'type' => 'both'],
+        '012' => ['name' => 'بدهکاران (حسابهای دریافتنی)', 'is_permanent' => true, 'type' => 'both'],
+        '015' => ['name' => 'موجودی مواد و کالا', 'is_permanent' => true, 'type' => 'both'],
+        '017' => ['name' => 'دارایی های غیر جاری', 'is_permanent' => true, 'type' => 'both'],
+        '018' => ['name' => 'سایر حسابهای دریافتنی', 'is_permanent' => true, 'type' => 'both'],
+        '019' => ['name' => 'سایر حسابهای پرداختنی', 'is_permanent' => true, 'type' => 'both'],
+        '022' => ['name' => 'اسناد پرداختنی', 'is_permanent' => true, 'type' => 'both'],
+        '023' => ['name' => 'بستانکاران (حسابهای پرداختنی)', 'is_permanent' => true, 'type' => 'both'],
+        '024' => ['name' => 'ذخیره مالیات', 'is_permanent' => true, 'type' => 'debtor'],
+        '025' => ['name' => 'ذخایر', 'is_permanent' => true, 'type' => 'both'],
+        '030' => ['name' => 'حقوق صاحبان سهام', 'is_permanent' => true, 'type' => 'both'],
+        '040' => ['name' => 'درآمدها', 'is_permanent' => false, 'type' => 'both'],
+        '050' => ['name' => 'هزینه ها', 'is_permanent' => false, 'type' => 'both'],
+        '060' => ['name' => 'فروش', 'is_permanent' => false, 'type' => 'both'],
+        '061' => ['name' => 'برگشت از فروش و تخفیفات', 'is_permanent' => false, 'type' => 'both'],
+        '062' => ['name' => 'تخفیفات نقدی خرید', 'is_permanent' => false, 'type' => 'both'],
+        '064' => ['name' => 'حسابهای انتظامی', 'is_permanent' => true, 'type' => 'both'],
+        '065' => ['name' => 'طرف حسابهای انتظامی', 'is_permanent' => true, 'type' => 'both'],
+    ];
+
     public function key(): string
     {
         return 'parsian';
@@ -145,17 +167,30 @@ class ParsianImportFormat extends DocumentImportFormat
         $kolCode = str_pad($kol, 3, '0', STR_PAD_LEFT);
         $moenCode = $kolCode.str_pad($moen, 3, '0', STR_PAD_LEFT);
 
-        $this->subjects->findOrCreate($kolCode, ImportSubjectResolver::synthesizeName($kolCode), '');
+        $root = $this->resolveTopLevel($kolCode);
+        $isPermanent = (bool) $root->is_permanent;
+        $type = $root->type;
 
         if ($taf > 0) {
             $tafCode = $moenCode.str_pad($taf, 3, '0', STR_PAD_LEFT);
             $moenName = $moenNames[$kol.'.'.$moen] ?? ImportSubjectResolver::synthesizeName($moenCode);
-            $this->subjects->findOrCreate($moenCode, $moenName, $kolCode);
+            $this->subjects->findOrCreate($moenCode, $moenName, $kolCode, $isPermanent, $type);
 
-            return $this->subjects->findOrCreate($tafCode, $name, $moenCode);
+            return $this->subjects->findOrCreate($tafCode, $name, $moenCode, $isPermanent, $type);
         }
 
-        return $this->subjects->findOrCreate($moenCode, $name, $kolCode);
+        return $this->subjects->findOrCreate($moenCode, $name, $kolCode, $isPermanent, $type);
+    }
+
+    private function resolveTopLevel(string $kolCode): Subject
+    {
+        $definition = self::ROOT_SUBJECTS[trim($kolCode)] ?? null;
+
+        if ($definition === null) {
+            return $this->subjects->findOrCreate($kolCode, ImportSubjectResolver::synthesizeName($kolCode), '');
+        }
+
+        return $this->subjects->resolveTopLevel($kolCode, $definition['name'], $definition['is_permanent'], $definition['type']);
     }
 
     private function importTrialBalanceRows(array $rows): void

@@ -2279,6 +2279,8 @@
     "subject_tafsili_code": "Tafsili Account Code",
     "subject_code": "Account Code",
     "subject_name": "Account Name",
+    "subject_type": "Account Type",
+    "subject_is_permanent": "Permanent/Temporary",
     "subject_parent_code": "Parent Account Code",
     "transaction_desc": "Transaction Description",
     "manual": "Manual",
