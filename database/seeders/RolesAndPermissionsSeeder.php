@@ -173,6 +173,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'home',
             'api.access',
             'change-company',
+            'update-global-configs',
         ];
 
         $permissions = $extras;
@@ -197,6 +198,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 ->where('name', 'NOT LIKE', 'roles.%')
                 ->where('name', 'NOT LIKE', 'permissions.%')
                 ->where('name', 'NOT LIKE', 'configs.%')
+                ->where('name', '!=', 'update-global-configs')
                 ->where('name', 'NOT LIKE', 'api.%')
                 ->where('name', 'NOT LIKE', 'api-tokens.%')
                 ->where('name', '!=', 'salary.payrolls.transition.pending-manager-approval-to-approved')

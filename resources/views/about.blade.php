@@ -24,6 +24,13 @@
                             'badge-info' => $appEnv === 'staging',
                             'badge-success' => $appEnv === 'production',
                         ])>{{ $appEnv }}</span>
+                        @can('update-global-configs')
+                            <button type="button" class="btn btn-ghost btn-xs btn-square" aria-label="{{ __('Edit :setting', ['setting' => $gcSettings['app_env']['title']]) }}" onclick="gc_modal_app_env.showModal()">
+                                <svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+                        @endcan
                     </div>
                 </div>
             </div>
@@ -46,11 +53,20 @@
                             <tr>
                                 <td class="font-medium opacity-70">{{ __('about.debug_mode') }}</td>
                                 <td>
-                                    @if($debugMode)
-                                        <span class="badge badge-warning badge-sm">{{ __('about.enabled') }}</span>
-                                    @else
-                                        <span class="badge badge-success badge-sm">{{ __('about.disabled') }}</span>
-                                    @endif
+                                    <div class="flex items-center gap-2">
+                                        @if($debugMode)
+                                            <span class="badge badge-warning badge-sm">{{ __('about.enabled') }}</span>
+                                        @else
+                                            <span class="badge badge-success badge-sm">{{ __('about.disabled') }}</span>
+                                        @endif
+                                        @can('update-global-configs')
+                                            <button type="button" class="btn btn-ghost btn-xs btn-square" aria-label="{{ __('Edit :setting', ['setting' => $gcSettings['app_debug']['title']]) }}" onclick="gc_modal_app_debug.showModal()">
+                                                <svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                            </button>
+                                        @endcan
+                                    </div>
                                 </td>
                             </tr>
                             <tr>
@@ -83,7 +99,18 @@
                             </tr>
                             <tr>
                                 <td class="font-medium opacity-70">{{ __('about.locale') }}</td>
-                                <td><span class="font-mono text-sm">{{ $locale }}</span></td>
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-mono text-sm">{{ $locale }}</span>
+                                        @can('update-global-configs')
+                                            <button type="button" class="btn btn-ghost btn-xs btn-square" aria-label="{{ __('Edit :setting', ['setting' => $gcSettings['app_locale']['title']]) }}" onclick="gc_modal_app_locale.showModal()">
+                                                <svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                            </button>
+                                        @endcan
+                                    </div>
+                                </td>
                             </tr>
                             <tr>
                                 <td class="font-medium opacity-70">{{ __('about.timezone') }}</td>
@@ -158,5 +185,42 @@
         </div>
 
     </div>
+
+    @can('update-global-configs')
+        @foreach ($gcSettings as $key => $setting)
+            <dialog id="gc_modal_{{ $key }}" class="modal">
+                <div class="modal-box">
+                    <h3 class="text-lg font-bold">{{ __('Edit :setting', ['setting' => $setting['title']]) }}</h3>
+
+                    <div role="alert" class="alert alert-warning mt-3 text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span>{{ __('If you set a value here, it is no longer read from the .env file and editing .env will have no effect. To read it from the .env file again, choose Default.') }}</span>
+                    </div>
+
+                    <form method="POST" action="{{ route('update-global-configs') }}" class="mt-4 space-y-3">
+                        @csrf
+                        @method('PUT')
+
+                        <label class="form-control w-full">
+                            <span class="label-text text-sm">{{ $setting['title'] }}</span>
+                            <select name="{{ $key }}" class="select select-bordered w-full">
+                                <option value="" @selected($setting['current'] === null)>{{ __('Default') }}</option>
+                                @foreach ($setting['options'] as $value => $optLabel)
+                                    <option value="{{ $value }}" @selected($setting['current'] === $value)>{{ $optLabel }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+
+                        <div class="modal-action">
+                            <button type="button" class="btn" onclick="gc_modal_{{ $key }}.close()">{{ __('Close') }}</button>
+                            <button type="submit" class="btn btn-primary">{{ __('save') }}</button>
+                        </div>
+                    </form>
+                </div>
+            </dialog>
+        @endforeach
+    @endcan
 
 </x-app-layout>
