@@ -31,10 +31,13 @@ class DocumentImportExportTest extends TestCase
 
     private function buildCsv(array $rows): UploadedFile
     {
-        $headers = 'doc_number,doc_date,doc_title,doc_type,doc_status,subject_root_code,subject_moein_code,subject_tafsili_code,subject_name,transaction_desc,debit,credit';
+        $headers = 'doc_number,doc_date,doc_title,doc_type,doc_status,subject_root_code,subject_moein_code,subject_tafsili_code,subject_name,subject_type,subject_is_permanent,transaction_desc,debit,credit';
         $lines = [$headers];
 
         foreach ($rows as $row) {
+            if (count($row) === 12) {
+                array_splice($row, 9, 0, ['', '']);
+            }
             $lines[] = implode(',', array_map(fn ($v) => '"'.str_replace('"', '""', $v).'"', $row));
         }
 
@@ -924,7 +927,7 @@ class DocumentImportExportTest extends TestCase
 
         $this->assertStringContainsString(__('subject_type'), $csv);
         $this->assertStringContainsString(__('subject_is_permanent'), $csv);
-        $this->assertStringContainsString('debtor', $csv);
+        $this->assertStringContainsString(__('debtor'), $csv);
         $this->assertStringContainsString(__('Permanent'), $csv);
     }
 

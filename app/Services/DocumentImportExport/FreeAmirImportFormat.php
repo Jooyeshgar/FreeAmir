@@ -177,9 +177,12 @@ class FreeAmirImportFormat extends DocumentImportFormat
             'debtor' => 'debtor',
             'creditor' => 'creditor',
             'both' => 'both',
+            mb_strtolower(__('debtor')) => 'debtor',
+            mb_strtolower(__('creditor')) => 'creditor',
+            mb_strtolower(__('both')) => 'both',
             mb_strtolower(__('Debtor')) => 'debtor',
             mb_strtolower(__('Creditor')) => 'creditor',
-            mb_strtolower(__('both')) => 'both',
+            mb_strtolower(__('Both')) => 'both',
         ];
 
         return $map[$value] ?? null;
