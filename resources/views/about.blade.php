@@ -8,6 +8,8 @@
             <p class="mt-1 text-sm text-base-content/60">{{ __('about.description') }}</p>
         </div>
 
+        <x-show-message-bags />
+
         {{-- Branding & Version --}}
         <section class="card border border-base-300 bg-base-100/90 shadow-sm">
             <div class="card-body flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:gap-5">

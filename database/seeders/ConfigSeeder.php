@@ -43,7 +43,7 @@ class ConfigSeeder extends Seeder
         foreach (['app_env', 'app_locale', 'app_debug'] as $key) {
             Config::withoutGlobalScope(FiscalYearScope::class)->updateOrCreate(
                 ['key' => $key, 'company_id' => null],
-                ['value' => null, 'type' => 3, 'category' => 1, 'desc' => $key],
+                ['value' => null, 'type' => 3, 'category' => 1, 'desc' => __($key)],
             );
         }
     }

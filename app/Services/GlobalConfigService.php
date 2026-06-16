@@ -37,7 +37,7 @@ class GlobalConfigService
 
             Config::withoutGlobalScope(FiscalYearScope::class)->updateOrCreate(
                 ['key' => $key, 'company_id' => null],
-                ['value' => $value, 'type' => 3, 'category' => 1, 'desc' => $key],
+                ['value' => $value, 'type' => 3, 'category' => 1, 'desc' => __($key)],
             );
         }
     }
