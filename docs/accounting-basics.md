@@ -56,8 +56,10 @@ $transaction2 = Transaction::create([
 
 ```php
 $totalValue = $document->transactions->sum('value');
-if ($totalValue !== 0) {
-    throw new DocumentServiceException('سند متوازن نیست');
+if ($totalValue != 0) {
+    throw ValidationException::withMessages([
+        'transactions' => ['سند متوازن نیست'],
+    ]);
 }
 ```
 

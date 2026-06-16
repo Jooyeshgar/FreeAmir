@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Exceptions\DocumentServiceException;
 use App\Models\Document;
 use App\Models\DocumentFile;
 use App\Models\Transaction;
@@ -29,7 +28,7 @@ class DocumentService
         ]);
 
         if ($validator->fails()) {
-            throw new DocumentServiceException($validator->errors()->first());
+            throw new ValidationException($validator);
         }
 
         $data['creator_id'] = $user->id;
@@ -209,7 +208,7 @@ class DocumentService
             match ($status) {
                 'approved' => self::approveDocument($user, $document),
                 'unapproved' => self::unapproveDocument($user, $document),
-                default => throw new DocumentServiceException('Invalid status'),
+                default => throw ValidationException::withMessages(['status' => __('Invalid status')]),
             };
         });
     }
