@@ -25,7 +25,7 @@
                             'badge-warning' => $appEnv === 'local',
                             'badge-info' => $appEnv === 'staging',
                             'badge-success' => $appEnv === 'production',
-                        ])>{{ $appEnv }}</span>
+                        ])>{{ $gcSettings['app_env']['options'][$appEnv] ?? $appEnv }}</span>
                         @can('update-global-configs')
                             <button type="button" class="btn btn-ghost btn-xs btn-square" aria-label="{{ __('Edit :setting', ['setting' => $gcSettings['app_env']['title']]) }}" onclick="gc_modal_app_env.showModal()">
                                 <svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -103,7 +103,7 @@
                                 <td class="font-medium opacity-70">{{ __('about.locale') }}</td>
                                 <td>
                                     <div class="flex items-center gap-2">
-                                        <span class="font-mono text-sm">{{ $locale }}</span>
+                                        <span class="font-mono text-sm">{{ $gcSettings['app_locale']['options'][$locale] ?? $locale }}</span>
                                         @can('update-global-configs')
                                             <button type="button" class="btn btn-ghost btn-xs btn-square" aria-label="{{ __('Edit :setting', ['setting' => $gcSettings['app_locale']['title']]) }}" onclick="gc_modal_app_locale.showModal()">
                                                 <svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
