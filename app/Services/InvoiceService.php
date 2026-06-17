@@ -5,7 +5,7 @@ namespace App\Services;
 use App\DTO\InvoiceStatusDecision;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Exceptions\InvoiceServiceException;
+use App\Models\AncillaryCost;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -14,6 +14,7 @@ use App\Models\User;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class InvoiceService
 {
@@ -25,7 +26,7 @@ class InvoiceService
      * @param  array  $items  - Invoice items with product_id, quantity, unit_discount, etc.
      * @return array ['document' => Document, 'invoice' => Invoice]
      *
-     * @throws InvoiceServiceException
+     * @throws ValidationException
      */
     public static function createInvoice(User $user, array $invoiceData, array $items = [], bool $approved = false): array
     {
@@ -116,7 +117,7 @@ class InvoiceService
      *
      * @return array ['document' => Document, 'invoice' => Invoice]
      *
-     * @throws InvoiceServiceException
+     * @throws ValidationException
      */
     public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = [], bool $approved = false): array
     {
@@ -897,7 +898,7 @@ class InvoiceService
 
     private static function findConflictingUnapprovedAncillaryCostsForInvoiceWithNoAncillaryCosts(Invoice $invoice, array $productIds): Collection
     {
-        return \App\Models\AncillaryCost::where('status', '!=', InvoiceStatus::APPROVED)
+        return AncillaryCost::where('status', '!=', InvoiceStatus::APPROVED)
             ->whereHas('items', function ($q) use ($productIds) {
                 $q->whereIn('product_id', $productIds);
             })->whereHas('invoice', function ($q) use ($invoice) {
@@ -909,7 +910,7 @@ class InvoiceService
 
     private static function findConflictingUnapprovedAncillaryCosts(Invoice $invoice, array $productIds): Collection
     {
-        return \App\Models\AncillaryCost::where('status', '!=', InvoiceStatus::APPROVED)
+        return AncillaryCost::where('status', '!=', InvoiceStatus::APPROVED)
             ->whereNotIn('id', $invoice->ancillaryCosts->pluck('id')->toArray())
             ->whereHas('items', function ($q) use ($productIds) {
                 $q->whereIn('product_id', $productIds);
@@ -922,7 +923,7 @@ class InvoiceService
 
     private static function findConflictingApprovedAncillaryCosts(Invoice $invoice, array $productIds): Collection
     {
-        return \App\Models\AncillaryCost::where('status', InvoiceStatus::APPROVED)
+        return AncillaryCost::where('status', InvoiceStatus::APPROVED)
             ->whereNotIn('id', $invoice->ancillaryCosts->pluck('id')->toArray())
             ->whereHas('items', function ($q) use ($productIds) {
                 $q->whereIn('product_id', $productIds);

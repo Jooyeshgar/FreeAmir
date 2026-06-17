@@ -10,7 +10,6 @@ transaction builders to protect accounting invariants such as balanced documents
 - `app/Console/Commands/`: Custom Artisan commands (including fiscal-year import/export workflows).
 - `app/DTO/`: Typed data-transfer objects used for service/domain decision payloads.
 - `app/Enums/`: Domain enums for invoice status/type, config keys, and fiscal-year sections.
-- `app/Exceptions/`: Domain-specific exception types for service and transaction failures.
 - `app/Helpers/`: Autoloaded helper functions/utilities (including Jalali date and number-to-word helpers).
 - `app/Http/Controllers/`: HTTP endpoints and resource actions.
 - `app/Http/Controllers/Auth/`: Authentication controllers and login/logout flow.
@@ -78,7 +77,7 @@ and `npm`.
 - Keep controllers thin; move business logic into `app/Services/` and transaction builders.
 - Prefer Form Request validation via `app/Http/Requests/*Request.php`.
 - Use dependency injection in controllers and leverage Laravel service container bindings.
-- For multi-step data updates, use `DB::transaction()` and custom exceptions where needed.
+- For multi-step data updates, use `DB::transaction()` and validation exceptions where needed.
 - Follow RESTful controller method conventions: `index`, `create`, `store`, `show`, `edit`, `update`, `destroy`.
 - Use Laravel Pint (`./vendor/bin/pint`) with default config (no `pint.json` is present).
 - Preserve existing Persian business/domain comments where they provide accounting context.

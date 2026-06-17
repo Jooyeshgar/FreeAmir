@@ -3,13 +3,13 @@
 namespace App\Services;
 
 use App\Enums\CustomerType;
-use App\Exceptions\CustomerImportException;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Subject;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class CustomerImportService
 {
@@ -74,14 +74,14 @@ class CustomerImportService
      * @param  UploadedFile|string  $file  fresh upload or a Storage-relative path
      * @return array{imported:int, updated:int, groups_created:int}
      *
-     * @throws CustomerImportException
+     * @throws ValidationException
      */
     public function import(UploadedFile|string $file, int $companyId): array
     {
         $rows = $this->parse($file);
 
         if (empty($rows)) {
-            throw new CustomerImportException(__('The import file is empty or has no data rows.'));
+            throw ValidationException::withMessages(['file' => __('The import file is empty or has no data rows.')]);
         }
 
         return DB::transaction(function () use ($rows, $companyId) {
@@ -99,11 +99,11 @@ class CustomerImportService
                 $subjectCode = $this->normalizeCode($row['subject_code'] ?? null);
 
                 if ($name === '') {
-                    throw new CustomerImportException(__('Line :line: customer name is required.', ['line' => $line]));
+                    throw ValidationException::withMessages(['file' => __('Line :line: customer name is required.', ['line' => $line])]);
                 }
 
                 if ($groupName === '') {
-                    throw new CustomerImportException(__('Line :line: group name is required.', ['line' => $line]));
+                    throw ValidationException::withMessages(['file' => __('Line :line: group name is required.', ['line' => $line])]);
                 }
 
                 // 1. Resolve the group: reuse an existing one with the same name, otherwise create it.
@@ -126,10 +126,10 @@ class CustomerImportService
                 $group->loadMissing('subject');
 
                 if (! $group->subject) {
-                    throw new CustomerImportException(__('Line :line: could not resolve the accounting subject for group ":group".', [
+                    throw ValidationException::withMessages(['file' => __('Line :line: could not resolve the accounting subject for group ":group".', [
                         'line' => $line,
                         'group' => $groupName,
-                    ]));
+                    ])]);
                 }
 
                 // 2. Validate the customer subject code against the group subject, if a code was supplied.
@@ -139,12 +139,12 @@ class CustomerImportService
                     $expectedParent = strlen($subjectCode) > 3 ? substr($subjectCode, 0, -3) : '';
 
                     if ($expectedParent !== $group->subject->code) {
-                        throw new CustomerImportException(__('Line :line: subject code :code is not a child of group ":group" subject :parent.', [
+                        throw ValidationException::withMessages(['file' => __('Line :line: subject code :code is not a child of group ":group" subject :parent.', [
                             'line' => $line,
                             'code' => formatCode($subjectCode),
                             'group' => $groupName,
                             'parent' => formatCode($group->subject->code),
-                        ]));
+                        ])]);
                     }
 
                     $codePortion = substr($subjectCode, -3);
@@ -185,10 +185,10 @@ class CustomerImportService
                             $this->customerService->update($customer, []);
                             $imported++;
                         } else {
-                            throw new CustomerImportException(__('Line :line: subject code :code is already linked to another record.', [
+                            throw ValidationException::withMessages(['file' => __('Line :line: subject code :code is already linked to another record.', [
                                 'line' => $line,
                                 'code' => formatCode($subjectCode),
-                            ]));
+                            ])]);
                         }
                     } else {
                         // 4c. No subject for this code (or no code at all): create a new customer
@@ -199,23 +199,23 @@ class CustomerImportService
                             ->exists();
 
                         if ($duplicate) {
-                            throw new CustomerImportException(__('Line :line: a customer named ":name" already exists in group ":group".', [
+                            throw ValidationException::withMessages(['file' => __('Line :line: a customer named ":name" already exists in group ":group".', [
                                 'line' => $line,
                                 'name' => $name,
                                 'group' => $groupName,
-                            ]));
+                            ])]);
                         }
 
                         $this->customerService->create($data + ['subject_code' => $codePortion]);
                         $imported++;
                     }
-                } catch (CustomerImportException $e) {
+                } catch (ValidationException $e) {
                     throw $e;
                 } catch (\Throwable $e) {
-                    throw new CustomerImportException(__('Line :line: :message', [
+                    throw ValidationException::withMessages(['file' => __('Line :line: :message', [
                         'line' => $line,
                         'message' => $e->getMessage(),
-                    ]), 0, $e);
+                    ])]);
                 }
             }
 
@@ -262,7 +262,7 @@ class CustomerImportService
         if (! isset($map['name'], $map['group_name'])) {
             fclose($handle);
 
-            throw new CustomerImportException(__('The import file must contain at least "name" and "group_name" columns.'));
+            throw ValidationException::withMessages(['file' => __('The import file must contain at least "name" and "group_name" columns.')]);
         }
 
         $rows = [];

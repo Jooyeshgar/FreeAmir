@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\CustomerImportException;
 use App\Http\Requests\ImportCustomerRequest;
 use App\Http\Requests\StoreCustomerRequest;
 use App\Models\Customer;
@@ -14,6 +13,7 @@ use App\Services\CustomerService;
 use App\Services\SubjectService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -213,7 +213,7 @@ class CustomerController extends Controller
     {
         try {
             $result = $importService->import($request->file('file'), getActiveCompany());
-        } catch (CustomerImportException $e) {
+        } catch (ValidationException $e) {
             return redirect()->route('customers.import')->with('error', $e->getMessage());
         }
 

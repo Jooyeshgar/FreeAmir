@@ -11,7 +11,6 @@ FreeAmir/
 ├── app/                    # منطق اصلی اپلیکیشن
 │   ├── Console/           # دستورات Artisan سفارشی
 │   ├── Enums/             # انواع داده‌های ثابت
-│   ├── Exceptions/        # مدیریت خطاهای سفارشی
 │   ├── Helpers/           # توابع کمکی
 │   ├── Http/              # کنترلرها، میدلویرها و درخواست‌ها
 │   ├── Models/            # مدل‌های Eloquent
@@ -53,17 +52,6 @@ enum FiscalYearSection: string
     case CUSTOMERS = 'customers';
     case PRODUCTS = 'products';
     // ...
-}
-```
-
-#### `Exceptions/`
-خطاهای سفارشی:
-
-```php
-// app/Exceptions/DocumentServiceException.php
-class DocumentServiceException extends Exception
-{
-    // منطق خاص برای خطاهای سند حسابداری
 }
 ```
 
