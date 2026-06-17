@@ -13,11 +13,11 @@ class FreeAmirImportFormat extends DocumentImportFormat
     public const ALL_COLUMNS = [
         'doc_number', 'doc_date', 'doc_title', 'doc_type', 'doc_status',
         'subject_root_code', 'subject_moein_code', 'subject_tafsili_code', 'subject_name',
-        'transaction_desc', 'debit', 'credit',
+        'subject_type', 'subject_is_permanent', 'transaction_desc', 'debit', 'credit',
     ];
 
     public const MANDATORY_COLUMNS = [
-        'doc_number', 'doc_date', 'subject_tafsili_code', 'subject_name', 'debit', 'credit',
+        'doc_number', 'doc_date', 'subject_tafsili_code', 'subject_name', 'subject_type', 'subject_is_permanent', 'debit', 'credit',
     ];
 
     private const HEADER_NORMALIZE_MAP = [
@@ -36,6 +36,10 @@ class FreeAmirImportFormat extends DocumentImportFormat
         'کد سرفصل تفصیلی' => 'subject_tafsili_code',
         'کد سرفصل' => 'subject_tafsili_code',
         'نام سرفصل' => 'subject_name',
+        'نوع حساب' => 'subject_type',
+        'ماهیت حساب' => 'subject_type',
+        'دائم/موقت' => 'subject_is_permanent',
+        'نوع سرفصل' => 'subject_is_permanent',
         'شرح ردیف' => 'transaction_desc',
         'بدهکار' => 'debit',
         'بستانکار' => 'credit',
@@ -49,6 +53,8 @@ class FreeAmirImportFormat extends DocumentImportFormat
         'Tafsili Account Code' => 'subject_tafsili_code',
         'Account Code' => 'subject_tafsili_code',
         'Account Name' => 'subject_name',
+        'Account Type' => 'subject_type',
+        'Permanent/Temporary' => 'subject_is_permanent',
         'Transaction Description' => 'transaction_desc',
         'Debit' => 'debit',
         'Credit' => 'credit',
@@ -160,6 +166,46 @@ class FreeAmirImportFormat extends DocumentImportFormat
         return [$root, ''];
     }
 
+    public static function parseSubjectType(string $raw): ?string
+    {
+        $value = mb_strtolower(trim(toEnglish($raw)));
+        if ($value === '') {
+            return null;
+        }
+
+        $map = [
+            'debtor' => 'debtor',
+            'creditor' => 'creditor',
+            'both' => 'both',
+            mb_strtolower(__('debtor')) => 'debtor',
+            mb_strtolower(__('creditor')) => 'creditor',
+            mb_strtolower(__('both')) => 'both',
+            mb_strtolower(__('Debtor')) => 'debtor',
+            mb_strtolower(__('Creditor')) => 'creditor',
+            mb_strtolower(__('Both')) => 'both',
+        ];
+
+        return $map[$value] ?? null;
+    }
+
+    public static function parseIsPermanent(string $raw): ?bool
+    {
+        $value = mb_strtolower(trim(toEnglish($raw)));
+        if ($value === '') {
+            return null;
+        }
+
+        if (in_array($value, ['1', 'true', 'yes', 'permanent', 'دائم', 'دائمی', mb_strtolower(__('Permanent'))], true)) {
+            return true;
+        }
+
+        if (in_array($value, ['0', 'false', 'no', 'temporary', 'موقت', mb_strtolower(__('Temporary'))], true)) {
+            return false;
+        }
+
+        return null;
+    }
+
     private function normalizeRow(array $row): array
     {
         $normalized = [];
@@ -226,7 +272,9 @@ class FreeAmirImportFormat extends DocumentImportFormat
             $subject = $this->subjects->findOrCreate(
                 $fullCode,
                 trim($row['subject_name'] ?? ''),
-                $parentFullCode
+                $parentFullCode,
+                self::parseIsPermanent((string) ($row['subject_is_permanent'] ?? '')),
+                self::parseSubjectType((string) ($row['subject_type'] ?? '')),
             );
 
             $transactions[] = [

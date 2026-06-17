@@ -31,10 +31,13 @@ class DocumentImportExportTest extends TestCase
 
     private function buildCsv(array $rows): UploadedFile
     {
-        $headers = 'doc_number,doc_date,doc_title,doc_type,doc_status,subject_root_code,subject_moein_code,subject_tafsili_code,subject_name,transaction_desc,debit,credit';
+        $headers = 'doc_number,doc_date,doc_title,doc_type,doc_status,subject_root_code,subject_moein_code,subject_tafsili_code,subject_name,subject_type,subject_is_permanent,transaction_desc,debit,credit';
         $lines = [$headers];
 
         foreach ($rows as $row) {
+            if (count($row) === 12) {
+                array_splice($row, 9, 0, ['', '']);
+            }
             $lines[] = implode(',', array_map(fn ($v) => '"'.str_replace('"', '""', $v).'"', $row));
         }
 
@@ -472,6 +475,18 @@ class DocumentImportExportTest extends TestCase
         return UploadedFile::fake()->createWithContent('parsian.csv', implode("\n", $lines));
     }
 
+    private function buildFreeAmirTypedCsv(array $rows): UploadedFile
+    {
+        $header = 'doc_number,doc_date,doc_title,doc_type,doc_status,subject_root_code,subject_moein_code,subject_tafsili_code,subject_name,subject_type,subject_is_permanent,transaction_desc,debit,credit';
+        $lines = [$header];
+        foreach ($rows as $r) {
+            $line = [$r[0], $r[1], 'Doc', 'manual', 'unapproved', $r[2], $r[3], $r[4], $r[5], $r[6], $r[7], 'desc', $r[8], $r[9]];
+            $lines[] = implode(',', array_map(fn ($v) => '"'.str_replace('"', '""', (string) $v).'"', $line));
+        }
+
+        return $this->makeCsvFile(chr(0xEF).chr(0xBB).chr(0xBF).implode("\n", $lines));
+    }
+
     private function buildParsianTrialBalanceCsv(array $rows): UploadedFile
     {
         $header = 'KolCode,KolName,SumBed,SumBes,RemainBed,RemainBes';
@@ -797,6 +812,229 @@ class DocumentImportExportTest extends TestCase
 
         $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'name' => 'شریک الف']);
         $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'name' => 'شریک ب']);
+    }
+
+    public function test_parsian_top_level_uses_fixed_account_name_and_type(): void
+    {
+        $csv = $this->buildParsianCsv([
+            $this->parsianRow(700, '1404/05/05', 11, 4, 0, 1000, 0, 'desc', 'بانک پاسارگاد'),
+            $this->parsianRow(700, '1404/05/05', 50, 1, 0, 0, 1000, 'desc', 'هزینه حقوق'),
+        ]);
+        $this->runCsvImport($csv, 'parsian');
+
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '011', 'name' => 'بانک ها', 'is_permanent' => true, 'type' => 'both']);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '050', 'name' => 'هزینه ها', 'is_permanent' => false]);
+    }
+
+    public function test_parsian_builds_full_chain_from_fixed_top_level_for_deep_row(): void
+    {
+        $csv = $this->buildParsianCsv([
+            $this->parsianRow(701, '1404/05/05', 11, 4, 1, 1000, 0, 'desc', 'زیرحساب بانک'),
+            $this->parsianRow(701, '1404/05/05', 19, 7, 0, 0, 1000, 'desc', 'سایر'),
+        ]);
+        $this->runCsvImport($csv, 'parsian');
+
+        $kol = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '011')->first();
+        $moein = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '011004')->first();
+        $tafsili = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '011004001')->first();
+
+        $this->assertNotNull($kol);
+        $this->assertSame('بانک ها', $kol->name, 'Top-level must use the fixed Parsian account name');
+        $this->assertTrue((bool) $kol->is_permanent);
+
+        $this->assertNotNull($moein);
+        $this->assertSame($kol->id, $moein->parent_id);
+        $this->assertTrue((bool) $moein->is_permanent, 'Lower levels inherit the fixed top-level permanence');
+
+        $this->assertNotNull($tafsili);
+        $this->assertSame($moein->id, $tafsili->parent_id);
+        $this->assertSame('زیرحساب بانک', $tafsili->name);
+        $this->assertTrue((bool) $tafsili->is_permanent);
+    }
+
+    public function test_parsian_tax_reserve_top_level_is_debtor_and_children_inherit(): void
+    {
+        $csv = $this->buildParsianCsv([
+            $this->parsianRow(702, '1404/05/05', 24, 1, 0, 1000, 0, 'desc', 'ذخیره مالیات عملکرد'),
+            $this->parsianRow(702, '1404/05/05', 11, 4, 0, 0, 1000, 'desc', 'بانک پاسارگاد'),
+        ]);
+        $this->runCsvImport($csv, 'parsian');
+
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '024', 'name' => 'ذخیره مالیات', 'type' => 'debtor', 'is_permanent' => true]);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '024001', 'type' => 'debtor']);
+    }
+
+    public function test_parsian_top_level_type_mismatch_reuses_existing_subject(): void
+    {
+        $existing = Subject::create(['company_id' => $this->company->id, 'code' => '011', 'name' => 'My Custom Root', 'parent_id' => null, 'type' => 'both', 'is_permanent' => false]);
+
+        $csv = $this->buildParsianCsv([
+            $this->parsianRow(703, '1404/05/05', 11, 4, 0, 1000, 0, 'desc', 'بانک پاسارگاد'),
+            $this->parsianRow(703, '1404/05/05', 19, 7, 0, 0, 1000, 'desc', 'سایر'),
+        ]);
+        $result = $this->runCsvImport($csv, 'parsian');
+
+        $this->assertSame(1, $result['documents_created']);
+        $this->assertSame(0, count($result['errors']));
+
+        $roots = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '011')->get();
+        $this->assertCount(1, $roots, 'Type mismatch must not create a duplicate top-level account');
+        $this->assertSame($existing->id, $roots->first()->id);
+        $this->assertSame('My Custom Root', $roots->first()->name, 'Existing subject must not be renamed');
+    }
+
+    public function test_parsian_non_fixed_top_level_uses_synthesized_name(): void
+    {
+        $csv = $this->buildParsianCsv([
+            $this->parsianRow(704, '1404/05/05', 99, 1, 0, 1000, 0, 'desc', 'الف'),
+            $this->parsianRow(704, '1404/05/05', 99, 2, 0, 0, 1000, 'desc', 'ب'),
+        ]);
+        $this->runCsvImport($csv, 'parsian');
+
+        $root = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '099')->first();
+        $this->assertNotNull($root);
+        $this->assertNotSame('099', $root->name);
+        $this->assertSame(0, (int) $root->is_permanent);
+    }
+
+    public function test_free_amir_import_reads_type_and_is_permanent_columns(): void
+    {
+        $header = 'doc_number,doc_date,doc_title,doc_type,doc_status,subject_root_code,subject_moein_code,subject_tafsili_code,subject_name,subject_type,subject_is_permanent,transaction_desc,debit,credit';
+        $rows = [
+            ['1', '2026-01-15', 'Doc', 'manual', 'unapproved', '001', '002', '', 'Tax Reserve', 'debtor', 'Permanent', 'd', '1000', '0'],
+            ['1', '2026-01-15', 'Doc', 'manual', 'unapproved', '003', '004', '', 'Expense', 'both', 'Temporary', 'c', '0', '1000'],
+        ];
+        $lines = [$header];
+        foreach ($rows as $row) {
+            $lines[] = implode(',', array_map(fn ($v) => '"'.str_replace('"', '""', $v).'"', $row));
+        }
+        $csv = $this->makeCsvFile(chr(0xEF).chr(0xBB).chr(0xBF).implode("\n", $lines));
+        $result = $this->runCsvImport($csv, 'free_amir');
+
+        $this->assertSame(1, $result['documents_created']);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001002', 'name' => 'Tax Reserve', 'type' => 'debtor', 'is_permanent' => true]);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '003004', 'name' => 'Expense', 'type' => 'both', 'is_permanent' => false]);
+    }
+
+    public function test_free_amir_export_includes_type_and_is_permanent_columns(): void
+    {
+        $root = Subject::create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets', 'parent_id' => null, 'type' => 'both', 'is_permanent' => true]);
+        $child = Subject::create(['company_id' => $this->company->id, 'code' => '001001', 'name' => 'Bank', 'parent_id' => $root->id, 'type' => 'debtor', 'is_permanent' => true]);
+        $document = Document::factory()->create(['company_id' => $this->company->id, 'number' => 1, 'date' => '2026-01-01']);
+        Transaction::create(['document_id' => $document->id, 'subject_id' => $child->id, 'value' => 1000, 'user_id' => $this->user->id]);
+
+        $csv = $this->exportCsvViaService([]);
+
+        $this->assertStringContainsString(__('subject_type'), $csv);
+        $this->assertStringContainsString(__('subject_is_permanent'), $csv);
+        $this->assertStringContainsString(__('debtor'), $csv);
+        $this->assertStringContainsString(__('Permanent'), $csv);
+    }
+
+    public function test_parsian_two_level_moein_under_temporary_root_is_not_permanent(): void
+    {
+        $csv = $this->buildParsianCsv([
+            $this->parsianRow(800, '1404/06/01', 50, 2, 0, 1000, 0, 'desc', 'هزینه اجاره'),
+            $this->parsianRow(800, '1404/06/01', 11, 4, 0, 0, 1000, 'desc', 'بانک'),
+        ]);
+        $this->runCsvImport($csv, 'parsian');
+
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '050002', 'name' => 'هزینه اجاره', 'type' => 'both', 'is_permanent' => false]);
+    }
+
+    public function test_parsian_three_level_tafsili_inherits_temporary_from_root(): void
+    {
+        $csv = $this->buildParsianCsv([
+            $this->parsianRow(801, '1404/06/01', 50, 2, 3, 1000, 0, 'desc', 'هزینه آب شعبه'),
+            $this->parsianRow(801, '1404/06/01', 11, 4, 0, 0, 1000, 'desc', 'بانک'),
+        ]);
+        $this->runCsvImport($csv, 'parsian');
+
+        foreach (['050', '050002', '050002003'] as $code) {
+            $subject = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', $code)->first();
+            $this->assertNotNull($subject, "Level {$code} must be created");
+            $this->assertFalse((bool) $subject->is_permanent, "Level {$code} must inherit the temporary root");
+            $this->assertSame('both', $subject->type);
+        }
+    }
+
+    public function test_parsian_three_level_tafsili_inherits_debtor_and_permanent(): void
+    {
+        $csv = $this->buildParsianCsv([
+            $this->parsianRow(802, '1404/06/01', 24, 1, 5, 1000, 0, 'desc', 'ذخیره مالیات عملکرد ۱۴۰۳'),
+            $this->parsianRow(802, '1404/06/01', 11, 4, 0, 0, 1000, 'desc', 'بانک'),
+        ]);
+        $this->runCsvImport($csv, 'parsian');
+
+        foreach (['024', '024001', '024001005'] as $code) {
+            $subject = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', $code)->first();
+            $this->assertNotNull($subject, "Level {$code} must be created");
+            $this->assertSame('debtor', $subject->type, "Level {$code} must inherit the debtor nature");
+            $this->assertTrue((bool) $subject->is_permanent, "Level {$code} must inherit permanence");
+        }
+    }
+
+    public function test_free_amir_top_level_subject_applies_type_and_permanent(): void
+    {
+        $csv = $this->buildFreeAmirTypedCsv([
+            ['1', '2026-02-01', '001', '', '', 'Cash Box', 'debtor', 'Permanent', '1000', '0'],
+            ['1', '2026-02-01', '009', '', '', 'Offset', 'both', 'Temporary', '0', '1000'],
+        ]);
+        $result = $this->runCsvImport($csv, 'free_amir');
+
+        $this->assertSame(1, $result['documents_created']);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001', 'name' => 'Cash Box', 'type' => 'debtor', 'is_permanent' => true]);
+    }
+
+    public function test_free_amir_two_level_subject_applies_type_and_permanent(): void
+    {
+        $csv = $this->buildFreeAmirTypedCsv([
+            ['1', '2026-02-02', '001', '002', '', 'Receivable', 'creditor', 'Temporary', '1000', '0'],
+            ['1', '2026-02-02', '003', '', '', 'Offset', 'both', 'Permanent', '0', '1000'],
+        ]);
+        $result = $this->runCsvImport($csv, 'free_amir');
+
+        $this->assertSame(1, $result['documents_created']);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001002', 'name' => 'Receivable', 'type' => 'creditor', 'is_permanent' => false]);
+    }
+
+    public function test_free_amir_three_level_applies_type_to_leaf_only(): void
+    {
+        $csv = $this->buildFreeAmirTypedCsv([
+            ['1', '2026-02-03', '001', '002', '003', 'Detail Account', 'debtor', 'Permanent', '1000', '0'],
+            ['1', '2026-02-03', '009', '', '', 'Offset', 'both', 'Temporary', '0', '1000'],
+        ]);
+        $result = $this->runCsvImport($csv, 'free_amir');
+        $this->assertSame(1, $result['documents_created']);
+
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001002003', 'name' => 'Detail Account', 'type' => 'debtor', 'is_permanent' => true]);
+
+        $moein = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '001002')->first();
+        $this->assertNotNull($moein);
+        $this->assertSame('both', $moein->type);
+        $this->assertSame(0, (int) $moein->is_permanent);
+    }
+
+    public function test_resolver_four_level_chain_applies_type_and_is_permanent_to_leaf(): void
+    {
+        $leaf = $this->resolver->findOrCreate('001001001001', 'CNC Lathes', '001001001', true, 'debtor');
+
+        $this->assertSame('001001001001', $leaf->code);
+        $this->assertSame('debtor', $leaf->type);
+        $this->assertTrue((bool) $leaf->is_permanent);
+
+        $parent = Subject::withoutGlobalScope(FiscalYearScope::class)->find($leaf->parent_id);
+        $this->assertSame('001001001', $parent->code);
+        $this->assertSame('both', $parent->type);
+        $this->assertSame(0, (int) $parent->is_permanent);
+
+        $depth = 0;
+        $current = $leaf;
+        while ($current->parent_id !== null) {
+            $current = Subject::withoutGlobalScope(FiscalYearScope::class)->find($current->parent_id);
+            $depth++;
+        }
+        $this->assertSame(3, $depth, 'Three ancestors must exist above the 4th-level leaf');
     }
 
     public function test_free_amir_export_drops_fourth_level_subject(): void

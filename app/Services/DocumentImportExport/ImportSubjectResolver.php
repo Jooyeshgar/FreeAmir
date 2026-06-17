@@ -38,7 +38,7 @@ class ImportSubjectResolver
         $this->ambiguousNames = array_filter(array_count_values(array_values($map)), fn ($count) => $count > 1);
     }
 
-    public function findOrCreate(string $code, string $name, string $parentCode = ''): Subject
+    public function findOrCreate(string $code, string $name, string $parentCode = '', ?bool $isPermanent = null, ?string $type = null): Subject
     {
         $code = trim($code);
         $name = trim($name);
@@ -65,7 +65,7 @@ class ImportSubjectResolver
         if ($candidates->count() > 1) {
             $byCode = $candidates->firstWhere('code', $code);
 
-            return $this->cache[$code] = $byCode ?? $this->createSubject($code, $name, $parent);
+            return $this->cache[$code] = $byCode ?? $this->createSubject($code, $name, $parent, $isPermanent, $type);
         }
 
         // No account with that name: fall back to an exact code match, then create.
@@ -74,7 +74,29 @@ class ImportSubjectResolver
             return $this->cache[$code] = $byCode;
         }
 
-        return $this->cache[$code] = $this->createSubject($code, $name, $parent);
+        return $this->cache[$code] = $this->createSubject($code, $name, $parent, $isPermanent, $type);
+    }
+
+    public function resolveTopLevel(string $code, string $name, bool $isPermanent, string $type = 'both'): Subject
+    {
+        $code = trim($code);
+        $name = trim($name);
+
+        if (isset($this->cache[$code])) {
+            return $this->cache[$code];
+        }
+
+        $existing = Subject::where('code', $code)->first();
+
+        if ($existing) {
+            if ((bool) $existing->is_permanent === $isPermanent && $existing->type === $type) {
+                return $this->cache[$code] = $existing;
+            }
+
+            return $this->findOrCreate($code, self::synthesizeName($code), '');
+        }
+
+        return $this->cache[$code] = $this->createSubject($code, $name, null, $isPermanent, $type);
     }
 
     public static function synthesizeName(string $code): string
@@ -147,14 +169,14 @@ class ImportSubjectResolver
         $this->ambiguousNames = [];
     }
 
-    private function createSubject(string $code, string $name, ?Subject $parent): Subject
+    private function createSubject(string $code, string $name, ?Subject $parent, ?bool $isPermanent = null, ?string $type = null): Subject
     {
         $subject = new Subject([
             'name' => $name,
             'parent_id' => $parent?->id,
             'company_id' => getActiveCompany(),
-            'type' => 'both',
-            'is_permanent' => false,
+            'type' => $type ?? 'both',
+            'is_permanent' => $isPermanent ?? false,
         ]);
 
         $subject->code = ! Subject::where('code', $code)->exists() ? $code : $subject->generateCode();
