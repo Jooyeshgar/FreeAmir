@@ -28,6 +28,7 @@ Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee
 });
 
 Route::group(['middleware' => ['auth', 'check-permission']], function () {
+    Route::put('/about/change-global-configs', [Controllers\AboutController::class, 'updateGlobalConfigs'])->name('update-global-configs');
     Route::get('api-tokens', [Controllers\ApiTokenController::class, 'index'])->name('api-tokens.index');
     Route::get('api-tokens/create', [Controllers\ApiTokenController::class, 'create'])->name('api-tokens.create');
     Route::post('api-tokens', [Controllers\ApiTokenController::class, 'store'])->name('api-tokens.store');

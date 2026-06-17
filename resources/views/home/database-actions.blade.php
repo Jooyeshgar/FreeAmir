@@ -20,7 +20,10 @@
                 </form>
             </div>
             <p class="text-sm opacity-80 w-full">
-                {{ __('To disable database refresh, set :APP_DEBUG=:false in the :env file.', ['env' => '.env', 'APP_DEBUG' => 'APP_DEBUG', 'false' => 'false']) }}
+                {!! __('To disable database refresh, disable :debug in page :settings.', [
+                    'debug' => __('about.debug_mode'),
+                    'settings' => '<a href="'.route('about').'" class="link">'.__('about.about').'</a>',
+                ]) !!}
             </p>
         </div>
     @endif

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Config;
+use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Seeder;
 
 class ConfigSeeder extends Seeder
@@ -37,6 +38,13 @@ class ConfigSeeder extends Seeder
         Config::upsert($configs, ['key', 'company_id'], ['type', 'category', 'value', 'desc']);
         foreach ($configs as $config) {
             config(['amir.'.$config['key'] => $config['value']]);
+        }
+
+        foreach (['app_env', 'app_locale', 'app_debug'] as $key) {
+            Config::withoutGlobalScope(FiscalYearScope::class)->updateOrCreate(
+                ['key' => $key, 'company_id' => null],
+                ['value' => null, 'type' => 3, 'category' => 1, 'desc' => __($key)],
+            );
         }
     }
 }
