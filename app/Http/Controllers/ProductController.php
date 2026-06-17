@@ -164,7 +164,7 @@ class ProductController extends Controller
             fwrite($file, "\xEF\xBB\xBF");
             fputcsv($file, ProductImportService::COLUMNS);
 
-            Product::with('productGroup')
+            Product::with('productGroup', 'incomeSubject', 'cogsSubject', 'inventorySubject', 'salesReturnsSubject')
                 ->orderBy('code')
                 ->chunk(200, function ($products) use ($file) {
                     foreach ($products as $product) {
@@ -172,6 +172,10 @@ class ProductController extends Controller
                             $product->code,
                             $product->name,
                             $product->productGroup?->name,
+                            $product->incomeSubject?->code,
+                            $product->cogsSubject?->code,
+                            $product->inventorySubject?->code,
+                            $product->salesReturnsSubject?->code,
                             $product->sstid,
                             $product->location,
                             $product->quantity,
