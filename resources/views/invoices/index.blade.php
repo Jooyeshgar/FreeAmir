@@ -35,7 +35,7 @@
                     e.preventDefault();
                     if (confirm(
                             '{{ __('This invoice has warnings for change its status, are you sure to change status?') }}'
-                            )) {
+                        )) {
                         this.submit();
                     }
                 });

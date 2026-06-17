@@ -18,6 +18,10 @@ enum InvoiceStatus: string
 
     case READY_TO_APPROVE = 'ready_to_approve';
 
+    case PARTIALLY_PAID = 'partially_paid';
+
+    case PAID = 'paid';
+
     /**
      * Get translated label for the invoice/ancillary cost status.
      */
@@ -31,7 +35,29 @@ enum InvoiceStatus: string
             self::APPROVED_INACTIVE => __('approved inactive'),
             self::REJECTED => __('rejected'),
             self::READY_TO_APPROVE => __('ready to approve'),
+            self::PARTIALLY_PAID => __('Partially paid'),
+            self::PAID => __('Paid'),
         };
+    }
+
+    public static function approvedOrSettled(): array
+    {
+        return [self::APPROVED, self::PARTIALLY_PAID, self::PAID];
+    }
+
+    public function isApprovedOrSettled(): bool
+    {
+        return in_array($this, self::approvedOrSettled(), true);
+    }
+
+    public function isPartiallyPaid(): bool
+    {
+        return $this === self::PARTIALLY_PAID;
+    }
+
+    public function isPaid(): bool
+    {
+        return $this === self::PAID;
     }
 
     public function isPending(): bool

@@ -12,6 +12,7 @@ use Jooyeshgar\Moadian\Facades\Moadian;
 use Jooyeshgar\Moadian\Invoice as MoadianInvoice;
 use Jooyeshgar\Moadian\InvoiceHeader;
 use Jooyeshgar\Moadian\InvoiceItem;
+use Jooyeshgar\Moadian\Payment;
 
 class MoadianService
 {
@@ -120,6 +121,7 @@ class MoadianService
         $this->moadianInvoice = new MoadianInvoice($this->header);
 
         $this->moadianInvoiceItems();
+        $this->moadianInvoicePayments();
     }
 
     private function voidInvoice(): bool
@@ -213,6 +215,16 @@ class MoadianService
             $body->vam = $item->vat;
             $body->tsstam = $item->amount;
             $this->moadianInvoice->addItem($body);
+        }
+    }
+
+    private function moadianInvoicePayments(): void
+    {
+        foreach ($this->invoice->payments as $payment) {
+            $moadianInvoicePayment = new Payment;
+            $moadianInvoicePayment->trn = $payment->reference_number;
+            $moadianInvoicePayment->pdt = Carbon::parse($payment->date)->timestamp * 1000;
+            $this->moadianInvoice->addPayment($moadianInvoicePayment);
         }
     }
 }

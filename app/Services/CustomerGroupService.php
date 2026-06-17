@@ -23,7 +23,7 @@ class CustomerGroupService
         $sellQuery = Invoice::query()
             ->whereIn('customer_id', $customerIds)
             ->where('invoice_type', InvoiceType::SELL)
-            ->where('status', InvoiceStatus::APPROVED);
+            ->whereIn('status', InvoiceStatus::approvedOrSettled());
 
         $totalSales = (float) (clone $sellQuery)->sum('amount');
         $invoicesCount = (clone $sellQuery)->count();
@@ -31,7 +31,7 @@ class CustomerGroupService
         $totalReturns = (float) Invoice::query()
             ->whereIn('customer_id', $customerIds)
             ->where('invoice_type', InvoiceType::RETURN_SELL)
-            ->where('status', InvoiceStatus::APPROVED)
+            ->whereIn('status', InvoiceStatus::approvedOrSettled())
             ->sum('amount');
 
         $topCustomerRows = (clone $sellQuery)

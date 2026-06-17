@@ -19,6 +19,7 @@ use App\Services\FiscalYearTransferService;
 use App\Services\GroupActionService;
 use App\Services\InvoiceService;
 use App\Services\MoadianService;
+use App\Services\PaymentService;
 use DB;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
@@ -42,7 +43,7 @@ class InvoiceController extends Controller
      */
     public function index(Request $request)
     {
-        $builder = Invoice::with(['customer', 'document', 'voidInvoice'])
+        $builder = Invoice::with(['customer', 'document', 'voidInvoice', 'payments'])
             ->orderByDesc('date')
             ->orderByDesc('number');
 
@@ -103,7 +104,7 @@ class InvoiceController extends Controller
         $statsBuilder = $builder->clone();
 
         $builder->when($request->filled('status') &&
-            in_array($request->status, ['approved', 'unapproved', 'pending', 'approved_inactive', 'rejected', 'ready_to_approve', 'pre_invoice']),
+            in_array($request->status, ['approved', 'unapproved', 'pending', 'approved_inactive', 'rejected', 'ready_to_approve', 'pre_invoice', 'partially_paid', 'paid']),
             fn ($invoice) => $invoice->where('status', $request->status)
         );
 
@@ -267,7 +268,7 @@ class InvoiceController extends Controller
             ->with($msgType, $msg);
     }
 
-    public function show(Invoice $invoice)
+    public function show(Invoice $invoice, PaymentService $paymentService)
     {
         $changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
 
@@ -287,17 +288,24 @@ class InvoiceController extends Controller
             'ancillaryCosts.document',
             'ancillaryCosts.items',
             'moadianHistories',
+            'payments.document.transactions.subject',
+            'payments.payer.subject',
+            'payments.creator',
         ]);
 
+        $paymentDecision = $paymentService->validateInvoicePayment($invoice);
+        $settlementSubjects = $paymentService->settlementSubjects();
+        $paidAmount = $paymentService->paidAmount($invoice);
+        $remainingAmount = $paymentService->remainingAmount($invoice);
+
         $ancillaryCostProductIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->unique()->values()->all();
-        $canCreateAncillaryCost = $invoice->invoice_type === InvoiceType::BUY && ! $isServiceBuy
-            && empty(InvoiceService::notAllowedInvoiceForAncillaryCosts($invoice, $ancillaryCostProductIds));
+        $canCreateAncillaryCost = $invoice->invoice_type === InvoiceType::BUY && ! $isServiceBuy && empty(InvoiceService::notAllowedInvoiceForAncillaryCosts($invoice, $ancillaryCostProductIds));
 
         $fiscalYears = Company::whereHas('users', function ($q) {
             $q->where('users.id', auth()->id());
         })->where('id', '!=', getActiveCompany())->get();
 
-        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'fiscalYears', 'canCreateAncillaryCost'));
+        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'paidAmount', 'remainingAmount', 'fiscalYears', 'canCreateAncillaryCost'));
     }
 
     public function print(Invoice $invoice)
@@ -644,6 +652,10 @@ class InvoiceController extends Controller
         if (! in_array($status, $allowedStatuses)) {
             return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])
                 ->with('error', __('Invalid status action.'));
+        }
+
+        if ($invoice->status->isPartiallyPaid() || $invoice->status->isPaid()) {
+            return redirect()->back()->with('error', __('Remove the recorded payments before changing the invoice status.'));
         }
 
         $decision = $this->invoiceService->getChangeStatusDecision($invoice, $status);

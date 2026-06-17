@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Models\AncillaryCostItem;
 use App\Models\Product;
 
 class ProductService
@@ -211,7 +212,7 @@ class ProductService
     {
         $sum = fn ($type) => $product->invoiceItems()
             ->whereHas('invoice', fn ($q) => $q->where('invoice_type', $type)
-                ->where('status', '!=', InvoiceStatus::APPROVED)
+                ->whereNotIn('status', InvoiceStatus::approvedOrSettled())
             )
             ->sum('quantity');
 
@@ -222,7 +223,7 @@ class ProductService
     {
         return $product->invoiceItems()
             ->whereHas('invoice', fn ($q) => $q->where('invoice_type', InvoiceType::SELL)
-                ->where('status', InvoiceStatus::APPROVED)
+                ->whereIn('status', InvoiceStatus::approvedOrSettled())
             )
             ->sum('quantity');
     }
@@ -231,7 +232,7 @@ class ProductService
     {
         $item = $product->invoiceItems()
             ->whereHas('invoice', fn ($q) => $q->where('invoice_type', 'buy')
-                ->where('status', InvoiceStatus::APPROVED)
+                ->whereIn('status', InvoiceStatus::approvedOrSettled())
             )
             ->with('invoice:id,date')
             ->get()
@@ -244,7 +245,7 @@ class ProductService
 
         $itemPrice = $item->unit_price ?? 0;
 
-        $ancillaryCostsSum = \App\Models\AncillaryCostItem::whereHas('ancillaryCost', function ($q) use ($item) {
+        $ancillaryCostsSum = AncillaryCostItem::whereHas('ancillaryCost', function ($q) use ($item) {
             $q->where('invoice_id', $item->invoice_id)
                 ->where('status', InvoiceStatus::APPROVED);
         })

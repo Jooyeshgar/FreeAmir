@@ -3,10 +3,15 @@
 namespace App\Services;
 
 use App\Enums\InvoiceStatus;
+use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
 use App\Models\Invoice;
 use App\Models\Product;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -62,7 +67,7 @@ class GroupActionService
 
         // Sort by date DESC, then number DESC (latest first for unapproving)
         $sortedInvoices = collect($conflictingInvoices)->sortByDesc(function ($inv) {
-            $date = $inv->date instanceof \Carbon\Carbon ? $inv->date->format('Y-m-d') : $inv->date;
+            $date = $inv->date instanceof Carbon ? $inv->date->format('Y-m-d') : $inv->date;
 
             return $date.str_pad((string) $inv->number, 10, '0', STR_PAD_LEFT);
         })->values()->all();
@@ -164,7 +169,7 @@ class GroupActionService
                             ->where('number', '>', $invoice->number);
                     });
             })
-            ->where('status', InvoiceStatus::APPROVED)
+            ->whereIn('status', InvoiceStatus::approvedOrSettled())
             ->whereHas('items', fn ($q) => $q->where('itemable_type', Product::class)
                 ->whereIn('itemable_id', $productIds)
             )
@@ -302,7 +307,7 @@ class GroupActionService
         }
 
         $modelClass = match (true) {
-            in_array($type, \App\Enums\InvoiceType::cases(), true) => Invoice::class,
+            in_array($type, InvoiceType::cases(), true) => Invoice::class,
             $type === 'ancillarycost' => AncillaryCost::class,
             default => Product::class,
         };
@@ -321,11 +326,11 @@ class GroupActionService
     /**
      * Paginate a collection of conflict items for display
      */
-    private function paginateConflictItems(\Illuminate\Support\Collection $conflictItems, int $perPage): \Illuminate\Pagination\LengthAwarePaginator
+    private function paginateConflictItems(Collection $conflictItems, int $perPage): LengthAwarePaginator
     {
-        $page = \Illuminate\Pagination\Paginator::resolveCurrentPage();
+        $page = Paginator::resolveCurrentPage();
 
-        return new \Illuminate\Pagination\LengthAwarePaginator(
+        return new LengthAwarePaginator(
             $conflictItems->forPage($page, $perPage),
             $conflictItems->count(),
             $perPage,

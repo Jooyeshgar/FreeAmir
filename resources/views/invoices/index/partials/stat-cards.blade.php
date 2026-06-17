@@ -10,6 +10,8 @@
             \App\Enums\InvoiceStatus::APPROVED_INACTIVE->value => 'error',
             \App\Enums\InvoiceStatus::REJECTED->value => 'error',
             \App\Enums\InvoiceStatus::READY_TO_APPROVE->value => 'info',
+            \App\Enums\InvoiceStatus::PARTIALLY_PAID->value => 'warning',
+            \App\Enums\InvoiceStatus::PAID->value => 'success',
         ];
     @endphp
     @foreach (\App\Enums\InvoiceStatus::cases() as $status)
