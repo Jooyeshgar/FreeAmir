@@ -10,13 +10,16 @@
             <span class="card-title">{{ __('Add Company') }}</span>
             <form action="{{ route('companies.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
-                <fieldset id="previousYears" class="grid grid-cols-2 gap-6 border p-5 my-3">
+                <fieldset id="previousYears" class="grid grid-cols-2 gap-6 border p-5 my-3" 
+                    x-data="{
+                        subjectsChecked: @js(in_array(FiscalYearSection::SUBJECTS->value, old('tables_to_copy', array_map(fn ($c) => $c->value, FiscalYearSection::cases())))),
+                    }">
                     <legend>{{ __('Previous Years') }}</legend>
                     <div class="fieldset">
                         <label for="source_year_id" class="label">
                             <span>{{ __('Copy Data From') }}</span>
                         </label>
-                        <select class="select  w-full" id="source_year_id" name="source_year_id" required>
+                        <select class="select w-full" id="source_year_id" name="source_year_id">
                             <option value="">{{ __('Select Source Fiscal Year') }}</option>
                             @foreach ($previousYears as $year)
                                 <option value="{{ $year->id }}" {{ old('source_year_id') == $year->id ? 'selected' : '' }}>{{ $year->name }} - {{ $year->fiscal_year }}</option>
@@ -39,9 +42,17 @@
                                 <tbody>
                                     @php $oldTables = old('tables_to_copy', array_map(fn ($c) => $c->value, FiscalYearSection::cases())); @endphp
                                     @foreach (FiscalYearSection::ui() as $key => $value)
+                                        @php $isSubjects = $key === FiscalYearSection::SUBJECTS->value; @endphp
                                         <tr>
-                                            <td>
-                                                <x-checkbox name="tables_to_copy[]" :value="$key" id="table_{{ $key }}" :checked="true" title="" />
+                                            <td x-bind:title="{{ $isSubjects ? 'false' : '!subjectsChecked' }} ? @js(__('Please select Subjects first')) : ''"
+                                                x-bind:class="({{ $isSubjects ? 'false' : '!subjectsChecked' }}) ? '[&_label]:cursor-not-allowed [&_input]:cursor-not-allowed' : ''">
+                                                @if ($isSubjects)
+                                                    <x-checkbox name="tables_to_copy[]" :value="$key" id="table_{{ $key }}" :checked="true" title=""
+                                                        x-model="subjectsChecked" x-effect="subjectsChecked = true" />
+                                                @else
+                                                    <x-checkbox name="tables_to_copy[]" :value="$key" id="table_{{ $key }}" :checked="true" title=""
+                                                        x-bind:disabled="!subjectsChecked" x-effect="$el.checked = subjectsChecked" />
+                                                @endif
                                             </td>
                                             <td>
                                                 <label for="table_{{ $key }}">{{ $value }}</label>
