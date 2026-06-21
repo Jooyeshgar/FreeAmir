@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\BankAccountType;
 use App\Models\Bank;
 use App\Models\Company;
 use App\Models\Subject;
@@ -18,7 +19,7 @@ class BankAccountFactory extends Factory
         return [
             'name' => $this->faker->name,
             'number' => $this->faker->unique()->numerify('#######'),
-            'type' => $this->faker->randomDigit(),
+            'type' => $this->faker->randomElement(BankAccountType::cases()),
             'owner' => $this->faker->name,
             'bank_id' => $this->faker->randomElement($bankIds),
             'company_id' => $this->faker->randomElement($companyIds),
@@ -27,6 +28,7 @@ class BankAccountFactory extends Factory
             'bank_phone' => substr($this->faker->phoneNumber, 0, 15),
             'bank_web_page' => $this->faker->url,
             'desc' => Str::limit($this->faker->persianSentence(12), 150, ''),
+            'iban' => 'IR'.fake()->unique()->numerify(str_repeat('#', 24)),
         ];
     }
 
@@ -47,7 +49,7 @@ class BankAccountFactory extends Factory
                 ->withParent($parentSubject)
                 ->for($bankAccount, 'subjectable')
                 ->create([
-                    'name' => $bankAccount->name.' - '.$bank->name,
+                    'name' => $bankAccount->name,
                     'company_id' => $bankAccount->company_id,
                 ]);
 

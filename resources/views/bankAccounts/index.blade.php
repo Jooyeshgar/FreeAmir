@@ -12,6 +12,7 @@
                         <th class="px-4 py-2">{{ __('Account number') }}</th>
                         <th class="px-4 py-2">{{ __('Account owner') }}</th>
                         <th class="px-4 py-2">{{ __('Account type') }}</th>
+                        <th class="px-4 py-2">{{ __('IBAN') }}</th>
                         <th class="px-4 py-2">{{ __('Bank name') }}</th>
                         <th class="px-4 py-2">{{ __('Action') }}</th>
                     </tr>
@@ -25,7 +26,8 @@
                             </td>
                             <td class="px-4 py-2">{{ $bankAccount->number }}</td>
                             <td class="px-4 py-2">{{ $bankAccount->owner }}</td>
-                            <td class="px-4 py-2">{{ $bankAccount->type }}</td>
+                            <td class="px-4 py-2">{{ $bankAccount->type?->label() }}</td>
+                            <td class="px-4 py-2">{{ $bankAccount->iban ?? '-' }}</td>
                             <td class="px-4 py-2">{{ $bankAccount->bank ? $bankAccount->bank->name : '' }}</td>
                             <td class="px-4 py-2">
                                 <a href="{{ route('bank-accounts.show', $bankAccount) }}"

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BankAccountType;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -23,6 +24,11 @@ class BankAccount extends Model
         'bank_web_page',
         'desc',
         'subject_id',
+        'iban',
+    ];
+
+    protected $casts = [
+        'type' => BankAccountType::class,
     ];
 
     public static function booted(): void
