@@ -140,7 +140,7 @@
         <div class="text-sm flex-1 min-w-80 text-center text-gray-500 pt-3">{{ __('description') }}</div>
         <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ __('Quantity') }}</div>
         <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ __('OFF') }}</div>
-        <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ __('VAT') }}</div>
+        <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ $invoice->exists ? __('VAT') : __('VAT') . ' (%)' }}</div>
         <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ __('Unit') }}</div>
         <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ __('Total') }}</div>
     </div>
