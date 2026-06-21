@@ -51,7 +51,7 @@
                     <x-input name="cols_submitted" value="1" hidden />
 
                     <div class="text-info mt-2">
-                        {{ __('The columns :columns are always reported.', ['columns' => __('Product name') . '، ' . __('Inbound quantity') . '، ' . __('Outbound quantity') . '، ' . __('Current stock')]) }}
+                        {{ __('The column product name are always reported.') }}
                     </div>
 
                     <div class="mt-4">

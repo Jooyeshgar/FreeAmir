@@ -1883,7 +1883,7 @@
     "The cash payment must be a number.": "مبلغ دریافت نقدی باید عددی باشد.",
     "The certificate file must contain a valid X.509 certificate.": "فایل گواهی باید شامل یک گواهی معتبر X.509 باشد.",
     "The code :code already exists in this company.": "کد :code از قبل در این شرکت وجود دارد.",
-    "The columns :columns are always reported.": "ستون‌های :columns همیشه گزارش می‌شوند.",
+    "The column product name are always reported.": "ستون نام محصول همیشه گزارش می‌شود.",
     "The company path parameter is required.": "پارامتر مسیر شرکت مورد نیاز است.",
     "The company path parameter must be a valid company ID.": "پارامتر مسیر شرکت باید یک شناسه معتبر شرکت باشد.",
     "The customer ID field must be an integer.": "فیلد شناسه مشتری باید یک عدد صحیح باشد.",

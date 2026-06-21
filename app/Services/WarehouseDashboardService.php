@@ -18,6 +18,9 @@ class WarehouseDashboardService
     public function __construct(private readonly ProductService $productService) {}
 
     public const OPTIONAL_COLUMNS = [
+        'inbound',
+        'outbound',
+        'stock',
         'category',
         'code',
         'selling_price',
@@ -627,7 +630,7 @@ class WarehouseDashboardService
             'selling_price', 'cost_of_goods', 'last_item_cost', 'sales_profit',
             'revenue_account', 'cogs_account', 'inventory_account', 'sales_return_account',
         ];
-        $fixed = ['name', 'inbound', 'outbound', 'stock'];
+        $fixed = ['name'];
         $numeric = [
             'inbound', 'outbound', 'stock', 'selling_price', 'cost_of_goods',
             'last_item_cost', 'sales_profit', 'revenue_account', 'cogs_account',
@@ -640,8 +643,11 @@ class WarehouseDashboardService
         ));
 
         $count = count($visible);
+        $totalTriggerColumns = ['sales_profit', 'revenue_account', 'cogs_account', 'inventory_account', 'sales_return_account'];
+        $showTotalRow = ! empty(array_intersect($totalTriggerColumns, $visible));
 
         return [
+            'showTotalRow' => $showTotalRow,
             'visible' => $visible,
             'numeric' => $numeric,
             'addDesc' => $count < 9,

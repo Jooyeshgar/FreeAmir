@@ -1869,7 +1869,7 @@
     "The cash payment must be a number.": "The cash payment must be a number.",
     "The certificate file must contain a valid X.509 certificate.": "The certificate file must contain a valid X.509 certificate.",
     "The code :code already exists in this company.": "The code :code already exists in this company.",
-    "The columns :columns are always reported.": "The columns :columns are always reported.",
+    "The column product name are always reported.": "The column product name are always reported.",
     "The company path parameter is required.": "The company path parameter is required.",
     "The company path parameter must be a valid company ID.": "The company path parameter must be a valid company ID.",
     "The customer ID field must be an integer.": "The customer ID field must be an integer.",
