@@ -5,7 +5,7 @@
     </div>
 
     <div class="col-span-2 md:col-span-1">
-        <x-input type="number" name="number" id="number" title="{{ __('Account Number') }}" :value="old('number', $bankAccount->number ?? '')"
+        <x-input name="number" id="number" title="{{ __('Account Number') }}" :value="old('number', $bankAccount->number ?? '')"
             placeholder="{{ __('Please enter the account number') }}" />
     </div>
 
@@ -16,7 +16,7 @@
                 class="h-10 min-h-10 border border-slate-400 w-full rounded-md text-gray-500 px-2">
                 <option class="bg-base-100" value="">{{ __('Select Type') }}</option>
                 @foreach (App\Enums\BankAccountType::cases() as $type)
-                    <option value="{{ $type->value }}" @selected(old('type', $bankAccount->type ?? '') == $type->value)>{{ $type->label() }}</option>
+                    <option value="{{ $type->value }}" @selected(old('type', $bankAccount->type?->value ?? '') == $type->value)>{{ $type->label() }}</option>
                 @endforeach
             </select>
         </div>
@@ -27,7 +27,7 @@
     </div>
 
     <div class="col-span-2 md:col-span-1">
-        <x-input name="iban" id="iban" title="{{ __('IBAN') }}" :value="old('iban', $bankAccount->iban ?? '')" placeholder="{{ __('Please enter the iban') }}" />
+        <x-input name="iban" id="iban" title="{{ __('IBAN') }}" :value="old('iban', $bankAccount->iban ?? '')" placeholder="{{ __('Please enter iban') }}" />
     </div>
 
     <div class="col-span-2">

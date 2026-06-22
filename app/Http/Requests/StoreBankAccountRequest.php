@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\BankAccountType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Enum;
 
 class StoreBankAccountRequest extends FormRequest
 {
@@ -64,7 +66,7 @@ class StoreBankAccountRequest extends FormRequest
                         $fail(__('Invalid IBAN'));
                     }
                 }],
-            'type' => ['required', 'integer'],
+            'type' => ['required', new Enum(BankAccountType::class)],
             'owner' => ['nullable', 'string', 'regex:/^[\w\d\s]*$/u'],
             'bank_id' => ['required', 'integer', 'exists:banks,id'],
             'bank_branch' => ['nullable', 'string', 'regex:/^[\w\d\s]*$/u'],
