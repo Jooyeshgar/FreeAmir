@@ -126,18 +126,6 @@ class MonthlyAttendanceTest extends TestCase
         $response->assertSee($this->employee->id);
     }
 
-    public function test_index_filters_by_year(): void
-    {
-        $this->makeMonthlyAttendance(['year' => 1406, 'month' => 1]);
-        $this->makeMonthlyAttendance(['year' => 1407, 'month' => 1]);
-
-        $response = $this->get(route('attendance.monthly-attendances.index', ['year' => 1406]));
-
-        $response->assertStatus(200);
-        $response->assertSee('1406');
-        $response->assertDontSee('1407');
-    }
-
     public function test_index_does_not_show_other_company_records(): void
     {
         $otherCompany = Company::factory()->create();

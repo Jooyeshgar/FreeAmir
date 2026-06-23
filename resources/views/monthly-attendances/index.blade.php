@@ -22,10 +22,6 @@
                     </label>
                 </div>
 
-                <div class="w-28">
-                    <x-text-input input_name="year" input_value="{{ request('year') }}" input_class="input-sm" label_text_class="label" title="{{ __('Year') }}" placeholder="{{ __('Year') }}" />
-                </div>
-
                 <div class="w-36">
                     <label class="w-full">
                         <div class="label">
@@ -70,7 +66,6 @@
                     <thead>
                         <tr>
                             <th>{{ __('Employee') }}</th>
-                            <th>{{ __('Year') }}</th>
                             <th>{{ __('Month') }}</th>
                             <th>{{ __('Work Days') }}</th>
                             <th>{{ __('Present') }}</th>
@@ -83,7 +78,6 @@
                         @forelse ($monthlyAttendances as $attendance)
                             <tr>
                                 <td>{{ $attendance->employee?->first_name }} {{ $attendance->employee?->last_name }}</td>
-                                <td>{{ $attendance->year }}</td>
                                 <td>{{ $attendance->month_name }}</td>
                                 <td>{{ $attendance->work_days }}</td>
                                 <td>{{ $attendance->present_days }}</td>

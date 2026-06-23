@@ -20,16 +20,10 @@ class MonthlyAttendanceController extends Controller
 
     public function index(Request $request): View
     {
-        $query = MonthlyAttendance::with(['employee', 'payroll'])
-            ->orderBy('year', 'desc')
-            ->orderBy('month', 'desc');
+        $query = MonthlyAttendance::with(['employee', 'payroll'])->orderByDesc('month')->orderByDesc('employee_id');
 
         if ($request->filled('employee_id')) {
             $query->where('employee_id', $request->integer('employee_id'));
-        }
-
-        if ($request->filled('year')) {
-            $query->where('year', $request->integer('year'));
         }
 
         if ($request->filled('month')) {

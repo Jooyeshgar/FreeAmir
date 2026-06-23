@@ -6,11 +6,6 @@
 
             {{-- Filter bar --}}
             <form action="{{ route('employee-portal.monthly-attendances') }}" method="GET" class="flex flex-wrap items-end gap-3 mb-2">
-
-                <div class="w-28 pb-1">
-                    <x-text-input input_name="year" input_value="{{ request('year') }}" input_class="input-sm" label_text_class="label" title="{{ __('Year') }}" placeholder="{{ __('Year') }}" />
-                </div>
-
                 <div class="w-36">
                     <label class="fieldset w-full">
                         <div class="label">
@@ -41,7 +36,6 @@
                 <table class="table w-full mt-2">
                     <thead>
                         <tr>
-                            <th>{{ __('Year') }}</th>
                             <th>{{ __('Month') }}</th>
                             <th>{{ __('Work Days') }}</th>
                             <th>{{ __('Present') }}</th>
@@ -53,7 +47,6 @@
                     <tbody>
                         @forelse ($monthlyAttendances as $ma)
                             <tr>
-                                <td>{{ localizeNumber($ma->year) }}</td>
                                 <td>{{ \App\Models\MonthlyAttendance::MONTH_NAMES[$ma->month] ?? $ma->month }}</td>
                                 <td>{{ localizeNumber($ma->work_days) }}</td>
                                 <td>

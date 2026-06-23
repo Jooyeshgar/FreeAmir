@@ -179,13 +179,7 @@ class EmployeePortalController extends Controller
     {
         $employee = $this->currentEmployee();
 
-        $query = MonthlyAttendance::where('employee_id', $employee->id)
-            ->orderBy('year', 'desc')
-            ->orderBy('month', 'desc');
-
-        if ($request->filled('year')) {
-            $query->where('year', $request->integer('year'));
-        }
+        $query = MonthlyAttendance::where('employee_id', $employee->id)->orderByDesc('month');
 
         if ($request->filled('month')) {
             $query->where('month', $request->integer('month'));
@@ -252,13 +246,7 @@ class EmployeePortalController extends Controller
     {
         $employee = $this->currentEmployee();
 
-        $query = Payroll::where('employee_id', $employee->id)
-            ->orderBy('year', 'desc')
-            ->orderBy('month', 'desc');
-
-        if ($request->filled('year')) {
-            $query->where('year', $request->integer('year'));
-        }
+        $query = Payroll::where('employee_id', $employee->id)->orderByDesc('month');
 
         if ($request->filled('month')) {
             $query->where('month', $request->integer('month'));

@@ -45,7 +45,6 @@ class PayrollController extends Controller
     {
         $validated = $request->validate([
             'employee_id' => ['nullable', 'integer', 'exists:employees,id'],
-            'year' => ['nullable', 'integer', 'between:1300,1600'],
             'month' => ['nullable', 'integer', 'between:1,12'],
             'organization_unit_id' => ['nullable', 'integer', 'exists:organization_units,id'],
             'status' => ['nullable', 'string', Rule::enum(PayrollStatus::class)],
@@ -55,10 +54,6 @@ class PayrollController extends Controller
 
         if (! empty($validated['employee_id'])) {
             $query->where('employee_id', $validated['employee_id']);
-        }
-
-        if (! empty($validated['year'])) {
-            $query->where('year', $validated['year']);
         }
 
         if (! empty($validated['month'])) {
