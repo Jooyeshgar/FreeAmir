@@ -257,6 +257,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 ->where('name', 'LIKE', 'employee-portal.%')
                 ->orWhere('name', '=', 'change-company')
                 ->orWhere('name', '=', 'home')
+                ->orWhere('name', '=', 'attendance.attendance-logs.show')
                 ->pluck('name')
                 ->toArray()
         );

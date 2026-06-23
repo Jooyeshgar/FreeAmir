@@ -254,8 +254,8 @@
                                     <td>
                                         <a href="{{ route('attendance.attendance-logs.show', $log) }}">{{ formatDate($log->log_date) }}</a>
                                     </td>
-                                    <td>{{ $log->entry_time ? localizeNumber($log->entry_time) : '—' }}</td>
-                                    <td>{{ $log->exit_time ? localizeNumber($log->exit_time) : '—' }}</td>
+                                    <td>{{ $log->entry_time ? localizeNumber(substr($log->entry_time, 0, 5)) : '—' }}</td>
+                                    <td>{{ $log->exit_time ? localizeNumber(substr($log->exit_time, 0, 5)) : '—' }}</td>
                                     <td>{{ formatMinutesAsTime($log->worked) }}</td>
                                     <td>{{ formatMinutesAsTime($log->paid_leave) }}</td>
                                     <td>{{ formatMinutesAsTime($log->overtime + $log->auto_overtime) }}</td>

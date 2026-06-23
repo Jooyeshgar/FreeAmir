@@ -94,7 +94,7 @@ class AttendanceService
 
         $midShiftCoverage = $this->midShiftCoverageMinutes($log, $hourlyCoverageRequests);
 
-        $columns = $this->computeLogColumns($log, $workShift, $isFriday, $isHoliday, $isThursday, $remoteRequest, $midShiftCoverage);
+        $columns = $this->computeLogColumns($log, $workShift, $isFriday, $isHoliday, $isThursday, $remoteRequest, $midShiftCoverage, $hourlyCoverageRequests);
 
         $log->update($columns);
 
@@ -122,7 +122,7 @@ class AttendanceService
      *     is_holiday?:bool
      * }
      */
-    public function computeLogColumns(AttendanceLog $log, ?WorkShift $workShift, bool $isFriday = false, bool $isHoliday = false, bool $isThursday = false, ?PersonnelRequest $remoteRequest = null, int $midShiftCoverage = 0): array
+    public function computeLogColumns(AttendanceLog $log, ?WorkShift $workShift, bool $isFriday = false, bool $isHoliday = false, bool $isThursday = false, ?PersonnelRequest $remoteRequest = null, int $midShiftCoverage = 0, $hourlyCoverageRequests = null): array
     {
         // ── Thursday handling ──────────────────────────────────────────────
         $thursdayStatus = $isThursday ? ($workShift?->thursday_status ?? ThursdayStatus::FULL_DAY) : null;
@@ -205,6 +205,38 @@ class AttendanceService
         // ── Normal working day ─────────────────────────────────────────────
         $bounds = $this->shiftDelayEarlyLeave($log, $workShift);
 
+        // Determine explicit coverage boundaries if request objects are passed
+        $explicitDelayCoverage = 0;
+        $explicitEarlyLeaveCoverage = 0;
+
+        if ($hourlyCoverageRequests !== null) {
+            $entryTime = $log->entry_time ? Carbon::parse($log->entry_time)->format('H:i:s') : null;
+            $exitTime = $log->exit_time ? Carbon::parse($log->exit_time)->format('H:i:s') : null;
+
+            foreach ($hourlyCoverageRequests as $req) {
+                $reqStart = Carbon::parse($req->start_date)->format('H:i:s');
+                $reqEnd = Carbon::parse($req->end_date)->format('H:i:s');
+
+                // Leave occurring prior to physical check-in covers morning delays
+                if ($entryTime) {
+                    $start = $reqStart;
+                    $end = min($reqEnd, $entryTime);
+                    if ($start < $end) {
+                        $explicitDelayCoverage += Carbon::parse($start)->diffInMinutes(Carbon::parse($end));
+                    }
+                }
+
+                // Leave occurring after physical check-out covers early leaves
+                if ($exitTime) {
+                    $start = max($reqStart, $exitTime);
+                    $end = $reqEnd;
+                    if ($start < $end) {
+                        $explicitEarlyLeaveCoverage += Carbon::parse($start)->diffInMinutes(Carbon::parse($end));
+                    }
+                }
+            }
+        }
+
         // Hourly leave/mission taken while the clock was running (mid-shift) is already inside the clocked window,
         // so it must be removed from worked and is NOT available to absorb delay / early_leave (it covered the mid-shift gap, not the edges).
         $totalCoverage = $paidLeave + $mission;
@@ -213,13 +245,29 @@ class AttendanceService
 
         $coveredMinutes = min($shiftMinutes, $edgeCoverage + min($remoteWork, $shiftMinutes));
 
-        $remainingCoverage = $coveredMinutes;
+        // Ensure explicit coverage mappings don't exceed logically allowed boundaries
+        $explicitDelayCoverage = min($explicitDelayCoverage, $coveredMinutes);
+        $explicitEarlyLeaveCoverage = min($explicitEarlyLeaveCoverage, max(0, $coveredMinutes - $explicitDelayCoverage));
 
-        $netDelay = max(0, $bounds['delay'] - $remainingCoverage);
-        $remainingCoverage = max(0, $remainingCoverage - $bounds['delay']);
+        // Any coverage originating from DB logs strictly missing request records (legacy or manual inputs)
+        $blindCoverage = max(0, $coveredMinutes - $explicitDelayCoverage - $explicitEarlyLeaveCoverage);
 
-        $netEarlyLeave = max(0, $bounds['early_leave'] - $remainingCoverage);
-        $remainingCoverage = max(0, $remainingCoverage - $bounds['early_leave']);
+        $netDelay = max(0, $bounds['delay'] - $explicitDelayCoverage);
+        $unusedExplicitDelay = max(0, $explicitDelayCoverage - $bounds['delay']);
+
+        $usedBlindForDelay = min($netDelay, $blindCoverage);
+        $netDelay -= $usedBlindForDelay;
+        $blindCoverage -= $usedBlindForDelay;
+
+        $netEarlyLeave = max(0, $bounds['early_leave'] - $explicitEarlyLeaveCoverage);
+        $unusedExplicitEarlyLeave = max(0, $explicitEarlyLeaveCoverage - $bounds['early_leave']);
+
+        $usedBlindForEarlyLeave = min($netEarlyLeave, $blindCoverage);
+        $netEarlyLeave -= $usedBlindForEarlyLeave;
+        $blindCoverage -= $usedBlindForEarlyLeave;
+
+        // Unused explicit coverage correctly converts to unused for overtime offset
+        $remainingCoverage = $blindCoverage + $unusedExplicitDelay + $unusedExplicitEarlyLeave;
 
         $computedOvertime = max(0, (int) ($bounds['overtime'] ?? 0));
         $approvedOvertime = min($approvedOvertimeInput, $computedOvertime);
@@ -228,7 +276,7 @@ class AttendanceService
 
         $remoteExtra = max(0, $remoteWork - $shiftMinutes);
 
-        $unusedCoverageForOvertime = $computedOvertime > 0 ? $remainingCoverage : 0;
+        $unusedCoverageForOvertime = $remainingCoverage;
 
         $autoOvertime = min($remainingOvertime + $unusedCoverageForOvertime + $remoteExtra, $autoOvertimeCap);
 
@@ -553,35 +601,40 @@ class AttendanceService
         $mergedStart = empty($starts) ? null : min($starts);
         $mergedEnd = empty($ends) ? null : max($ends);
 
-        // When both windows exist, compute their intersection so overlapping
-        // minutes are not counted twice in either worked or effectiveInShift.
+        $actualShiftStart = $shiftStart;
+        $actualShiftEnd = $shiftEnd;
+        if ($mergedStart !== null && $shiftStart !== null && $float > 0 && $mergedStart->greaterThan($shiftStart)) {
+            $offset = min($float, $shiftStart->diffInMinutes($mergedStart));
+            $actualShiftStart = $shiftStart->copy()->addMinutes($offset);
+            $actualShiftEnd = $shiftEnd->copy()->addMinutes($offset);
+        }
+
         $windowOverlapRaw = 0;
         $windowOverlapInShift = 0;
         if ($officeEntry !== null && $officeExit !== null && $remoteStart !== null && $remoteEnd !== null) {
             $intersectStart = $officeEntry->greaterThan($remoteStart) ? $officeEntry : $remoteStart;
             $intersectEnd = $officeExit->lessThan($remoteEnd) ? $officeExit : $remoteEnd;
             $windowOverlapRaw = max(0, (int) $intersectStart->diffInMinutes($intersectEnd, false));
-            if ($windowOverlapRaw > 0 && $shiftStart !== null && $shiftEnd !== null) {
-                $windowOverlapInShift = $this->overlapMinutes($intersectStart, $intersectEnd, $shiftStart, $shiftEnd);
+            if ($windowOverlapRaw > 0) {
+                $windowOverlapInShift = $this->overlapMinutes($intersectStart, $intersectEnd, $actualShiftStart, $actualShiftEnd);
             }
         }
 
         $effectiveInShift = 0;
-        if ($officeEntry !== null && $officeExit !== null && $shiftStart !== null && $shiftEnd !== null) {
-            $effectiveInShift += $this->overlapMinutes($officeEntry, $officeExit, $shiftStart, $shiftEnd);
+        if ($officeEntry !== null && $officeExit !== null) {
+            $effectiveInShift += $this->overlapMinutes($officeEntry, $officeExit, $actualShiftStart, $actualShiftEnd);
         }
-        if ($remoteStart !== null && $remoteEnd !== null && $shiftStart !== null && $shiftEnd !== null) {
-            $effectiveInShift += $this->overlapMinutes($remoteStart, $remoteEnd, $shiftStart, $shiftEnd);
+        if ($remoteStart !== null && $remoteEnd !== null) {
+            $effectiveInShift += $this->overlapMinutes($remoteStart, $remoteEnd, $actualShiftStart, $actualShiftEnd);
         }
         $effectiveInShift = min($shiftMinutes, $effectiveInShift - $windowOverlapInShift);
 
         $delayTime = 0;
         $overtimeTime = 0;
-        if ($mergedStart !== null && $mergedEnd !== null && $shiftStart !== null && $shiftEnd !== null) {
-            $floatCutoff = $shiftStart->copy()->addMinutes($float);
-            $delayTime = max(0, (int) $floatCutoff->diffInMinutes($mergedStart, false));
-            $earlyArrival = max(0, (int) $mergedStart->diffInMinutes($shiftStart, false));
-            $lateExit = max(0, (int) $shiftEnd->diffInMinutes($mergedEnd, false));
+        if ($mergedStart !== null && $mergedEnd !== null) {
+            $delayTime = max(0, (int) $actualShiftStart->diffInMinutes($mergedStart, false));
+            $earlyArrival = max(0, (int) $mergedStart->diffInMinutes($actualShiftStart, false));
+            $lateExit = max(0, (int) $actualShiftEnd->diffInMinutes($mergedEnd, false));
             $overtimeTime = $earlyArrival + $lateExit;
         }
 
