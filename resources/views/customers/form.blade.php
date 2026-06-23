@@ -72,11 +72,11 @@
         <div x-show="activeTab === 'contact'" x-cloak>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <x-input title="{{ __('Mobile') }}" name="phone" placeholder="{{ __('Mobile') }}" :value="old('phone', $customer->phone ?? '')" />
+                    <x-input title="{{ __('Mobile') }}" name="mobile" placeholder="{{ __('Mobile') }}" :value="old('mobile', $customer->mobile ?? '')" />
                 </div>
                 <div>
-                    <x-input title="{{ __('Cell') }}" name="cell" placeholder="{{ __('Cell') }}"
-                        :value="old('cell', $customer->cell ?? '')" />
+                    <x-input title="{{ __('Phone') }}" name="phone" placeholder="{{ __('Phone') }}"
+                        :value="old('phone', $customer->phone ?? '')" />
                 </div>
                 <div>
                     <x-input title="{{ __('Fax') }}" name="fax" placeholder="{{ __('Fax') }}" :value="old('fax', $customer->fax ?? '')" />

@@ -50,7 +50,6 @@ return [
         'calculated_amount' => 'مبلغ محاسبه‌شده',
         'card_number' => 'شماره کارت',
         'category' => 'دسته‌بندی',
-        'cell' => 'موبایل',
         'children_count' => 'تعداد فرزند',
         'code' => 'کد',
         'company' => 'نام شرکت',
@@ -225,7 +224,7 @@ return [
                 ],
             ],
         ],
-        'cell' => [
+        'mobile' => [
             'regex' => 'شماره موبایل معتبر نیست.',
         ],
         'contract_end_date' => [

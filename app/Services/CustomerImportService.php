@@ -24,7 +24,7 @@ class CustomerImportService
         'subject_code',
         'type',
         'phone',
-        'cell',
+        'mobile',
         'fax',
         'address',
         'postal_code',
@@ -47,7 +47,7 @@ class CustomerImportService
 
     /** Customer fields copied straight from the CSV row (no special handling). */
     private const PLAIN_FIELDS = [
-        'phone', 'cell', 'fax', 'address', 'postal_code', 'email', 'ecnmcs_code',
+        'phone', 'mobile', 'fax', 'address', 'postal_code', 'email', 'ecnmcs_code',
         'personal_code', 'web_page', 'responsible', 'connector', 'desc', 'credit',
         'disc_rate', 'acc_name_1', 'acc_no_1', 'acc_bank_1', 'acc_name_2',
         'acc_no_2', 'acc_bank_2',

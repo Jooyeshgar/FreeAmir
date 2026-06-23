@@ -16,7 +16,7 @@ class Customer extends Model
         'name',
         'subject_id',
         'phone',
-        'cell',
+        'mobile',
         'fax',
         'address',
         'postal_code',
@@ -48,7 +48,7 @@ class Customer extends Model
 
     protected $attributes = [
         'connector' => '',
-        'cell' => '',
+        'mobile' => '',
         'balance' => 0,
         'credit' => 0,
         'commission' => '',

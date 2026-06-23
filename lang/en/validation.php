@@ -50,7 +50,6 @@ return [
         'calculated_amount' => 'Calculated amount',
         'card_number' => 'Card number',
         'category' => 'categorization',
-        'cell' => 'Mobile',
         'children_count' => 'Number of children',
         'code' => 'Code',
         'company' => 'company',
@@ -225,7 +224,7 @@ return [
                 ],
             ],
         ],
-        'cell' => [
+        'mobile' => [
             'regex' => 'The mobile number is not valid.',
         ],
         'contract_end_date' => [

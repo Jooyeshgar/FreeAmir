@@ -85,8 +85,8 @@
 
                 {{-- Primary phone numbers, emphasized and click-to-call --}}
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                    <a @if ($customer->cell) href="tel:{{ $customer->cell }}" @endif
-                        class="flex items-center gap-3 rounded-xl bg-base-100 border border-base-300 p-3 {{ $customer->cell ? 'hover:border-primary hover:shadow-md transition-all' : 'opacity-70 pointer-events-none' }}">
+                    <a @if ($customer->mobile) href="tel:{{ $customer->mobile }}" @endif
+                        class="flex items-center gap-3 rounded-xl bg-base-100 border border-base-300 p-3 {{ $customer->mobile ? 'hover:border-primary hover:shadow-md transition-all' : 'opacity-70 pointer-events-none' }}">
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -95,7 +95,7 @@
                         </span>
                         <div class="min-w-0">
                             <div class="text-xs text-gray-500">{{ __('Mobile') }}</div>
-                            <div class="text-lg font-bold truncate text-right" dir="ltr">{{ $customer->cell ?? '-' }}</div>
+                            <div class="text-lg font-bold truncate text-right" dir="ltr">{{ $customer->mobile ?? '-' }}</div>
                         </div>
                     </a>
 

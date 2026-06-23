@@ -45,7 +45,7 @@ class StoreCustomerRequest extends FormRequest
                 'regex:/^\d+$/',
                 Rule::unique('customers', 'phone')->ignore($customerId),
             ],
-            'cell' => [
+            'mobile' => [
                 'nullable',
                 'string',
                 'max:15',
