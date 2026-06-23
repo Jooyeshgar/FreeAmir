@@ -2387,6 +2387,7 @@
     "twelve": "دوازده",
     "twenty": "بیست",
     "two": "دو",
+    "Unsupported IBAN country.": "کشور شماره شبا پشتیبانی نمی‌شود.",
     "unapproved": "تایید نشده",
     "undertime (:hours hrs × :rate × :coeff)": "کسر کار (:hours ساعت × :rate × :coeff)",
     "unknown reason": "دلیل نامشخص",

@@ -28,44 +28,44 @@ class StoreBankAccountRequest extends FormRequest
         return [
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
             'number' => 'nullable|string|max:40',
-            'iban' => ['nullable', Rule::unique('bank_accounts', 'iban')->where(fn ($query) => $query->where('company_id', $this->company_id))->ignore($this->bank_account),
+            'iban' => ['nullable', Rule::unique('bank_accounts', 'iban')->ignore($this->bank_account),
                 function ($attribute, $value, $fail) {
-                    $ibans = [
-                        'fa' => [
-                            'country' => 'IR',
-                            'length' => 26,
-                        ],
-                        'de' => [
-                            'country' => 'DE',
-                            'length' => 22,
-                        ],
-                        'gr' => [
-                            'country' => 'GR',
-                            'length' => 27,
-                        ],
-                        'el' => [
-                            'country' => 'GR',
-                            'length' => 27,
-                        ],
-                        'en' => [
-                            'country' => 'GB',
-                            'length' => 22,
-                        ],
+                    $value = strtoupper(str_replace(' ', '', trim($value)));
+                    $ibanLengths = [
+                        'IR' => 26,
+                        'DE' => 22,
+                        'GB' => 22,
+                        'GR' => 27,
                     ];
-                    $config = $ibans[app()->getLocale()] ?? $ibans['fa'];
-                    $value = strtoupper(trim($value));
-                    if (strlen($value) !== $config['length'] || ! str_starts_with($value, $config['country'])) {
+
+                    if (! preg_match('/^[A-Z]{2}[0-9]{2}[A-Z0-9]+$/', $value)) {
                         $fail(__('Invalid IBAN.'));
 
                         return;
                     }
 
-                    $iban = substr($value, 4).substr($value, 0, 4);
-                    $iban = preg_replace_callback('/[A-Z]/', fn ($m) => ord($m[0]) - 55, $iban);
+                    $country = substr($value, 0, 2);
+
+                    if (! isset($ibanLengths[$country])) {
+                        $fail(__('Unsupported IBAN country.'));
+
+                        return;
+                    }
+
+                    if (strlen($value) !== $ibanLengths[$country]) {
+                        $fail(__('Invalid IBAN.'));
+
+                        return;
+                    }
+
+                    $iban = substr($value, 4).substr($value, 0, 4); // Move first 4 chars to the end
+                    $iban = preg_replace_callback('/[A-Z]/', fn ($match) => ord($match[0]) - 55, $iban); // Replace letters with numbers (A=10 ... Z=35)
+
                     if (bcmod($iban, '97') != 1) {
                         $fail(__('Invalid IBAN.'));
                     }
-                }],
+                },
+            ],
             'type' => ['required', new Enum(BankAccountType::class)],
             'owner' => ['nullable', 'string', 'regex:/^[\w\d\s]*$/u'],
             'bank_id' => ['required', 'integer', 'exists:banks,id'],
