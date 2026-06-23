@@ -66,7 +66,7 @@
                 </tr>
             @endforelse
 
-            @if ($rows->isNotEmpty())
+            @if ($rows->isNotEmpty() && $showTotalRow)
                 <tr class="total-row">
                     @foreach ($totalRow as $cell)
                         @if ($cell['type'] === 'merge')
