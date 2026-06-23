@@ -55,7 +55,7 @@ class StoreBankAccountRequest extends FormRequest
                     $config = $ibans[app()->getLocale()] ?? $ibans['fa'];
                     $value = strtoupper(trim($value));
                     if (strlen($value) !== $config['length'] || ! str_starts_with($value, $config['country'])) {
-                        $fail(__('Invalid IBAN'));
+                        $fail(__('Invalid IBAN.'));
 
                         return;
                     }
@@ -63,7 +63,7 @@ class StoreBankAccountRequest extends FormRequest
                     $iban = substr($value, 4).substr($value, 0, 4);
                     $iban = preg_replace_callback('/[A-Z]/', fn ($m) => ord($m[0]) - 55, $iban);
                     if (bcmod($iban, '97') != 1) {
-                        $fail(__('Invalid IBAN'));
+                        $fail(__('Invalid IBAN.'));
                     }
                 }],
             'type' => ['required', new Enum(BankAccountType::class)],

@@ -14,9 +14,12 @@
             <span class="text-gray-500 w-full"> {{ __('Type') }} </span>
             <select name="type" id="type" x-model="selectedType"
                 class="h-10 min-h-10 border border-slate-400 w-full rounded-md text-gray-500 px-2">
-                <option class="bg-base-100" value="">{{ __('Select Type') }}</option>
+                @php
+                    $selectedType = old('type', $bankAccount->type?->value ?? '');
+                @endphp
+                <option value="" @selected($selectedType === null || $selectedType === '')>{{ __('Select Type') }}</option>
                 @foreach (App\Enums\BankAccountType::cases() as $type)
-                    <option value="{{ $type->value }}" @selected(old('type', $bankAccount->type?->value ?? '') == $type->value)>{{ $type->label() }}</option>
+                    <option value="{{ $type->value }}" @selected((int)$selectedType === $type->value)>{{ $type->label() }}</option>
                 @endforeach
             </select>
         </div>

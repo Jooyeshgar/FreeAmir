@@ -9,8 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('bank_accounts', function (Blueprint $table) {
-            $table->string('iban')->unique()->nullable();
-            $table->enum('type', ['current', 'savings', 'qarz_al_hasanah', 'other'])->nullable()->change();
+            $table->string('iban')->nullable()->unique();
         });
     }
 
@@ -18,7 +17,6 @@ return new class extends Migration
     {
         Schema::table('bank_accounts', function (Blueprint $table) {
             $table->dropColumn('iban');
-            $table->integer('type')->change();
         });
     }
 };
