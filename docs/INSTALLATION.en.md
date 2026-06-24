@@ -2,9 +2,26 @@
 
 ## Table of Contents
 
+0. [Windows Executable (.exe)](#windows-executable-exe)
 1. [Production — Docker Compose (Recommended)](#option-1-production--docker-compose-recommended)
 2. [All-in-One — Single Docker Command (Testing only)](#option-2-all-in-one--single-docker-command-testing-only)
 3. [Standard Installation — PHP + MariaDB](#option-3-standard-installation--php--mariadb)
+
+---
+
+## Windows Executable (.exe)
+
+> ⚠️ **Not recommended for production.** This option is designed for quick testing on Windows.
+
+### Steps
+
+**1. Download the file:**
+
+Download the Windows executable from the [Releases](https://github.com/Jooyeshgar/FreeAmir/releases/) page.
+
+**2. Installation:**
+
+Execute the downloaded `.exe` file. The application will be installed on your computer.
 
 ---
 
