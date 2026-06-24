@@ -4,6 +4,17 @@
 
 This directory is the Markdown documentation hub for Amir. To keep languages aligned, Persian README files have no prefix, and the English version of the same README is named `README.en.md`.
 
+## Product Pages
+
+| Page | Description |
+|---|---|
+| [Features](features.en.html) | Complete list of Amir's capabilities |
+| [Comparison](comparison.en.html) | Comparison with commercial software |
+| [FAQ](faq.en.html) | Frequently asked questions |
+| [Roadmap](roadmap.en.html) | Future development roadmap |
+| [Screenshots](screenshots.en.html) | User interface screenshots |
+| [Moadian setup](moadian.en.html) | Moadian system setup guide |
+
 ## Main Paths
 
 | Path | Audience | Description |
