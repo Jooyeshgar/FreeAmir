@@ -16,7 +16,7 @@
 
 - **ERP متن باز ایرانی** با پشتیبانی از چند شرکت و چند سال مالی
 - **نرم افزار حسابداری رایگان** بدون هزینه مجوز یا اشتراک
-- **سامانه مودیان متن باز** با اتصال کامل به سامانه مودیات مالیاتی ایران
+- **سامانه مودیان متن باز** با اتصال کامل به سامانه مودیان مالیاتی ایران
 
 ---
 
@@ -36,11 +36,11 @@
 ## نصب سریع
 
 
-### ۱. فایل exe - ویندوز  (آزمایش سریع برای محیط عملیانی توصیه نمی شود)
+### ۱. فایل exe - ویندوز  (آزمایش سریع برای محیط عملیاتی توصیه نمی شود)
 
 دانلود فایل ویندوزی از بخش  [ریلیز ها](https://github.com/Jooyeshgar/FreeAmir/releases/)
 
-### ۲. Docker تک‌دستوری (آزمایش سریع برای محیط عملیانی توصیه نمی شود)
+### ۲. Docker تک‌دستوری (آزمایش سریع برای محیط عملیاتی توصیه نمی شود)
 
 ```bash
 docker run -d --name freeamir -p 80:80 ghcr.io/jooyeshgar/freeamir-all-in-one:latest
@@ -97,7 +97,7 @@ sail npm run dev
 | مقایسه | [comparison.md](docs/comparison.md) | [comparison.en.md](docs/comparison.en.md) |
 | سوالات متداول | [faq.md](docs/faq.md) | [faq.en.md](docs/faq.en.md) |
 | نقشه راه | [roadmap.md](docs/roadmap.md) | [roadmap.en.md](docs/roadmap.en.md) |
-| نماشگاه | [screenshots.md](docs/screenshots.md) | [screenshots.en.md](docs/screenshots.en.md) |
+| نمایشگاه | [screenshots.md](docs/screenshots.md) | [screenshots.en.md](docs/screenshots.en.md) |
 | فهرست مستندات | [docs/README.md](docs/README.md) | [docs/README.en.md](docs/README.en.md) |
 | راهنمای نصب | [docs/INSTALLATION.md](docs/INSTALLATION.md) | [docs/INSTALLATION.en.md](docs/INSTALLATION.en.md) |
 | راهنمای استفاده‌کنندگان | [docs/user/README.md](docs/user/README.md) | [docs/user/README.en.md](docs/user/README.en.md) |
