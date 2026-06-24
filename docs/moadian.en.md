@@ -132,7 +132,3 @@ If the information is correct, the application will be able to send electronic i
 * If the private key is deleted or lost, the issued certificate cannot be used.
 * The unique tax memory identifier must be entered exactly as registered in the Moadian system.
 * In Amir, there is no need to use a hardware token directly; only public and private keys are used.
-
----
-
-<a href="index.en.html" class="inline-flex items-center gap-2 rounded-lg bg-mint px-5 py-3 text-sm font-black text-white transition hover:bg-teal-800">Back to homepage</a>

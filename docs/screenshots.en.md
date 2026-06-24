@@ -67,6 +67,3 @@ docker run -d --name freeamir -p 80:80 ghcr.io/jooyeshgar/freeamir-all-in-one:la
 
 Once running, the application is available at http://localhost.
 
----
-
-<a href="index.en.html" class="inline-flex items-center gap-2 rounded-lg bg-mint px-5 py-3 text-sm font-black text-white transition hover:bg-teal-800">Back to homepage</a>

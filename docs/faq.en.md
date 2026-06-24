@@ -56,7 +56,3 @@ Anyone! Amir is an open-source project and contributions from everyone are welco
 - **Frontend:** Tailwind CSS + Alpine.js
 - **Deployment:** Docker / Docker Compose
 - **License:** GPL-3.0
-
----
-
-<a href="index.en.html" class="inline-flex items-center gap-2 rounded-lg bg-mint px-5 py-3 text-sm font-black text-white transition hover:bg-teal-800">Back to homepage</a>

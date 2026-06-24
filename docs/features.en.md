@@ -94,6 +94,3 @@ Management features for multi-branch organizations.
 - Responsive user interface
 - Persian (Farsi) language priority
 
----
-
-<a href="index.en.html" class="inline-flex items-center gap-2 rounded-lg bg-mint px-5 py-3 text-sm font-black text-white transition hover:bg-teal-800">Back to homepage</a>

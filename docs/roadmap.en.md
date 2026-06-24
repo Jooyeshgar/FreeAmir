@@ -41,6 +41,3 @@ Amir is an actively developing project. Below are some future ideas and prioriti
 
 If you have ideas for improving Amir, share them through [GitHub Issues](https://github.com/Jooyeshgar/FreeAmir/issues).
 
----
-
-<a href="index.en.html" class="inline-flex items-center gap-2 rounded-lg bg-mint px-5 py-3 text-sm font-black text-white transition hover:bg-teal-800">Back to homepage</a>
