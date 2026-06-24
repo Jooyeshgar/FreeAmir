@@ -14,7 +14,6 @@
 
 امیر به عنوان جایگزینی **رایگان و متن باز** برای نرم‌افزارهای تجاری حسابداری ایرانی طراحی شده است:
 
-- **جایگزین سپیدار** و **جایگزین هلو** با حسابداری دوبل استاندارد
 - **ERP متن باز ایرانی** با پشتیبانی از چند شرکت و چند سال مالی
 - **نرم افزار حسابداری رایگان** بدون هزینه مجوز یا اشتراک
 - **سامانه مودیان متن باز** با اتصال کامل به سامانه مودیات مالیاتی ایران
@@ -27,7 +26,7 @@
 |---|---|
 | **حسابداری مالی** | حسابداری دوبل، ثبت‌های روزنامه، دفتر کل، ترازنامه، سود و زیان |
 | **فروش و خرید** | مشتریان، تأمین‌کنندگان، فاکتور فروش و خرید، برگشت از فروش و خرید |
-| **انبارداری** | مدیریت انبارها، انتقال بین انبارها، پیگیری موجودی، بهای تمام‌شده میانگین موزون |
+| **انبارداری** | مدیریت انبار، پیگیری موجودی، بهای تمام‌شده میانگین موزون |
 | **منابع انسانی** | کارکنان، حضور و غیاب، حقوق و دستمزد، فیش حقوقی |
 | **مالیات** | اتصال به سامانه مودیان، گزارش‌های مالیاتی |
 | **مدیریت** | چند شرکت، چند سال مالی، نقش‌ها و دسترسی‌ها |
@@ -36,7 +35,12 @@
 
 ## نصب سریع
 
-### ۱. Docker تک‌دستوری (آزمایش سریع)
+
+### ۱. فایل exe - ویندوز  (آزمایش سریع برای محیط عملیانی توصیه نمی شود)
+
+دانلود فایل ویندوزی از بخش  [ریلیز ها](https://github.com/Jooyeshgar/FreeAmir/releases/)
+
+### ۲. Docker تک‌دستوری (آزمایش سریع برای محیط عملیانی توصیه نمی شود)
 
 ```bash
 docker run -d --name freeamir -p 80:80 ghcr.io/jooyeshgar/freeamir-all-in-one:latest
@@ -44,7 +48,7 @@ docker run -d --name freeamir -p 80:80 ghcr.io/jooyeshgar/freeamir-all-in-one:la
 
 برنامه پس از اجرا در http://localhost در دسترس است.
 
-### ۲. Docker Compose (محیط عملیاتی)
+### ۳. Docker Compose (محیط عملیاتی)
 
 ```bash
 mkdir freeamir && cd freeamir
@@ -54,20 +58,6 @@ cp docker-compose.prebuilt.yml docker-compose.yml
 cp .env.example .env
 # فایل .env را ویرایش کنید
 docker compose up -d
-```
-
-### ۳. نصب استاندارد
-
-```bash
-git clone https://github.com/Jooyeshgar/FreeAmir.git
-cd FreeAmir
-composer install --no-dev --optimize-autoloader
-cp .env.example .env
-php artisan key:generate
-php artisan migrate
-php artisan db:seed
-npm install && npm run build
-php artisan serve
 ```
 
 > راهنمای کامل نصب در [docs/INSTALLATION.md](docs/INSTALLATION.md) قرار دارد.
@@ -95,26 +85,6 @@ sail artisan test
 sail npm run dev
 ```
 
-### راه‌اندازی بدون Sail
-
-```bash
-php artisan test
-npm run dev
-```
-
-### دستورات مفید
-
-```bash
-# اجرای تست‌ها
-sail artisan test
-
-# قالب‌بندی کد
-./vendor/bin/pint
-
-# اجرای مایگریشن و داده اولیه
-sail artisan migrate --seed
-```
-
 پیش از تغییر در منطق حسابداری، [راهنمای برنامه‌نویس](docs/developer/README.md) را بخوانید. تغییرات اثرگذار بر محاسبات مالی باید تست داشته باشند.
 
 ---
@@ -123,11 +93,11 @@ sail artisan migrate --seed
 
 | بخش | فارسی | English |
 |---|---|---|
-| ویژگی‌ها | [features.html](docs/features.html) | [features.en.html](docs/features.en.html) |
-| مقایسه | [comparison.html](docs/comparison.html) | [comparison.en.html](docs/comparison.en.html) |
-| سوالات متداول | [faq.html](docs/faq.html) | [faq.en.html](docs/faq.en.html) |
-| نقشه راه | [roadmap.html](docs/roadmap.html) | [roadmap.en.html](docs/roadmap.en.html) |
-| نماشگاه | [screenshots.html](docs/screenshots.html) | [screenshots.en.html](docs/screenshots.en.html) |
+| ویژگی‌ها | [features.md](docs/features.md) | [features.en.md](docs/features.en.md) |
+| مقایسه | [comparison.md](docs/comparison.md) | [comparison.en.md](docs/comparison.en.md) |
+| سوالات متداول | [faq.md](docs/faq.md) | [faq.en.md](docs/faq.en.md) |
+| نقشه راه | [roadmap.md](docs/roadmap.md) | [roadmap.en.md](docs/roadmap.en.md) |
+| نماشگاه | [screenshots.md](docs/screenshots.md) | [screenshots.en.md](docs/screenshots.en.md) |
 | فهرست مستندات | [docs/README.md](docs/README.md) | [docs/README.en.md](docs/README.en.md) |
 | راهنمای نصب | [docs/INSTALLATION.md](docs/INSTALLATION.md) | [docs/INSTALLATION.en.md](docs/INSTALLATION.en.md) |
 | راهنمای استفاده‌کنندگان | [docs/user/README.md](docs/user/README.md) | [docs/user/README.en.md](docs/user/README.en.md) |
@@ -160,7 +130,7 @@ sail artisan migrate --seed
 - [x] اتصال کامل سامانه مودیان
 - [ ] نقش‌های اختصاصی شرکت
 - [ ] فرآیندهای تأیید
-- [ ] گزارش‌های حسابرسی
+- [ ] گزارش‌های حسابرسی (Audit Logs)
 - [ ] گسترش API
 - [ ] پشتیبانی موبایل / PWA
 
@@ -175,7 +145,7 @@ sail artisan migrate --seed
 بله. امیر برای خودمیزبانی طراحی شده و داده‌ها کاملاً در اختیار شماست.
 
 **آیا از سامانه مودیان پشتیبانی می‌کند؟**
-بله. امیر از سامانه مودیان پشتیبانی می‌کند. هر شرکت می‌تواند گواهی و کلید خصوصی خود را تنظیم کند. [راهنمای راه‌اندازی مودیان](docs/moadian.html)
+بله. امیر از سامانه مودیان پشتیبانی می‌کند. هر شرکت می‌تواند گواهی و کلید خصوصی خود را تنظیم کند. [راهنمای راه‌اندازی مودیان](docs/moadian.md)
 
 **آیا از چند شرکت پشتیبانی می‌کند؟**
 بله. امیر از چند شرکت با سال‌های مالی مستقل پشتیبانی می‌کند.

@@ -7,7 +7,7 @@
     <meta name="description"
         content="امیر؛ نرم افزار آزاد و رایگان حسابداری و ERP ایرانی مبتنی بر Laravel. حسابداری دوبل، سامانه مودیان، مدیریت انبار، حقوق و دستمزد. خودمیزبان و متن باز.">
     <meta name="keywords"
-        content="نرم افزار حسابداری متن باز, نرم افزار حسابداری رایگان, جایگزین سپیدار, جایگزین هلو, ERP متن باز ایرانی, سامانه مودیان متن باز, حسابداری دوبل, Laravel accounting, open source ERP Iran">
+        content="نرم افزار حسابداری متن باز, نرم افزار حسابداری رایگان, ERP متن باز ایرانی, سامانه مودیان متن باز, حسابداری دوبل, Laravel accounting, open source ERP Iran">
     <meta property="og:title" content="امیر | نرم افزار آزاد حسابداری و ERP ایرانی">
     <meta property="og:description"
         content="پلتفرم متن باز حسابداری و ERP برای کسب و کارهای ایرانی. حسابداری دوبل، مودیان، انبار، حقوق و دستمزد. رایگان و خودمیزبان.">
@@ -94,8 +94,8 @@
                         @click="menuOpen = false">مقایسه</a>
                     <a class="rounded-lg px-3 py-2 hover:bg-white" href="screenshots.html"
                         @click="menuOpen = false">نماشگاه</a>
-                    <a class="rounded-lg px-3 py-2 hover:bg-white" href="faq.html"
-                        @click="menuOpen = false">سوالات متداول</a>
+                    <a class="rounded-lg px-3 py-2 hover:bg-white" href="faq.html" @click="menuOpen = false">سوالات
+                        متداول</a>
                     <a class="rounded-lg px-3 py-2 hover:bg-white" href="INSTALLATION.html"
                         @click="menuOpen = false">نصب</a>
                     <a class="rounded-lg px-3 py-2 hover:bg-white" href="README.html"
@@ -124,7 +124,8 @@
                         </div>
                         <h1 class="max-w-4xl text-4xl font-black leading-tight text-ink sm:text-5xl lg:text-6xl">
                             امیر
-                            <span class="block text-3xl sm:text-4xl lg:text-5xl mt-2 text-stone-600">نرم افزار آزاد حسابداری و ERP ایرانی</span>
+                            <span class="block text-3xl sm:text-4xl lg:text-5xl mt-2 text-stone-600">نرم افزار آزاد
+                                حسابداری و ERP ایرانی</span>
                         </h1>
                         <p class="mt-6 max-w-2xl text-lg leading-9 text-stone-700">
                             حسابداری دوبل، سامانه مودیان، چند شرکت، انبارداری، حقوق و دستمزد &mdash; همه در یک
@@ -217,7 +218,8 @@ FreeAmir:
                     </div>
 
                     <!-- Financial -->
-                    <div x-show="activeTab === 'financial'" x-transition class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div x-show="activeTab === 'financial'" x-transition
+                        class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <article class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
                             <h3 class="text-lg font-black">حسابداری دوبل</h3>
                             <p class="mt-3 leading-8 text-stone-600">ثبت دقیق تراکنش‌ها با اصل بدهکار/بستانکار و
@@ -236,7 +238,8 @@ FreeAmir:
                     </div>
 
                     <!-- Sales -->
-                    <div x-show="activeTab === 'sales'" x-transition class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div x-show="activeTab === 'sales'" x-transition
+                        class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <article class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
                             <h3 class="text-lg font-black">مشتریان و تأمین‌کنندگان</h3>
                             <p class="mt-3 leading-8 text-stone-600">مدیریت اطلاعات و سوابق مشتریان و
@@ -255,7 +258,8 @@ FreeAmir:
                     </div>
 
                     <!-- Inventory -->
-                    <div x-show="activeTab === 'inventory'" x-transition class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div x-show="activeTab === 'inventory'" x-transition
+                        class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <article class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
                             <h3 class="text-lg font-black">مدیریت انبارها</h3>
                             <p class="mt-3 leading-8 text-stone-600">ایجاد و مدیریت چندین انبار و انتقال کالا بین
@@ -292,12 +296,15 @@ FreeAmir:
                     </div>
 
                     <!-- Tax -->
-                    <div x-show="activeTab === 'tax'" x-transition class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div x-show="activeTab === 'tax'" x-transition
+                        class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <article class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
                             <h3 class="text-lg font-black">سامانه مودیان</h3>
                             <p class="mt-3 leading-8 text-stone-600">اتصال کامل به سامانه مودیات مالیاتی ایران.
                                 هر شرکت گواهی و کلید خصوصی مختص خود را دارد.</p>
-                            <a href="moadian.html" class="mt-3 inline-flex text-sm font-bold text-mint hover:text-teal-800">راهنمای راه‌اندازی ←</a>
+                            <a href="moadian.html"
+                                class="mt-3 inline-flex text-sm font-bold text-mint hover:text-teal-800">راهنمای
+                                راه‌اندازی ←</a>
                         </article>
                         <article class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
                             <h3 class="text-lg font-black">گزارش‌های مالیاتی</h3>
@@ -307,7 +314,8 @@ FreeAmir:
                     </div>
 
                     <!-- Admin -->
-                    <div x-show="activeTab === 'admin'" x-transition class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div x-show="activeTab === 'admin'" x-transition
+                        class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <article class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
                             <h3 class="text-lg font-black">چند شرکت</h3>
                             <p class="mt-3 leading-8 text-stone-600">مدیریت همزمان چندین شرکت با داده‌های مجزا
@@ -403,7 +411,8 @@ FreeAmir:
                         <div>
                             <p class="text-sm font-black text-mint">شروع سریع</p>
                             <h2 class="mt-3 text-3xl font-black">سه مسیر نصب، از آزمایش سریع تا محیط عملیاتی</h2>
-                            <p class="mt-5 leading-8 text-stone-600">راهنمای نصب، Docker Compose، اجرای تک دستوری Docker و
+                            <p class="mt-5 leading-8 text-stone-600">راهنمای نصب، Docker Compose، اجرای تک دستوری Docker
+                                و
                                 نصب استاندارد با PHP و MariaDB را پوشش می‌دهد.</p>
                             <a href="INSTALLATION.html"
                                 class="mt-7 inline-flex rounded-lg bg-ink px-5 py-3 text-sm font-black text-white transition hover:bg-stone-800">مشاهده
@@ -416,7 +425,8 @@ FreeAmir:
                                         class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-teal-50 font-black text-mint">۱</span>
                                     <div>
                                         <h3 class="font-black">Docker Compose برای محیط عملیاتی</h3>
-                                        <p class="mt-2 leading-8 text-stone-600">استفاده از ایمیج‌های آماده GitHub Container
+                                        <p class="mt-2 leading-8 text-stone-600">استفاده از ایمیج‌های آماده GitHub
+                                            Container
                                             Registry با فایل تنظیمات محیطی.</p>
                                     </div>
                                 </div>
@@ -427,7 +437,8 @@ FreeAmir:
                                         class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-teal-50 font-black text-mint">۲</span>
                                     <div>
                                         <h3 class="font-black">Docker تک دستوری برای آزمایش</h3>
-                                        <p class="mt-2 leading-8 text-stone-600">راه‌اندازی سریع یک کانتینر همه در یک برای
+                                        <p class="mt-2 leading-8 text-stone-600">راه‌اندازی سریع یک کانتینر همه در یک
+                                            برای
                                             ارزیابی اولیه و تست کوتاه‌مدت.</p>
                                     </div>
                                 </div>
@@ -503,35 +514,46 @@ FreeAmir:
                     </div>
                     <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
-                            <div class="mb-3 inline-flex rounded-lg bg-teal-50 px-3 py-1 text-xs font-bold text-mint">تکمیل
+                            <div class="mb-3 inline-flex rounded-lg bg-teal-50 px-3 py-1 text-xs font-bold text-mint">
+                                تکمیل
                                 شده</div>
                             <h3 class="text-lg font-black">اتصال کامل مودیان</h3>
                             <p class="mt-2 leading-8 text-stone-600">اتصال کامل به سامانه مودیات مالیاتی ایران با
                                 پشتیبانی از گواهی و کلید خصوصی هر شرکت.</p>
                         </div>
                         <div class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
-                            <div class="mb-3 inline-flex rounded-lg bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">آینده</div>
+                            <div
+                                class="mb-3 inline-flex rounded-lg bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                                آینده</div>
                             <h3 class="text-lg font-black">نقش‌های اختصاصی شرکت</h3>
                             <p class="mt-2 leading-8 text-stone-600">تعریف نقش‌ها و دسترسی‌ها به صورت اختصاصی برای
                                 هر شرکت.</p>
                         </div>
                         <div class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
-                            <div class="mb-3 inline-flex rounded-lg bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">آینده</div>
+                            <div
+                                class="mb-3 inline-flex rounded-lg bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                                آینده</div>
                             <h3 class="text-lg font-black">فرآیندهای تأیید</h3>
                             <p class="mt-2 leading-8 text-stone-600">سیستم تأیید مراحل مختلف عملیات مالی.</p>
                         </div>
                         <div class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
-                            <div class="mb-3 inline-flex rounded-lg bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">آینده</div>
+                            <div
+                                class="mb-3 inline-flex rounded-lg bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                                آینده</div>
                             <h3 class="text-lg font-black">گزارش‌های حسابرسی</h3>
                             <p class="mt-2 leading-8 text-stone-600">ثبت تغییرات و پیگیری فعالیت‌ها.</p>
                         </div>
                         <div class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
-                            <div class="mb-3 inline-flex rounded-lg bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">آینده</div>
+                            <div
+                                class="mb-3 inline-flex rounded-lg bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                                آینده</div>
                             <h3 class="text-lg font-black">گسترش API</h3>
                             <p class="mt-2 leading-8 text-stone-600">API کامل برای اتصال به سیستم‌های جانبی.</p>
                         </div>
                         <div class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
-                            <div class="mb-3 inline-flex rounded-lg bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">آینده</div>
+                            <div
+                                class="mb-3 inline-flex rounded-lg bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                                آینده</div>
                             <h3 class="text-lg font-black">پشتیبانی موبایل / PWA</h3>
                             <p class="mt-2 leading-8 text-stone-600">اپلیکیشن موبایل یا PWA برای دسترسی
                                 آسان‌تر.</p>

@@ -8,12 +8,12 @@ This directory is the Markdown documentation hub for Amir. To keep languages ali
 
 | Page | Description |
 |---|---|
-| [Features](features.en.html) | Complete list of Amir's capabilities |
-| [Comparison](comparison.en.html) | Comparison with commercial software |
-| [FAQ](faq.en.html) | Frequently asked questions |
-| [Roadmap](roadmap.en.html) | Future development roadmap |
-| [Screenshots](screenshots.en.html) | User interface screenshots |
-| [Moadian setup](moadian.en.html) | Moadian system setup guide |
+| [Features](features.en.md) | Complete list of Amir's capabilities |
+| [Comparison](comparison.en.md) | Comparison with commercial software |
+| [FAQ](faq.en.md) | Frequently asked questions |
+| [Roadmap](roadmap.en.md) | Future development roadmap |
+| [Screenshots](screenshots.en.md) | User interface screenshots |
+| [Moadian setup](moadian.en.md) | Moadian system setup guide |
 
 ## Main Paths
 
