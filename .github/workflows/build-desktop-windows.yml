@@ -54,6 +54,10 @@ jobs:
         working-directory: nativephp/electron
         run: npm ci
 
+      - name: Build NativePHP Electron plugin
+        working-directory: nativephp/electron
+        run: npm run plugin:build
+
       - name: Install npm dependencies
         run: npm ci
 
