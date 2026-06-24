@@ -34,7 +34,7 @@ jobs:
         with:
           php-version: '8.3'        # MATCH the PHP version your app uses — NativePHP
                                     # ships the matching PHP binary based on this
-          extensions: dom, curl, libxml, mbstring, zip, fileinfo, intl, sqlite3, pdo_sqlite
+          extensions: dom, gd, curl, libxml, mbstring, zip, fileinfo, intl, sqlite3, pdo_sqlite
           tools: composer:v2
           coverage: none
 
@@ -44,7 +44,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       - name: Install npm dependencies
