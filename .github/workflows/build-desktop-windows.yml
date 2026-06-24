@@ -78,7 +78,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: freeamir-windows
-          path: dist/**          # NativePHP outputs installers here; adjust if needed
+          path: nativephp/electron/dist/**          # NativePHP outputs installers here; adjust if needed
 
       # Optional: attach the installer to a GitHub Release when you push a v* tag
       # - name: Publish to GitHub Release
