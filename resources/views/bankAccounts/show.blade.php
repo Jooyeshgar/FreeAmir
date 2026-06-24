@@ -22,9 +22,10 @@
         </div>
 
         <div class="card-body">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
                 <x-stat-card :title="__('Account number')" :value="localizeNumber($bankAccount->number)" type="success" />
-                <x-stat-card :title="__('Account type')" :value="localizeNumber($bankAccount->type)" type="info" />
+                <x-stat-card :title="__('Account type')" :value="$bankAccount->type?->label()" type="info" />
+                <x-stat-card :title="__('IBAN')" :value="$bankAccount->iban" type="info" />
                 <x-stat-card :title="__('Owner')" :value="$bankAccount->owner ?? '-'" type="info" />
                 @can('reports.ledger')
                     <x-stat-card-link :title="__('Subject Balance')" :value="formatNumber(\App\Services\SubjectService::sumSubject($bankAccount->subject, true, false) ?? 0)"

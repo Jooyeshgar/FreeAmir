@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreBankAccountRequest;
 use App\Models;
 use App\Models\Bank;
 use App\Services\SubjectService;
@@ -20,30 +21,19 @@ class BankAccountController extends Controller
 
     public function create()
     {
-        $banks = Models\Bank::select('id', 'name')->limit(20)->get();
+        $banks = Bank::select('id', 'name')->limit(20)->get();
 
         return view('bankAccounts.create', compact('banks'));
     }
 
-    public function store(Request $request)
+    public function store(StoreBankAccountRequest $request)
     {
-        $validatedData = $request->validate([
-            'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
-            'number' => 'required|numeric',
-            'type' => 'required|integer|regex:/^[\w\d\s]*$/u',
-            'owner' => 'nullable|string|regex:/^[\w\d\s]*$/u',
-            'bank_id' => 'required|exists:banks,id|integer',
-            'bank_branch' => 'nullable|string|regex:/^[\w\d\s]*$/u',
-            'bank_address' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
-            'bank_phone' => 'nullable|numeric',
-            'bank_web_page' => 'nullable|url|max:200',
-            'desc' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
-        ]);
+        $validatedData = $request->validated();
 
         $bankAccount = Models\BankAccount::create($validatedData);
 
         $bankSubject = $this->subjectService->createSubject([
-            'name' => $bankAccount->name.' - '.$bankAccount->bank->name,
+            'name' => $bankAccount->name,
             'parent_id' => config('amir.bank'),
         ]);
 
@@ -62,33 +52,20 @@ class BankAccountController extends Controller
 
     public function edit(Models\BankAccount $bankAccount)
     {
-        $bankIdsForSelect = Models\Bank::select('id', 'name')->limit(20)->pluck('id');
+        $bankIdsForSelect = Bank::select('id', 'name')->limit(20)->pluck('id');
         $oldBank = $bankAccount->bank;
-        $banks = Models\Bank::whereIn('id', $bankIdsForSelect->push($oldBank->id)->unique())->get();
+        $banks = Bank::whereIn('id', $bankIdsForSelect->push($oldBank->id)->unique())->get();
 
         return view('bankAccounts.edit', compact('bankAccount', 'banks'));
     }
 
-    public function update(Request $request, Models\BankAccount $bankAccount)
+    public function update(StoreBankAccountRequest $request, Models\BankAccount $bankAccount)
     {
-        $validatedData = $request->validate([
-            'name' => 'required|max:20',
-            'number' => 'required|numeric',
-            'type' => 'required|integer|regex:/^[\w\d\s]*$/u',
-            'owner' => 'nullable|string|regex:/^[\w\d\s]*$/u',
-            'bank_id' => 'required|exists:banks,id|integer',
-            'bank_branch' => 'nullable|string|regex:/^[\w\d\s]*$/u',
-            'bank_address' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
-            'bank_phone' => 'nullable|numeric',
-            'bank_web_page' => 'nullable|url|max:200',
-            'desc' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
-        ]);
+        $validatedData = $request->validated();
 
         $bankAccount->update($validatedData);
 
-        $bankAccount->subject->update([
-            'name' => $validatedData['name'].' - '.$bankAccount->bank->name,
-        ]);
+        $bankAccount->subject->update(['name' => $validatedData['name']]);
 
         return redirect()->route('bank-accounts.index')->with('success', __('Bank Account updated successfully.'));
     }
