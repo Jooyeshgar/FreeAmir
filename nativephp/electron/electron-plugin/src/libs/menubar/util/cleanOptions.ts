@@ -10,8 +10,8 @@ import url from 'url';
 
 import type { Options } from '../types.js';
 
-const DEFAULT_WINDOW_HEIGHT = 400;
-const DEFAULT_WINDOW_WIDTH = 400;
+const DEFAULT_WINDOW_HEIGHT = 768;
+const DEFAULT_WINDOW_WIDTH = 1024;
 
 /**
  * Take as input some options, and return a sanitized version of it.
