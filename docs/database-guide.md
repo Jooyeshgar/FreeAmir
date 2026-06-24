@@ -202,7 +202,7 @@ CREATE TABLE customers (
     name VARCHAR(100) NOT NULL,
     subject_id BIGINT UNSIGNED NULL,
     phone VARCHAR(15) NULL DEFAULT '',
-    cell VARCHAR(15) NULL DEFAULT '',
+    mobile VARCHAR(15) NULL DEFAULT '',
     fax VARCHAR(15) NULL DEFAULT '',
     address VARCHAR(100) NULL DEFAULT '',
     postal_code VARCHAR(15) NULL DEFAULT '',

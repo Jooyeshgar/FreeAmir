@@ -53,7 +53,7 @@ class CustomerController extends Controller
             $phone = request('phone');
             $query->where(function ($q) use ($phone) {
                 $q->where('phone', 'like', '%'.$phone.'%')
-                    ->orWhere('cell', 'like', '%'.$phone.'%');
+                    ->orWhere('mobile', 'like', '%'.$phone.'%');
             });
         }
 
@@ -175,7 +175,7 @@ class CustomerController extends Controller
                             $customer->subject?->code,
                             $customer->type?->value,
                             $customer->phone,
-                            $customer->cell,
+                            $customer->mobile,
                             $customer->fax,
                             $customer->address,
                             $customer->postal_code,

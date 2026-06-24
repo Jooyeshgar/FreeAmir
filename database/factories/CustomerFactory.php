@@ -27,7 +27,7 @@ class CustomerFactory extends Factory
             'company_id' => $companyId,
             'name' => $this->faker->name,
             'phone' => substr($this->faker->phoneNumber, 0, 15),
-            'cell' => substr($this->faker->phoneNumber, 0, 15),
+            'mobile' => substr($this->faker->phoneNumber, 0, 15),
             'fax' => substr($this->faker->phoneNumber, 0, 15),
             'address' => $this->faker->address,
             'postal_code' => $this->faker->postcode,
