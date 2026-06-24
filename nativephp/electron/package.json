@@ -1,9 +1,9 @@
 {
-    "name": "freeamir",
-    "version": "1.0.0",
-    "description": "An awesome app built with NativePHP",
+    "name": "nativephp",
+    "version": "2.0.0",
+    "description": "A NativePHP Electron application",
     "main": "./out/main/index.js",
-    "author": null,
+    "author": "NativePHP",
     "homepage": "https://nativephp.com",
     "type": "module",
     "engines": {

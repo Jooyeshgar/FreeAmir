@@ -86,12 +86,12 @@ export default {
         icon: '../../resources/images/icon.ico',
         ...(azureEndpoint && azureCertificateProfileName && azureCodeSigningAccountName
             ? {
-                  azureSignOptions: {
-                      endpoint: azureEndpoint,
-                      certificateProfileName: azureCertificateProfileName,
-                      codeSigningAccountName: azureCodeSigningAccountName,
-                  },
-              }
+                azureSignOptions: {
+                    endpoint: azureEndpoint,
+                    certificateProfileName: azureCertificateProfileName,
+                    codeSigningAccountName: azureCodeSigningAccountName,
+                },
+            }
             : {}),
     },
     nsis: {

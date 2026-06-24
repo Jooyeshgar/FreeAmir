@@ -5,7 +5,9 @@ services:
             dockerfile: Dockerfile
             args:
                 WWWGROUP: '${WWWGROUP}'
+                WWWUSER: '${WWWUSER}'
                 MYSQL_CLIENT: mariadb-client
+                NODE_VERSION: '22'
         image: sail-8.3/app
         extra_hosts:
             - 'host.docker.internal:host-gateway'
