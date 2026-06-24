@@ -2,6 +2,8 @@ name: Build Windows Desktop App
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
   workflow_dispatch: {}   # lets you trigger a build manually from the Actions tab
@@ -43,8 +45,10 @@ jobs:
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
+        env:
+          ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
         with:
-          node-version: '24'
+          node-version: '20'
           cache: 'npm'
 
       - name: Install npm dependencies
