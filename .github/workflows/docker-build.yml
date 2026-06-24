@@ -25,7 +25,7 @@ jobs:
           if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
             version="${GITHUB_REF_NAME#v}"
           else
-            version="$(date -u +'%Y.%m.%d')"
+            version="nightly-$(date -u +'%Y%m%d')-${GITHUB_SHA::7}"
           fi
 
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
