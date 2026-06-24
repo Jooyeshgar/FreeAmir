@@ -94,6 +94,3 @@ description: "فهرست کامل قابلیت‌های امیر، نرم افز
 - رابط کاربری واکنش‌گرا
 - پشتیبانی از زبان فارسی (اولویت اول)
 
----
-
-<a href="index.html" class="inline-flex items-center gap-2 rounded-lg bg-mint px-5 py-3 text-sm font-black text-white transition hover:bg-teal-800">بازگشت به صفحه اصلی</a>

@@ -133,6 +133,3 @@ openssl x509 -pubkey -noout -in mystamp.cer > public.key
 * شناسه یکتای حافظه مالیاتی باید دقیقاً مطابق اطلاعات ثبت شده در سامانه مودیان وارد شود.
 * در آزاد امیر نیازی به استفاده مستقیم از توکن سخت‌افزاری نیست و تنها کلیدهای عمومی و خصوصی مورد استفاده قرار می‌گیرند.
 
----
-
-<a href="index.html" class="inline-flex items-center gap-2 rounded-lg bg-mint px-5 py-3 text-sm font-black text-white transition hover:bg-teal-800">بازگشت به صفحه اصلی</a>

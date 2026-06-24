@@ -55,7 +55,3 @@ description: "مقایسه امیر با نرم‌افزارهای تجاری ح
 - انطباق با قوانین مالیاتی ایران
 - رابط کاربری فارسی بومی
 - امکان استقرار به صورت خصوصی در سازمان
-
----
-
-<a href="index.html" class="inline-flex items-center gap-2 rounded-lg bg-mint px-5 py-3 text-sm font-black text-white transition hover:bg-teal-800">بازگشت به صفحه اصلی</a>

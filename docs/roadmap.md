@@ -41,6 +41,3 @@ description: "نقشه راه توسعه آینده امیر"
 
 اگر ایده‌ای برای بهبود امیر دارید، از طریق [GitHub Issues](https://github.com/Jooyeshgar/FreeAmir/issues) مطرح کنید.
 
----
-
-<a href="index.html" class="inline-flex items-center gap-2 rounded-lg bg-mint px-5 py-3 text-sm font-black text-white transition hover:bg-teal-800">بازگشت به صفحه اصلی</a>
