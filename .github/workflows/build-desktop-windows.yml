@@ -48,6 +48,11 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
+          cache-dependency-path: 'nativephp/electron/package-lock.json'
+
+      - name: Install NativePHP dependencies
+        working-directory: nativephp/electron
+        run: npm ci
 
       - name: Install npm dependencies
         run: npm ci
@@ -63,14 +68,7 @@ jobs:
       - name: Build NativePHP app for Windows
         run: php artisan native:build win
         env:
-          # Make config/nativephp.php read this, e.g.:
-          #   'version' => env('NATIVEPHP_APP_VERSION', '1.0.0'),
-          # so the exe carries the same version as the tag / Docker image.
           APP_VERSION: ${{ steps.app-version.outputs.version }}
-          # Code signing (recommended for distribution): add cert + password
-          # as repo secrets and expose the env vars NativePHP expects, e.g.:
-          # NATIVEPHP_WIN_CERTIFICATE_FILE: ...
-          # NATIVEPHP_WIN_CERTIFICATE_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
