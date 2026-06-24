@@ -608,7 +608,7 @@ function gregorian_to_jalali($gy,$gm,$gd,$mod=''){
         $jm=7+(int)(($days-186)/30);
         $jd=1+(($days-186)%30);
     }
-    return($mod==='')?array($jy,$jm,$jd):$jy .$mod .$jm .$mod .$jd;
+    return($mod==='')?array($jy,$jm,$jd):sprintf('%04d%s%02d%s%02d',$jy,$mod,$jm,$mod,$jd);
 }
 
 /*	F	*/
@@ -637,7 +637,7 @@ function jalali_to_gregorian($jy,$jm,$jd,$mod=''){
         if($gd <= $v)break;
         $gd-=$v;
     }
-    return($mod==='')?array($gy,$gm,$gd):$gy .$mod .$gm .$mod .$gd;
+    return($mod==='')?array($gy,$gm,$gd):sprintf('%04d%s%02d%s%02d',$gy,$mod,$gm,$mod,$gd);
 }
 
 function jalali_to_gregorian_date($date,$str='/',$dateExploadStr='/'){

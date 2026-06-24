@@ -35,7 +35,7 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void
+   public function boot(): void
     {
         Paginator::defaultView('vendor.pagination.daisyui');
         Paginator::defaultSimpleView('vendor.pagination.daisyui-simple');
@@ -47,5 +47,6 @@ class AppServiceProvider extends ServiceProvider
                 return true;
             }
         });
-    }
+
+    }   
 }

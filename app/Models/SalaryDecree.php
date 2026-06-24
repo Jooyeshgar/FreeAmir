@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Scopes\FiscalYearScope;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -33,6 +34,20 @@ class SalaryDecree extends Model
     public static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope);
+    }
+
+    public function setStartDateAttribute($value): void
+    {
+        $this->attributes['start_date'] = $value
+            ? Carbon::parse($value)->format('Y-m-d')
+            : null;
+    }
+
+    public function setEndDateAttribute($value): void
+    {
+        $this->attributes['end_date'] = $value
+            ? Carbon::parse($value)->format('Y-m-d')
+            : null;
     }
 
     public function employee(): BelongsTo
