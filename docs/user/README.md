@@ -1,4 +1,4 @@
-<div dir="rtl" align="right">
+<div dir="rtl">
 
 # راهنمای استفاده کنندگان امیر
 

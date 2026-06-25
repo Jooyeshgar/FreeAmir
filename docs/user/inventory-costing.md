@@ -1,4 +1,4 @@
-<div dir="rtl" align="right">
+<div dir="rtl">
 
 # بهای تمام‌شده کالا و روش محاسبه در امیر
 

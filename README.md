@@ -1,4 +1,4 @@
-<div dir="rtl" align="right">
+<div dir="rtl">
 
 # امیر: نرم‌افزار آزاد حسابداری و ERP ایرانی
 

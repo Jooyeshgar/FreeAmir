@@ -95,8 +95,7 @@
                         @click="menuOpen = false">Comparison</a>
                     <a class="rounded-lg px-3 py-2 hover:bg-white" href="screenshots.en.html"
                         @click="menuOpen = false">Screenshots</a>
-                    <a class="rounded-lg px-3 py-2 hover:bg-white" href="faq.en.html"
-                        @click="menuOpen = false">FAQ</a>
+                    <a class="rounded-lg px-3 py-2 hover:bg-white" href="faq.en.html" @click="menuOpen = false">FAQ</a>
                     <a class="rounded-lg px-3 py-2 hover:bg-white" href="INSTALLATION.en.html"
                         @click="menuOpen = false">Install</a>
                     <a class="rounded-lg px-3 py-2 hover:bg-white" href="README.en.html"
@@ -125,7 +124,8 @@
                         </div>
                         <h1 class="max-w-4xl text-4xl font-black leading-tight text-ink sm:text-5xl lg:text-6xl">
                             Amir
-                            <span class="block text-3xl sm:text-4xl lg:text-5xl mt-2 text-stone-600">Free Open-Source Accounting &amp; ERP for Iran</span>
+                            <span class="block text-3xl sm:text-4xl lg:text-5xl mt-2 text-stone-600">Free Open-Source
+                                Accounting &amp; ERP for Iran</span>
                         </h1>
                         <p class="mt-6 max-w-2xl text-lg leading-9 text-stone-700">
                             Double-entry accounting, Moadian integration, multi-company, inventory, payroll &mdash; all
@@ -148,7 +148,8 @@
                     </div>
 
                     <div class="relative">
-                        <a href="screenshots.en.html" class="block rounded-2xl border border-stone-200 bg-white p-2 shadow-soft transition hover:-translate-y-1 hover:shadow-lg">
+                        <a href="screenshots.en.html"
+                            class="block rounded-2xl border border-stone-200 bg-white p-2 shadow-soft transition hover:-translate-y-1 hover:shadow-lg">
                             <img src="screenshot/main-page.png" alt="Amir main page" class="rounded-xl w-full" />
                         </a>
                         <div class="mt-4 grid grid-cols-3 gap-3">
@@ -262,8 +263,7 @@
                     </div>
 
                     <!-- HR -->
-                    <div x-show="activeTab === 'hr'" x-transition
-                        class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div x-show="activeTab === 'hr'" x-transition class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <article class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
                             <h3 class="text-lg font-black">Employee management</h3>
                             <p class="mt-3 leading-8 text-stone-600">Register and manage employee information.</p>
@@ -287,7 +287,9 @@
                             <h3 class="text-lg font-black">Moadian integration</h3>
                             <p class="mt-3 leading-8 text-stone-600">Full connection to Iran's Moadian tax system.
                                 Each company has its own certificate and private key.</p>
-                            <a href="moadian.en.html" class="mt-3 inline-flex text-sm font-bold text-mint hover:text-teal-800">Setup guide ←</a>
+                            <a href="moadian.en.html"
+                                class="mt-3 inline-flex text-sm font-bold text-mint hover:text-teal-800">Setup guide
+                                ←</a>
                         </article>
                         <article class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
                             <h3 class="text-lg font-black">Tax reports</h3>
@@ -459,7 +461,8 @@
                     </div>
                     <div class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
                         <h3 class="font-black">Can I host it on my own server?</h3>
-                        <p class="mt-3 leading-8 text-stone-600">Yes. Amir can be installed on dedicated servers, cloud servers, or on-premise infrastructure. Your data stays fully under your control.</p>
+                        <p class="mt-3 leading-8 text-stone-600">Yes. Amir can be installed on dedicated servers, cloud
+                            servers, or on-premise infrastructure. Your data stays fully under your control.</p>
                     </div>
                     <div class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
                         <h3 class="font-black">Does it support Moadian?</h3>
@@ -499,37 +502,48 @@
                     </div>
                     <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
-                            <div class="mb-3 inline-flex rounded-lg bg-teal-50 px-3 py-1 text-xs font-bold text-mint">Completed</div>
+                            <div class="mb-3 inline-flex rounded-lg bg-teal-50 px-3 py-1 text-xs font-bold text-mint">
+                                Completed</div>
                             <h3 class="text-lg font-black">Full Moadian integration</h3>
                             <p class="mt-2 leading-8 text-stone-600">Complete connection to Iran's Moadian tax
                                 system with per-company certificate and private key support.</p>
                         </div>
                         <div class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
-                            <div class="mb-3 inline-flex rounded-lg bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">Future</div>
+                            <div
+                                class="mb-3 inline-flex rounded-lg bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                                Future</div>
                             <h3 class="text-lg font-black">Company-specific roles</h3>
                             <p class="mt-2 leading-8 text-stone-600">Dedicated roles and permissions per
                                 company.</p>
                         </div>
                         <div class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
-                            <div class="mb-3 inline-flex rounded-lg bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">Future</div>
+                            <div
+                                class="mb-3 inline-flex rounded-lg bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                                Future</div>
                             <h3 class="text-lg font-black">Workflow approvals</h3>
                             <p class="mt-2 leading-8 text-stone-600">Approval system for various financial
                                 operations.</p>
                         </div>
                         <div class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
-                            <div class="mb-3 inline-flex rounded-lg bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">Future</div>
+                            <div
+                                class="mb-3 inline-flex rounded-lg bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                                Future</div>
                             <h3 class="text-lg font-black">Audit logs</h3>
                             <p class="mt-2 leading-8 text-stone-600">Change tracking and activity
                                 monitoring.</p>
                         </div>
                         <div class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
-                            <div class="mb-3 inline-flex rounded-lg bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">Future</div>
+                            <div
+                                class="mb-3 inline-flex rounded-lg bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                                Future</div>
                             <h3 class="text-lg font-black">API expansion</h3>
                             <p class="mt-2 leading-8 text-stone-600">Full API for third-party system
                                 integration.</p>
                         </div>
                         <div class="rounded-xl border border-stone-200 bg-paper p-6 shadow-sm">
-                            <div class="mb-3 inline-flex rounded-lg bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">Future</div>
+                            <div
+                                class="mb-3 inline-flex rounded-lg bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                                Future</div>
                             <h3 class="text-lg font-black">Mobile / PWA support</h3>
                             <p class="mt-2 leading-8 text-stone-600">Mobile app or PWA for easier access.</p>
                         </div>
