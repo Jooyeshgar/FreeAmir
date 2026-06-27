@@ -30,6 +30,12 @@
                     </div>
                 </form>
 
+                @if (app()->isProduction())
+                    <div class="mt-3">
+                        <p class="text-center">{{ __('Don\'t have an account?') }} <a class="text-info" href="{{ route('register') }}">{{ __('Sign up') }}</a></p>
+                    </div>    
+                @endif
+
                 @if (!app()->isProduction())
                     <div class="overflow-x-auto mt-3">
                         <p class="text-sm">{{ __('You can use one of the emails below to log in') }}.</p>
