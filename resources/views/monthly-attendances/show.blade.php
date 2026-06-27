@@ -189,9 +189,9 @@
 
             <div class="divider">{{ __('Daily Attendance Logs') }}</div>
 
-            <div class="overflow-x-auto">
+            <div>
                 <table class="table table-sm w-full">
-                    <thead>
+                    <thead class="sticky top-[65px] z-20 border-b-2 card-header bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700">
                         <tr>
                             <th colspan="2">{{ __('Date') }}</th>
                             <th>{{ __('Entry') }}</th>
