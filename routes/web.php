@@ -7,9 +7,15 @@ Route::get('/login', [Controllers\Auth\LoginController::class, 'showLoginForm'])
 Route::post('/login', [Controllers\Auth\LoginController::class, 'login']);
 Route::get('/logout', [Controllers\Auth\LoginController::class, 'logout'])->name('logout');
 
+Route::get('/register', [Controllers\Auth\RegisterController::class, 'showRegisterForm'])->name('register');
+Route::post('/register/email', [Controllers\Auth\RegisterController::class, 'registerWithEmail'])->name('register.email');
+Route::get('/email/verify', [Controllers\Auth\RegisterController::class, 'verificationNotice'])->middleware('auth')->name('verification.notice');
+Route::post('/email/verification-notification', [Controllers\Auth\RegisterController::class, 'sendVerificationEmail'])->middleware(['auth', 'throttle:6,1'])->name('verification.send');
+Route::get('/email/verify/{id}/{hash}', [Controllers\Auth\RegisterController::class, 'verifyEmail'])->middleware(['auth', 'signed'])->name('verification.verify');
+
 Route::get('/about', [Controllers\AboutController::class, 'index'])->name('about')->middleware('auth');
 
-Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee-portal', 'as' => 'employee-portal.'], function () {
+Route::group(['middleware' => ['auth', 'ensure-employee', 'verified'], 'prefix' => 'employee-portal', 'as' => 'employee-portal.'], function () {
     Route::get('/employee', [Controllers\EmployeePortalController::class, 'employeeShow'])->name('employee.show');
     Route::get('/change-employee-information', [Controllers\EmployeePortalController::class, 'changeEmployeeInformation'])->name('change-employee-information');
     Route::put('/change-employee-information', [Controllers\EmployeePortalController::class, 'updateEmployeeInformation'])->name('update-employee-information');
@@ -27,7 +33,7 @@ Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee
     Route::delete('/personnel-requests/{personnel_request}', [Controllers\EmployeePortalController::class, 'destroyPersonnelRequest'])->name('personnel-requests.destroy');
 });
 
-Route::group(['middleware' => ['auth', 'check-permission']], function () {
+Route::group(['middleware' => ['auth', 'check-permission', 'verified']], function () {
     Route::put('/about/change-global-configs', [Controllers\AboutController::class, 'updateGlobalConfigs'])->name('update-global-configs');
     Route::get('api-tokens', [Controllers\ApiTokenController::class, 'index'])->name('api-tokens.index');
     Route::get('api-tokens/create', [Controllers\ApiTokenController::class, 'create'])->name('api-tokens.create');

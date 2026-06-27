@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 
 class LoginController extends Controller
@@ -22,6 +23,20 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
+
+            if (! Auth::user()->hasVerifiedEmail()) {
+                return redirect()->route('verification.notice');
+            }
+
+            if (Auth::user()->hasVerifiedEmail() && ! Auth::user()->companies()->exists()) {
+                abort_if(! app()->isProduction(), 404);
+
+                try {
+                    Artisan::call('db:seed');
+                } catch (\Exception $e) {
+                    return redirect()->route('home')->with('error', __('An error occurred while seeding database.'));
+                }
+            }
 
             return redirect()->intended('/');
         }
