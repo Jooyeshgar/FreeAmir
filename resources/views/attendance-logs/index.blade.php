@@ -135,7 +135,7 @@
                                         </form>
                                     @endcan
                                     @can('attendance.attendance-logs.delete')
-                                        <form action="{{ route('attendance.attendance-logs.destroy', $log) }}" method="POST" class="inline-block"
+                                        <form action="{{ route('attendance.attendance-logs.destroy', array_merge(['attendance_log' => $log->id], request()->query()))  }}" method="POST" class="inline-block"
                                             onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                             @csrf
                                             @method('DELETE')
