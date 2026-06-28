@@ -12,7 +12,7 @@ This index is for developers and contributors. If you plan to change Laravel cod
 3. [Testing guide](../testing-guide.md)
 4. [Accounting basics](../accounting-basics.md)
 5. [Fiscal year](../fiscal-year.en.md)
-6. [Fiscal-year export/import](../FiscalYearExportImport.md)
+6. [Fiscal-year export/import](../FiscalYearExportImport.en.md)
 
 ## Technical Documentation
 
@@ -31,7 +31,7 @@ This index is for developers and contributors. If you plan to change Laravel cod
 | [user/inventory-costing.en.md](../user/inventory-costing.en.md) | User-facing explanation of COGS and the moving weighted average method |
 | [return-sell-return-buy.md](../return-sell-return-buy.md) | Recording sales returns and purchase returns |
 | [fiscal-year.en.md](../fiscal-year.en.md) | Fiscal-year concept and creation flow |
-| [FiscalYearExportImport.md](../FiscalYearExportImport.md) | Fiscal-year export and import commands |
+| [FiscalYearExportImport.en.md](../FiscalYearExportImport.en.md) | Fiscal-year export and import commands |
 
 ## Important Rules for Code Changes
 

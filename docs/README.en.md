@@ -24,7 +24,7 @@ This directory is the Markdown documentation hub for Amir. To keep languages ali
 | [Programmer guide](developer/README.en.md) | Developers | Architecture, database, testing, and scripts |
 | [Installation guide](INSTALLATION.en.md) | System admins and developers | Installation with Docker Compose, single-command Docker, or standard setup |
 | [Fiscal year](fiscal-year.en.md) | Everyone | What a fiscal year is and how to create one in Amir |
-| [Fiscal-year export/import](FiscalYearExportImport.md) | System admins and developers | The `fiscal-year:export` and `fiscal-year:import` commands |
+| [Fiscal-year export/import](FiscalYearExportImport.en.md) | System admins and developers | The `fiscal-year:export` and `fiscal-year:import` commands |
 
 ## All Documentation Files
 
@@ -38,7 +38,7 @@ This directory is the Markdown documentation hub for Amir. To keep languages ali
 | [user/salary/README.md](user/salary/README.md) / [user/salary/README.en.md](user/salary/README.en.md) | Salary and payroll | Payroll elements, salary decrees, and payrolls |
 | [user/inventory-costing.md](user/inventory-costing.md) / [user/inventory-costing.en.md](user/inventory-costing.en.md) | Inventory accounting | COGS, costing methods, and Amir's selected method |
 | [fiscal-year.md](fiscal-year.md) / [fiscal-year.en.md](fiscal-year.en.md) | Fiscal year | Fiscal-year concept and creation guide |
-| [FiscalYearExportImport.md](FiscalYearExportImport.md) | Fiscal year | Exporting and importing fiscal-year data |
+| [FiscalYearExportImport.en.md](FiscalYearExportImport.en.md) | Fiscal year | Exporting and importing fiscal-year data |
 | [accounting-basics.md](accounting-basics.md) | Accounting | Accounting basics, debit, credit, and documents |
 | [return-sell-return-buy.md](return-sell-return-buy.md) | Inventory accounting | Sales returns and purchase returns |
 | [project-structure.md](project-structure.md) | Technical | Laravel project structure |

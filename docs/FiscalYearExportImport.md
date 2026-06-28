@@ -1,151 +1,171 @@
-# Fiscal Year Export Command (`fiscal-year:export`)
+<div dir="rtl">
 
-This Artisan command exports data associated with a specific fiscal year (represented by a `Company` record) into a JSON file. This file can be used for backups, migrations, or as input for the `fiscal-year:import` command.
+# دستور خروجی گرفتن سال مالی (`fiscal-year:export`)
 
-## Purpose
+این دستور Artisan داده‌های مرتبط با یک سال مالی (که به‌صورت یک رکورد `Company` نمایش داده می‌شود) را به یک فایل JSON منتقل می‌کند. این فایل می‌تواند برای پشتیبان‌گیری، مهاجرت داده‌ها یا به‌عنوان ورودی برای دستور `fiscal-year:import` استفاده شود.
 
-Extract specific data sections (like banks, customers, products, configurations, etc.) linked to a single fiscal year from the database and save them in a structured JSON format.
+## هدف
 
-## Usage
+استخراج بخش‌های مشخصی از داده‌ها (مانند بانک‌ها، مشتری‌ها، محصولات، تنظیمات و غیره) مرتبط با یک سال مالی خاص از پایگاه داده و ذخیره آن‌ها در قالب JSON ساختاریافته.
+
+## نحوه استفاده
 
 ```bash
 php artisan fiscal-year:export <source_id> [options]
 ```
 
-## Arguments
+## آرگومان‌ها
 
-| Argument   | Description                                      | Required |
-|------------|--------------------------------------------------|----------|
-| `source_id`| The numeric ID of the Company record to export. | Yes      |
-
----
-
-## Options
-
-| Option       | Description                                                                                                                                                    | Required | Default                                               |
-|--------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|-------------------------------------------------------|
-| `--output`   | Relative path within `storage/app` for the output JSON file (e.g., `my_exports/fy_export.json`). If omitted, a default name is generated in the `exports/` dir. | No       | `exports/fiscal_year_<source_id>_<timestamp>.json`   |
-| `--sections` | Comma-separated list of data sections to export (e.g., `banks,customers,products`). Valid sections are defined in `FiscalYearService::getAvailableSections()`. | No       | All available sections                                |
-
-**Available Sections (from `FiscalYearService`):**
-- `configs`
-- `banks`
-- `bank_accounts`
-- `customer_groups`
-- `customers`
-- `product_groups`
-- `products`
-- `subjects`
-
-## Examples
-
-1. **Export all data from Fiscal Year ID 1 to a default file:**
-   ```bash
-   sail artisan fiscal-year:export 1
-   ```
-   > Output: `storage/app/exports/fiscal_year_1_<timestamp>.json`
-
-2. **Export only banks and customers from Fiscal Year ID 5 to a specific file:**
-   ```bash
-   sail artisan fiscal-year:export 5 --output=data_exports/fy5_banks_customers.json --sections=banks,customers
-   ```
-   > Output: `storage/app/data_exports/fy5_banks_customers.json`
-
-3. **Export all data from Fiscal Year ID 2 to a custom path:**
-   ```bash
-   sail artisan fiscal-year:export 2 --output=archive/fiscal_year_2_full.json
-   ```
-   > Output: `storage/app/archive/fiscal_year_2_full.json`
+| آرگومان     | توضیحات                                   | الزامی |
+| ----------- | ----------------------------------------- | ------ |
+| `source_id` | شناسه عددی رکورد Company که باید منتقل شود | بله    |
 
 
-## Output
+## گزینه‌ها
 
-- The command prints the full path to the generated JSON file.
-- The JSON contains keys for each exported section (e.g., `"banks"`, `"customers"`), each holding an array of model data.
-- A `"meta"` key is included with:
-  - `source_id`
-  - `company_name`
-  - `timestamp`
-  - `sections_exported`
+| گزینه        | توضیحات                                                                                                                                                              | الزامی | مقدار پیش‌فرض                                      |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------------------------------------------------- |
+| `--output`   | مسیر نسبی داخل `storage/app` برای فایل خروجی JSON (مثلاً `my_exports/fy_export.json`). در صورت عدم تعیین، نام پیش‌فرض تولید می‌شود.                                  | خیر    | `exports/fiscal_year_<source_id>_<timestamp>.json` |
+| `--sections` | لیست بخش‌های موردنظر برای خروجی به‌صورت جداشده با کاما (مثل `banks,customers,products`). بخش‌های معتبر در `FiscalYearService::getAvailableSections()` تعریف شده‌اند. | خیر    | همه بخش‌های موجود                                  |
 
----
+**بخش‌های قابل دسترس (از `FiscalYearService`):**
 
-## Error Handling
+* `configs`
+* `banks`
+* `bank_accounts`
+* `customer_groups`
+* `customers`
+* `product_groups`
+* `products`
+* `subjects`
 
-- If the provided `source_id` doesn't match an existing `Company`, an error message is displayed.
-- Invalid section names in `--sections` trigger a warning. If no valid sections remain, the command fails.
-- Other issues (e.g., file write permissions) result in an error message and are logged to `storage/logs/laravel.log`.
+## مثال‌ها
 
----
+1. **خروجی گرفتن از تمام داده‌های سال مالی با ID برابر 1:**
 
-# Fiscal Year Import Command (`fiscal-year:import`)
+```bash
+sail artisan fiscal-year:export 1
+```
 
-This Artisan command imports data from a JSON file (typically generated by `fiscal-year:export`) into a **new** fiscal year (Company record).
+> خروجی: `storage/app/exports/fiscal_year_1_<timestamp>.json`
 
-## Purpose
 
-Create a new fiscal year and populate it with data (banks, customers, products, etc.) from a previously exported JSON file. This is useful for restoring backups or migrating fiscal year data between environments.
+2. **خروجی گرفتن فقط از بانک‌ها و مشتری‌ها برای سال مالی ID برابر 5:**
 
-## Usage
+```bash
+sail artisan fiscal-year:export 5 --output=data_exports/fy5_banks_customers.json --sections=banks,customers
+```
+
+> خروجی: `storage/app/data_exports/fy5_banks_customers.json`
+
+
+3. **خروجی گرفتن کامل با مسیر سفارشی:**
+
+```bash
+sail artisan fiscal-year:export 2 --output=archive/fiscal_year_2_full.json
+```
+
+> خروجی: `storage/app/archive/fiscal_year_2_full.json`
+
+
+## خروجی
+
+* مسیر کامل فایل JSON تولید شده نمایش داده می‌شود.
+* JSON شامل کلیدهایی برای هر بخش صادر شده است (مثل `"banks"`، `"customers"`).
+* همچنین یک کلید `"meta"` شامل اطلاعات زیر وجود دارد:
+
+  * `source_id`
+  * `company_name`
+  * `timestamp`
+  * `sections_exported`
+
+
+## مدیریت خطا
+
+* اگر `source_id` معتبر نباشد، خطا نمایش داده می‌شود.
+* اگر نام بخش‌ها در `--sections` اشتباه باشد، هشدار داده می‌شود. اگر هیچ بخش معتبری باقی نماند، دستور متوقف می‌شود.
+* خطاهای دیگر (مثل مشکل دسترسی به فایل) در لاگ `storage/logs/laravel.log` ثبت می‌شوند.
+
+
+# دستور وارد کردن سال مالی (`fiscal-year:import`)
+
+این دستور Artisan داده‌ها را از یک فایل JSON (که معمولاً توسط `fiscal-year:export` ساخته شده است) به یک سال مالی جدید (رکورد Company جدید) وارد می‌کند.
+
+## هدف
+
+ایجاد یک سال مالی جدید و پر کردن آن با داده‌های قبلی (بانک‌ها، مشتری‌ها، محصولات و غیره). این قابلیت برای بازیابی بکاپ یا انتقال داده‌ها بین محیط‌ها استفاده می‌شود.
+
+## نحوه استفاده
 
 ```bash
 php artisan fiscal-year:import <file> <fiscal_year> --name=<new_name> [options]
 ```
 
-## Arguments
+## آرگومان‌ها
 
-| Argument      | Description                                                              | Required |
-|---------------|--------------------------------------------------------------------------|----------|
-| `file`        | The path to the JSON import file, relative to the `storage/app` directory. | Yes      |
-| `fiscal_year` | The fiscal year identifier (positive integer).                           | Yes      |
+| آرگومان       | توضیحات                                    | الزامی |
+| ------------- | ------------------------------------------ | ------ |
+| `file`        | مسیر فایل JSON ورودی نسبت به `storage/app` | بله    |
+| `fiscal_year` | شناسه سال مالی (عدد مثبت)                  | بله    |
 
----
 
-## Options
+## گزینه‌ها
 
-| Option    | Description                                                                                                                            | Required | Default |
-|-----------|----------------------------------------------------------------------------------------------------------------------------------------|----------|---------|
-| `--name`  | The name for the **new** fiscal year being created.                                                                                    | Yes      |         |
-| `--force` | Skip the confirmation prompt before starting the import. Use with caution, especially in production environments.                        | No       | `false` |
-| *Note:*   | *Depending on your `Company` model setup, additional required fields might need to be handled within the `FiscalYearService::importData` method.* |          |         |
+| گزینه     | توضیحات                                                       | الزامی | مقدار پیش‌فرض |
+| --------- | ------------------------------------------------------------- | ------ | ------------- |
+| `--name`  | نام سال مالی جدید که ایجاد خواهد شد                           | بله    | —             |
+| `--force` | رد کردن پیام تأیید قبل از شروع عملیات (با احتیاط استفاده شود) | خیر    | `false`       |
 
-## Examples
+> *توجه:* بسته به ساختار مدل `Company` ممکن است فیلدهای دیگری نیز در `FiscalYearService::importData` لازم باشد.
 
-1.  **Import data from `exports/fy1_backup.json` into a new fiscal year named "Fiscal Year 2024" with fiscal year identifier 2024:**
-    ```bash
-    sail artisan fiscal-year:import exports/fy1_backup.json 2024 --name="Fiscal Year 2024"
-    ```
-    >   This will prompt for confirmation before proceeding.
 
-2.  **Import data from `archive/old_data.json` forcefully (no confirmation):**
-    ```bash
-    sail artisan fiscal-year:import archive/old_data.json 2023 --name="Restored FY" --force
-    ```
+## مثال‌ها
 
-## Process
+1. **وارد کردن داده از فایل backup به سال مالی جدید 2024:**
 
-1.  **Validation:**
-    *   Checks if `--name` is provided.
-    *   Validates that the `fiscal_year` argument is a positive integer.
-    *   Verifies that the specified import `file` exists within `storage/app`.
-2.  **Confirmation:**
-    *   Displays the full path of the file being imported and the details of the new fiscal year to be created.
-    *   Prompts the user to confirm unless `--force` is used.
-3.  **Import Execution:**
-    *   Reads and decodes the JSON file.
-    *   Prepares the data for creating a new `Company` record using the provided `--name` and `fiscal_year`.
-    *   Calls the `FiscalYearService::importData` method, passing the decoded JSON data and the new fiscal year details. This service handles the actual creation of the new `Company` and the insertion of related data (banks, customers, etc.) associated with the new company ID.
-4.  **Output:**
-    *   On success, prints a confirmation message including the ID and name of the newly created fiscal year.
-    *   On failure, displays an error message.
+```bash
+sail artisan fiscal-year:import exports/fy1_backup.json 2024 --name="سال مالی ۱۴۰۳"
+```
 
----
+> قبل از اجرا تأیید گرفته می‌شود.
 
-## Error Handling
 
-- If the required `--name` option is missing, an error is shown.
-- If the `fiscal_year` argument is not a positive integer, an error is shown.
-- If the import file is not found at the specified path, an error is displayed.
-- If the JSON file is invalid or cannot be decoded, an error message is shown.
-- Any exceptions during the `FiscalYearService::importData` process (e.g., database errors, validation issues within the service) will result in an error message being displayed, and details are logged to `storage/logs/laravel.log`.
-- If the user cancels the confirmation prompt, an "Import cancelled" message is shown.
+2. **وارد کردن داده بدون تأیید (اجباری):**
+
+```bash
+sail artisan fiscal-year:import archive/old_data.json 2023 --name="بازیابی شده" --force
+```
+
+
+## روند اجرا
+
+1. **اعتبارسنجی**
+   * بررسی وجود گزینه `--name`
+   * بررسی مثبت بودن `fiscal_year`
+   * بررسی وجود فایل در `storage/app`
+
+2. **تأیید کاربر**
+   * نمایش مسیر فایل و اطلاعات سال مالی جدید
+   * درخواست تأیید (مگر با `--force`)
+
+3. **اجرای عملیات واردسازی**
+   * خواندن و decode کردن JSON
+   * آماده‌سازی داده‌ها برای ایجاد رکورد جدید `Company`
+   * فراخوانی `FiscalYearService::importData` برای ایجاد داده‌ها
+
+4. **خروجی**
+   * نمایش پیام موفقیت همراه با ID و نام سال مالی جدید
+   * در صورت خطا، نمایش پیام مناسب
+
+## مدیریت خطا
+
+* نبود گزینه `--name`
+* نامعتبر بودن `fiscal_year`
+* نبود فایل ورودی
+* خراب بودن JSON
+* خطاهای داخلی سرویس `FiscalYearService`
+* لغو عملیات توسط کاربر
+
+تمام خطاها در `storage/logs/laravel.log` ثبت می‌شوند.
+
+</div>

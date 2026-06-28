@@ -57,7 +57,7 @@ Editing a log marks it as manually corrected. Use recalculation when you want th
 
 ## Importing Logs
 
-During import, choose the import type, date range, and duplicate behavior. Duplicate rows can be ignored or replaced. Before final import, review the preview page, especially unknown device IDs that are not mapped to employees.
+During import, choose the import type, date range, and duplicate behavior. Duplicate rows can be ignored or replaced. Before final import, review the preview page, especially unknown device IDs that are not mapped to employees. Please note that in both cases (keeping the existing record or replacing it with the new one), the check-in and check-out times in the log will be updated if their values are `NULL`.
 
 ## Monthly Attendance and Payroll
 

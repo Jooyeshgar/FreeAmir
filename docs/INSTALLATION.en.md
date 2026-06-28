@@ -2,12 +2,11 @@
 
 ## Table of Contents
 
-0. [Windows Executable (.exe)](#windows-executable-exe)
-1. [Production — Docker Compose (Recommended)](#option-1-production--docker-compose-recommended)
-2. [All-in-One — Single Docker Command (Testing only)](#option-2-all-in-one--single-docker-command-testing-only)
-3. [Standard Installation — PHP + MariaDB](#option-3-standard-installation--php--mariadb)
+1. [Windows Executable (.exe)](#windows-executable-exe)
+2. [Production — Docker Compose (Recommended)](#option-1-production--docker-compose-recommended)
+3. [All-in-One — Single Docker Command (Testing only)](#option-2-all-in-one--single-docker-command-testing-only)
+4. [Standard Installation — PHP + MariaDB](#option-3-standard-installation--php--mariadb)
 
----
 
 ## Windows Executable (.exe)
 
@@ -23,7 +22,6 @@ Download the Windows executable from the [Releases](https://github.com/Jooyeshga
 
 Execute the downloaded `.exe` file. The application will be installed on your computer.
 
----
 
 ## Option 1: Production — Docker Compose (Recommended)
 
@@ -84,12 +82,6 @@ Access phpMyAdmin at http://localhost:8080.
 docker compose down
 ```
 
-> ⚠️ To also remove all data volumes (irreversible):
-> ```bash
-> docker compose down -v
-> ```
-
----
 
 ## Option 2: All-in-One — Single Docker Command (Testing only)
 
@@ -131,7 +123,6 @@ docker logs -f freeamir
 docker stop freeamir && docker rm freeamir
 ```
 
----
 
 ## Option 3: Standard Installation — PHP + MariaDB
 
@@ -181,12 +172,12 @@ Optional — seed with demo data:
 php artisan db:seed --class DemoSeeder
 ```
 
-**7. Warm up application caches:**
+**7. Optimize application caches:**
 ```bash
 php artisan optimize
 ```
 
-**8. Install and build frontend assets:**
+**8. Installing and building frontend packages:**
 ```bash
 npm install
 npm run build
@@ -198,7 +189,6 @@ php artisan serve
 ```
 Access the application at http://localhost:8000.
 
----
 
 ## Default Login
 
@@ -214,8 +204,7 @@ After seeding, all users share the password **`password`**. Available accounts:
 | `accountant-seller-warehouse@example.com` | Accountant, Seller, Warehousekeeper, Employee |
 | `employee@example.com` | Employee |
 
----
 
 ## Database Migration from Older Version
 
-See [Database Migration Guide](../script/README.md) for migrating from the older SQLite-based version.
+See [Database Migration Guide](https://github.com/Jooyeshgar/FreeAmir/tree/main/script) for migrating from the older SQLite-based version.
