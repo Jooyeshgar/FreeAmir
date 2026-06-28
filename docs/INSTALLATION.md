@@ -4,12 +4,11 @@
 
 ## فهرست مطالب
 
-0. [فایل اجرایی ویندوز (.exe)](#فایل-اجرایی-ویندوز-exe)
-1. [محیط عملیاتی — Docker Compose (پیشنهادی)](#روش-۱-محیط-عملیاتی--docker-compose-پیشنهادی)
-2. [همه-در-یک — دستور تکی Docker (فقط برای آزمایش)](#روش-۲-همه-در-یک--دستور-تکی-docker-فقط-برای-آزمایش)
-3. [نصب استاندارد — PHP + MariaDB](#روش-۳-نصب-استاندارد--php--mariadb)
+1. [فایل اجرایی ویندوز (.exe)](#فایل-اجرایی-ویندوز-exe)
+2. [محیط عملیاتی — Docker Compose (پیشنهادی)](#روش-۱-محیط-عملیاتی--docker-compose-پیشنهادی)
+3. [همه-در-یک — دستور تکی Docker (فقط برای آزمایش)](#روش-۲-همه-در-یک--دستور-تکی-docker-فقط-برای-آزمایش)
+4. [نصب استاندارد — PHP + MariaDB](#روش-۳-نصب-استاندارد--php--mariadb)
 
----
 
 ## فایل اجرایی ویندوز (.exe)
 
@@ -19,15 +18,12 @@
 
 **۱. دانلود فایل:**
 
-فایل اجرایی ویندوز را از بخش [ریلیزها](https://github.com/Jooyeshgar/FreeAmir/releases/) دانلود کنید.
+فایل اجرایی ویندوز را از بخش [نسخه ها](https://github.com/Jooyeshgar/FreeAmir/releases/) دانلود کنید.
 
 **۲. نصب:**
 
 فایل `.exe` دانلود شده را اجرا کنید. برنامه توسط فایل نصب، نصب شده و قابل اجرا خواهد بود.
 
-
-
----
 
 ## روش ۱: محیط عملیاتی — Docker Compose (پیشنهادی)
 
@@ -88,7 +84,6 @@ phpMyAdmin در آدرس http://localhost:8080 در دسترس خواهد بود
 docker compose down
 ```
 
----
 
 ## روش ۲: همه-در-یک — دستور تکی Docker (فقط برای آزمایش)
 
@@ -130,11 +125,10 @@ docker logs -f freeamir
 docker stop freeamir && docker rm freeamir
 ```
 
----
 
 ## روش ۳: نصب استاندارد — PHP + MariaDB
 
-مستقیماً روی سرور یا سیستم شخصی با PHP، Composer، Node.js و MariaDB نصب کنید.
+مستقیما روی سرور یا سیستم شخصی با PHP، Composer، Node.js و MariaDB نصب کنید.
 
 ### پیش‌نیازها
 - PHP >= 8.2 با افزونه‌های: `pdo_mysql`، `gd`، `intl`، `zip`، `bcmath`، `mbstring`، `xml`، `opcache`
@@ -175,29 +169,28 @@ php artisan migrate
 ```bash
 php artisan db:seed
 ```
-اختیاری — Seed با داده‌های نمونه:
+Seed با داده‌های نمونه (اختیاری):
 ```bash
 php artisan db:seed --class DemoSeeder
 ```
 
-**۷. گرم کردن کش‌های برنامه:**
+**۷. بهینه‌سازی کش برنامه:**
 ```bash
 php artisan optimize
 ```
 
-**۸. نصب و ساخت دارایی‌های فرانت‌اند:**
+**۸. نصب وابستگی‌ها و آماده‌سازی فرانت‌اند:**
 ```bash
 npm install
 npm run build
 ```
 
-**۹. پیکربندی وب‌سرور** برای سرویس‌دهی از پوشه `public/` و تنظیم document root. برای آزمایش سریع محلی:
+**۹. وب‌سرور خود را تنظیم کنید** تا به پوشه `/public` اشاره کند و مسیر ریشه (document root) را روی این مسیر قرار دهید. برای اجرای سریع روی سیستم خودتان:
 ```bash
 php artisan serve
 ```
 برنامه در آدرس http://localhost:8000 در دسترس خواهد بود.
 
----
 
 ## ورود پیش‌فرض
 
@@ -213,10 +206,9 @@ php artisan serve
 | `accountant-seller-warehouse@example.com` | Accountant, Seller, Warehousekeeper, Employee |
 | `employee@example.com` | Employee |
 
----
 
 ## مهاجرت پایگاه داده از نسخه قدیمی
 
-برای مهاجرت از نسخه قدیمی مبتنی بر SQLite، به [راهنمای مهاجرت پایگاه داده](../script/README.md) مراجعه کنید.
+برای مهاجرت از نسخه قدیمی مبتنی بر SQLite، به [راهنمای مهاجرت پایگاه داده](https://github.com/Jooyeshgar/FreeAmir/tree/main/script) مراجعه کنید.
 
 </div>

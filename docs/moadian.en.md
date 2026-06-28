@@ -13,7 +13,6 @@ To use the Moadian system in Amir, you need three things:
 
 Below are the steps to obtain these.
 
----
 
 ## Step 1: Create a private key and CSR file
 
@@ -54,7 +53,6 @@ Two files will be created:
 
 > ⚠️ The `private.key` file is extremely important. Store it securely and keep a backup.
 
----
 
 ## Step 2: Request an organization stamp certificate
 
@@ -67,7 +65,6 @@ Two files will be created:
 
 After submitting, you will receive a receipt or referral letter.
 
----
 
 ## Step 3: Visit a government service office
 
@@ -77,7 +74,6 @@ After identity verification and process completion, an organization stamp certif
 
 You will receive a certificate file with the `.cer` extension.
 
----
 
 ## Step 4: Extract the public key
 
@@ -92,7 +88,6 @@ You now have the two files needed for Amir:
 * `private.key`
 * `public.key`
 
----
 
 ## Step 5: Obtain the Moadian username
 
@@ -107,7 +102,6 @@ In Amir, this identifier is used as the **Moadian username**.
 
 > ⚠️ The unique tax memory identifier is unique to each tax memory and must be entered exactly as shown in the Moadian portal.
 
----
 
 ## Step 6: Configure in Amir
 
@@ -123,7 +117,6 @@ After saving the settings, test the Moadian connection.
 
 If the information is correct, the application will be able to send electronic invoices to the Moadian system.
 
----
 
 ## Important notes
 
