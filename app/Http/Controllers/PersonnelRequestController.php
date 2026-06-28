@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\PersonnelRequestType;
+use App\Filters\PersonnelRequestFilter;
 use App\Models\Employee;
 use App\Models\PersonnelRequest;
 use App\Services\AttendanceService;
@@ -16,7 +17,7 @@ class PersonnelRequestController extends Controller
 {
     public function __construct(private readonly AttendanceService $attendanceService) {}
 
-    public function index(Request $request): View
+    public function index(Request $request, PersonnelRequestFilter $filter): View
     {
         $tab = $request->get('tab', 'leaves');
 
@@ -31,15 +32,8 @@ class PersonnelRequestController extends Controller
 
         $query = PersonnelRequest::with(['employee', 'approvedBy'])
             ->whereIn('request_type', $typeValues)
+            ->filter($filter)
             ->orderBy('start_date', 'desc');
-
-        if ($request->filled('employee_id')) {
-            $query->where('employee_id', $request->employee_id);
-        }
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
 
         $personnelRequests = $query->paginate(15)->withQueryString();
 

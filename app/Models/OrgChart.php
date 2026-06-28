@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use AliMousavi\Filoquent\Traits\Filterable;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +12,7 @@ use Illuminate\Support\Collection;
 
 class OrgChart extends Model
 {
+    use Filterable;
     use HasFactory;
 
     protected $fillable = [

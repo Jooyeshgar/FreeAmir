@@ -9,6 +9,7 @@ use App\Enums\EmployeeGender;
 use App\Enums\EmployeeInsuranceType;
 use App\Enums\EmployeeMaritalStatus;
 use App\Enums\EmployeeNationality;
+use App\Filters\EmployeeFilter;
 use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Models\Employee;
@@ -17,17 +18,15 @@ use App\Models\OrgChart;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
 use App\Models\WorkSiteContract;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EmployeeController extends Controller
 {
-    public function index(Request $request): View
+    public function index(EmployeeFilter $filter): View
     {
-        $employees = $this->filteredEmployeeQuery($request)
+        $employees = $this->filteredEmployeeQuery($filter)
             ->paginate(15)
             ->withQueryString();
         $workSites = WorkSite::orderBy('name')->get(['id', 'name']);
@@ -67,11 +66,11 @@ class EmployeeController extends Controller
         ));
     }
 
-    public function export(Request $request): StreamedResponse
+    public function export(EmployeeFilter $filter): StreamedResponse
     {
         $filename = 'employees_'.now()->format('YmdHis').'.csv';
 
-        return response()->streamDownload(function () use ($request) {
+        return response()->streamDownload(function () use ($filter) {
             $file = fopen('php://output', 'w');
 
             fwrite($file, "\xEF\xBB\xBF");
@@ -91,7 +90,7 @@ class EmployeeController extends Controller
                 __('Salary Decree Count'),
             ]);
 
-            $this->filteredEmployeeQuery($request)
+            $this->filteredEmployeeQuery($filter)
                 ->chunk(200, function ($employees) use ($file) {
                     foreach ($employees as $employee) {
                         fputcsv($file, [
@@ -186,38 +185,15 @@ class EmployeeController extends Controller
             ->with('success', __('Employee deleted successfully.'));
     }
 
-    private function filteredEmployeeQuery(Request $request): Builder
+    private function filteredEmployeeQuery(EmployeeFilter $filter)
     {
-        $query = Employee::with(['workSite', 'orgChart', 'workSiteContract', 'organizationUnit'])
+        return Employee::with(['workSite', 'orgChart', 'workSiteContract', 'organizationUnit'])
             ->withCount([
                 'salaryDecrees',
                 'salaryDecrees as active_salary_decrees_count' => fn ($q) => $q->where('is_active', true),
             ])
+            ->filter($filter)
             ->orderBy('code');
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function (Builder $q) use ($search) {
-                $q->where('first_name', 'like', "%{$search}%")
-                    ->orWhere('last_name', 'like', "%{$search}%")
-                    ->orWhere('code', 'like', "%{$search}%")
-                    ->orWhere('national_code', 'like', "%{$search}%");
-            });
-        }
-
-        if ($request->filled('is_active')) {
-            $query->where('is_active', (bool) $request->is_active);
-        }
-
-        if ($request->filled('work_site_id')) {
-            $query->where('work_site_id', $request->integer('work_site_id'));
-        }
-
-        if ($request->filled('contract_framework_id')) {
-            $query->where('contract_framework_id', $request->integer('contract_framework_id'));
-        }
-
-        return $query;
     }
 
     /** Build the shared enum options arrays used by views. */

@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use AliMousavi\Filoquent\Traits\Filterable;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Document extends Model
 {
+    use Filterable;
     use HasFactory;
 
     public $timestamps = true;

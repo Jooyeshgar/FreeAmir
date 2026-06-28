@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Filters\TransactionFilter;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Services\SubjectService;
@@ -11,58 +12,16 @@ class TransactionController extends Controller
 {
     public function __construct(private readonly SubjectService $subjectService) {}
 
-    public function index(Request $request)
+    public function index(Request $request, TransactionFilter $filter)
     {
         $query = Transaction::with(['document', 'subject', 'user'])
             ->whereHas('document')
             ->join('documents', 'transactions.document_id', '=', 'documents.id')
+            ->filter($filter)
             ->orderBy('documents.date', 'desc')
             ->orderBy('documents.number', 'desc')
             ->orderBy('transactions.id', 'desc')
             ->select('transactions.*');
-
-        if ($request->filled('subject_id')) {
-            $subject = Subject::findOrFail($request->integer('subject_id'));
-            $query->whereIn('subject_id', $subject->getAllDescendantIds());
-        }
-
-        // Date range filter
-        if ($request->filled('start_date')) {
-            $startDate = convertToGregorian($request->input('start_date'));
-            $query->whereHas('document', fn ($q) => $q->whereDate('date', '>=', $startDate)
-            );
-        }
-
-        if ($request->filled('end_date')) {
-            $endDate = convertToGregorian($request->input('end_date'));
-            $query->whereHas('document', fn ($q) => $q->whereDate('date', '<=', $endDate)
-            );
-        }
-
-        if ($request->filled('start_document_number')) {
-            $startDocNum = convertToFloat($request->input('start_document_number'));
-            $query->whereHas('document', fn ($q) => $q->where('number', '>=', $startDocNum)
-            );
-        }
-
-        if ($request->filled('end_document_number')) {
-            $endDocNum = convertToFloat($request->input('end_document_number'));
-            $query->whereHas('document', fn ($q) => $q->where('number', '<=', $endDocNum)
-            );
-        }
-
-        if ($request->filled('search')) {
-            $search = trim($request->input('search'));
-            $query->where(function ($q) use ($search) {
-                $q->where('transactions.desc', 'like', "%{$search}%")
-                    ->orWhereHas('subject', fn ($qq) => $qq->where('name', 'like', "%{$search}%")
-                        ->orWhere('code', 'like', "%{$search}%")
-                    )
-                    ->orWhereHas('document', fn ($qd) => $qd->where('title', 'like', "%{$search}%")
-                        ->orWhere('number', 'like', "%{$search}%")
-                    );
-            });
-        }
 
         $openingBalance = $this->calculateOpeningBalance($request);
 
@@ -173,5 +132,4 @@ class TransactionController extends Controller
 
         return view('transactions.show', compact('transaction'));
     }
-
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Filters\CustomerFilter;
 use App\Http\Requests\ImportCustomerRequest;
 use App\Http\Requests\StoreCustomerRequest;
 use App\Models\Customer;
@@ -21,7 +22,7 @@ class CustomerController extends Controller
 {
     public function __construct(private readonly CustomerService $service) {}
 
-    public function index(Request $request)
+    public function index(Request $request, CustomerFilter $filter)
     {
         $query = Customer::with('subject', 'group')
             ->withCount('comments')
@@ -32,44 +33,14 @@ class CustomerController extends Controller
                     ->whereColumn('transactions.subject_id', 'customers.subject_id'),
                 'balance'
             )
-            ->orderBy('id', 'desc');
-
-        if (request()->has('name') && request('name')) {
-            $query->where('name', 'like', '%'.request('name').'%');
-        }
-
-        if (request()->has('subject_code') && request('subject_code')) {
-            $subjectCode = request('subject_code');
-            if (str_contains($subjectCode, '/')) {
-                $subjectCode = str_replace('/', '', $subjectCode);
-            }
-
-            $query->whereHas('subject', function ($subject) use ($subjectCode) {
-                $subject->where('code', 'like', '%'.$subjectCode.'%');
-            });
-        }
-
-        if (request()->has('phone') && request('phone')) {
-            $phone = request('phone');
-            $query->where(function ($q) use ($phone) {
-                $q->where('phone', 'like', '%'.$phone.'%')
-                    ->orWhere('mobile', 'like', '%'.$phone.'%');
-            });
-        }
+            ->orderBy('id', 'desc')
+            ->filter($filter);
 
         $groupId = $request->query('group_id');
-
-        if ($groupId && $groupId !== 'all') {
-            $query->where('group_id', $groupId);
-        }
 
         $balanceFilter = $request->query('balance', 'all');
         if (! in_array($balanceFilter, ['all', 'debt', 'credit'], true)) {
             $balanceFilter = 'all';
-        }
-        if ($balanceFilter !== 'all') {
-            $query->whereIn('subject_id', $this->balanceSubjectIds($balanceFilter));
-            $query->reorder('balance', $balanceFilter === 'debt' ? 'asc' : 'desc');
         }
 
         $balanceSum = (float) Transaction::query()
@@ -81,18 +52,6 @@ class CustomerController extends Controller
         $groups = CustomerGroup::select('id', 'name')->orderBy('name')->get();
 
         return view('customers.index', compact('customers', 'groups', 'groupId', 'balanceFilter', 'balanceSum'));
-    }
-
-    private function balanceSubjectIds(string $balanceFilter)
-    {
-        $customerSubjectIds = Customer::query()->whereNotNull('subject_id')->pluck('subject_id');
-        $comparison = $balanceFilter === 'credit' ? 'SUM(value) > 0' : 'SUM(value) < 0';
-
-        return Transaction::query()
-            ->whereIn('subject_id', $customerSubjectIds)
-            ->groupBy('subject_id')
-            ->havingRaw($comparison)
-            ->pluck('subject_id');
     }
 
     public function create()

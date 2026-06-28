@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Filters\PayrollElementFilter;
 use App\Models\PayrollElement;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -10,19 +11,12 @@ use Illuminate\View\View;
 
 class PayrollElementController extends Controller
 {
-    public function index(Request $request): View
+    public function index(PayrollElementFilter $filter): View
     {
-        $query = PayrollElement::orderBy('category')->orderBy('title');
-
-        if ($request->filled('category')) {
-            $query->where('category', $request->category);
-        }
-
-        if ($request->filled('title')) {
-            $query->where('title', 'like', '%'.$request->title.'%');
-        }
-
-        $payrollElements = $query->paginate(15);
+        $payrollElements = PayrollElement::filter($filter)
+            ->orderBy('category')
+            ->orderBy('title')
+            ->paginate(15);
 
         return view('payroll-elements.index', compact('payrollElements'));
     }

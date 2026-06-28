@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Filters\SubjectFilter;
 use App\Http\Requests\StoreSubjectRequest;
 use App\Models\Subject;
 use App\Services\SubjectService;
@@ -12,30 +13,19 @@ class SubjectController extends Controller
 {
     public function __construct(private readonly SubjectService $subjectService) {}
 
-    public function index(Request $request)
+    public function index(Request $request, SubjectFilter $filter)
     {
         $importedDefaultName = (bool) $request->input('name_is_default', false);
         $currentParent = null;
+        $query = Subject::with('subjectable')->orderBy('code');
 
         if ($importedDefaultName) {
-            $prefixes = [
-                __('Kol :code', ['code' => '']),
-                __('Moein :code', ['code' => '']),
-                __('Tafsili :code', ['code' => '']),
-                explode(':n', __('Level :n :code'))[0],
-            ];
-            $subjects = Subject::where(function ($q) use ($prefixes) {
-                foreach ($prefixes as $prefix) {
-                    if ($prefix !== '') {
-                        $q->orWhere('name', 'like', "{$prefix}%");
-                    }
-                }
-            })->with('subjectable')->orderBy('code')->get();
+            $subjects = $query->filter($filter)->get();
         } elseif ($request->has('parent_id')) {
             $currentParent = Subject::find($request->input('parent_id'));
-            $subjects = $currentParent->children()->with('subjectable')->orderBy('code')->get();
+            $subjects = $query->filter($filter)->get();
         } else {
-            $subjects = Subject::whereIsRoot()->with('subjectable')->orderBy('code')->get();
+            $subjects = $query->whereIsRoot()->get();
         }
 
         return view('subjects.index', compact('subjects', 'currentParent', 'importedDefaultName'));

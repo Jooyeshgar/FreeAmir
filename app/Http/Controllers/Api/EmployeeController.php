@@ -2,18 +2,17 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Filters\ApiEmployeeFilter;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreEmployeeRequest;
 use App\Models\Employee;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class EmployeeController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(ApiEmployeeFilter $filter): JsonResponse
     {
-        $employees = Employee::query()
-            ->when($request->has('is_active'), fn ($query) => $query->where('is_active', $request->boolean('is_active')))
+        $employees = Employee::filter($filter)
             ->orderBy('code')
             ->get(['id', 'code', 'first_name', 'last_name', 'device_id', 'is_active']);
 

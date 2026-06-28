@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Filters\PublicHolidayFilter;
 use App\Models\PublicHoliday;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -9,15 +10,11 @@ use Illuminate\View\View;
 
 class PublicHolidayController extends Controller
 {
-    public function index(Request $request): View
+    public function index(PublicHolidayFilter $filter): View
     {
-        $query = PublicHoliday::orderBy('date', 'asc');
-
-        if ($request->filled('name')) {
-            $query->where('name', 'like', '%'.$request->name.'%');
-        }
-
-        $publicHolidays = $query->paginate(15);
+        $publicHolidays = PublicHoliday::filter($filter)
+            ->orderBy('date', 'asc')
+            ->paginate(15);
 
         return view('public-holidays.index', compact('publicHolidays'));
     }

@@ -2,22 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Filters\OrgChartFilter;
 use App\Models\OrgChart;
 use Illuminate\Http\Request;
 
 class OrgChartController extends Controller
 {
-    public function index()
+    public function index(OrgChartFilter $filter)
     {
         $search = request('search');
 
-        $query = OrgChart::with('parent')->orderBy('title');
-
-        if ($search) {
-            $query->where('title', 'like', "%{$search}%");
-        }
-
-        $orgCharts = $query->paginate(15);
+        $orgCharts = OrgChart::with('parent')
+            ->filter($filter)
+            ->orderBy('title')
+            ->paginate(15);
 
         return view('org-charts.index', compact('orgCharts', 'search'));
     }

@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Management;
 
+use App\Filters\ManagementRoleFilter;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -21,23 +23,18 @@ class RoleController extends Controller
 
     public $messages = [];
 
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
-    public function index(Request $request)
+    public function index(Request $request, ManagementRoleFilter $filter)
     {
-        $validated = Validator::make($request->all(), $this->searchRules, $this->messages)->validate();
+        Validator::make($request->all(), $this->searchRules, $this->messages)->validate();
         $query = Role::where('name', '!=', 'Super-Admin')->orderBy('id', 'desc');
-
-        if (isset($validated['search']) && $search = $validated['search']) {
-            $query->where('name', 'like', "%{$search}%");
-        }
+        $filter->apply($query);
 
         $roles = $query->paginate(20);
 

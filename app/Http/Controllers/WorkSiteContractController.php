@@ -2,24 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Filters\WorkSiteContractFilter;
 use App\Models\WorkSite;
 use App\Models\WorkSiteContract;
 use Illuminate\Http\Request;
 
 class WorkSiteContractController extends Controller
 {
-    public function index()
+    public function index(WorkSiteContractFilter $filter)
     {
         $search = request('search');
 
-        $query = WorkSiteContract::with('workSites')->orderBy('name');
-
-        if ($search) {
-            $query->where('name', 'like', "%{$search}%")
-                ->orWhere('code', 'like', "%{$search}%");
-        }
-
-        $contracts = $query->paginate(15);
+        $contracts = WorkSiteContract::with('workSites')
+            ->filter($filter)
+            ->orderBy('name')
+            ->paginate(15);
 
         return view('work-site-contracts.index', compact('contracts', 'search'));
     }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Management;
 
+use App\Filters\ManagementPermissionFilter;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -19,14 +20,12 @@ class PermissionController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request)
+    public function index(Request $request, ManagementPermissionFilter $filter)
     {
-        $validated = Validator::make($request->all(), $this->searchRules, $this->messages)->validate();
+        Validator::make($request->all(), $this->searchRules, $this->messages)->validate();
 
         $query = Permission::orderBy('id', 'desc');
-        if (isset($validated['search']) and $search = $validated['search']) {
-            $query->where('name', 'like', "%{$search}%");
-        }
+        $filter->apply($query);
         $permissions = $query->paginate(20);
 
         return view('management.permission.index', [

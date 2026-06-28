@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use AliMousavi\Filoquent\Traits\Filterable;
 use App\Models\Scopes\FiscalYearScope;
 use Exception;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Subject extends Model
 {
+    use Filterable;
     use HasFactory;
 
     protected $fillable = [
@@ -129,7 +133,7 @@ class Subject extends Model
      * @param  int|null  $code  Optional specific code number to use (without padding)
      * @return string The generated code for the subject
      *
-     * @throws \Exception When trying to exceed the maximum of 999 children
+     * @throws Exception When trying to exceed the maximum of 999 children
      */
     public function generateCode($code = null)
     {
@@ -187,7 +191,7 @@ class Subject extends Model
     /**
      * Get the children for the subject.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * @return HasMany
      */
     public function children()
     {
@@ -235,8 +239,8 @@ class Subject extends Model
     /**
      * Scope a query to only include root subjects.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeWhereIsRoot($query)
     {
