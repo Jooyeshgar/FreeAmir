@@ -139,11 +139,11 @@ class AttendanceLogController extends Controller
         return redirect()->to($target)->with('success', __('Attendance log updated successfully.'));
     }
 
-    public function destroy(AttendanceLog $attendanceLog): RedirectResponse
+    public function destroy(Request $request, AttendanceLog $attendanceLog): RedirectResponse
     {
         $attendanceLog->delete();
 
-        return redirect()->route('attendance.attendance-logs.index')
+        return redirect()->route('attendance.attendance-logs.index', $request->query())
             ->with('success', __('Attendance log deleted successfully.'));
     }
 
