@@ -28,6 +28,9 @@
     @can('products.report')
         @php
             $optionalColumns = [
+                'inbound'=>__('Inbound'),
+                'outbound'=>__('Outbound'),
+                'stock'=>__('Stock'),
                 'category' => __('Category'),
                 'code' => __('Product code'),
                 'selling_price' => __('Sale price'),
