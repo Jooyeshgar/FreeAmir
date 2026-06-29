@@ -50,7 +50,7 @@ class RolesAndPermissionsSeeder extends Seeder
     {
         $groups = [
             // Subjects / accounting subjects
-            'subjects' => [...self::CRUD, 'search', 'search-code'],
+            'subjects' => [...self::CRUD, 'search', 'search-code', 'transfer-form', 'transfer'],
 
             // Documents (accounting documents) and their files
             'documents' => [
