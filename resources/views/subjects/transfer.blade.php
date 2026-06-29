@@ -58,7 +58,7 @@
 
                     <div class="flex flex-wrap gap-4 mt-6 items-center justify-between">
                         <div class="flex flex-wrap gap-2 items-center">
-                            <x-checkbox name="create_new_subject" id="create_new_subject" x-model="createNewSubject" value="1" title="{{ __('Create new subject under parent') }}" />
+                            <x-checkbox name="create_new_subject" id="create_new_subject" x-model="createNewSubject" value="1" title="{{ __('Create new subject under destination subject') }}" />
                             <x-checkbox name="transfer_subjectable" id="transfer_subjectable" value="1" checked title="{{ __('Transfer source subject relation') }}" />
                             <x-checkbox name="remove_source_subject" id="remove_source_subject" value="1" title="{{ __('Remove source subject after transfer') }}" />
                         </div>
