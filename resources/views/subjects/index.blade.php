@@ -34,6 +34,9 @@
                         </a>
                     @endif
                 </div>
+                <div>
+                    <a href="{{ route('subjects.transfer-form') }}" class="btn btn-primary ">{{ __('Transfer Transaction Between Subjects') }}</a>
+                </div>
             </div>
             <table class="table w-full mt-4">
                 <thead>

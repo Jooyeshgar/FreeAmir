@@ -196,4 +196,59 @@ class SubjectController extends Controller
 
         return response()->json($this->subjectService->buildSubjectTreeFromCollection($subjects));
     }
+
+    public function transferSubjectForm()
+    {
+        $subjects = Subject::orderBy('code')->get(['id', 'name', 'code', 'parent_id']);
+        $subjects = $this->subjectService->buildSubjectTreeFromCollection($subjects);
+
+        return view('subjects.transfer', compact('subjects'));
+    }
+
+    public function transferSubject(Request $request)
+    {
+        $isCreateNew = $request->boolean('create_new_subject');
+
+        $rules = [
+            'source_subject_id' => 'required|integer|exists:subjects,id',
+        ];
+
+        if ($isCreateNew) {
+            $rules['parent_destination_subject_id'] = 'required|integer|exists:subjects,id';
+        } else {
+            $rules['destination_subject_id'] = 'required|integer|exists:subjects,id|different:source_subject_id';
+        }
+
+        $request->validate($rules);
+
+        $sourceSubject = Subject::find($request->source_subject_id);
+
+        $removeSource = $request->boolean('remove_source_subject');
+
+        try {
+            $transferSubjectable = $request->boolean('transfer_subjectable');
+
+            if ($isCreateNew) {
+                $result = $this->subjectService->transferSubjectToNewUnderParent($sourceSubject, Subject::find($request->parent_destination_subject_id), $transferSubjectable, $removeSource);
+            } else {
+                $result = $this->subjectService->transferSubject($sourceSubject, Subject::find($request->destination_subject_id), $transferSubjectable, $removeSource);
+            }
+        } catch (\InvalidArgumentException $e) {
+            return redirect()->back()->withErrors(['code' => $e->getMessage()])->withInput();
+        }
+
+        $route = $request->input('submit_action') === 'create_new' ? 'subjects.transfer-form' : 'subjects.index';
+
+        $response = redirect()->route($route)->with('success', __(':count transactions transferred successfully. Total sum: :sum', ['count' => $result['count'], 'sum' => formatNumber($result['sum'] ?? 0)]));
+
+        if (isset($result['source_removed'])) {
+            if ($result['source_removed']) {
+                $response->with('info', __('Source subject removed successfully.'));
+            } else {
+                $response->with('warning', __('Source subject could not be removed. It may have children or other dependencies.'));
+            }
+        }
+
+        return $response;
+    }
 }

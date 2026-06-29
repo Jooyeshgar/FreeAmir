@@ -50,6 +50,8 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::get('/home/bank-account', [Controllers\HomeController::class, 'bankAccount'])->name('home.bank-account');
     Route::get('subjects/search', [Controllers\SubjectController::class, 'search'])->name('subjects.search');
     Route::get('subjects/search-code', [Controllers\SubjectController::class, 'searchCode'])->name('subjects.search-code');
+    Route::get('subjects/transfer', [Controllers\SubjectController::class, 'transferSubjectForm'])->name('subjects.transfer-form');
+    Route::post('subjects/transfer', [Controllers\SubjectController::class, 'transferSubject'])->name('subjects.transfer');
     Route::resource('subjects', Controllers\SubjectController::class);
     Route::post('documents/{document}/change-status', [Controllers\DocumentController::class, 'changeStatus'])->name('documents.change-status');
     Route::post('documents/approve-all', [Controllers\DocumentController::class, 'approveAll'])->name('documents.approve-all');
