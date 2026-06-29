@@ -2411,7 +2411,7 @@
     ":count transactions transferred successfully. Total sum: :sum": ":count تراکنش با موفقیت منتقل شد. جمع کل: :sum",
     "A new subject with the same name and properties as the source subject will be created under the selected parent subject.": "یک سرفصل جدید با همان نام و مشخصات سرفصل مبدا زیر سرفصل بالایی مقصد ایجاد می‌شود.",
     "Cannot transfer to a descendant of the source subject.": "انتقال به زیرمجموعه سرفصل مبدا امکان‌پذیر نیست.",
-    "Create new subject under parent": "ایجاد سرفصل بالایی مقصد",
+    "Create new subject under destination subject": "ایجاد سرفصل جدید زیر سرفصل مقصد",
     "Destination": "مقصد",
     "Destination Subject": "سرفصل مقصد",
     "I confirm the transfer despite different subjectable relationships.": "با وجود تفاوت در ارتباط انتقال را تأیید می‌کنم.",

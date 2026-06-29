@@ -494,7 +494,7 @@ class SubjectService
 
     public function transferSubject(Subject $source, Subject $destination, bool $transferSubjectable = false, bool $removeSource = false): array
     {
-        if ($source === $destination) {
+        if ($source->id === $destination->id) {
             throw new \InvalidArgumentException(__('Source and destination subjects must be different.'));
         }
 
