@@ -2,11 +2,17 @@
 
 namespace App\Services;
 
+use App\Models\BankAccount;
+use App\Models\Customer;
+use App\Models\CustomerGroup;
 use App\Models\Subject;
+use App\Models\Transaction;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class SubjectService
 {
-    public function buildSubjectTreeFromCollection(\Illuminate\Support\Collection $subjects): array
+    public function buildSubjectTreeFromCollection(Collection $subjects): array
     {
         $rootKey = 'root';
         $grouped = $subjects->groupBy(function ($subject) use ($rootKey) {
@@ -76,7 +82,7 @@ class SubjectService
             return [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0, 8 => 0, 9 => 0, 10 => 0, 11 => 0, 12 => 0];
         }
 
-        $year = config('active-company-fiscal-year');
+        $year = (int) (config('active-company-fiscal-year') ?? toEnglish(jdate('Y')));
 
         $months = [
             1 => [1, 31],
@@ -94,7 +100,7 @@ class SubjectService
         ];
 
         $subjectIds = $subject->getAllDescendantIds();
-        $transactionQuery = \App\Models\Transaction::query()->whereIn('subject_id', $subjectIds);
+        $transactionQuery = Transaction::query()->whereIn('subject_id', $subjectIds);
         $monthlySum = [];
 
         foreach ($months as $month => [$startDay, $endDay]) {
@@ -466,5 +472,139 @@ class SubjectService
         }
 
         return str_pad($next, 3, '0', STR_PAD_LEFT);
+    }
+
+    private function syncSubjectableSubjectId(Subject $subject): void
+    {
+        if (is_null($subject->subjectable_type) || is_null($subject->subjectable_id)) {
+            return;
+        }
+
+        $subjectable = $subject->subjectable;
+        if ($subjectable && in_array(get_class($subjectable), [Customer::class, CustomerGroup::class, BankAccount::class])) {
+            $subjectable->subject_id = $subject->id;
+            $subjectable->save();
+        }
+    }
+
+    public function transferSubject(Subject $source, Subject $destination, bool $transferSubjectable = false, bool $removeSource = false): array
+    {
+        if ($source->id === $destination->id) {
+            throw new \InvalidArgumentException(__('Source and destination subjects must be different.'));
+        }
+
+        if (in_array($destination->id, $source->getAllDescendantIds())) {
+            throw new \InvalidArgumentException(__('Cannot transfer to a descendant of the source subject.'));
+        }
+
+        $year = (int) (config('active-company-fiscal-year') ?? toEnglish(jdate('Y')));
+        $startDate = jalali_to_gregorian($year, 1, 1, '-');
+        $endDate = now()->format('Y-m-d');
+
+        $result = DB::transaction(function () use ($source, $destination, $startDate, $endDate, $transferSubjectable) {
+            if ($transferSubjectable && ! is_null($source->subjectable_type) && ! is_null($source->subjectable_id)) {
+                $destination->subjectable_type = $source->subjectable_type;
+                $destination->subjectable_id = $source->subjectable_id;
+                $destination->save();
+
+                $this->syncSubjectableSubjectId($destination);
+
+                $source->subjectable_type = null;
+                $source->subjectable_id = null;
+                $source->save();
+            }
+
+            $query = Transaction::where('subject_id', $source->id)->whereHas('document', function ($q) use ($startDate, $endDate) {
+                $q->whereBetween('date', [$startDate, $endDate]);
+            });
+
+            $sum = (clone $query)->sum('value');
+            $count = $query->count();
+
+            $query->update(['subject_id' => $destination->id]);
+
+            return [
+                'count' => $count,
+                'sum' => $sum,
+                'source' => $source,
+                'destination' => $destination,
+            ];
+        });
+
+        if ($removeSource && $source->exists) {
+            try {
+                $source->fresh()->delete();
+                $result['source_removed'] = true;
+            } catch (\Exception) {
+                $result['source_removed'] = false;
+            }
+        }
+
+        return $result;
+    }
+
+    public function transferSubjectToNewUnderParent(Subject $source, Subject $parentDestination, bool $transferSubjectable = false, bool $removeSource = false): array
+    {
+        if ($source->id === $parentDestination->id) {
+            throw new \InvalidArgumentException(__('Source and parent destination subjects must be different.'));
+        }
+
+        $descendantIds = $source->getAllDescendantIds();
+        if (in_array($parentDestination->id, $descendantIds)) {
+            throw new \InvalidArgumentException(__('Cannot transfer to a descendant of the source subject.'));
+        }
+
+        $result = DB::transaction(function () use ($source, $parentDestination, $transferSubjectable) {
+            $newSubject = Subject::create([
+                'name' => $source->name,
+                'code' => $this->generateCode($parentDestination->id, $source->company_id),
+                'parent_id' => $parentDestination->id,
+                'company_id' => $source->company_id,
+                'type' => $this->resolveTypeForParent($parentDestination, $source->type),
+                'is_permanent' => $parentDestination->is_permanent,
+            ]);
+
+            if ($transferSubjectable && ! is_null($source->subjectable_type) && ! is_null($source->subjectable_id)) {
+                $newSubject->subjectable_type = $source->subjectable_type;
+                $newSubject->subjectable_id = $source->subjectable_id;
+                $newSubject->save();
+
+                $this->syncSubjectableSubjectId($newSubject);
+
+                $source->subjectable_type = null;
+                $source->subjectable_id = null;
+                $source->save();
+            }
+
+            $year = (int) (config('active-company-fiscal-year') ?? toEnglish(jdate('Y')));
+            $startDate = jalali_to_gregorian($year, 1, 1, '-');
+            $endDate = now()->format('Y-m-d');
+
+            $query = Transaction::where('subject_id', $source->id)->whereHas('document', function ($q) use ($startDate, $endDate) {
+                $q->whereBetween('date', [$startDate, $endDate]);
+            });
+
+            $sum = (clone $query)->sum('value');
+            $count = $query->count();
+            $query->update(['subject_id' => $newSubject->id]);
+
+            return [
+                'count' => $count,
+                'sum' => $sum,
+                'source' => $source,
+                'destination' => $newSubject,
+            ];
+        });
+
+        if ($removeSource && $source->exists) {
+            try {
+                $source->fresh()->delete();
+                $result['source_removed'] = true;
+            } catch (\Exception) {
+                $result['source_removed'] = false;
+            }
+        }
+
+        return $result;
     }
 }

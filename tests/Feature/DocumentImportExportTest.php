@@ -1064,19 +1064,4 @@ class DocumentImportExportTest extends TestCase
             'code' => '001001001001',
         ]);
     }
-
-    public function test_name_is_default_filter_matches_synthesized_subjects_not_manually_named(): void
-    {
-        $synthesized = ImportSubjectResolver::synthesizeName('001');
-        Subject::create(['company_id' => $this->company->id, 'code' => '001', 'name' => $synthesized, 'type' => 'both', 'parent_id' => null]);
-        Subject::create(['company_id' => $this->company->id, 'code' => '002', 'name' => 'Manually named', 'type' => 'both', 'parent_id' => null]);
-        Subject::create(['company_id' => $this->company->id, 'code' => '003', 'name' => '003', 'type' => 'both', 'parent_id' => null]);
-
-        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'subjects.index']));
-        $response = $this->get(route('subjects.index', ['name_is_default' => 1]));
-
-        $response->assertOk();
-        $response->assertSee($synthesized);
-        $response->assertDontSee('Manually named');
-    }
 }

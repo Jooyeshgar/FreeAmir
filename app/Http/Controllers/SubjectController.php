@@ -14,31 +14,18 @@ class SubjectController extends Controller
 
     public function index(Request $request)
     {
-        $importedDefaultName = (bool) $request->input('name_is_default', false);
         $currentParent = null;
-
-        if ($importedDefaultName) {
-            $prefixes = [
-                __('Kol :code', ['code' => '']),
-                __('Moein :code', ['code' => '']),
-                __('Tafsili :code', ['code' => '']),
-                explode(':n', __('Level :n :code'))[0],
-            ];
-            $subjects = Subject::where(function ($q) use ($prefixes) {
-                foreach ($prefixes as $prefix) {
-                    if ($prefix !== '') {
-                        $q->orWhere('name', 'like', "{$prefix}%");
-                    }
-                }
-            })->with('subjectable')->orderBy('code')->get();
-        } elseif ($request->has('parent_id')) {
+        if ($request->has('parent_id')) {
             $currentParent = Subject::find($request->input('parent_id'));
             $subjects = $currentParent->children()->with('subjectable')->orderBy('code')->get();
         } else {
             $subjects = Subject::whereIsRoot()->with('subjectable')->orderBy('code')->get();
         }
 
-        return view('subjects.index', compact('subjects', 'currentParent', 'importedDefaultName'));
+        $subjectTree = Subject::orderBy('code')->limit(30)->get(['id', 'name', 'code', 'parent_id']);
+        $subjectTree = $this->subjectService->buildSubjectTreeFromCollection($subjectTree);
+
+        return view('subjects.index', compact('subjects', 'currentParent', 'subjectTree'));
     }
 
     public function create(Request $request)
@@ -195,5 +182,63 @@ class SubjectController extends Controller
         $subjects = $this->collectWithRelations(collect([$matched]));
 
         return response()->json($this->subjectService->buildSubjectTreeFromCollection($subjects));
+    }
+
+    public function transferSubject(Request $request)
+    {
+        $validated = $request->validate($this->transferSubjectRules($request));
+        $sourceSubject = Subject::findOrFail($validated['source_subject_id']);
+        $transfer_subjectable = $request->boolean('transfer_subjectable');
+        $remove_source_subject = $request->boolean('remove_source_subject');
+
+        try {
+            $result = $request->boolean('create_new_subject')
+                ? $this->subjectService->transferSubjectToNewUnderParent(
+                    $sourceSubject,
+                    Subject::findOrFail($validated['parent_destination_subject_id']),
+                    $transfer_subjectable,
+                    $remove_source_subject
+                )
+                : $this->subjectService->transferSubject(
+                    $sourceSubject,
+                    Subject::findOrFail($validated['destination_subject_id']),
+                    $transfer_subjectable,
+                    $remove_source_subject
+                );
+        } catch (\InvalidArgumentException $e) {
+            return redirect()->back()->withErrors(['code' => $e->getMessage()])->withInput();
+        }
+
+        $response = redirect()->route('subjects.index')
+            ->with('success', __(':count transactions transferred successfully. Total sum: :sum', ['count' => $result['count'], 'sum' => formatNumber($result['sum'] ?? 0)]));
+
+        if (isset($result['source_removed'])) {
+            $response->with(
+                $result['source_removed'] ? 'info' : 'warning',
+                $result['source_removed']
+                    ? __('Source subject removed successfully.')
+                    : __('Source subject could not be removed. It may have children or other dependencies.')
+            );
+        }
+
+        return $response;
+    }
+
+    private function transferSubjectRules(Request $request): array
+    {
+        $rules = [
+            'source_subject_id' => 'required|integer|exists:subjects,id',
+            'transfer_subjectable' => 'nullable|boolean',
+            'remove_source_subject' => 'nullable|boolean',
+            'create_new_subject' => 'nullable|boolean',
+        ];
+
+        if ($request->boolean('create_new_subject')) {
+            $rules['parent_destination_subject_id'] = 'required|integer|exists:subjects,id';
+        } else {
+            $rules['destination_subject_id'] = 'required|integer|exists:subjects,id|different:source_subject_id';
+        }
+
+        return $rules;
     }
 }
