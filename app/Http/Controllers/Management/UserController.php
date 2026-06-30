@@ -130,14 +130,15 @@ class UserController extends Controller
             throw ValidationException::withMessages([__('The User must have at least one company.')]);
         }
 
-        if ($user->employee()->exists()) {
-            throw ValidationException::withMessages([__('This user already has an employee assigned.')]);
-        }
+        if ($request->filled('employee_id')) {
+            if ($user->employee()->exists() && $user->employee->id !== (int) $request->employee_id) {
+                throw ValidationException::withMessages([__('The user is already linked to an employee.')]);
+            }
 
-        $employee = Employee::whereKey($request->employee_id)->whereNull('user_id')->first();
-
-        if (! $employee) {
-            throw ValidationException::withMessages([__('The selected employee is already assigned to another user.')]);
+            $employee = Employee::whereKey($request->employee_id)->whereNull('user_id')->first();
+            if (! $employee) {
+                throw ValidationException::withMessages([__('The selected employee is already assigned to another user.')]);
+            }
         }
 
         DB::transaction(function () use ($request, $user, $employee) {
