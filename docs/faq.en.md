@@ -13,7 +13,7 @@ Yes. Amir is released under the GPL-3 license. Using, modifying, and distributin
 
 ## Can I host it on my own server?
 
-Yes. You can set it up with Docker, Docker Compose, or a standard PHP and MariaDB installation on your own server. Your data stays fully under your control.
+Yes. Amir is designed for self-hosted deployment. You can set it up with Docker, Docker Compose, or a standard PHP and MariaDB installation on your own server. Your data stays fully under your control.
 
 
 ## Does it support Moadian?

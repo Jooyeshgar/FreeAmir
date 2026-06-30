@@ -15,7 +15,7 @@
 | Category | Capabilities |
 |---|---|
 | **Financial Accounting** | Double-entry accounting, journal entries, general ledger, balance sheet, profit & loss |
-| **Sales & Purchasing** | Customers, suppliers, sales & purchase invoicing, returns |
+| **Purchasing & Sales** | Customers, suppliers, sales & purchase invoicing, returns |
 | **Inventory** | Warehouse management, stock tracking, weighted average costing |
 | **Human Resources** | Employees, attendance, payroll, payslips |
 | **Tax** | Moadian integration, tax reports |

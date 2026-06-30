@@ -21,7 +21,7 @@ Amir's double-entry accounting provides a solid foundation for recording all fin
 - Financial reports
 
 
-## Sales & Purchasing
+## Purchasing & Sales
 
 Complete sales and purchase cycle management from creation to tracking.
 
