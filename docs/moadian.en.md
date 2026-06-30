@@ -9,7 +9,7 @@ To use the Moadian system in Amir, you need three things:
 
 1. Moadian username (unique tax memory identifier)
 2. Private key
-3. Public key
+3. Signaure Certificate
 
 Below are the steps to obtain these.
 
@@ -75,7 +75,7 @@ Visit one of the government service offices with the required documents and the 
 
 After identity verification and process completion, an organization stamp certificate will be issued.
 
-You will receive a certificate file with the `.cer` extension.
+You will receive a certificate file with the `.cer` or `.crt` extension.
 
 ---
 
@@ -87,9 +87,7 @@ After receiving the certificate file, extract the public key:
 openssl x509 -pubkey -noout -in mystamp.cer > public.key
 ```
 
-You now have the two files needed for Amir:
-
-* `private.key`
+You now have the public key file:
 * `public.key`
 
 ---
@@ -117,7 +115,7 @@ In the company settings section of Amir, enter the following:
 |---|---|
 | Moadian username | Unique tax memory identifier |
 | Private key | Contents of `private.key` file |
-| Public key (certificate) | Contents of `.cer` or `public.key` file |
+| Signaure Certificate | Contents of `.cer` or `.crt` file |
 
 After saving the settings, test the Moadian connection.
 
