@@ -127,7 +127,7 @@ class AttendanceLogImportService
 
             // Parse datetime
             try {
-                $dt = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $datetimeStr);
+                $dt = Carbon::createFromFormat('Y-m-d H:i:s', $datetimeStr);
             } catch (\Exception) {
                 $skipped++;
 
@@ -173,24 +173,27 @@ class AttendanceLogImportService
                     ->first();
 
                 if ($existing) {
-                    if ($duplicateMode === 'replace') {
-                        // Overwrite only the fields that are present in the file;
-                        // keep existing value for whichever side is missing.
-                        $update = [];
-                        if ($times['entry_time'] !== null) {
-                            $update['entry_time'] = $times['entry_time'];
+                    $update = [];
+
+                    foreach (['entry_time', 'exit_time'] as $field) {
+                        $value = $times[$field];
+
+                        if (
+                            $value !== null &&
+                            (
+                                $duplicateMode === 'replace' ||
+                                ($duplicateMode === 'ignore' && $existing->$field === null)
+                            )
+                        ) {
+                            $update[$field] = $value;
                         }
-                        if ($times['exit_time'] !== null) {
-                            $update['exit_time'] = $times['exit_time'];
-                        }
-                        if (! empty($update)) {
-                            $existing->update($update);
-                            $imported++;
-                        } else {
-                            $skipped++;
-                        }
+                    }
+
+                    if ($update) {
+                        $existing->update($update);
+                        $this->attendanceService->recalculateLog($existing);
+                        $imported++;
                     } else {
-                        // 'ignore' – day already has a record, skip entirely
                         $skipped++;
                     }
                 } else {

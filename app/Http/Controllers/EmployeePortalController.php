@@ -349,7 +349,9 @@ class EmployeePortalController extends Controller
             default => __('New Leave Request'),
         };
 
-        return view('employee-portal.personnel-requests.create', compact('requestTypes', 'tab', 'title'));
+        $currentRequestType = old('request_type', $request->input('request_type') ?? array_key_first($requestTypes));
+
+        return view('employee-portal.personnel-requests.create', compact('requestTypes', 'tab', 'title', 'currentRequestType'));
     }
 
     /**
@@ -391,7 +393,10 @@ class EmployeePortalController extends Controller
         $tab = $request->get('tab', 'leaves');
 
         if ($request->input('submit_action') === 'create_new') {
-            return redirect()->route('employee-portal.personnel-requests.create', ['tab' => $tab])->with('success', __('Personnel request created successfully.'));
+            return redirect()->route('employee-portal.personnel-requests.create', [
+                'tab' => $tab,
+                'request_type' => $request->input('request_type'),
+            ])->with('success', __('Personnel request created successfully.'));
         }
 
         return redirect()->route('employee-portal.personnel-requests.index', ['tab' => $tab])
@@ -436,7 +441,9 @@ class EmployeePortalController extends Controller
             default => __('Edit Leave Request'),
         };
 
-        return view('employee-portal.personnel-requests.edit', compact('personnelRequest', 'requestTypes', 'tab', 'title'));
+        $currentRequestType = old('request_type', $personnelRequest->request_type->value);
+
+        return view('employee-portal.personnel-requests.edit', compact('personnelRequest', 'requestTypes', 'tab', 'title', 'currentRequestType'));
     }
 
     /**

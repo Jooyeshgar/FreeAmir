@@ -1,8 +1,6 @@
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4" 
-    x-data="{ requestType: '{{ old('request_type', $personnelRequest->request_type->value ?? 'LEAVE_HOURLY') }}' }">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4" x-data="{ requestType: '{{ $currentRequestType }}' }">
     
-    <x-select name="request_type" id="request_type" title="{{ __('Request Type') }}" :options="$requestTypes" 
-        :selected="old('request_type', $personnelRequest->request_type->value ?? 'LEAVE_HOURLY')" x-model="requestType" required/>
+    <x-select name="request_type" id="request_type" title="{{ __('Request Type') }}" :options="$requestTypes" :selected="$currentRequestType" x-model="requestType" required/>
 
     <x-date-picker name="request_date" id="request_date" :title="__('Date')" 
         :value="old('request_date', isset($personnelRequest) ? convertToJalali($personnelRequest->start_date) : '')" :placeholder="__('Date')" required />
