@@ -99,20 +99,19 @@
             @if($subjects->isEmpty())
                 <div class="text-center py-2">
                     <p>
-                        {{ __('There are no subjects in current level.') }}
-                        {{ __('You can') }}
+                        {{ __('There are no subjects in the current level.') }}
+                        {{ __('You can for this level') }} 
                         <a href="{{ route('subjects.create', ['parent_id' => request('parent_id', null)]) }}" class="link link-primary">{{ __('create a subject') }}</a>
-                        {{ __('for this level or') }}
                         @if($currentParent)
-                            <a href="#" x-on:click.prevent="openTransferModal('{{ $currentParent->id }}', '{{ $currentParent->name }}')" class="link link-primary">{{ __('transfer') }}</a>
+                            {{ __('or') }}
+                            <a href="#" x-on:click.prevent="openTransferModal('{{ $currentParent->id }}', '{{ $currentParent->name }}')" class="link link-primary">{{ __('transfer this subject to this level') }}</a>.
                         @endif
-                        {{ __('this subject.') }}
                     </p>
                 </div>
             @endif
 
             <dialog id="transferModal" class="modal">
-                <div class="modal-box w-11/12 max-w-2xl">
+                <div class="modal-box w-11/12 max-w-2xl overflow-visible relative">
                     <h3 class="font-bold text-lg">{{ __('Transfer Subject') }}</h3>
 
                     <form action="{{ route('subjects.transfer') }}" method="POST" x-data="{ createNewSubject: true }">
@@ -126,23 +125,6 @@
                                     <div class="input input-bordered w-full flex items-center gap-2">
                                         <span x-text="transferSourceName" class="grow"></span>
                                     </div>
-                                </div>
-                            </template>
-
-                            <template x-if="!transferSourceId">
-                                <div x-data="{
-                                    srcSelectedName: '',
-                                    srcSelectedCode: '',
-                                    srcSelectedId: '',
-                                }">
-                                    <x-subject-select :subjects="$subjectTree" title="{{ __('Source Subject') }}" placeholder="{{ __('Select source subject') }}"
-                                        @selected="
-                                            srcSelectedName = $event.detail.name;
-                                            srcSelectedCode = $event.detail.code;
-                                            srcSelectedId = $event.detail.id;
-                                            transferSourceId = $event.detail.id;
-                                            transferSourceName = $event.detail.name;
-                                        " />
                                 </div>
                             </template>
 
