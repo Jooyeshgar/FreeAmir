@@ -498,11 +498,16 @@ class SubjectService
             throw new \InvalidArgumentException(__('Source and destination subjects must be different.'));
         }
 
+        $descendantIds = $source->getAllDescendantIds();
+        if (in_array($destination->id, $descendantIds)) {
+            throw new \InvalidArgumentException(__('Cannot transfer to a descendant of the source subject.'));
+        }
+
         $year = (int) (config('active-company-fiscal-year') ?? toEnglish(jdate('Y')));
         $startDate = jalali_to_gregorian($year, 1, 1, '-');
         $endDate = now()->format('Y-m-d');
 
-        $result = DB::transaction(function () use ($source, $destination, $startDate, $endDate, $transferSubjectable) {
+        $result = DB::transaction(function () use ($source, $destination, $startDate, $endDate, $transferSubjectable, $descendantIds) {
             if ($transferSubjectable && ! is_null($source->subjectable_type) && ! is_null($source->subjectable_id)) {
                 $destination->subjectable_type = $source->subjectable_type;
                 $destination->subjectable_id = $source->subjectable_id;
@@ -515,7 +520,9 @@ class SubjectService
                 $source->save();
             }
 
-            $query = Transaction::where('subject_id', $source->id)->whereHas('document', function ($q) use ($startDate, $endDate) {
+            $subjectIds = array_merge([$source->id], $descendantIds);
+
+            $query = Transaction::whereIn('subject_id', $subjectIds)->whereHas('document', function ($q) use ($startDate, $endDate) {
                 $q->whereBetween('date', [$startDate, $endDate]);
             });
 

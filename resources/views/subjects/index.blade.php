@@ -1,16 +1,20 @@
 <x-app-layout :title="__('Subjects')">
     <x-show-message-bags />
     <div class="card bg-base-100 shadow-xl">
-        <div class="card-body">
+        <div class="card-body" x-data="{
+            transferSourceId: null,
+            transferSourceName: '',
+            openTransferModal(id, name) {
+                this.transferSourceId = id;
+                this.transferSourceName = name;
+                this.$nextTick(() => document.getElementById('transferModal').showModal());
+            }
+        }">
             <div class="card-actions ">
                 <div>
                     <a href="{{ route('subjects.create', ['parent_id' => request('parent_id', null)]) }}" class="btn btn-primary ">{{ __('Create Subject') }}</a>
                 </div>
-                @if($importedDefaultName)
-                    <a href="{{ route('subjects.index') }}" class="btn btn-outline">
-                        {{ __('Back') }}
-                    </a>
-                @elseif($currentParent)
+                @if($currentParent)
                     @php
                         $upUrl = route('subjects.index');
                         if ($currentParent->parent_id) {
@@ -22,21 +26,12 @@
                     <a href="{{ $upUrl }}" class="btn btn-outline">
                         {{ __('Back') }}
                     </a>
-                @endif
-                <div class="ml-auto">
-                    @if($importedDefaultName)
-                        <a href="{{ route('subjects.index') }}" class="btn btn-warning">
-                            {{ __('Imported with Default Name') }} ✕
-                        </a>
-                    @else
-                        <a href="{{ route('subjects.index', ['name_is_default' => 1]) }}" class="btn btn-outline">
-                            {{ __('Imported with Default Name') }}
-                        </a>
+                    @if(! $currentParent->children()->exists())
+                        <button class="btn btn-primary" x-on:click="openTransferModal('{{ $currentParent->id }}', '{{ $currentParent->name }}')" title="{{ __('Transfer transactions from this subject and its descendants to another') }}">
+                            {{ __('Transfer Transactions') }}
+                        </button>
                     @endif
-                </div>
-                <div>
-                    <a href="{{ route('subjects.transfer-form') }}" class="btn btn-primary ">{{ __('Transfer Transaction Between Subjects') }}</a>
-                </div>
+                @endif
             </div>
             <table class="table w-full mt-4">
                 <thead>
@@ -100,6 +95,103 @@
                     @endforeach
                 </tbody>
             </table>
+
+            @if($subjects->isEmpty())
+                <div class="text-center py-2">
+                    <p>
+                        {{ __('There are no subjects in current level.') }}
+                        {{ __('You can') }}
+                        <a href="{{ route('subjects.create', ['parent_id' => request('parent_id', null)]) }}" class="link link-primary">{{ __('create a subject') }}</a>
+                        {{ __('for this level or') }}
+                        @if($currentParent)
+                            <a href="#" x-on:click.prevent="openTransferModal('{{ $currentParent->id }}', '{{ $currentParent->name }}')" class="link link-primary">{{ __('transfer') }}</a>
+                        @endif
+                        {{ __('this subject.') }}
+                    </p>
+                </div>
+            @endif
+
+            <dialog id="transferModal" class="modal">
+                <div class="modal-box w-11/12 max-w-2xl">
+                    <h3 class="font-bold text-lg">{{ __('Transfer Subject') }}</h3>
+
+                    <form action="{{ route('subjects.transfer') }}" method="POST" x-data="{ createNewSubject: true }">
+                        @csrf
+                        <x-input name="source_subject_id" x-bind:value="transferSourceId" hidden />
+
+                        <div class="py-4 space-y-4">
+                            <template x-if="transferSourceId">
+                                <div>
+                                    <label class="label">{{ __('Source Subject') }}</label>
+                                    <div class="input input-bordered w-full flex items-center gap-2">
+                                        <span x-text="transferSourceName" class="grow"></span>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <template x-if="!transferSourceId">
+                                <div x-data="{
+                                    srcSelectedName: '',
+                                    srcSelectedCode: '',
+                                    srcSelectedId: '',
+                                }">
+                                    <x-subject-select :subjects="$subjectTree" title="{{ __('Source Subject') }}" placeholder="{{ __('Select source subject') }}"
+                                        @selected="
+                                            srcSelectedName = $event.detail.name;
+                                            srcSelectedCode = $event.detail.code;
+                                            srcSelectedId = $event.detail.id;
+                                            transferSourceId = $event.detail.id;
+                                            transferSourceName = $event.detail.name;
+                                        " />
+                                </div>
+                            </template>
+
+                            <template x-if="!createNewSubject">
+                                <div x-data="{
+                                    selectedName: '',
+                                    selectedCode: '',
+                                    selectedId: '',
+                                }">
+                                    <x-subject-select :subjects="$subjectTree" title="{{ __('Destination Subject') }}" placeholder="{{ __('Select destination subject') }}"
+                                        @selected="
+                                            selectedName = $event.detail.name;
+                                            selectedCode = $event.detail.code;
+                                            selectedId = $event.detail.id;
+                                        " />
+                                    <x-input name="destination_subject_id" x-bind:value="selectedId" hidden />
+                                </div>
+                            </template>
+
+                            <template x-if="createNewSubject">
+                                <div x-data="{
+                                    selectedName: '',
+                                    selectedCode: '',
+                                    selectedId: '',
+                                }">
+                                    <x-subject-select :subjects="$subjectTree" title="{{ __('Parent Destination Subject') }}" placeholder="{{ __('Select parent destination subject') }}"
+                                        @selected="
+                                            selectedName = $event.detail.name;
+                                            selectedCode = $event.detail.code;
+                                            selectedId = $event.detail.id;
+                                        " />
+                                    <x-input name="parent_destination_subject_id" x-bind:value="selectedId" hidden />
+                                </div>
+                            </template>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 pt-4 border-t border-base-300">
+                                <x-checkbox name="create_new_subject" id="create_new_subject" x-model="createNewSubject" value="1" checked title="{{ __('Create new subject under destination subject') }}" />
+                                <x-checkbox name="transfer_subjectable" id="transfer_subjectable" value="1" checked title="{{ __('Transfer source subject relation') }}" />
+                                <x-checkbox name="remove_source_subject" id="remove_source_subject" value="1" checked title="{{ __('Remove source subject after transfer') }}" />
+                            </div>
+                        </div>
+
+                        <div class="modal-action">
+                            <button type="button" onclick="document.getElementById('transferModal').close()" class="btn">{{ __('Cancel') }}</button>
+                            <button type="submit" class="btn btn-primary">{{ __('Transfer Transactions') }}</button>
+                        </div>
+                    </form>
+                </div>
+            </dialog>
         </div>
     </div>
 </x-app-layout>
