@@ -480,14 +480,8 @@ class SubjectService
             return;
         }
 
-        $modelsWithSubjectId = [Customer::class, CustomerGroup::class, BankAccount::class];
-
-        if (! in_array($subject->subjectable_type, $modelsWithSubjectId)) {
-            return;
-        }
-
-        $subjectable = $subject->subjectable_type::find($subject->subjectable_id);
-        if ($subjectable) {
+        $subjectable = $subject->subjectable;
+        if ($subjectable && in_array(get_class($subjectable), [Customer::class, CustomerGroup::class, BankAccount::class])) {
             $subjectable->subject_id = $subject->id;
             $subjectable->save();
         }
