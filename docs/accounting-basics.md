@@ -27,7 +27,7 @@
 - مقدار مثبت = بستانکار
 
 ```php
-// example: خرید ۱۰۰,۰۰۰ تومان کالا نقدا
+// example: خرید ۱۰۰,۰۰۰ تومان کالا نقداً
 // تراکنش 1: افزایش موجودی کالا (بدهکار)
 $transaction1 = Transaction::create([
     'subject_id' => $inventorySubject->id,
