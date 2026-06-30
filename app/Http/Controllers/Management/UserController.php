@@ -104,7 +104,7 @@ class UserController extends Controller
     {
         $roles = Role::all();
         $companies = Company::all();
-        $employees = Employee::all();
+        $employees = Employee::whereDoesntHave('user')->get();
 
         return view('users.edit', compact('user', 'roles', 'companies', 'employees'));
     }
