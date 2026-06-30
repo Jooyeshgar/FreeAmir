@@ -50,6 +50,8 @@ return [
         'calculated_amount' => 'Calculated amount',
         'card_number' => 'Card number',
         'category' => 'categorization',
+        'certificate' => 'certificate',
+        'private_key' => 'private key',
         'children_count' => 'Number of children',
         'code' => 'Code',
         'company' => 'company',

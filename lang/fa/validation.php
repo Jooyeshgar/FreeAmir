@@ -50,6 +50,8 @@ return [
         'calculated_amount' => 'مبلغ محاسبه‌شده',
         'card_number' => 'شماره کارت',
         'category' => 'دسته‌بندی',
+        'certificate' => 'گواهی امضا',
+        'private_key' => 'کلید خصوصی',
         'children_count' => 'تعداد فرزند',
         'code' => 'کد',
         'company' => 'نام شرکت',

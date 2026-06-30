@@ -195,7 +195,7 @@ class CompanyController extends Controller
 
     private function certificateRules(): array
     {
-        return ['nullable', 'file', 'extensions:crt', function ($_, $value, $fail) {
+        return ['nullable', 'file', 'extensions:crt,cer', function ($_, $value, $fail) {
             $content = file_get_contents($value->getRealPath());
 
             // Try PEM as-is

@@ -89,7 +89,7 @@
                     </div>
                     <div class="flex gap-2">
                         <div class="col-span-2 md:col-span-1">
-                            <x-file-input name="certificate" title="{{ __('SSL Certificate') }}" accept=".crt" />
+                            <x-file-input name="certificate" title="{{ __('SSL Certificate') }}" accept=".crt,.cer" />
                         </div>
                         <div class="col-span-2 md:col-span-1">
                             <x-file-input name="private_key" title="{{ __('Private Key') }}" accept=".pem" />

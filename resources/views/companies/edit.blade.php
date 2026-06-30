@@ -33,7 +33,7 @@
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <div class="col-span-2 md:col-span-1">
-                            <x-file-input name="certificate" title="{{ __('SSL Certificate') }}" accept=".crt" />
+                            <x-file-input name="certificate" title="{{ __('SSL Certificate') }}" accept=".crt,.cer" />
                             @if ($company->certificate_path)
                                 <p class="text-sm text-base-content/60 mt-1">{{ __('Current file') }}: {{ basename($company->certificate_path) }}</p>
                             @endif
