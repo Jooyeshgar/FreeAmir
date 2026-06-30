@@ -112,11 +112,23 @@
 
             <dialog id="transferModal" class="modal">
                 <div class="modal-box w-11/12 max-w-2xl overflow-visible relative">
-                    <h3 class="font-bold text-lg">{{ __('Transfer Subject') }}</h3>
+                    <h3 class="font-bold text-lg">{{ __('Transfer Transactions') }}</h3>
 
                     <form action="{{ route('subjects.transfer') }}" method="POST" x-data="{ createNewSubject: true }">
                         @csrf
                         <x-input name="source_subject_id" x-bind:value="transferSourceId" hidden />
+
+                        <div class="fieldset w-fit">
+                            <label class="flex items-center cursor-pointer justify-start gap-3">
+                                <input type="radio" name="create_new_subject" value="1" class="radio" x-model.number="createNewSubject"/>
+                                <span>{{ __('Transfer To new subject under destination subject') }}</span>
+                            </label>
+
+                            <label class="flex items-center cursor-pointer justify-start gap-3">
+                                <input type="radio" name="create_new_subject" value="0" class="radio" x-model.number="createNewSubject"/>
+                                <span>{{ __('Aggregation with destination subject') }}</span>
+                            </label>
+                        </div>
 
                         <div class="py-4 space-y-4">
                             <template x-if="transferSourceId">
@@ -161,9 +173,8 @@
                             </template>
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 pt-4 border-t border-base-300">
-                                <x-checkbox name="create_new_subject" id="create_new_subject" x-model="createNewSubject" value="1" checked title="{{ __('Create new subject under destination subject') }}" />
-                                <x-checkbox name="transfer_subjectable" id="transfer_subjectable" value="1" checked title="{{ __('Transfer source subject relation') }}" />
-                                <x-checkbox name="remove_source_subject" id="remove_source_subject" value="1" checked title="{{ __('Remove source subject after transfer') }}" />
+                                <x-checkbox name="transfer_subjectable" id="transfer_subjectable" value="1" title="{{ __('Transfer source subject relation') }}" />
+                                <x-checkbox name="remove_source_subject" id="remove_source_subject" value="1" title="{{ __('Remove source subject after transfer') }}" />
                             </div>
                         </div>
 
