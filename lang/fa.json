@@ -2429,15 +2429,13 @@
     "Transaction sum to transfer": "جمع تراکنش‌های قابل انتقال",
     "Transfer Subject": "انتقال سرفصل",
     "Transfer source subject relation": "انتقال ارتباط سرفصل مبدا",
-    "Transfer this subject and all its descendants": "انتقال این سرفصل و تمام زیرمجموعه‌های آن",
+    "transfer this subject to this level": "این سرفصل را منتقل کنید",
     "Transfer transactions from this subject and its descendants to another": "انتقال تراکنش‌های این سرفصل و زیرمجموعه‌های آن به سرفصل دیگر",
     "… and :n more.": "… و :n مورد دیگر.",
     "… and :remaining more records.": "… و :remaining رکوردهای بیشتر.",
     "Transfer Transactions": "انتقال تراکنش‌ها",
-    "There are no subjects in current level.": "در این سطح هیچ سرفصلی وجود ندارد.",
-    "You can": "شما می‌توانید",
+    "There are no subjects in the current level.": "در این سطح هیچ سرفصلی وجود ندارد.",
+    "You can for this level": "شما می‌توانید برای این سطح",
     "create a subject": "یک سرفصل ایجاد کنید",
-    "for this level or": "برای این سطح یا",
-    "transfer": "انتقال دهید",
-    "this subject.": "این سرفصل را."
+    "transfer": "انتقال دهید"
 }

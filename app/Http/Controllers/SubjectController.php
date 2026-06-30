@@ -22,7 +22,7 @@ class SubjectController extends Controller
             $subjects = Subject::whereIsRoot()->with('subjectable')->orderBy('code')->get();
         }
 
-        $subjectTree = Subject::orderBy('code')->get(['id', 'name', 'code', 'parent_id']);
+        $subjectTree = Subject::orderBy('code')->limit(30)->get(['id', 'name', 'code', 'parent_id']);
         $subjectTree = $this->subjectService->buildSubjectTreeFromCollection($subjectTree);
 
         return view('subjects.index', compact('subjects', 'currentParent', 'subjectTree'));

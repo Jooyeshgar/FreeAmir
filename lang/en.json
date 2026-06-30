@@ -2406,15 +2406,13 @@
     "Transaction sum to transfer": "Transaction sum to transfer",
     "Transfer Subject": "Transfer Subject",
     "Transfer source subject relation": "Transfer source subject relation",
-    "Transfer this subject and all its descendants": "Transfer this subject and all its descendants",
+    "transfer this subject to this level": "transfer this subject to this level",
     "Transfer transactions from this subject and its descendants to another": "Transfer transactions from this subject and its descendants to another",
     "… and :n more.": "… and :n more.",
     "… and :remaining more records.": "… and :remaining more records.",
     "Transfer Transactions": "Transfer Transactions",
-    "There are no subjects in current level.": "There are no subjects in current level.",
-    "You can": "You can",
+    "There are no subjects in the current level.": "There are no subjects in the current level.",
+    "You can for this level": "You can for this level",
     "create a subject": "create a subject",
-    "for this level or": "for this level or",
-    "transfer": "transfer",
-    "this subject.": "this subject."
+    "transfer": "transfer"
 }
