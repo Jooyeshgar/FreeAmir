@@ -4,8 +4,57 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "8fa73113da24351639fb241ae86a413d",
+    "content-hash": "d57c98864dbadc5e0349838f19c584b5",
     "packages": [
+        {
+            "name": "alimousavi/filoquent",
+            "version": "v1.2.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/alimousavidev/filoquent.git",
+                "reference": "617ec1a202d8842ff8b1169e4a404ab0ab0903e8"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/alimousavidev/filoquent/zipball/617ec1a202d8842ff8b1169e4a404ab0ab0903e8",
+                "reference": "617ec1a202d8842ff8b1169e4a404ab0ab0903e8",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/support": ">=9.0",
+                "php": ">=8.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "AliMousavi\\Filoquent\\FiloquentServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "AliMousavi\\Filoquent\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Ali Mousavi",
+                    "email": "hello@alimousavi.dev"
+                }
+            ],
+            "description": "A powerful Laravel package for filtering Eloquent models using HTTP query parameters.",
+            "homepage": "https://github.com/alimousavidev/filoquent",
+            "support": {
+                "issues": "https://github.com/alimousavidev/filoquent/issues",
+                "source": "https://github.com/alimousavidev/filoquent/tree/v1.2.1"
+            },
+            "time": "2025-08-07T11:37:26+00:00"
+        },
         {
             "name": "barryvdh/laravel-debugbar",
             "version": "v3.16.5",

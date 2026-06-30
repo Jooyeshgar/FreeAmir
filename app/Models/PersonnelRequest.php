@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use AliMousavi\Filoquent\Traits\Filterable;
 use App\Enums\PersonnelRequestType;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Builder;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PersonnelRequest extends Model
 {
+    use Filterable;
     use HasFactory;
 
     protected $fillable = [

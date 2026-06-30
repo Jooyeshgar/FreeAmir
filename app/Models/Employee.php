@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use AliMousavi\Filoquent\Traits\Filterable;
 use App\Enums\EmployeeDutyStatus;
 use App\Enums\EmployeeEducationLevel;
 use App\Enums\EmployeeEmploymentType;
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Employee extends Model
 {
+    use Filterable;
     use HasFactory;
 
     protected $fillable = [

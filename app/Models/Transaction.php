@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use AliMousavi\Filoquent\Traits\Filterable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Transaction extends Model
 {
+    use Filterable;
     use HasFactory;
 
     /**
@@ -21,7 +23,6 @@ class Transaction extends Model
         'desc',
         'value',
     ];
-
 
     public function subject()
     {

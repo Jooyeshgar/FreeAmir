@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Filters\DocumentFilter;
 use App\Http\Requests\StoreTransactionRequest;
 use App\Models\Company;
 use App\Models\Document;
@@ -27,43 +28,16 @@ class DocumentController extends Controller
         private readonly DocumentImportExportService $documentImportExportService
     ) {}
 
-    public function index()
+    public function index(DocumentFilter $filter)
     {
-        $query = Document::orderByDesc('date')->orderByDesc('number');
-
-        if (request()->has('number') && request('number')) {
-            $query->where('number', convertToFloat(request('number')));
-        }
-
-        if (request()->has('date') && request('date')) {
-            $query->where('date', convertToGregorian(request('date')));
-        }
-
-        // Search by document title or transaction description
-        if (request()->has('text') && request('text')) {
-            $searchText = request('text');
-            $query->where(function ($q) use ($searchText) {
-                $q->where('title', 'like', '%'.$searchText.'%')
-                    ->orWhereHas('transactions', function ($subQ) use ($searchText) {
-                        $subQ->where('desc', 'like', '%'.$searchText.'%');
-                    });
-            });
-        }
-
         // It would use query instead of Elequent
         $approvedDocumentsNumber = Document::whereNot('approved_at', null)->count();
         $unapprovedDocumentsNumber = Document::where('approved_at', null)->count();
 
-        if (request()->has('status') && request('status') && request('status') !== 'all') {
-            $status = request('status');
-            if ($status === 'approved') {
-                $query->whereNotNull('approved_at');
-            } elseif ($status === 'unapproved') {
-                $query->whereNull('approved_at');
-            }
-        }
-
-        $documents = $query->paginate(10);
+        $documents = Document::filter($filter)
+            ->orderByDesc('date')
+            ->orderByDesc('number')
+            ->paginate(10);
 
         return view('documents.index', compact('documents', 'approvedDocumentsNumber', 'unapprovedDocumentsNumber'));
     }

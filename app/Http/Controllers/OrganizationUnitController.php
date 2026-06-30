@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Filters\OrganizationUnitFilter;
 use App\Models\OrganizationUnit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -10,25 +11,14 @@ use Illuminate\View\View;
 
 class OrganizationUnitController extends Controller
 {
-    public function index(Request $request): View
+    public function index(OrganizationUnitFilter $filter): View
     {
-        $query = OrganizationUnit::with('parent')
+        $organizationUnits = OrganizationUnit::with('parent')
             ->withCount('employees')
-            ->orderBy('name');
-
-        if ($request->filled('search')) {
-            $search = $request->string('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('code', 'like', "%{$search}%");
-            });
-        }
-
-        if ($request->filled('is_active')) {
-            $query->where('is_active', (bool) $request->is_active);
-        }
-
-        $organizationUnits = $query->paginate(15)->withQueryString();
+            ->filter($filter)
+            ->orderBy('name')
+            ->paginate(15)
+            ->withQueryString();
 
         return view('organization-units.index', compact('organizationUnits'));
     }

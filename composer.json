@@ -10,6 +10,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "alimousavi/filoquent": "^1.2",
         "barryvdh/laravel-debugbar": "^3.13",
         "carlos-meneses/laravel-mpdf": "^2.1",
         "doctrine/dbal": "^3.10",

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Filters\InvoiceFilter;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Company;
 use App\Models\Customer;
@@ -41,74 +42,22 @@ class InvoiceController extends Controller
      *
      * @return View|Factory
      */
-    public function index(Request $request)
+    public function index(Request $request, InvoiceFilter $filter)
     {
         $builder = Invoice::with(['customer', 'document', 'voidInvoice', 'payments'])
-            ->orderByDesc('date')
-            ->orderByDesc('number');
+            ->filter($filter);
 
         $builder->when(in_array($request->invoice_type, [InvoiceType::SELL->value, InvoiceType::VOID->value]),
             fn ($q) => $q->with('latestMoadianHistory')
         );
 
-        $builder->when($request->filled('invoice_type') &&
-            in_array($request->invoice_type, ['buy', 'sell', 'return_buy', 'return_sell', 'void']),
-            fn ($invoice) => $invoice->where('invoice_type', $request->invoice_type)
-        );
-
-        $builder->when($request->filled('number'),
-            fn ($q) => $q->where('number', $request->number)
-        );
-
-        $builder->when($request->filled('start_date'),
-            fn ($q) => $q->where('date', '>=', convertToGregorian($request->start_date))
-        );
-
-        $builder->when($request->filled('end_date'),
-            fn ($q) => $q->where('date', '<=', convertToGregorian($request->end_date))
-        );
-
-        $builder->when($request->filled('text'),
-            fn ($q) => $q->where(function ($invoice) use ($request) {
-                $invoice->whereHas('items', function ($items) use ($request) {
-                    $items->where('description', 'like', "%{$request->text}%");
-                })->orWhereHas('customer', function ($customer) use ($request) {
-                    $customer->where('name', 'like', "%{$request->text}%");
-                });
-            })
-        );
-
-        $service_buy = $request->filled('invoice_type') && in_array($request->invoice_type, [InvoiceType::BUY->value, InvoiceType::RETURN_BUY->value])
-            && $request->filled('service_buy') && $request->service_buy == '1';
-
-        $builder->when($service_buy, fn ($q) => $q->whereHas('items', function ($item) {
-            $item->where('itemable_type', Service::class);
-        }));
-
-        $builder->when(! $service_buy && ! in_array($request->invoice_type, [InvoiceType::SELL->value, InvoiceType::RETURN_SELL->value]), fn ($q) => $q->whereHas('items', function ($item) {
-            $item->where('itemable_type', Product::class);
-        }));
-
-        $builder->when($request->invoice_type === InvoiceType::SELL->value && $request->boolean('voided'), fn ($q) => $q->whereHas('voidInvoice'));
-
-        $builder->when($request->filled('moadian_status') && in_array($request->invoice_type, [InvoiceType::SELL->value, InvoiceType::VOID->value, InvoiceType::RETURN_SELL->value]),
-            function ($q) use ($request) {
-                if ($request->moadian_status === 'not_sent') {
-                    $q->whereDoesntHave('moadianHistories');
-                } else {
-                    $q->whereHas('latestMoadianHistory', fn ($h) => $h->where('data->status', $request->moadian_status));
-                }
-            }
-        );
-
         $statsBuilder = $builder->clone();
 
-        $builder->when($request->filled('status') &&
-            in_array($request->status, ['approved', 'unapproved', 'pending', 'approved_inactive', 'rejected', 'ready_to_approve', 'pre_invoice', 'partially_paid', 'paid']),
-            fn ($invoice) => $invoice->where('status', $request->status)
-        );
+        $filter->applyStatus($builder);
 
-        $invoices = $builder->paginate(25);
+        $invoices = $builder->orderByDesc('date')
+            ->orderByDesc('number')
+            ->paginate(25);
 
         $statusCounts = $statsBuilder->reorder()
             ->toBase()
@@ -133,6 +82,8 @@ class InvoiceController extends Controller
 
         $invoices->totalProductsQuantity = $itemTotals[Product::class] ?? 0;
         $invoices->totalServicesQuantity = $itemTotals[Service::class] ?? 0;
+
+        $service_buy = $filter->isServiceBuy();
 
         return view('invoices.index', compact('invoices', 'statusCounts', 'service_buy'));
     }

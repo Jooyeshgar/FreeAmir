@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use AliMousavi\Filoquent\Traits\Filterable;
 use App\Enums\ThursdayStatus;
 use App\Models\Scopes\FiscalYearScope;
 use Carbon\Carbon;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WorkShift extends Model
 {
+    use Filterable;
     use HasFactory;
 
     protected $fillable = [

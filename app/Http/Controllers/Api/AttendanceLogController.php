@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Filters\ApiAttendanceLogFilter;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreAttendanceLogsRequest;
 use App\Models\AttendanceLog;
@@ -12,9 +13,9 @@ use Illuminate\Validation\Rule;
 
 class AttendanceLogController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, ApiAttendanceLogFilter $filter): JsonResponse
     {
-        $validated = $request->validate([
+        $request->validate([
             'employee_id' => [
                 'required',
                 'integer',
@@ -24,9 +25,7 @@ class AttendanceLogController extends Controller
             'date_to' => ['required', 'date_format:Y-m-d', 'after_or_equal:date_from'],
         ]);
 
-        $logs = AttendanceLog::query()
-            ->where('employee_id', $validated['employee_id'])
-            ->whereBetween('log_date', [$validated['date_from'], $validated['date_to']])
+        $logs = AttendanceLog::filter($filter)
             ->orderBy('log_date')
             ->get();
 

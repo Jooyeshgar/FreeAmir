@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ThursdayStatus;
+use App\Filters\WorkShiftFilter;
 use App\Models\WorkShift;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -10,12 +11,12 @@ use Illuminate\View\View;
 
 class WorkShiftController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, WorkShiftFilter $filter): View
     {
         $search = $request->input('search', '');
 
-        $workShifts = WorkShift::orderBy('name')
-            ->when($search, fn ($q) => $q->where('name', 'like', "%{$search}%"))
+        $workShifts = WorkShift::filter($filter)
+            ->orderBy('name')
             ->paginate(15);
 
         return view('work-shifts.index', compact('workShifts', 'search'));

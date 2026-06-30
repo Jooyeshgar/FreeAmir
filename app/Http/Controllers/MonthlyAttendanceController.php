@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ThursdayStatus;
+use App\Filters\MonthlyAttendanceFilter;
 use App\Models\Employee;
 use App\Models\MonthlyAttendance;
 use App\Models\PublicHoliday;
@@ -18,19 +19,13 @@ class MonthlyAttendanceController extends Controller
 {
     public function __construct(private readonly AttendanceService $attendanceService) {}
 
-    public function index(Request $request): View
+    public function index(MonthlyAttendanceFilter $filter): View
     {
-        $query = MonthlyAttendance::with(['employee', 'payroll'])->orderByDesc('month')->orderByDesc('employee_id');
-
-        if ($request->filled('employee_id')) {
-            $query->where('employee_id', $request->integer('employee_id'));
-        }
-
-        if ($request->filled('month')) {
-            $query->where('month', $request->integer('month'));
-        }
-
-        $monthlyAttendances = $query->paginate(15);
+        $monthlyAttendances = MonthlyAttendance::with(['employee', 'payroll'])
+            ->filter($filter)
+            ->orderByDesc('month')
+            ->orderByDesc('employee_id')
+            ->paginate(15);
         $employees = Employee::orderBy('first_name')->get();
 
         return view('monthly-attendances.index', compact('monthlyAttendances', 'employees'));

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Filters\ServiceFilter;
 use App\Http\Requests\StoreServiceRequest;
 use App\Http\Requests\UpdateServiceRequest;
 use App\Models\Service;
@@ -19,22 +20,12 @@ class ServiceController extends Controller
         private readonly ServiceService $serviceService,
     ) {}
 
-    public function index()
+    public function index(ServiceFilter $filter)
     {
-        $query = Service::orderBy('code');
-
-        if (request()->has('name') && request('name')) {
-            $query->where('name', 'like', '%'.request('name').'%');
-        }
-
-        if (request()->has('group_name') && request('group_name')) {
-            $searchGroupName = request('group_name');
-            $query->whereHas('serviceGroup', function ($groupName) use ($searchGroupName) {
-                $groupName->where('name', 'like', '%'.$searchGroupName.'%');
-            });
-        }
-
-        $services = $query->with('serviceGroup', 'cogsSubject', 'salesReturnsSubject')->paginate(12);
+        $services = Service::filter($filter)
+            ->orderBy('code')
+            ->with('serviceGroup', 'cogsSubject', 'salesReturnsSubject')
+            ->paginate(12);
 
         return view('services.index', compact('services'));
     }

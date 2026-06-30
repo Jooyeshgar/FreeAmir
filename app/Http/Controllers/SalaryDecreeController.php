@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Filters\SalaryDecreeFilter;
 use App\Models\DecreeBenefit;
 use App\Models\Employee;
 use App\Models\OrgChart;
@@ -14,20 +15,12 @@ use Illuminate\View\View;
 
 class SalaryDecreeController extends Controller
 {
-    public function index(Request $request): View
+    public function index(SalaryDecreeFilter $filter): View
     {
-        $query = SalaryDecree::with(['employee'])
-            ->orderBy('start_date', 'desc');
-
-        if ($request->filled('search')) {
-            $query->where('name', 'like', '%'.$request->search.'%');
-        }
-
-        if ($request->filled('employee_id')) {
-            $query->where('employee_id', $request->employee_id);
-        }
-
-        $decrees = $query->paginate(15);
+        $decrees = SalaryDecree::with(['employee'])
+            ->filter($filter)
+            ->orderBy('start_date', 'desc')
+            ->paginate(15);
         $employees = Employee::orderBy('first_name')->get();
 
         return view('salary-decrees.index', compact('decrees', 'employees'));

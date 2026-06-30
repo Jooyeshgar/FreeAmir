@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use AliMousavi\Filoquent\Traits\Filterable;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\Scopes\FiscalYearScope;
@@ -10,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Invoice extends Model
 {
+    use Filterable;
     use HasFactory;
 
     public $timestamps = true;

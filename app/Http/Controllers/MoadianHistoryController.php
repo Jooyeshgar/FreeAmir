@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Filters\MoadianHistoryFilter;
 use App\Models\Invoice;
 use App\Models\MoadianHistory;
 use App\Services\MoadianService;
@@ -13,23 +14,13 @@ class MoadianHistoryController extends Controller
 {
     public function __construct(private readonly MoadianService $moadianService) {}
 
-    public function index(Request $request): View
+    public function index(MoadianHistoryFilter $filter): View
     {
-        $query = MoadianHistory::with('invoice');
-
-        if ($request->filled('status')) {
-            $query->where('data->status', $request->input('status'));
-        }
-
-        if ($request->filled('invoice_number')) {
-            $query->whereHas('invoice', fn ($invoice) => $invoice->where('number', $request->input('invoice_number')));
-        }
-
-        if ($request->filled('date')) {
-            $query->whereDate('created_at', $request->input('date'));
-        }
-
-        $moadianHistories = $query->latest()->paginate(10)->withQueryString();
+        $moadianHistories = MoadianHistory::with('invoice')
+            ->filter($filter)
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
 
         $latestHistoryIds = MoadianHistory::whereIn('invoice_id', $moadianHistories->pluck('invoice_id')->unique())
             ->selectRaw('MAX(id) as id')

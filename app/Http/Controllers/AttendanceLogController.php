@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\AttendanceImportType;
 use App\Enums\ThursdayStatus;
+use App\Filters\AttendanceLogFilter;
 use App\Models\AttendanceLog;
 use App\Models\Employee;
 use App\Models\MonthlyAttendance;
@@ -25,27 +26,12 @@ class AttendanceLogController extends Controller
 {
     public function __construct(private readonly AttendanceService $attendanceService) {}
 
-    public function index(Request $request): View
+    public function index(AttendanceLogFilter $filter): View
     {
-        $query = AttendanceLog::with('employee')->orderBy('log_date', 'desc');
-
-        if ($request->filled('employee_id')) {
-            $query->where('employee_id', $request->employee_id);
-        }
-
-        if ($request->filled('date_from')) {
-            $query->whereDate('log_date', '>=', Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($request->date_from))->format('Y-m-d'));
-        }
-
-        if ($request->filled('date_to')) {
-            $query->whereDate('log_date', '<=', Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($request->date_to))->format('Y-m-d'));
-        }
-
-        if ($request->filled('is_manual')) {
-            $query->where('is_manual', (bool) $request->is_manual);
-        }
-
-        $attendanceLogs = $query->paginate(15);
+        $attendanceLogs = AttendanceLog::with('employee')
+            ->filter($filter)
+            ->orderBy('log_date', 'desc')
+            ->paginate(15);
         $employees = Employee::orderBy('first_name')->get();
 
         return view('attendance-logs.index', compact('attendanceLogs', 'employees'));

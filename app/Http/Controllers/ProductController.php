@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Filters\ProductFilter;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models\Invoice;
@@ -50,30 +51,12 @@ class ProductController extends Controller
         return PDF::loadView('warehouse.report-pdf', $data, [], $config)->stream('warehouse-report.pdf');
     }
 
-    public function index()
+    public function index(ProductFilter $filter)
     {
-        $query = Product::orderBy('code');
-
-        if (request()->has('name') && request('name')) {
-            $query->where('name', 'like', '%'.request('name').'%');
-        }
-
-        if (request()->has('code') && request('code')) {
-            $query->where('code', 'like', '%'.request('code').'%');
-        }
-
-        if (request()->has('group_name') && request('group_name')) {
-            $searchGroupName = request('group_name');
-            $query->whereHas('productGroup', function ($groupName) use ($searchGroupName) {
-                $groupName->where('name', 'like', '%'.$searchGroupName.'%');
-            });
-        }
-
-        if (request()->filled('min_quantity') && is_numeric(request('min_quantity'))) {
-            $query->where('quantity', '>=', (float) request('min_quantity'));
-        }
-
-        $products = $query->paginate(12)->withQueryString();
+        $products = Product::filter($filter)
+            ->orderBy('code')
+            ->paginate(12)
+            ->withQueryString();
 
         $products->transform(function ($product) {
             $product->unapprovedQuantity = $this->productService->unapprovedQuantity($product);

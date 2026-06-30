@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\PayrollStatus;
+use App\Filters\PayrollFilter;
 use App\Models\Employee;
 use App\Models\MonthlyAttendance;
 use App\Models\OrganizationUnit;
@@ -41,34 +42,17 @@ class PayrollController extends Controller
     /**
      * Display a list of payrolls.
      */
-    public function index(Request $request): View
+    public function index(Request $request, PayrollFilter $filter): View
     {
-        $validated = $request->validate([
+        $request->validate([
             'employee_id' => ['nullable', 'integer', 'exists:employees,id'],
             'month' => ['nullable', 'integer', 'between:1,12'],
             'organization_unit_id' => ['nullable', 'integer', 'exists:organization_units,id'],
             'status' => ['nullable', 'string', Rule::enum(PayrollStatus::class)],
         ]);
 
-        $query = Payroll::query();
-
-        if (! empty($validated['employee_id'])) {
-            $query->where('employee_id', $validated['employee_id']);
-        }
-
-        if (! empty($validated['month'])) {
-            $query->where('month', $validated['month']);
-        }
-
-        if (! empty($validated['organization_unit_id'])) {
-            $query->whereHas('employee', fn (Builder $employeeQuery) => $employeeQuery->where('organization_unit_id', $validated['organization_unit_id']));
-        }
-
-        if (! empty($validated['status'])) {
-            $query->where('status', $validated['status']);
-        }
-
-        $payrolls = $query->with(['employee', 'decree', 'monthlyAttendance'])
+        $payrolls = Payroll::filter($filter)
+            ->with(['employee', 'decree', 'monthlyAttendance'])
             ->orderBy('issue_date', 'desc')
             ->paginate(20)
             ->withQueryString();
