@@ -10,6 +10,7 @@ use App\Models\WorkShift;
 use App\Models\WorkSite;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
@@ -58,24 +59,26 @@ class UserController extends Controller
             'password_confirmation' => 'required|string|min:8',
         ]);
 
-        $user = new User;
-        $user->name = $request->input('name');
-        $user->email = $request->input('email');
-        $user->password = bcrypt($request->input('password'));
-        $user->save();
-
         if (! $request->has('role')) {
             throw ValidationException::withMessages([__('The User must have at least one role.')]);
         }
-        $role = array_values($request->role);
 
         if (! $request->has('company')) {
             throw ValidationException::withMessages([__('The User must have at least one company.')]);
         }
-        $company = array_values($request->company);
 
-        $user->syncRoles($role);
-        $user->companies()->sync($company);
+        DB::transaction(function () use ($request, &$user) {
+            $role = array_values($request->role);
+            $company = array_values($request->company);
+            $user = new User;
+            $user->name = $request->input('name');
+            $user->email = $request->input('email');
+            $user->password = bcrypt($request->input('password'));
+            $user->save();
+
+            $user->syncRoles($role);
+            $user->companies()->sync($company);
+        });
 
         return redirect()->route('users.index')->with('success', __('User created successfully!'));
     }
@@ -101,8 +104,9 @@ class UserController extends Controller
     {
         $roles = Role::all();
         $companies = Company::all();
+        $employees = Employee::all();
 
-        return view('users.edit', compact('user', 'roles', 'companies'));
+        return view('users.edit', compact('user', 'roles', 'companies', 'employees'));
     }
 
     /**
@@ -115,27 +119,46 @@ class UserController extends Controller
             'email' => 'required|string|email|max:255|unique:users,email,'.$user->id,
             'password' => 'nullable|string|min:8|confirmed',
             'password_confirmation' => 'nullable|string|min:8',
+            'employee_id' => 'nullable|exists:employees,id',
         ]);
-
-        $user->name = $request->input('name');
-        $user->email = $request->input('email');
-        if ($request->input('password')) {
-            $user->password = bcrypt($request->input('password'));
-        }
-        $user->save();
 
         if (! $request->has('role')) {
             throw ValidationException::withMessages([__('The User must have at least one role.')]);
         }
-        $role = array_values($request->role);
 
         if (! $request->has('company')) {
             throw ValidationException::withMessages([__('The User must have at least one company.')]);
         }
-        $company = array_values($request->company);
 
-        $user->syncRoles($role);
-        $user->companies()->sync($company);
+        if ($user->employee()->exists()) {
+            throw ValidationException::withMessages([__('This user already has an employee assigned.')]);
+        }
+
+        $employee = Employee::whereKey($request->employee_id)->whereNull('user_id')->first();
+
+        if (! $employee) {
+            throw ValidationException::withMessages([__('The selected employee is already assigned to another user.')]);
+        }
+
+        DB::transaction(function () use ($request, $user, $employee) {
+            $user->name = $request->input('name');
+            $user->email = $request->input('email');
+            $role = array_values($request->role);
+            $company = array_values($request->company);
+
+            if ($request->input('password')) {
+                $user->password = bcrypt($request->input('password'));
+            }
+
+            $user->save();
+
+            if ($request->filled('employee_id')) {
+                $employee->update(['user_id' => $user->id]);
+            }
+
+            $user->syncRoles($role);
+            $user->companies()->sync($company);
+        });
 
         return redirect()->route('users.index')->with('success', __('User updated successfully!'));
     }

@@ -8,6 +8,19 @@
     <x-input title="{{ __('Email') }}" name="email" :value="old('email', $user->email ?? '')" type="email" />
     <x-input title="{{ __('Password') }}" type="password" name="password" />
     <x-input title="{{ __('Confirm Password') }}" type="password" name="password_confirmation" />
+    @if ($user)
+        <div>
+            <x-select name="employee_id" id="employee_id" title="{{ __('Employee') }}"
+                :options="$employees?->mapWithKeys(fn($e) => [
+                    $e->id => $e->first_name . ' ' . $e->last_name
+                ])->toArray() ?? []"
+            :selected="old('employee_id') ?? $user?->employee?->id" :disabled="$user?->employee || !isset($employees) || $employees->isEmpty()" required />
+
+            <p class="text-warning p-2">
+                {{ $user?->employee ? __('The user is already linked to an employee.') : __('There are no unlinked employees available. Please create a new employee first.')}}
+            </p>
+        </div>
+    @endif
 </div>
 
 @can('management.roles.*')
