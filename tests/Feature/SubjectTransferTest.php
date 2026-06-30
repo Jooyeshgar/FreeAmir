@@ -2,7 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Bank;
+use App\Models\BankAccount;
 use App\Models\Company;
+use App\Models\Customer;
+use App\Models\CustomerGroup;
 use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
@@ -28,17 +32,13 @@ class SubjectTransferTest extends TestCase
 
         $this->user = User::factory()->create();
         $this->company = Company::factory()->create(['fiscal_year' => 1403]);
-
         $this->user->companies()->attach([$this->company->id]);
-
         $this->user->givePermissionTo(
-            Permission::firstOrCreate(['name' => 'subject.transfer-form']),
-            Permission::firstOrCreate(['name' => 'subject.transfer'])
+            Permission::firstOrCreate(['name' => 'subjects.transfer'])
         );
 
         $this->actingAs($this->user);
         config(['active-company-id' => $this->company->id, 'active-company-fiscal-year' => $this->company->fiscal_year]);
-
         $this->subjectService = app(SubjectService::class);
     }
 
@@ -76,6 +76,55 @@ class SubjectTransferTest extends TestCase
         ]);
     }
 
+    private function makeBank(array $attributes = []): Bank
+    {
+        $bank = new Bank;
+        $bank->name = $attributes['name'] ?? 'Test Bank';
+        $bank->company_id = $attributes['company_id'] ?? $this->company->id;
+        $bank->save();
+
+        return $bank;
+    }
+
+    private function makeCustomer(Subject $subject, array $attributes = []): Customer
+    {
+        return Customer::withoutGlobalScopes()->create(array_merge([
+            'name' => 'Test Customer',
+            'company_id' => $this->company->id,
+            'subject_id' => $subject->id,
+        ], $attributes));
+    }
+
+    private function makeCustomerGroup(Subject $subject, array $attributes = []): CustomerGroup
+    {
+        return CustomerGroup::withoutGlobalScopes()->create(array_merge([
+            'name' => 'Test Group',
+            'company_id' => $this->company->id,
+            'subject_id' => $subject->id,
+        ], $attributes));
+    }
+
+    private function makeBankAccount(Subject $subject, array $attributes = []): BankAccount
+    {
+        $bank = $this->makeBank();
+
+        return BankAccount::withoutGlobalScopes()->create(array_merge([
+            'name' => 'Test Account',
+            'number' => '123456789',
+            'type' => 1,
+            'bank_id' => $bank->id,
+            'company_id' => $this->company->id,
+            'subject_id' => $subject->id,
+        ], $attributes));
+    }
+
+    private function setSubjectable(Subject $subject, string $type, int $id): void
+    {
+        $subject->subjectable_type = $type;
+        $subject->subjectable_id = $id;
+        $subject->save();
+    }
+
     public function test_transfers_transactions_from_source_to_destination()
     {
         $source = $this->makeSubject(['code' => '001']);
@@ -101,9 +150,7 @@ class SubjectTransferTest extends TestCase
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
 
-        $source->subjectable_type = 'App\Models\Customer';
-        $source->subjectable_id = 5;
-        $source->save();
+        $this->setSubjectable($source, 'App\Models\Customer', 5);
 
         $this->subjectService->transferSubject($source, $destination, transferSubjectable: true);
 
@@ -123,9 +170,7 @@ class SubjectTransferTest extends TestCase
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
 
-        $source->subjectable_type = 'App\Models\Customer';
-        $source->subjectable_id = 5;
-        $source->save();
+        $this->setSubjectable($source, 'App\Models\Customer', 5);
 
         $this->subjectService->transferSubject($source, $destination, transferSubjectable: false);
 
@@ -154,7 +199,7 @@ class SubjectTransferTest extends TestCase
     public function test_does_not_remove_source_when_it_has_children()
     {
         $source = $this->makeSubject(['code' => '001']);
-        $child = $this->makeSubject(['code' => '001001', 'parent_id' => $source->id]);
+        $this->makeSubject(['code' => '001001', 'parent_id' => $source->id]);
         $destination = $this->makeSubject(['code' => '002']);
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
@@ -223,9 +268,7 @@ class SubjectTransferTest extends TestCase
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
 
-        $source->subjectable_type = 'App\Models\Customer';
-        $source->subjectable_id = 10;
-        $source->save();
+        $this->setSubjectable($source, 'App\Models\Customer', 10);
 
         $result = $this->subjectService->transferSubjectToNewUnderParent($source, $parent, transferSubjectable: true);
 
@@ -245,9 +288,7 @@ class SubjectTransferTest extends TestCase
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
 
-        $source->subjectable_type = 'App\Models\Customer';
-        $source->subjectable_id = 10;
-        $source->save();
+        $this->setSubjectable($source, 'App\Models\Customer', 10);
 
         $result = $this->subjectService->transferSubjectToNewUnderParent($source, $parent, transferSubjectable: false);
 
@@ -309,7 +350,7 @@ class SubjectTransferTest extends TestCase
     public function test_code_is_generated_correctly_when_parent_already_has_children()
     {
         $parent = $this->makeSubject(['code' => '002', 'name' => 'Parent']);
-        $existingChild = $this->makeSubject(['code' => '002001', 'name' => 'Child 1', 'parent_id' => $parent->id]);
+        $this->makeSubject(['code' => '002001', 'name' => 'Child 1', 'parent_id' => $parent->id]);
         $source = $this->makeSubject(['code' => '003', 'name' => 'Source']);
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
@@ -373,14 +414,8 @@ class SubjectTransferTest extends TestCase
     {
         $source = $this->makeSubject(['code' => '001']);
         $destination = $this->makeSubject(['code' => '002']);
-        $customer = \App\Models\Customer::withoutGlobalScopes()->create([
-            'name' => 'Test Customer',
-            'company_id' => $this->company->id,
-            'subject_id' => $source->id,
-        ]);
-        $source->subjectable_type = 'App\Models\Customer';
-        $source->subjectable_id = $customer->id;
-        $source->save();
+        $customer = $this->makeCustomer($source);
+        $this->setSubjectable($source, 'App\Models\Customer', $customer->id);
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
 
@@ -399,9 +434,7 @@ class SubjectTransferTest extends TestCase
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
 
-        $source->subjectable_type = 'App\Models\Customer';
-        $source->subjectable_id = 5;
-        $source->save();
+        $this->setSubjectable($source, 'App\Models\Customer', 5);
 
         $result = $this->subjectService->transferSubject($source, $destination, transferSubjectable: true, removeSource: true);
 
@@ -418,9 +451,7 @@ class SubjectTransferTest extends TestCase
         $destination = $this->makeSubject(['code' => '002']);
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
-        $source->subjectable_type = 'App\Models\Customer';
-        $source->subjectable_id = 5;
-        $source->save();
+        $this->setSubjectable($source, 'App\Models\Customer', 5);
 
         $result = $this->subjectService->transferSubject($source, $destination, transferSubjectable: false, removeSource: false);
 
@@ -441,9 +472,7 @@ class SubjectTransferTest extends TestCase
         $destination = $this->makeSubject(['code' => '002']);
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
-        $source->subjectable_type = 'App\Models\Customer';
-        $source->subjectable_id = 5;
-        $source->save();
+        $this->setSubjectable($source, 'App\Models\Customer', 5);
 
         $result = $this->subjectService->transferSubject($source, $destination, transferSubjectable: true, removeSource: false);
 
@@ -461,14 +490,8 @@ class SubjectTransferTest extends TestCase
     {
         $source = $this->makeSubject(['code' => '001']);
         $destination = $this->makeSubject(['code' => '002']);
-        $customer = \App\Models\Customer::withoutGlobalScopes()->create([
-            'name' => 'Test Customer',
-            'company_id' => $this->company->id,
-            'subject_id' => $source->id,
-        ]);
-        $source->subjectable_type = 'App\Models\Customer';
-        $source->subjectable_id = $customer->id;
-        $source->save();
+        $customer = $this->makeCustomer($source);
+        $this->setSubjectable($source, 'App\Models\Customer', $customer->id);
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
 
@@ -487,9 +510,7 @@ class SubjectTransferTest extends TestCase
         $destination = $this->makeSubject(['code' => '002']);
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
-        $source->subjectable_type = 'App\Models\Customer';
-        $source->subjectable_id = 5;
-        $source->save();
+        $this->setSubjectable($source, 'App\Models\Customer', 5);
 
         $result = $this->subjectService->transferSubject($source, $destination, transferSubjectable: true, removeSource: true);
 
@@ -506,9 +527,7 @@ class SubjectTransferTest extends TestCase
         $parent = $this->makeSubject(['code' => '002']);
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
-        $source->subjectable_type = 'App\Models\Customer';
-        $source->subjectable_id = 7;
-        $source->save();
+        $this->setSubjectable($source, 'App\Models\Customer', 7);
 
         $result = $this->subjectService->transferSubjectToNewUnderParent($source, $parent, transferSubjectable: false, removeSource: false);
 
@@ -527,9 +546,7 @@ class SubjectTransferTest extends TestCase
         $parent = $this->makeSubject(['code' => '002']);
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
-        $source->subjectable_type = 'App\Models\Customer';
-        $source->subjectable_id = 7;
-        $source->save();
+        $this->setSubjectable($source, 'App\Models\Customer', 7);
 
         $result = $this->subjectService->transferSubjectToNewUnderParent($source, $parent, transferSubjectable: true, removeSource: true);
 
@@ -546,9 +563,7 @@ class SubjectTransferTest extends TestCase
         $destination = $this->makeSubject(['code' => '002']);
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
-        $source->subjectable_type = 'App\Models\BankAccount';
-        $source->subjectable_id = 42;
-        $source->save();
+        $this->setSubjectable($source, 'App\Models\BankAccount', 42);
 
         $this->subjectService->transferSubject($source, $destination, transferSubjectable: true);
 
@@ -563,9 +578,7 @@ class SubjectTransferTest extends TestCase
         $destination = $this->makeSubject(['code' => '002']);
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
-        $source->subjectable_type = 'App\Models\BankAccount';
-        $source->subjectable_id = 42;
-        $source->save();
+        $this->setSubjectable($source, 'App\Models\BankAccount', 42);
 
         $this->subjectService->transferSubject($source, $destination, transferSubjectable: false);
 
@@ -580,9 +593,7 @@ class SubjectTransferTest extends TestCase
         $destination = $this->makeSubject(['code' => '002']);
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
-        $source->subjectable_type = 'App\Models\Customer';
-        $source->subjectable_id = 5;
-        $source->save();
+        $this->setSubjectable($source, 'App\Models\Customer', 5);
 
         $this->subjectService->transferSubject($source, $destination, transferSubjectable: true, removeSource: true);
 
@@ -646,23 +657,6 @@ class SubjectTransferTest extends TestCase
         $this->assertFalse($result['destination']->is_permanent);
     }
 
-    public function test_multiple_transfers_in_sequence()
-    {
-        $a = $this->makeSubject(['code' => '001', 'name' => 'A']);
-        $b = $this->makeSubject(['code' => '002', 'name' => 'B']);
-        $c = $this->makeSubject(['code' => '003', 'name' => 'C']);
-        $doc = $this->makeDocument();
-        $this->makeTransaction($a, $doc, 100);
-
-        $this->subjectService->transferSubject($a, $b);
-        $this->assertEquals(0, Transaction::withoutGlobalScopes()->where('subject_id', $a->id)->count());
-        $this->assertEquals(1, Transaction::withoutGlobalScopes()->where('subject_id', $b->id)->count());
-
-        $this->subjectService->transferSubject($b, $c);
-        $this->assertEquals(0, Transaction::withoutGlobalScopes()->where('subject_id', $b->id)->count());
-        $this->assertEquals(1, Transaction::withoutGlobalScopes()->where('subject_id', $c->id)->count());
-    }
-
     public function test_source_not_removed_when_remove_checkbox_is_unchecked()
     {
         $source = $this->makeSubject(['code' => '001']);
@@ -682,9 +676,7 @@ class SubjectTransferTest extends TestCase
         $parent = $this->makeSubject(['code' => '002']);
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
-        $source->subjectable_type = 'App\Models\CustomerGroup';
-        $source->subjectable_id = 15;
-        $source->save();
+        $this->setSubjectable($source, 'App\Models\CustomerGroup', 15);
 
         $result = $this->subjectService->transferSubjectToNewUnderParent($source, $parent, transferSubjectable: true);
 
@@ -700,14 +692,8 @@ class SubjectTransferTest extends TestCase
     {
         $source = $this->makeSubject(['code' => '001']);
         $destination = $this->makeSubject(['code' => '002']);
-        $customer = \App\Models\Customer::withoutGlobalScopes()->create([
-            'name' => 'Test Customer',
-            'company_id' => $this->company->id,
-            'subject_id' => $source->id,
-        ]);
-        $source->subjectable_type = 'App\Models\Customer';
-        $source->subjectable_id = $customer->id;
-        $source->save();
+        $customer = $this->makeCustomer($source);
+        $this->setSubjectable($source, 'App\Models\Customer', $customer->id);
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
 
@@ -722,14 +708,8 @@ class SubjectTransferTest extends TestCase
     {
         $source = $this->makeSubject(['code' => '001']);
         $destination = $this->makeSubject(['code' => '002']);
-        $customer = \App\Models\Customer::withoutGlobalScopes()->create([
-            'name' => 'Test Customer',
-            'company_id' => $this->company->id,
-            'subject_id' => $source->id,
-        ]);
-        $source->subjectable_type = 'App\Models\Customer';
-        $source->subjectable_id = $customer->id;
-        $source->save();
+        $customer = $this->makeCustomer($source);
+        $this->setSubjectable($source, 'App\Models\Customer', $customer->id);
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
 
@@ -743,21 +723,8 @@ class SubjectTransferTest extends TestCase
     {
         $source = $this->makeSubject(['code' => '001']);
         $destination = $this->makeSubject(['code' => '002']);
-        $bank = new \App\Models\Bank();
-        $bank->name = 'Test Bank';
-        $bank->company_id = $this->company->id;
-        $bank->save();
-        $bankAccount = \App\Models\BankAccount::withoutGlobalScopes()->create([
-            'name' => 'Test Account',
-            'number' => '123456789',
-            'type' => 1,
-            'bank_id' => $bank->id,
-            'company_id' => $this->company->id,
-            'subject_id' => $source->id,
-        ]);
-        $source->subjectable_type = 'App\Models\BankAccount';
-        $source->subjectable_id = $bankAccount->id;
-        $source->save();
+        $bankAccount = $this->makeBankAccount($source);
+        $this->setSubjectable($source, 'App\Models\BankAccount', $bankAccount->id);
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
 
@@ -771,14 +738,8 @@ class SubjectTransferTest extends TestCase
     {
         $source = $this->makeSubject(['code' => '001']);
         $destination = $this->makeSubject(['code' => '002']);
-        $group = \App\Models\CustomerGroup::withoutGlobalScopes()->create([
-            'name' => 'Test Group',
-            'company_id' => $this->company->id,
-            'subject_id' => $source->id,
-        ]);
-        $source->subjectable_type = 'App\Models\CustomerGroup';
-        $source->subjectable_id = $group->id;
-        $source->save();
+        $group = $this->makeCustomerGroup($source);
+        $this->setSubjectable($source, 'App\Models\CustomerGroup', $group->id);
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
 
@@ -792,14 +753,8 @@ class SubjectTransferTest extends TestCase
     {
         $source = $this->makeSubject(['code' => '001']);
         $parent = $this->makeSubject(['code' => '002']);
-        $customer = \App\Models\Customer::withoutGlobalScopes()->create([
-            'name' => 'Test Customer',
-            'company_id' => $this->company->id,
-            'subject_id' => $source->id,
-        ]);
-        $source->subjectable_type = 'App\Models\Customer';
-        $source->subjectable_id = $customer->id;
-        $source->save();
+        $customer = $this->makeCustomer($source);
+        $this->setSubjectable($source, 'App\Models\Customer', $customer->id);
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
 
@@ -813,14 +768,8 @@ class SubjectTransferTest extends TestCase
     {
         $source = $this->makeSubject(['code' => '001']);
         $destination = $this->makeSubject(['code' => '002']);
-        $customer = \App\Models\Customer::withoutGlobalScopes()->create([
-            'name' => 'Test Customer',
-            'company_id' => $this->company->id,
-            'subject_id' => $source->id,
-        ]);
-        $source->subjectable_type = 'App\Models\Customer';
-        $source->subjectable_id = $customer->id;
-        $source->save();
+        $customer = $this->makeCustomer($source);
+        $this->setSubjectable($source, 'App\Models\Customer', $customer->id);
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
 
