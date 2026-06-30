@@ -331,7 +331,7 @@ DocumentService::deleteDocument($documentId);
 ```
 
 ### SubjectCreatorService
-برای ایجاد سرفصل‌ها (برای تولید خودکار کد حسابداری حتما از این سرویس استفاده کنید):
+برای ایجاد سرفصل‌ها (برای تولید خودکار کد حسابداری حتماً از این سرویس استفاده کنید):
 
 ```php
 use App\Models\Subject;

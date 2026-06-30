@@ -7,7 +7,6 @@ description: "How Amir compares to commercial accounting software"
 
 As an open-source and free alternative, Amir offers compelling advantages over commercial accounting software.
 
----
 
 ## Feature Comparison
 
@@ -21,7 +20,6 @@ As an open-source and free alternative, Amir offers compelling advantages over c
 | **Inventory** | ✅ Weighted average costing | ⚠️ Varies |
 | **License Cost** | ✅ Free (GPL-3) | ❌ Annual subscription |
 
----
 
 ## Key Advantages
 
@@ -45,7 +43,6 @@ As an open-source and free alternative, Amir offers compelling advantages over c
 - Accounting standards followed
 - Community contribution possible
 
----
 
 ## Alternative to Commercial Software
 
@@ -53,5 +50,5 @@ Amir can serve as an open-source, free alternative to commercial Iranian account
 
 - Standard double-entry accounting
 - Compliance with Iranian tax regulations
-- Native Persian user interface
+- Persian user interface
 - Self-hosted deployment capability

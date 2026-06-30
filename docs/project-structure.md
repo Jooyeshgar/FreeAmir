@@ -8,7 +8,7 @@
 
 ```
 FreeAmir/
-├── app/                    # منطق اصلی اپلیکیشن
+├── app/                   # منطق اصلی اپلیکیشن
 │   ├── Console/           # دستورات Artisan سفارشی
 │   ├── Enums/             # انواع داده‌های ثابت
 │   ├── Helpers/           # توابع کمکی
@@ -28,9 +28,10 @@ FreeAmir/
 └── vendor/                # پکیج‌های Composer
 ```
 
-## 📂 توضیح دایرکتوری‌های اصلی
 
-### دایرکتوری `app/` - هسته اپلیکیشن
+## 📂 توضیح مسیرهای اصلی
+
+### مسیر `app/` - هسته اپلیکیشن
 
 #### `Console/Commands/`
 دستورات سفارشی Artisan برای عملیات خاص:
@@ -41,7 +42,7 @@ php artisan fiscal-year:export --year=1403
 php artisan fiscal-year:import --file=data.json --year=1404
 ```
 
-#### `Enums/`
+#### `/Enums`
 انواع داده‌های ثابت پروژه:
 
 ```php
@@ -58,7 +59,7 @@ enum FiscalYearSection: string
 #### `Helpers/`
 توابع کمکی عمومی:
 
-- `helpers.php` - توابع عمومی
+- فایل `helpers.php` - توابع عمومی
 - فایل `jdf.php` - توابع تبدیل تاریخ فارسی
 - فایل `NumberToWordHelper.php` - تبدیل عدد به حروف
 
@@ -67,7 +68,7 @@ enum FiscalYearSection: string
 
 ```
 Http/
-├── Controllers/           # کنترلرها
+├── Controllers/          # کنترلرها
 │   ├── Auth/             # احراز هویت
 │   ├── Management/       # مدیریت کاربران و نقش‌ها
 │   ├── DocumentController.php
@@ -75,7 +76,7 @@ Http/
 │   └── ...
 ├── Middleware/           # میدلویرها
 ├── Requests/             # اعتبارسنجی درخواست‌ها
-└── Kernel.php           # تنظیمات HTTP
+└── Kernel.php            # تنظیمات HTTP
 ```
 
 #### `Models/`
@@ -114,7 +115,7 @@ class FiscalYearService
 {
     public static function exportData($fiscalYearId, array $sections)
     {
-        // صادرات داده‌های سال مالی
+        // خروجی گرفتن داده‌های سال مالی
     }
 }
 ```
@@ -182,48 +183,230 @@ views/
 مسیرهای وب اپلیکیشن:
 
 ```php
+use App\Http\Controllers;
+use Illuminate\Support\Facades\Route;
+
 Route::get('/login', [Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [Controllers\Auth\LoginController::class, 'login']);
 Route::get('/logout', [Controllers\Auth\LoginController::class, 'logout'])->name('logout');
 
+Route::get('/about', [Controllers\AboutController::class, 'index'])->name('about')->middleware('auth');
+
+Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee-portal', 'as' => 'employee-portal.'], function () {
+    Route::get('/employee', [Controllers\EmployeePortalController::class, 'employeeShow'])->name('employee.show');
+    Route::get('/change-employee-information', [Controllers\EmployeePortalController::class, 'changeEmployeeInformation'])->name('change-employee-information');
+    Route::put('/change-employee-information', [Controllers\EmployeePortalController::class, 'updateEmployeeInformation'])->name('update-employee-information');
+    Route::get('/', [Controllers\EmployeePortalController::class, 'dashboard'])->name('dashboard');
+    Route::get('/attendance-logs', [Controllers\EmployeePortalController::class, 'attendanceLogs'])->name('attendance-logs');
+    Route::get('/monthly-attendances', [Controllers\EmployeePortalController::class, 'monthlyAttendances'])->name('monthly-attendances');
+    Route::get('/monthly-attendances/{monthly_attendance}', [Controllers\EmployeePortalController::class, 'monthlyAttendanceShow'])->name('monthly-attendances.show');
+    Route::get('/payrolls', [Controllers\EmployeePortalController::class, 'payrolls'])->name('payrolls');
+    Route::get('/payrolls/{payroll}', [Controllers\EmployeePortalController::class, 'payrollShow'])->name('payrolls.show');
+    Route::get('/personnel-requests', [Controllers\EmployeePortalController::class, 'personnelRequests'])->name('personnel-requests.index');
+    Route::get('/personnel-requests/create', [Controllers\EmployeePortalController::class, 'createPersonnelRequest'])->name('personnel-requests.create');
+    Route::post('/personnel-requests', [Controllers\EmployeePortalController::class, 'storePersonnelRequest'])->name('personnel-requests.store');
+    Route::get('/personnel-requests/{personnel_request}/edit', [Controllers\EmployeePortalController::class, 'editPersonnelRequest'])->name('personnel-requests.edit');
+    Route::put('/personnel-requests/{personnel_request}', [Controllers\EmployeePortalController::class, 'updatePersonnelRequest'])->name('personnel-requests.update');
+    Route::delete('/personnel-requests/{personnel_request}', [Controllers\EmployeePortalController::class, 'destroyPersonnelRequest'])->name('personnel-requests.destroy');
+});
+
 Route::group(['middleware' => ['auth', 'check-permission']], function () {
+    Route::put('/about/change-global-configs', [Controllers\AboutController::class, 'updateGlobalConfigs'])->name('update-global-configs');
+    Route::get('api-tokens', [Controllers\ApiTokenController::class, 'index'])->name('api-tokens.index');
+    Route::get('api-tokens/create', [Controllers\ApiTokenController::class, 'create'])->name('api-tokens.create');
+    Route::post('api-tokens', [Controllers\ApiTokenController::class, 'store'])->name('api-tokens.store');
+    Route::delete('api-tokens/{tokenId}', [Controllers\ApiTokenController::class, 'destroy'])->name('api-tokens.destroy');
+
+    Route::get('change-company/{company}', [Controllers\CompanyController::class, 'setActiveCompany'])->name('change-company');
+    Route::post('/seed-demo-data', [Controllers\HomeController::class, 'seedDemoData'])->name('home.seed-demo-data');
+    Route::post('/refresh-database', [Controllers\HomeController::class, 'refreshDatabase'])->name('home.refresh-database');
+
+    Route::group(['prefix' => 'backups', 'as' => 'backups.'], function () {
+        Route::get('/create', [Controllers\BackupController::class, 'create'])->name('create');
+        Route::get('/upload', [Controllers\BackupController::class, 'upload'])->name('upload');
+        Route::get('/document-files-size', [Controllers\BackupController::class, 'documentFilesSize'])->name('document-files-size');
+        Route::post('/export', [Controllers\BackupController::class, 'export'])->name('export');
+        Route::post('/import', [Controllers\BackupController::class, 'import'])->name('import');
+    });
     Route::get('/', [Controllers\HomeController::class, 'index'])->name('home');
-    Route::post('/home/subject-detail', [Controllers\HomeController::class, 'subjectDetail'])->name('home.subject-detail');
+    Route::get('/home/cash-banks', [Controllers\HomeController::class, 'cashAndBanksBalances'])->name('home.cash-banks');
+    Route::get('/home/bank-account', [Controllers\HomeController::class, 'bankAccount'])->name('home.bank-account');
+    Route::get('subjects/search', [Controllers\SubjectController::class, 'search'])->name('subjects.search');
+    Route::get('subjects/search-code', [Controllers\SubjectController::class, 'searchCode'])->name('subjects.search-code');
     Route::resource('subjects', Controllers\SubjectController::class);
-    Route::post('subjects/search', [Controllers\SubjectController::class, 'search'])->name('subjects.search');
+    Route::post('documents/{document}/change-status', [Controllers\DocumentController::class, 'changeStatus'])->name('documents.change-status');
+    Route::post('documents/approve-all', [Controllers\DocumentController::class, 'approveAll'])->name('documents.approve-all');
+    Route::get('documents/search-account-balance', [Controllers\DocumentController::class, 'searchAccountBalance'])->name('documents.search-account-balance');
+    Route::get('documents/sort-numbers', [Controllers\DocumentController::class, 'sortNumbers'])->name('documents.sort-numbers');
+    Route::post('documents/sort-numbers/start', [Controllers\DocumentController::class, 'startSorting'])->name('documents.sort-numbers.start');
+    Route::post('documents/sort-numbers/process', [Controllers\DocumentController::class, 'processSorting'])->name('documents.sort-numbers.process');
+    Route::get('documents/export', [Controllers\DocumentController::class, 'exportForm'])->name('documents.export');
+    Route::post('documents/export', [Controllers\DocumentController::class, 'export'])->name('documents.export.download');
+    Route::get('documents/import', [Controllers\DocumentController::class, 'importForm'])->name('documents.import');
+    Route::post('documents/import', [Controllers\DocumentController::class, 'import'])->name('documents.import.store');
     Route::resource('documents', Controllers\DocumentController::class);
+    Route::get('documents/{document}/print', [Controllers\DocumentController::class, 'print'])->name('documents.print');
+    Route::get('documents/{document}/duplicate', [Controllers\DocumentController::class, 'duplicate'])->name('documents.duplicate');
+    Route::post('documents/{document}/transfer', [Controllers\DocumentController::class, 'transfer'])->name('documents.transfer');
+
     Route::resource('transactions', Controllers\TransactionController::class)->only(['index', 'show']);
+    Route::get('products/search-product-group', [Controllers\ProductController::class, 'searchProductGroup'])->name('products.search-product-group');
+    Route::get('products/report', [Controllers\ProductController::class, 'report'])->name('products.report');
+    Route::get('products/export', [Controllers\ProductController::class, 'export'])->name('products.export');
+    Route::get('products/import', [Controllers\ProductController::class, 'importForm'])->name('products.import');
+    Route::post('products/import', [Controllers\ProductController::class, 'import'])->name('products.import.store');
     Route::resource('products', Controllers\ProductController::class);
     Route::resource('product-groups', Controllers\ProductGroupController::class);
+    Route::get('services/search-service-group', [Controllers\ServiceController::class, 'searchServiceGroup'])->name('services.search-service-group');
+    Route::get('services/export', [Controllers\ServiceController::class, 'export'])->name('services.export');
+    Route::get('services/import', [Controllers\ServiceController::class, 'importForm'])->name('services.import');
+    Route::post('services/import', [Controllers\ServiceController::class, 'import'])->name('services.import.store');
+    Route::resource('services', Controllers\ServiceController::class);
+    Route::resource('service-groups', Controllers\ServiceGroupController::class);
+    Route::get('crm/dashboard', [Controllers\CrmDashboardController::class, 'index'])->name('crm.dashboard');
+    Route::get('customers/export', [Controllers\CustomerController::class, 'export'])->name('customers.export');
+    Route::get('customers/import', [Controllers\CustomerController::class, 'importForm'])->name('customers.import');
+    Route::post('customers/import', [Controllers\CustomerController::class, 'import'])->name('customers.import.store');
     Route::resource('customers', Controllers\CustomerController::class);
     Route::resource('customer-groups', Controllers\CustomerGroupController::class);
     Route::resource('companies', Controllers\CompanyController::class);
+    Route::post('companies/close-fiscal-year/{company}', [Controllers\CompanyController::class, 'closeFiscalYear'])->name('companies.close-fiscal-year');
+    Route::get('companies/{company}/closing-wizard', [Controllers\CompanyController::class, 'closingWizard'])->name('companies.closing-wizard');
+    Route::post('companies/{company}/closing-wizard/step1', [Controllers\CompanyController::class, 'closingWizardStep1'])->name('companies.closing-wizard.step1');
+    Route::post('companies/{company}/closing-wizard/step3', [Controllers\CompanyController::class, 'closingWizardStep3'])->name('companies.closing-wizard.step3');
+    Route::get('bank-accounts/search-bank', [Controllers\BankAccountController::class, 'searchBank'])->name('bank-accounts.search-bank');
     Route::resource('bank-accounts', Controllers\BankAccountController::class);
     Route::resource('banks', Controllers\BankController::class);
-    Route::resource('invoices', Controllers\InvoiceController::class)->except(['index', 'create']);
+
+    Route::get('invoices/search/{invoice_type}', [Controllers\InvoiceController::class, 'search'])->name('invoices.search');
+    Route::get('invoices/get-items/{invoice}', [Controllers\InvoiceController::class, 'getItems'])->name('invoices.get-items');
+    Route::get('invoices/search-customer', [Controllers\InvoiceController::class, 'searchCustomer'])->name('invoices.search-customer');
+    Route::get('invoices/search-product-service', [Controllers\InvoiceController::class, 'searchProductService'])->name('invoices.search-product-service');
+
+    Route::get('invoices/inactive', [Controllers\InvoiceController::class, 'inactiveInvoices'])->name('invoices.inactive');
+    Route::get('invoices/inactive/approve', [Controllers\InvoiceController::class, 'approveInactiveInvoices'])->name('invoices.inactive.approve');
+    Route::prefix('invoices')->group(function () {
+        Route::get('ancillary-costs/search-customer', [Controllers\AncillaryCostController::class, 'searchCustomer'])->name('ancillary-costs.search-customer');
+        Route::get('ancillary-costs/search-invoice', [Controllers\AncillaryCostController::class, 'searchInvoice'])->name('ancillary-costs.search-invoice');
+        Route::get('ancillary-costs/get-products/{invoice_id}', [Controllers\AncillaryCostController::class, 'getBuyInvoiceProducts'])->name('ancillary-costs.get-products');
+        Route::post('ancillary-costs/{ancillary_cost}/change-status/{status}', [Controllers\AncillaryCostController::class, 'changeStatus'])->name('ancillary-costs.change-status');
+        Route::get('ancillary-costs/', [Controllers\AncillaryCostController::class, 'index'])->name('ancillary-costs.index');
+        Route::get('{invoice}/ancillary-costs/create', [Controllers\AncillaryCostController::class, 'create'])->name('invoices.ancillary-costs.create');
+        Route::post('{invoice}/ancillary-costs', [Controllers\AncillaryCostController::class, 'store'])->name('invoices.ancillary-costs.store');
+        Route::get('{invoice}/ancillary-costs/{ancillary_cost}', [Controllers\AncillaryCostController::class, 'show'])->name('invoices.ancillary-costs.show');
+        Route::get('{invoice}/ancillary-costs/{ancillary_cost}/edit', [Controllers\AncillaryCostController::class, 'edit'])->name('invoices.ancillary-costs.edit');
+        Route::put('{invoice}/ancillary-costs/{ancillary_cost}', [Controllers\AncillaryCostController::class, 'update'])->name('invoices.ancillary-costs.update');
+        Route::delete('{invoice}/ancillary-costs/{ancillary_cost}', [Controllers\AncillaryCostController::class, 'destroy'])->name('invoices.ancillary-costs.destroy');
+    });
+    Route::get('invoices/moadian-histories', [Controllers\MoadianHistoryController::class, 'index'])->name('invoices.moadian-histories.index');
+    Route::resource('invoices', Controllers\InvoiceController::class);
+    Route::get('invoices/{invoice}/moadian-histories', [Controllers\MoadianHistoryController::class, 'show'])->name('invoices.moadian-histories.show');
+    Route::post('invoices/{invoice}/send-moadian', [Controllers\InvoiceController::class, 'sendMoadian'])->name('invoices.send-moadian');
+    Route::post('invoices/{invoice}/moadian-check-status', [Controllers\MoadianHistoryController::class, 'checkStatus'])->name('invoices.moadian-check-status');
+    Route::get('invoices/{invoice}/conflicts', [Controllers\InvoiceController::class, 'conflicts'])->name('invoices.conflicts');
+    Route::get('invoices/{invoice}/conflicts/{type}', [Controllers\InvoiceController::class, 'showMoreConflictsByType'])->name('invoices.conflicts.more');
+    Route::get('invoices/{invoice}/group-action', [Controllers\InvoiceController::class, 'groupAction'])->name('invoices.group-action');
+    Route::get('invoices/{invoice}/print', [Controllers\InvoiceController::class, 'print'])->name('invoices.print');
+    Route::get('invoices/{invoice}/void', [Controllers\InvoiceController::class, 'showVoidForm'])->name('invoices.void-form');
+    Route::post('invoices/{invoice}/void', [Controllers\InvoiceController::class, 'voidInvoice'])->name('invoices.void');
+    Route::post('invoices/{invoice}/change-status/{status}', [Controllers\InvoiceController::class, 'changeStatus'])->name('invoices.change-status');
+    Route::post('invoices/{invoice}/payments', [Controllers\PaymentController::class, 'store'])->name('invoices.payments.store');
+    Route::delete('invoices/{invoice}/payments/{payment}', [Controllers\PaymentController::class, 'destroy'])->name('invoices.payments.destroy');
+    Route::post('invoices/{invoice}/payments/{payment}/document', [Controllers\PaymentController::class, 'createDocument'])->name('invoices.payments.create-document');
+    Route::delete('invoices/{invoice}/payments/{payment}/document', [Controllers\PaymentController::class, 'destroyDocument'])->name('invoices.payments.destroy-document');
+    Route::post('invoices/{invoice}/transfer', [Controllers\InvoiceController::class, 'transfer'])->name('invoices.transfer');
     Route::group(['prefix' => 'management'], function () {
+        Route::post('users/{user}/create-employee', [Controllers\Management\UserController::class, 'createEmployee'])
+            ->name('users.create-employee');
         Route::resource('users', Controllers\Management\UserController::class);
         Route::resource('permissions', Controllers\Management\PermissionController::class)->except(['show']);
         Route::resource('roles', Controllers\Management\RoleController::class)->except(['show']);
         Route::resource('configs', Controllers\ConfigController::class);
     });
+
+    Route::group(['prefix' => 'hr', 'as' => 'hr.'], function () {
+        Route::get('employees/export', [Controllers\EmployeeController::class, 'export'])->name('employees.export');
+        Route::resource('employees', Controllers\EmployeeController::class);
+        Route::resource('organization-units', Controllers\OrganizationUnitController::class);
+        Route::resource('org-charts', Controllers\OrgChartController::class);
+        Route::resource('personnel-requests', Controllers\PersonnelRequestController::class);
+        Route::patch('personnel-requests/{personnel_request}/approve', [Controllers\PersonnelRequestController::class, 'approve'])->name('personnel-requests.approve');
+        Route::patch('personnel-requests/{personnel_request}/reject', [Controllers\PersonnelRequestController::class, 'reject'])->name('personnel-requests.reject');
+    });
+
+    Route::group(['prefix' => 'attendance', 'as' => 'attendance.'], function () {
+        Route::resource('attendance-logs', Controllers\AttendanceLogController::class)->except(['show']);
+        Route::get('attendance-logs/{attendance_log}', [Controllers\AttendanceLogController::class, 'show'])->name('attendance-logs.show');
+        Route::post('attendance-logs/{attendance_log}/recalculate', [Controllers\AttendanceLogController::class, 'recalculate'])->name('attendance-logs.recalculate');
+        Route::get('attendance-logs-bulk/create', [Controllers\AttendanceLogController::class, 'bulkCreate'])->name('attendance-logs.bulk-create');
+        Route::get('attendance-logs-bulk/search-employee', [Controllers\AttendanceLogController::class, 'searchEmployee'])->name('attendance-logs.search-employee');
+        Route::post('attendance-logs-bulk', [Controllers\AttendanceLogController::class, 'bulkStore'])->name('attendance-logs.bulk-store');
+        Route::get('attendance-logs-import', [Controllers\AttendanceLogController::class, 'importForm'])->name('attendance-logs.import');
+        Route::post('attendance-logs-import/preview', [Controllers\AttendanceLogController::class, 'importPreview'])->name('attendance-logs.import.preview');
+        Route::post('attendance-logs-import', [Controllers\AttendanceLogController::class, 'importStore'])->name('attendance-logs.import.store');
+        Route::post('monthly-attendances/{monthly_attendance}/attendance-logs/recalculate', [Controllers\AttendanceLogController::class, 'recalculateAll'])->name('attendance-logs.recalculate-all');
+        Route::post('monthly-attendances/{monthly_attendance}/recalculate', [Controllers\MonthlyAttendanceController::class, 'recalculate'])->name('monthly-attendances.recalculate');
+        Route::post('monthly-attendances/{monthly_attendance}/payroll', [Controllers\PayrollController::class, 'store'])->name('monthly-attendances.payroll.store');
+        Route::get('monthly-attendances-bulk/create', [Controllers\MonthlyAttendanceController::class, 'bulkCreate'])->name('monthly-attendances.bulk-create');
+        Route::post('monthly-attendances-bulk', [Controllers\MonthlyAttendanceController::class, 'bulkStore'])->name('monthly-attendances.bulk-store');
+        Route::resource('monthly-attendances', Controllers\MonthlyAttendanceController::class);
+        Route::resource('work-shifts', Controllers\WorkShiftController::class)->except(['show']);
+    });
+
+    Route::group(['prefix' => 'salary', 'as' => 'salary.'], function () {
+        Route::get('payrolls/dashboard', [Controllers\PayrollController::class, 'dashboard'])->name('payrolls.dashboard');
+        Route::resource('tax-slabs', Controllers\TaxSlabController::class);
+        Route::resource('work-sites', Controllers\WorkSiteController::class)->except(['show']);
+        Route::resource('work-site-contracts', Controllers\WorkSiteContractController::class)->except(['show']);
+        Route::resource('public-holidays', Controllers\PublicHolidayController::class)->except(['show']);
+        Route::resource('payroll-elements', Controllers\PayrollElementController::class)->except(['show']);
+        Route::resource('salary-decrees', Controllers\SalaryDecreeController::class)->except(['show']);
+        Route::patch('payrolls/{payroll}/submit-for-approval', [Controllers\PayrollController::class, 'submitForApproval'])->name('payrolls.transition.draft-to-pending-manager-approval');
+        Route::patch('payrolls/{payroll}/approve', [Controllers\PayrollController::class, 'approve'])->name('payrolls.transition.pending-manager-approval-to-approved');
+        Route::patch('payrolls/{payroll}/mark-paid', [Controllers\PayrollController::class, 'markPaid'])->name('payrolls.transition.approved-to-paid');
+        Route::get('payrolls/{payroll}', [Controllers\PayrollController::class, 'show'])->name('payrolls.show');
+        Route::get('payrolls', [Controllers\PayrollController::class, 'index'])->name('payrolls.index');
+        Route::delete('payrolls/{payroll}', [Controllers\PayrollController::class, 'destroy'])->name('payrolls.destroy');
+        Route::get('payroll-items/{payroll_item}/edit', [Controllers\PayrollController::class, 'editItem'])->name('payroll-items.edit');
+        Route::put('payroll-items/{payroll_item}', [Controllers\PayrollController::class, 'updateItem'])->name('payroll-items.update');
+    });
+    Route::get('warehouse/dashboard', [Controllers\WarehouseDashboardController::class, 'index'])->name('warehouse.dashboard');
+
     Route::group(['prefix' => 'reports', 'as' => 'reports.'], function () {
         Route::get('ledger', [Controllers\ReportsController::class, 'ledger'])->name('ledger');
         Route::get('journal', [Controllers\ReportsController::class, 'journal'])->name('journal');
         Route::get('sub-ledger', [Controllers\ReportsController::class, 'subLedger'])->name('sub-ledger');
+        Route::get('trial-balance', [Controllers\ReportsController::class, 'trialBalance'])->name('trial-balance');
+        Route::get('trial-balance.print', [Controllers\ReportsController::class, 'printTrialBalance'])->name('trial-balance.print');
+        Route::get('trial-balance/export-csv', [Controllers\ReportsController::class, 'exportTrialBalanceCsv'])->name('trial-balance.export-csv');
         Route::get('documents', [Controllers\ReportsController::class, 'documents'])->name('documents');
         Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
-    });
-    Route::get('change-company/{company}', [Controllers\CompanyController::class, 'setActiveCompany'])->name('change-company');
-    
-    Route::group(['prefix' => 'invoices/create', 'as' => 'invoices.create'], function () {
-        Route::get('{invoice_type}',[Controllers\InvoiceController::class, 'create']);
+        Route::post('documents/export', [Controllers\DocumentController::class, 'export'])->name('documents.export');
+        Route::get('cost-income', [Controllers\CostIncomeController::class, 'index'])->name('cost-income');
     });
 
     Route::group(['prefix' => 'invoices', 'as' => 'invoices.index'], function () {
-        Route::get('',[Controllers\InvoiceController::class, 'index']);
+        Route::get('', [Controllers\InvoiceController::class, 'index']);
     });
 
+    Route::prefix('customers/{customer}/comments')->as('comments.')->controller(Controllers\CommentController::class)->group(function () {
+        Route::get('', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::post('', 'store')->name('store');
+        Route::get('{comment}/edit', 'edit')->name('edit');
+        Route::put('{comment}', 'update')->name('update');
+        Route::delete('{comment}', 'destroy')->name('destroy');
+    });
+
+    Route::prefix('documents/{document}/files')->as('documents.files.')->controller(Controllers\DocumentFileController::class)->group(function () {
+        Route::get('create', 'create')->name('create');
+        Route::post('store', 'store')->name('store');
+        Route::get('{documentFile}/edit', 'edit')->name('edit');
+        Route::put('{documentFile}', 'update')->name('update');
+        Route::delete('{documentFile}', 'destroy')->name('destroy');
+        Route::get('{documentFile}/view', 'view')->name('view');
+        Route::get('{documentFile}/download', 'download')->name('download');
+    });
 });
 ```
 
@@ -231,8 +414,36 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
 مسیرهای API:
 
 ```php
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('companies', [CompanyController::class, 'index'])
+        ->middleware('check-permission:companies.index')
+        ->name('api.companies.index');
+});
+
+Route::prefix('companies/{company}')->middleware(['auth:sanctum', 'api-company'])->group(function () {
+    Route::post('attendance/logs', [AttendanceLogController::class, 'store'])
+        ->middleware('check-permission:attendance.attendance-logs.store')
+        ->name('api.attendance-logs.store');
+    Route::get('attendance/logs', [AttendanceLogController::class, 'index'])
+        ->middleware('check-permission:attendance.attendance-logs.index')
+        ->name('api.attendance-logs.index');
+
+    Route::get('employees', [EmployeeController::class, 'index'])
+        ->middleware('check-permission:hr.employees.index')
+        ->name('api.employees.index');
+    Route::post('employees', [EmployeeController::class, 'store'])
+        ->middleware('check-permission:hr.employees.store')
+        ->name('api.employees.store');
+
+    Route::post('documents', [DocumentController::class, 'store'])
+        ->middleware('check-permission:documents.store')
+        ->name('api.documents.store');
+    Route::get('documents/{documentId}', [DocumentController::class, 'show'])
+        ->middleware('check-permission:documents.show')
+        ->name('api.documents.show');
+    Route::post('documents/{documentId}/files', [DocumentController::class, 'attachFile'])
+        ->middleware('check-permission:documents.files.store')
+        ->name('api.documents.files.store');
 });
 ```
 
@@ -257,7 +468,7 @@ tests/
 
 ```bash
 composer install        # نصب پکیج‌ها
-composer dump-autoload   # بازسازی autoloader
+composer dump-autoload  # بازسازی autoloader
 composer update         # به‌روزرسانی پکیج‌ها
 ```
 
@@ -265,7 +476,7 @@ composer update         # به‌روزرسانی پکیج‌ها
 مدیریت dependency های JavaScript:
 
 ```bash
-npm install             # نصب پکیج‌ها
+npm install            # نصب پکیج‌ها
 npm run dev            # اجرای توسعه
 npm run build          # ساخت نهایی
 ```
@@ -302,15 +513,15 @@ php artisan serve       # اجرای سرور توسعه
 ## 🔒 امنیت
 
 ### Middleware
-- میان‌افزار `auth` - احراز هویت کاربر
-- میان‌افزار `check-permission` - کنترل مجوزها
-- سایر middleware های Laravel
+- میدلویر `auth` - احراز هویت کاربر
+- میدلویر `check-permission` - کنترل مجوزها
+- سایر میدلویر های Laravel
 
 ### مجوزها
 استفاده از پکیج Spatie Permission:
 
 ```php
-// permission in Controller
+// permission in Controller (Not Used):
 $this->authorize('documents.create');
 
 // کنترل در Blade

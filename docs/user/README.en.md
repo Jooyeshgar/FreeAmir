@@ -34,7 +34,7 @@ This index is for users who want to understand Amir's accounting concepts and pr
 | File | Topic |
 |---|---|
 | [fiscal-year.en.md](../fiscal-year.en.md) | Fiscal-year definition, when to create one, and important pre-start checks |
-| [FiscalYearExportImport.md](../FiscalYearExportImport.md) | Backing up, transferring, importing, and exporting fiscal-year data |
+| [FiscalYearExportImport.en.md](../FiscalYearExportImport.en.md) | Backing up, transferring, importing, and exporting fiscal-year data |
 | [INSTALLATION.en.md](../INSTALLATION.en.md) | Installing and running the application |
 
 ## Note

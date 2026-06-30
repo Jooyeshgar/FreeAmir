@@ -7,7 +7,6 @@ description: "Complete feature list for Amir, an open-source Iranian accounting 
 
 Amir is an open-source Iranian accounting and ERP platform offering a comprehensive set of capabilities for financial management, inventory, human resources, and tax compliance.
 
----
 
 ## Financial Management
 
@@ -21,9 +20,8 @@ Amir's double-entry accounting provides a solid foundation for recording all fin
 - Profit & loss
 - Financial reports
 
----
 
-## Sales & Purchasing
+## Purchasing & Sales
 
 Complete sales and purchase cycle management from creation to tracking.
 
@@ -33,7 +31,6 @@ Complete sales and purchase cycle management from creation to tracking.
 - Purchasing workflow
 - Sales and purchase returns
 
----
 
 ## Inventory & Goods
 
@@ -45,7 +42,6 @@ Perpetual inventory system with moving weighted-average cost calculation.
 - Cost of goods calculation (weighted average)
 - Product management
 
----
 
 ## Human Resources
 
@@ -62,7 +58,6 @@ Employee management, attendance, and payroll.
   - Payslips
   - Payroll reports
 
----
 
 ## Tax & Compliance
 
@@ -73,7 +68,6 @@ Full support for Iranian tax requirements and the Moadian system.
 - Tax reports
 - [Moadian setup guide](moadian.en.md)
 
----
 
 ## Administration
 
@@ -84,7 +78,6 @@ Management features for multi-branch organizations.
 - Role and permission system
 - User management
 
----
 
 ## Technology & Deployment
 
@@ -92,5 +85,4 @@ Management features for multi-branch organizations.
 - Docker and Docker Compose deployment
 - Standard PHP and MariaDB installation
 - Responsive user interface
-- Persian (Farsi) language priority
 

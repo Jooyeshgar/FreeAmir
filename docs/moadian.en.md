@@ -1,25 +1,23 @@
 ---
 title: "Moadian Setup Guide"
-description: "How to set up and connect the Moadian tax system in Amir"
+description: "How to set up and connect the Moadian Tax System in Amir"
 ---
 
-# Setting up Moadian in Amir
+# Setting Up the Moadian Tax System in Amir
 
-To use the Moadian system in Amir, you need three things:
+To use the Moadian Tax System in Amir, you will need the following:
 
-1. Moadian username (unique tax memory identifier)
-2. Private key
-3. Signaure Certificate
+1. Moadian Username (Unique Tax Memory ID)
+2. Private Key
+3. Signature Certificate
 
-Below are the steps to obtain these.
+The following sections explain how to obtain each of these items.
 
----
+## Step 1: Create a Private Key and CSR
 
-## Step 1: Create a private key and CSR file
+First, create a Certificate Signing Request (CSR).
 
-First, create a CSR (Certificate Signing Request) file.
-
-Create a text file with the following content and replace the values with your company details:
+Create a text file with the following content and replace the sample values with your company's information:
 
 ```ini
 [req]
@@ -38,7 +36,7 @@ ST = Tehran
 C = IR
 ```
 
-Then run the following command using OpenSSL:
+Then run the following OpenSSL command:
 
 ```bash
 openssl req -new -newkey rsa:2048 -nodes \
@@ -47,86 +45,76 @@ openssl req -new -newkey rsa:2048 -nodes \
 -config csr.conf
 ```
 
-Two files will be created:
+This command generates two files:
 
-* `private.key` — private key
-* `company.csr` — certificate signing request (CSR)
+- `private.key` — Your private key
+- `company.csr` — Your Certificate Signing Request (CSR)
 
-> ⚠️ The `private.key` file is extremely important. Store it securely and keep a backup.
+> ⚠️ The `private.key` file is extremely important. Store it securely and keep a backup. If it is lost, the issued certificate cannot be used.
 
----
+## Step 2: Request an Organizational Seal Certificate
 
-## Step 2: Request an organization stamp certificate
-
-1. Go to the [GICA](https://www.gica.ir) website.
-2. Click "Register Electronic Certificate Request" from the right menu.
-3. Select "Register certificate request via CSR".
-4. Choose the certificate type (one-year or two-year).
+1. Visit the GICA website.
+2. From the right-hand menu, select **Register Electronic Certificate Request**.
+3. Choose **Register Certificate Request via CSR**.
+4. Select the certificate validity period (one year or two years).
 5. Upload the CSR file created in the previous step.
-6. Submit the request.
+6. Submit your request.
 
-After submitting, you will receive a receipt or referral letter.
+After submission, you will receive a receipt or referral letter.
 
----
+## Step 3: Visit a Government Service Office
 
-## Step 3: Visit a government service office
+Take the required documents and the referral letter to an authorized government service office.
 
-Visit one of the government service offices with the required documents and the referral letter.
+After your identity has been verified and the process is completed, your Organizational Seal Certificate will be issued.
 
-After identity verification and process completion, an organization stamp certificate will be issued.
+You will typically receive a certificate file with a `.cer` or `.crt` extension.
 
-You will receive a certificate file with the `.cer` or `.crt` extension.
+## Step 4: Extract the Public Key
 
----
-
-## Step 4: Extract the public key
-
-After receiving the certificate file, extract the public key:
+After receiving the certificate, extract the public key by running:
 
 ```bash
 openssl x509 -pubkey -noout -in mystamp.cer > public.key
 ```
 
-You now have the public key file:
-* `public.key`
+You now have the following files required by Amir:
 
----
+- `private.key`
+- `public.key`
 
-## Step 5: Obtain the Moadian username
+## Step 5: Obtain Your Moadian Username
 
-After receiving the certificate, log in to the Moadian portal.
+After receiving your certificate, sign in to the Moadian portal.
 
-1. Go to the "Unique Tax Memory Identifiers" section.
+1. Open the **Unique Tax Memory IDs** section.
 2. Create a new tax memory or select an existing one.
-3. Attach the received certificate to the tax memory.
-4. After registering the tax memory, the "Unique Tax Memory Identifier" will be displayed.
+3. Associate your certificate with the selected tax memory.
+4. Once the tax memory has been registered, the **Unique Tax Memory ID** will be displayed.
 
-In Amir, this identifier is used as the **Moadian username**.
+In Amir, this value is used as the **Moadian Username**.
 
-> ⚠️ The unique tax memory identifier is unique to each tax memory and must be entered exactly as shown in the Moadian portal.
+> ⚠️ Each Tax Memory has its own unique identifier. Enter it exactly as it appears in the Moadian portal.
 
----
+## Step 6: Configure Amir
 
-## Step 6: Configure in Amir
-
-In the company settings section of Amir, enter the following:
+Open your company's settings in Amir and enter the following information:
 
 | Field | Value |
-|---|---|
-| Moadian username | Unique tax memory identifier |
-| Private key | Contents of `private.key` file |
-| Signaure Certificate | Contents of `.cer` or `.crt` file |
+| --- | --- |
+| Moadian Username | Unique Tax Memory ID |
+| Private Key | Contents of the `private.key` file |
+| Signature Certificate | Contents of the `.cer` or `.crt` certificate file |
 
-After saving the settings, test the Moadian connection.
+Save the settings and test the Moadian connection.
 
-If the information is correct, the application will be able to send electronic invoices to the Moadian system.
+If everything has been configured correctly, Amir will be able to submit electronic invoices to the Moadian Tax System.
 
----
+## Important Notes
 
-## Important notes
-
-* The private key is equivalent to your company's digital signature and should not be accessible to unauthorized individuals.
-* Keep a backup of the `private.key` file.
-* If the private key is deleted or lost, the issued certificate cannot be used.
-* The unique tax memory identifier must be entered exactly as registered in the Moadian system.
-* In Amir, there is no need to use a hardware token directly; only public and private keys are used.
+- Your private key represents your company's digital signature and must never be shared with unauthorized individuals.
+- Always keep a secure backup of the `private.key` file.
+- If the private key is lost or deleted, the issued certificate can no longer be used.
+- The Moadian Username (Unique Tax Memory ID) must exactly match the value shown in the Moadian portal.
+- Amir does not require direct access to a hardware token. Only the private key and the signature certificate are required.

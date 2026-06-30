@@ -7,13 +7,11 @@ description: "Amir user interface screenshots"
 
 Below are previews of Amir's user interface.
 
----
 
 ## Main Page
 
 ![Amir main page](screenshot/main-page.png)
 
----
 
 ## Dashboards
 
@@ -33,7 +31,6 @@ Below are previews of Amir's user interface.
 
 ![Customer dashboard](screenshot/customer-dashboard.png)
 
----
 
 ## Invoices & Documents
 
@@ -45,7 +42,6 @@ Below are previews of Amir's user interface.
 
 ![Document list](screenshot/document-list.png)
 
----
 
 ## Products
 
@@ -57,7 +53,6 @@ Below are previews of Amir's user interface.
 
 ![Product detail](screenshot/product-detail.png)
 
----
 
 ## Run locally to explore
 
