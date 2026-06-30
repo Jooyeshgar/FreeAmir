@@ -486,9 +486,10 @@ class SubjectService
             return;
         }
 
-        $subjectable = $subject->subjectable_type::withoutGlobalScopes()->find($subject->subjectable_id);
-        if ($subjectable && in_array('subject_id', $subjectable->getFillable())) {
-            $subjectable->updateQuietly(['subject_id' => $subject->id]);
+        $subjectable = $subject->subjectable_type::find($subject->subjectable_id);
+        if ($subjectable) {
+            $subjectable->subject_id = $subject->id;
+            $subjectable->save();
         }
     }
 
@@ -498,8 +499,7 @@ class SubjectService
             throw new \InvalidArgumentException(__('Source and destination subjects must be different.'));
         }
 
-        $descendantIds = $source->getAllDescendantIds();
-        if (in_array($destination->id, $descendantIds)) {
+        if (in_array($destination->id, $source->getAllDescendantIds())) {
             throw new \InvalidArgumentException(__('Cannot transfer to a descendant of the source subject.'));
         }
 
@@ -507,7 +507,7 @@ class SubjectService
         $startDate = jalali_to_gregorian($year, 1, 1, '-');
         $endDate = now()->format('Y-m-d');
 
-        $result = DB::transaction(function () use ($source, $destination, $startDate, $endDate, $transferSubjectable, $descendantIds) {
+        $result = DB::transaction(function () use ($source, $destination, $startDate, $endDate, $transferSubjectable) {
             if ($transferSubjectable && ! is_null($source->subjectable_type) && ! is_null($source->subjectable_id)) {
                 $destination->subjectable_type = $source->subjectable_type;
                 $destination->subjectable_id = $source->subjectable_id;
@@ -520,9 +520,7 @@ class SubjectService
                 $source->save();
             }
 
-            $subjectIds = array_merge([$source->id], $descendantIds);
-
-            $query = Transaction::whereIn('subject_id', $subjectIds)->whereHas('document', function ($q) use ($startDate, $endDate) {
+            $query = Transaction::where('subject_id', $source->id)->whereHas('document', function ($q) use ($startDate, $endDate) {
                 $q->whereBetween('date', [$startDate, $endDate]);
             });
 
@@ -588,10 +586,9 @@ class SubjectService
             $startDate = jalali_to_gregorian($year, 1, 1, '-');
             $endDate = now()->format('Y-m-d');
 
-            $query = Transaction::where('subject_id', $source->id)
-                ->whereHas('document', function ($q) use ($startDate, $endDate) {
-                    $q->whereBetween('date', [$startDate, $endDate]);
-                });
+            $query = Transaction::where('subject_id', $source->id)->whereHas('document', function ($q) use ($startDate, $endDate) {
+                $q->whereBetween('date', [$startDate, $endDate]);
+            });
 
             $sum = (clone $query)->sum('value');
             $count = $query->count();
