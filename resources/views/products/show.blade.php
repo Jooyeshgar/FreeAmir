@@ -109,7 +109,9 @@
                         @forelse ($historyItems as $item)
                             <tr class="hover:bg-base-300 {{ !$item->invoice->status->isApproved() ? 'opacity-50' : '' }}">
                                 <td class="px-4 py-3">
-                                    {{ formatDate($item->invoice->date) }}
+                                    <span title="{{ $item->invoice->customer->name }}">
+                                        {{ formatDate($item->invoice->date) }}
+                                    </span>
                                 </td>
 
                                 <td class="px-4 py-3 text-center">

@@ -131,7 +131,7 @@ class ProductController extends Controller
         $product->salesProfit = $this->productService->totalSell($product) + $this->productService->totalCOGS($product);
 
         $historyItems = $product->invoiceItems()
-            ->with(['invoice.ancillaryCosts.items' => function ($query) use ($product) {
+            ->with(['invoice.customer', 'invoice.ancillaryCosts.items' => function ($query) use ($product) {
                 $query->where('product_id', $product->id);
             }])
             ->tap(function ($q) {
