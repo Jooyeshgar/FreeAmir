@@ -8,7 +8,11 @@
         @include('home.header')
         @include('home.quick-access')
 
-        @if ($hasBusinessPerms)
+        @if ($canWorkInProgress)
+            @include('home.work-in-progress')
+        @endif
+
+        @if ($hasBusinessPerms && $canOperationalRecentItems)
             <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
                 @if ($canRecentDocuments)
                     @include('home.recent-documents')

@@ -11,6 +11,7 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\MonthlyAttendance;
 use App\Models\Payroll;
+use App\Models\PersonnelRequest;
 use App\Models\Product;
 use App\Models\Service;
 use App\Models\Subject;
@@ -60,6 +61,75 @@ class HomeService
             ->first();
 
         return compact('employee', 'recentLogs', 'requestsCount', 'lastMonthlyAttendance', 'lastPayroll');
+    }
+
+    public function workInProgressItems(User $user): Collection
+    {
+        $items = collect();
+
+        if ($user->can('documents.index')) {
+            $pendingDocumentsCount = Document::query()->whereNull('approved_at')->count();
+
+            if ($pendingDocumentsCount > 0) {
+                $items->push([
+                    'tone' => 'warning',
+                    'title' => __('Unapproved documents'),
+                    'value' => localizeNumber($pendingDocumentsCount),
+                    'description' => __('Accounting documents waiting for approval'),
+                    'href' => route('documents.index', ['status' => 'unapproved']),
+                    'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z',
+                ]);
+            }
+        }
+
+        if ($user->can('invoices.index')) {
+            $actionableInvoiceStatuses = [
+                InvoiceStatus::PENDING,
+                InvoiceStatus::PRE_INVOICE,
+                InvoiceStatus::UNAPPROVED,
+                InvoiceStatus::READY_TO_APPROVE,
+                InvoiceStatus::PARTIALLY_PAID,
+            ];
+
+            $actionableInvoiceStatusValues = collect($actionableInvoiceStatuses)
+                ->map(fn (InvoiceStatus $status) => $status->value)
+                ->all();
+
+            $actionableInvoicesCount = Invoice::query()
+                ->whereIn('status', $actionableInvoiceStatusValues)
+                ->count();
+
+            if ($actionableInvoicesCount > 0) {
+                $items->push([
+                    'tone' => 'info',
+                    'title' => __('Invoices needing attention'),
+                    'value' => localizeNumber($actionableInvoicesCount),
+                    'description' => __('Draft, pending, or partially paid invoices'),
+                    'href' => route('invoices.index'),
+                    'icon' => 'M9 14l2 2 4-4m1-6H8a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V8l-4-4z',
+                ]);
+            }
+        }
+
+        if ($user->can('hr.personnel-requests.index')) {
+            $approvedPersonnelRequestsCount = PersonnelRequest::query()
+                ->where('status', 'approved')
+                ->whereNull('payroll_id')
+                ->count();
+
+            if ($approvedPersonnelRequestsCount > 0) {
+                $items->push([
+                    'tone' => 'success',
+                    'title' => __('Approved personnel requests'),
+                    'value' => localizeNumber($approvedPersonnelRequestsCount),
+                    'description' => __('Approved HR requests not attached to payroll yet'),
+                    'href' => route('hr.personnel-requests.index', ['status' => 'approved']),
+                    'icon' => 'M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z',
+                ]);
+            }
+        }
+
+        return $items;
     }
 
     public function recentDocuments(): Collection

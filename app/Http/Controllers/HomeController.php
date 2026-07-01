@@ -24,6 +24,7 @@ class HomeController extends Controller
         'customers.index',
         'bank-accounts.index',
         'reports.ledger',
+        'hr.personnel-requests.index',
     ];
 
     public function __construct(private readonly HomeService $service) {}
@@ -70,6 +71,8 @@ class HomeController extends Controller
         $canRecentDocuments = $user->can('documents.index');
         $canRecentInvoices = $user->can('invoices.index');
         $canRecentCustomers = $user->can('customers.index');
+        $canOperationalRecentItems = $canRecentDocuments || $canRecentInvoices || $canRecentCustomers;
+        $canWorkInProgress = $canRecentDocuments || $canRecentInvoices || $user->can('hr.personnel-requests.index');
 
         if (! $hasBusinessPerms && ! $canSeePersonalPortal) {
             abort(403);
@@ -84,9 +87,15 @@ class HomeController extends Controller
             'canRecentDocuments' => $canRecentDocuments,
             'canRecentInvoices' => $canRecentInvoices,
             'canRecentCustomers' => $canRecentCustomers,
+            'canOperationalRecentItems' => $canOperationalRecentItems,
+            'canWorkInProgress' => $canWorkInProgress,
             'hasDocument' => Document::exists(),
             'isDebugMode' => config('app.debug') && ! app()->isProduction(),
         ];
+
+        if ($canWorkInProgress) {
+            $data['workInProgressItems'] = $this->service->workInProgressItems($user);
+        }
 
         if ($canRecentDocuments) {
             $data['recentDocuments'] = $this->service->recentDocuments();

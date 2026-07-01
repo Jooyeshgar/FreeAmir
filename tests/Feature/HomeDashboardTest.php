@@ -7,7 +7,9 @@ use App\Enums\InvoiceType;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Models\Document;
+use App\Models\Employee;
 use App\Models\Invoice;
+use App\Models\PersonnelRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
@@ -72,6 +74,8 @@ class HomeDashboardTest extends TestCase
         $response = $this->actingAs($this->user)->get(route('home'));
 
         $response->assertOk();
+        $response->assertSee('Unapproved documents');
+        $response->assertSee('Invoices needing attention');
         $response->assertSee('Recent Accounting Documents');
         $response->assertSee('Recent Invoices');
         $response->assertSee('Recent Customers');
@@ -81,6 +85,24 @@ class HomeDashboardTest extends TestCase
         $response->assertDontSee('Total Bank Balance');
         $response->assertDontSee('Profit and loss');
         $response->assertDontSee('Cash and banks balances');
+    }
+
+    public function test_home_shows_approved_personnel_requests_when_hr_has_wip(): void
+    {
+        $this->grant('home', 'hr.personnel-requests.index');
+
+        $employee = Employee::factory()->create(['company_id' => $this->company->id]);
+        PersonnelRequest::factory()->approved()->create([
+            'company_id' => $this->company->id,
+            'employee_id' => $employee->id,
+            'payroll_id' => null,
+        ]);
+
+        $response = $this->actingAs($this->user)->get(route('home'));
+
+        $response->assertOk();
+        $response->assertSee('Approved personnel requests');
+        $response->assertSee('Approved HR requests not attached to payroll yet');
     }
 
     public function test_home_only_shows_widgets_allowed_by_explicit_permissions(): void

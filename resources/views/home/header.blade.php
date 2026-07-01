@@ -9,7 +9,11 @@
             {{ __('Welcome') }}, {{ $user->name }}
         </h1>
         <p class="mt-1 text-sm text-base-content/60">
-            {{ __('Dashboard') }} — {{ $today }}
+            {{ __('Operational Workspace') }} — {{ $today }}
         </p>
+    </div>
+    <div class="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-base-content/70 shadow-sm">
+        <span class="font-semibold text-primary">{{ __('Today Focus') }}:</span>
+        {{ __('Review work in progress without exposing financial totals.') }}
     </div>
 </section>
