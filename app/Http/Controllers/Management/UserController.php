@@ -130,6 +130,7 @@ class UserController extends Controller
             throw ValidationException::withMessages([__('The User must have at least one company.')]);
         }
 
+        $employee = null;
         if ($request->filled('employee_id')) {
             if ($user->employee()->exists() && $user->employee->id !== (int) $request->employee_id) {
                 throw ValidationException::withMessages([__('The user is already linked to an employee.')]);
@@ -153,7 +154,7 @@ class UserController extends Controller
 
             $user->save();
 
-            if ($request->filled('employee_id')) {
+            if ($employee) {
                 $employee->update(['user_id' => $user->id]);
             }
 
