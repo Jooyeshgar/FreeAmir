@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Models\Customer;
+use App\Models\Document;
 use App\Models\Employee;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
@@ -58,6 +60,50 @@ class HomeService
             ->first();
 
         return compact('employee', 'recentLogs', 'requestsCount', 'lastMonthlyAttendance', 'lastPayroll');
+    }
+
+    public function recentDocuments(): Collection
+    {
+        return Document::query()
+            ->with('creator')
+            ->orderByRaw('CASE WHEN approved_at IS NULL THEN 0 ELSE 1 END')
+            ->latest('date')
+            ->latest('id')
+            ->limit(8)
+            ->get();
+    }
+
+    public function recentInvoices(): Collection
+    {
+        $actionableStatuses = [
+            InvoiceStatus::PENDING,
+            InvoiceStatus::PRE_INVOICE,
+            InvoiceStatus::UNAPPROVED,
+            InvoiceStatus::READY_TO_APPROVE,
+            InvoiceStatus::PARTIALLY_PAID,
+        ];
+
+        return Invoice::query()
+            ->with('customer')
+            ->orderByRaw(
+                'CASE WHEN status IN ('.collect($actionableStatuses)->map(fn () => '?')->implode(',').') THEN 0 ELSE 1 END',
+                collect($actionableStatuses)->map(fn (InvoiceStatus $status) => $status->value)->all()
+            )
+            ->latest('date')
+            ->latest('id')
+            ->limit(8)
+            ->get();
+    }
+
+    public function recentCustomers(): Collection
+    {
+        return Customer::query()
+            ->with('group')
+            ->orderByDesc('marked')
+            ->latest('updated_at')
+            ->latest('id')
+            ->limit(8)
+            ->get();
     }
 
     public function getSellAmountPerProducts()
