@@ -3,6 +3,7 @@
     'name',
     'title' => '',
     'type' => 'text',
+    'step' => null,
     'placeholder' => false,
     'value' => false,
     'hint' => false,
@@ -13,6 +14,9 @@
     'bordered' => true,
     'model_name' => false,
 ])
+@php
+    $resolvedStep = $type === 'number' ? ($step ?? 'any') : null;
+@endphp
 <fieldset {{ $attributes->whereDoesntStartWith('x-')->merge(['class' => 'form-control w-full']) }}>
     @if ($title != '')
         <div class="flex items-center justify-between gap-2">
@@ -22,7 +26,7 @@
             @endif
         </div>
     @endif
-    <input {{ $attributes->whereStartsWith('x-')->merge() }} title="{{ $title }}" type="{{ $type }}" name="{{ $name }}" id="{{ $name }}"
+    <input {{ $attributes->whereStartsWith('x-')->merge() }} title="{{ $title }}" type="{{ $type }}" @if ($resolvedStep !== null) step="{{ $resolvedStep }}" @endif name="{{ $name }}" id="{{ $name }}"
         value="{{ $value ?? '' }}" placeholder="{{ $placeholder ?? '' }}" class="input {{ $bordered ? 'border-slate-400' : 'input-ghost' }} w-full max-w-full max-h-10"
         {{ $required ? 'required' : '' }} {{ $disabled ? 'disabled' : '' }} {!! $model_name ? "x-model=\"$model_name\"" : '' !!} />
 
