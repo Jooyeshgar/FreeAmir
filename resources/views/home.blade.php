@@ -8,47 +8,24 @@
         @include('home.header')
         @include('home.quick-access')
 
-        @if ($hasBusinessPerms)
+        @if ($canWorkInProgress)
+            @include('home.work-in-progress')
+        @endif
 
-            @if ($canFinancial)
-                @include('home.financial-metrics')
-            @endif
+        @if ($hasBusinessPerms && $canOperationalRecentItems)
+            <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+                @if ($canRecentDocuments)
+                    @include('home.recent-documents')
+                @endif
 
-            @if ($canSales || $canInventory)
-                @include('home.sales-metrics')
-            @endif
+                @if ($canRecentInvoices)
+                    @include('home.recent-invoices')
+                @endif
 
-            @if ($canFinancial)
-                <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
-                    @include('home.cash-and-banks')
-                    @include('home.income')
-                    @include('home.profit')
-                </section>
-
-                <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                    @include('home.bank-account-list')
-                    @include('home.bank-account-chart')
-                </section>
-            @endif
-
-            @if ($canPopularItems || $canInventory)
-                <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                    @if ($canInventory)
-                        @include('home.warehouse')
-                    @endif
-
-                    @if ($canPopularItems)
-                        @include('home.popular-products')
-                    @endif
-                </section>
-            @endif
-
-            @if ($canSales)
-                <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                    @include('home.sell')
-                    @include('home.sold-amount')
-                </section>
-            @endif
+                @if ($canRecentCustomers)
+                    @include('home.recent-customers')
+                @endif
+            </section>
         @endif
 
         @if ($canSeePersonalPortal)

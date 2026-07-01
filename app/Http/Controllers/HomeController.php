@@ -6,6 +6,7 @@ use App\Models\Document;
 use App\Services\HomeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Gate;
 
 class HomeController extends Controller
 {
@@ -15,6 +16,7 @@ class HomeController extends Controller
      * stays focused on the user's higher-priority responsibilities.
      */
     private const BUSINESS_PERMISSIONS = [
+        'documents.index',
         'documents.show',
         'products.index',
         'services.index',
@@ -22,6 +24,7 @@ class HomeController extends Controller
         'customers.index',
         'bank-accounts.index',
         'reports.ledger',
+        'hr.personnel-requests.index',
     ];
 
     public function __construct(private readonly HomeService $service) {}
@@ -65,10 +68,11 @@ class HomeController extends Controller
         $hasBusinessPerms = collect(self::BUSINESS_PERMISSIONS)->contains(fn ($perm) => $user->can($perm));
         $canSeePersonalPortal = $user->can('employee-portal.dashboard') && ! $hasBusinessPerms;
 
-        $canFinancial = $user->can('documents.show');
-        $canSales = $user->can('invoices.index') || $user->can('products.index');
-        $canInventory = $user->can('products.index');
-        $canPopularItems = $user->can('products.index') || $user->can('services.index');
+        $canRecentDocuments = $user->can('documents.index');
+        $canRecentInvoices = $user->can('invoices.index');
+        $canRecentCustomers = $user->can('customers.index');
+        $canOperationalRecentItems = $canRecentDocuments || $canRecentInvoices || $canRecentCustomers;
+        $canWorkInProgress = $canRecentDocuments || $canRecentInvoices || $user->can('hr.personnel-requests.index');
 
         if (! $hasBusinessPerms && ! $canSeePersonalPortal) {
             abort(403);
@@ -80,44 +84,29 @@ class HomeController extends Controller
             'cashTypes' => $cashTypes,
             'hasBusinessPerms' => $hasBusinessPerms,
             'canSeePersonalPortal' => $canSeePersonalPortal,
-            'canFinancial' => $canFinancial,
-            'canSales' => $canSales,
-            'canInventory' => $canInventory,
-            'canPopularItems' => $canPopularItems,
+            'canRecentDocuments' => $canRecentDocuments,
+            'canRecentInvoices' => $canRecentInvoices,
+            'canRecentCustomers' => $canRecentCustomers,
+            'canOperationalRecentItems' => $canOperationalRecentItems,
+            'canWorkInProgress' => $canWorkInProgress,
             'hasDocument' => Document::exists(),
             'isDebugMode' => config('app.debug') && ! app()->isProduction(),
         ];
 
-        if ($canFinancial) {
-            [$bankAccounts, $topTenBankAccountBalances] = $this->service->topTenBanksAccountBalances();
-
-            ['incomeData' => $totalIncomesData, 'costData' => $totalCostsData, 'profit' => $profit] =
-                $this->service->profitFromNonPermanentSubjects();
-
-            $data += [
-                'bankAccounts' => $bankAccounts,
-                'topTenBankAccountBalances' => $topTenBankAccountBalances,
-                'monthlyIncome' => $this->service->getMonthlyIncome(),
-                'monthlyCost' => $this->service->getMonthlyCost(),
-                'totalIncomesData' => $totalIncomesData,
-                'totalCostsData' => $totalCostsData,
-                'profit' => $profit,
-            ];
+        if ($canWorkInProgress) {
+            $data['workInProgressItems'] = $this->service->workInProgressItems($user);
         }
 
-        if ($canSales) {
-            $data['monthlySellAmount'] = $this->service->getMonthlyProductsStat();
-            $data['sellAmountPerProducts'] = $this->service->getSellAmountPerProducts();
-            $data['totalBuyAmount'] = $this->service->totalBuyAmount();
+        if ($canRecentDocuments) {
+            $data['recentDocuments'] = $this->service->recentDocuments();
         }
 
-        if ($canInventory) {
-            $data['monthlyWarehouse'] = $this->service->getMonthlyWarehouse();
-            $data['totalWarehouseValue'] = $this->service->totalWarehouseValue();
+        if ($canRecentInvoices) {
+            $data['recentInvoices'] = $this->service->recentInvoices();
         }
 
-        if ($canPopularItems) {
-            $data['popularProductsAndServices'] = $this->service->popularProductsAndServices();
+        if ($canRecentCustomers) {
+            $data['recentCustomers'] = $this->service->recentCustomers();
         }
 
         if ($canSeePersonalPortal) {
@@ -143,6 +132,8 @@ class HomeController extends Controller
             ]
         );
 
+        Gate::authorize('reports.cost-income');
+
         return $this->service->cashAndBanksBalances($data['type'], intval($data['duration']));
     }
 
@@ -154,6 +145,8 @@ class HomeController extends Controller
                 'duration' => 'required|integer|in:1,2,3,4',
             ]
         );
+
+        Gate::authorize('reports.ledger');
 
         return $this->service->balanceForSubjectIds([$data['subject_id']], intval($data['duration']));
     }
