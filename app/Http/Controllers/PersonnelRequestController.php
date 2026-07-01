@@ -96,7 +96,7 @@ class PersonnelRequestController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        if (isset($request['request_type']) && in_array($request['request_type'], ['LEAVE_DAILY', 'MISSION_DAILY']) && isset($request['employee_id'])) {
+        if (isset($request['request_type']) && in_array($request['request_type'], ['LEAVE_DAILY', 'LEAVE_WITHOUT_PAY', 'MISSION_DAILY']) && isset($request['employee_id'])) {
             $employee = Employee::find($request['employee_id']);
             $request['start_time'] = Carbon::createFromTimeString($employee->workShift->start_time)->format('H:i');
             $request['end_time'] = Carbon::createFromTimeString($employee->workShift->end_time)->format('H:i');

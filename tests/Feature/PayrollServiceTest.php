@@ -212,6 +212,7 @@ class PayrollServiceTest extends TestCase
             'mission' => 0,
             'paid_leave' => 0,
             'unpaid_leave' => 0,
+            'unpaid_leave_days' => 0,
             'friday' => 0,
             'holiday' => 0,
         ], $overrides));
@@ -1036,5 +1037,46 @@ class PayrollServiceTest extends TestCase
         $this->assertArrayHasKey('undertime', $result['deductions']);
         $this->assertEquals($absenceDeduction, $result['deductions']['ABSENCE_DEDUCTION']['amount']);
         $this->assertEquals($undertime, $result['deductions']['undertime']['amount']);
+    }
+
+    public function test_daily_leave_without_pay_reduces_payable_days_without_absence_deduction(): void
+    {
+        $this->seedTaxSlabs();
+        $decree = $this->makeDecree();
+        $attendance = $this->makeAttendance([
+            'present_days' => 25,
+            'absent_days' => 0,
+            'unpaid_leave' => self::SHIFT_MINUTES,
+            'unpaid_leave_days' => 1,
+            'undertime' => 0,
+        ]);
+
+        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+
+        $this->assertSame(25, $result['prorated_days']);
+        $this->assertEquals(self::DAILY_WAGE * 25, $result['earnings']['base_salary']['amount']);
+        $this->assertArrayNotHasKey('ABSENCE_DEDUCTION', $result['deductions']);
+        $this->assertArrayNotHasKey('undertime', $result['deductions']);
+        $this->assertArrayNotHasKey('unpaid_leave', $result['deductions']);
+    }
+
+    public function test_hourly_leave_without_pay_reduces_base_salary_without_a_deduction(): void
+    {
+        $this->seedTaxSlabs();
+        $decree = $this->makeDecree();
+        $attendance = $this->makeAttendance([
+            'present_days' => 26,
+            'absent_days' => 0,
+            'unpaid_leave' => 240,
+            'unpaid_leave_days' => 0,
+            'undertime' => 0,
+        ]);
+
+        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+
+        $this->assertSame(26, $result['prorated_days']);
+        $this->assertArrayNotHasKey('undertime', $result['deductions']);
+        $this->assertArrayNotHasKey('unpaid_leave', $result['deductions']);
+        $this->assertEquals((self::DAILY_WAGE * 26) - (4 * self::HOURLY_WAGE), $result['earnings']['base_salary']['amount']);
     }
 }

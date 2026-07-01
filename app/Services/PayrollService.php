@@ -46,6 +46,10 @@ class PayrollService
 
     private int $absentDays = 0;
 
+    private int $unpaidLeaveDays = 0;
+
+    private int $hourlyUnpaidLeaveMinutes = 0;
+
     private int $proratedDays = 0;
 
     private mixed $workShift = null;
@@ -109,8 +113,11 @@ class PayrollService
         $this->dailyWage = (float) ($decree->daily_wage ?? 0);
         $this->workDays = max(1, (int) $attendance->work_days);
         $this->absentDays = (int) $attendance->absent_days;
-        $this->proratedDays = max(0, $this->workDays - $this->absentDays);
         $this->workShift = $attendance->employee->workShift;
+        $this->unpaidLeaveDays = $this->resolveDailyUnpaidLeaveDays($attendance);
+        $shiftMinutes = max(1, (int) ($this->workShift?->duration ?? (8 * 60)));
+        $this->hourlyUnpaidLeaveMinutes = max(0, (int) ($attendance->unpaid_leave ?? 0) - ($this->unpaidLeaveDays * $shiftMinutes));
+        $this->proratedDays = max(0, $this->workDays - $this->absentDays - $this->unpaidLeaveDays);
         $this->benefits = $decree->benefits;
         $this->hourlyWage = $this->resolveHourlyWage();
 
@@ -133,17 +140,27 @@ class PayrollService
 
     private function computeBaseSalary(): void
     {
-        $amount = $this->dailyWage * $this->proratedDays;
+        $hourlyUnpaidLeaveAmount = round(($this->hourlyUnpaidLeaveMinutes / 60) * $this->hourlyWage, 2);
+        $amount = max(0, ($this->dailyWage * $this->proratedDays) - $hourlyUnpaidLeaveAmount);
+
+        $description = $this->hourlyUnpaidLeaveMinutes > 0
+            ? __('Base salary (:days days × :rate/day − :hours unpaid leave hrs × :hourly_rate/hour)', [
+                'days' => $this->proratedDays,
+                'rate' => number_format($this->dailyWage),
+                'hours' => number_format($this->hourlyUnpaidLeaveMinutes / 60, 2),
+                'hourly_rate' => number_format($this->hourlyWage),
+            ])
+            : __('Base salary (:days days × :rate/day)', [
+                'days' => $this->proratedDays,
+                'rate' => number_format($this->dailyWage),
+            ]);
 
         $this->addEarning('base_salary', [
             'element_id' => null,
             'amount' => $amount,
             'unit_count' => $this->proratedDays,
             'unit_rate' => $this->dailyWage,
-            'description' => __('Base salary (:days days × :rate/day)', [
-                'days' => $this->proratedDays,
-                'rate' => number_format($this->dailyWage),
-            ]),
+            'description' => $description,
             'is_taxable' => true,
             'is_insurable' => true,
         ]);
@@ -277,7 +294,7 @@ class PayrollService
 
     private function computeCustomDeductions(SalaryDecree $decree): void
     {
-        $skipCodes = ['INSURANCE_EMP', 'INSURANCE_EMP2', 'INCOME_TAX', self::CODE_UNDERTIME, self::CODE_ABSENCE_DEDUCTION];
+        $skipCodes = ['INSURANCE_EMP', 'INSURANCE_EMP2', 'INCOME_TAX', 'UNPAID_LEAVE', self::CODE_UNDERTIME, self::CODE_ABSENCE_DEDUCTION];
 
         foreach ($decree->benefits as $benefit) {
             $element = $benefit->element;
@@ -390,6 +407,19 @@ class PayrollService
         $shiftMinutes = $this->workShift?->duration ?? (8 * 60);
 
         return round($this->dailyWage / max(1, $shiftMinutes / 60), 4);
+    }
+
+    private function resolveDailyUnpaidLeaveDays(MonthlyAttendance $attendance): int
+    {
+        $days = max(0, (int) ($attendance->unpaid_leave_days ?? 0));
+
+        if ($days > 0) {
+            return $days;
+        }
+
+        $shiftMinutes = max(1, (int) ($this->workShift?->duration ?? (8 * 60)));
+
+        return intdiv(max(0, (int) ($attendance->unpaid_leave ?? 0)), $shiftMinutes);
     }
 
     private function resolveCoefficient(string $type): float

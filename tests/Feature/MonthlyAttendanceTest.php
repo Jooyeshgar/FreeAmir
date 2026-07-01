@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Enums\PersonnelRequestType;
 use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\MonthlyAttendance;
+use App\Models\PersonnelRequest;
 use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
@@ -42,6 +44,7 @@ class MonthlyAttendanceTest extends TestCase
         );
 
         $this->actingAs($this->user);
+        request()->cookies->set('active-company-id', $this->companyId);
         $this->withCookies(['active-company-id' => $this->companyId]);
 
         $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
@@ -673,5 +676,71 @@ class MonthlyAttendanceTest extends TestCase
         $this->assertEquals(1, $totals['work_days']);
         $this->assertEquals(0, $totals['present_days']);
         $this->assertEquals(1, $totals['absent_days']);
+    }
+
+    public function test_daily_leave_without_pay_is_neither_present_nor_absent_and_has_no_undertime(): void
+    {
+        $workShift = $this->employee->workShift;
+        $workShift->update(['start_time' => '08:00:00', 'end_time' => '16:00:00', 'float' => 0]);
+
+        $request = PersonnelRequest::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'request_type' => PersonnelRequestType::LEAVE_WITHOUT_PAY,
+            'start_date' => '2025-01-06 08:00:00',
+            'end_date' => '2025-01-06 16:00:00',
+            'status' => 'approved',
+        ]);
+
+        $service = new AttendanceService;
+        $service->syncPersonnelRequestLogs($request);
+
+        $log = AttendanceLog::where('employee_id', $this->employee->id)->whereDate('log_date', '2025-01-06')->firstOrFail();
+        $totals = $service->computeTotals(Carbon::parse('2025-01-06'), 1, new Collection([$log]), [], $workShift->fresh());
+
+        $this->assertSame(480, $log->unpaid_leave);
+        $this->assertSame(0, $log->delay + $log->early_leave);
+        $this->assertSame(0, $totals['present_days']);
+        $this->assertSame(0, $totals['absent_days']);
+        $this->assertSame(0, $totals['undertime']);
+        $this->assertSame(480, $totals['unpaid_leave']);
+        $this->assertSame(1, $totals['unpaid_leave_days']);
+    }
+
+    public function test_hourly_leave_without_pay_is_present_without_leave_undertime(): void
+    {
+        $workShift = $this->employee->workShift;
+        $workShift->update(['start_time' => '08:00:00', 'end_time' => '16:00:00', 'float' => 0]);
+
+        AttendanceLog::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2025-01-06',
+            'entry_time' => '10:00:00',
+            'exit_time' => '16:00:00',
+        ]);
+
+        $request = PersonnelRequest::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'request_type' => PersonnelRequestType::LEAVE_WITHOUT_PAY_HOURLY,
+            'start_date' => '2025-01-06 08:00:00',
+            'end_date' => '2025-01-06 10:00:00',
+            'status' => 'approved',
+        ]);
+
+        $service = new AttendanceService;
+        $service->syncPersonnelRequestLogs($request);
+
+        $log = AttendanceLog::where('employee_id', $this->employee->id)->whereDate('log_date', '2025-01-06')->firstOrFail();
+        $totals = $service->computeTotals(Carbon::parse('2025-01-06'), 1, new Collection([$log]), [], $workShift->fresh());
+
+        $this->assertSame(120, $log->unpaid_leave);
+        $this->assertSame(0, $log->delay + $log->early_leave);
+        $this->assertSame(1, $totals['present_days']);
+        $this->assertSame(0, $totals['absent_days']);
+        $this->assertSame(0, $totals['undertime']);
+        $this->assertSame(120, $totals['unpaid_leave']);
+        $this->assertSame(0, $totals['unpaid_leave_days']);
     }
 }

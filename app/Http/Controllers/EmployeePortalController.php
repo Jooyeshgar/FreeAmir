@@ -361,7 +361,7 @@ class EmployeePortalController extends Controller
     {
         $employee = $this->currentEmployee();
 
-        if (isset($request['request_type']) && in_array($request['request_type'], ['LEAVE_DAILY', 'MISSION_DAILY'])) {
+        if (isset($request['request_type']) && in_array($request['request_type'], ['LEAVE_DAILY', 'LEAVE_WITHOUT_PAY', 'MISSION_DAILY'])) {
             $request['start_time'] = Carbon::createFromTimeString($employee->workShift->start_time)->format('H:i');
             $request['end_time'] = Carbon::createFromTimeString($employee->workShift->end_time)->format('H:i');
         }

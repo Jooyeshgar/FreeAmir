@@ -89,6 +89,7 @@ class AttendanceService
         // so it can be excluded from worked rather than being counted as both work and leave.
         $hourlyCoverageRequests = $employee?->personnelRequests()->whereIn('request_type', [
             PersonnelRequestType::LEAVE_HOURLY->value,
+            PersonnelRequestType::LEAVE_WITHOUT_PAY_HOURLY->value,
             PersonnelRequestType::MISSION_HOURLY->value,
         ])->approved()->coveringDate($logDate->toDateString())->get() ?? collect();
 
@@ -143,6 +144,7 @@ class AttendanceService
 
         // Base values
         $paidLeave = max(0, (int) ($log->paid_leave ?? 0));
+        $unpaidLeave = max(0, (int) ($log->unpaid_leave ?? 0));
         $mission = max(0, (int) ($log->mission ?? 0));
         $remoteWork = max(0, (int) ($log->remote_work ?? 0));
         $approvedOvertimeInput = max(0, (int) ($log->overtime ?? 0));
@@ -185,7 +187,7 @@ class AttendanceService
 
         // ── No clock data ──────────────────────────────────────────────────
         if (! $hasClockData) {
-            $coveredMinutes = min($shiftMinutes, $paidLeave + $mission + min($remoteWork, $shiftMinutes));
+            $coveredMinutes = min($shiftMinutes, $paidLeave + $unpaidLeave + $mission + min($remoteWork, $shiftMinutes));
             $remoteExtra = max(0, $remoteWork - $shiftMinutes);
             $autoOvertime = min($remoteExtra, $autoOvertimeCap);
 
@@ -239,7 +241,7 @@ class AttendanceService
 
         // Hourly leave/mission taken while the clock was running (mid-shift) is already inside the clocked window,
         // so it must be removed from worked and is NOT available to absorb delay / early_leave (it covered the mid-shift gap, not the edges).
-        $totalCoverage = $paidLeave + $mission;
+        $totalCoverage = $paidLeave + $unpaidLeave + $mission;
         $midShift = max(0, min($midShiftCoverage, $totalCoverage));
         $edgeCoverage = $totalCoverage - $midShift;
 
@@ -366,6 +368,7 @@ class AttendanceService
      * Stored units:
      *   work_days, present_days, absent_days → days (integer count)
      *   overtime, mission, paid_leave, unpaid_leave, friday, holiday → minutes
+     *   unpaid_leave_days → full days
      *
      * @param  Collection  $logs  AttendanceLog records (already recalculated)
      * @param  array  $holidayDates  Gregorian date strings e.g. ['2025-03-21']
@@ -390,6 +393,7 @@ class AttendanceService
         $missionMin = 0;
         $paidLeaveMin = 0;
         $unpaidLeaveMin = 0;
+        $unpaidLeaveDays = 0;
         $fridayMin = 0;
         $holidayMin = 0;
         $remoteWorkMin = 0;
@@ -415,11 +419,11 @@ class AttendanceService
 
             $log = $logsByDate[$dateStr];
 
-            $presentDays++;
             $missionMin += (int) $log->mission;
             $remoteWorkMin += (int) $log->remote_work;
 
             if ($isOffDay) {
+                $presentDays++;
 
                 if (isset($logsByDate[$dateStr])) {
                     $log = $logsByDate[$dateStr];
@@ -435,10 +439,19 @@ class AttendanceService
             }
 
             // ── Regular work day ──────────────────────────────────────────
+            $dailyUnpaidLeave = (int) $log->unpaid_leave >= $this->shiftWorkMinutes($workShift);
+            $unpaidLeaveMin += (int) $log->unpaid_leave;
+
+            if ($dailyUnpaidLeave) {
+                $unpaidLeaveDays++;
+
+                continue;
+            }
+
+            $presentDays++;
             $overtimeMin += (int) $log->overtime;
             $autoOvertimeMin += (int) $log->auto_overtime;
             $paidLeaveMin += (int) $log->paid_leave;
-            $unpaidLeaveMin += (int) $log->unpaid_leave;
             $undertimeMin += (int) $log->early_leave + $log->delay;
         }
 
@@ -452,6 +465,7 @@ class AttendanceService
             'mission' => $missionMin,
             'paid_leave' => $paidLeaveMin,
             'unpaid_leave' => $unpaidLeaveMin,
+            'unpaid_leave_days' => $unpaidLeaveDays,
             'remote_work' => $remoteWorkMin,
             'friday' => $fridayMin,
             'holiday' => $holidayMin,
@@ -476,7 +490,8 @@ class AttendanceService
             PersonnelRequestType::LEAVE_HOURLY,
             PersonnelRequestType::LEAVE_DAILY,
             PersonnelRequestType::SICK_LEAVE => 'paid_leave',
-            PersonnelRequestType::LEAVE_WITHOUT_PAY => 'unpaid_leave',
+            PersonnelRequestType::LEAVE_WITHOUT_PAY,
+            PersonnelRequestType::LEAVE_WITHOUT_PAY_HOURLY => 'unpaid_leave',
             PersonnelRequestType::MISSION_HOURLY,
             PersonnelRequestType::MISSION_DAILY => 'mission',
             PersonnelRequestType::OVERTIME_ORDER => 'overtime',
