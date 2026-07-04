@@ -7,14 +7,20 @@ use Illuminate\Database\Seeder;
 
 class CustomerGroupSeeder extends Seeder
 {
-    public function run()
+    public function run(): void
     {
+        $companyId = (int) getActiveCompany();
+
+        if (CustomerGroup::withoutGlobalScopes()->where('company_id', $companyId)->where('name', 'عمومی')->exists()) {
+            return;
+        }
+
         CustomerGroup::factory()
             ->withSubject()
             ->create([
                 'name' => 'عمومی',
                 'description' => 'گروه مشتریان عمومی',
-                'company_id' => 1,
+                'company_id' => $companyId,
             ]);
     }
 }

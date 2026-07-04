@@ -9,12 +9,18 @@ class ServiceGroupSeeder extends Seeder
 {
     public function run(): void
     {
+        $companyId = (int) getActiveCompany();
+
+        if (ServiceGroup::withoutGlobalScopes()->where('company_id', $companyId)->where('name', 'عمومی')->exists()) {
+            return;
+        }
+
         ServiceGroup::factory()
             ->withSubject()
             ->create([
                 'name' => 'عمومی',
                 'vat' => 10,
-                'company_id' => 1,
+                'company_id' => $companyId,
             ]);
     }
 }

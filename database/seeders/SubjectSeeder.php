@@ -2,8 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Models\Subject;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class SubjectSeeder extends Seeder
 {
@@ -17,6 +19,7 @@ class SubjectSeeder extends Seeder
      */
     public function run(): void
     {
+        $companyId = (int) getActiveCompany();
         // Root subjects classified as non-permanent (income statement / temporary).
         // Their children inherit the same flag.
         $nonPermanentRoots = [
@@ -149,6 +152,35 @@ class SubjectSeeder extends Seeder
             $row['is_permanent'] = ! isset($nonPermanentLookup[$rootId]);
         }
         unset($row);
+
+        if ($companyId !== 1) {
+            $subjectIds = [];
+
+            foreach ($subjectData as $row) {
+                $templateId = $row['id'];
+                $templateParentId = $row['parent_id'];
+
+                unset($row['id']);
+                $row['company_id'] = $companyId;
+
+                if ($templateParentId !== null && ! isset($subjectIds[$templateParentId])) {
+                    throw new RuntimeException("Missing parent subject template [{$templateParentId}].");
+                }
+
+                $row['parent_id'] = $templateParentId === null
+                    ? null
+                    : $subjectIds[$templateParentId];
+
+                $subject = Subject::withoutGlobalScopes()->updateOrCreate(
+                    ['company_id' => $companyId, 'code' => $row['code']],
+                    $row,
+                );
+
+                $subjectIds[$templateId] = $subject->id;
+            }
+
+            return;
+        }
 
         DB::table('subjects')->upsert(
             $subjectData,
