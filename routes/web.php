@@ -7,13 +7,22 @@ Route::get('/login', [Controllers\Auth\LoginController::class, 'showLoginForm'])
 Route::post('/login', [Controllers\Auth\LoginController::class, 'login']);
 Route::get('/logout', [Controllers\Auth\LoginController::class, 'logout'])->name('logout');
 
+Route::get('/forgot-password', [Controllers\Auth\PasswordResetController::class, 'showForgotPasswordForm'])->name('password.request');
+Route::post('/forgot-password', [Controllers\Auth\PasswordResetController::class, 'sendResetLink'])->middleware('throttle:6,1')->name('password.email');
+Route::get('/reset-password/{token}', [Controllers\Auth\PasswordResetController::class, 'showResetPasswordForm'])->name('password.reset');
+Route::post('/reset-password', [Controllers\Auth\PasswordResetController::class, 'resetPassword'])->name('password.update');
+
 Route::get('/register', [Controllers\Auth\RegisterController::class, 'showRegisterForm'])->name('register');
 Route::post('/register/email', [Controllers\Auth\RegisterController::class, 'registerWithEmail'])->name('register.email');
-Route::get('/email/verify', [Controllers\Auth\RegisterController::class, 'verificationNotice'])->middleware('auth')->name('verification.notice');
-Route::post('/email/verification-notification', [Controllers\Auth\RegisterController::class, 'sendVerificationEmail'])->middleware(['auth', 'throttle:6,1'])->name('verification.send');
-Route::get('/email/verify/{id}/{hash}', [Controllers\Auth\RegisterController::class, 'verifyEmail'])->middleware(['auth', 'signed'])->name('verification.verify');
+Route::get('/verify', [Controllers\Auth\RegisterController::class, 'showVerificationNotice'])->middleware('auth')->name('verification.notice');
+Route::post('/verification-notification', [Controllers\Auth\RegisterController::class, 'resendVerificationNotification'])->middleware(['auth', 'throttle:6,1'])->name('verification.send');
+Route::get('/verify/{id}/{hash}', [Controllers\Auth\RegisterController::class, 'verify'])->middleware(['auth', 'signed', 'throttle:6,1'])->name('verification.verify');
 
-Route::get('/about', [Controllers\AboutController::class, 'index'])->name('about')->middleware('auth');
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/about', [Controllers\AboutController::class, 'index'])->name('about');
+    Route::get('/registered-user/company', [Controllers\CompanyController::class, 'createCompanyForRegisteredUser'])->name('registered-user.company.create');
+    Route::post('/registered-user/company', [Controllers\CompanyController::class, 'storeCompanyForRegisteredUser'])->name('registered-user.company.store');
+});
 
 Route::group(['middleware' => ['auth', 'ensure-employee', 'verified'], 'prefix' => 'employee-portal', 'as' => 'employee-portal.'], function () {
     Route::get('/employee', [Controllers\EmployeePortalController::class, 'employeeShow'])->name('employee.show');
