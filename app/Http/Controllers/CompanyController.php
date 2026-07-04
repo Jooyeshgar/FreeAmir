@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class CompanyController extends Controller
 {
@@ -53,7 +54,7 @@ class CompanyController extends Controller
     public function create(): View
     {
         // Get previous fiscal years for the current company
-        $previousYears = Company::all();
+        $previousYears = auth()->user()->companies()->orderByDesc('fiscal_year')->get();
 
         return view('companies.create', [
             'company' => null,
@@ -67,7 +68,10 @@ class CompanyController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $fiscalYearRules = [
-            'source_year_id' => 'nullable|exists:companies,id',
+            'source_year_id' => [
+                'nullable',
+                Rule::exists('company_user', 'company_id')->where('user_id', auth()->user()->id),
+            ],
             'tables_to_copy' => 'array',
             'tables_to_copy.*' => 'string|in:'.implode(',', array_map(fn ($case) => $case->value, FiscalYearSection::cases())),
             'certificate' => $this->certificateRules(),
