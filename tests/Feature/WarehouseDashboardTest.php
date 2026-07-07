@@ -198,6 +198,48 @@ class WarehouseDashboardTest extends TestCase
         $this->assertEquals($atThreshold->name, $rows->first()['name']);
     }
 
+    public function test_report_need_order_filter_returns_reorder_products(): void
+    {
+        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId, 'name' => 'Widgets']);
+
+        $needsOrder = Product::factory()->withGroup($group)->withSubjects()->create([
+            'company_id' => $this->companyId,
+            'code' => 'R-LOW',
+            'name' => 'Needs Order',
+            'quantity' => 3,
+            'quantity_warning' => 10,
+            'average_cost' => 100,
+            'selling_price' => 150,
+        ]);
+
+        Product::factory()->withGroup($group)->withSubjects()->create([
+            'company_id' => $this->companyId,
+            'code' => 'R-OK',
+            'name' => 'Healthy Stock',
+            'quantity' => 20,
+            'quantity_warning' => 10,
+            'average_cost' => 100,
+            'selling_price' => 150,
+        ]);
+
+        Product::factory()->withGroup($group)->withSubjects()->create([
+            'company_id' => $this->companyId,
+            'code' => 'R-NO-WARNING',
+            'name' => 'No Warning',
+            'quantity' => 0,
+            'quantity_warning' => 0,
+            'average_cost' => 100,
+            'selling_price' => 150,
+        ]);
+
+        $report = app(WarehouseDashboardService::class)->report(['need_order' => true]);
+        $rows = $report['rows'];
+
+        $this->assertCount(1, $rows);
+        $this->assertEquals($needsOrder->name, $rows->first()['name']);
+        $this->assertContains(__('Need Order'), collect($report['filterSummary'])->pluck('label')->all());
+    }
+
     private function grant(string ...$permissions): void
     {
         $this->user->givePermissionTo(
