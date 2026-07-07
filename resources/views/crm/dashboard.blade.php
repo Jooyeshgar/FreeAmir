@@ -12,14 +12,10 @@
             </div>
             <div class="flex flex-wrap gap-2">
                 @can('customers.create')
-                    <a href="{{ route('customers.create') }}" class="btn btn-sm btn-primary">
-                        + {{ __('New Customer') }}
-                    </a>
+                    <a href="{{ route('customers.create') }}" class="btn btn-sm btn-primary">{{ __('New Customer') }}</a>
                 @endcan
                 @can('invoices.create')
-                    <a href="{{ route('invoices.create', ['invoice_type' => 'sell']) }}" class="btn btn-sm btn-neutral">
-                        + {{ __('Issue Invoice') }}
-                    </a>
+                    <a href="{{ route('invoices.create', ['invoice_type' => 'sell']) }}" class="btn btn-sm btn-neutral">{{ __('Issue Invoice') }}</a>
                 @endcan
             </div>
         </section>

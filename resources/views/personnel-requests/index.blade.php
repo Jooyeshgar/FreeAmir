@@ -41,10 +41,10 @@
 
             {{-- Filters --}}
             <div class="flex flex-wrap items-end justify-between gap-3">
-                <form action="{{ route('hr.personnel-requests.index') }}" method="GET" class="flex justify-between gap-2 w-1/2">
+                <form action="{{ route('hr.personnel-requests.index') }}" method="GET" class="flex gap-2 w-1/2">
                     <x-input name="tab" value="{{ $tab }}" hidden />
 
-                    <select name="employee_id" class="select  select-sm">
+                    <select name="employee_id" class="select select-sm w-60">
                         <option value="">{{ __('All Employees') }}</option>
                         @foreach ($employees as $employee)
                             <option value="{{ $employee->id }}" {{ request('employee_id') == $employee->id ? 'selected' : '' }}>
@@ -53,7 +53,7 @@
                         @endforeach
                     </select>
 
-                    <select name="status" class="select select-sm">
+                    <select name="status" class="select select-sm w-30">
                         <option value="">{{ __('All Statuses') }}</option>
                         <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>
                             {{ __('Pending') }}
@@ -66,12 +66,7 @@
                         </option>
                     </select>
 
-                    <button type="submit" class="btn btn-sm btn-neutral">
-                        {{ __('Search') }}
-                    </button>
-                    <a href="{{ route('hr.personnel-requests.index', ['tab' => $tab]) }}" class="btn btn-sm btn-ghost">
-                        {{ __('Reset') }}
-                    </a>
+                    <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
                 </form>
 
                 @can('hr.personnel-requests.create')

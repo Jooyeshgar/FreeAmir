@@ -3,15 +3,15 @@
 
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <span class="card-title">{{ __('Roles') }}</span>
-
-            <a href="{{ route('roles.create') }}">
-                <button class="btn btn-primary">{{ __('Add new Role') }}</button>
-            </a>
-            <form class="right" method="GET" action="{{ route('roles.index') }}">
-                <x-text-input label_class="max-w-xs" type="text" name="search" placeholder="{{ __('Search') }}" />
-                <button type="submit" class="right btn-flat"><i class="icon-search"></i></button>
+            <form action="{{ route('roles.index') }}" method="GET" class="flex flex-wrap items-center gap-2">
+                <div class="w-60 [&_.input]:input-sm">
+                    <x-input name="search" placeholder="{{ __('Search by name') }}" :value="request('search')" title="" />
+                </div>    
+                <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
             </form>
+            <div class="card-actions">
+                <a href="{{ route('roles.create') }}" class="btn btn-primary">{{ __('Add new Role') }}</a>
+            </div>
 
             <table class='table w-full mt-4 overflow-auto'>
                 <tr>
