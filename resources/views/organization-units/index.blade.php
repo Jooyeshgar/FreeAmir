@@ -7,14 +7,13 @@
                 <form action="{{ route('hr.organization-units.index') }}" method="GET" class="flex flex-wrap gap-2 w-full">
                     <x-text-input input_class="input-sm w-80" name="search" value="{{ request('search') }}" placeholder="{{ __('Search by name or code') }}" />
 
-                    <select name="is_active" class="select select-sm">
+                    <select name="is_active" class="select select-sm w-30">
                         <option value="">{{ __('All Statuses') }}</option>
                         <option value="1" {{ request('is_active') === '1' ? 'selected' : '' }}>{{ __('Active') }}</option>
                         <option value="0" {{ request('is_active') === '0' ? 'selected' : '' }}>{{ __('Inactive') }}</option>
                     </select>
 
                     <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
-                    <a href="{{ route('hr.organization-units.index') }}" class="btn btn-sm btn-ghost">{{ __('Reset') }}</a>
                 </form>
 
                 @can('hr.organization-units.create')

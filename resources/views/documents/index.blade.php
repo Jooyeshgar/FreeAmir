@@ -9,12 +9,7 @@
         </div>
 
         <div class="flex flex-wrap items-center justify-start gap-2">
-            <a href="{{ route('documents.create') }}" class="btn btn-primary btn-sm gap-1.5">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-                {{ __('Create Document') }}
-            </a>
+            <a href="{{ route('documents.create') }}" class="btn btn-primary btn-sm">{{ __('Create Document') }}</a>
             @can('documents.approve')
                 <form action="{{ route('documents.approve-all') }}" method="POST" class="inline-block" id="approve-all-form">
                     @csrf
@@ -64,31 +59,26 @@
                     </a>
                 </div>
 
-                <form action="{{ route('documents.index') }}" method="GET" class="flex flex-wrap items-center gap-2" dir="ltr">
-                    <div class="relative w-32 max-w-full [&_.input]:input-sm" dir="rtl">
+                <form action="{{ route('documents.index') }}" method="GET" class="flex flex-wrap items-center gap-2">
+                    <div class="relative w-32 max-w-full [&_.input]:input-sm">
                         <x-input type="text" name="number" value="{{ request('number') }}" placeholder="{{ __('Doc Number') }}" />
                     </div>
 
-                    <div class="w-36 [&_.input]:input-sm" dir="rtl">
+                    <div class="w-36 [&_.input]:input-sm">
                         <x-date-picker name="date" placeholder="{{ __('date') }}" value="{{ request('date') }}" class="datePicker" />
                     </div>
 
-                    <div class="relative w-56 max-w-full [&_.input]:input-sm" dir="rtl">
+                    <div class="relative w-72 max-w-full [&_.input]:input-sm">
                         <x-input type="text" name="text" value="{{ request('text') }}" placeholder="{{ __('Search by document title or transaction description') }}" />
                     </div>
 
-                    <select name="status" class="select select-sm w-40" dir="rtl" onchange="this.form.submit()">
+                    <select name="status" class="select select-sm w-30" onchange="this.form.submit()">
                         <option value="all" @selected($status === 'all')>{{ __('All Documents') }}</option>
                         <option value="approved" @selected($status === 'approved')>{{ __('Approved') }}</option>
                         <option value="unapproved" @selected($status === 'unapproved')>{{ __('Not approved') }}</option>
                     </select>
 
-                    <button type="submit" class="btn btn-sm btn-primary gap-1.5" dir="rtl">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z" />
-                        </svg>
-                        {{ __('Search') }}
-                    </button>
+                    <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
                 </form>
             </div>
 

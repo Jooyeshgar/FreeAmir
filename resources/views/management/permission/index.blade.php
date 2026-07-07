@@ -2,14 +2,14 @@
     <x-show-message-bags />
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <div class="flex flex-wrap items-center gap-3 mb-4">
-                <span class="card-title">{{ __('Permissions') }}</span>
-                <a href="{{ route('permissions.create') }}">
-                    <button class="btn btn-primary btn-sm">{{ __('Add new Permission') }}</button>
-                </a>
-                <form class="flex items-center" method="GET" action="{{ route('permissions.index') }}">
-                    <x-input name="search" placeholder="{{ __('Search') }}" :value="request('search')" title="" />
-                </form>
+            <form action="{{ route('permissions.index') }}" method="GET" class="flex flex-wrap items-center gap-2">
+                <div class="w-60 [&_.input]:input-sm">
+                    <x-input name="search" placeholder="{{ __('Permission wildcard') }}" :value="request('search')" title="" />
+                </div>    
+                <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
+            </form>
+            <div class="card-actions">
+                <a href="{{ route('permissions.create') }}" class="btn btn-primary">{{ __('Add new Permission') }}</a>
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
