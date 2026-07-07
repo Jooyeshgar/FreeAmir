@@ -7,9 +7,9 @@
             {{-- Filter bar --}}
             <form action="{{ route('attendance.attendance-logs.index') }}" method="GET" class="flex flex-wrap items-end gap-3 mb-2">
 
-                <div class="flex flex-col w-60">
+                <div class="w-1/5 flex flex-col">
                     <label class="label">{{ __('Employee') }}</label>
-                    <select name="employee_id" class="select select-sm">
+                    <select name="employee_id" class="select  select-sm">
                         <option value="">{{ __('All Employees') }}</option>
                         @foreach ($employees as $employee)
                             <option value="{{ $employee->id }}" {{ request('employee_id') == $employee->id ? 'selected' : '' }}>
@@ -19,20 +19,20 @@
                     </select>
                 </div>
 
-                <div class="[&_.input]:input-sm w-30">
+                <div class="w-36">
                     <x-date-picker name="date_from" id="date_from" title="{{ __('From Date') }}" :value="request('date_from')" />
                 </div>
 
-                <div class="[&_.input]:input-sm w-30">
+                <div class="w-36">
                     <x-date-picker name="date_to" id="date_to" title="{{ __('To Date') }}" :value="request('date_to')" />
                 </div>
 
-                <div class="w-30">
+                <div class="w-36">
                     <label class="w-full">
                         <div class="label">
                             <span>{{ __('Entry Type') }}</span>
                         </div>
-                        <select name="is_manual" class="select select-sm">
+                        <select name="is_manual" class="select  select-sm">
                             <option value="">{{ __('All') }}</option>
                             <option value="1" {{ request('is_manual') === '1' ? 'selected' : '' }}>
                                 {{ __('Manual') }}
@@ -44,8 +44,14 @@
                     </label>
                 </div>
 
-                <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
-                <a href="{{ route('attendance.attendance-logs.index') }}" class="btn btn-sm btn-ghost">{{ __('Reset') }}</a>
+                <div class="flex gap-2 items-end">
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        {{ __('Search') }}
+                    </button>
+                    <a href="{{ route('attendance.attendance-logs.index') }}" class="btn btn-sm btn-ghost">
+                        {{ __('Reset') }}
+                    </a>
+                </div>
             </form>
 
             {{-- Table header row --}}

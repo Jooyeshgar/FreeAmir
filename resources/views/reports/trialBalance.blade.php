@@ -24,28 +24,28 @@
                     <x-input name="parent_id" value="{{ $currentParent->id }}" hidden />
                 @endif
 
-                <div class="flex flex-wrap gap-2 items-center">
-                    <div class="[&_.input]:input-sm w-60">
+                <div class="grid grid-cols-8 gap-3 items-end">
+                    <div class="col-span-1">
                         <x-input name="subject_name" value="{{ $subject_name }}" class="w-full" placeholder="{{ __('Subject Name') }}" />
                     </div>
-                    <div class="[&_.input]:input-sm w-30">
+                    <div class="col-span-1">
                         <x-date-picker name="start_date" value="{{ $start_date }}" class="w-full" placeholder="{{ __('Start date') }}" />
                     </div>
-                    <div class="[&_.input]:input-sm w-30">
+                    <div class="col-span-1">
                         <x-date-picker name="end_date" value="{{ $end_date }}" class="w-full" placeholder="{{ __('End date') }}" />
                     </div>
-                    <div class="[&_.input]:input-sm w-30">
+                    <div class="col-span-1">
                         <x-input name="start_document_number" value="{{ $start_document_number ?? 3 }}" class="w-full" placeholder="{{ __('Document start number') }}" />
                     </div>
-                    <div class="[&_.input]:input-sm w-30">
+                    <div class="col-span-1">
                         <x-input name="end_document_number" value="{{ $end_document_number }}" class="w-full" placeholder="{{ __('Document end number') }}" />
                     </div>
-                    <div class="col-span-1">
+                    <div class="col-span-1 flex items-center gap-3 mb-2">
                         <x-checkbox name="include_children" id="include_children" :title="__('Include 2 levels')" value="1" :checked="$include_children == '1'" />
                     </div>
                     <div class="col-span-2 flex gap-2 justify-end">
-                        <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
-                        <a href="{{ route('reports.trial-balance') }}" class="btn btn-sm btn-outline">{{ __('Clear') }}</a>
+                        <button type="submit" class="btn btn-primary text-white rounded-md">{{ __('Search') }}</button>
+                        <a href="{{ route('reports.trial-balance') }}" class="btn btn-outline rounded-md">{{ __('Clear') }}</a>
                     </div>
                 </div>
             </form>

@@ -3,22 +3,6 @@
 
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <form action="{{ route('salary.payroll-elements.index') }}" method="GET" class="flex flex-wrap items-center gap-2">
-                <div class="w-60 [&_.input]:input-sm">
-                    <x-input type="text" name="title" value="{{ request('title') }}" placeholder="{{ __('Filter by title') }}" />
-                </div>
-                <div>
-                    <select name="category" class="select select-sm w-30">
-                        <option value="">{{ __('All Categories') }}</option>
-                        <option value="earning" @selected(request('category') === 'earning')>{{ __('Earning') }}</option>
-                        <option value="deduction" @selected(request('category') === 'deduction')>{{ __('Deduction') }}</option>
-                    </select>
-                </div>
-                <div>
-                    <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
-                </div>
-            </form>
-
             <div class="card-actions">
                 @can('salary.payroll-elements.create')
                     <a href="{{ route('salary.payroll-elements.create') }}" class="btn btn-primary">
@@ -26,6 +10,26 @@
                     </a>
                 @endcan
             </div>
+
+            <form action="{{ route('salary.payroll-elements.index') }}" method="GET">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 w-full md:w-3/5">
+                    <div class="relative">
+                        <x-input type="text" name="title" value="{{ request('title') }}" placeholder="{{ __('Filter by title') }}" />
+                    </div>
+                    <div class="relative">
+                        <select name="category" class="select w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">{{ __('All Categories') }}</option>
+                            <option value="earning" @selected(request('category') === 'earning')>{{ __('Earning') }}</option>
+                            <option value="deduction" @selected(request('category') === 'deduction')>{{ __('Deduction') }}</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 text-sm rounded-lg shadow transition-all">
+                            {{ __('Search') }}
+                        </button>
+                    </div>
+                </div>
+            </form>
 
             <table class="table w-full mt-4 overflow-auto">
                 <thead>

@@ -6,16 +6,16 @@
             {{-- Filter bar --}}
             <form action="{{ route('employee-portal.attendance-logs') }}" method="GET" class="flex flex-wrap items-end gap-3 mb-4">
 
-                <div class="[&_.input]:input-sm w-30">
+                <div class="w-36">
                     <x-date-picker name="date_from" id="date_from" title="{{ __('From Date') }}" :value="request('date_from')" />
                 </div>
 
-                <div class="[&_.input]:input-sm w-30">
+                <div class="w-36">
                     <x-date-picker name="date_to" id="date_to" title="{{ __('To Date') }}" :value="request('date_to')" />
                 </div>
 
-                <div class="w-30">
-                    <label class="w-full">
+                <div class="w-36">
+                    <label class="fieldset w-full">
                         <div class="label">
                             <span>{{ __('Entry Type') }}</span>
                         </div>
@@ -31,7 +31,14 @@
                     </label>
                 </div>
 
-                <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
+                <div class="flex gap-2 items-end pb-1">
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        {{ __('Search') }}
+                    </button>
+                    <a href="{{ route('employee-portal.attendance-logs') }}" class="btn btn-sm btn-ghost">
+                        {{ __('Reset') }}
+                    </a>
+                </div>
             </form>
 
             <div class="overflow-x-auto">

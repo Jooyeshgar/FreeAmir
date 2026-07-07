@@ -5,10 +5,10 @@
         <div class="card-body">
             <div class="flex items-center justify-between gap-3">
                 <form action="{{ route('attendance.work-shifts.index') }}" method="GET" class="flex items-center gap-2">
-                    <div class="w-60 max-w-full [&_.input]:input-sm">
-                        <x-input type="text" name="search" value="{{ $search }}" placeholder="{{ __('Filter by name') }}" />
-                    </div>    
-                    <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
+                    <x-input type="text" name="search" value="{{ $search }}" placeholder="{{ __('Filter by name') }}" />
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 text-sm rounded-lg shadow transition-all">
+                        {{ __('Search') }}
+                    </button>
                 </form>
 
                 @can('attendance.work-shifts.create')

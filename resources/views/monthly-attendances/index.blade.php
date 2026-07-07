@@ -38,7 +38,12 @@
                     </label>
                 </div>
 
-                <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
+                <button type="submit" class="btn btn-sm btn-neutral self-end">
+                    {{ __('Search') }}
+                </button>
+                <a href="{{ route('attendance.monthly-attendances.index') }}" class="btn btn-sm btn-ghost self-end">
+                    {{ __('Reset') }}
+                </a>
             </form>
 
             <div class="flex justify-end items-center gap-2">

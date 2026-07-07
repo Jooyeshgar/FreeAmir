@@ -10,6 +10,9 @@
 
         <div class="flex flex-wrap items-center justify-start gap-2">
             <a href="{{ route('products.create') }}" class="btn btn-primary btn-sm gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
                 {{ __('Create product') }}
             </a>
             @can('products.report')
@@ -17,8 +20,8 @@
                     {{ __('Warehouse Report') }}
                 </button>
             @endcan
-            <a href="{{ route('products.export') }}" class="btn btn-outline btn-sm">{{ __('Export CSV') }}</a>
-            <a href="{{ route('products.import') }}" class="btn btn-outline btn-sm">{{ __('Import CSV') }}</a>
+            <a href="{{ route('products.export') }}" class="btn btn-primary btn-sm gap-1.5">{{ __('Export CSV') }}</a>
+            <a href="{{ route('products.import') }}" class="btn btn-primary btn-sm gap-1.5">{{ __('Import CSV') }}</a>
         </div>
     </div>
 
@@ -48,7 +51,6 @@
                     <x-input name="name" value="{{ request('name') }}" hidden />
                     <x-input name="group_name" value="{{ request('group_name') }}" hidden />
                     <x-input name="min_quantity" value="{{ request('min_quantity') }}" hidden />
-                    <x-input name="need_order" value="1" hidden :disabled="! request()->boolean('need_order')" />
                     <x-input name="cols_submitted" value="1" hidden />
 
                     <div class="text-info mt-2">
@@ -99,28 +101,29 @@
                     </span>
                 </div>
 
-                <form action="{{ route('products.index') }}" method="GET" class="flex flex-wrap items-center gap-2">
-                    <div class="relative w-50 max-w-full [&_.input]:input-sm">
+                <form action="{{ route('products.index') }}" method="GET" class="flex flex-wrap items-center gap-2" dir="ltr">
+                    <div class="relative w-40 max-w-full [&_.input]:input-sm" dir="rtl">
                         <x-input type="text" name="name" value="{{ request('name') }}" placeholder="{{ __('Product Name') }}" />
                     </div>
 
-                    <div class="relative w-20 max-w-full [&_.input]:input-sm">
+                    <div class="relative w-40 max-w-full [&_.input]:input-sm" dir="rtl">
                         <x-input type="text" name="code" value="{{ request('code') }}" placeholder="{{ __('Product code') }}" />
                     </div>
 
-                    <div class="relative w-30 max-w-full [&_.input]:input-sm">
+                    <div class="relative w-40 max-w-full [&_.input]:input-sm" dir="rtl">
                         <x-input type="text" name="group_name" value="{{ request('group_name') }}" placeholder="{{ __('Product Group Name') }}" />
                     </div>
 
-                    <div class="relative w-30 max-w-full [&_.input]:input-sm">
+                    <div class="relative w-40 max-w-full [&_.input]:input-sm" dir="rtl">
                         <x-input type="number" name="min_quantity" value="{{ request('min_quantity') }}" placeholder="{{ __('Min quantity') }}" />
                     </div>
 
-                    <div class="[&_.fieldset]:m-0 [&_.label]:text-sm">
-                        <x-checkbox name="need_order" id="need_order" :title="__('Need Order')" value="1" :checked="request()->boolean('need_order')" />
-                    </div>
-
-                    <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>   
+                    <button type="submit" class="btn btn-sm btn-primary gap-1.5" dir="rtl">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z" />
+                        </svg>
+                        {{ __('Search') }}
+                    </button>
                 </form>
             </div>
 
@@ -146,17 +149,11 @@
                     <tbody>
 
                         @foreach ($products as $product)
-                            @php($needOrderTextClass = $product->needs_order ? 'text-red-500' : '')
-                            <tr @class([$needOrderTextClass => $needOrderTextClass !== ''])>
+                            <tr>
                                 <td class="px-4 py-2">{{ localizeNumber($product->code) }}</td>
                                 <td class="px-4 py-2">
-                                    @if ($product->needs_order)
-                                        <span class="tooltip" data-tip="{{ __('Need Order') }}">
-                                            <a href="{{ route('products.show', $product) }}" class="{{ $needOrderTextClass }}">{{ $product->name }}</a>
-                                        </span>
-                                    @else
-                                        <a href="{{ route('products.show', $product) }}" class="text-primary">{{ $product->name }}</a>
-                                    @endif
+                                    <a href="{{ route('products.show', $product) }}" class="text-primary">
+                                        {{ $product->name }}</a>
                                 </td>
                                 <td class="px-4 py-2">
                                     {{ formatNumber($product->quantity) }}

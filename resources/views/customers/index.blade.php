@@ -9,9 +9,14 @@
         </div>
 
         <div class="flex flex-wrap items-center justify-start gap-2">
-            <a href="{{ route('customers.create') }}" class="btn btn-sm btn-primary">{{ __('Create Customer') }}</a>
-            <a href="{{ route('customers.export') }}" class="btn btn-sm btn-outline">{{ __('Export CSV') }}</a>
-            <a href="{{ route('customers.import') }}" class="btn btn-sm btn-outline">{{ __('Import CSV') }}</a>
+            <a href="{{ route('customers.create') }}" class="btn btn-primary btn-sm gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                {{ __('Create Customer') }}
+            </a>
+            <a href="{{ route('customers.export') }}" class="btn btn-primary btn-sm gap-1.5">{{ __('Export CSV') }}</a>
+            <a href="{{ route('customers.import') }}" class="btn btn-primary btn-sm gap-1.5">{{ __('Import CSV') }}</a>
         </div>
     </div>
 
@@ -41,32 +46,14 @@
                     </span>
                 </div>
 
-                <form action="{{ route('customers.index') }}" method="GET" class="flex flex-wrap items-center gap-2">
-                    <div class="relative w-60 max-w-full [&_.input]:input-sm">
-                        <x-input type="text" name="name" value="{{ request('name') }}" placeholder="{{ __('Customer Name') }}" />
-                        <button type="submit" aria-label="{{ __('Search') }}" class="absolute inset-y-0 left-2 flex cursor-pointer items-center text-base-content/40 hover:text-base-content">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z" />
-                            </svg>
-                        </button>
-                    </div>
-
-                    <div class="relative w-44 max-w-full [&_.input]:input-sm">
-                        <x-input type="text" name="phone" value="{{ request('phone') }}" placeholder="{{ __('Phone number') }}" />
-                        <button type="submit" aria-label="{{ __('Search') }}" class="absolute inset-y-0 left-2 flex cursor-pointer items-center text-base-content/40 hover:text-base-content">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106a1.125 1.125 0 0 0-1.173.417l-.97 1.293a1.125 1.125 0 0 1-1.21.38 12.035 12.035 0 0 1-7.143-7.143 1.125 1.125 0 0 1 .38-1.21l1.293-.97a1.125 1.125 0 0 0 .417-1.173L6.963 3.102A1.125 1.125 0 0 0 5.872 2.25H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
-                            </svg>
-                        </button>
-                    </div>
-
-                    <select name="balance" class="select select-sm w-40" onchange="this.form.submit()">
+                <form action="{{ route('customers.index') }}" method="GET" class="flex flex-wrap items-center gap-2" dir="ltr">
+                    <select name="balance" class="select select-sm w-40" dir="rtl" onchange="this.form.submit()">
                         <option value="all" @selected($balanceFilter === 'all')>{{ __('All Customers') }}</option>
                         <option value="debt" @selected($balanceFilter === 'debt')>{{ __('Customers with debt') }}</option>
                         <option value="credit" @selected($balanceFilter === 'credit')>{{ __('Customers with credit') }}</option>
                     </select>
 
-                    <select name="group_id" class="select select-sm w-40" onchange="this.form.submit()">
+                    <select name="group_id" class="select select-sm w-40" dir="rtl" onchange="this.form.submit()">
                         <option value="all">{{ __('All Groups') }}</option>
                         @foreach ($groups as $g)
                             <option value="{{ $g->id }}" @selected(isset($groupId) && $groupId !== 'all' && (int) $groupId === $g->id)>
@@ -75,7 +62,30 @@
                         @endforeach
                     </select>
 
-                    <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
+                    <div class="relative w-44 max-w-full [&_.input]:input-sm" dir="rtl">
+                        <x-input type="text" name="name" value="{{ request('name') }}" placeholder="{{ __('Customer Name') }}" />
+                        <button type="submit" aria-label="{{ __('Search') }}" class="absolute inset-y-0 left-2 flex cursor-pointer items-center text-base-content/40 hover:text-base-content">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="relative w-44 max-w-full [&_.input]:input-sm" dir="rtl">
+                        <x-input type="text" name="phone" value="{{ request('phone') }}" placeholder="{{ __('Phone number') }}" />
+                        <button type="submit" aria-label="{{ __('Search') }}" class="absolute inset-y-0 left-2 flex cursor-pointer items-center text-base-content/40 hover:text-base-content">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106a1.125 1.125 0 0 0-1.173.417l-.97 1.293a1.125 1.125 0 0 1-1.21.38 12.035 12.035 0 0 1-7.143-7.143 1.125 1.125 0 0 1 .38-1.21l1.293-.97a1.125 1.125 0 0 0 .417-1.173L6.963 3.102A1.125 1.125 0 0 0 5.872 2.25H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <button type="submit" class="btn btn-sm btn-primary gap-1.5" dir="rtl">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z" />
+                        </svg>
+                        {{ __('Search') }}
+                    </button>
                 </form>
             </div>
 

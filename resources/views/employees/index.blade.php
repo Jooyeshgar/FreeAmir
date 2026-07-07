@@ -8,7 +8,26 @@
             <p class="text-sm text-base-content/50 mt-0.5">{{ __('Manage your organization\'s team members') }}</p>
         </div>
 
-        <div class="flex flex-wrap items-center justify-start gap-2">
+        <div class="flex flex-wrap items-center justify-start gap-2" dir="ltr">
+            @can('hr.employees.create')
+                <a href="{{ route('hr.employees.create') }}" class="btn btn-primary btn-sm gap-1.5" dir="rtl">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                    {{ __('Add Employee') }}
+                </a>
+            @endcan
+
+            @can('hr.employees.export')
+                <a href="{{ route('hr.employees.export', request()->only(['search', 'is_active', 'work_site_id', 'contract_framework_id'])) }}"
+                    class="btn btn-sm btn-outline gap-1.5" dir="rtl">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14" />
+                    </svg>
+                    {{ __('CSV Export') }}
+                </a>
+            @endcan
+
             <form action="{{ route('hr.employees.index') }}" method="GET" class="flex flex-wrap items-center gap-2">
                 @if (request()->filled('search'))
                     <x-input name="search" value="{{ request('search') }}" hidden />
@@ -33,15 +52,6 @@
                     @endforeach
                 </select>
             </form>
-            @can('hr.employees.export')
-                <a href="{{ route('hr.employees.export', request()->only(['search', 'is_active', 'work_site_id', 'contract_framework_id'])) }}"
-                    class="btn btn-sm btn-outline">
-                    {{ __('CSV Export') }}
-                </a>
-            @endcan
-            @can('hr.employees.create')
-                <a href="{{ route('hr.employees.create') }}" class="btn btn-primary btn-sm">{{ __('Add Employee') }}</a>
-            @endcan
         </div>
     </div>
 
