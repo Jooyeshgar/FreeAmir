@@ -4,17 +4,15 @@ namespace Database\Seeders;
 
 use App\Models\Config;
 use App\Models\Scopes\FiscalYearScope;
+use App\Models\Subject;
 use Illuminate\Database\Seeder;
+use RuntimeException;
 
 class ConfigSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     *
-     * @return void
-     */
-    public function run()
+    public function run(): void
     {
+        $companyId = (int) getActiveCompany();
         $configs = [
             ['type' => 3, 'category' => 1, 'key' => 'wage', 'value' => '10', 'desc' => 'حقوق پرسنل', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'cust_subject', 'value' => '4', 'desc' => 'مشتریان', 'company_id' => 1],
@@ -35,6 +33,21 @@ class ConfigSeeder extends Seeder
             ['type' => 3, 'category' => 1, 'key' => 'service_revenue', 'value' => '103', 'desc' => 'درآمد خدمات', 'company_id' => 1],
         ];
 
+        $subjectCodes = $this->subjectCodes();
+        $subjects = Subject::withoutGlobalScopes()->where('company_id', $companyId)->whereIn('code', array_values($subjectCodes))->get()->keyBy('code');
+
+        foreach ($configs as &$config) {
+            $subject = $subjects->get($subjectCodes[$config['key']]);
+
+            if (! $subject) {
+                throw new RuntimeException("Missing seeded subject for config [{$config['key']}].");
+            }
+
+            $config['company_id'] = $companyId;
+            $config['value'] = (string) $subject->id;
+        }
+        unset($config);
+
         Config::upsert($configs, ['key', 'company_id'], ['type', 'category', 'value', 'desc']);
         foreach ($configs as $config) {
             config(['amir.'.$config['key'] => $config['value']]);
@@ -46,5 +59,31 @@ class ConfigSeeder extends Seeder
                 ['value' => null, 'type' => 3, 'category' => 1, 'desc' => __($key)],
             );
         }
+    }
+
+    /**
+     * Map configuration keys to their seeded accounting subject codes.
+     */
+    private function subjectCodes(): array
+    {
+        return [
+            'wage' => '040001',
+            'cust_subject' => '012',
+            'cash_book' => '011',
+            'cost' => '040',
+            'sundry_cost' => '040013',
+            'bank' => '010',
+            'income' => '050',
+            'sell_discount' => '066002',
+            'buy_discount' => '066001',
+            'sell_vat' => '023001',
+            'buy_vat' => '018001',
+            'inventory' => '019',
+            'sales_returns' => '061002',
+            'cost_of_goods_sold' => '070001',
+            'cogs_service' => '070002',
+            'sales_revenue' => '050003',
+            'service_revenue' => '050002',
+        ];
     }
 }

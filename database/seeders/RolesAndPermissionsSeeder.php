@@ -265,6 +265,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
     private function seedDemoUsersAndEmployees(): void
     {
+        $companyId = (int) getActiveCompany();
         $users = [
             'super-admin' => [
                 'roles' => ['Super-Admin', __('Employee')],
@@ -304,9 +305,8 @@ class RolesAndPermissionsSeeder extends Seeder
         ];
 
         $workSite = WorkSite::firstOrCreate(
-            ['code' => 'DEMO-WS-1'],
+            ['company_id' => $companyId, 'code' => 'DEMO-WS-1'],
             [
-                'company_id' => 1,
                 'name' => 'کارگاه ۱',
                 'is_active' => true,
             ]
@@ -314,7 +314,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $workShift = WorkShift::firstOrCreate(
             [
-                'company_id' => 1,
+                'company_id' => $companyId,
                 'name' => 'شیفت کاری',
             ],
             [
@@ -327,8 +327,8 @@ class RolesAndPermissionsSeeder extends Seeder
             ]
         );
 
-        $orgCharts = OrgChart::withoutGlobalScopes()->where('company_id', 1)->get()->keyBy('title');
-        $orgUnits = OrganizationUnit::withoutGlobalScopes()->where('company_id', 1)->get()->keyBy('name');
+        $orgCharts = OrgChart::withoutGlobalScopes()->where('company_id', $companyId)->get()->keyBy('title');
+        $orgUnits = OrganizationUnit::withoutGlobalScopes()->where('company_id', $companyId)->get()->keyBy('name');
 
         foreach ($users as $name => $config) {
             $email = $name === 'super-admin' ? 'admin@example.com' : $name.'@example.com';
@@ -340,7 +340,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'password' => bcrypt('password'),
                 ]
             );
-            $user->companies()->sync([1]);
+            $user->companies()->syncWithoutDetaching([$companyId]);
             $user->assignRole($config['roles']);
 
             $baseCode = 'EMP-'.$user->id;
@@ -356,12 +356,12 @@ class RolesAndPermissionsSeeder extends Seeder
             }
 
             Employee::withoutGlobalScopes()->updateOrCreate(
-                ['user_id' => $user->id],
+                ['user_id' => $user->id, 'company_id' => $companyId],
                 [
                     'first_name' => __($name),
                     'last_name' => __('Demo'),
                     'user_id' => $user->id,
-                    'company_id' => 1,
+                    'company_id' => $companyId,
                     'code' => $employeeCode,
                     'work_site_id' => $workSite->id,
                     'work_shift_id' => $workShift->id,
