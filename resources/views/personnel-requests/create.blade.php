@@ -17,7 +17,7 @@
                     
                     <x-date-picker name="request_date" id="request_date" :title="__('Date')" :value="old('request_date')" :placeholder="__('Date')" required />
                     
-                    <div class="contents" x-show="!['LEAVE_DAILY', 'MISSION_DAILY'].includes(requestType)">
+                    <div class="contents" x-show="!['LEAVE_DAILY', 'LEAVE_WITHOUT_PAY', 'MISSION_DAILY'].includes(requestType)">
                         <x-input name="start_time" id="start_time" type="text" :title="__('Start Time')" :value="old('start_time')" placeholder="{{ __('HH:MM — e.g. 08:30') }}" />
                         <x-input name="end_time" id="end_time" type="text" :title="__('End Time')" :value="old('end_time')" placeholder="{{ __('HH:MM — e.g. 17:00') }}" />
                     </div>

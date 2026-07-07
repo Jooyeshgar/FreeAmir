@@ -8,6 +8,7 @@ enum PersonnelRequestType: string
     case LEAVE_DAILY = 'LEAVE_DAILY';
     case SICK_LEAVE = 'SICK_LEAVE';
     case LEAVE_WITHOUT_PAY = 'LEAVE_WITHOUT_PAY';
+    case LEAVE_WITHOUT_PAY_HOURLY = 'LEAVE_WITHOUT_PAY_HOURLY';
     case MISSION_HOURLY = 'MISSION_HOURLY';
     case MISSION_DAILY = 'MISSION_DAILY';
     case OVERTIME_ORDER = 'OVERTIME_ORDER';
@@ -20,7 +21,8 @@ enum PersonnelRequestType: string
             self::LEAVE_HOURLY => __('Hourly Leave'),
             self::LEAVE_DAILY => __('Daily Leave'),
             self::SICK_LEAVE => __('Sick Leave'),
-            self::LEAVE_WITHOUT_PAY => __('Leave Without Pay'),
+            self::LEAVE_WITHOUT_PAY => __('Daily Leave Without Pay'),
+            self::LEAVE_WITHOUT_PAY_HOURLY => __('Hourly Leave Without Pay'),
             self::MISSION_HOURLY => __('Hourly Mission'),
             self::MISSION_DAILY => __('Daily Mission'),
             self::OVERTIME_ORDER => __('Overtime Order'),
@@ -37,6 +39,7 @@ enum PersonnelRequestType: string
             self::LEAVE_DAILY,
             self::SICK_LEAVE,
             self::LEAVE_WITHOUT_PAY,
+            self::LEAVE_WITHOUT_PAY_HOURLY,
         ];
     }
 
