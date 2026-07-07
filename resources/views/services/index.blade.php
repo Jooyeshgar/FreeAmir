@@ -9,14 +9,9 @@
         </div>
 
         <div class="flex flex-wrap items-center justify-start gap-2">
-            <a href="{{ route('services.create') }}" class="btn btn-primary btn-sm gap-1.5">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-                {{ __('Create service') }}
-            </a>
-            <a href="{{ route('services.export') }}" class="btn btn-primary btn-sm gap-1.5">{{ __('Export CSV') }}</a>
-            <a href="{{ route('services.import') }}" class="btn btn-primary btn-sm gap-1.5">{{ __('Import CSV') }}</a>
+            <a href="{{ route('services.create') }}" class="btn btn-primary btn-sm">{{ __('Create service') }}</a>
+            <a href="{{ route('services.export') }}" class="btn btn-outline btn-sm">{{ __('Export CSV') }}</a>
+            <a href="{{ route('services.import') }}" class="btn btn-outline btn-sm">{{ __('Import CSV') }}</a>
         </div>
     </div>
 
@@ -32,21 +27,16 @@
                     </span>
                 </div>
 
-                <form action="{{ route('services.index') }}" method="GET" class="flex flex-wrap items-center gap-2" dir="ltr">
-                    <div class="relative w-44 max-w-full [&_.input]:input-sm" dir="rtl">
+                <form action="{{ route('services.index') }}" method="GET" class="flex flex-wrap items-center gap-2">
+                    <div class="relative w-44 max-w-full [&_.input]:input-sm">
                         <x-input type="text" name="name" value="{{ request('name') }}" placeholder="{{ __('Service Name') }}" />
                     </div>
 
-                    <div class="relative w-44 max-w-full [&_.input]:input-sm" dir="rtl">
+                    <div class="relative w-44 max-w-full [&_.input]:input-sm">
                         <x-input type="text" name="group_name" value="{{ request('group_name') }}" placeholder="{{ __('Service Group Name') }}" />
                     </div>
 
-                    <button type="submit" class="btn btn-sm btn-primary gap-1.5" dir="rtl">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z" />
-                        </svg>
-                        {{ __('Search') }}
-                    </button>
+                    <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
                 </form>
             </div>
 

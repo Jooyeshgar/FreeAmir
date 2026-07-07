@@ -27,72 +27,63 @@
             <form action="{{ route('salary.payrolls.index') }}" method="GET"
                 class="mt-4 rounded-box border border-base-300 bg-base-200/40 p-4 flex flex-wrap items-end gap-3 mb-4">
 
-                <div class="w-1/5">
-                    <label class="w-full">
-                        <div class="label">
-                            <span>{{ __('Employee') }}</span>
-                        </div>
-                        <select name="employee_id" class="select select-sm">
-                            <option value="">{{ __('All Employees') }}</option>
-                            @foreach ($employees as $employee)
-                                <option value="{{ $employee->id }}" {{ request('employee_id') == $employee->id ? 'selected' : '' }}>
-                                    {{ $employee->last_name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </label>
+                <div class="w-60">
+                    <div class="label">
+                        <span>{{ __('Employee') }}</span>
+                    </div>
+                    <select name="employee_id" class="select select-sm">
+                        <option value="">{{ __('All Employees') }}</option>
+                        @foreach ($employees as $employee)
+                            <option value="{{ $employee->id }}" {{ request('employee_id') == $employee->id ? 'selected' : '' }}>
+                                {{ $employee->last_name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="w-30">
+                    <div class="label">
+                        <span>{{ __('Month') }}</span>
+                    </div>
+                    <select name="month" class="select select-sm">
+                        <option value="">{{ __('All Months') }}</option>
+                        @foreach (\App\Models\MonthlyAttendance::MONTH_NAMES as $monthIndex => $monthName)
+                            <option value="{{ $monthIndex }}" {{ request('month') == $monthIndex ? 'selected' : '' }}>
+                                {{ $monthName }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
 
                 <div class="w-36">
-                    <label class="w-full">
-                        <div class="label">
-                            <span>{{ __('Month') }}</span>
-                        </div>
-                        <select name="month" class="select select-sm">
-                            <option value="">{{ __('All Months') }}</option>
-                            @foreach (\App\Models\MonthlyAttendance::MONTH_NAMES as $monthIndex => $monthName)
-                                <option value="{{ $monthIndex }}" {{ request('month') == $monthIndex ? 'selected' : '' }}>
-                                    {{ $monthName }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </label>
+                    <div class="label">
+                        <span>{{ __('Status') }}</span>
+                    </div>
+                    <select name="status" class="select select-sm">
+                        <option value="">{{ __('All Statuses') }}</option>
+                        @foreach (\App\Models\Payroll::statusLabels() as $status => $label)
+                            <option value="{{ $status }}" {{ request('status') === $status ? 'selected' : '' }}>
+                                {{ $label }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
 
-                <div class="w-56">
-                    <label class="w-full">
-                        <div class="label">
-                            <span>{{ __('Status') }}</span>
-                        </div>
-                        <select name="status" class="select select-sm">
-                            <option value="">{{ __('All Statuses') }}</option>
-                            @foreach (\App\Models\Payroll::statusLabels() as $status => $label)
-                                <option value="{{ $status }}" {{ request('status') === $status ? 'selected' : '' }}>
-                                    {{ $label }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </label>
+                <div class="w-40">
+                    <div class="label">
+                        <span>{{ __('Organization Unit') }}</span>
+                    </div>
+                    <select name="organization_unit_id" class="select select-sm">
+                        <option value="">{{ __('All Units') }}</option>
+                        @foreach ($organizationUnits as $unit)
+                            <option value="{{ $unit->id }}" {{ request('organization_unit_id') == $unit->id ? 'selected' : '' }}>
+                                {{ $unit->name }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
-
-                <div class="w-56">
-                    <label class="w-full">
-                        <div class="label">
-                            <span>{{ __('Organization Unit') }}</span>
-                        </div>
-                        <select name="organization_unit_id" class="select select-sm">
-                            <option value="">{{ __('All Units') }}</option>
-                            @foreach ($organizationUnits as $unit)
-                                <option value="{{ $unit->id }}" {{ request('organization_unit_id') == $unit->id ? 'selected' : '' }}>
-                                    {{ $unit->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </label>
-                </div>
-
                 <div>
-                    <button type="submit" class="btn btn-primary btn-sm">{{ __('Filter') }}</button>
+                    <button type="submit" class="btn btn-sm btn-neutral">{{ __('Filter') }}</button>
                     <a href="{{ route('salary.payrolls.index') }}" class="btn btn-ghost btn-sm">{{ __('Reset') }}</a>
                 </div>
             </form>

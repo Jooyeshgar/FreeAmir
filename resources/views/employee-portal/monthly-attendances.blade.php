@@ -7,28 +7,14 @@
             {{-- Filter bar --}}
             <form action="{{ route('employee-portal.monthly-attendances') }}" method="GET" class="flex flex-wrap items-end gap-3 mb-2">
                 <div class="w-36">
-                    <label class="fieldset w-full">
-                        <div class="label">
-                            <span>{{ __('Month') }}</span>
-                        </div>
-                        <select name="month" class="select  select-sm">
-                            <option value="">{{ __('All Months') }}</option>
-                            @foreach (\App\Models\MonthlyAttendance::MONTH_NAMES as $num => $name)
-                                <option value="{{ $num }}" {{ request('month') == $num ? 'selected' : '' }}>
-                                    {{ $name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </label>
-                </div>
-
-                <div class="flex gap-2 items-end pb-1">
-                    <button type="submit" class="btn btn-sm btn-primary">
-                        {{ __('Search') }}
-                    </button>
-                    <a href="{{ route('employee-portal.monthly-attendances') }}" class="btn btn-sm btn-ghost">
-                        {{ __('Reset') }}
-                    </a>
+                    <select name="month" class="select select-sm" onchange="this.form.submit()">
+                        <option value="">{{ __('All Months') }}</option>
+                        @foreach (\App\Models\MonthlyAttendance::MONTH_NAMES as $num => $name)
+                            <option value="{{ $num }}" {{ request('month') == $num ? 'selected' : '' }}>
+                                {{ $name }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
             </form>
 

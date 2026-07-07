@@ -3,6 +3,15 @@
 
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
+            <form action="{{ route('salary.work-site-contracts.index') }}" method="GET" class="flex gap-3 w-full">
+                <div class="w-60 [&_.input]:input-sm">
+                    <x-input type="text" name="search" value="{{ $search }}" placeholder="{{ __('Search by name or code') }}" />
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
+                </div>
+            </form>
+
             <div class="card-actions">
                 @can('salary.work-site-contracts.create')
                     <a href="{{ route('salary.work-site-contracts.create') }}" class="btn btn-primary">
@@ -10,19 +19,6 @@
                     </a>
                 @endcan
             </div>
-
-            <form action="{{ route('salary.work-site-contracts.index') }}" method="GET">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full md:w-2/5">
-                    <div class="relative">
-                        <x-input type="text" name="search" value="{{ $search }}" placeholder="{{ __('Search by name or code') }}" />
-                    </div>
-                    <div class="flex items-center">
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 text-sm rounded-lg shadow transition-all">
-                            {{ __('Search') }}
-                        </button>
-                    </div>
-                </div>
-            </form>
 
             <table class="table w-full mt-4 overflow-auto">
                 <thead>

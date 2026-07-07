@@ -5,11 +5,11 @@
         <div class="card-body">
             <div class="flex items-center justify-between gap-3">
                 <form action="{{ route('salary.salary-decrees.index') }}" method="GET" class="flex items-center gap-2 flex-wrap w-3/4">
-                    <div>
+                    <div class="w-60 [&_.input]:input-sm">
                         <x-input type="text" name="search" value="{{ request('search') }}" placeholder="{{ __('Filter by name') }}" />
-                    </div>    
+                    </div>
 
-                    <select name="employee_id" class="select px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                    <select name="employee_id" class="select select-sm w-60">
                         <option value="">— {{ __('All Employees') }} —</option>
                         @foreach ($employees as $employee)
                             <option value="{{ $employee->id }}" {{ request('employee_id') == $employee->id ? 'selected' : '' }}>
@@ -18,9 +18,7 @@
                         @endforeach
                     </select>
 
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 text-sm rounded-lg shadow transition-all">
-                        {{ __('Search') }}
-                    </button>
+                    <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
                 </form>
 
                 @can('salary.salary-decrees.create')
