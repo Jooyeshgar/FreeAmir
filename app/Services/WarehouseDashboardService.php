@@ -563,6 +563,7 @@ class WarehouseDashboardService
         $name = trim((string) ($rawFilters['name'] ?? ''));
         $groupName = trim((string) ($rawFilters['group_name'] ?? ''));
         $minQuantity = is_numeric($rawFilters['min_quantity'] ?? null) ? (float) $rawFilters['min_quantity'] : null;
+        $needOrder = filter_var($rawFilters['need_order'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $columns = $this->normalizeColumns($rawFilters);
 
         $products = Product::query()->orderBy('code')->when($name !== '', fn (Builder $q) => $q->where('name', 'like', '%'.$name.'%'))
@@ -571,6 +572,7 @@ class WarehouseDashboardService
                 fn (Builder $g) => $g->where('name', 'like', '%'.$groupName.'%')
             ))
             ->when($minQuantity !== null, fn (Builder $q) => $q->where('quantity', '>=', $minQuantity))
+            ->when($needOrder, fn (Builder $q) => $q->where('quantity_warning', '>', 0)->whereColumn('quantity', '<=', 'quantity_warning'))
             ->with(['productGroup:id,name', 'incomeSubject:id', 'cogsSubject:id', 'inventorySubject:id', 'salesReturnsSubject:id'])
             ->get();
 
@@ -608,7 +610,7 @@ class WarehouseDashboardService
             'columns' => $columns,
             'columnLabels' => $this->columnLabels(),
             'rows' => $rows,
-            'filterSummary' => $this->reportFilterSummary($name, $groupName, $minQuantity, $fyStart, $now),
+            'filterSummary' => $this->reportFilterSummary($name, $groupName, $minQuantity, $needOrder, $fyStart, $now),
             'company' => Company::find(getActiveCompany()),
             'logo' => $this->reportLogo(),
             'generatedAtDate' => toEnglish(jdate('Y/m/d', $now->timestamp)),
@@ -795,7 +797,7 @@ class WarehouseDashboardService
             ->groupBy('subject_id')->pluck('total', 'subject_id')->map(fn ($value) => (float) $value)->all();
     }
 
-    private function reportFilterSummary(string $name, string $groupName, ?float $minQuantity, Carbon $from, Carbon $to): array
+    private function reportFilterSummary(string $name, string $groupName, ?float $minQuantity, bool $needOrder, Carbon $from, Carbon $to): array
     {
         $fromJ = toEnglish(jdate('Y/m/d', $from->timestamp));
         $toJ = toEnglish(jdate('Y/m/d', $to->timestamp));
@@ -807,6 +809,10 @@ class WarehouseDashboardService
 
         if ($minQuantity !== null) {
             $summary[] = ['label' => __('Min quantity'), 'value' => formatNumber($minQuantity)];
+        }
+
+        if ($needOrder) {
+            $summary[] = ['label' => __('Need Order'), 'value' => __('Yes')];
         }
 
         $summary[] = ['label' => __('Period'), 'value' => localizeNumber($fromJ).' - '.localizeNumber($toJ)];

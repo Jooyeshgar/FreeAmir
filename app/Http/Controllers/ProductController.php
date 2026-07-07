@@ -29,6 +29,7 @@ class ProductController extends Controller
             'name' => ['nullable', 'string'],
             'group_name' => ['nullable', 'string'],
             'min_quantity' => ['nullable', 'numeric'],
+            'need_order' => ['nullable', 'boolean'],
             'cols_submitted' => ['nullable'],
             'columns' => ['nullable', 'array'],
             'columns.*' => ['string'],
@@ -73,9 +74,14 @@ class ProductController extends Controller
             $query->where('quantity', '>=', (float) request('min_quantity'));
         }
 
+        if (request()->boolean('need_order')) {
+            $query->where('quantity_warning', '>', 0)->whereColumn('quantity', '<=', 'quantity_warning');
+        }
+
         $products = $query->paginate(12)->withQueryString();
 
         $products->transform(function ($product) {
+            $product->needs_order = (float) ($product->quantity_warning ?? 0) > 0 && (float) $product->quantity <= (float) $product->quantity_warning;
             $product->unapprovedQuantity = $this->productService->unapprovedQuantity($product);
             $product->totalSellCount = $this->productService->totalSellCount($product);
             if (auth()->user()->can('reports.journal')) {

@@ -140,7 +140,7 @@ return [
         'present_days' => 'روزهای حضور',
         'price' => 'قیمت',
         'quantity' => 'موجودی',
-        'quantity_warning' => 'حد هشدار موجودی',
+        'quantity_warning' => 'نقطه سفارش',
         'rating' => 'امتیاز',
         'reason' => 'دلیل',
         'rep_via_email' => 'ارسال گزارش از طریق ایمیل',
