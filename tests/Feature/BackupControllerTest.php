@@ -18,6 +18,7 @@ use App\Models\Scopes\FiscalYearScope;
 use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
+use App\Services\DocumentFileService;
 use App\Services\DocumentService;
 use App\Services\FiscalYearService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -25,6 +26,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -84,12 +86,54 @@ class BackupControllerTest extends TestCase
 
         $currentYearCompany = Company::factory()->create(['fiscal_year' => $currentYear]);
         $otherCompany = Company::factory()->create(['fiscal_year' => $currentYear - 1]);
+        $currentYearCompany->users()->syncWithoutDetaching([$this->user->id]);
+        $otherCompany->users()->syncWithoutDetaching([$this->user->id]);
 
         $response = $this->get(route('backups.create'));
 
         $response->assertOk();
         $response->assertSee("value=\"{$currentYearCompany->id}\" selected", false);
         $response->assertDontSee("value=\"{$otherCompany->id}\" selected", false);
+    }
+
+    public function test_create_lists_only_companies_accessible_to_user(): void
+    {
+        $accessibleCompany = Company::factory()->create(['name' => 'Accessible Company']);
+        $inaccessibleCompany = Company::factory()->create(['name' => 'Inaccessible Company']);
+        $accessibleCompany->users()->syncWithoutDetaching([$this->user->id]);
+        $inaccessibleCompany->users()->detach($this->user->id);
+
+        $response = $this->get(route('backups.create'));
+
+        $response->assertOk();
+        $response->assertSee('Accessible Company');
+        $response->assertDontSee('Inaccessible Company');
+    }
+
+    public function test_export_rejects_company_not_accessible_to_user(): void
+    {
+        $inaccessibleCompany = Company::factory()->create();
+        $inaccessibleCompany->users()->detach($this->user->id);
+
+        $response = $this->post(route('backups.export'), [
+            'source_id' => $inaccessibleCompany->id,
+            'tables_to_backup' => [FiscalYearSection::SUBJECTS->value],
+        ]);
+
+        $response->assertSessionHasErrors('source_id');
+    }
+
+    public function test_document_files_size_rejects_company_not_accessible_to_user(): void
+    {
+        $inaccessibleCompany = Company::factory()->create();
+        $inaccessibleCompany->users()->detach($this->user->id);
+
+        $response = $this->getJson(route('backups.document-files-size', [
+            'source_id' => $inaccessibleCompany->id,
+        ]));
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors('source_id');
     }
 
     public function test_export_downloads_zip_with_json_backup_contents(): void
@@ -101,7 +145,7 @@ class BackupControllerTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertStringContainsString('application/zip', $response->headers->get('content-type'));
-        $this->assertInstanceOf(\Symfony\Component\HttpFoundation\BinaryFileResponse::class, $response->baseResponse);
+        $this->assertInstanceOf(BinaryFileResponse::class, $response->baseResponse);
 
         $zipFile = $response->baseResponse->getFile();
         $this->assertNotNull($zipFile);
@@ -228,6 +272,7 @@ class BackupControllerTest extends TestCase
     public function test_export_filename_replaces_spaces_with_hyphens(): void
     {
         $company = Company::factory()->create(['name' => 'My Test Company']);
+        $company->users()->syncWithoutDetaching([$this->user->id]);
 
         $response = $this->post(route('backups.export'), [
             'source_id' => $company->id,
@@ -807,7 +852,7 @@ class BackupControllerTest extends TestCase
 
         Storage::disk('public')->assertExists($path);
 
-        (new \App\Services\DocumentFileService)->delete($docFile);
+        (new DocumentFileService)->delete($docFile);
 
         Storage::disk('public')->assertMissing($path);
         $this->assertDatabaseMissing('document_files', ['id' => $docFile->id]);

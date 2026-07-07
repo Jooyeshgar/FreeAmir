@@ -7,13 +7,14 @@ use App\Models\Company;
 use App\Services\FiscalYearService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use ZipArchive;
 
 class BackupController extends Controller
 {
     public function create()
     {
-        $previousYears = Company::all();
+        $previousYears = auth()->user()->companies()->orderByDesc('fiscal_year')->get();
         $currentYear = toEnglish(jdate('Y'));
 
         return view('backups.create', compact('previousYears', 'currentYear'));
@@ -21,7 +22,12 @@ class BackupController extends Controller
 
     public function documentFilesSize(Request $request): JsonResponse
     {
-        $validated = $request->validate(['source_id' => 'required|exists:companies,id']);
+        $validated = $request->validate([
+            'source_id' => [
+                'required',
+                Rule::exists('company_user', 'company_id')->where('user_id', auth()->user()->id),
+            ],
+        ]);
 
         $bytes = FiscalYearService::documentFilesSizeBytes($validated['source_id']);
 
@@ -31,7 +37,10 @@ class BackupController extends Controller
     public function export(Request $request)
     {
         $validated = $request->validate([
-            'source_id' => 'required|exists:companies,id',
+            'source_id' => [
+                'required',
+                Rule::exists('company_user', 'company_id')->where('user_id', auth()->user()->id),
+            ],
             'tables_to_backup' => 'required|array',
             'tables_to_backup.*' => 'string|in:'.implode(',', array_map(fn ($case) => $case->value, FiscalYearSection::cases())),
         ]);
