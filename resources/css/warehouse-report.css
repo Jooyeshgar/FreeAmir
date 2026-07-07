@@ -53,6 +53,14 @@ table.report {
     table-layout: fixed;
 }
 
+li:nth-child(odd) {
+    background-color: #ccc;
+}
+
+tr:nth-child(even) {
+    background-color: #ccc;
+}
+
 table.report thead th {
     background-color: #334155;
     color: #ffffff;
@@ -64,7 +72,6 @@ table.report thead th {
 }
 
 table.report tbody td {
-    border: 0.4pt solid #727f8d;
     padding: 2pt;
     font-size: 8pt;
     text-align: center;
