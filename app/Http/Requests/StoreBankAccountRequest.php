@@ -61,7 +61,7 @@ class StoreBankAccountRequest extends FormRequest
                     $iban = substr($value, 4).substr($value, 0, 4); // Move first 4 chars to the end
                     $iban = preg_replace_callback('/[A-Z]/', fn ($match) => ord($match[0]) - 55, $iban); // Replace letters with numbers (A=10 ... Z=35)
 
-                    if (bcmod($iban, '97') != 1) {
+                    if ($this->mod97($iban) !== 1) {
                         $fail(__('Invalid IBAN.'));
                     }
                 },
@@ -75,5 +75,16 @@ class StoreBankAccountRequest extends FormRequest
             'bank_web_page' => ['nullable', 'url', 'max:200'],
             'desc' => ['nullable', 'string', 'max:150'],
         ];
+    }
+
+    private function mod97(string $number): int
+    {
+        $remainder = 0;
+
+        foreach (str_split($number) as $digit) {
+            $remainder = ($remainder * 10 + (int) $digit) % 97;
+        }
+
+        return $remainder;
     }
 }
