@@ -7,9 +7,7 @@ use Illuminate\Http\Request;
 
 class BankController extends Controller
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     public function index()
     {
@@ -29,6 +27,7 @@ class BankController extends Controller
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
         ]);
 
+        $validatedData['company_id'] = getActiveCompany();
         Models\Bank::create($validatedData);
 
         return redirect()->route('banks.index')->with('success', __('Bank created successfully.'));
