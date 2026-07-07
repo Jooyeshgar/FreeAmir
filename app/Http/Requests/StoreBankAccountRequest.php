@@ -27,7 +27,7 @@ class StoreBankAccountRequest extends FormRequest
     {
         return [
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
-            'number' => 'nullable|string|max:40',
+            'number' => ['required', 'string', 'max:40', Rule::unique('bank_accounts', 'number')->where('company_id', getActiveCompany())->ignore($this->bank_account)],
             'iban' => ['nullable', Rule::unique('bank_accounts', 'iban')->ignore($this->bank_account),
                 function ($attribute, $value, $fail) {
                     $value = strtoupper(str_replace(' ', '', trim($value)));

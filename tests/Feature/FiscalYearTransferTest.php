@@ -222,14 +222,16 @@ class FiscalYearTransferTest extends TestCase
         $cash = $this->makeSubject($this->source, '101', 'Cash');
         $bank = $this->makeSubject($this->source, '102', 'Bank');
         $document = $this->makeDocument($this->source, [[$cash, 1000], [$bank, -1000]]);
+        $this->makeDocument($this->target, [], 24);
 
         $result = FiscalYearTransferService::transferDocument($document, $this->target->id, $this->user);
 
         $this->assertTrue($result['success']);
 
-        $newDoc = Document::withoutGlobalScopes()->where('company_id', $this->target->id)->where('number', $document->number)->first();
+        $newDoc = Document::withoutGlobalScopes()->where('company_id', $this->target->id)->where('number', 25)->first();
 
         $this->assertNotNull($newDoc);
+        $this->assertNotEquals($document->number, $newDoc->number);
         $this->assertNull($newDoc->documentable_type);
         $this->assertSame('Document', $newDoc->title);
         $this->assertSame($this->user->id, $newDoc->creator_id);
@@ -308,7 +310,8 @@ class FiscalYearTransferTest extends TestCase
 
         $newInvoice = $targetInvoices->first();
         $this->assertSame($this->target->id, (int) $newInvoice->company_id);
-        $this->assertEquals($invoice->number, $newInvoice->number);
+        $this->assertSame(1, (int) $newInvoice->number);
+        $this->assertNotEquals($invoice->number, $newInvoice->number);
         $this->assertSame(InvoiceType::BUY, $newInvoice->invoice_type);
 
         $newItem = InvoiceItem::where('invoice_id', $newInvoice->id)->first();
@@ -323,6 +326,28 @@ class FiscalYearTransferTest extends TestCase
         $this->assertSame($newInvoice->id, $newDoc->documentable_id);
 
         $this->assertSame($this->source->id, (int) $invoice->fresh()->company_id);
+    }
+
+    public function test_invoice_transfer_uses_the_next_target_number_for_the_same_invoice_type(): void
+    {
+        $customer = $this->makeCustomer($this->source, 'ACME');
+        $product = $this->makeProduct($this->source, 'Widget', 'P1');
+        $invoice = $this->makeInvoice($this->source, ['customer_id' => $customer->id, 'invoice_type' => InvoiceType::BUY, 'amount' => 100]);
+        $this->addProductItem($invoice, $product);
+
+        $targetCustomer = $this->makeCustomer($this->target, 'ACME');
+        $this->makeProduct($this->target, 'Widget', 'P1');
+        $this->makeInvoice($this->target, ['customer_id' => $targetCustomer->id, 'invoice_type' => InvoiceType::BUY, 'number' => 37]);
+        $this->makeInvoice($this->target, ['customer_id' => $targetCustomer->id, 'invoice_type' => InvoiceType::SELL, 'number' => 99]);
+
+        $result = FiscalYearTransferService::transferInvoice($invoice, $this->target->id, $this->user);
+
+        $this->assertTrue($result['success'], json_encode($result));
+
+        $newInvoice = Invoice::withoutGlobalScopes()->where('company_id', $this->target->id)->where('invoice_type', InvoiceType::BUY)->where('number', 38)->first();
+
+        $this->assertNotNull($newInvoice);
+        $this->assertNotEquals($invoice->number, $newInvoice->number);
     }
 
     public function test_invoice_transfer_remaps_service_items(): void

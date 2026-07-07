@@ -74,11 +74,12 @@
                                     <a href="{{ route('subjects.edit', $subject) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                 @endif
 
-                                @if ($subject->subjectable || $subject->hasChildren())
+                                @if ($subject->subjectable || $subject->children_count > 0 || $subject->transactions_count > 0)
                                     @php
                                         $reasons = [];
                                         if ($subject->subjectable) $reasons[] = __('Cannot delete subject with relationships');
-                                        if ($subject->hasChildren()) $reasons[] = __('Cannot delete subject with children');
+                                        if ($subject->children_count > 0) $reasons[] = __('Cannot delete subject with children');
+                                        if ($subject->transactions_count > 0) $reasons[] = __('Cannot delete subject with transactions');
                                     @endphp
                                     <span class="tooltip tooltip-left" data-tip="{{ implode(' | ', $reasons) }}">
                                         <button class="btn btn-sm btn-error" disabled>{{ __('Delete') }}</button>

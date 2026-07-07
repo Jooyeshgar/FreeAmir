@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
 use App\Models\AncillaryCostItem;
 use App\Models\Customer;
@@ -119,7 +120,7 @@ class FiscalYearTransferService
     private static function _createInvoiceInTarget(Invoice $invoice, int $targetCompanyId, User $user, array $validation, ?int $returnedInvoiceId = null): Invoice
     {
         $newInvoice = new Invoice;
-        $newInvoice->number = $invoice->number;
+        $newInvoice->number = self::_nextInvoiceNumber($targetCompanyId, $invoice->invoice_type);
         $newInvoice->date = $invoice->date;
         $newInvoice->ship_date = $invoice->ship_date;
         $newInvoice->ship_via = $invoice->ship_via;
@@ -215,7 +216,7 @@ class FiscalYearTransferService
 
         $newDoc = new Document;
         $newDoc->title = $document->title;
-        $newDoc->number = $document->number;
+        $newDoc->number = self::_nextDocumentNumber($targetCompanyId);
         $newDoc->date = $document->date;
         $newDoc->creator_id = $user->id;
         $newDoc->approver_id = $document->approver_id;
@@ -242,6 +243,25 @@ class FiscalYearTransferService
         return $newDoc;
     }
 
+    private static function _nextDocumentNumber(int $targetCompanyId): int
+    {
+        $maxNumber = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $targetCompanyId)->max('number');
+
+        return ((int) floor((float) ($maxNumber ?? 0))) + 1;
+    }
+
+    private static function _nextInvoiceNumber(int $targetCompanyId, mixed $invoiceType): int
+    {
+        $maxNumber = Invoice::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $targetCompanyId)->where('invoice_type', self::_invoiceTypeValue($invoiceType))->max('number');
+
+        return ((int) floor((float) ($maxNumber ?? 0))) + 1;
+    }
+
+    private static function _invoiceTypeValue(mixed $invoiceType): string
+    {
+        return $invoiceType instanceof InvoiceType ? $invoiceType->value : (string) $invoiceType;
+    }
+
     private static function _checkReturnedInvoiceDeps(Invoice $invoice, int $targetCompanyId): array
     {
         if (! $invoice->returned_invoice_id) {
@@ -254,8 +274,7 @@ class FiscalYearTransferService
             return ['needed' => false, 'errors' => [], 'exists' => false, 'target_id' => null, 'source' => null, 'validation' => null];
         }
 
-        $existing = Invoice::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $targetCompanyId)->where('number', $source->number)
-            ->where('invoice_type', $source->invoice_type)->first();
+        $existing = Invoice::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $targetCompanyId)->where('number', $source->number)->where('invoice_type', self::_invoiceTypeValue($source->invoice_type))->first();
 
         if ($existing) {
             return ['needed' => false, 'errors' => [], 'exists' => true, 'target_id' => $existing->id, 'source' => $source, 'validation' => null];

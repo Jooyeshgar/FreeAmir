@@ -17,9 +17,9 @@ class SubjectController extends Controller
         $currentParent = null;
         if ($request->has('parent_id')) {
             $currentParent = Subject::find($request->input('parent_id'));
-            $subjects = $currentParent->children()->with('subjectable')->orderBy('code')->get();
+            $subjects = $currentParent->children()->with('subjectable')->withCount(['children', 'transactions'])->orderBy('code')->get();
         } else {
-            $subjects = Subject::whereIsRoot()->with('subjectable')->orderBy('code')->get();
+            $subjects = Subject::whereIsRoot()->with('subjectable')->withCount(['children', 'transactions'])->orderBy('code')->get();
         }
 
         $subjectTree = Subject::orderBy('code')->limit(30)->get(['id', 'name', 'code', 'parent_id']);

@@ -34,6 +34,8 @@ class SubjectTransferTest extends TestCase
         $this->company = Company::factory()->create(['fiscal_year' => 1403]);
         $this->user->companies()->attach([$this->company->id]);
         $this->user->givePermissionTo(
+            Permission::firstOrCreate(['name' => 'subjects.index']),
+            Permission::firstOrCreate(['name' => 'subjects.destroy']),
             Permission::firstOrCreate(['name' => 'subjects.transfer'])
         );
 
@@ -84,6 +86,33 @@ class SubjectTransferTest extends TestCase
         $bank->save();
 
         return $bank;
+    }
+
+    public function test_subject_used_in_transactions_shows_disabled_delete_with_tooltip(): void
+    {
+        $subject = $this->makeSubject(['name' => 'Cash', 'code' => '101']);
+        $document = $this->makeDocument();
+        $this->makeTransaction($subject, $document, 100);
+
+        $response = $this->get(route('subjects.index'));
+
+        $response->assertOk();
+        $response->assertSee(__('Cannot delete subject with transactions'));
+        $response->assertSee('disabled', false);
+        $response->assertDontSee('action="'.route('subjects.destroy', $subject).'"', false);
+    }
+
+    public function test_subject_used_in_transactions_cannot_be_deleted(): void
+    {
+        $subject = $this->makeSubject(['name' => 'Cash', 'code' => '101']);
+        $document = $this->makeDocument();
+        $this->makeTransaction($subject, $document, 100);
+
+        $response = $this->delete(route('subjects.destroy', $subject));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('errors', __('Cannot delete subject with transactions'));
+        $this->assertDatabaseHas('subjects', ['id' => $subject->id]);
     }
 
     private function makeCustomer(Subject $subject, array $attributes = []): Customer
