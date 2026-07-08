@@ -17,9 +17,11 @@ class UserVerificationNotification extends Notification
     {
         return (new MailMessage)
             ->subject(__('Verify Your Account'))
-            ->line(__('Please use the button below to verify your account.'))
             ->action(__('Verify Your Account'), $this->verificationUrl($notifiable))
-            ->line(__('If you did not create an account, no further action is required.'));
+            ->view('auth.verify-account', [
+                'appName' => __(config('app.name')),
+                'appUrl' => config('app.url'),
+            ]);
     }
 
     private function verificationUrl(object $notifiable): string

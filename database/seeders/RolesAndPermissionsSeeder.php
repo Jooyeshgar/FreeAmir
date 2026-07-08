@@ -340,6 +340,11 @@ class RolesAndPermissionsSeeder extends Seeder
                     'password' => bcrypt('password'),
                 ]
             );
+
+            if (! $user->hasVerifiedEmail()) {
+                $user->markEmailAsVerified();
+            }
+
             $user->companies()->syncWithoutDetaching([$companyId]);
             $user->assignRole($config['roles']);
 

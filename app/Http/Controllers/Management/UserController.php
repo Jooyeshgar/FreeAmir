@@ -8,9 +8,11 @@ use App\Models\Employee;
 use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
+use App\Notifications\UserVerificationNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
@@ -79,6 +81,14 @@ class UserController extends Controller
             $user->syncRoles($role);
             $user->companies()->sync($company);
         });
+
+        try {
+            $user->notify(new UserVerificationNotification);
+        } catch (\Throwable $exception) {
+            Log::error('Management user verification notification could not be sent.', ['user_id' => $user->id, 'exception' => $exception]);
+
+            return redirect()->route('users.index')->with('error', __('The verification notification could not be sent. Please try again later.'));
+        }
 
         return redirect()->route('users.index')->with('success', __('User created successfully!'));
     }
