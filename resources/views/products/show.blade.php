@@ -96,6 +96,8 @@
                     <thead>
                         <tr>
                             <th class="px-4 py-3">{{ __('Date') }}</th>
+                            <th class="px-4 py-3">{{ __('Invoice Number') }}</th>
+                            <th class="px-4 py-3">{{ __('Customer Name') }}</th>
                             <th class="px-4 py-3 text-center">{{ __('Buy') }}</th>
                             <th class="px-4 py-3 text-center">{{ __('Sell') }}</th>
                             <th class="px-4 py-3 text-center">{{ __('Buy Unit Price') }}</th>
@@ -108,11 +110,9 @@
                     <tbody>
                         @forelse ($historyItems as $item)
                             <tr class="hover:bg-base-300 {{ !$item->invoice->status->isApproved() ? 'opacity-50' : '' }}">
-                                <td class="px-4 py-3">
-                                    <span title="{{ $item->invoice->customer->name }}">
-                                        {{ formatDate($item->invoice->date) }}
-                                    </span>
-                                </td>
+                                <td class="px-4 py-3">{{ formatDate($item->invoice->date) }}</td>
+                                <td class="px-4 py-3">{{ formatDocumentNumber($item->invoice->number) }}</td>
+                                <td class="px-4 py-3">{{ $item->invoice->customer->name }}</td>
 
                                 <td class="px-4 py-3 text-center">
                                     @if ($item->invoice->invoice_type === \App\Enums\InvoiceType::BUY)
