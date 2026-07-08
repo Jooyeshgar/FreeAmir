@@ -39,10 +39,10 @@ class PayrollSeeder extends Seeder
             $dailyWage = (float) ($decree->daily_wage ?? 0);
             $hourlyWage = $dailyWage / 8;
 
-            $decreeElements = $decree->benefits->map(fn ($b) => $b->element)->filter()->keyBy('system_code');
+            $decreeElements = $decree->benefits->map(fn ($b) => $b->element)->filter()->keyBy(fn ($element) => $element->system_code->valueName());
 
             $benefitValues = $decree->benefits->filter(fn ($b) => $b->element !== null)
-                ->mapWithKeys(fn ($b) => [$b->element->system_code => (float) $b->element_value])->all();
+                ->mapWithKeys(fn ($b) => [$b->element->system_code->valueName() => (float) $b->element_value])->all();
 
             $housing = $benefitValues['HOUSING_ALLOWANCE'] ?? 30_000_000;
             $food = $benefitValues['FOOD_ALLOWANCE'] ?? 30_000_000;

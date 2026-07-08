@@ -19,11 +19,11 @@
             @continue
         @endif
         @php
-            $value = $status->value;
-            $count = $statusCounts->get($value, 0);
+            $value = $status->valueName();
+            $count = $statusCounts->get($status->value, 0);
             $isActive = $statusFilter == $value;
             $url = route('invoices.index', array_merge($baseQuery, ['status' => $value]));
-            $type = $statusTypes[$value] ?? 'info';
+            $type = $statusTypes[$status->value] ?? 'info';
         @endphp
         <a href="{{ $url }}" class="block transition-transform hover:scale-105 {{ $isActive ? 'ring-2 ring-primary rounded-xl' : '' }}">
             <x-stat-card :title="$status->label()" :value="localizeNumber($count)" :type="$type" />

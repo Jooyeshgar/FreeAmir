@@ -13,7 +13,7 @@
                 </h2>
                 <x-show-message-bags />
 
-                @switch($invoice_type->value)
+                @switch($invoice_type->valueName())
                     @case('sell')
                         @include('invoices.forms.sell')
                     @break

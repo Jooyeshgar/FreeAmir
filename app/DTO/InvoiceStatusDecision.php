@@ -147,7 +147,7 @@ class InvoiceStatusDecision
     private function groupedConflictsByType(): Collection
     {
         return $this->conflicts->groupBy(fn ($conflict) => $conflict instanceof \App\Models\Invoice ?
-                $conflict->invoice_type->value.' invoice' : strtolower(class_basename($conflict)));
+                $conflict->invoice_type->valueName().' invoice' : strtolower(class_basename($conflict)));
     }
 
     public function addConflict($conflict): void

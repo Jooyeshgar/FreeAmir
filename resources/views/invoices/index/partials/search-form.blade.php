@@ -25,7 +25,7 @@
                     @if ($isSellWorkflow ? $status->isPending() : ($status->isReadyToApprove() || $status->isPreInvoice() || $status->isRejected()))
                         @continue
                     @endif
-                    <option value="{{ $status->value }}" @selected($status->value == request('status'))>
+                    <option value="{{ $status->valueName() }}" @selected($status->valueName() == request('status'))>
                         {{ $status->label() }}
                     </option>
                 @endforeach

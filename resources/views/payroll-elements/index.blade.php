@@ -44,13 +44,13 @@
                     @forelse ($payrollElements as $element)
                         <tr>
                             <td>{{ $element->title }}</td>
-                            <td>{{ $element->system_code }}</td>
+                            <td>{{ $element->system_code?->valueName() }}</td>
                             <td>
-                                <span class="badge {{ $element->category === 'earning' ? 'badge-success' : 'badge-error' }}">
-                                    {{ $element->category === 'earning' ? __('Earning') : __('Deduction') }}
+                                <span class="badge {{ $element->category?->isEarning() ? 'badge-success' : 'badge-error' }}">
+                                    {{ $element->category?->label() }}
                                 </span>
                             </td>
-                            <td>{{ __($element->calc_type) }}</td>
+                            <td>{{ $element->calc_type?->label() }}</td>
                             <td>{{ $element->default_amount !== null ? formatNumber($element->default_amount) : '-' }}</td>
                             <td>
                                 @if ($element->is_taxable)

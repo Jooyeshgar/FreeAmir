@@ -2,18 +2,20 @@
 
 namespace App\Enums;
 
-enum PersonnelRequestType: string
+use ValueError;
+
+enum PersonnelRequestType: int
 {
-    case LEAVE_HOURLY = 'LEAVE_HOURLY';
-    case LEAVE_DAILY = 'LEAVE_DAILY';
-    case SICK_LEAVE = 'SICK_LEAVE';
-    case LEAVE_WITHOUT_PAY = 'LEAVE_WITHOUT_PAY';
-    case LEAVE_WITHOUT_PAY_HOURLY = 'LEAVE_WITHOUT_PAY_HOURLY';
-    case MISSION_HOURLY = 'MISSION_HOURLY';
-    case MISSION_DAILY = 'MISSION_DAILY';
-    case OVERTIME_ORDER = 'OVERTIME_ORDER';
-    case REMOTE_WORK = 'REMOTE_WORK';
-    case OTHER = 'OTHER';
+    case LEAVE_HOURLY = 1;
+    case LEAVE_DAILY = 2;
+    case SICK_LEAVE = 3;
+    case LEAVE_WITHOUT_PAY = 4;
+    case LEAVE_WITHOUT_PAY_HOURLY = 5;
+    case MISSION_HOURLY = 6;
+    case MISSION_DAILY = 7;
+    case OVERTIME_ORDER = 8;
+    case REMOTE_WORK = 9;
+    case OTHER = 10;
 
     public function label(): string
     {
@@ -31,7 +33,11 @@ enum PersonnelRequestType: string
         };
     }
 
-    /** Returns all leave-related types. */
+    public function valueName(): string
+    {
+        return $this->name;
+    }
+
     public static function leaveTypes(): array
     {
         return [
@@ -43,7 +49,6 @@ enum PersonnelRequestType: string
         ];
     }
 
-    /** Returns all mission-related types. */
     public static function missionTypes(): array
     {
         return [
@@ -52,7 +57,6 @@ enum PersonnelRequestType: string
         ];
     }
 
-    /** Returns all work-order-related types. */
     public static function workOrderTypes(): array
     {
         return [
@@ -61,7 +65,6 @@ enum PersonnelRequestType: string
         ];
     }
 
-    /** Returns other types. */
     public static function otherTypes(): array
     {
         return [
@@ -69,13 +72,45 @@ enum PersonnelRequestType: string
         ];
     }
 
-    /** Returns an associative array of value => label for all cases. */
     public static function options(): array
     {
         return array_column(
-            array_map(fn ($case) => ['value' => $case->value, 'label' => $case->label()], self::cases()),
+            array_map(fn ($case) => ['value' => $case->valueName(), 'label' => $case->label()], self::cases()),
             'label',
             'value'
         );
+    }
+
+    public static function valueNames(): array
+    {
+        return array_map(fn (self $case) => $case->valueName(), self::cases());
+    }
+
+    public static function fromName(self|int|string $value): self
+    {
+        return self::tryFromName($value) ?? throw new ValueError(sprintf('"%s" is not a valid %s', (string) $value, self::class));
+    }
+
+    public static function tryFromName(self|int|string|null $value): ?self
+    {
+        if ($value instanceof self) {
+            return $value;
+        }
+
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_int($value) || (is_string($value) && ctype_digit($value))) {
+            return self::tryFrom((int) $value);
+        }
+
+        foreach (self::cases() as $case) {
+            if ($case->valueName() === $value || $case->name === $value) {
+                return $case;
+            }
+        }
+
+        return null;
     }
 }

@@ -82,26 +82,26 @@
             @if (!($isEmployeeView ?? false))
                 @php
                     $transitionActions = [
-                        \App\Enums\PayrollStatus::Draft->value => [
+                        \App\Enums\PayrollStatus::Draft->valueName() => [
                             'to' => \App\Enums\PayrollStatus::PendingManagerApproval,
                             'route' => 'salary.payrolls.transition.draft-to-pending-manager-approval',
                             'label' => __('Submit for Approval'),
                             'class' => 'btn-warning',
                         ],
-                        \App\Enums\PayrollStatus::PendingManagerApproval->value => [
+                        \App\Enums\PayrollStatus::PendingManagerApproval->valueName() => [
                             'to' => \App\Enums\PayrollStatus::Approved,
                             'route' => 'salary.payrolls.transition.pending-manager-approval-to-approved',
                             'label' => __('Approve'),
                             'class' => 'btn-success',
                         ],
-                        \App\Enums\PayrollStatus::Approved->value => [
+                        \App\Enums\PayrollStatus::Approved->valueName() => [
                             'to' => \App\Enums\PayrollStatus::Paid,
                             'route' => 'salary.payrolls.transition.approved-to-paid',
                             'label' => __('Mark as Paid'),
                             'class' => 'btn-info',
                         ],
                     ];
-                    $transitionAction = $transitionActions[$payroll->status?->value] ?? null;
+                    $transitionAction = $transitionActions[$payroll->status?->valueName()] ?? null;
                     $transitionPermission = $transitionAction ? $payroll->transitionPermissionTo($transitionAction['to']) : null;
                     $canTransition = $transitionPermission && auth()->user()?->can($transitionPermission);
                 @endphp
@@ -182,7 +182,7 @@
                                 <td>{{ $item->description ?? ($item->element?->title ?? '—') }}</td>
                                 <td>
                                     @if ($item->element)
-                                        @if ($item->element->category === 'earning')
+                                        @if ($item->element->category?->isEarning())
                                             <span class="badge badge-success badge-sm">{{ __('Earning') }}</span>
                                         @else
                                             <span class="badge badge-error badge-sm">{{ __('Deduction') }}</span>

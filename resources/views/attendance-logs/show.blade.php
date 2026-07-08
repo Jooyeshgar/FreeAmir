@@ -446,8 +446,8 @@
                                 @foreach ($personnelRequests as $pr)
                                     @php
                                         $statusClass = match ($pr->status) {
-                                            'approved' => 'badge-success',
-                                            'rejected' => 'badge-error',
+                                            \App\Enums\PersonnelRequestStatus::APPROVED => 'badge-success',
+                                            \App\Enums\PersonnelRequestStatus::REJECTED => 'badge-error',
                                             default => 'badge-warning',
                                         };
                                         $typeClass = match (true) {
@@ -457,7 +457,7 @@
                                         };
                                         $durationMin = (int) $pr->start_date->diffInMinutes($pr->end_date);
                                     @endphp
-                                    <tr class="hover:bg-base-300 {{ $pr->status === 'approved' ? '' : 'opacity-60' }}">
+                                    <tr class="hover:bg-base-300 {{ $pr->status?->isApproved() ? '' : 'opacity-60' }}">
                                         <td class="px-4 py-3">
                                             <span class="badge badge-sm {{ $typeClass }}">{{ $pr->request_type->label() }}</span>
                                         </td>
@@ -466,7 +466,7 @@
                                         <td class="px-4 py-3 text-center font-mono">{{ $durationMin }}</td>
                                         <td class="px-4 py-3 text-center">
                                             <span class="badge badge-sm {{ $statusClass }}">
-                                                {{ ucfirst($pr->status) }}
+                                                {{ $pr->status?->label() }}
                                             </span>
                                         </td>
                                         <td class="px-4 py-3 text-sm text-gray-500">{{ $pr->reason ?? '—' }}</td>

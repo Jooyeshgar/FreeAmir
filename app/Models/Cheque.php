@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ChequeStatus;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Model;
 
@@ -22,6 +23,10 @@ class Cheque extends Model
         'history_id',
         'bill_id',
         'order',
+    ];
+
+    protected $casts = [
+        'status' => ChequeStatus::class,
     ];
 
     public static function booted(): void

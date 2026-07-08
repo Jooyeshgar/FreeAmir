@@ -173,7 +173,7 @@ class CustomerController extends Controller
                             $customer->name,
                             $customer->group?->name,
                             $customer->subject?->code,
-                            $customer->type?->value,
+                            $customer->type?->valueName(),
                             $customer->phone,
                             $customer->mobile,
                             $customer->fax,

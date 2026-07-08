@@ -2,12 +2,14 @@
 
 namespace App\Enums;
 
-enum PayrollStatus: string
+use ValueError;
+
+enum PayrollStatus: int
 {
-    case Draft = 'draft';
-    case PendingManagerApproval = 'pending_manager_approval';
-    case Approved = 'approved';
-    case Paid = 'paid';
+    case Draft = 1;
+    case PendingManagerApproval = 2;
+    case Approved = 3;
+    case Paid = 4;
 
     public function label(): string
     {
@@ -16,6 +18,16 @@ enum PayrollStatus: string
             self::PendingManagerApproval => __('Pending Manager Approval'),
             self::Approved => __('Approved'),
             self::Paid => __('Paid'),
+        };
+    }
+
+    public function valueName(): string
+    {
+        return match ($this) {
+            self::Draft => 'draft',
+            self::PendingManagerApproval => 'pending_manager_approval',
+            self::Approved => 'approved',
+            self::Paid => 'paid',
         };
     }
 
@@ -42,7 +54,7 @@ enum PayrollStatus: string
     public static function options(): array
     {
         return array_column(
-            array_map(fn (self $status) => ['value' => $status->value, 'label' => $status->label()], self::cases()),
+            array_map(fn (self $status) => ['value' => $status->valueName(), 'label' => $status->label()], self::cases()),
             'label',
             'value'
         );
@@ -50,6 +62,39 @@ enum PayrollStatus: string
 
     public static function values(): array
     {
-        return array_column(self::cases(), 'value');
+        return self::valueNames();
+    }
+
+    public static function valueNames(): array
+    {
+        return array_map(fn (self $case) => $case->valueName(), self::cases());
+    }
+
+    public static function fromName(self|int|string $value): self
+    {
+        return self::tryFromName($value) ?? throw new ValueError(sprintf('"%s" is not a valid %s', (string) $value, self::class));
+    }
+
+    public static function tryFromName(self|int|string|null $value): ?self
+    {
+        if ($value instanceof self) {
+            return $value;
+        }
+
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_int($value) || (is_string($value) && ctype_digit($value))) {
+            return self::tryFrom((int) $value);
+        }
+
+        foreach (self::cases() as $case) {
+            if ($case->valueName() === $value || $case->name === $value) {
+                return $case;
+            }
+        }
+
+        return null;
     }
 }

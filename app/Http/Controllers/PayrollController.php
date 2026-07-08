@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\PayrollStatus;
+use App\Enums\PersonnelRequestStatus;
 use App\Models\Employee;
 use App\Models\MonthlyAttendance;
 use App\Models\OrganizationUnit;
@@ -47,7 +48,7 @@ class PayrollController extends Controller
             'employee_id' => ['nullable', 'integer', 'exists:employees,id'],
             'month' => ['nullable', 'integer', 'between:1,12'],
             'organization_unit_id' => ['nullable', 'integer', 'exists:organization_units,id'],
-            'status' => ['nullable', 'string', Rule::enum(PayrollStatus::class)],
+            'status' => ['nullable', 'string', Rule::in(PayrollStatus::valueNames())],
         ]);
 
         $query = Payroll::query();
@@ -65,7 +66,7 @@ class PayrollController extends Controller
         }
 
         if (! empty($validated['status'])) {
-            $query->where('status', $validated['status']);
+            $query->where('status', PayrollStatus::fromName($validated['status']));
         }
 
         $payrolls = $query->with(['employee', 'decree', 'monthlyAttendance'])
@@ -96,14 +97,14 @@ class PayrollController extends Controller
             'year' => ['nullable', 'integer', 'between:1300,1600'],
             'month' => ['nullable', 'integer', 'between:1,12'],
             'organization_unit_id' => ['nullable', 'integer', 'exists:organization_units,id'],
-            'status' => ['nullable', 'string', Rule::enum(PayrollStatus::class)],
+            'status' => ['nullable', 'string', Rule::in(PayrollStatus::valueNames())],
             'q' => ['nullable', 'string', 'max:80'],
         ]);
 
         $year = (int) ($validated['year'] ?? $defaultYear);
         $month = (int) ($validated['month'] ?? $defaultMonth);
         $organizationUnitId = isset($validated['organization_unit_id']) ? (int) $validated['organization_unit_id'] : null;
-        $statusFilter = $validated['status'] ?? null;
+        $statusFilter = isset($validated['status']) ? PayrollStatus::fromName($validated['status']) : null;
         $search = trim($validated['q'] ?? '');
 
         $organizationUnits = OrganizationUnit::orderBy('name')->get(['id', 'name']);
@@ -177,6 +178,8 @@ class PayrollController extends Controller
             ->mapWithKeys(fn (string $label, int $monthNumber) => [$monthNumber => $this->jalaliMonthLabel($monthNumber)])
             ->all();
         $periodLabel = ($monthNames[$month] ?? (string) $month).' '.formatNumber($year);
+
+        $statusFilter = $statusFilter?->valueName();
 
         return view('payrolls.dashboard', compact(
             'alerts',
@@ -536,7 +539,7 @@ class PayrollController extends Controller
                 $row = $rows->get($status->value);
 
                 return [
-                    'value' => $status->value,
+                    'value' => $status->valueName(),
                     'label' => $status->label(),
                     'badge' => $status->badgeClass(),
                     'count' => (int) ($row->payroll_count ?? 0),
@@ -677,7 +680,7 @@ class PayrollController extends Controller
     private function dashboardAlerts(int $year, int $month, ?int $organizationUnitId, array $summary): array
     {
         $pendingRequests = PersonnelRequest::query()
-            ->where('status', 'pending')
+            ->where('status', PersonnelRequestStatus::PENDING)
             ->when($organizationUnitId, function (Builder $query) use ($organizationUnitId) {
                 $query->whereHas('employee', fn (Builder $employeeQuery) => $employeeQuery->where('organization_unit_id', $organizationUnitId));
             })

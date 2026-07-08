@@ -124,11 +124,11 @@ class PayrollService
         $this->elements = $decree->benefits
             ->map(fn ($benefit) => $benefit->element)
             ->filter()
-            ->keyBy('system_code');
+            ->keyBy(fn ($element) => $element->system_code->valueName());
 
         $this->benefitValues = $decree->benefits
             ->filter(fn ($benefit) => $benefit->element !== null)
-            ->mapWithKeys(fn ($benefit) => [$benefit->element->system_code => (float) $benefit->element_value])
+            ->mapWithKeys(fn ($benefit) => [$benefit->element->system_code->valueName() => (float) $benefit->element_value])
             ->all();
 
         $this->earnings = [];
@@ -170,11 +170,13 @@ class PayrollService
     {
         foreach ($decree->benefits as $benefit) {
             $element = $benefit->element;
-            if (! $element || $element->category !== 'earning') {
+            if (! $element || ! $element->category->isEarning()) {
                 continue;
             }
 
-            if (in_array($element->system_code, [
+            $systemCode = $element->system_code->valueName();
+
+            if (in_array($systemCode, [
                 self::CODE_OVERTIME, self::CODE_AUTO_OVERTIME, self::CODE_FRIDAY_PAY,
                 self::CODE_HOLIDAY_PAY, self::CODE_MISSION_PAY,
             ], true)) {
@@ -182,15 +184,15 @@ class PayrollService
             }
 
             $raw = (float) $benefit->element_value;
-            $amount = match ($element->system_code) {
-                self::CODE_HOUSING, self::CODE_FOOD => $this->prorateAllowance($raw, $element->calc_type),
+            $amount = match ($systemCode) {
+                self::CODE_HOUSING, self::CODE_FOOD => $this->prorateAllowance($raw, $element->calc_type->valueName()),
                 self::CODE_CHILD => $this->proratedDays > 0
                     ? $raw * ($benefit->element->employee?->children_count ?? 0)
                     : 0.0,
                 default => $raw,
             };
 
-            $this->addEarning($element->system_code.'_'.$element->id, [
+            $this->addEarning($systemCode.'_'.$element->id, [
                 'element_id' => $element->id,
                 'amount' => $amount,
                 'unit_count' => null,
@@ -298,7 +300,9 @@ class PayrollService
 
         foreach ($decree->benefits as $benefit) {
             $element = $benefit->element;
-            if (! $element || $element->category !== 'deduction' || in_array($element->system_code, $skipCodes, true)) {
+            $systemCode = $element?->system_code?->valueName();
+
+            if (! $element || ! $element->category->isDeduction() || in_array($systemCode, $skipCodes, true)) {
                 continue;
             }
 

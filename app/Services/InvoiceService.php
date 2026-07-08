@@ -618,7 +618,7 @@ class InvoiceService
             $rule = $group['rule'];
             $invoices = $group['invoices'];
 
-            $invoiceList = $invoices->map(fn ($inv) => $inv->invoice_type->value.': '.$inv->number)->implode(', ');
+            $invoiceList = $invoices->map(fn ($inv) => $inv->invoice_type->valueName().': '.$inv->number)->implode(', ');
 
             if ($rule === 'subsequent_approved') {
                 $decision->addMessage('error', __('invoices.status_change.blocked_by_subsequent', ['invoices' => $invoiceList]));
@@ -731,7 +731,7 @@ class InvoiceService
     {
         $productIds = self::getProductIdsFromInvoice($invoice);
 
-        $nextStatus = $nextStatus instanceof InvoiceStatus ? $nextStatus : InvoiceStatus::from($nextStatus);
+        $nextStatus = $nextStatus instanceof InvoiceStatus ? $nextStatus : InvoiceStatus::fromName($nextStatus);
 
         return self::decideInvoiceStatusChange($invoice, $productIds, $nextStatus);
     }
@@ -846,7 +846,7 @@ class InvoiceService
             $rule = $group['rule'];
             $ancillaryCosts = $group['ancillary_costs'];
 
-            $ancillaryCostList = $ancillaryCosts->map(fn ($ac) => 'ID '.$ac->id.' (Invoice ID: '.$ac->invoice_id.', Status: '.$ac->status->value.')')->implode(', ');
+            $ancillaryCostList = $ancillaryCosts->map(fn ($ac) => 'ID '.$ac->id.' (Invoice ID: '.$ac->invoice_id.', Status: '.$ac->status->valueName().')')->implode(', ');
 
             if ($rule === 'subsequent_ancillary_cost_approved') {
                 $decision->addMessage('error', __('invoices.status_change.blocked_by_subsequent_ancillary_cost_approved', ['ancillary_costs' => $ancillaryCostList]));
@@ -946,7 +946,7 @@ class InvoiceService
         return [
             'title' => $validated['title'],
             'date' => $validated['date'],
-            'invoice_type' => InvoiceType::from($validated['invoice_type']),
+            'invoice_type' => InvoiceType::fromName($validated['invoice_type']),
             'customer_id' => $validated['customer_id'],
             'returned_invoice_id' => $validated['returned_invoice_id'] ?? null,
             'document_number' => $validated['document_number'],

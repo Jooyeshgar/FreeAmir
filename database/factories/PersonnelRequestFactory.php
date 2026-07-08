@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Models\Company;
 use App\Models\Employee;
@@ -24,7 +25,7 @@ class PersonnelRequestFactory extends Factory
             'start_date' => $startDate,
             'end_date' => $endDate,
             'reason' => $this->faker->optional()->sentence(),
-            'status' => $this->faker->randomElement(['pending', 'approved', 'rejected']),
+            'status' => $this->faker->randomElement(PersonnelRequestStatus::cases()),
             'approved_by' => null,
             'payroll_id' => null,
         ];
@@ -32,16 +33,16 @@ class PersonnelRequestFactory extends Factory
 
     public function pending(): static
     {
-        return $this->state(['status' => 'pending']);
+        return $this->state(['status' => PersonnelRequestStatus::PENDING]);
     }
 
     public function approved(): static
     {
-        return $this->state(['status' => 'approved']);
+        return $this->state(['status' => PersonnelRequestStatus::APPROVED]);
     }
 
     public function rejected(): static
     {
-        return $this->state(['status' => 'rejected']);
+        return $this->state(['status' => PersonnelRequestStatus::REJECTED]);
     }
 }

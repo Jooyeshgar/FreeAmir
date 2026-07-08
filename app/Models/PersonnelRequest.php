@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Builder;
@@ -29,6 +30,7 @@ class PersonnelRequest extends Model
         'start_date' => 'datetime',
         'end_date' => 'datetime',
         'request_type' => PersonnelRequestType::class,
+        'status' => PersonnelRequestStatus::class,
     ];
 
     public static function booted(): void
@@ -58,7 +60,7 @@ class PersonnelRequest extends Model
 
     public function scopeApproved(Builder $query): Builder
     {
-        return $query->where('status', 'approved');
+        return $query->where('status', PersonnelRequestStatus::APPROVED);
     }
 
     public function scopeCoveringDate(Builder $query, string $date): Builder

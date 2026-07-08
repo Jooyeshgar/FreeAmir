@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Models\Employee;
 use App\Models\PersonnelRequest;
@@ -90,13 +91,13 @@ class PersonnelRequestSeeder extends Seeder
                         'company_id' => 1,
                         'end_date' => $end,
                         'reason' => __('Demo request').' #'.($i + 1),
-                        'status' => $row['status'],
+                        'status' => PersonnelRequestStatus::fromName($row['status']),
                         'approved_by' => $row['status'] !== 'pending' ? $approverId : null,
                         'payroll_id' => null,
                     ]
                 );
 
-                if ($row['status'] === 'approved') {
+                if (PersonnelRequestStatus::fromName($row['status'])->isApproved()) {
                     $request->load('employee.workShift');
                     $this->service->syncPersonnelRequestLogs($request);
                 }

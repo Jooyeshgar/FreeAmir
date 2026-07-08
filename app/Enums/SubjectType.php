@@ -4,40 +4,33 @@ namespace App\Enums;
 
 use ValueError;
 
-enum CustomerType: int
+enum SubjectType: int
 {
-    case INDIVIDUAL = 1;
-    case LEGAL_ENTITY = 2;
-    case CIVIL_PARTNERSHIP = 3;
-    case FOREIGN_NATIONAL = 4;
+    case DEBTOR = 1;
+    case CREDITOR = 2;
+    case BOTH = 3;
 
     public function label(): string
     {
         return match ($this) {
-            self::INDIVIDUAL => __('Individual'),
-            self::LEGAL_ENTITY => __('Legal Entity'),
-            self::CIVIL_PARTNERSHIP => __('Civil Partnership'),
-            self::FOREIGN_NATIONAL => __('Foreign National'),
+            self::DEBTOR => __('Debtor'),
+            self::CREDITOR => __('Creditor'),
+            self::BOTH => __('Both'),
         };
     }
 
     public function valueName(): string
     {
         return match ($this) {
-            self::INDIVIDUAL => 'individual',
-            self::LEGAL_ENTITY => 'legal_entity',
-            self::CIVIL_PARTNERSHIP => 'civil_partnership',
-            self::FOREIGN_NATIONAL => 'foreign_national',
+            self::DEBTOR => 'debtor',
+            self::CREDITOR => 'creditor',
+            self::BOTH => 'both',
         };
     }
 
-    public static function options(): array
+    public function isBoth(): bool
     {
-        return array_reduce(self::cases(), function ($carry, $case) {
-            $carry[$case->valueName()] = $case->label();
-
-            return $carry;
-        }, []);
+        return $this === self::BOTH;
     }
 
     public static function valueNames(): array

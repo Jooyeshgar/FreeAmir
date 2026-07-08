@@ -259,7 +259,7 @@ class FiscalYearTransferService
 
     private static function _invoiceTypeValue(mixed $invoiceType): string
     {
-        return $invoiceType instanceof InvoiceType ? $invoiceType->value : (string) $invoiceType;
+        return $invoiceType instanceof InvoiceType ? $invoiceType->valueName() : (string) $invoiceType;
     }
 
     private static function _checkReturnedInvoiceDeps(Invoice $invoice, int $targetCompanyId): array

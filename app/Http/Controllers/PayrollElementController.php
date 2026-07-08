@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PayrollElementCalcType;
+use App\Enums\PayrollElementCategory;
+use App\Enums\PayrollElementSystemCode;
 use App\Models\PayrollElement;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,7 +18,11 @@ class PayrollElementController extends Controller
         $query = PayrollElement::orderBy('category')->orderBy('title');
 
         if ($request->filled('category')) {
-            $query->where('category', $request->category);
+            $category = PayrollElementCategory::tryFromName($request->category);
+
+            if ($category !== null) {
+                $query->where('category', $category);
+            }
         }
 
         if ($request->filled('title')) {
@@ -36,14 +43,9 @@ class PayrollElementController extends Controller
     {
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:100'],
-            'system_code' => ['required', Rule::in([
-                'CHILD_ALLOWANCE', 'HOUSING_ALLOWANCE', 'FOOD_ALLOWANCE', 'MARRIAGE_ALLOWANCE',
-                'OVERTIME', 'AUTO_OVERTIME', 'FRIDAY_PAY', 'HOLIDAY_PAY', 'MISSION_PAY',
-                'INSURANCE_EMP', 'INSURANCE_EMP2', 'UNEMPLOYMENT_INS',
-                'INCOME_TAX', 'ABSENCE_DEDUCTION', 'OTHER',
-            ])],
-            'category' => ['required', Rule::in(['earning', 'deduction'])],
-            'calc_type' => ['required', Rule::in(['fixed', 'formula', 'percentage', 'daily'])],
+            'system_code' => ['required', Rule::in(PayrollElementSystemCode::valueNames())],
+            'category' => ['required', Rule::in(PayrollElementCategory::valueNames())],
+            'calc_type' => ['required', Rule::in(PayrollElementCalcType::valueNames())],
             'formula' => ['nullable', 'string', 'max:500'],
             'default_amount' => ['nullable', 'numeric', 'min:0'],
             'is_taxable' => ['boolean'],
@@ -55,6 +57,9 @@ class PayrollElementController extends Controller
         $validated['is_taxable'] = $request->boolean('is_taxable');
         $validated['is_insurable'] = $request->boolean('is_insurable');
         $validated['show_in_payslip'] = $request->boolean('show_in_payslip');
+        $validated['system_code'] = PayrollElementSystemCode::fromName($validated['system_code']);
+        $validated['category'] = PayrollElementCategory::fromName($validated['category']);
+        $validated['calc_type'] = PayrollElementCalcType::fromName($validated['calc_type']);
 
         PayrollElement::create(array_merge(
             $validated,
@@ -74,14 +79,9 @@ class PayrollElementController extends Controller
     {
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:100'],
-            'system_code' => ['required', Rule::in([
-                'CHILD_ALLOWANCE', 'HOUSING_ALLOWANCE', 'FOOD_ALLOWANCE', 'MARRIAGE_ALLOWANCE',
-                'OVERTIME', 'AUTO_OVERTIME', 'FRIDAY_PAY', 'HOLIDAY_PAY', 'MISSION_PAY',
-                'INSURANCE_EMP', 'INSURANCE_EMP2', 'UNEMPLOYMENT_INS',
-                'INCOME_TAX', 'ABSENCE_DEDUCTION', 'OTHER',
-            ])],
-            'category' => ['required', Rule::in(['earning', 'deduction'])],
-            'calc_type' => ['required', Rule::in(['fixed', 'formula', 'percentage', 'daily'])],
+            'system_code' => ['required', Rule::in(PayrollElementSystemCode::valueNames())],
+            'category' => ['required', Rule::in(PayrollElementCategory::valueNames())],
+            'calc_type' => ['required', Rule::in(PayrollElementCalcType::valueNames())],
             'formula' => ['nullable', 'string', 'max:500'],
             'default_amount' => ['nullable', 'numeric', 'min:0'],
             'is_taxable' => ['boolean'],
@@ -93,6 +93,9 @@ class PayrollElementController extends Controller
         $validated['is_taxable'] = $request->boolean('is_taxable');
         $validated['is_insurable'] = $request->boolean('is_insurable');
         $validated['show_in_payslip'] = $request->boolean('show_in_payslip');
+        $validated['system_code'] = PayrollElementSystemCode::fromName($validated['system_code']);
+        $validated['category'] = PayrollElementCategory::fromName($validated['category']);
+        $validated['calc_type'] = PayrollElementCalcType::fromName($validated['calc_type']);
 
         $payrollElement->update($validated);
 

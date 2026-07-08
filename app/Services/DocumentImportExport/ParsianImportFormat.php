@@ -169,7 +169,7 @@ class ParsianImportFormat extends DocumentImportFormat
 
         $root = $this->resolveTopLevel($kolCode);
         $isPermanent = (bool) $root->is_permanent;
-        $type = $root->type;
+        $type = $root->type->valueName();
 
         if ($taf > 0) {
             $tafCode = $moenCode.str_pad($taf, 3, '0', STR_PAD_LEFT);
