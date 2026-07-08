@@ -111,8 +111,12 @@
                         @forelse ($historyItems as $item)
                             <tr class="hover:bg-base-300 {{ !$item->invoice->status->isApproved() ? 'opacity-50' : '' }}">
                                 <td class="px-4 py-3">{{ formatDate($item->invoice->date) }}</td>
-                                <td class="px-4 py-3">{{ formatDocumentNumber($item->invoice->number) }}</td>
-                                <td class="px-4 py-3">{{ $item->invoice->customer->name }}</td>
+                                <td class="px-4 py-3">
+                                    <a href="{{ route('invoices.show', $item->invoice_id) }}" class="link">{{ formatDocumentNumber($item->invoice->number) }}</a>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <a href="{{ route('customers.show', $item->invoice->customer_id) }}">{{ $item->invoice->customer->name }}</a>
+                                </td>
 
                                 <td class="px-4 py-3 text-center">
                                     @if ($item->invoice->invoice_type === \App\Enums\InvoiceType::BUY)
