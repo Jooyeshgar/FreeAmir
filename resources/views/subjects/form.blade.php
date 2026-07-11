@@ -3,12 +3,12 @@
         <x-input name="name" id="name" title="{{ __('Name') }}" :value="old('name', $subject->name ?? '')" placeholder="{{ __('Please enter the name') }}" />
     </div>
 
-   <div class="flex flex-col justify-end" x-data="{ selectedType: @js(old('type', $subject->type?->valueName() ?? 'debtor')) }">
+   <div class="flex flex-col justify-end" x-data="{ selectedType: @js(old('type', isset($subject) ? $subject->type?->valueName() : 'debtor')) }">
         <label class="label">{{ __('Type') }}</label>
         <select name="type" id="type" x-model="selectedType" class="select select-sm h-10 min-h-10 w-full px-2">
-            <option value="debtor" @selected(old('type', $subject->type?->valueName() ?? '') === 'debtor')>{{ __('Debtor') }}</option>
-            <option value="creditor" @selected(old('type', $subject->type?->valueName() ?? '') === 'creditor')>{{ __('Creditor') }}</option>
-            <option value="both" @selected(old('type', $subject->type?->valueName() ?? '') === 'both')>{{ __('Both') }}</option>
+            <option value="debtor" @selected(old('type', isset($subject) ? $subject->type?->valueName() : '') === 'debtor')>{{ __('Debtor') }}</option>
+            <option value="creditor" @selected(old('type', isset($subject) ? $subject->type?->valueName() : '') === 'creditor')>{{ __('Creditor') }}</option>
+            <option value="both" @selected(old('type', isset($subject) ? $subject->type?->valueName() : '') === 'both')>{{ __('Both') }}</option>
         </select>
     </div>
 
