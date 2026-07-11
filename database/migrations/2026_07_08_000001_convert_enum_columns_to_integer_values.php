@@ -43,22 +43,6 @@ return new class extends Migration
                 ],
             ],
 
-            'cheques' => [
-                'status' => [
-                    'map' => ['1' => 1, '2' => 2, '3' => 3, '4' => 4, '5' => 5],
-                    'integer_default' => 1,
-                    'string_default' => '1',
-                ],
-            ],
-
-            'cheque_histories' => [
-                'status' => [
-                    'map' => ['1' => 1, '2' => 2, '3' => 3, '4' => 4, '5' => 5],
-                    'integer_default' => 1,
-                    'string_default' => '1',
-                ],
-            ],
-
             'invoices' => [
                 'invoice_type' => [
                     'map' => [
