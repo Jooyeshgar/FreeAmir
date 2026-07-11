@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\SubjectType;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\Scopes\FiscalYearScope;
@@ -207,8 +208,8 @@ class DocumentImportExportTest extends TestCase
 
     public function test_csv_import_reuses_existing_subject_by_name_when_code_differs(): void
     {
-        $assets = Subject::create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets', 'parent_id' => null, 'type' => 'both']);
-        $existingCash = Subject::create(['company_id' => $this->company->id, 'code' => '001009', 'name' => 'Cash', 'parent_id' => $assets->id, 'type' => 'both']);
+        $assets = Subject::create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets', 'parent_id' => null, 'type' => SubjectType::BOTH]);
+        $existingCash = Subject::create(['company_id' => $this->company->id, 'code' => '001009', 'name' => 'Cash', 'parent_id' => $assets->id, 'type' => SubjectType::BOTH]);
 
         $csv = $this->buildCsv([
             ['1', '2026-01-01', 'D', 'manual', 'unapproved', '001', '002', '', 'Cash', 'd', '100', '0'],
@@ -226,10 +227,10 @@ class DocumentImportExportTest extends TestCase
 
     public function test_csv_import_keeps_same_named_subjects_under_different_parents_distinct(): void
     {
-        $products = Subject::create(['company_id' => $this->company->id, 'code' => '010', 'name' => 'Products', 'parent_id' => null, 'type' => 'both']);
-        $services = Subject::create(['company_id' => $this->company->id, 'code' => '020', 'name' => 'Services', 'parent_id' => null, 'type' => 'both']);
-        Subject::create(['company_id' => $this->company->id, 'code' => '010001', 'name' => 'Cash', 'parent_id' => $products->id, 'type' => 'both']);
-        Subject::create(['company_id' => $this->company->id, 'code' => '020001', 'name' => 'Cash', 'parent_id' => $services->id, 'type' => 'both']);
+        $products = Subject::create(['company_id' => $this->company->id, 'code' => '010', 'name' => 'Products', 'parent_id' => null, 'type' => SubjectType::BOTH]);
+        $services = Subject::create(['company_id' => $this->company->id, 'code' => '020', 'name' => 'Services', 'parent_id' => null, 'type' => SubjectType::BOTH]);
+        Subject::create(['company_id' => $this->company->id, 'code' => '010001', 'name' => 'Cash', 'parent_id' => $products->id, 'type' => SubjectType::BOTH]);
+        Subject::create(['company_id' => $this->company->id, 'code' => '020001', 'name' => 'Cash', 'parent_id' => $services->id, 'type' => SubjectType::BOTH]);
 
         $csv = $this->buildCsv([
             ['1', '2026-01-01', 'D', 'manual', 'unapproved', '010', '001', '', 'Cash', 'd', '100', '0'],
@@ -248,7 +249,7 @@ class DocumentImportExportTest extends TestCase
 
     public function test_csv_import_matches_by_code_when_a_name_is_reused_for_several_codes_in_the_file(): void
     {
-        Subject::create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets', 'parent_id' => null, 'type' => 'both']);
+        Subject::create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets', 'parent_id' => null, 'type' => SubjectType::BOTH]);
 
         $csv = $this->buildCsv([
             ['1', '2026-01-01', 'D', 'manual', 'unapproved', '001', '002', '', 'Widget', 'd', '100', '0'],
@@ -280,8 +281,8 @@ class DocumentImportExportTest extends TestCase
 
     public function test_csv_import_preserves_subject_hierarchy(): void
     {
-        $assets = Subject::create(['company_id' => $this->company->id, 'code' => '011', 'name' => 'Assets', 'parent_id' => null, 'type' => 'both']);
-        Subject::create(['company_id' => $this->company->id, 'code' => '011004', 'name' => 'Bank', 'parent_id' => $assets->id, 'type' => 'both']);
+        $assets = Subject::create(['company_id' => $this->company->id, 'code' => '011', 'name' => 'Assets', 'parent_id' => null, 'type' => SubjectType::BOTH]);
+        Subject::create(['company_id' => $this->company->id, 'code' => '011004', 'name' => 'Bank', 'parent_id' => $assets->id, 'type' => SubjectType::BOTH]);
 
         $csv = $this->buildCsv([
             ['2', '2026-01-10', 'T', 'manual', 'unapproved', '011', '004', '001', 'Mellat', 'x', '0', '0'],
@@ -409,7 +410,7 @@ class DocumentImportExportTest extends TestCase
 
     public function test_creates_child_subject_with_existing_parent(): void
     {
-        $parent = Subject::create(['company_id' => $this->company->id, 'code' => '100', 'name' => 'Assets', 'parent_id' => null, 'type' => 'both']);
+        $parent = Subject::create(['company_id' => $this->company->id, 'code' => '100', 'name' => 'Assets', 'parent_id' => null, 'type' => SubjectType::BOTH]);
         $child = $this->resolver->findOrCreate('100002', 'Bank', '100');
 
         $this->assertNotNull($child->id);
@@ -419,8 +420,8 @@ class DocumentImportExportTest extends TestCase
 
     public function test_falls_back_to_name_parent_match_when_code_missing(): void
     {
-        $parent = Subject::create(['company_id' => $this->company->id, 'code' => '200', 'name' => 'Liabilities', 'parent_id' => null, 'type' => 'both']);
-        $existing = Subject::create(['company_id' => $this->company->id, 'code' => '200001', 'name' => 'Loans', 'parent_id' => $parent->id, 'type' => 'both']);
+        $parent = Subject::create(['company_id' => $this->company->id, 'code' => '200', 'name' => 'Liabilities', 'parent_id' => null, 'type' => SubjectType::BOTH]);
+        $existing = Subject::create(['company_id' => $this->company->id, 'code' => '200001', 'name' => 'Loans', 'parent_id' => $parent->id, 'type' => SubjectType::BOTH]);
         $result = $this->resolver->findOrCreate('200999', 'Loans', '200');
 
         $this->assertSame($existing->id, $result->id, 'Should match by name + parent_id when code differs');
@@ -822,7 +823,7 @@ class DocumentImportExportTest extends TestCase
         ]);
         $this->runCsvImport($csv, 'parsian');
 
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '011', 'name' => 'بانک ها', 'is_permanent' => true, 'type' => 'both']);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '011', 'name' => 'بانک ها', 'is_permanent' => true, 'type' => SubjectType::BOTH]);
         $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '050', 'name' => 'هزینه ها', 'is_permanent' => false]);
     }
 
@@ -860,13 +861,13 @@ class DocumentImportExportTest extends TestCase
         ]);
         $this->runCsvImport($csv, 'parsian');
 
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '024', 'name' => 'ذخیره مالیات', 'type' => 'debtor', 'is_permanent' => true]);
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '024001', 'type' => 'debtor']);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '024', 'name' => 'ذخیره مالیات', 'type' => SubjectType::DEBTOR, 'is_permanent' => true]);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '024001', 'type' => SubjectType::DEBTOR]);
     }
 
     public function test_parsian_top_level_type_mismatch_reuses_existing_subject(): void
     {
-        $existing = Subject::create(['company_id' => $this->company->id, 'code' => '011', 'name' => 'My Custom Root', 'parent_id' => null, 'type' => 'both', 'is_permanent' => false]);
+        $existing = Subject::create(['company_id' => $this->company->id, 'code' => '011', 'name' => 'My Custom Root', 'parent_id' => null, 'type' => SubjectType::BOTH, 'is_permanent' => false]);
 
         $csv = $this->buildParsianCsv([
             $this->parsianRow(703, '1404/05/05', 11, 4, 0, 1000, 0, 'desc', 'بانک پاسارگاد'),
@@ -912,14 +913,14 @@ class DocumentImportExportTest extends TestCase
         $result = $this->runCsvImport($csv, 'free_amir');
 
         $this->assertSame(1, $result['documents_created']);
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001002', 'name' => 'Tax Reserve', 'type' => 'debtor', 'is_permanent' => true]);
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '003004', 'name' => 'Expense', 'type' => 'both', 'is_permanent' => false]);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001002', 'name' => 'Tax Reserve', 'type' => SubjectType::DEBTOR, 'is_permanent' => true]);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '003004', 'name' => 'Expense', 'type' => SubjectType::BOTH, 'is_permanent' => false]);
     }
 
     public function test_free_amir_export_includes_type_and_is_permanent_columns(): void
     {
-        $root = Subject::create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets', 'parent_id' => null, 'type' => 'both', 'is_permanent' => true]);
-        $child = Subject::create(['company_id' => $this->company->id, 'code' => '001001', 'name' => 'Bank', 'parent_id' => $root->id, 'type' => 'debtor', 'is_permanent' => true]);
+        $root = Subject::create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets', 'parent_id' => null, 'type' => SubjectType::BOTH, 'is_permanent' => true]);
+        $child = Subject::create(['company_id' => $this->company->id, 'code' => '001001', 'name' => 'Bank', 'parent_id' => $root->id, 'type' => SubjectType::DEBTOR, 'is_permanent' => true]);
         $document = Document::factory()->create(['company_id' => $this->company->id, 'number' => 1, 'date' => '2026-01-01']);
         Transaction::create(['document_id' => $document->id, 'subject_id' => $child->id, 'value' => 1000, 'user_id' => $this->user->id]);
 
@@ -939,7 +940,7 @@ class DocumentImportExportTest extends TestCase
         ]);
         $this->runCsvImport($csv, 'parsian');
 
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '050002', 'name' => 'هزینه اجاره', 'type' => 'both', 'is_permanent' => false]);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '050002', 'name' => 'هزینه اجاره', 'type' => SubjectType::BOTH, 'is_permanent' => false]);
     }
 
     public function test_parsian_three_level_tafsili_inherits_temporary_from_root(): void
@@ -954,7 +955,7 @@ class DocumentImportExportTest extends TestCase
             $subject = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', $code)->first();
             $this->assertNotNull($subject, "Level {$code} must be created");
             $this->assertFalse((bool) $subject->is_permanent, "Level {$code} must inherit the temporary root");
-            $this->assertSame('both', $subject->type);
+            $this->assertSame(SubjectType::BOTH, $subject->type);
         }
     }
 
@@ -969,7 +970,7 @@ class DocumentImportExportTest extends TestCase
         foreach (['024', '024001', '024001005'] as $code) {
             $subject = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', $code)->first();
             $this->assertNotNull($subject, "Level {$code} must be created");
-            $this->assertSame('debtor', $subject->type, "Level {$code} must inherit the debtor nature");
+            $this->assertSame(SubjectType::DEBTOR, $subject->type, "Level {$code} must inherit the debtor nature");
             $this->assertTrue((bool) $subject->is_permanent, "Level {$code} must inherit permanence");
         }
     }
@@ -983,7 +984,7 @@ class DocumentImportExportTest extends TestCase
         $result = $this->runCsvImport($csv, 'free_amir');
 
         $this->assertSame(1, $result['documents_created']);
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001', 'name' => 'Cash Box', 'type' => 'debtor', 'is_permanent' => true]);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001', 'name' => 'Cash Box', 'type' => SubjectType::DEBTOR, 'is_permanent' => true]);
     }
 
     public function test_free_amir_two_level_subject_applies_type_and_permanent(): void
@@ -995,7 +996,7 @@ class DocumentImportExportTest extends TestCase
         $result = $this->runCsvImport($csv, 'free_amir');
 
         $this->assertSame(1, $result['documents_created']);
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001002', 'name' => 'Receivable', 'type' => 'creditor', 'is_permanent' => false]);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001002', 'name' => 'Receivable', 'type' => SubjectType::CREDITOR, 'is_permanent' => false]);
     }
 
     public function test_free_amir_three_level_applies_type_to_leaf_only(): void
@@ -1007,11 +1008,11 @@ class DocumentImportExportTest extends TestCase
         $result = $this->runCsvImport($csv, 'free_amir');
         $this->assertSame(1, $result['documents_created']);
 
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001002003', 'name' => 'Detail Account', 'type' => 'debtor', 'is_permanent' => true]);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001002003', 'name' => 'Detail Account', 'type' => SubjectType::DEBTOR, 'is_permanent' => true]);
 
         $moein = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '001002')->first();
         $this->assertNotNull($moein);
-        $this->assertSame('both', $moein->type);
+        $this->assertSame(SubjectType::BOTH, $moein->type);
         $this->assertSame(0, (int) $moein->is_permanent);
     }
 
@@ -1020,12 +1021,12 @@ class DocumentImportExportTest extends TestCase
         $leaf = $this->resolver->findOrCreate('001001001001', 'CNC Lathes', '001001001', true, 'debtor');
 
         $this->assertSame('001001001001', $leaf->code);
-        $this->assertSame('debtor', $leaf->type);
+        $this->assertSame(SubjectType::DEBTOR, $leaf->type);
         $this->assertTrue((bool) $leaf->is_permanent);
 
         $parent = Subject::withoutGlobalScope(FiscalYearScope::class)->find($leaf->parent_id);
         $this->assertSame('001001001', $parent->code);
-        $this->assertSame('both', $parent->type);
+        $this->assertSame(SubjectType::BOTH, $parent->type);
         $this->assertSame(0, (int) $parent->is_permanent);
 
         $depth = 0;
@@ -1039,10 +1040,10 @@ class DocumentImportExportTest extends TestCase
 
     public function test_free_amir_export_drops_fourth_level_subject(): void
     {
-        $l1 = Subject::create(['company_id' => $this->company->id, 'code' => '001',         'name' => 'L1', 'parent_id' => null,  'type' => 'both']);
-        $l2 = Subject::create(['company_id' => $this->company->id, 'code' => '001001',      'name' => 'L2', 'parent_id' => $l1->id, 'type' => 'both']);
-        $l3 = Subject::create(['company_id' => $this->company->id, 'code' => '001001001',   'name' => 'L3', 'parent_id' => $l2->id, 'type' => 'both']);
-        $l4 = Subject::create(['company_id' => $this->company->id, 'code' => '001001001001', 'name' => 'L4', 'parent_id' => $l3->id, 'type' => 'both']);
+        $l1 = Subject::create(['company_id' => $this->company->id, 'code' => '001',         'name' => 'L1', 'parent_id' => null,  'type' => SubjectType::BOTH]);
+        $l2 = Subject::create(['company_id' => $this->company->id, 'code' => '001001',      'name' => 'L2', 'parent_id' => $l1->id, 'type' => SubjectType::BOTH]);
+        $l3 = Subject::create(['company_id' => $this->company->id, 'code' => '001001001',   'name' => 'L3', 'parent_id' => $l2->id, 'type' => SubjectType::BOTH]);
+        $l4 = Subject::create(['company_id' => $this->company->id, 'code' => '001001001001', 'name' => 'L4', 'parent_id' => $l3->id, 'type' => SubjectType::BOTH]);
 
         $document = Document::factory()->create(['company_id' => $this->company->id, 'number' => 99, 'date' => '2026-01-01']);
         Transaction::create(['document_id' => $document->id, 'subject_id' => $l4->id, 'value' => 100, 'user_id' => $this->user->id]);
@@ -1051,9 +1052,9 @@ class DocumentImportExportTest extends TestCase
         $csv = $this->exportCsvViaService([]);
 
         $newCompany = Company::factory()->create();
-        Subject::create(['company_id' => $newCompany->id, 'code' => '001',       'name' => 'L1', 'parent_id' => null,  'type' => 'both']);
-        Subject::create(['company_id' => $newCompany->id, 'code' => '001001',    'name' => 'L2', 'parent_id' => null,  'type' => 'both']);
-        Subject::create(['company_id' => $newCompany->id, 'code' => '001001001', 'name' => 'L3', 'parent_id' => null,  'type' => 'both']);
+        Subject::create(['company_id' => $newCompany->id, 'code' => '001',       'name' => 'L1', 'parent_id' => null,  'type' => SubjectType::BOTH]);
+        Subject::create(['company_id' => $newCompany->id, 'code' => '001001',    'name' => 'L2', 'parent_id' => null,  'type' => SubjectType::BOTH]);
+        Subject::create(['company_id' => $newCompany->id, 'code' => '001001001', 'name' => 'L3', 'parent_id' => null,  'type' => SubjectType::BOTH]);
 
         $result = $this->runCsvImport($this->makeCsvFile($csv), 'free_amir', $newCompany);
 

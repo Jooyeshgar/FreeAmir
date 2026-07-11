@@ -29,7 +29,7 @@ class PersonnelRequestSeeder extends Seeder
             [
                 'days_ago' => 45,
                 'type' => PersonnelRequestType::LEAVE_DAILY,
-                'status' => 'approved',
+                'status' => PersonnelRequestStatus::APPROVED,
                 'days' => 2,
                 'start_time' => '08:00',
                 'end_time' => '16:00',
@@ -37,7 +37,7 @@ class PersonnelRequestSeeder extends Seeder
             [
                 'days_ago' => 30,
                 'type' => PersonnelRequestType::SICK_LEAVE,
-                'status' => 'approved',
+                'status' => PersonnelRequestStatus::APPROVED,
                 'days' => 1,
                 'start_time' => '08:00',
                 'end_time' => '16:00',
@@ -45,7 +45,7 @@ class PersonnelRequestSeeder extends Seeder
             [
                 'days_ago' => 14,
                 'type' => PersonnelRequestType::LEAVE_WITHOUT_PAY,
-                'status' => 'rejected',
+                'status' => PersonnelRequestStatus::REJECTED,
                 'days' => 3,
                 'start_time' => '08:00',
                 'end_time' => '16:00',
@@ -53,7 +53,7 @@ class PersonnelRequestSeeder extends Seeder
             [
                 'days_ago' => 7,
                 'type' => PersonnelRequestType::LEAVE_HOURLY,
-                'status' => 'pending',
+                'status' => PersonnelRequestStatus::PENDING,
                 'days' => null,
                 'start_time' => '10:00',
                 'end_time' => '12:00',
@@ -61,7 +61,7 @@ class PersonnelRequestSeeder extends Seeder
             [
                 'days_ago' => 2,
                 'type' => PersonnelRequestType::MISSION_DAILY,
-                'status' => 'pending',
+                'status' => PersonnelRequestStatus::PENDING,
                 'days' => 2,
                 'start_time' => '08:00',
                 'end_time' => '16:00',
@@ -91,13 +91,13 @@ class PersonnelRequestSeeder extends Seeder
                         'company_id' => 1,
                         'end_date' => $end,
                         'reason' => __('Demo request').' #'.($i + 1),
-                        'status' => PersonnelRequestStatus::fromName($row['status']),
-                        'approved_by' => $row['status'] !== 'pending' ? $approverId : null,
+                        'status' => $row['status'],
+                        'approved_by' => $row['status']->isPending() ? null : $approverId,
                         'payroll_id' => null,
                     ]
                 );
 
-                if (PersonnelRequestStatus::fromName($row['status'])->isApproved()) {
+                if ($row['status']->isApproved()) {
                     $request->load('employee.workShift');
                     $this->service->syncPersonnelRequestLogs($request);
                 }

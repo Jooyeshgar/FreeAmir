@@ -3,7 +3,10 @@
 namespace Tests\Feature;
 
 use App\Enums\FiscalYearSection;
+use App\Enums\InvoiceStatus;
+use App\Enums\InvoiceType;
 use App\Enums\PayrollStatus;
+use App\Enums\SubjectType;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
@@ -244,8 +247,8 @@ class BackupControllerTest extends TestCase
         // Before the fix, empty documentMapping caused all invoices to be skipped.
         $payload = [
             'subjects' => [
-                ['id' => 1, 'code' => '1',   'name' => 'Group Subject',    'parent_id' => null, 'company_id' => 0, 'type' => 'both', 'subjectable_type' => CustomerGroup::class, 'subjectable_id' => 1, 'is_permanent' => false],
-                ['id' => 2, 'code' => '11', 'name' => 'Customer Subject', 'parent_id' => 1,    'company_id' => 0, 'type' => 'both', 'subjectable_type' => Customer::class, 'subjectable_id' => 1, 'is_permanent' => false],
+                ['id' => 1, 'code' => '1',   'name' => 'Group Subject',    'parent_id' => null, 'company_id' => 0, 'type' => SubjectType::BOTH, 'subjectable_type' => CustomerGroup::class, 'subjectable_id' => 1, 'is_permanent' => false],
+                ['id' => 2, 'code' => '11', 'name' => 'Customer Subject', 'parent_id' => 1,    'company_id' => 0, 'type' => SubjectType::BOTH, 'subjectable_type' => Customer::class, 'subjectable_id' => 1, 'is_permanent' => false],
             ],
             'customer_groups' => [
                 ['id' => 1, 'name' => 'Test Group', 'description' => null, 'subject_id' => 1, 'company_id' => 0],
@@ -257,7 +260,7 @@ class BackupControllerTest extends TestCase
             'invoices' => [
                 ['id' => 1, 'number' => '1', 'date' => '2026-01-01', 'customer_id' => 1, 'document_id' => null,
                     'company_id' => 0, 'subtraction' => 0, 'vat' => 0, 'amount' => 100, 'returned_invoice_id' => null,
-                    'creator_id' => null, 'approver_id' => null, 'status' => 'unapproved', 'invoice_type' => 'sell'],
+                    'creator_id' => null, 'approver_id' => null, 'status' => InvoiceStatus::UNAPPROVED, 'invoice_type' => InvoiceType::SELL],
             ],
             'invoice_items' => [],
             'ancillary_costs' => [],

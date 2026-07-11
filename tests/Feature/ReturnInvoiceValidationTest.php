@@ -189,8 +189,8 @@ class ReturnInvoiceValidationTest extends TestCase
         $response = $this->from(route('invoices.create', ['invoice_type' => 'return_sell']))
             ->post(route('invoices.store'), [
                 'title' => 'Return sell invoice',
-                'date' => '2026-06-03',
-                'invoice_type' => InvoiceType::RETURN_SELL->value,
+                'date' => convertToJalali('2026-06-03', true),
+                'invoice_type' => InvoiceType::RETURN_SELL->valueName(),
                 'customer_id' => $sell->customer_id,
                 'returned_invoice_id' => $sell->id,
                 'document_number' => 6056,

@@ -21,7 +21,7 @@ class PersonnelRequestFactory extends Factory
         return [
             'company_id' => Company::factory(),
             'employee_id' => Employee::factory(),
-            'request_type' => $this->faker->randomElement(PersonnelRequestType::cases())->value,
+            'request_type' => $this->faker->randomElement(PersonnelRequestType::cases()),
             'start_date' => $startDate,
             'end_date' => $endDate,
             'reason' => $this->faker->optional()->sentence(),

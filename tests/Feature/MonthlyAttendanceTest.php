@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
@@ -689,7 +690,7 @@ class MonthlyAttendanceTest extends TestCase
             'request_type' => PersonnelRequestType::LEAVE_WITHOUT_PAY,
             'start_date' => '2025-01-06 08:00:00',
             'end_date' => '2025-01-06 16:00:00',
-            'status' => 'approved',
+            'status' => PersonnelRequestStatus::APPROVED,
         ]);
 
         $service = new AttendanceService;
@@ -726,7 +727,7 @@ class MonthlyAttendanceTest extends TestCase
             'request_type' => PersonnelRequestType::LEAVE_WITHOUT_PAY_HOURLY,
             'start_date' => '2025-01-06 08:00:00',
             'end_date' => '2025-01-06 10:00:00',
-            'status' => 'approved',
+            'status' => PersonnelRequestStatus::APPROVED,
         ]);
 
         $service = new AttendanceService;

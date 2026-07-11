@@ -34,7 +34,7 @@ class PayrollFactory extends Factory
             'tax_base_amount' => $taxBaseAmount,
             'income_tax_amount' => $incomeTaxAmount,
             'issue_date' => $this->faker->dateTimeBetween('-6 months', 'now'),
-            'status' => $this->faker->randomElement(PayrollStatus::cases())->value,
+            'status' => $this->faker->randomElement(PayrollStatus::cases()),
             'accounting_voucher_id' => null,
             'description' => $this->faker->optional()->sentence(),
         ];

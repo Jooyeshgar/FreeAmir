@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Models\Company;
 use App\Models\Employee;
@@ -55,22 +56,33 @@ class PersonnelRequestTest extends TestCase
         return PersonnelRequest::factory()->create(array_merge([
             'company_id' => $this->companyId,
             'employee_id' => $this->employee->id,
-            'request_type' => PersonnelRequestType::LEAVE_DAILY->value,
-            'status' => 'pending',
+            'request_type' => PersonnelRequestType::LEAVE_DAILY,
+            'status' => PersonnelRequestStatus::PENDING,
         ], $overrides));
     }
 
     private function validPayload(array $overrides = []): array
     {
-        return array_merge([
+        $payload = array_merge([
             'employee_id' => $this->employee->id,
-            'request_type' => PersonnelRequestType::REMOTE_WORK->value,
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY->valueName(),
             'request_date' => '1404/12/10',
             'start_time' => '08:00',
             'end_time' => '17:00',
             'reason' => 'Family matter',
-            'status' => 'pending',
+            'status' => PersonnelRequestStatus::PENDING->valueName(),
+            'tab' => 'leaves',
         ], $overrides);
+
+        if ($payload['request_type'] instanceof PersonnelRequestType) {
+            $payload['request_type'] = $payload['request_type']->valueName();
+        }
+
+        if ($payload['status'] instanceof PersonnelRequestStatus) {
+            $payload['status'] = $payload['status']->valueName();
+        }
+
+        return $payload;
     }
 
     // ----------------------------------------------------------------
@@ -86,8 +98,8 @@ class PersonnelRequestTest extends TestCase
 
     public function test_index_lists_personnel_requests_for_active_company(): void
     {
-        $this->makePersonnelRequest(['request_type' => PersonnelRequestType::LEAVE_DAILY->value]);
-        $this->makePersonnelRequest(['request_type' => PersonnelRequestType::LEAVE_HOURLY->value]);
+        $this->makePersonnelRequest(['request_type' => PersonnelRequestType::LEAVE_DAILY]);
+        $this->makePersonnelRequest(['request_type' => PersonnelRequestType::LEAVE_HOURLY]);
 
         $response = $this->get(route('hr.personnel-requests.index'));
 
@@ -97,8 +109,8 @@ class PersonnelRequestTest extends TestCase
 
     public function test_index_tabs_filter_by_type_group(): void
     {
-        $this->makePersonnelRequest(['request_type' => PersonnelRequestType::LEAVE_DAILY->value]);
-        $this->makePersonnelRequest(['request_type' => PersonnelRequestType::MISSION_DAILY->value]);
+        $this->makePersonnelRequest(['request_type' => PersonnelRequestType::LEAVE_DAILY]);
+        $this->makePersonnelRequest(['request_type' => PersonnelRequestType::MISSION_DAILY]);
 
         // Leaves tab (default)
         $response = $this->get(route('hr.personnel-requests.index', ['tab' => 'leaves']));
@@ -119,8 +131,8 @@ class PersonnelRequestTest extends TestCase
 
     public function test_index_shows_pending_badge_counts(): void
     {
-        $this->makePersonnelRequest(['status' => 'pending', 'request_type' => PersonnelRequestType::LEAVE_DAILY->value]);
-        $this->makePersonnelRequest(['status' => 'approved', 'request_type' => PersonnelRequestType::LEAVE_DAILY->value]);
+        $this->makePersonnelRequest(['status' => PersonnelRequestStatus::PENDING, 'request_type' => PersonnelRequestType::LEAVE_DAILY]);
+        $this->makePersonnelRequest(['status' => PersonnelRequestStatus::APPROVED, 'request_type' => PersonnelRequestType::LEAVE_DAILY]);
 
         $response = $this->get(route('hr.personnel-requests.index'));
 
@@ -131,8 +143,8 @@ class PersonnelRequestTest extends TestCase
 
     public function test_index_filters_by_status(): void
     {
-        $this->makePersonnelRequest(['status' => 'pending']);
-        $this->makePersonnelRequest(['status' => 'approved']);
+        $this->makePersonnelRequest(['status' => PersonnelRequestStatus::PENDING]);
+        $this->makePersonnelRequest(['status' => PersonnelRequestStatus::APPROVED]);
 
         $response = $this->get(route('hr.personnel-requests.index', ['tab' => 'leaves', 'status' => 'pending']));
 
@@ -182,8 +194,8 @@ class PersonnelRequestTest extends TestCase
         $this->assertDatabaseHas('personnel_requests', [
             'company_id' => $this->companyId,
             'employee_id' => $this->employee->id,
-            'request_type' => PersonnelRequestType::REMOTE_WORK->value,
-            'status' => 'pending',
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY->value,
+            'status' => PersonnelRequestStatus::PENDING->value,
             'approved_by' => null,
         ]);
     }
@@ -207,7 +219,7 @@ class PersonnelRequestTest extends TestCase
     public function test_store_rejects_invalid_request_type(): void
     {
         $response = $this->post(route('hr.personnel-requests.store'), $this->validPayload([
-            'request_type' => 'INVALID_TYPE',
+            'request_type' => 10,
         ]));
 
         $response->assertSessionHasErrors(['request_type']);
@@ -304,7 +316,7 @@ class PersonnelRequestTest extends TestCase
 
     public function test_approve_changes_status_to_approved(): void
     {
-        $personnelRequest = $this->makePersonnelRequest(['status' => 'pending']);
+        $personnelRequest = $this->makePersonnelRequest(['status' => PersonnelRequestStatus::PENDING]);
 
         $response = $this->patch(route('hr.personnel-requests.approve', $personnelRequest));
 
@@ -313,15 +325,15 @@ class PersonnelRequestTest extends TestCase
 
         $this->assertDatabaseHas('personnel_requests', [
             'id' => $personnelRequest->id,
-            'status' => 'approved',
+            'status' => PersonnelRequestStatus::APPROVED->value,
         ]);
         // approved_by should be auto-set to the acting user's employee id (null here since test user has no employee)
-        $this->assertDatabaseHas('personnel_requests', ['id' => $personnelRequest->id, 'status' => 'approved']);
+        $this->assertDatabaseHas('personnel_requests', ['id' => $personnelRequest->id, 'status' => PersonnelRequestStatus::APPROVED->value]);
     }
 
     public function test_reject_changes_status_to_rejected(): void
     {
-        $personnelRequest = $this->makePersonnelRequest(['status' => 'pending']);
+        $personnelRequest = $this->makePersonnelRequest(['status' => PersonnelRequestStatus::PENDING]);
 
         $response = $this->patch(route('hr.personnel-requests.reject', $personnelRequest));
 
@@ -330,33 +342,33 @@ class PersonnelRequestTest extends TestCase
 
         $this->assertDatabaseHas('personnel_requests', [
             'id' => $personnelRequest->id,
-            'status' => 'rejected',
+            'status' => PersonnelRequestStatus::REJECTED->value,
         ]);
         // approved_by should be auto-set to the acting user's employee id (null here since test user has no employee)
-        $this->assertDatabaseHas('personnel_requests', ['id' => $personnelRequest->id, 'status' => 'rejected']);
+        $this->assertDatabaseHas('personnel_requests', ['id' => $personnelRequest->id, 'status' => PersonnelRequestStatus::REJECTED->value]);
     }
 
     public function test_approve_can_override_rejected_status(): void
     {
-        $personnelRequest = $this->makePersonnelRequest(['status' => 'rejected']);
+        $personnelRequest = $this->makePersonnelRequest(['status' => PersonnelRequestStatus::REJECTED]);
 
         $this->patch(route('hr.personnel-requests.approve', $personnelRequest));
 
         $this->assertDatabaseHas('personnel_requests', [
             'id' => $personnelRequest->id,
-            'status' => 'approved',
+            'status' => PersonnelRequestStatus::APPROVED->value,
         ]);
     }
 
     public function test_reject_can_override_approved_status(): void
     {
-        $personnelRequest = $this->makePersonnelRequest(['status' => 'approved']);
+        $personnelRequest = $this->makePersonnelRequest(['status' => PersonnelRequestStatus::APPROVED]);
 
         $this->patch(route('hr.personnel-requests.reject', $personnelRequest));
 
         $this->assertDatabaseHas('personnel_requests', [
             'id' => $personnelRequest->id,
-            'status' => 'rejected',
+            'status' => PersonnelRequestStatus::REJECTED->value,
         ]);
     }
 
@@ -369,13 +381,13 @@ class PersonnelRequestTest extends TestCase
             'user_id' => $this->user->id,
         ]);
 
-        $personnelRequest = $this->makePersonnelRequest(['status' => 'pending']);
+        $personnelRequest = $this->makePersonnelRequest(['status' => PersonnelRequestStatus::PENDING]);
 
         $this->patch(route('hr.personnel-requests.approve', $personnelRequest));
 
         $this->assertDatabaseHas('personnel_requests', [
             'id' => $personnelRequest->id,
-            'status' => 'approved',
+            'status' => PersonnelRequestStatus::APPROVED->value,
             'approved_by' => $approverEmployee->user->id,
         ]);
     }
@@ -389,13 +401,13 @@ class PersonnelRequestTest extends TestCase
             'user_id' => $this->user->id,
         ]);
 
-        $personnelRequest = $this->makePersonnelRequest(['status' => 'pending']);
+        $personnelRequest = $this->makePersonnelRequest(['status' => PersonnelRequestStatus::PENDING]);
 
         $this->patch(route('hr.personnel-requests.reject', $personnelRequest));
 
         $this->assertDatabaseHas('personnel_requests', [
             'id' => $personnelRequest->id,
-            'status' => 'rejected',
+            'status' => PersonnelRequestStatus::REJECTED->value,
             'approved_by' => $approverEmployee->user->id,
         ]);
     }
@@ -416,8 +428,8 @@ class PersonnelRequestTest extends TestCase
         PersonnelRequest::factory()->create([
             'company_id' => $otherCompany->id,
             'employee_id' => $otherEmployee->id,
-            'request_type' => PersonnelRequestType::LEAVE_DAILY->value,
-            'status' => 'pending',
+            'request_type' => PersonnelRequestType::LEAVE_DAILY,
+            'status' => PersonnelRequestStatus::PENDING,
         ]);
 
         $response = $this->get(route('hr.personnel-requests.index'));

@@ -8,11 +8,11 @@
                 <x-show-message-bags />
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4"
-                    x-data="{ requestType: '{{ old('request_type', $personnelRequest->request_type->valueName() ?? 'LEAVE_HOURLY') }}' }">
+                    x-data="{ requestType: '{{ old('request_type', isset($personnelRequest) ? $personnelRequest->request_type->valueName() : 'LEAVE_HOURLY') }}' }">
                     
                     <x-select name="employee_id" id="employee_id" title="{{ __('Employee') }}" :options="$employees->mapWithKeys(fn($e) => [$e->id => $e->first_name . ' ' . $e->last_name])->toArray()" :selected="old('employee_id')" required />
                     <x-select name="request_type" id="request_type" title="{{ __('Request Type') }}" :options="$requestTypes" 
-                        :selected="old('request_type', $personnelRequest->request_type->valueName() ?? 'LEAVE_HOURLY')" x-model="requestType" required/>
+                        :selected="old('request_type', isset($personnelRequest) ? $personnelRequest->request_type->valueName() : 'LEAVE_HOURLY')" x-model="requestType" required/>
 
                     
                     <x-date-picker name="request_date" id="request_date" :title="__('Date')" :value="old('request_date')" :placeholder="__('Date')" required />

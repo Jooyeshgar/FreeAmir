@@ -231,7 +231,7 @@ class ProductService
     public function lastApprovedBuyInvoiceItemCOG(Product $product)
     {
         $item = $product->invoiceItems()
-            ->whereHas('invoice', fn ($q) => $q->where('invoice_type', 'buy')
+            ->whereHas('invoice', fn ($q) => $q->where('invoice_type', InvoiceType::BUY)
                 ->whereIn('status', InvoiceStatus::approvedOrSettled())
             )
             ->with('invoice:id,date')

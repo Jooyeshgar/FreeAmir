@@ -127,18 +127,18 @@ class PayrollServiceTest extends TestCase
     private function seedElements(): array
     {
         $definitions = [
-            ['system_code' => 'HOUSING_ALLOWANCE', 'category' => 'earning',   'calc_type' => 'fixed',   'is_taxable' => true,  'is_insurable' => true],
-            ['system_code' => 'FOOD_ALLOWANCE',    'category' => 'earning',   'calc_type' => 'fixed',   'is_taxable' => true,  'is_insurable' => true],
-            ['system_code' => 'CHILD_ALLOWANCE',   'category' => 'earning',   'calc_type' => 'fixed',   'is_taxable' => false, 'is_insurable' => false],
-            ['system_code' => 'OVERTIME',          'category' => 'earning',   'calc_type' => 'formula', 'is_taxable' => true,  'is_insurable' => true],
-            ['system_code' => 'AUTO_OVERTIME',     'category' => 'earning',   'calc_type' => 'formula', 'is_taxable' => true,  'is_insurable' => true],
-            ['system_code' => 'FRIDAY_PAY',        'category' => 'earning',   'calc_type' => 'formula', 'is_taxable' => true,  'is_insurable' => true],
-            ['system_code' => 'HOLIDAY_PAY',       'category' => 'earning',   'calc_type' => 'formula', 'is_taxable' => true,  'is_insurable' => true],
-            ['system_code' => 'MISSION_PAY',       'category' => 'earning',   'calc_type' => 'formula', 'is_taxable' => true,  'is_insurable' => true],
-            ['system_code' => 'UNDERTIME',         'category' => 'deduction', 'calc_type' => 'formula', 'is_taxable' => false, 'is_insurable' => false],
-            ['system_code' => 'ABSENCE_DEDUCTION', 'category' => 'deduction', 'calc_type' => 'formula', 'is_taxable' => false, 'is_insurable' => false],
-            ['system_code' => 'INSURANCE_EMP',     'category' => 'deduction', 'calc_type' => 'formula', 'is_taxable' => false, 'is_insurable' => false],
-            ['system_code' => 'INCOME_TAX',        'category' => 'deduction', 'calc_type' => 'formula', 'is_taxable' => false, 'is_insurable' => false],
+            ['system_code' => 2, 'category' => 1,   'calc_type' => 1,   'is_taxable' => true,  'is_insurable' => true],
+            ['system_code' => 3,    'category' => 1,   'calc_type' => 1,   'is_taxable' => true,  'is_insurable' => true],
+            ['system_code' => 1,   'category' => 1,   'calc_type' => 1,   'is_taxable' => false, 'is_insurable' => false],
+            ['system_code' => 5,          'category' => 1,   'calc_type' => 2, 'is_taxable' => true,  'is_insurable' => true],
+            ['system_code' => 6,     'category' => 1,   'calc_type' => 2, 'is_taxable' => true,  'is_insurable' => true],
+            ['system_code' => 7,        'category' => 1,   'calc_type' => 2, 'is_taxable' => true,  'is_insurable' => true],
+            ['system_code' => 8,       'category' => 1,   'calc_type' => 2, 'is_taxable' => true,  'is_insurable' => true],
+            ['system_code' => 9,       'category' => 1,   'calc_type' => 2, 'is_taxable' => true,  'is_insurable' => true],
+            ['system_code' => 16,         'category' => 2, 'calc_type' => 2, 'is_taxable' => false, 'is_insurable' => false],
+            ['system_code' => 14, 'category' => 2, 'calc_type' => 2, 'is_taxable' => false, 'is_insurable' => false],
+            ['system_code' => 10,     'category' => 2, 'calc_type' => 2, 'is_taxable' => false, 'is_insurable' => false],
+            ['system_code' => 13,        'category' => 2, 'calc_type' => 2, 'is_taxable' => false, 'is_insurable' => false],
         ];
 
         $keyed = [];
@@ -221,7 +221,7 @@ class PayrollServiceTest extends TestCase
     /**
      * Attach a benefit element to a decree.
      */
-    private function addBenefit(SalaryDecree $decree, string $systemCode, float $value): DecreeBenefit
+    private function addBenefit(SalaryDecree $decree, int $systemCode, float $value): DecreeBenefit
     {
         return DecreeBenefit::factory()->create([
             'decree_id' => $decree->id,
@@ -280,14 +280,14 @@ class PayrollServiceTest extends TestCase
         $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         $housingAmount = 2_000_000.0;
-        $this->addBenefit($decree, 'HOUSING_ALLOWANCE', $housingAmount);
+        $this->addBenefit($decree, 2, $housingAmount);
 
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
         $result = $this->service->calculate($attendance, $decree, $this->companyId);
 
         // system_code HOUSING_ALLOWANCE uses prorateAllowance; calc_type is 'fixed' so no proration
-        $housingKey = 'HOUSING_ALLOWANCE_'.$this->elements['HOUSING_ALLOWANCE']->id;
+        $housingKey = 'HOUSING_ALLOWANCE_'.$this->elements[2]->id;
         $this->assertArrayHasKey($housingKey, $result['earnings']);
         $this->assertEquals($housingAmount, $result['earnings'][$housingKey]['amount']);
     }
@@ -300,18 +300,18 @@ class PayrollServiceTest extends TestCase
     {
         $this->seedTaxSlabs();
         // Set food element to calc_type = 'daily' for proration
-        $this->elements['FOOD_ALLOWANCE']->update(['calc_type' => 'daily']);
+        $this->elements[3]->update(['calc_type' => 4]);
 
         $decree = $this->makeDecree();
         $monthlyFood = 2_600_000.0; // exactly 100,000/day over 26 days
-        $this->addBenefit($decree, 'FOOD_ALLOWANCE', $monthlyFood);
+        $this->addBenefit($decree, 3, $monthlyFood);
 
         // 26 work days, 2 absent → 24 prorated
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 2]);
 
         $result = $this->service->calculate($attendance, $decree, $this->companyId);
 
-        $foodKey = 'FOOD_ALLOWANCE_'.$this->elements['FOOD_ALLOWANCE']->id;
+        $foodKey = 'FOOD_ALLOWANCE_'.$this->elements[3]->id;
         $expectedFood = round($monthlyFood / 26 * 24, 2); // 2,400,000
 
         $this->assertArrayHasKey($foodKey, $result['earnings']);
@@ -553,7 +553,7 @@ class PayrollServiceTest extends TestCase
             'employer_insurance' => 0,
             'tax_base_amount' => $taxBaseMonth1,
             'income_tax_amount' => $taxAmountMonth1,
-            'status' => 'approved',
+            'status' => PayrollStatus::Approved,
         ]);
 
         $attendance2 = $this->makeAttendance(['month' => 2, 'work_days' => 26, 'absent_days' => 0]);
@@ -595,7 +595,7 @@ class PayrollServiceTest extends TestCase
             'employer_insurance' => 0,
             'tax_base_amount' => $taxBaseMonth1,
             'income_tax_amount' => 0,
-            'status' => PayrollStatus::PendingManagerApproval->value,
+            'status' => PayrollStatus::PendingManagerApproval,
         ]);
 
         $attendance2 = $this->makeAttendance(['month' => 2, 'work_days' => 26, 'absent_days' => 0]);
@@ -614,7 +614,7 @@ class PayrollServiceTest extends TestCase
     {
         $this->seedTaxSlabs();
         $decree = $this->makeDecree();
-        $this->addBenefit($decree, 'HOUSING_ALLOWANCE', 1_000_000);
+        $this->addBenefit($decree, 2, 1_000_000);
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
         $result = $this->service->calculate($attendance, $decree, $this->companyId);
@@ -700,7 +700,7 @@ class PayrollServiceTest extends TestCase
             'monthly_attendance_id' => $attendance->id,
             'year' => 1404,
             'month' => 1,
-            'status' => PayrollStatus::Draft->value,
+            'status' => PayrollStatus::Draft,
         ]);
     }
 
@@ -712,7 +712,7 @@ class PayrollServiceTest extends TestCase
     {
         $this->seedTaxSlabs();
         $decree = $this->makeDecree();
-        $this->addBenefit($decree, 'HOUSING_ALLOWANCE', 1_500_000);
+        $this->addBenefit($decree, 2, 1_500_000);
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
         $payroll = $this->service->createFromAttendance($attendance, $decree, $this->companyId);
@@ -784,9 +784,9 @@ class PayrollServiceTest extends TestCase
         // Create a custom deduction element (not a system-reserved code)
         $customDeduction = PayrollElement::factory()->create([
             'company_id' => $this->companyId,
-            'system_code' => 'OTHER',
-            'category' => 'deduction',
-            'calc_type' => 'fixed',
+            'system_code' => 15,
+            'category' => 2,
+            'calc_type' => 1,
             'is_taxable' => false,
             'is_insurable' => false,
         ]);
@@ -883,8 +883,8 @@ class PayrollServiceTest extends TestCase
         $this->seedTaxSlabs();
         $decree = $this->makeDecree();
         // CHILD_ALLOWANCE is_insurable = false in seedElements()
-        $this->elements['CHILD_ALLOWANCE']->update(['is_insurable' => false]);
-        $this->addBenefit($decree, 'CHILD_ALLOWANCE', 500000);
+        $this->elements[1]->update(['is_insurable' => false]);
+        $this->addBenefit($decree, 1, 500000);
 
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
@@ -972,13 +972,13 @@ class PayrollServiceTest extends TestCase
         $this->seedTaxSlabs();
         $decree = $this->makeDecree();
 
-        $this->addBenefit($decree, 'OVERTIME', 0);
+        $this->addBenefit($decree, 5, 0);
 
         $attendance = $this->makeAttendance(['overtime' => 60]);
 
         $result = $this->service->calculate($attendance, $decree, $this->companyId);
 
-        $overtimeElementId = $this->elements['OVERTIME']->id;
+        $overtimeElementId = $this->elements[5]->id;
 
         $this->assertEquals($overtimeElementId, $result['earnings']['overtime']['element_id']);
     }
@@ -988,13 +988,13 @@ class PayrollServiceTest extends TestCase
         $this->seedTaxSlabs();
         $decree = $this->makeDecree();
 
-        $this->addBenefit($decree, 'AUTO_OVERTIME', 0);
+        $this->addBenefit($decree, 6, 0);
 
         $attendance = $this->makeAttendance(['auto_overtime' => 60]);
 
         $result = $this->service->calculate($attendance, $decree, $this->companyId);
 
-        $autoOvertimeElementId = $this->elements['AUTO_OVERTIME']->id;
+        $autoOvertimeElementId = $this->elements[6]->id;
 
         $this->assertEquals($autoOvertimeElementId, $result['earnings']['auto_overtime']['element_id']);
     }
@@ -1007,8 +1007,8 @@ class PayrollServiceTest extends TestCase
     {
         $this->seedTaxSlabs();
         $decree = $this->makeDecree();
-        $this->addBenefit($decree, 'HOUSING_ALLOWANCE', 1000000);
-        $this->addBenefit($decree, 'FOOD_ALLOWANCE', 500000);
+        $this->addBenefit($decree, 2, 1000000);
+        $this->addBenefit($decree, 3, 500000);
 
         $attendance = $this->makeAttendance([
             'work_days' => 26,

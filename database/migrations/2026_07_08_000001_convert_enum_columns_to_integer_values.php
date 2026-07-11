@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if ($this->isSqlite()) {
+            return;
+        }
+
         foreach ($this->schemaChanges() as $table => $columns) {
             foreach ($columns as $column => $definition) {
                 $this->convertToTinyInteger($table, $column, $definition['map'], $definition['integer_default'], $definition['nullable'] ?? false);
@@ -17,6 +21,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if ($this->isSqlite()) {
+            return;
+        }
+
         foreach ($this->schemaChanges() as $table => $columns) {
             foreach ($columns as $column => $definition) {
                 $this->restoreToString($table, $column, $definition['map'], $definition['string_default'], $definition['nullable'] ?? false);
@@ -227,6 +235,10 @@ return new class extends Migration
 
     private function convertToTinyInteger(string $table, string $column, array $map, ?int $default, bool $nullable = false): void
     {
+        if ($this->isSqlite()) {
+            return;
+        }
+
         if (! Schema::hasTable($table)) {
             return;
         }
@@ -251,8 +263,15 @@ return new class extends Migration
             DB::table($table)->where($column, (string) $integerValue)->update([$column => (string) $integerValue]);
         }
 
-        if (! $nullable) {
-            DB::table($table)->whereNull($column)->update([$column => (string) $default]);
+        $validIntegerValues = array_map('strval', array_values($map));
+
+        if ($nullable) {
+            DB::table($table)->whereNotNull($column)->whereNotIn($column, $validIntegerValues)->update([$column => null]);
+        } else {
+            DB::table($table)
+                ->where(function ($query) use ($column, $validIntegerValues) {
+                    $query->whereNull($column)->orWhereNotIn($column, $validIntegerValues);
+                })->update([$column => (string) $default]);
         }
 
         $this->modifyColumn($table, $column, $nullable ? 'TINYINT UNSIGNED NULL' : 'TINYINT UNSIGNED NOT NULL DEFAULT '.$default);
@@ -260,6 +279,10 @@ return new class extends Migration
 
     private function restoreToString(string $table, string $column, array $map, ?string $default, bool $nullable = false): void
     {
+        if ($this->isSqlite()) {
+            return;
+        }
+
         if (! Schema::hasTable($table)) {
             return;
         }
@@ -280,13 +303,23 @@ return new class extends Migration
             DB::table($table)->where($column, (string) $integerValue)->update([$column => $stringValue]);
         }
 
-        if (! $nullable) {
-            DB::table($table)->whereNull($column)->update([$column => $default]);
+        $validStringValues = array_keys($map);
+
+        if ($nullable) {
+            DB::table($table)->whereNotNull($column)->whereNotIn($column, $validStringValues)->update([$column => null]);
+        } else {
+            DB::table($table)->where(function ($query) use ($column, $validStringValues) {
+                $query->whereNull($column)->orWhereNotIn($column, $validStringValues);
+            })->update([$column => $default]);
         }
     }
 
     private function recoverPartialIntegerMigration(string $table, string $column, ?int $default, bool $nullable): void
     {
+        if ($this->isSqlite()) {
+            return;
+        }
+
         if ($this->hasColumn($table, $column)) {
             return;
         }
@@ -306,6 +339,10 @@ return new class extends Migration
 
     private function modifyColumn(string $table, string $column, string $definition): void
     {
+        if ($this->isSqlite()) {
+            return;
+        }
+
         DB::statement(sprintf(
             'ALTER TABLE `%s` MODIFY `%s` %s',
             $this->escapeIdentifier($table),
@@ -316,6 +353,10 @@ return new class extends Migration
 
     private function changeColumn(string $table, string $from, string $to, string $definition): void
     {
+        if ($this->isSqlite()) {
+            return;
+        }
+
         DB::statement(sprintf(
             'ALTER TABLE `%s` CHANGE `%s` `%s` %s',
             $this->escapeIdentifier($table),
@@ -327,6 +368,14 @@ return new class extends Migration
 
     private function hasColumn(string $table, string $column): bool
     {
+        if (! Schema::hasTable($table)) {
+            return false;
+        }
+
+        if ($this->isSqlite()) {
+            return Schema::hasColumn($table, $column);
+        }
+
         $database = DB::getDatabaseName();
 
         return ! empty(DB::selectOne(
@@ -349,11 +398,19 @@ return new class extends Migration
 
     private function isStringColumn(string $table, string $column): bool
     {
-        return in_array($this->columnType($table, $column), ['varchar', 'char', 'text', 'tinytext', 'mediumtext', 'longtext'], true);
+        return in_array($this->columnType($table, $column), ['varchar', 'char', 'text', 'tinytext', 'mediumtext', 'longtext', 'enum'], true);
     }
 
     private function columnType(string $table, string $column): ?string
     {
+        if (! Schema::hasTable($table)) {
+            return null;
+        }
+
+        if ($this->isSqlite()) {
+            return Schema::getColumnType($table, $column);
+        }
+
         $database = DB::getDatabaseName();
 
         $result = DB::selectOne(
@@ -379,6 +436,11 @@ return new class extends Migration
     private function escapeIdentifier(string $value): string
     {
         return str_replace('`', '``', $value);
+    }
+
+    private function isSqlite(): bool
+    {
+        return DB::connection()->getDriverName() === 'sqlite';
     }
 
     private function invoiceStatuses(): array

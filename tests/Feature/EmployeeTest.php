@@ -62,7 +62,7 @@ class EmployeeTest extends TestCase
             'code' => 'EMP-0001',
             'first_name' => 'Ali',
             'last_name' => 'Hosseini',
-            'nationality' => EmployeeNationality::IRANIAN->value,
+            'nationality' => EmployeeNationality::IRANIAN->valueName(),
             'work_site_id' => $this->workSite->id,
             'is_active' => '1',
             'work_shift_id' => $this->workShift->id,
@@ -453,8 +453,8 @@ class EmployeeTest extends TestCase
     public function test_store_accepts_optional_enum_fields(): void
     {
         $payload = $this->validPayload([
-            'gender' => EmployeeGender::MALE->value,
-            'employment_type' => EmployeeEmploymentType::PERMANENT->value,
+            'gender' => EmployeeGender::MALE->valueName(),
+            'employment_type' => EmployeeEmploymentType::PERMANENT->valueName(),
         ]);
 
         $response = $this->post(route('hr.employees.store'), $payload);

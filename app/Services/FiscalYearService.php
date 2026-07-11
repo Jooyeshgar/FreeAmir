@@ -2,7 +2,15 @@
 
 namespace App\Services;
 
+use App\Enums\EmployeeDutyStatus;
+use App\Enums\EmployeeEducationLevel;
+use App\Enums\EmployeeEmploymentType;
+use App\Enums\EmployeeGender;
+use App\Enums\EmployeeInsuranceType;
+use App\Enums\EmployeeMaritalStatus;
+use App\Enums\EmployeeNationality;
 use App\Enums\FiscalYearSection;
+use App\Enums\SubjectType;
 use App\Models\AncillaryCost;
 use App\Models\AncillaryCostItem;
 use App\Models\AttendanceLog;
@@ -1406,6 +1414,7 @@ class FiscalYearService
             // }
 
             $newEmp = new Employee;
+            $employeeData = self::_normalizeEmployeeEnumAttributes($employeeData);
             $newEmp->fill(collect($employeeData)->except(['id', 'org_chart_id', 'organization_unit_id', 'work_site_id', 'work_shift_id', 'contract_framework_id'])->toArray());
             $newEmp->company_id = $targetYearId;
             $newEmp->org_chart_id = $orgChartMapping[$oldOrgChartId] ?? null;
@@ -1419,6 +1428,33 @@ class FiscalYearService
         }
 
         return $mapping;
+    }
+
+    private static function _normalizeEmployeeEnumAttributes(array $employeeData): array
+    {
+        foreach ([
+            'nationality' => EmployeeNationality::class,
+            'gender' => EmployeeGender::class,
+            'marital_status' => EmployeeMaritalStatus::class,
+            'duty_status' => EmployeeDutyStatus::class,
+            'insurance_type' => EmployeeInsuranceType::class,
+            'education_level' => EmployeeEducationLevel::class,
+            'employment_type' => EmployeeEmploymentType::class,
+        ] as $attribute => $enumClass) {
+            if (! array_key_exists($attribute, $employeeData) || $employeeData[$attribute] === null) {
+                continue;
+            }
+
+            if ($employeeData[$attribute] === '') {
+                $employeeData[$attribute] = null;
+
+                continue;
+            }
+
+            $employeeData[$attribute] = $enumClass::fromName($employeeData[$attribute]);
+        }
+
+        return $employeeData;
     }
 
     /**
@@ -1445,6 +1481,11 @@ class FiscalYearService
     protected static function _createSubject(array $subjectData, int $targetYearId, array &$mapping): Subject
     {
         $newSubject = new Subject;
+        if (array_key_exists('type', $subjectData) && $subjectData['type'] !== null) {
+            $subjectData['type'] = $subjectData['type'] === ''
+                ? SubjectType::BOTH
+                : SubjectType::fromName($subjectData['type']);
+        }
         $newSubject->fill(collect($subjectData)->except(['id', 'parent_id', 'company_id', '_lft', '_rgt', 'subjectable_type', 'subjectable_id'])->toArray());
         $newSubject->company_id = $targetYearId;
         $newSubject->parent_id = ($subjectData['parent_id'] == 0) ? null : $mapping[$subjectData['parent_id']];

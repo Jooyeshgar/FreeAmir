@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Enums\CustomerType;
+use App\Enums\SubjectType;
 use App\Models\Company;
 use App\Models\Config;
 use App\Models\Customer;
@@ -36,7 +38,7 @@ class FiscalYearCopySubjectableIntegrityTest extends TestCase
             'name' => 'Customers Root',
             'code' => '101',
             'parent_id' => null,
-            'type' => 'both',
+            'type' => SubjectType::DEBTOR,
             'is_permanent' => true,
         ])->save();
 
@@ -68,9 +70,9 @@ class FiscalYearCopySubjectableIntegrityTest extends TestCase
 
         $g1 = $groupService->create(['name' => 'Wholesale', 'company_id' => $source->id]);
         $g2 = $groupService->create(['name' => 'Retail', 'company_id' => $source->id]);
-        $c1 = $customerService->create(['name' => 'Acme', 'group_id' => $g1->id, 'company_id' => $source->id, 'type' => 'individual']);
-        $customerService->create(['name' => 'Globex', 'group_id' => $g1->id, 'company_id' => $source->id, 'type' => 'individual', 'introducer_id' => $c1->id]);
-        $customerService->create(['name' => 'Initech', 'group_id' => $g2->id, 'company_id' => $source->id, 'type' => 'individual']);
+        $c1 = $customerService->create(['name' => 'Acme', 'group_id' => $g1->id, 'company_id' => $source->id, 'type' => CustomerType::INDIVIDUAL]);
+        $customerService->create(['name' => 'Globex', 'group_id' => $g1->id, 'company_id' => $source->id, 'type' => CustomerType::INDIVIDUAL, 'introducer_id' => $c1->id]);
+        $customerService->create(['name' => 'Initech', 'group_id' => $g2->id, 'company_id' => $source->id, 'type' => CustomerType::INDIVIDUAL]);
 
         return $source;
     }
@@ -129,7 +131,7 @@ class FiscalYearCopySubjectableIntegrityTest extends TestCase
         $this->setActive($target);
         $group = app(CustomerGroupService::class)->create(['name' => 'FreshGroup', 'company_id' => $target->id]);
         $customer = app(CustomerService::class)->create([
-            'name' => 'BrandNew', 'group_id' => $group->id, 'company_id' => $target->id, 'type' => 'individual',
+            'name' => 'BrandNew', 'group_id' => $group->id, 'company_id' => $target->id, 'type' => CustomerType::INDIVIDUAL,
         ]);
         $customer->refresh();
 

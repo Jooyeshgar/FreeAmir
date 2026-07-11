@@ -1,6 +1,8 @@
+@php($payrollElement = $payrollElement ?? null)
+
 <div class="grid grid-cols-2 gap-6">
     <div class="col-span-2 md:col-span-1">
-        <x-input name="title" id="title" title="{{ __('Title') }}" :value="old('title', $payrollElement->title ?? '')" placeholder="{{ __('e.g. Housing Allowance') }}" required />
+        <x-input name="title" id="title" title="{{ __('Title') }}" :value="old('title', isset($payrollElement) ? $payrollElement->title : '')" placeholder="{{ __('e.g. Housing Allowance') }}" required />
     </div>
 
     <div class="col-span-2 md:col-span-1">
@@ -25,7 +27,7 @@
         'ABSENCE_DEDUCTION' => __('Absence Deduction'),
         'OTHER' => __('Other'),
     ] as $value => $label)
-                <option value="{{ $value }}" @selected(old('system_code', $payrollElement->system_code?->valueName() ?? '') === $value)>
+                <option value="{{ $value }}" @selected(old('system_code', $payrollElement ? $payrollElement->system_code?->valueName() : '') === $value)>
                     {{ $label }}
                 </option>
             @endforeach
@@ -41,8 +43,8 @@
         </label>
         <select name="category" id="category" class="select  w-full" required>
             <option value="">{{ __('Select Category') }}</option>
-            <option value="earning" @selected(old('category', $payrollElement->category?->valueName() ?? '') === 'earning')>{{ __('Earning') }}</option>
-            <option value="deduction" @selected(old('category', $payrollElement->category?->valueName() ?? '') === 'deduction')>{{ __('Deduction') }}</option>
+            <option value="earning" @selected(old('category', $payrollElement ? $payrollElement->category?->valueName() : '') === 'earning')>{{ __('Earning') }}</option>
+            <option value="deduction" @selected(old('category', $payrollElement ? $payrollElement->category?->valueName() : '') === 'deduction')>{{ __('Deduction') }}</option>
         </select>
         @error('category')
             <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
@@ -55,9 +57,9 @@
         </label>
         <select name="calc_type" id="calc_type" class="select  w-full" required>
             <option value="">{{ __('Select Calculation Type') }}</option>
-            <option value="fixed" @selected(old('calc_type', $payrollElement->calc_type?->valueName() ?? '') === 'fixed')>{{ __('Fixed') }}</option>
-            <option value="daily" @selected(old('calc_type', $payrollElement->calc_type?->valueName() ?? '') === 'daily')>{{ __('Daily') }}</option>
-            <option value="percentage" @selected(old('calc_type', $payrollElement->calc_type?->valueName() ?? '') === 'percentage')>{{ __('Percentage') }}</option>
+            <option value="fixed" @selected(old('calc_type', $payrollElement ? $payrollElement->calc_type?->valueName() : '') === 'fixed')>{{ __('Fixed') }}</option>
+            <option value="daily" @selected(old('calc_type', $payrollElement ? $payrollElement->calc_type?->valueName() : '') === 'daily')>{{ __('Daily') }}</option>
+            <option value="percentage" @selected(old('calc_type', $payrollElement ? $payrollElement->calc_type?->valueName() : '') === 'percentage')>{{ __('Percentage') }}</option>
         </select>
         @error('calc_type')
             <p class="text-red-500 text-sm mt-1">{{ $message }}</p>

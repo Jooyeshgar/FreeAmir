@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\SubjectType;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\Subject;
@@ -53,7 +54,7 @@ class TrialBalanceExportTest extends TestCase
 
     public function test_trial_balance_export_contains_csv_headers(): void
     {
-        Subject::create(['company_id' => $this->company->id, 'code' => '011', 'name' => 'بانک ها', 'parent_id' => null, 'type' => 'both']);
+        Subject::create(['company_id' => $this->company->id, 'code' => '011', 'name' => 'بانک ها', 'parent_id' => null, 'type' => SubjectType::BOTH]);
 
         $response = $this->service->exportCsv(request());
 
@@ -71,8 +72,8 @@ class TrialBalanceExportTest extends TestCase
 
     public function test_trial_balance_export_includes_root_subjects_with_balances(): void
     {
-        $root = Subject::create(['company_id' => $this->company->id, 'code' => '011', 'name' => 'بانک ها', 'parent_id' => null, 'type' => 'both']);
-        $child = Subject::create(['company_id' => $this->company->id, 'code' => '011004', 'name' => 'پاسارگاد', 'parent_id' => $root->id, 'type' => 'both']);
+        $root = Subject::create(['company_id' => $this->company->id, 'code' => '011', 'name' => 'بانک ها', 'parent_id' => null, 'type' => SubjectType::BOTH]);
+        $child = Subject::create(['company_id' => $this->company->id, 'code' => '011004', 'name' => 'پاسارگاد', 'parent_id' => $root->id, 'type' => SubjectType::BOTH]);
 
         $doc = Document::factory()->create(['company_id' => $this->company->id, 'number' => 5, 'date' => '2026-01-10']);
         Transaction::create(['document_id' => $doc->id, 'subject_id' => $child->id, 'value' => 1000000, 'user_id' => $this->user->id]);
@@ -92,7 +93,7 @@ class TrialBalanceExportTest extends TestCase
 
     public function test_trial_balance_export_remain_bed_and_bes_reflect_net_balance(): void
     {
-        $root = Subject::create(['company_id' => $this->company->id, 'code' => '011', 'name' => 'بانک', 'parent_id' => null, 'type' => 'both']);
+        $root = Subject::create(['company_id' => $this->company->id, 'code' => '011', 'name' => 'بانک', 'parent_id' => null, 'type' => SubjectType::BOTH]);
         $doc = Document::factory()->create(['company_id' => $this->company->id, 'number' => 3, 'date' => '2026-01-01']);
         // Net debit: value=-300 (debit) + value=100 (credit) → net = -200 → RemainBed=200
         Transaction::create(['document_id' => $doc->id, 'subject_id' => $root->id, 'value' => -300, 'user_id' => $this->user->id]);
