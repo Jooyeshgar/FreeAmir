@@ -3,6 +3,9 @@
 namespace App\Services;
 
 use App\Models\ServiceGroup;
+use App\Models\Subject;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ServiceGroupService
 {
@@ -29,9 +32,37 @@ class ServiceGroupService
 
     public function delete(ServiceGroup $serviceGroup): void
     {
-        $serviceGroup->delete();
+        DB::transaction(function () use ($serviceGroup): void {
+            $this->ensureCanDelete($serviceGroup);
 
-        $this->deleteSubjects($serviceGroup);
+            $serviceGroup->delete();
+
+            $this->deleteSubjects($serviceGroup);
+        });
+    }
+
+    public function ensureCanDelete(ServiceGroup $serviceGroup): void
+    {
+        $message = $this->deleteBlockingReason($serviceGroup);
+
+        if ($message) {
+            throw ValidationException::withMessages(['service_group' => $message]);
+        }
+    }
+
+    public function deleteBlockingReason(ServiceGroup $serviceGroup): ?string
+    {
+        $serviceGroup->loadMissing('subject', 'cogsSubject', 'salesReturnsSubject');
+
+        if ($serviceGroup->services()->exists()) {
+            return __('Cannot delete service group because it has services.');
+        }
+
+        return $this->subjectsBlockingReason([
+            $serviceGroup->subject,
+            $serviceGroup->cogsSubject,
+            $serviceGroup->salesReturnsSubject,
+        ], $serviceGroup);
     }
 
     public function deleteSubjects(ServiceGroup $serviceGroup): void
@@ -113,5 +144,40 @@ class ServiceGroupService
         if ($dirtyIds) {
             $serviceGroup->updateQuietly($dirtyIds);
         }
+    }
+
+    private function subjectsBlockingReason(array $subjects, ServiceGroup $serviceGroup): ?string
+    {
+        foreach (array_filter($subjects) as $subject) {
+            if ($subject->children()->exists()) {
+                return __('Cannot delete service group because one of its subjects has children.');
+            }
+
+            if ($subject->transactions()->exists()) {
+                return __('Cannot delete service group because one of its subjects has transactions.');
+            }
+
+            if ($this->subjectHasExternalRelation($subject, $serviceGroup)) {
+                return __('Cannot delete service group because one of its subjects has another relationship.');
+            }
+        }
+
+        return null;
+    }
+
+    private function subjectHasExternalRelation(Subject $subject, ServiceGroup $serviceGroup): bool
+    {
+        if (! $subject->subjectable_type || ! $subject->subjectable_id) {
+            return false;
+        }
+
+        if (
+            $subject->subjectable_type === $serviceGroup->getMorphClass()
+            && (int) $subject->subjectable_id === (int) $serviceGroup->id
+        ) {
+            return false;
+        }
+
+        return $subject->subjectable()->exists();
     }
 }

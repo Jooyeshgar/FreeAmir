@@ -3,6 +3,9 @@
 namespace App\Services;
 
 use App\Models\ProductGroup;
+use App\Models\Subject;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ProductGroupService
 {
@@ -29,9 +32,38 @@ class ProductGroupService
 
     public function delete(ProductGroup $productGroup): void
     {
-        $this->deleteSubjects($productGroup);
+        DB::transaction(function () use ($productGroup): void {
+            $this->ensureCanDelete($productGroup);
 
-        $productGroup->delete();
+            $productGroup->delete();
+
+            $this->deleteSubjects($productGroup);
+        });
+    }
+
+    public function ensureCanDelete(ProductGroup $productGroup): void
+    {
+        $message = $this->deleteBlockingReason($productGroup);
+
+        if ($message) {
+            throw ValidationException::withMessages(['product_group' => $message]);
+        }
+    }
+
+    public function deleteBlockingReason(ProductGroup $productGroup): ?string
+    {
+        $productGroup->loadMissing('incomeSubject', 'salesReturnsSubject', 'cogsSubject', 'inventorySubject');
+
+        if ($productGroup->products()->exists()) {
+            return __('Cannot delete product group because it has products.');
+        }
+
+        return $this->subjectsBlockingReason([
+            $productGroup->incomeSubject,
+            $productGroup->salesReturnsSubject,
+            $productGroup->cogsSubject,
+            $productGroup->inventorySubject,
+        ], $productGroup);
     }
 
     public function deleteSubjects(ProductGroup $productGroup): void
@@ -116,5 +148,40 @@ class ProductGroupService
         if ($dirtyIds) {
             $productGroup->updateQuietly($dirtyIds);
         }
+    }
+
+    private function subjectsBlockingReason(array $subjects, ProductGroup $productGroup): ?string
+    {
+        foreach (array_filter($subjects) as $subject) {
+            if ($subject->children()->exists()) {
+                return __('Cannot delete product group because one of its subjects has children.');
+            }
+
+            if ($subject->transactions()->exists()) {
+                return __('Cannot delete product group because one of its subjects has transactions.');
+            }
+
+            if ($this->subjectHasExternalRelation($subject, $productGroup)) {
+                return __('Cannot delete product group because one of its subjects has another relationship.');
+            }
+        }
+
+        return null;
+    }
+
+    private function subjectHasExternalRelation(Subject $subject, ProductGroup $productGroup): bool
+    {
+        if (! $subject->subjectable_type || ! $subject->subjectable_id) {
+            return false;
+        }
+
+        if (
+            $subject->subjectable_type === $productGroup->getMorphClass()
+            && (int) $subject->subjectable_id === (int) $productGroup->id
+        ) {
+            return false;
+        }
+
+        return $subject->subjectable()->exists();
     }
 }
