@@ -3,7 +3,10 @@
 namespace Tests\Feature;
 
 use App\Enums\FiscalYearSection;
+use App\Models\Bank;
+use App\Models\BankAccount;
 use App\Models\Company;
+use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
@@ -74,5 +77,70 @@ class CompanyAccessTest extends TestCase
 
         $response->assertSessionHasErrors('name');
         $response->assertSessionDoesntHaveErrors('source_year_id');
+    }
+
+    public function test_store_copies_bank_accounts_with_same_iban_into_new_company(): void
+    {
+        config(['active-company-id' => $this->accessibleCompany->id]);
+
+        $bank = Bank::create([
+            'name' => 'Source Bank',
+            'company_id' => $this->accessibleCompany->id,
+        ]);
+
+        $bankRoot = Subject::create([
+            'code' => '010',
+            'name' => 'Banks',
+            'type' => 'both',
+            'company_id' => $this->accessibleCompany->id,
+            'parent_id' => null,
+        ]);
+
+        $accountSubject = Subject::create([
+            'code' => '010001',
+            'name' => 'Main Account',
+            'type' => 'both',
+            'company_id' => $this->accessibleCompany->id,
+            'parent_id' => $bankRoot->id,
+        ]);
+
+        $sourceAccount = new BankAccount;
+        $sourceAccount->forceFill([
+            'name' => 'Main Account',
+            'number' => '123456789',
+            'type' => 1,
+            'owner' => 'Source Owner',
+            'bank_id' => $bank->id,
+            'company_id' => $this->accessibleCompany->id,
+            'subject_id' => $accountSubject->id,
+            'iban' => 'IR163212724891703088374062',
+        ])->saveQuietly();
+
+        $accountSubject->subjectable()->associate($sourceAccount);
+        $accountSubject->save();
+
+        $response = $this->post(route('companies.store'), [
+            'name' => 'Copied Company',
+            'fiscal_year' => 1405,
+            'source_year_id' => $this->accessibleCompany->id,
+            'tables_to_copy' => [
+                FiscalYearSection::SUBJECTS->value,
+                FiscalYearSection::BANKS->value,
+            ],
+        ]);
+
+        $response->assertRedirect(route('companies.index'));
+
+        $newCompany = Company::where('name', 'Copied Company')->firstOrFail();
+
+        $this->assertDatabaseHas('bank_accounts', [
+            'company_id' => $this->accessibleCompany->id,
+            'iban' => 'IR163212724891703088374062',
+        ]);
+
+        $this->assertDatabaseHas('bank_accounts', [
+            'company_id' => $newCompany->id,
+            'iban' => 'IR163212724891703088374062',
+        ]);
     }
 }
