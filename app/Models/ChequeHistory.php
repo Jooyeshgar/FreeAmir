@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\ChequeStatus;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Model;
 
@@ -22,13 +21,9 @@ class ChequeHistory extends Model
         'date',
     ];
 
-    protected $casts = [
-        'status' => ChequeStatus::class,
-    ];
-
     public static function booted(): void
     {
-        static::addGlobalScope(new FiscalYearScope);
+        static::addGlobalScope(new FiscalYearScope());
     }
 
     public function cheque()
