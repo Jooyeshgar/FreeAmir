@@ -338,8 +338,13 @@
 
             @if (in_array($invoice->invoice_type, [App\Enums\InvoiceType::RETURN_BUY, App\Enums\InvoiceType::RETURN_SELL]))
                 <div class="divider text-lg font-semibold">{{ __('Invoice') }}
-                    {{ $invoice->getReturnedInvoice()?->invoice_type->label() }}</div>
-                @if ($invoice->getReturnedInvoice())
+                    {{ $returnedInvoice?->invoice_type->label() }}</div>
+                @if ($returnedInvoice)
+                    @if ($returnedInvoiceRequiresCompanySwitch)
+                        <div class="alert alert-warning mb-4">
+                            <span>{{ __('The returned invoice belongs to another fiscal year. Switch to that fiscal year before opening it.') }}</span>
+                        </div>
+                    @endif
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                         <div class="card bg-base-200">
                             <div class="card-body p-4">
@@ -347,11 +352,11 @@
                                     {{ __('Title') }}
                                     {{ __('Invoice') }}</h3>
                                 <p class="text-lg font-semibold text-gray-800 dark:text-slate-100">
-                                    <a href="{{ route('invoices.show', $invoice->getReturnedInvoice()) }}"
-                                        class="link link-hover link-primary">
-                                        {{ $invoice->getReturnedInvoice()?->title }}
-                                        ({{ $invoice->getReturnedInvoice()?->invoice_type->label() }}
-                                        #{{ formatDocumentNumber($invoice->getReturnedInvoice()?->number ?? $invoice->getReturnedInvoice()?->id) }})
+                                    <a href="{{ $returnedInvoiceRequiresCompanySwitch ? $returnedInvoiceSwitchUrl : route('invoices.show', $returnedInvoice) }}" class="link link-hover link-primary"
+                                        @if ($returnedInvoiceRequiresCompanySwitch) onclick="return confirm('{{ __('The returned invoice belongs to another fiscal year. Switch to that fiscal year and open it?') }}')" @endif>
+                                        {{ $returnedInvoice?->title }}
+                                        ({{ $returnedInvoice?->invoice_type->label() }}
+                                        #{{ formatDocumentNumber($returnedInvoice?->number ?? $returnedInvoice?->id) }})
                                     </a>
                                 </p>
                             </div>
@@ -363,7 +368,7 @@
                                 <div class="stat-title text-blue-500 dark:text-sky-300">{{ __('Subtotal') }}
                                     ({{ config('amir.currency') ?? __('Rial') }})</div>
                                 <div class="stat-value text-blue-600 dark:text-sky-200 text-3xl">
-                                    {{ formatNumber($invoice->getReturnedInvoice()?->items->reduce(fn($carry, $item) => $carry + ($item->quantity ?? 0) * ($item->unit_price ?? 0), 0)) }}
+                                    {{ formatNumber($returnedInvoice?->items->reduce(fn($carry, $item) => $carry + ($item->quantity ?? 0) * ($item->unit_price ?? 0), 0)) }}
                                 </div>
                                 <div class="stat-desc text-blue-400 dark:text-sky-400/80">
                                     {{ __('Before discounts and tax') }}</div>
@@ -376,7 +381,7 @@
                                 <div class="stat-title text-amber-500 dark:text-amber-300">{{ __('Discounts') }}
                                     ({{ config('amir.currency') ?? __('Rial') }})</div>
                                 <div class="stat-value text-amber-600 dark:text-amber-200 text-3xl">
-                                    {{ formatNumber($invoice->getReturnedInvoice()?->items->reduce(fn($carry, $item) => $carry + ($item->unit_discount ?? 0), 0)) }}
+                                    {{ formatNumber($returnedInvoice?->items->reduce(fn($carry, $item) => $carry + ($item->unit_discount ?? 0), 0)) }}
                                 </div>
                                 <div class="stat-desc text-amber-400 dark:text-amber-400/80">
                                     {{ __('Total deductions') }}</div>
@@ -389,7 +394,7 @@
                                 <div class="stat-title text-emerald-500 dark:text-emerald-300">{{ __('VAT') }}
                                     ({{ config('amir.currency') ?? __('Rial') }})</div>
                                 <div class="stat-value text-emerald-600 dark:text-emerald-200 text-3xl">
-                                    {{ formatNumber($invoice->getReturnedInvoice()?->items->reduce(fn($carry, $item) => $carry + ($item->vat ?? 0), 0)) }}
+                                    {{ formatNumber($returnedInvoice?->items->reduce(fn($carry, $item) => $carry + ($item->vat ?? 0), 0)) }}
                                 </div>
                                 <div class="stat-desc text-emerald-400 dark:text-emerald-400/80">
                                     {{ __('Collected tax') }}</div>
@@ -402,7 +407,7 @@
                                 <div class="stat-title text-indigo-500 dark:text-indigo-300">{{ __('Grand total') }}
                                     ({{ config('amir.currency') ?? __('Rial') }})</div>
                                 <div class="stat-value text-indigo-600 dark:text-indigo-200 text-3xl">
-                                    {{ formatNumber(($invoice->getReturnedInvoice()?->amount ?? 0) - ($invoice->getReturnedInvoice()?->subtraction ?? 0)) }}
+                                    {{ formatNumber(($returnedInvoice?->amount ?? 0) - ($returnedInvoice?->subtraction ?? 0)) }}
                                 </div>
                                 <div class="stat-desc text-indigo-400 dark:text-indigo-400/80">
                                     {{ __('Payable amount') }}</div>
@@ -426,13 +431,17 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse ($invoice->getReturnedInvoice()?->items as $index => $item)
+                                @forelse ($returnedInvoice?->items as $index => $item)
                                     <tr class="hover:bg-base-300">
                                         <td class="px-4 py-3">{{ localizeNumber($index + 1) }}</td>
                                         <td class="px-4 py-3">
                                             @if ($item->itemable)
-                                                <a href="{{ route($item->itemable instanceof App\Models\Product ? 'products.show' : 'services.show', $item->itemable) }}"
-                                                    class="link link-hover link-primary">
+                                                @php
+                                                    $itemShowRoute = route($item->itemable instanceof App\Models\Product ? 'products.show' : 'services.show', $item->itemable);
+                                                    $itemHref = $returnedInvoiceRequiresCompanySwitch ? route('change-company', ['company' => $returnedInvoice->company_id, 'redirect' => $itemShowRoute]) : $itemShowRoute;
+                                                @endphp
+                                                <a href="{{ $itemHref }}" class="link link-hover link-primary"
+                                                    @if ($returnedInvoiceRequiresCompanySwitch) onclick="return confirm('{{ __('This item belongs to another fiscal year. Switch to that fiscal year and open it?') }}')" @endif>
                                                     {{ $item->itemable->name }}
                                                 </a>
                                             @else
@@ -465,7 +474,7 @@
                                 <tr>
                                     <td colspan="8"
                                         class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
-                                        {{ __('Total items: :count', ['count' => localizeNumber($invoice->getReturnedInvoice()?->items->count() ?? 0)]) }}
+                                        {{ __('Total items: :count', ['count' => localizeNumber($returnedInvoice?->items->count() ?? 0)]) }}
                                     </td>
                                 </tr>
                             </tfoot>
