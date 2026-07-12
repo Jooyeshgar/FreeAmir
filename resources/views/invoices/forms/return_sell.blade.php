@@ -7,15 +7,41 @@
             );
             $initialSelectedValue = $initialReturnedInvoiceId ? "invoice-$initialReturnedInvoiceId" : null;
             $disableReturnedInvoiceSelect = $invoice->exists || ($lockReturnedInvoiceSelection ?? false);
+            $includeLastYearsInvoices = old(
+                'include_last_years_invoices',
+                $invoice->exists && ! $invoice->returned_invoice_id,
+            );
         @endphp
         <div class="flex w-1/3">
             <div class="flex-wrap w-full" x-data="{
                 returnedInvoiceId: '{{ $initialReturnedInvoiceId }}',
                 invoiceCustomers: @js(collect($returnInvoices)->pluck('customer_id', 'id')),
                 selectedValue: '{{ $initialSelectedValue }}',
+                includeLastYearsInvoices: @js((bool) $includeLastYearsInvoices),
+                updateIncludeLastYearsInvoices() {
+                    const returnedInvoiceSelect = document.getElementById('returned-invoice-select');
+                    const returnedInvoiceButton = returnedInvoiceSelect?.querySelector('button');
+                    if (returnedInvoiceButton) {
+                        returnedInvoiceButton.disabled = {{ $disableReturnedInvoiceSelect ? 'true' : 'false' }} || this.includeLastYearsInvoices;
+                    }
+
+                    if (this.includeLastYearsInvoices) {
+                        this.returnedInvoiceId = null;
+                        this.selectedValue = null;
+                    }
+
+                    window.dispatchEvent(new CustomEvent('include-last-years-invoices-changed', {
+                        detail: { enabled: this.includeLastYearsInvoices }
+                    }));
+                },
             }">
+                <x-checkbox name="include_last_years_invoices" id="include-last-years-invoices"
+                    title="{{ __('Include last years invoices') }}" value="1" :checked="$includeLastYearsInvoices"
+                    x-model="includeLastYearsInvoices" x-init="$nextTick(() => updateIncludeLastYearsInvoices())"
+                    x-on:change="updateIncludeLastYearsInvoices()" />
                 <span class="text-gray-500">{{ __('Returned Invoice') }}</span>
                 <x-select-box url="{{ route('invoices.search', ['invoice_type' => 'return_sell']) }}" :options="[['headerGroup' => 'invoice', 'options' => $returnInvoices]]"
+                    id="returned-invoice-select"
                     x-model="selectedValue" x-init="if (!selectedValue && returnedInvoiceId) {
                         selectedValue = 'invoice-' + returnedInvoiceId;
                     }
@@ -36,7 +62,7 @@
                             window.dispatchEvent(new CustomEvent('return-invoice-customer-selected', { detail: { customerId } }));
                         }
                     "
-                    :disabled="$disableReturnedInvoiceSelect" />
+                    :disabled="$disableReturnedInvoiceSelect || $includeLastYearsInvoices" />
                 <x-input name="returned_invoice_id" x-bind:value="returnedInvoiceId" hidden />
             </div>
         </div>
@@ -82,7 +108,8 @@
                         x-model="selectedValue" x-init="if (!selectedValue && customer_id) {
                             selectedValue = 'customer-' + customer_id;
                         }" placeholder="{{ __('Select Customer') }}"
-                        @selected="customer_id = $event.detail.id;" :disabled="true" />
+                        @selected="customer_id = $event.detail.id;" :disabled="!$includeLastYearsInvoices"
+                        x-on:include-last-years-invoices-changed.window="disabled = !$event.detail.enabled" />
                 </template>
 
                 <x-input x-bind:value="customer_id" name="customer_id" hidden />
@@ -183,7 +210,8 @@
                             x-model="selectedValue" x-init="selectedValue = initItemSelection(transaction)"
                             placeholder="{{ __('Select Product/Service') }}"
                             @selected="selectItem(transaction, $event.detail.type, $event.detail.id)"
-                            :disabled="true" />
+                            :disabled="!$includeLastYearsInvoices"
+                            x-on:include-last-years-invoices-changed.window="disabled = !$event.detail.enabled" />
 
                         <x-input name="" x-bind:name="'transactions[' + index + '][product_id]'" x-bind:value="transaction.product_id || ''" hidden />
                         <x-input name="" x-bind:name="'transactions[' + index + '][service_id]'" x-bind:value="transaction.service_id || ''" hidden />

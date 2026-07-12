@@ -32,13 +32,16 @@ class StoreInvoiceRequest extends FormRequest
             'invoice_number' => convertToInt($this->input('invoice_number')),
             'subtractions' => convertToFloat($this->input('subtraction', 0)),
             'customer_id' => convertToInt($this->input('customer_id')),
+            'include_last_years_invoices' => $this->boolean('include_last_years_invoices'),
         ]);
 
-        $returnedInvoiceId = $this->input('returned_invoice_id') ?? null;
+        $returnedInvoiceId = $this->boolean('include_last_years_invoices') ? null : $this->input('returned_invoice_id');
         if ($returnedInvoiceId) {
             $this->merge([
                 'returned_invoice_id' => convertToInt($returnedInvoiceId),
             ]);
+        } elseif ($this->boolean('include_last_years_invoices')) {
+            $this->merge(['returned_invoice_id' => null]);
         }
 
         if (str_contains($this->input('document_number'), '/')) {
@@ -88,7 +91,7 @@ class StoreInvoiceRequest extends FormRequest
             $invoice = $this->route('invoice');
             $isApproved = $this->input('approve');
 
-            if (in_array($invoiceType, ['return_sell', 'return_buy'])) {
+            if (in_array($invoiceType, ['return_sell', 'return_buy']) && ! $this->boolean('include_last_years_invoices')) {
                 $returnedInvoiceId = $this->input('returned_invoice_id');
                 $returnedInvoice = Invoice::find($returnedInvoiceId);
 
@@ -292,6 +295,7 @@ class StoreInvoiceRequest extends FormRequest
             'invoice_type' => ['required', Rule::in(array_column(InvoiceType::cases(), 'value'))],
             'customer_id' => 'required|exists:customers,id|integer',
             'invoice_id' => Rule::when($invoice !== null, ['required', 'integer', 'exists:invoices,id']),
+            'include_last_years_invoices' => 'nullable|boolean',
             'returned_invoice_id' => 'nullable|integer|exists:invoices,id',
             'document_number' => [
                 'required',
