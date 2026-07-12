@@ -1,16 +1,5 @@
 <x-card class="rounded-2xl w-full" class_body="p-4">
-    <div class="flex gap-2 items-center justify-start" x-data="{
-        includeLastYears: false,
-        accessibleCompanyIds: @js($accessibleCompanyIds ?? []),
-        init() {
-            window.__returnInvoiceIncludeLastYears = this.includeLastYears;
-            window.__returnInvoiceAccessibleCompanyIds = this.accessibleCompanyIds;
-            this.$watch('includeLastYears', value => {
-                window.__returnInvoiceIncludeLastYears = value;
-                window.__returnInvoiceAccessibleCompanyIds = this.accessibleCompanyIds;
-            });
-        }
-    }">
+    <div class="flex gap-2 items-center justify-start">
         @php
             $initialReturnedInvoiceId = old(
                 'returned_invoice_id',
@@ -25,50 +14,29 @@
                 invoiceCustomers: @js(collect($returnInvoices)->pluck('customer_id', 'id')),
                 selectedValue: '{{ $initialSelectedValue }}',
             }">
-                <div class="flex items-center justify-between gap-2">
-                    <span class="text-gray-500">{{ __('Returned Invoice') }}</span>
-                    <x-checkbox title="{{ __('Include last years invoices') }}" name="includeLastYears"
-                        id="include-last-years-return-buy" x-model="includeLastYears" x-bind:disabled="@js($disableReturnedInvoiceSelect)" />
-                </div>
-                <div x-show="!includeLastYears">
-                    <x-select-box url="{{ route('invoices.search', ['invoice_type' => 'return_buy']) }}" :options="[['headerGroup' => 'invoice', 'options' => $returnInvoices]]"
-                        x-model="selectedValue" x-init="if (!selectedValue && returnedInvoiceId) {
-                            selectedValue = 'invoice-' + returnedInvoiceId;
+                <span class="text-gray-500">{{ __('Returned Invoice') }}</span>
+                <x-select-box url="{{ route('invoices.search', ['invoice_type' => 'return_buy']) }}" :options="[['headerGroup' => 'invoice', 'options' => $returnInvoices]]"
+                    x-model="selectedValue" x-init="if (!selectedValue && returnedInvoiceId) {
+                        selectedValue = 'invoice-' + returnedInvoiceId;
+                    }
+                    if (returnedInvoiceId) {
+                        window.dispatchEvent(new CustomEvent('return-invoice-selected', { detail: { invoiceId: returnedInvoiceId } }));
+                        const customerId = invoiceCustomers[returnedInvoiceId] ?? null;
+                        if (customerId) {
+                            window.__returnInvoiceCustomerId = customerId;
+                            window.dispatchEvent(new CustomEvent('return-invoice-customer-selected', { detail: { customerId } }));
                         }
-                        if (returnedInvoiceId) {
-                            window.dispatchEvent(new CustomEvent('return-invoice-selected', { detail: { invoiceId: returnedInvoiceId } }));
-                            const customerId = invoiceCustomers[returnedInvoiceId] ?? null;
-                            if (customerId) {
-                                window.__returnInvoiceCustomerId = customerId;
-                                window.dispatchEvent(new CustomEvent('return-invoice-customer-selected', { detail: { customerId } }));
-                            }
-                        }" placeholder="{{ __('Select Invoice') }}"
-                        @selected="
-                            returnedInvoiceId = $event.detail.id;
-                            window.dispatchEvent(new CustomEvent('return-invoice-selected', { detail: { invoiceId: returnedInvoiceId } }));
-                            const customerId = $event.detail.customer_id ?? invoiceCustomers[returnedInvoiceId] ?? null;
-                            if (customerId) {
-                                window.__returnInvoiceCustomerId = customerId;
-                                window.dispatchEvent(new CustomEvent('return-invoice-customer-selected', { detail: { customerId } }));
-                            }
-                        "
-                        :disabled="$disableReturnedInvoiceSelect" />
-                </div>
-                <div x-show="includeLastYears">
-                    <x-select-box url="{{ route('invoices.search', ['invoice_type' => 'return_buy:1:'.implode(',', $accessibleCompanyIds ?? [])]) }}"
-                        :options="[['headerGroup' => 'invoice', 'options' => $crossCompanyReturnInvoices ?? $returnInvoices]]" x-model="selectedValue"
-                        placeholder="{{ __('Select Invoice') }}"
-                        @selected="
-                            returnedInvoiceId = $event.detail.id;
-                            window.dispatchEvent(new CustomEvent('return-invoice-selected', { detail: { invoiceId: returnedInvoiceId } }));
-                            const customerId = $event.detail.customer_id ?? invoiceCustomers[returnedInvoiceId] ?? null;
-                            if (customerId) {
-                                window.__returnInvoiceCustomerId = customerId;
-                                window.dispatchEvent(new CustomEvent('return-invoice-customer-selected', { detail: { customerId } }));
-                            }
-                        "
-                        :disabled="$disableReturnedInvoiceSelect" />
-                </div>
+                    }" placeholder="{{ __('Select Invoice') }}"
+                    @selected="
+                        returnedInvoiceId = $event.detail.id;
+                        window.dispatchEvent(new CustomEvent('return-invoice-selected', { detail: { invoiceId: returnedInvoiceId } }));
+                        const customerId = $event.detail.customer_id ?? invoiceCustomers[returnedInvoiceId] ?? null;
+                        if (customerId) {
+                            window.__returnInvoiceCustomerId = customerId;
+                            window.dispatchEvent(new CustomEvent('return-invoice-customer-selected', { detail: { customerId } }));
+                        }
+                    "
+                    :disabled="$disableReturnedInvoiceSelect" />
                 <x-input name="returned_invoice_id" x-bind:value="returnedInvoiceId" hidden />
             </div>
         </div>
@@ -151,9 +119,6 @@
     </div>
 </x-card>
 <x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-4" x-data="transactionForm">
-    <div x-show="validationError" x-cloak class="alert alert-error m-4 mb-0">
-        <span x-text="validationError"></span>
-    </div>
     <div class="flex flex-wrap overflow-x-auto overflow-y-hidden gap-2 items-center px-4">
         <div class="text-sm flex-1 max-w-8 text-center text-gray-500 pt-3">*</div>
         <div class="text-sm flex-1 min-w-24 max-w-64 text-center text-gray-500 pt-3">
@@ -345,19 +310,6 @@
                     old('returned_invoice_id', $invoice->returned_invoice_id ?? ($prefilledReturnedInvoiceId ?? null)),
                     JSON_UNESCAPED_UNICODE,
                 ) !!},
-                validationError: '',
-                returnInvoiceItemsUrl(invoiceId) {
-                    const url = new URL(`/invoices/get-items/${invoiceId}`, window.location.origin);
-                    const includeLastYears = window.__returnInvoiceIncludeLastYears ?? false;
-                    const accessibleCompanyIds = window.__returnInvoiceAccessibleCompanyIds ?? [];
-
-                    url.searchParams.set('includeLastYears', includeLastYears ? '1' : '0');
-                    accessibleCompanyIds.forEach(companyId => {
-                        url.searchParams.append('accessibleCompanyIds[]', companyId);
-                    });
-
-                    return url.toString();
-                },
                 init() {
                     window.addEventListener('return-invoice-selected', (event) => {
                         const invoiceId = event?.detail?.invoiceId;
@@ -395,18 +347,9 @@
                         return;
                     }
 
-                    fetch(this.returnInvoiceItemsUrl(invoiceId))
-                        .then(async response => {
-                            const data = await response.json();
-
-                            if (!response.ok) {
-                                throw data;
-                            }
-
-                            return data;
-                        })
+                    fetch(`/invoices/get-items/${invoiceId}`)
+                        .then(response => response.json())
                         .then(data => {
-                            this.validationError = '';
                             this.transactions = data.map(item => ({
                                 id: item.id,
                                 product_id: item.product_id,
@@ -426,7 +369,6 @@
                         })
                         .catch(error => {
                             console.error('Error loading invoice items:', error);
-                            this.validationError = error?.message || Object.values(error?.errors || {}).flat().join(' ') || '{{ __('Unable to load invoice items.') }}';
                             this.transactions = [];
                         });
                 },

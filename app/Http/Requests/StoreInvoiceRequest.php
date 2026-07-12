@@ -6,17 +6,11 @@ use App\Enums\InvoiceType;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Service;
-use App\Services\InvoiceService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreInvoiceRequest extends FormRequest
 {
-    public function __construct(private readonly InvoiceService $invoiceService)
-    {
-        parent::__construct();
-    }
-
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -96,25 +90,13 @@ class StoreInvoiceRequest extends FormRequest
 
             if (in_array($invoiceType, ['return_sell', 'return_buy'])) {
                 $returnedInvoiceId = $this->input('returned_invoice_id');
-                $returnedInvoice = $this->findReturnedInvoice($returnedInvoiceId);
+                $returnedInvoice = Invoice::find($returnedInvoiceId);
 
                 // To return an invoice, a valid invoice must be provided
                 if (! $returnedInvoice) {
                     $validator->errors()->add(
                         'returned_invoice_id',
                         __('The returned invoice ID is invalid.')
-                    );
-
-                    return;
-                }
-
-                $missingCurrentCompanyItems = $this->invoiceService->missingCurrentCompanyItemNames($returnedInvoice);
-                if (! empty($missingCurrentCompanyItems)) {
-                    $validator->errors()->add(
-                        'returned_invoice_id',
-                        __('Products or services of this invoice are not available in current company: :items. Create them in current company before returning this invoice.', [
-                            'items' => implode(', ', $missingCurrentCompanyItems),
-                        ])
                     );
 
                     return;
@@ -148,7 +130,9 @@ class StoreInvoiceRequest extends FormRequest
                 $lastReturnedInvoices = $lastReturnedInvoicesQuery->get();
 
                 foreach ($transactions as $index => $transaction) {
-                    $originalItem = $this->invoiceService->originalItemForTransaction($returnedInvoice, $transaction);
+                    $originalItem = $returnedInvoice->items()
+                        ->where('itemable_type', $transaction['item_type'] === 'product' ? Product::class : Service::class)
+                        ->where('itemable_id', $transaction['item_id'])->first();
 
                     if (! $originalItem) {
                         continue;
@@ -163,11 +147,9 @@ class StoreInvoiceRequest extends FormRequest
                         $sumLastReturnedInvoiceItems += $returnedInvoiceItem?->quantity ?? 0;
                     }
                     if ($originalItem->quantity < $transaction['quantity'] + $sumLastReturnedInvoiceItems) {
-                        $originalItemableName = $this->invoiceService->itemable($originalItem)?->name ?? __('item');
-
                         $validator->errors()->add(
                             "transactions.{$index}.quantity",
-                            __('The addition quantity for item')." '{$originalItemableName}' ".__('and its last returned invoice items cannot exceed the original related invoice item quantity of :quantity.', ['quantity' => $originalItem->quantity])
+                            __('The addition quantity for item')." '{$originalItem->itemable->name}' ".__('and its last returned invoice items cannot exceed the original related invoice item quantity of :quantity.', ['quantity' => $originalItem->quantity])
                         );
                     }
                 }
@@ -180,7 +162,7 @@ class StoreInvoiceRequest extends FormRequest
                         fn ($transaction) => [
                             $makeItemKey(
                                 $transaction['item_type'],
-                                $this->invoiceService->currentItemName($transaction) ?? $transaction['item_id']
+                                $transaction['item_id']
                             ) => (float) $transaction['quantity'],
                         ]
                     );
@@ -188,12 +170,11 @@ class StoreInvoiceRequest extends FormRequest
                     $originalItems = $returnedInvoice->items->mapWithKeys(
                         function ($item) use ($makeItemKey) {
                             $itemType = $item->itemable_type === Product::class ? 'product' : 'service';
-                            $itemable = $this->invoiceService->itemable($item);
 
                             return [
                                 $makeItemKey(
                                     $itemType,
-                                    $itemable?->name ?? $item->itemable_id
+                                    $item->itemable_id
                                 ) => (float) $item->quantity,
                             ];
                         }
@@ -295,7 +276,7 @@ class StoreInvoiceRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, Illuminate\Contracts\ValidationRule|array<mixed>|string>
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -361,14 +342,5 @@ class StoreInvoiceRequest extends FormRequest
         ];
 
         return $rules;
-    }
-
-    private function findReturnedInvoice(?int $returnedInvoiceId): ?Invoice
-    {
-        if (! $returnedInvoiceId) {
-            return null;
-        }
-
-        return $this->invoiceService->findReturnableInvoice($returnedInvoiceId, $this->user());
     }
 }

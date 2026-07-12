@@ -6,7 +6,6 @@ use App\DTO\InvoiceStatusDecision;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
-use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -332,7 +331,8 @@ class InvoiceService
             ];
 
             if (in_array($invoice->invoice_type, [InvoiceType::RETURN_SELL, InvoiceType::RETURN_BUY, InvoiceType::VOID]) && $invoice->returned_invoice_id) {
-                $originalItem = (new self)->findReturnedInvoiceItem($invoice->returned_invoice_id, $itemableType, $itemableId);
+                $originalItem = InvoiceItem::where('invoice_id', $invoice->returned_invoice_id)
+                    ->where('itemable_type', $itemableType)->where('itemable_id', $itemableId)->first();
 
                 if ($originalItem) {
                     $invoiceItemData['cog_after'] = $originalItem->cog_after;
@@ -351,104 +351,6 @@ class InvoiceService
         CostOfGoodsService::refreshProductCOGAfterItemsDeletion($invoice, $itemId);
 
         $invoice->items()->whereNotIn('id', $itemId)->delete();
-    }
-
-    public function accessibleCompanyIds(?User $user = null): array
-    {
-        $companies = $user?->companies()->get(['companies.id', 'companies.fiscal_year']) ?? collect();
-        if ($companies->isEmpty()) {
-            $companies = Company::withoutGlobalScopes()->whereKey((int) getActiveCompany())->get(['id', 'fiscal_year']);
-        }
-
-        $activeFiscalYear = Company::withoutGlobalScopes()->whereKey((int) getActiveCompany())->value('fiscal_year') ?? $companies->max('fiscal_year');
-
-        return $companies->filter(fn ($company) => $company->fiscal_year <= $activeFiscalYear)->pluck('id')
-            ->map(fn ($id) => (int) $id)->unique()->values()->all();
-    }
-
-    public function findReturnableInvoice(int $invoiceId, ?User $user = null): ?Invoice
-    {
-        return Invoice::find($invoiceId) ?? Invoice::withoutGlobalScopes()->whereIn('company_id', $this->accessibleCompanyIds($user))->find($invoiceId);
-    }
-
-    public function itemable(InvoiceItem $item): Product|Service|null
-    {
-        return match ($item->itemable_type) {
-            Product::class => Product::withoutGlobalScopes()->with('inventorySubject')->find($item->itemable_id),
-            Service::class => Service::withoutGlobalScopes()->with('subject')->find($item->itemable_id),
-            default => null,
-        };
-    }
-
-    public function itemableForCurrentCompany(InvoiceItem $item): Product|Service|null
-    {
-        $originalItemable = $this->itemable($item);
-        if (! $originalItemable) {
-            return null;
-        }
-
-        return match ($item->itemable_type) {
-            Product::class => Product::where('name', $originalItemable->name)->first(),
-            Service::class => Service::where('name', $originalItemable->name)->first(),
-            default => null,
-        };
-    }
-
-    public function missingCurrentCompanyItemNames(Invoice $invoice): array
-    {
-        return $invoice->items->map(fn (InvoiceItem $item) => $this->itemableForCurrentCompany($item) ? null : $this->itemable($item)?->name)
-            ->filter()->unique()->values()->all();
-    }
-
-    public function currentItemName(array $transaction): ?string
-    {
-        return match ($transaction['item_type'] ?? null) {
-            'product' => Product::find($transaction['item_id'] ?? null)?->name,
-            'service' => Service::find($transaction['item_id'] ?? null)?->name,
-            default => null,
-        };
-    }
-
-    public function originalItemForTransaction(Invoice $invoice, array $transaction): ?InvoiceItem
-    {
-        $itemableType = $transaction['item_type'] === 'product' ? Product::class : Service::class;
-
-        $originalItem = $invoice->items()->where('itemable_type', $itemableType)->where('itemable_id', $transaction['item_id'])->first();
-        if ($originalItem) {
-            return $originalItem;
-        }
-
-        $currentName = $this->currentItemName($transaction);
-
-        return $currentName ? $invoice->items->first(fn (InvoiceItem $item) => $item->itemable_type === $itemableType && $this->itemable($item)?->name === $currentName) : null;
-    }
-
-    public function findReturnedInvoiceItem(int $returnedInvoiceId, string $itemableType, int $itemableId): ?InvoiceItem
-    {
-        $originalItem = InvoiceItem::where('invoice_id', $returnedInvoiceId)->where('itemable_type', $itemableType)->where('itemable_id', $itemableId)->first();
-        if ($originalItem) {
-            return $originalItem;
-        }
-
-        $currentItemableName = match ($itemableType) {
-            Product::class => Product::find($itemableId)?->name,
-            Service::class => Service::find($itemableId)?->name,
-            default => null,
-        };
-        if (! $currentItemableName) {
-            return null;
-        }
-
-        return InvoiceItem::where('invoice_id', $returnedInvoiceId)->where('itemable_type', $itemableType)->get()
-            ->first(function (InvoiceItem $item) use ($itemableType, $currentItemableName) {
-                $originalItemable = match ($itemableType) {
-                    Product::class => Product::withoutGlobalScopes()->find($item->itemable_id),
-                    Service::class => Service::withoutGlobalScopes()->find($item->itemable_id),
-                    default => null,
-                };
-
-                return $originalItemable?->name === $currentItemableName;
-            });
     }
 
     public function changeInvoiceStatus(Invoice $invoice, string $status): void

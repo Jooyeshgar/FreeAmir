@@ -272,7 +272,7 @@ class CompanyController extends Controller
         return $path;
     }
 
-    public function setActiveCompany(Company $company, ?Request $request = null): RedirectResponse
+    public function setActiveCompany(Company $company): RedirectResponse
     {
         if (! $company->users->contains(auth()->id())) {
             abort(403);
@@ -284,11 +284,6 @@ class CompanyController extends Controller
             'active-company-name' => $company->name,
             'active-company-fiscal-year' => $company->fiscal_year,
         ]);
-
-        $redirect = $request?->query('redirect');
-        if ($redirect && str_starts_with($redirect, url('/'))) {
-            return redirect()->to($redirect);
-        }
 
         return redirect()->route('home');
     }

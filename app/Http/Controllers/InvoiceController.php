@@ -26,7 +26,6 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
 use PDF;
 
 class InvoiceController extends Controller
@@ -157,8 +156,6 @@ class InvoiceController extends Controller
         $products = collect();
         $services = collect();
         $customers = collect();
-        $accessibleCompanyIds = $this->invoiceService->accessibleCompanyIds($request->user());
-        $crossCompanyReturnInvoices = collect();
 
         $returnInvoiceTypeMap = [
             'return_buy' => InvoiceType::BUY,
@@ -171,15 +168,8 @@ class InvoiceController extends Controller
 
             $returnInvoices = Invoice::where('invoice_type', $returnInvoiceType)->where('status', InvoiceStatus::APPROVED)->with(['customer', 'items'])->get();
 
-            $crossCompanyReturnInvoices = Invoice::withoutGlobalScopes()->whereIn('company_id', $accessibleCompanyIds)->where('invoice_type', $returnInvoiceType)
-                ->where('status', InvoiceStatus::APPROVED)->with(['company', 'customer', 'items'])->get();
-
             if ($request->filled('service_buy')) {
                 $returnInvoices = $returnInvoices->filter(function ($invoice) {
-                    return $invoice->items->where('itemable_type', Product::class)->isEmpty();
-                });
-
-                $crossCompanyReturnInvoices = $crossCompanyReturnInvoices->filter(function ($invoice) {
                     return $invoice->items->where('itemable_type', Product::class)->isEmpty();
                 });
             }
@@ -188,29 +178,21 @@ class InvoiceController extends Controller
                 $returnInvoices = $returnInvoices->filter(function ($invoice) {
                     return $invoice->items->where('itemable_type', Service::class)->isEmpty();
                 });
-
-                $crossCompanyReturnInvoices = $crossCompanyReturnInvoices->filter(function ($invoice) {
-                    return $invoice->items->where('itemable_type', Service::class)->isEmpty();
-                });
             }
 
-            $returnInvoicesForItems = $returnInvoices->merge($crossCompanyReturnInvoices)->unique('id');
-
-            if ($returnInvoicesForItems->isNotEmpty()) {
-                $productIds = $returnInvoicesForItems->flatMap(function ($invoice) {
+            if ($returnInvoices->isNotEmpty()) {
+                $productIds = $returnInvoices->flatMap(function ($invoice) {
                     return $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id');
                 })->unique();
-                $productNames = Product::withoutGlobalScopes()->whereIn('id', $productIds)->pluck('name')->unique();
-                $products = Product::with('inventorySubject', 'productGroup')->whereIn('name', $productNames)->get();
+                $products = Product::with('inventorySubject', 'productGroup')->whereIn('id', $productIds)->get();
 
-                $serviceIds = $returnInvoicesForItems->flatMap(function ($invoice) {
+                $serviceIds = $returnInvoices->flatMap(function ($invoice) {
                     return $invoice->items->where('itemable_type', Service::class)->pluck('itemable_id');
                 })->unique();
-                $serviceNames = Service::withoutGlobalScopes()->whereIn('id', $serviceIds)->pluck('name')->unique();
-                $services = Service::with('subject', 'serviceGroup')->whereIn('name', $serviceNames)->get();
+                $services = Service::with('subject', 'serviceGroup')->whereIn('id', $serviceIds)->get();
 
-                $customerIds = $returnInvoicesForItems->pluck('customer.id')->unique();
-                $customers = Customer::withoutGlobalScopes()->with('group')->whereIn('id', $customerIds)->get();
+                $customerIds = $returnInvoices->pluck('customer.id')->unique();
+                $customers = Customer::with('group')->whereIn('id', $customerIds)->get();
             }
         } else {
             $products = Product::with('inventorySubject', 'productGroup')->orderBy('name')->limit(20)->get();
@@ -226,18 +208,6 @@ class InvoiceController extends Controller
                 'text' => trim(($invoice->title ?? '').' - '.$invoice->number, ' -'),
                 'type' => 'invoice',
                 'customer_id' => $invoice->customer_id,
-            ];
-        })->values()->all();
-
-        $crossCompanyReturnInvoices = $crossCompanyReturnInvoices->map(function ($invoice) { // Format invoices for select box
-            return [
-                'id' => $invoice->id,
-                'groupId' => $invoice->company_id,
-                'groupName' => $invoice->company?->name ?? 'General',
-                'text' => trim(($invoice->title ?? '').' - '.$invoice->number, ' -'),
-                'type' => 'invoice',
-                'customer_id' => $invoice->customer_id,
-                'company_id' => $invoice->company_id,
             ];
         })->values()->all();
 
@@ -267,7 +237,7 @@ class InvoiceController extends Controller
 
         $previousInvoiceNumber = floor(Invoice::where('invoice_type', $invoice_type)->max('number') ?? 0);
 
-        return view('invoices.create', compact('returnInvoices', 'crossCompanyReturnInvoices', 'products', 'services', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type', 'isServiceBuy', 'isReturnServiceBuy', 'isReturnInvoice', 'prefilledReturnedInvoiceId', 'lockReturnedInvoiceSelection', 'accessibleCompanyIds'));
+        return view('invoices.create', compact('returnInvoices', 'products', 'services', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type', 'isServiceBuy', 'isReturnServiceBuy', 'isReturnInvoice', 'prefilledReturnedInvoiceId', 'lockReturnedInvoiceSelection'));
     }
 
     /**
@@ -331,35 +301,11 @@ class InvoiceController extends Controller
         $ancillaryCostProductIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->unique()->values()->all();
         $canCreateAncillaryCost = $invoice->invoice_type === InvoiceType::BUY && ! $isServiceBuy && empty(InvoiceService::notAllowedInvoiceForAncillaryCosts($invoice, $ancillaryCostProductIds));
 
-        $returnedInvoice = null;
-        $returnedInvoiceRequiresCompanySwitch = false;
-        $returnedInvoiceSwitchUrl = null;
-
-        if (in_array($invoice->invoice_type, [InvoiceType::RETURN_BUY, InvoiceType::RETURN_SELL], true) && $invoice->returned_invoice_id) {
-            $returnedInvoice = Invoice::withoutGlobalScopes()->with(['company', 'items'])->find($invoice->returned_invoice_id);
-
-            if ($returnedInvoice && auth()->user()->companies->contains((int) $returnedInvoice->company_id)) {
-                $returnedInvoice->items->each(function ($item) {
-                    $item->setRelation('itemable', $this->invoiceService->itemable($item));
-                });
-
-                $returnedInvoiceRequiresCompanySwitch = (int) $returnedInvoice->company_id !== (int) getActiveCompany();
-                if ($returnedInvoiceRequiresCompanySwitch) {
-                    $returnedInvoiceSwitchUrl = route('change-company', [
-                        'company' => $returnedInvoice->company_id,
-                        'redirect' => route('invoices.show', $returnedInvoice),
-                    ]);
-                }
-            } else {
-                $returnedInvoice = null;
-            }
-        }
-
         $fiscalYears = Company::whereHas('users', function ($q) {
             $q->where('users.id', auth()->id());
         })->where('id', '!=', getActiveCompany())->get();
 
-        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'paidAmount', 'remainingAmount', 'fiscalYears', 'canCreateAncillaryCost', 'returnedInvoice', 'returnedInvoiceRequiresCompanySwitch', 'returnedInvoiceSwitchUrl'));
+        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'paidAmount', 'remainingAmount', 'fiscalYears', 'canCreateAncillaryCost'));
     }
 
     public function print(Invoice $invoice)
@@ -432,7 +378,6 @@ class InvoiceController extends Controller
 
         $isServiceBuy = $invoice->invoice_type === InvoiceType::BUY && $invoice->items->where('itemable_type', Product::class)->isEmpty();
         $isReturnServiceBuy = $invoice->invoice_type === InvoiceType::RETURN_BUY && $invoice->items->where('itemable_type', Product::class)->isEmpty();
-        $accessibleCompanyIds = $this->invoiceService->accessibleCompanyIds(request()->user());
 
         return view('invoices.edit', compact(
             'invoice',
@@ -446,8 +391,7 @@ class InvoiceController extends Controller
             'previousDocumentNumber',
             'isServiceBuy',
             'isReturnServiceBuy',
-            'isReturnInvoice',
-            'accessibleCompanyIds'
+            'isReturnInvoice'
         ));
     }
 
@@ -526,38 +470,23 @@ class InvoiceController extends Controller
     public function search(Request $request, string $invoice_type)
     {
         $validated = $request->validate([
-            'q' => 'nullable|string|max:100',
-            'includeLastYears' => 'sometimes|boolean',
-            'accessibleCompanyIds' => 'sometimes|array',
-            'accessibleCompanyIds.*' => 'integer',
+            'q' => 'required|string|max:100',
         ]);
 
-        [$invoiceTypeValue, $includeLastYears, $accessibleCompanyIds] = array_pad(explode(':', $invoice_type, 3), 3, null);
+        $invoice_type = InvoiceType::from($invoice_type);
 
-        $invoice_type = InvoiceType::from($invoiceTypeValue);
-        $isReturnInvoiceSearch = in_array($invoice_type, [InvoiceType::RETURN_BUY, InvoiceType::RETURN_SELL], true);
-
-        if ($isReturnInvoiceSearch) {
+        if (in_array($invoice_type, [InvoiceType::RETURN_BUY, InvoiceType::RETURN_SELL])) {
             $baseType = str_replace('return_', '', $invoice_type->value);
             $invoice_type = InvoiceType::from($baseType);
         }
 
-        $q = $validated['q'] ?? '';
+        $q = $validated['q'];
 
-        $query = $this->returnInvoiceQuery($request, $invoice_type, $isReturnInvoiceSearch, $includeLastYears, $accessibleCompanyIds);
-
-        $invoices = $query->when($q !== '', function ($query) use ($q) {
-            if (preg_match('/^invoice-(\d+)$/', $q, $matches)) {
-                $query->whereKey((int) $matches[1]);
-
-                return;
-            }
-
-            $query->where(function ($query) use ($q) {
+        $invoices = Invoice::where('status', InvoiceStatus::APPROVED)->where('invoice_type', $invoice_type)
+            ->where(function ($query) use ($q) {
                 $query->where('number', 'like', "%{$q}%")
                     ->orWhere('title', 'like', "%{$q}%");
-            });
-        })->select('id', 'number', 'date', 'title', 'customer_id', 'company_id')->orderByDesc('date')->orderByDesc('number')->limit(20)->get();
+            })->select('id', 'number', 'date', 'title', 'customer_id')->limit(20)->get();
 
         if ($invoices->isEmpty()) {
             return response()->json([]);
@@ -572,7 +501,6 @@ class InvoiceController extends Controller
                 'title' => $invoice->title,
                 'number' => $invoice->number,
                 'customer_id' => $invoice->customer_id,
-                'company_id' => $invoice->company_id,
                 'type' => 'invoice',
             ])->all(),
         ];
@@ -589,38 +517,16 @@ class InvoiceController extends Controller
     /**
      * Get invoice items for a given invoice. Used when an invoice is selected in return sell or return buy.
      */
-    public function getItems(Request $request, int $invoice)
+    public function getItems(Invoice $invoice)
     {
-        $request->validate([
-            'includeLastYears' => 'sometimes|boolean',
-            'accessibleCompanyIds' => 'sometimes|array',
-            'accessibleCompanyIds.*' => 'integer',
-        ]);
-
-        $invoice = $this->findReturnableInvoiceForItems($request, $invoice);
-        $mappedItems = collect($invoice->items)->mapWithKeys(function ($item) {
-            return [$item->id => $this->invoiceService->itemableForCurrentCompany($item)];
-        })->all();
-
-        $missingItems = $this->invoiceService->missingCurrentCompanyItemNames($invoice);
-        if ($missingItems) {
-            throw ValidationException::withMessages([
-                'returned_invoice_id' => __('Products or services of this invoice are not available in current company: :items. Create them in current company before returning this invoice.', [
-                    'items' => implode(', ', $missingItems),
-                ]),
-            ]);
-        }
-
-        $items = $invoice->items()->get()->map(function ($item) use ($mappedItems) {
-            $itemable = $mappedItems[$item->id] ?? null;
-
+        $items = $invoice->items()->with('itemable')->get()->map(function ($item) {
             return [
                 'id' => $item->id,
-                'name' => $itemable?->name,
-                'subject' => $item->itemable_type === Product::class ? $itemable?->inventorySubject?->name : ($item->itemable_type === Service::class ? $itemable?->subject?->name : ''),
-                'service_id' => $item->itemable_type === Service::class ? $itemable?->id : null,
-                'product_id' => $item->itemable_type === Product::class ? $itemable?->id : null,
-                'inventory_subject_id' => $item->itemable_type === Product::class ? $itemable?->inventory_subject_id : null,
+                'name' => $item->itemable->name,
+                'subject' => $item->itemable_type === Product::class ? $item->itemable->inventorySubject->name : ($item->itemable_type === Service::class ? $item->itemable->subject->name : ''),
+                'service_id' => $item->itemable_type === Service::class ? $item->itemable_id : null,
+                'product_id' => $item->itemable_type === Product::class ? $item->itemable_id : null,
+                'inventory_subject_id' => $item->itemable_type === Product::class ? $item->itemable->inventory_subject_id : null,
                 'vat' => $item->vat,
                 'quantity' => $item->quantity,
                 'unit' => $item->unit_price,
@@ -631,44 +537,6 @@ class InvoiceController extends Controller
         });
 
         return response()->json($items);
-    }
-
-    private function returnInvoiceQuery(Request $request, InvoiceType $invoiceType, bool $isReturnInvoiceSearch, ?string $includeLastYears = null, ?string $accessibleCompanyIds = null)
-    {
-        $query = $isReturnInvoiceSearch && $this->includeLastYearsRequested($request, $includeLastYears)
-            ? Invoice::withoutGlobalScopes()->whereIn('company_id', $this->requestedAccessibleCompanyIds($request, $accessibleCompanyIds)) : Invoice::query();
-
-        return $query->where('status', InvoiceStatus::APPROVED)->where('invoice_type', $invoiceType);
-    }
-
-    private function findReturnableInvoiceForItems(Request $request, int $invoiceId): Invoice
-    {
-        if ($this->includeLastYearsRequested($request)) {
-            return Invoice::withoutGlobalScopes()->whereIn('company_id', $this->requestedAccessibleCompanyIds($request))->findOrFail($invoiceId);
-        }
-
-        return Invoice::findOrFail($invoiceId);
-    }
-
-    private function includeLastYearsRequested(Request $request, ?string $includeLastYears = null): bool
-    {
-        return $request->boolean('includeLastYears') || filter_var($includeLastYears, FILTER_VALIDATE_BOOLEAN);
-    }
-
-    private function requestedAccessibleCompanyIds(Request $request, ?string $routeCompanyIds = null): array
-    {
-        $userCompanyIds = collect($this->invoiceService->accessibleCompanyIds($request->user()));
-        $requestCompanyIds = $request->input('accessibleCompanyIds', []);
-        $routeCompanyIds = $routeCompanyIds ? explode(',', $routeCompanyIds) : [];
-
-        $requestedCompanyIds = collect($requestCompanyIds)->merge($routeCompanyIds)->flatten()->filter(fn ($id) => is_numeric($id))
-            ->map(fn ($id) => (int) $id)->unique()->values();
-
-        if ($requestedCompanyIds->isEmpty()) {
-            return $userCompanyIds->all();
-        }
-
-        return $requestedCompanyIds->intersect($userCompanyIds)->values()->all();
     }
 
     public function searchCustomer(Request $request)
