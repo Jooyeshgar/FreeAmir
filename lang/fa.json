@@ -1628,7 +1628,7 @@
     "Returned Items": "موارد بازگشتی",
     "Returned Sold Products Quantity": "تعداد محصولات بازگشتی از فروش",
     "Returned Sold Services Quantity": "تعداد خدمات بازگشتی از خرید",
-    "Returned invoice is not linked to any original invoice (:invoice).": "فاکتور برگشتی به هیچ فاکتور اصلی (:invoice) مرتبط نیست.",
+    "Returned invoice is not linked to any original invoice (:invoice)": "فاکتور برگشتی به هیچ فاکتور اصلی (:invoice) مرتبط نیست",
     "Revenue account amount": "حساب درآمد",
     "Review the below-reorder table and trigger purchase orders.": "جدول زیر نقطه سفارش را بررسی و سفارش خرید ایجاد کنید.",
     "Rial": "ریال",

@@ -668,10 +668,9 @@ class InvoiceService
 
         $originalInvoice = $invoice->getReturnedInvoice();
         if (! $originalInvoice) {
-            $decision->addMessage('error', __('Returned invoice is not linked to any original invoice (:invoice).', [
+            $decision->addMessage('warning', __('Returned invoice is not linked to any original invoice (:invoice)', [
                 'invoice' => $invoice->number,
             ]));
-            $decision->addConflict($originalInvoice);
 
             return;
         }
