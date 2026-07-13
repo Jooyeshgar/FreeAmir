@@ -195,6 +195,11 @@ class InvoiceController extends Controller
                 $customerIds = $returnInvoices->pluck('customer.id')->unique();
                 $customers = Customer::with('group')->whereIn('id', $customerIds)->get();
             }
+
+            // Last-years returns have no linked invoice in the active fiscal year, so their customer and items must be selected manually.
+            $products = $products->merge(Product::with('inventorySubject', 'productGroup')->orderBy('name')->limit(20)->get())->unique('id')->values();
+            $services = $services->merge(Service::with('subject', 'serviceGroup')->orderBy('name')->limit(20)->get())->unique('id')->values();
+            $customers = $customers->merge(Customer::with('group')->orderBy('name')->limit(20)->get())->unique('id')->values();
         } else {
             $products = Product::with('inventorySubject', 'productGroup')->orderBy('name')->limit(20)->get();
             $services = Service::with('subject', 'serviceGroup')->orderBy('name')->limit(20)->get();

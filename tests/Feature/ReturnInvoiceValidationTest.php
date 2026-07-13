@@ -227,6 +227,103 @@ class ReturnInvoiceValidationTest extends TestCase
         ]);
     }
 
+    public function test_last_years_return_invoices_do_not_require_a_linked_invoice(): void
+    {
+        $product = $this->createProduct();
+
+        foreach ([
+            [InvoiceType::RETURN_BUY, 6057],
+            [InvoiceType::RETURN_SELL, 6058],
+        ] as [$invoiceType, $number]) {
+            $response = $this->from(route('invoices.create', ['invoice_type' => $invoiceType]))
+                ->post(route('invoices.store'), [
+                    'title' => 'Last years return invoice',
+                    'date' => '1405/03/13',
+                    'invoice_type' => $invoiceType->value,
+                    'customer_id' => $this->customer->id,
+                    'include_last_years_invoices' => '1',
+                    'document_number' => $number,
+                    'invoice_number' => $number,
+                    'transactions' => [[
+                        'item_id' => 'product-'.$product->id,
+                        'quantity' => 1,
+                        'unit' => 100,
+                        'total' => 100,
+                        'off' => 0,
+                        'vat' => 0,
+                    ]],
+                ]);
+
+            $response->assertSessionHasNoErrors();
+            $this->assertDatabaseHas('invoices', [
+                'invoice_type' => $invoiceType->value,
+                'number' => $number,
+                'returned_invoice_id' => null,
+            ]);
+        }
+    }
+
+    public function test_last_years_return_ignores_a_submitted_returned_invoice(): void
+    {
+        $product = $this->createProduct();
+        $buy = $this->buy([$this->productItem($product, 5, 100)], true, 6059, '2026-06-01')['invoice'];
+
+        $response = $this->from(route('invoices.create', ['invoice_type' => 'return_sell']))
+            ->post(route('invoices.store'), [
+                'title' => 'Last years return sell invoice',
+                'date' => '1405/03/12',
+                'invoice_type' => InvoiceType::RETURN_SELL->value,
+                'customer_id' => $this->customer->id,
+                'include_last_years_invoices' => '1',
+                'returned_invoice_id' => $buy->id,
+                'document_number' => 6060,
+                'invoice_number' => 6060,
+                'transactions' => [[
+                    'item_id' => 'product-'.$product->id,
+                    'quantity' => 1,
+                    'unit' => 100,
+                    'total' => 100,
+                    'off' => 0,
+                    'vat' => 0,
+                ]],
+            ]);
+
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('invoices', [
+            'invoice_type' => InvoiceType::RETURN_SELL->value,
+            'number' => 6060,
+            'returned_invoice_id' => null,
+        ]);
+        $this->assertDatabaseHas('invoices', ['id' => $buy->id]);
+        $this->assertDatabaseMissing('invoices', ['returned_invoice_id' => $buy->id]);
+    }
+
+    public function test_return_invoice_without_last_years_option_requires_a_linked_invoice(): void
+    {
+        $product = $this->createProduct();
+
+        $response = $this->from(route('invoices.create', ['invoice_type' => 'return_buy']))
+            ->post(route('invoices.store'), [
+                'title' => 'Return buy invoice',
+                'date' => '1405/03/13',
+                'invoice_type' => InvoiceType::RETURN_BUY->value,
+                'customer_id' => $this->customer->id,
+                'document_number' => 6061,
+                'invoice_number' => 6061,
+                'transactions' => [[
+                    'item_id' => 'product-'.$product->id,
+                    'quantity' => 1,
+                    'unit' => 100,
+                    'total' => 100,
+                    'off' => 0,
+                    'vat' => 0,
+                ]],
+            ]);
+
+        $response->assertRedirect(route('invoices.create', ['invoice_type' => 'return_buy']));
+        $response->assertSessionHasErrors('returned_invoice_id');
+    }
+
     // -------------------------------------------------------------------------
     // RETURN BUY — COG و میانگین
     // -------------------------------------------------------------------------

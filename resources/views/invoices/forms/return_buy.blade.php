@@ -7,15 +7,43 @@
             );
             $initialSelectedValue = $initialReturnedInvoiceId ? "invoice-$initialReturnedInvoiceId" : null;
             $disableReturnedInvoiceSelect = $invoice->exists || ($lockReturnedInvoiceSelection ?? false);
+            $includeLastYearsInvoices = old(
+                'include_last_years_invoices',
+                $invoice->exists && ! $invoice->returned_invoice_id,
+            );
         @endphp
         <div class="flex w-1/3">
             <div class="flex-wrap w-full" x-data="{
                 returnedInvoiceId: '{{ $initialReturnedInvoiceId }}',
                 invoiceCustomers: @js(collect($returnInvoices)->pluck('customer_id', 'id')),
                 selectedValue: '{{ $initialSelectedValue }}',
+                includeLastYearsInvoices: @js((bool) $includeLastYearsInvoices),
+                updateIncludeLastYearsInvoices() {
+                    const returnedInvoiceSelect = document.getElementById('returned-invoice-select');
+                    const returnedInvoiceButton = returnedInvoiceSelect?.querySelector('button');
+                    if (returnedInvoiceButton) {
+                        returnedInvoiceButton.disabled = {{ $disableReturnedInvoiceSelect ? 'true' : 'false' }} || this.includeLastYearsInvoices;
+                    }
+
+                    if (this.includeLastYearsInvoices) {
+                        this.returnedInvoiceId = null;
+                        this.selectedValue = null;
+                    }
+
+                    window.dispatchEvent(new CustomEvent('include-last-years-invoices-changed', {
+                        detail: { enabled: this.includeLastYearsInvoices }
+                    }));
+                },
             }">
-                <span class="text-gray-500">{{ __('Returned Invoice') }}</span>
+                <div class="flex items-center justify-between whitespace-nowrap">
+                    <span class="text-gray-500">{{ __('Returned Invoice') }}</span>
+                    <x-checkbox name="include_last_years_invoices" id="include-last-years-invoices"
+                        title="{{ __('Include last years invoices') }}" value="1" :checked="$includeLastYearsInvoices"
+                        x-model="includeLastYearsInvoices" x-init="$nextTick(() => updateIncludeLastYearsInvoices())"
+                        x-on:change="updateIncludeLastYearsInvoices()" />
+                </div>
                 <x-select-box url="{{ route('invoices.search', ['invoice_type' => 'return_buy']) }}" :options="[['headerGroup' => 'invoice', 'options' => $returnInvoices]]"
+                    id="returned-invoice-select"
                     x-model="selectedValue" x-init="if (!selectedValue && returnedInvoiceId) {
                         selectedValue = 'invoice-' + returnedInvoiceId;
                     }
@@ -36,18 +64,18 @@
                             window.dispatchEvent(new CustomEvent('return-invoice-customer-selected', { detail: { customerId } }));
                         }
                     "
-                    :disabled="$disableReturnedInvoiceSelect" />
+                    :disabled="$disableReturnedInvoiceSelect || $includeLastYearsInvoices" />
                 <x-input name="returned_invoice_id" x-bind:value="returnedInvoiceId" hidden />
             </div>
         </div>
         <x-input id="invoice_type" name="invoice_type" value="return_buy" hidden />
-        <div class="flex w-1/3">
+        <div class="flex w-1/3 pt-3">
             <x-text-input input_name="title" title="{{ __('Invoice Name') }}"
                 input_value="{{ old('title') ?? ($invoice->title ?? '') }}" placeholder="{{ __('Invoice Name') }}"
                 label_text_class="text-gray-500" label_class="w-1/2"></x-text-input>
         </div>
 
-        <div class="flex w-1/4">
+        <div class="flex w-1/4 pt-3">
             @php
                 $matchedReturnedInvoice = $initialReturnedInvoiceId
                     ? collect($returnInvoices)->firstWhere('id', (int) $initialReturnedInvoiceId)
@@ -82,7 +110,8 @@
                         x-model="selectedValue" x-init="if (!selectedValue && customer_id) {
                             selectedValue = 'customer-' + customer_id;
                         }" placeholder="{{ __('Select Customer') }}"
-                        @selected="customer_id = $event.detail.id;" :disabled="true" />
+                        @selected="customer_id = $event.detail.id;" :disabled="!$includeLastYearsInvoices"
+                        x-on:include-last-years-invoices-changed.window="disabled = !$event.detail.enabled" />
                 </template>
 
                 <x-input x-bind:value="customer_id" name="customer_id" hidden />
@@ -118,7 +147,8 @@
             label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
     </div>
 </x-card>
-<x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-4" x-data="transactionForm">
+<x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-4" x-data="transactionForm"
+    x-on:include-last-years-invoices-changed.window="lastYearsInvoices = $event.detail.enabled">
     <div class="flex flex-wrap overflow-x-auto overflow-y-hidden gap-2 items-center px-4">
         <div class="text-sm flex-1 max-w-8 text-center text-gray-500 pt-3">*</div>
         <div class="text-sm flex-1 min-w-24 max-w-64 text-center text-gray-500 pt-3">
@@ -178,7 +208,8 @@
                         <x-select-box url="{{ route('invoices.search-product-service') }}" :options="$options"
                             x-model="selectedValue" x-init="selectedValue = initItemSelection(transaction)"
                             placeholder="{{ $isReturnServiceBuy ? __('Select Service') : __('Select Product') }}"
-                            :disabled="true" @selected="selectItem(transaction, $event.detail.type, $event.detail.id)"
+                            :disabled="!$includeLastYearsInvoices" @selected="selectItem(transaction, $event.detail.type, $event.detail.id)"
+                            x-on:include-last-years-invoices-changed.window="disabled = !$event.detail.enabled"
                             />
 
                         <x-input name="" x-bind:name="'transactions[' + index + '][product_id]'" x-bind:value="transaction.product_id || ''" hidden />
@@ -207,7 +238,7 @@
                         <x-text-input placeholder="{{ localizeNumber('0') }}" x-model.number="transaction.off"
                             x-bind:name="'transactions[' + index + '][off]'"
                             x-bind:disabled="!transaction.product_id && !transaction.service_id"
-                            x-bind:readonly="true" x-bind:class="'bg-base-200 opacity-60 cursor-not-allowed'"
+                            x-bind:readonly="!lastYearsInvoices" x-bind:class="lastYearsInvoices ? '' : 'bg-base-200 opacity-60 cursor-not-allowed'"
                             label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
                             x-on:input="transaction.off = $store.utils.convertToEnglish($event.target.value)"
                             x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(transaction.off))">
@@ -217,7 +248,7 @@
                         <x-text-input placeholder="{{ localizeNumber('0') }}" x-model.number="transaction.vat"
                             x-bind:name="'transactions[' + index + '][vat]'"
                             x-bind:disabled="!transaction.product_id && !transaction.service_id"
-                            x-bind:readonly="true" x-bind:class="'bg-base-200 opacity-60 cursor-not-allowed'"
+                            x-bind:readonly="!lastYearsInvoices" x-bind:class="lastYearsInvoices ? '' : 'bg-base-200 opacity-60 cursor-not-allowed'"
                             label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
                             x-on:input="transaction.vat = $store.utils.convertToEnglish($event.target.value)"
                             x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(transaction.vat))">
@@ -227,7 +258,7 @@
                         <x-text-input placeholder="{{ localizeNumber('0') }}" x-model.number="transaction.unit"
                             x-bind:name="'transactions[' + index + '][unit]'"
                             x-bind:disabled="!transaction.product_id && !transaction.service_id"
-                            x-bind:readonly="true" x-bind:class="'bg-base-200 opacity-60 cursor-not-allowed'"
+                            x-bind:readonly="!lastYearsInvoices" x-bind:class="lastYearsInvoices ? '' : 'bg-base-200 opacity-60 cursor-not-allowed'"
                             label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
                             x-on:input="transaction.unit = $store.utils.convertToEnglish($event.target.value)"
                             x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(transaction.unit))">
@@ -306,6 +337,7 @@
                 products: {!! json_encode($products, JSON_UNESCAPED_UNICODE) !!},
                 services: {!! json_encode($services, JSON_UNESCAPED_UNICODE) !!},
                 isEditing: {{ $invoice->exists ? 'true' : 'false' }},
+                lastYearsInvoices: @js((bool) $includeLastYearsInvoices),
                 selectedReturnInvoiceId: {!! json_encode(
                     old('returned_invoice_id', $invoice->returned_invoice_id ?? ($prefilledReturnedInvoiceId ?? null)),
                     JSON_UNESCAPED_UNICODE,

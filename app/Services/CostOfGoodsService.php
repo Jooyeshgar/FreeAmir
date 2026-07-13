@@ -61,7 +61,7 @@ class CostOfGoodsService
             $baseCost = $sign * $inputs['baseCost'];
             $availableQuantity = $inputs['availableQuantity'];
             $newQuantity = $sign * $inputs['newQuantity'];
-            $ancillaryCosts = $isReturnBuy ? $invoice->getReturnedInvoice()->ancillaryCosts : $inputs['ancillaryCosts'];
+            $ancillaryCosts = $isReturnBuy ? $invoice->getReturnedInvoice()?->ancillaryCosts : $inputs['ancillaryCosts'];
 
             $sumAncillaryCosts = self::sumApprovedAncillaryCostsForProduct($ancillaryCosts, $product->id);
             $ancillaryCostsValue = $isReturnBuy ? ($sumAncillaryCosts / $invoiceItem->quantity_at) * $newQuantity : $sumAncillaryCosts;
