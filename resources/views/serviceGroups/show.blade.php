@@ -1,4 +1,6 @@
 <x-app-layout>
+    <x-show-message-bags />
+
     <div class="card bg-base-100 shadow-xl">
         <div
             class="card-header bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 px-6 py-4 rounded-t-2xl border-b-2 border-primary/20">
@@ -27,7 +29,7 @@
         <div class="card-body">
             <div class="grid grid-cols-3 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-3">
                 <x-stat-card :title="__('VAT')" :value="formatNumber($serviceGroup->vat) . '%'" type="base" icon="vat" />
-                <x-stat-card :title="__('Services Count')" :value="formatNumber($serviceGroup->services->count()) ?? '-'" type="base" icon="services" />
+                <x-stat-card :title="__('Services Count')" :value="formatNumber($serviceGroup->services_count ?? $serviceGroup->services()->count()) ?? '-'" type="base" icon="services" />
             </div>
 
             @can('reports.ledger')
@@ -52,14 +54,26 @@
                     </svg>
                     {{ __('Back') }}
                 </a>
-                <a href="{{ route('service-groups.edit', $serviceGroup) }}" class="btn btn-primary gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    {{ __('Edit') }}
-                </a>
+                <div class="flex flex-wrap items-center gap-2">
+                    <a href="{{ route('service-groups.edit', $serviceGroup) }}" class="btn btn-primary gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        {{ __('Edit') }}
+                    </a>
+
+                    @if ($deleteBlockingReason)
+                        <span class="tooltip" data-tip="{{ $deleteBlockingReason }}">
+                            <button class="btn btn-error btn-disabled cursor-not-allowed" disabled title="{{ $deleteBlockingReason }}">{{ __('Delete') }}</button>
+                        </span>
+                    @else
+                        <form action="{{ route('service-groups.destroy', $serviceGroup) }}" method="POST" class="inline-block">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-error">{{ __('Delete') }}</button>
+                        </form>
+                    @endif
+                </div>
             </div>
         </div>
 </x-app-layout>

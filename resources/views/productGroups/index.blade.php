@@ -53,7 +53,7 @@
                                 </a>
                             </td>
                             <td class="px-4 py-2">{{ formatNumber($productGroup->vat) }}%</td>
-                            <td class="px-4 py-2">{{ formatNumber($productGroup->products->count()) }}</td>
+                            <td class="px-4 py-2">{{ formatNumber($productGroup->products_count ?? $productGroup->products()->count()) }}</td>
                             <td class="px-4 py-2"><a
                                     href="{{ route('transactions.index', ['subject_id' => $productGroup->inventorySubject]) }}">{{ $productGroup->inventorySubject?->name }}</a>
                             </td>
@@ -71,12 +71,17 @@
                                     class="btn btn-sm btn-info">{{ __('View') }}</a>
                                 <a href="{{ route('product-groups.edit', $productGroup) }}"
                                     class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                <form action="{{ route('product-groups.destroy', $productGroup) }}" method="POST"
-                                    class="inline-block">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                </form>
+                                @if ($productGroup->delete_blocking_reason)
+                                    <span class="tooltip" data-tip="{{ $productGroup->delete_blocking_reason }}">
+                                        <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled title="{{ $productGroup->delete_blocking_reason }}">{{ __('Delete') }}</button>
+                                    </span>
+                                @else
+                                    <form action="{{ route('product-groups.destroy', $productGroup) }}" method="POST" class="inline-block">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                    </form>
+                                @endif
                             </td>
                         </tr>
                     @endforeach

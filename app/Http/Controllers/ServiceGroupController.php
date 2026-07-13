@@ -14,7 +14,11 @@ class ServiceGroupController extends Controller
 
     public function index()
     {
-        $serviceGroups = ServiceGroup::with('subject', 'cogsSubject')->paginate(12);
+        $serviceGroups = ServiceGroup::with('subject', 'cogsSubject', 'salesReturnsSubject')->withCount('services')->paginate(12);
+
+        $serviceGroups->getCollection()->each(function (ServiceGroup $serviceGroup): void {
+            $serviceGroup->setAttribute('delete_blocking_reason', $this->serviceGroupService->deleteBlockingReason($serviceGroup));
+        });
 
         return view('serviceGroups.index', compact('serviceGroups'));
     }
@@ -30,9 +34,10 @@ class ServiceGroupController extends Controller
 
     public function show(ServiceGroup $serviceGroup)
     {
-        $serviceGroup->load('subject', 'cogsSubject');
+        $serviceGroup->load('subject', 'cogsSubject', 'salesReturnsSubject')->loadCount('services');
+        $deleteBlockingReason = $this->serviceGroupService->deleteBlockingReason($serviceGroup);
 
-        return view('serviceGroups.show', compact('serviceGroup'));
+        return view('serviceGroups.show', compact('serviceGroup', 'deleteBlockingReason'));
     }
 
     public function store(Request $request)

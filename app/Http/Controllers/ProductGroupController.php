@@ -14,7 +14,11 @@ class ProductGroupController extends Controller
 
     public function index()
     {
-        $productGroups = Models\ProductGroup::paginate(12);
+        $productGroups = Models\ProductGroup::with('incomeSubject', 'salesReturnsSubject', 'cogsSubject', 'inventorySubject')->withCount('products')->paginate(12);
+
+        $productGroups->getCollection()->each(function (Models\ProductGroup $productGroup): void {
+            $productGroup->setAttribute('delete_blocking_reason', $this->productGroupService->deleteBlockingReason($productGroup));
+        });
 
         return view('productGroups.index', compact('productGroups'));
     }
@@ -48,7 +52,10 @@ class ProductGroupController extends Controller
 
     public function show(Models\ProductGroup $productGroup)
     {
-        return view('productGroups.show', compact('productGroup'));
+        $productGroup->load('incomeSubject', 'salesReturnsSubject', 'cogsSubject', 'inventorySubject')->loadCount('products');
+        $deleteBlockingReason = $this->productGroupService->deleteBlockingReason($productGroup);
+
+        return view('productGroups.show', compact('productGroup', 'deleteBlockingReason'));
     }
 
     public function update(Request $request, Models\ProductGroup $productGroup)
