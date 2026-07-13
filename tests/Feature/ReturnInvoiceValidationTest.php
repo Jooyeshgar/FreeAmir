@@ -235,11 +235,11 @@ class ReturnInvoiceValidationTest extends TestCase
             [InvoiceType::RETURN_BUY, 6057],
             [InvoiceType::RETURN_SELL, 6058],
         ] as [$invoiceType, $number]) {
-            $response = $this->from(route('invoices.create', ['invoice_type' => $invoiceType]))
+            $response = $this->from(route('invoices.create', ['invoice_type' => $invoiceType->valueName()]))
                 ->post(route('invoices.store'), [
                     'title' => 'Last years return invoice',
                     'date' => '1405/03/13',
-                    'invoice_type' => $invoiceType->value,
+                    'invoice_type' => $invoiceType->valueName(),
                     'customer_id' => $this->customer->id,
                     'include_last_years_invoices' => '1',
                     'document_number' => $number,
@@ -272,7 +272,7 @@ class ReturnInvoiceValidationTest extends TestCase
             ->post(route('invoices.store'), [
                 'title' => 'Last years return sell invoice',
                 'date' => '1405/03/12',
-                'invoice_type' => InvoiceType::RETURN_SELL->value,
+                'invoice_type' => InvoiceType::RETURN_SELL->valueName(),
                 'customer_id' => $this->customer->id,
                 'include_last_years_invoices' => '1',
                 'returned_invoice_id' => $buy->id,
@@ -306,7 +306,7 @@ class ReturnInvoiceValidationTest extends TestCase
             ->post(route('invoices.store'), [
                 'title' => 'Return buy invoice',
                 'date' => '1405/03/13',
-                'invoice_type' => InvoiceType::RETURN_BUY->value,
+                'invoice_type' => InvoiceType::RETURN_BUY->valueName(),
                 'customer_id' => $this->customer->id,
                 'document_number' => 6061,
                 'invoice_number' => 6061,

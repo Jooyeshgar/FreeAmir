@@ -91,7 +91,7 @@ class CompanyAccessTest extends TestCase
         $bankRoot = Subject::create([
             'code' => '010',
             'name' => 'Banks',
-            'type' => 'both',
+            'type' => 3,
             'company_id' => $this->accessibleCompany->id,
             'parent_id' => null,
         ]);
@@ -99,7 +99,7 @@ class CompanyAccessTest extends TestCase
         $accountSubject = Subject::create([
             'code' => '010001',
             'name' => 'Main Account',
-            'type' => 'both',
+            'type' => 3,
             'company_id' => $this->accessibleCompany->id,
             'parent_id' => $bankRoot->id,
         ]);
