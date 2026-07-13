@@ -59,7 +59,7 @@
                         class="h-10 min-h-10 border border-slate-400 w-full rounded-md text-gray-500 px-2">
                         <option class="bg-base-100" value="">{{ __('Select Cost Type') }}</option>
                         @foreach (App\Enums\AncillaryCostType::cases() as $type)
-                            <option class="bg-base-100" value="{{ $type->value }}">{{ $type->label() }}</option>
+                            <option class="bg-base-100" value="{{ $type->valueName() }}">{{ $type->label() }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -186,7 +186,7 @@
                 availableProducts: [],
                 productAmounts: {},
                 selectedInvoiceId: {{ old('invoice_id') ?? ($ancillaryCost->invoice_id ?? 'null') }},
-                selectedCostType: '{{ old('type') ?? ($ancillaryCost->type ?? '') }}',
+                selectedCostType: '{{ old('type') ?? ($ancillaryCost->type?->valueName() ?? '') }}',
                 selectedCustomerId: {{ old('customer_id') ?? ($ancillaryCost->customer_id ?? 'null') }},
                 vat: '{{ old('vat') ?? ($ancillaryCost->vat ?? 0) }}',
 

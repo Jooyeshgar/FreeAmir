@@ -4,40 +4,31 @@ namespace App\Enums;
 
 use ValueError;
 
-enum CustomerType: int
+enum PayrollElementCalcType: int
 {
-    case INDIVIDUAL = 1;
-    case LEGAL_ENTITY = 2;
-    case CIVIL_PARTNERSHIP = 3;
-    case FOREIGN_NATIONAL = 4;
+    case FIXED = 1;
+    case FORMULA = 2;
+    case PERCENTAGE = 3;
+    case DAILY = 4;
 
     public function label(): string
     {
         return match ($this) {
-            self::INDIVIDUAL => __('Individual'),
-            self::LEGAL_ENTITY => __('Legal Entity'),
-            self::CIVIL_PARTNERSHIP => __('Civil Partnership'),
-            self::FOREIGN_NATIONAL => __('Foreign National'),
+            self::FIXED => __('Fixed'),
+            self::FORMULA => __('Formula'),
+            self::PERCENTAGE => __('Percentage'),
+            self::DAILY => __('Daily'),
         };
     }
 
     public function valueName(): string
     {
         return match ($this) {
-            self::INDIVIDUAL => 'individual',
-            self::LEGAL_ENTITY => 'legal_entity',
-            self::CIVIL_PARTNERSHIP => 'civil_partnership',
-            self::FOREIGN_NATIONAL => 'foreign_national',
+            self::FIXED => 'fixed',
+            self::FORMULA => 'formula',
+            self::PERCENTAGE => 'percentage',
+            self::DAILY => 'daily',
         };
-    }
-
-    public static function options(): array
-    {
-        return array_reduce(self::cases(), function ($carry, $case) {
-            $carry[$case->valueName()] = $case->label();
-
-            return $carry;
-        }, []);
     }
 
     public static function valueNames(): array

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Enums\BankAccountType;
+use App\Enums\SubjectType;
 use App\Models\Bank;
 use App\Models\BankAccount;
 use App\Models\Company;
@@ -52,7 +54,7 @@ class SubjectTransferTest extends TestCase
             'is_permanent' => true,
             'name' => 'Test Subject',
             'code' => '001',
-            'type' => 'both',
+            'type' => SubjectType::BOTH,
         ], $attributes));
     }
 
@@ -140,7 +142,7 @@ class SubjectTransferTest extends TestCase
         return BankAccount::withoutGlobalScopes()->create(array_merge([
             'name' => 'Test Account',
             'number' => '123456789',
-            'type' => 1,
+            'type' => BankAccountType::INTEREST_FREE_LOAN,
             'bank_id' => $bank->id,
             'company_id' => $this->company->id,
             'subject_id' => $subject->id,
@@ -271,7 +273,7 @@ class SubjectTransferTest extends TestCase
 
     public function test_creates_new_subject_under_parent_and_transfers()
     {
-        $source = $this->makeSubject(['code' => '001', 'name' => 'Source Name', 'type' => 'debtor']);
+        $source = $this->makeSubject(['code' => '001', 'name' => 'Source Name', 'type' => SubjectType::DEBTOR]);
         $parent = $this->makeSubject(['code' => '002', 'name' => 'Parent']);
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 150);
@@ -664,14 +666,14 @@ class SubjectTransferTest extends TestCase
 
     public function test_new_subject_inherits_parent_type_when_parent_type_is_restrictive()
     {
-        $parent = $this->makeSubject(['code' => '002', 'type' => 'creditor']);
-        $source = $this->makeSubject(['code' => '003', 'type' => 'debtor']);
+        $parent = $this->makeSubject(['code' => '002', 'type' => SubjectType::CREDITOR]);
+        $source = $this->makeSubject(['code' => '003', 'type' => SubjectType::DEBTOR]);
         $doc = $this->makeDocument();
         $this->makeTransaction($source, $doc, 100);
 
         $result = $this->subjectService->transferSubjectToNewUnderParent($source, $parent);
 
-        $this->assertEquals('creditor', $result['destination']->type);
+        $this->assertEquals(SubjectType::CREDITOR, $result['destination']->type);
     }
 
     public function test_new_subject_inherits_parent_is_permanent()

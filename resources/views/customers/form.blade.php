@@ -1,14 +1,16 @@
+@php
+    $customer = $customer ?? null;
+    $groupHint = '<a class="link text-blue-500" href="' . route('customer-groups.create') . '">' . __('Create new group') . '</a>';
+@endphp
+
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <div class="p-4">
         <div>
             <div class="text-sm font-semibold text-gray-600 mb-3">{{ __('Identity Information') }}</div>
             <div class="grid grid-cols-2 gap-1 ">
                 <div>
-                    @php
-                        $hint = '<a class="link text-blue-500" href="' . route('customer-groups.create') . '">' . __('Create new group') . '</a>';
-                    @endphp
                     <x-select title="{{ __('Account Plan Group') }}" name="group_id" id="group_id"
-                        :options="$groups->pluck('name', 'id')" :selected="old('group_id', $customer->group_id ?? null)" :hint="$hint" />
+                        :options="$groups->pluck('name', 'id')" :selected="old('group_id', $customer->group_id ?? null)" :hint="$groupHint" />
                 </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -37,7 +39,7 @@
                     <span class="label"> {{ __('Type') }}</span>
                     <select name="type" id="type" class="select">
                         @foreach (App\Enums\CustomerType::cases() as $type)
-                            <option value="{{ $type->value }}" @selected(old('type', $customer->type?->value ?? '') == $type->value)>{{ $type->label() }}</option>
+                            <option value="{{ $type->valueName() }}" @selected(old('type', $customer?->type?->valueName() ?? '') === $type->valueName())>{{ $type->label() }}</option>
                         @endforeach
                     </select>
                 </div>

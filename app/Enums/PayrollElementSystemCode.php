@@ -4,40 +4,28 @@ namespace App\Enums;
 
 use ValueError;
 
-enum CustomerType: int
+enum PayrollElementSystemCode: int
 {
-    case INDIVIDUAL = 1;
-    case LEGAL_ENTITY = 2;
-    case CIVIL_PARTNERSHIP = 3;
-    case FOREIGN_NATIONAL = 4;
-
-    public function label(): string
-    {
-        return match ($this) {
-            self::INDIVIDUAL => __('Individual'),
-            self::LEGAL_ENTITY => __('Legal Entity'),
-            self::CIVIL_PARTNERSHIP => __('Civil Partnership'),
-            self::FOREIGN_NATIONAL => __('Foreign National'),
-        };
-    }
+    case CHILD_ALLOWANCE = 1;
+    case HOUSING_ALLOWANCE = 2;
+    case FOOD_ALLOWANCE = 3;
+    case MARRIAGE_ALLOWANCE = 4;
+    case OVERTIME = 5;
+    case AUTO_OVERTIME = 6;
+    case FRIDAY_PAY = 7;
+    case HOLIDAY_PAY = 8;
+    case MISSION_PAY = 9;
+    case INSURANCE_EMP = 10;
+    case INSURANCE_EMP2 = 11;
+    case UNEMPLOYMENT_INS = 12;
+    case INCOME_TAX = 13;
+    case ABSENCE_DEDUCTION = 14;
+    case OTHER = 15;
+    case UNDERTIME = 16;
 
     public function valueName(): string
     {
-        return match ($this) {
-            self::INDIVIDUAL => 'individual',
-            self::LEGAL_ENTITY => 'legal_entity',
-            self::CIVIL_PARTNERSHIP => 'civil_partnership',
-            self::FOREIGN_NATIONAL => 'foreign_national',
-        };
-    }
-
-    public static function options(): array
-    {
-        return array_reduce(self::cases(), function ($carry, $case) {
-            $carry[$case->valueName()] = $case->label();
-
-            return $carry;
-        }, []);
+        return $this->name;
     }
 
     public static function valueNames(): array

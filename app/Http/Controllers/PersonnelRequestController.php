@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Models\Employee;
 use App\Models\PersonnelRequest;
@@ -38,7 +39,11 @@ class PersonnelRequestController extends Controller
         }
 
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $status = PersonnelRequestStatus::tryFromName($request->status);
+
+            if ($status !== null) {
+                $query->where('status', $status);
+            }
         }
 
         $personnelRequests = $query->paginate(15)->withQueryString();
@@ -46,13 +51,13 @@ class PersonnelRequestController extends Controller
         // Pending counts per tab for badges
         $pendingCounts = [
             'leaves' => PersonnelRequest::whereIn('request_type', array_map(fn ($t) => $t->value, PersonnelRequestType::leaveTypes()))
-                ->where('status', 'pending')->count(),
+                ->where('status', PersonnelRequestStatus::PENDING)->count(),
             'missions' => PersonnelRequest::whereIn('request_type', array_map(fn ($t) => $t->value, PersonnelRequestType::missionTypes()))
-                ->where('status', 'pending')->count(),
+                ->where('status', PersonnelRequestStatus::PENDING)->count(),
             'work_orders' => PersonnelRequest::whereIn('request_type', array_map(fn ($t) => $t->value, PersonnelRequestType::workOrderTypes()))
-                ->where('status', 'pending')->count(),
+                ->where('status', PersonnelRequestStatus::PENDING)->count(),
             'other' => PersonnelRequest::whereIn('request_type', array_map(fn ($t) => $t->value, PersonnelRequestType::otherTypes()))
-                ->where('status', 'pending')->count(),
+                ->where('status', PersonnelRequestStatus::PENDING)->count(),
         ];
 
         $employees = Employee::orderBy('first_name')->get(['id', 'first_name', 'last_name']);
@@ -77,7 +82,7 @@ class PersonnelRequestController extends Controller
         };
 
         $requestTypes = array_column(
-            array_map(fn ($case) => ['value' => $case->value, 'label' => $case->label()], $cases),
+            array_map(fn ($case) => ['value' => $case->valueName(), 'label' => $case->label()], $cases),
             'label',
             'value'
         );
@@ -104,7 +109,7 @@ class PersonnelRequestController extends Controller
 
         $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
-            'request_type' => ['required', 'string', 'in:'.implode(',', array_column(PersonnelRequestType::cases(), 'value'))],
+            'request_type' => ['required', 'string', 'in:'.implode(',', PersonnelRequestType::valueNames())],
             'request_date' => ['required', 'string'],
             'start_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
             'end_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
@@ -125,7 +130,7 @@ class PersonnelRequestController extends Controller
         PersonnelRequest::create([
             'employee_id' => $request->employee_id,
             'company_id' => getActiveCompany(),
-            'request_type' => $request->request_type,
+            'request_type' => PersonnelRequestType::fromName($request->request_type),
             'start_date' => $startDatetime,
             'end_date' => $endDatetime,
             'reason' => $request->reason,
@@ -160,7 +165,7 @@ class PersonnelRequestController extends Controller
         };
 
         $requestTypes = array_column(
-            array_map(fn ($case) => ['value' => $case->value, 'label' => $case->label()], $cases),
+            array_map(fn ($case) => ['value' => $case->valueName(), 'label' => $case->label()], $cases),
             'label',
             'value'
         );
@@ -177,14 +182,14 @@ class PersonnelRequestController extends Controller
 
     public function update(Request $request, PersonnelRequest $personnelRequest): RedirectResponse
     {
-        if ($personnelRequest->status !== 'pending') {
+        if (! $personnelRequest->status?->isPending()) {
             throw ValidationException::withMessages([
                 __('Only pending requests can be edited.'),
             ]);
         }
 
         $validated = $request->validate([
-            'request_type' => ['required', 'string', 'in:'.implode(',', array_column(PersonnelRequestType::cases(), 'value'))],
+            'request_type' => ['required', 'string', 'in:'.implode(',', PersonnelRequestType::valueNames())],
             'request_date' => ['required', 'string'],
             'start_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
             'end_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
@@ -194,6 +199,7 @@ class PersonnelRequestController extends Controller
         $gregorianDate = str_replace('/', '-', convertToGregorian($request->request_date));
         $validated['start_date'] = $gregorianDate.' '.$request->start_time;
         $validated['end_date'] = $gregorianDate.' '.$request->end_time;
+        $validated['request_type'] = PersonnelRequestType::fromName($validated['request_type']);
 
         if (strtotime($validated['end_date']) < strtotime($validated['start_date'])) {
             throw ValidationException::withMessages([
@@ -221,13 +227,13 @@ class PersonnelRequestController extends Controller
 
     public function approve(PersonnelRequest $personnelRequest): RedirectResponse
     {
-        if ($personnelRequest->status === 'approved') {
+        if ($personnelRequest->status?->isApproved()) {
             return redirect()->back()
                 ->with('info', __('Personnel request is already approved.'));
         }
 
         $personnelRequest->update([
-            'status' => 'approved',
+            'status' => PersonnelRequestStatus::APPROVED,
             'approved_by' => auth()->user()->id,
         ]);
 
@@ -239,10 +245,10 @@ class PersonnelRequestController extends Controller
 
     public function reject(PersonnelRequest $personnelRequest): RedirectResponse
     {
-        $wasApproved = $personnelRequest->status === 'approved';
+        $wasApproved = $personnelRequest->status?->isApproved();
 
         $personnelRequest->update([
-            'status' => 'rejected',
+            'status' => PersonnelRequestStatus::REJECTED,
             'approved_by' => auth()->user()->id,
         ]);
 

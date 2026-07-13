@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Service for handling ancillary costs.
@@ -48,7 +49,7 @@ class AncillaryCostService
                 ];
             }
 
-            $type = AncillaryCostType::from($data['type']);
+            $type = AncillaryCostType::fromName($data['type']);
 
             $documentData = [
                 'date' => $data['date'] ?? now()->toDateString(),
@@ -96,7 +97,7 @@ class AncillaryCostService
                 'customer_id' => $data['customer_id'],
                 'company_id' => $data['company_id'],
                 'date' => $data['date'] ?? now()->toDateString(),
-                'type' => AncillaryCostType::from($data['type']),
+                'type' => AncillaryCostType::fromName($data['type']),
                 'amount' => $data['amount'],
                 'vat' => $data['vatPrice'] ?? 0,
                 'status' => InvoiceStatus::UNAPPROVED,
@@ -172,7 +173,7 @@ class AncillaryCostService
     private static function updateAncillaryCostWithoutApproval(AncillaryCost $ancillaryCost, array $data)
     {
         DB::transaction(function () use ($ancillaryCost, $data) {
-            $type = AncillaryCostType::from($data['type']);
+            $type = AncillaryCostType::fromName($data['type']);
 
             $ancillaryCost->update([
                 'invoice_id' => $data['invoice_id'],
@@ -194,7 +195,7 @@ class AncillaryCostService
      *
      * @param  int  $ancillaryCostId  The ID of the ancillary cost
      *
-     * @throws \Exception
+     * @throws Exception
      */
     public static function deleteAncillaryCost(AncillaryCost $ancillaryCost): void
     {
@@ -240,11 +241,11 @@ class AncillaryCostService
      *
      * @param  array  $data  Data to validate
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     private static function validateAncillaryCostData(array $data): void
     {
-        $allowedTypes = collect(AncillaryCostType::cases())->map->value->all();
+        $allowedTypes = AncillaryCostType::valueNames();
 
         $validator = Validator::make($data, [
             'invoice_id' => 'required|integer|exists:invoices,id',
@@ -259,7 +260,7 @@ class AncillaryCostService
         ]);
 
         if ($validator->fails()) {
-            throw new \Illuminate\Validation\ValidationException($validator);
+            throw new ValidationException($validator);
         }
     }
 

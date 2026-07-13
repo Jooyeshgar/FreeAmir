@@ -6,6 +6,7 @@ use App\Enums\InvoiceType;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Service;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -276,20 +277,20 @@ class StoreInvoiceRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         $invoice = $this->route('invoice');
         $isEditing = $invoice !== null;
-        $isReturnInvoice = in_array($this->input('invoice_type'), [InvoiceType::RETURN_BUY->value, InvoiceType::RETURN_SELL->value], true);
+        $isReturnInvoice = in_array($this->input('invoice_type'), [InvoiceType::RETURN_BUY->valueName(), InvoiceType::RETURN_SELL->valueName()], true);
 
         $rules = [
             'title' => 'nullable|string|min:2|max:255',
             'description' => 'nullable|string',
             'date' => 'required|date',
 
-            'invoice_type' => ['required', Rule::in(array_column(InvoiceType::cases(), 'value'))],
+            'invoice_type' => ['required', Rule::in(InvoiceType::valueNames())],
             'customer_id' => 'required|exists:customers,id|integer',
             'invoice_id' => Rule::when($invoice !== null, ['required', 'integer', 'exists:invoices,id']),
             'returned_invoice_id' => 'nullable|integer|exists:invoices,id',
@@ -307,7 +308,7 @@ class StoreInvoiceRequest extends FormRequest
                 'integer',
                 Rule::unique('invoices', 'number')
                     ->where(function ($query) {
-                        return $query->where('company_id', getActiveCompany())->where('invoice_type', $this->input('invoice_type'));
+                        return $query->where('company_id', getActiveCompany())->where('invoice_type', InvoiceType::fromName($this->input('invoice_type')));
                     })
                     ->ignore($isEditing ? $invoice->id : null),
             ],

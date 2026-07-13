@@ -94,7 +94,7 @@
                     </thead>
                     <tbody>
                         @forelse ($personnelRequests as $personnelRequest)
-                            <tr class="{{ $personnelRequest->status === 'pending' ? 'bg-warning/10' : '' }}">
+                            <tr class="{{ $personnelRequest->status?->isPending() ? 'bg-warning/10' : '' }}">
                                 <td>
                                     {{ $personnelRequest->employee?->first_name }}
                                     {{ $personnelRequest->employee?->last_name }}
@@ -115,9 +115,9 @@
                                     @endif
                                 </td>
                                 <td>
-                                    @if ($personnelRequest->status === 'pending')
+                                    @if ($personnelRequest->status?->isPending())
                                         <span class="badge badge-warning">{{ __('Pending') }}</span>
-                                    @elseif ($personnelRequest->status === 'approved')
+                                    @elseif ($personnelRequest->status?->isApproved())
                                         <span class="badge badge-success">{{ __('Approved') }}</span>
                                     @else
                                         <span class="badge badge-error">{{ __('Rejected') }}</span>
@@ -126,7 +126,7 @@
                                 </td>
                                 <td class="flex gap-2">
                                     @can('hr.personnel-requests.approve')
-                                        @if ($personnelRequest->status === 'pending' || $personnelRequest->status === 'rejected')
+                                        @if ($personnelRequest->status?->isPending() || $personnelRequest->status?->isRejected())
                                             <form action="{{ route('hr.personnel-requests.approve', $personnelRequest) }}" method="POST" class="inline-block mb-0">
                                                 @csrf
                                                 @method('PATCH')
@@ -135,7 +135,7 @@
                                                 </button>
                                             </form>
                                         @endif
-                                        @if ($personnelRequest->status === 'pending' || $personnelRequest->status === 'approved')
+                                        @if ($personnelRequest->status?->isPending() || $personnelRequest->status?->isApproved())
                                             <form action="{{ route('hr.personnel-requests.reject', $personnelRequest) }}" method="POST" class="inline-block mb-0">
                                                 @csrf
                                                 @method('PATCH')
@@ -145,7 +145,7 @@
                                             </form>
                                         @endif
                                     @endcan
-                                    @if($personnelRequest->status === 'pending')
+                                    @if($personnelRequest->status?->isPending())
                                         @can('hr.personnel-requests.edit')
                                             <a href="{{ route('hr.personnel-requests.edit', ['tab' => $tab, 'personnel_request' => $personnelRequest->id]) }}" class="btn btn-sm btn-info">
                                                 {{ __('Edit') }}
@@ -154,7 +154,7 @@
                                     @else
                                         <button type="submit" class="btn btn-sm btn-disabled">{{ __('Edit') }}</button>
                                     @endif
-                                    @if($personnelRequest->status !== 'approved')
+                                    @if(! $personnelRequest->status?->isApproved())
                                         @can('hr.personnel-requests.delete')
                                             <form action="{{ route('hr.personnel-requests.destroy', ['tab' => $tab, 'personnel_request' => $personnelRequest->id]) }}" method="POST" class="inline-block"
                                                 onsubmit="return confirm('{{ __('Are you sure?') }}')">

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\AncillaryCostType;
+use App\Models\Invoice;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -34,7 +35,7 @@ class StoreAncillaryCostRequest extends FormRequest
             $vatPrice = $total * ($this->input('vat') ?? 0) / 100;
             $total += $total * ($this->input('vat') ?? 0) / 100;
         }
-        $invoice = \App\Models\Invoice::find($this->input('invoice_id'));
+        $invoice = Invoice::find($this->input('invoice_id'));
 
         $this->merge([
             'invoice_date' => $invoice?->date,
@@ -58,7 +59,7 @@ class StoreAncillaryCostRequest extends FormRequest
             'vatPrice' => 'nullable|numeric|min:0',
             'vatPercentage' => 'nullable|numeric|min:0|max:100',
             'date' => ['required', 'date', 'after_or_equal:invoice_date'],
-            'type' => ['required', Rule::in(array_column(AncillaryCostType::cases(), 'value'))],
+            'type' => ['required', Rule::in(AncillaryCostType::valueNames())],
             'ancillaryCosts' => 'required|array',
             'ancillaryCosts.*.product_id' => 'required|integer|exists:products,id',
             'ancillaryCosts.*.amount' => 'required|numeric|min:0',

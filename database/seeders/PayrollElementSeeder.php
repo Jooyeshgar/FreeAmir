@@ -2,6 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Enums\PayrollElementCalcType;
+use App\Enums\PayrollElementCategory;
+use App\Enums\PayrollElementSystemCode;
 use App\Models\PayrollElement;
 use Illuminate\Database\Seeder;
 
@@ -169,8 +172,12 @@ class PayrollElementSeeder extends Seeder
         ];
 
         foreach ($elements as $data) {
+            $data['system_code'] = PayrollElementSystemCode::fromName($data['system_code']);
+            $data['category'] = PayrollElementCategory::fromName($data['category']);
+            $data['calc_type'] = PayrollElementCalcType::fromName($data['calc_type']);
+
             PayrollElement::withoutGlobalScopes()->updateOrCreate(
-                ['company_id' => 1, 'system_code' => $data['system_code']],
+                ['company_id' => 1, 'system_code' => $data['system_code']->value],
                 array_merge($data, ['company_id' => 1])
             );
         }

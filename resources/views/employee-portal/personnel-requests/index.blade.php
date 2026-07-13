@@ -81,9 +81,9 @@
                                     @endif
                                 </td>
                                 <td>
-                                    @if ($req->status === 'approved')
+                                    @if ($req->status?->isApproved())
                                         <span class="badge badge-success badge-sm">{{ __('Approved') }}</span>
-                                    @elseif ($req->status === 'rejected')
+                                    @elseif ($req->status?->isRejected())
                                         <span class="badge badge-error badge-sm">{{ __('Rejected') }}</span>
                                     @else
                                         <span class="badge badge-warning badge-sm">{{ __('Pending') }}</span>
@@ -93,7 +93,7 @@
                                     {{ $req->reason ?? '—' }}
                                 </td>
                                 <td>
-                                    @if ($req->status === 'pending')
+                                    @if ($req->status?->isPending())
                                         <a href="{{ route('employee-portal.personnel-requests.edit', ['tab' => $tab, 'personnel_request' => $req->id]) }}" class="btn btn-sm btn-info">
                                             {{ __('Edit') }}
                                         </a>

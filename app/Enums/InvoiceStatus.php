@@ -2,29 +2,28 @@
 
 namespace App\Enums;
 
-enum InvoiceStatus: string
+use ValueError;
+
+enum InvoiceStatus: int
 {
-    case PENDING = 'pending';
+    case PENDING = 1;
 
-    case PRE_INVOICE = 'pre_invoice';
+    case PRE_INVOICE = 2;
 
-    case APPROVED = 'approved';
+    case APPROVED = 3;
 
-    case UNAPPROVED = 'unapproved';
+    case UNAPPROVED = 4;
 
-    case APPROVED_INACTIVE = 'approved_inactive';
+    case APPROVED_INACTIVE = 5;
 
-    case REJECTED = 'rejected';
+    case REJECTED = 6;
 
-    case READY_TO_APPROVE = 'ready_to_approve';
+    case READY_TO_APPROVE = 7;
 
-    case PARTIALLY_PAID = 'partially_paid';
+    case PARTIALLY_PAID = 8;
 
-    case PAID = 'paid';
+    case PAID = 9;
 
-    /**
-     * Get translated label for the invoice/ancillary cost status.
-     */
     public function label(): string
     {
         return match ($this) {
@@ -38,6 +37,54 @@ enum InvoiceStatus: string
             self::PARTIALLY_PAID => __('Partially paid'),
             self::PAID => __('Paid'),
         };
+    }
+
+    public function valueName(): string
+    {
+        return match ($this) {
+            self::PENDING => 'pending',
+            self::PRE_INVOICE => 'pre_invoice',
+            self::APPROVED => 'approved',
+            self::UNAPPROVED => 'unapproved',
+            self::APPROVED_INACTIVE => 'approved_inactive',
+            self::REJECTED => 'rejected',
+            self::READY_TO_APPROVE => 'ready_to_approve',
+            self::PARTIALLY_PAID => 'partially_paid',
+            self::PAID => 'paid',
+        };
+    }
+
+    public static function valueNames(): array
+    {
+        return array_map(fn (self $case) => $case->valueName(), self::cases());
+    }
+
+    public static function fromName(self|int|string $value): self
+    {
+        return self::tryFromName($value) ?? throw new ValueError(sprintf('"%s" is not a valid %s', (string) $value, self::class));
+    }
+
+    public static function tryFromName(self|int|string|null $value): ?self
+    {
+        if ($value instanceof self) {
+            return $value;
+        }
+
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_int($value) || (is_string($value) && ctype_digit($value))) {
+            return self::tryFrom((int) $value);
+        }
+
+        foreach (self::cases() as $case) {
+            if ($case->valueName() === $value || $case->name === $value) {
+                return $case;
+            }
+        }
+
+        return null;
     }
 
     public static function approvedOrSettled(): array

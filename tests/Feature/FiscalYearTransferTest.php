@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AncillaryCostType;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Enums\SubjectType;
 use App\Models\AncillaryCost;
 use App\Models\AncillaryCostItem;
 use App\Models\Company;
@@ -68,7 +70,7 @@ class FiscalYearTransferTest extends TestCase
         return Subject::create([
             'code' => $code,
             'name' => $name,
-            'type' => 'both',
+            'type' => SubjectType::BOTH,
             'company_id' => $company->id,
             'parent_id' => $parent?->id,
         ]);
@@ -187,7 +189,7 @@ class FiscalYearTransferTest extends TestCase
     {
         $ac = AncillaryCost::create(array_merge([
             'number' => $this->nextNumber(),
-            'type' => 'Shipping',
+            'type' => AncillaryCostType::Shipping,
             'amount' => 500,
             'vat' => 0,
             'date' => '2023-06-01',
@@ -200,7 +202,7 @@ class FiscalYearTransferTest extends TestCase
         AncillaryCostItem::create([
             'ancillary_cost_id' => $ac->id,
             'product_id' => $product->id,
-            'type' => 'Shipping',
+            'type' => AncillaryCostType::Shipping,
             'amount' => 500,
         ]);
 

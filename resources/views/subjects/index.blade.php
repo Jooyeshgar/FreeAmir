@@ -64,7 +64,7 @@
                                 @endif
                             </td>
                             <td class="px-4 py-2">{{ $subject->parent ? $subject->parent->name : __('Main') }}</td>
-                            <td class="px-4 py-2">{{ $subject->type ? __(ucfirst($subject->type)) : '-' }}</td>
+                            <td class="px-4 py-2">{{ $subject->type?->label() ?? '-' }}</td>
                             <td class="px-4 py-2">{{ $subject->is_permanent ? __('Permanent') : __('Temporary') }}</td>
                             <td class="px-4 py-2">{{ $subject->created_at ? formatDate($subject->created_at) : '-' }}</td>
                             <td class="px-4 py-2">

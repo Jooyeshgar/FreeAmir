@@ -312,6 +312,6 @@ class CustomerImportService
     {
         $value = trim((string) $value);
 
-        return CustomerType::tryFrom($value) ?? CustomerType::INDIVIDUAL;
+        return CustomerType::tryFromName($value) ?? CustomerType::INDIVIDUAL;
     }
 }

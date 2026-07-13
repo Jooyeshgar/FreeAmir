@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\PayrollElementCalcType;
+use App\Enums\PayrollElementCategory;
+use App\Enums\PayrollElementSystemCode;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -27,6 +30,9 @@ class PayrollElement extends Model
     ];
 
     protected $casts = [
+        'system_code' => PayrollElementSystemCode::class,
+        'category' => PayrollElementCategory::class,
+        'calc_type' => PayrollElementCalcType::class,
         'default_amount' => 'decimal:2',
         'is_taxable' => 'boolean',
         'is_insurable' => 'boolean',

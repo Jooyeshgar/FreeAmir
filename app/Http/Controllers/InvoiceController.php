@@ -43,17 +43,19 @@ class InvoiceController extends Controller
      */
     public function index(Request $request)
     {
+        $invoiceType = InvoiceType::tryFromName($request->invoice_type);
+        $status = InvoiceStatus::tryFromName($request->status);
+
         $builder = Invoice::with(['customer', 'document', 'voidInvoice', 'payments'])
             ->orderByDesc('date')
             ->orderByDesc('number');
 
-        $builder->when(in_array($request->invoice_type, [InvoiceType::SELL->value, InvoiceType::VOID->value]),
+        $builder->when(in_array($invoiceType, [InvoiceType::SELL, InvoiceType::VOID], true),
             fn ($q) => $q->with('latestMoadianHistory')
         );
 
-        $builder->when($request->filled('invoice_type') &&
-            in_array($request->invoice_type, ['buy', 'sell', 'return_buy', 'return_sell', 'void']),
-            fn ($invoice) => $invoice->where('invoice_type', $request->invoice_type)
+        $builder->when($invoiceType !== null,
+            fn ($invoice) => $invoice->where('invoice_type', $invoiceType)
         );
 
         $builder->when($request->filled('number'),
@@ -78,20 +80,20 @@ class InvoiceController extends Controller
             })
         );
 
-        $service_buy = $request->filled('invoice_type') && in_array($request->invoice_type, [InvoiceType::BUY->value, InvoiceType::RETURN_BUY->value])
+        $service_buy = in_array($invoiceType, [InvoiceType::BUY, InvoiceType::RETURN_BUY], true)
             && $request->filled('service_buy') && $request->service_buy == '1';
 
         $builder->when($service_buy, fn ($q) => $q->whereHas('items', function ($item) {
             $item->where('itemable_type', Service::class);
         }));
 
-        $builder->when(! $service_buy && ! in_array($request->invoice_type, [InvoiceType::SELL->value, InvoiceType::RETURN_SELL->value]), fn ($q) => $q->whereHas('items', function ($item) {
+        $builder->when(! $service_buy && ! in_array($invoiceType, [InvoiceType::SELL, InvoiceType::RETURN_SELL], true), fn ($q) => $q->whereHas('items', function ($item) {
             $item->where('itemable_type', Product::class);
         }));
 
-        $builder->when($request->invoice_type === InvoiceType::SELL->value && $request->boolean('voided'), fn ($q) => $q->whereHas('voidInvoice'));
+        $builder->when($invoiceType === InvoiceType::SELL && $request->boolean('voided'), fn ($q) => $q->whereHas('voidInvoice'));
 
-        $builder->when($request->filled('moadian_status') && in_array($request->invoice_type, [InvoiceType::SELL->value, InvoiceType::VOID->value, InvoiceType::RETURN_SELL->value]),
+        $builder->when($request->filled('moadian_status') && in_array($invoiceType, [InvoiceType::SELL, InvoiceType::VOID, InvoiceType::RETURN_SELL], true),
             function ($q) use ($request) {
                 if ($request->moadian_status === 'not_sent') {
                     $q->whereDoesntHave('moadianHistories');
@@ -103,9 +105,8 @@ class InvoiceController extends Controller
 
         $statsBuilder = $builder->clone();
 
-        $builder->when($request->filled('status') &&
-            in_array($request->status, ['approved', 'unapproved', 'pending', 'approved_inactive', 'rejected', 'ready_to_approve', 'pre_invoice', 'partially_paid', 'paid']),
-            fn ($invoice) => $invoice->where('status', $request->status)
+        $builder->when($status !== null,
+            fn ($invoice) => $invoice->where('status', $status)
         );
 
         $invoices = $builder->paginate(25);
@@ -235,7 +236,7 @@ class InvoiceController extends Controller
             }
         }
 
-        $previousInvoiceNumber = floor(Invoice::where('invoice_type', $invoice_type)->max('number') ?? 0);
+        $previousInvoiceNumber = floor(Invoice::where('invoice_type', InvoiceType::fromName($invoice_type))->max('number') ?? 0);
 
         return view('invoices.create', compact('returnInvoices', 'products', 'services', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type', 'isServiceBuy', 'isReturnServiceBuy', 'isReturnInvoice', 'prefilledReturnedInvoiceId', 'lockReturnedInvoiceSelection'));
     }
@@ -264,7 +265,7 @@ class InvoiceController extends Controller
         $isServiceBuy = in_array($result['invoice']->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_BUY]) && $result['invoice']->items->where('itemable_type', Product::class)->isEmpty();
 
         return redirect()
-            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type, 'service_buy' => $isServiceBuy ? '1' : null])
+            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type->valueName(), 'service_buy' => $isServiceBuy ? '1' : null])
             ->with($msgType, $msg);
     }
 
@@ -411,7 +412,7 @@ class InvoiceController extends Controller
         $items = InvoiceService::mapTransactionsToItems($validated['transactions'], true);
 
         if ($invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {
-            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('error', __('Invoice has associated approved ancillary costs and cannot be edited.'));
+            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->valueName()])->with('error', __('Invoice has associated approved ancillary costs and cannot be edited.'));
         }
 
         $approved = false;
@@ -427,23 +428,23 @@ class InvoiceController extends Controller
         $isServiceBuy = in_array($result['invoice']->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_BUY]) && $result['invoice']->items->where('itemable_type', Product::class)->isEmpty();
 
         return redirect()
-            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type, 'service_buy' => $isServiceBuy ? '1' : null])
+            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type->valueName(), 'service_buy' => $isServiceBuy ? '1' : null])
             ->with($msgType, $msg);
     }
 
     public function destroy(Invoice $invoice)
     {
         if ($invoice->status->isApproved()) {
-            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('error', __('Only unapproved invoices can be deleted.'));
+            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->valueName()])->with('error', __('Only unapproved invoices can be deleted.'));
         }
 
         if ($invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {
-            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('error', __('Invoice has associated approved ancillary costs and cannot be deleted.'));
+            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->valueName()])->with('error', __('Invoice has associated approved ancillary costs and cannot be deleted.'));
         }
 
         InvoiceService::deleteInvoice($invoice->id);
 
-        return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])->with('info', __('Invoice deleted successfully.'));
+        return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->valueName()])->with('info', __('Invoice deleted successfully.'));
     }
 
     private function invoiceMessage(array $result, string $action = 'created', bool $approved = false)
@@ -473,11 +474,11 @@ class InvoiceController extends Controller
             'q' => 'required|string|max:100',
         ]);
 
-        $invoice_type = InvoiceType::from($invoice_type);
+        $invoice_type = InvoiceType::fromName($invoice_type);
 
         if (in_array($invoice_type, [InvoiceType::RETURN_BUY, InvoiceType::RETURN_SELL])) {
-            $baseType = str_replace('return_', '', $invoice_type->value);
-            $invoice_type = InvoiceType::from($baseType);
+            $baseType = str_replace('return_', '', $invoice_type->valueName());
+            $invoice_type = InvoiceType::fromName($baseType);
         }
 
         $q = $validated['q'];
@@ -650,7 +651,7 @@ class InvoiceController extends Controller
         $allowedStatuses = $invoice->invoice_type === InvoiceType::SELL ? $sellAllowedStatuses : $defaultAllowedStatuses;
 
         if (! in_array($status, $allowedStatuses)) {
-            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type])
+            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->valueName()])
                 ->with('error', __('Invalid status action.'));
         }
 
@@ -668,7 +669,7 @@ class InvoiceController extends Controller
         if ($decision->needsConfirmation && ! request()->has('confirm')) {
             $warning = $decision->messages->first(fn ($m) => $m->type === 'warning');
 
-            return redirect()->back()->with('warning', $warning?->text ?? __('Please confirm your action.'))->with('confirm_invoice_status_change', true)->with('conflicting_invoices', $decision->conflicts->map(fn ($i) => ['id' => $i->id, 'number' => $i->number, 'type' => $i->invoice_type])->values()->all());
+            return redirect()->back()->with('warning', $warning?->text ?? __('Please confirm your action.'))->with('confirm_invoice_status_change', true)->with('conflicting_invoices', $decision->conflicts->map(fn ($i) => ['id' => $i->id, 'number' => $i->number, 'type' => $i->invoice_type?->valueName()])->values()->all());
         }
 
         $this->invoiceService->changeInvoiceStatus($invoice, $status);
@@ -697,7 +698,7 @@ class InvoiceController extends Controller
     {
         $this->groupActionService->approveInactiveInvoices();
 
-        return redirect()->route('invoices.index', ['invoice_type' => InvoiceType::BUY])->with('success', __('Inactive invoices approved successfully.'));
+        return redirect()->route('invoices.index', ['invoice_type' => InvoiceType::BUY->valueName()])->with('success', __('Inactive invoices approved successfully.'));
     }
 
     public function conflicts(Invoice $invoice)

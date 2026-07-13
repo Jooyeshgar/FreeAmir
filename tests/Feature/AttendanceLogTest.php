@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\AttendanceImportType;
+use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
@@ -915,14 +916,14 @@ class AttendanceLogTest extends TestCase
         $personnelRequest = PersonnelRequest::create([
             'company_id' => $this->companyId,
             'employee_id' => $this->employee->id,
-            'status' => 'pending',
-            'request_type' => PersonnelRequestType::LEAVE_HOURLY->value,
+            'status' => PersonnelRequestStatus::PENDING,
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
             'start_date' => $logDate.' 11:00:00',
             'end_date' => $logDate.' 13:00:00',
         ]);
 
         $personnelRequest->update([
-            'status' => 'approved',
+            'status' => PersonnelRequestStatus::APPROVED,
             'approved_by' => auth()->user()->id,
         ]);
 
@@ -971,14 +972,14 @@ class AttendanceLogTest extends TestCase
         $personnelRequest = PersonnelRequest::create([
             'company_id' => $this->companyId,
             'employee_id' => $this->employee->id,
-            'status' => 'pending',
-            'request_type' => PersonnelRequestType::LEAVE_HOURLY->value,
+            'status' => PersonnelRequestStatus::PENDING,
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
             'start_date' => $logDate.' 16:45:00',
             'end_date' => $logDate.' 17:00:00',
         ]);
 
         $personnelRequest->update([
-            'status' => 'approved',
+            'status' => PersonnelRequestStatus::APPROVED,
             'approved_by' => auth()->user()->id,
         ]);
 
@@ -1012,14 +1013,14 @@ class AttendanceLogTest extends TestCase
         $personnelRequest_2 = PersonnelRequest::create([
             'company_id' => $this->companyId,
             'employee_id' => $this->employee->id,
-            'status' => 'pending',
-            'request_type' => PersonnelRequestType::LEAVE_HOURLY->value,
+            'status' => PersonnelRequestStatus::PENDING,
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
             'start_date' => $logDate2.' 16:30:00',
             'end_date' => $logDate2.' 17:00:00',
         ]);
 
         $personnelRequest_2->update([
-            'status' => 'approved',
+            'status' => PersonnelRequestStatus::APPROVED,
             'approved_by' => auth()->user()->id,
         ]);
 
@@ -1051,14 +1052,14 @@ class AttendanceLogTest extends TestCase
         $personnelRequest_3 = PersonnelRequest::create([
             'company_id' => $this->companyId,
             'employee_id' => $this->employee->id,
-            'status' => 'pending',
-            'request_type' => PersonnelRequestType::LEAVE_HOURLY->value,
+            'status' => PersonnelRequestStatus::PENDING,
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
             'start_date' => $logDate3.' 16:32:00',
             'end_date' => $logDate3.' 17:00:00',
         ]);
 
         $personnelRequest_3->update([
-            'status' => 'approved',
+            'status' => PersonnelRequestStatus::APPROVED,
             'approved_by' => auth()->user()->id,
         ]);
 

@@ -18,7 +18,7 @@ class SalaryDecreeSeeder extends Seeder
             return;
         }
 
-        $elements = PayrollElement::withoutGlobalScopes()->where('company_id', 1)->get()->keyBy('system_code');
+        $elements = PayrollElement::withoutGlobalScopes()->where('company_id', 1)->get()->keyBy(fn ($element) => $element->system_code->valueName());
         if ($elements->isEmpty()) {
             return;
         }

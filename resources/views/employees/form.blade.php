@@ -29,15 +29,15 @@
     </div>
 
     <div>
-        <x-select name="nationality" id="nationality" title="{{ __('Nationality') }}" :options="$nationalities" :selected="old('nationality', $employee->nationality?->value ?? 'iranian')" required />
+        <x-select name="nationality" id="nationality" title="{{ __('Nationality') }}" :options="$nationalities" :selected="old('nationality', isset($employee) ? $employee->nationality?->valueName() : 'iranian')" required />
     </div>
 
     <div>
-        <x-select name="gender" id="gender" title="{{ __('Gender') }}" :options="$genders" :selected="old('gender', $employee->gender?->value ?? '')" />
+        <x-select name="gender" id="gender" title="{{ __('Gender') }}" :options="$genders" :selected="old('gender', isset($employee) ? $employee->gender?->valueName() : '')" />
     </div>
 
     <div>
-        <x-select name="marital_status" id="marital_status" title="{{ __('Marital Status') }}" :options="$maritalStatuses" :selected="old('marital_status', $employee->marital_status?->value ?? '')" />
+        <x-select name="marital_status" id="marital_status" title="{{ __('Marital Status') }}" :options="$maritalStatuses" :selected="old('marital_status', isset($employee) ? $employee->marital_status?->valueName() : '')" />
     </div>
 
     <div>
@@ -53,7 +53,7 @@
     </div>
 
     <div>
-        <x-select name="duty_status" id="duty_status" title="{{ __('Duty Status') }}" :options="$dutyStatuses" :selected="old('duty_status', $employee->duty_status?->value ?? '')" />
+        <x-select name="duty_status" id="duty_status" title="{{ __('Duty Status') }}" :options="$dutyStatuses" :selected="old('duty_status', isset($employee) ? $employee->duty_status?->valueName() : '')" />
     </div>
 
     <div>
@@ -124,7 +124,7 @@
     </div>
 
     <div>
-        <x-select name="insurance_type" id="insurance_type" title="{{ __('Insurance Type') }}" :options="$insuranceTypes" :selected="old('insurance_type', $employee->insurance_type?->value ?? '')" />
+        <x-select name="insurance_type" id="insurance_type" title="{{ __('Insurance Type') }}" :options="$insuranceTypes" :selected="old('insurance_type', isset($employee) ? $employee->insurance_type?->valueName() : '')" />
     </div>
 
 </div>
@@ -156,7 +156,7 @@
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
     <div>
-        <x-select name="education_level" id="education_level" title="{{ __('Education Level') }}" :options="$educationLevels" :selected="old('education_level', $employee->education_level?->value ?? '')" />
+        <x-select name="education_level" id="education_level" title="{{ __('Education Level') }}" :options="$educationLevels" :selected="old('education_level', isset($employee) ? $employee->education_level?->valueName() : '')" />
     </div>
 
     <div>
@@ -170,7 +170,7 @@
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 
     <div>
-        <x-select name="employment_type" id="employment_type" title="{{ __('Employment Type') }}" :options="$employmentTypes" :selected="old('employment_type', $employee->employment_type?->value ?? '')" />
+        <x-select name="employment_type" id="employment_type" title="{{ __('Employment Type') }}" :options="$employmentTypes" :selected="old('employment_type', isset($employee) ? $employee->employment_type?->valueName() : '')" />
     </div>
 
     <div>

@@ -2,6 +2,7 @@
 
 namespace App\Services\DocumentImportExport;
 
+use App\Enums\SubjectType;
 use App\Models\Subject;
 use Illuminate\Support\Facades\Log;
 
@@ -89,7 +90,7 @@ class ImportSubjectResolver
         $existing = Subject::where('code', $code)->first();
 
         if ($existing) {
-            if ((bool) $existing->is_permanent === $isPermanent && $existing->type === $type) {
+            if ((bool) $existing->is_permanent === $isPermanent && $existing->type === SubjectType::fromName($type)) {
                 return $this->cache[$code] = $existing;
             }
 
@@ -175,7 +176,7 @@ class ImportSubjectResolver
             'name' => $name,
             'parent_id' => $parent?->id,
             'company_id' => getActiveCompany(),
-            'type' => $type ?? 'both',
+            'type' => SubjectType::fromName($type ?? 'both'),
             'is_permanent' => $isPermanent ?? false,
         ]);
 

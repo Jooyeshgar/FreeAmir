@@ -7,7 +7,7 @@
                     @if (! $status->isReadyToApprove() && ! $status->isRejected())
                         @php
                             $statusCount = $ancillaryCosts->where('status', $status)->count();
-                            $isActiveStatus = request('status') == $status->value;
+                            $isActiveStatus = request('status') == $status->valueName();
                         @endphp
                         <div class="bg-base-100 p-3 rounded-md border">
                             <dd class="text-sm font-semibold">
@@ -15,7 +15,7 @@
                                     <span class="text-gray-500">{{ $status->label() }} :
                                         {{ localizeNumber($statusCount) }}</span>
                                 @else
-                                    <a class="link link-hover" href="{{ route('ancillary-costs.index', ['status' => $status]) }}">
+                                    <a class="link link-hover" href="{{ route('ancillary-costs.index', ['status' => $status->valueName()]) }}">
                                         {{ $status->label() }} :
                                         {{ localizeNumber($statusCount) }}
                                     </a>

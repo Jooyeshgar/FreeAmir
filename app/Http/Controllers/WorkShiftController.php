@@ -34,7 +34,7 @@ class WorkShiftController extends Controller
             'name' => ['required', 'string', 'max:200'],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i'],
-            'thursday_status' => ['required', 'in:holiday,full_day,half_day'],
+            'thursday_status' => ['required', 'in:'.implode(',', ThursdayStatus::valueNames())],
             'thursday_exit_time' => ['nullable', 'required_if:thursday_status,half_day', 'date_format:H:i'],
             'float' => ['nullable', 'numeric', 'min:0', 'max:120'],
             'break' => ['nullable', 'integer', 'min:0', 'max:480'],
@@ -50,6 +50,7 @@ class WorkShiftController extends Controller
         ]);
 
         $validated = $this->normalizeAutoOvertimeSettings($validated, $request);
+        $validated['thursday_status'] = ThursdayStatus::fromName($validated['thursday_status']);
 
         WorkShift::create(array_merge($validated, [
             'company_id' => getActiveCompany(),
@@ -73,7 +74,7 @@ class WorkShiftController extends Controller
             'name' => ['required', 'string', 'max:200'],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i'],
-            'thursday_status' => ['required', 'in:holiday,full_day,half_day'],
+            'thursday_status' => ['required', 'in:'.implode(',', ThursdayStatus::valueNames())],
             'thursday_exit_time' => ['nullable', 'required_if:thursday_status,half_day', 'date_format:H:i'],
             'float' => ['nullable', 'numeric', 'min:0', 'max:120'],
             'break' => ['nullable', 'integer', 'min:0', 'max:480'],
@@ -89,6 +90,7 @@ class WorkShiftController extends Controller
         ]);
 
         $validated = $this->normalizeAutoOvertimeSettings($validated, $request);
+        $validated['thursday_status'] = ThursdayStatus::fromName($validated['thursday_status']);
 
         if (isset($validated['paid_leave']) && $validated['paid_leave'] != $workShift->paid_leave) {
             $leaveDiff = $validated['paid_leave'] - $workShift->paid_leave;

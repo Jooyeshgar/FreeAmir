@@ -257,9 +257,9 @@ class FiscalYearTransferService
         return ((int) floor((float) ($maxNumber ?? 0))) + 1;
     }
 
-    private static function _invoiceTypeValue(mixed $invoiceType): string
+    private static function _invoiceTypeValue(mixed $invoiceType): int
     {
-        return $invoiceType instanceof InvoiceType ? $invoiceType->value : (string) $invoiceType;
+        return InvoiceType::fromName($invoiceType)->value;
     }
 
     private static function _checkReturnedInvoiceDeps(Invoice $invoice, int $targetCompanyId): array

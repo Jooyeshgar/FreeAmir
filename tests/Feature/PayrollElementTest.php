@@ -2,6 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Enums\PayrollElementCalcType;
+use App\Enums\PayrollElementCategory;
+use App\Enums\PayrollElementSystemCode;
 use App\Models\Company;
 use App\Models\PayrollElement;
 use App\Models\User;
@@ -77,8 +80,8 @@ class PayrollElementTest extends TestCase
 
     public function test_index_filters_by_category(): void
     {
-        $this->makeElement(['title' => 'Bonus', 'category' => 'earning']);
-        $this->makeElement(['title' => 'Tax Deduction', 'category' => 'deduction']);
+        $this->makeElement(['title' => 'Bonus', 'category' => PayrollElementCategory::EARNING]);
+        $this->makeElement(['title' => 'Tax Deduction', 'category' => PayrollElementCategory::DEDUCTION]);
 
         $response = $this->get(route('salary.payroll-elements.index', ['category' => 'deduction']));
 
@@ -118,9 +121,9 @@ class PayrollElementTest extends TestCase
         $this->assertDatabaseHas('payroll_elements', [
             'company_id' => $this->companyId,
             'title' => 'Housing Allowance',
-            'system_code' => 'HOUSING_ALLOWANCE',
-            'category' => 'earning',
-            'calc_type' => 'fixed',
+            'system_code' => PayrollElementSystemCode::HOUSING_ALLOWANCE->value,
+            'category' => PayrollElementCategory::EARNING->value,
+            'calc_type' => PayrollElementCalcType::FIXED->value,
         ]);
     }
 
@@ -143,7 +146,7 @@ class PayrollElementTest extends TestCase
     public function test_store_rejects_invalid_category(): void
     {
         $response = $this->post(route('salary.payroll-elements.store'), $this->validPayload([
-            'category' => 'bonus',
+            'category' => 3,
         ]));
 
         $response->assertSessionHasErrors(['category']);
@@ -152,7 +155,7 @@ class PayrollElementTest extends TestCase
     public function test_store_rejects_invalid_calc_type(): void
     {
         $response = $this->post(route('salary.payroll-elements.store'), $this->validPayload([
-            'calc_type' => 'monthly',
+            'calc_type' => 10,
         ]));
 
         $response->assertSessionHasErrors(['calc_type']);
@@ -192,7 +195,7 @@ class PayrollElementTest extends TestCase
 
     public function test_update_modifies_payroll_element_and_redirects(): void
     {
-        $element = $this->makeElement(['title' => 'Old Title', 'calc_type' => 'fixed']);
+        $element = $this->makeElement(['title' => 'Old Title', 'calc_type' => PayrollElementCalcType::FIXED]);
 
         $response = $this->put(
             route('salary.payroll-elements.update', $element),
@@ -205,7 +208,7 @@ class PayrollElementTest extends TestCase
         $this->assertDatabaseHas('payroll_elements', [
             'id' => $element->id,
             'title' => 'New Title',
-            'calc_type' => 'percentage',
+            'calc_type' => PayrollElementCalcType::PERCENTAGE->value,
         ]);
     }
 

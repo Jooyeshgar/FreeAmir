@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Models\Company;
 use App\Models\Employee;
@@ -53,7 +54,7 @@ class EmployeePortalPersonnelRequestTest extends TestCase
     private function validPayload(array $overrides = []): array
     {
         return array_merge([
-            'request_type' => PersonnelRequestType::REMOTE_WORK->value,
+            'request_type' => PersonnelRequestType::REMOTE_WORK->valueName(),
             'request_date' => '1404/12/10',
             'start_time' => '08:00',
             'end_time' => '17:00',
@@ -68,7 +69,7 @@ class EmployeePortalPersonnelRequestTest extends TestCase
             'company_id' => $this->companyId,
             'employee_id' => $this->employee->id,
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
-            'status' => 'pending',
+            'status' => PersonnelRequestStatus::PENDING,
         ], $overrides));
     }
 

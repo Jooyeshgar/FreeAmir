@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\SubjectType;
 use App\Models\Subject;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -150,6 +151,7 @@ class SubjectSeeder extends Seeder
         foreach ($subjectData as &$row) {
             $rootId = $row['parent_id'] ?? $row['id'];
             $row['is_permanent'] = ! isset($nonPermanentLookup[$rootId]);
+            $row['type'] = SubjectType::fromName($row['type'])->value;
         }
         unset($row);
 

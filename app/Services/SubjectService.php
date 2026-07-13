@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\SubjectType;
 use App\Models\BankAccount;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
@@ -226,10 +227,10 @@ class SubjectService
         }
 
         if (isset($data['type'], $data['is_permanent'])) {
-            $resolvedType = $parentSubject ? $this->resolveTypeForParent($parentSubject, $data['type']) : ($data['type'] ?? 'both');
+            $resolvedType = $parentSubject ? $this->resolveTypeForParent($parentSubject, $data['type']) : SubjectType::fromName($data['type'] ?? 'both');
             $is_permanent = $parentSubject ? $parentSubject->is_permanent : ($data['is_permanent']);
         } else {
-            $resolvedType = $parentSubject ? $this->resolveTypeForParent($parentSubject, null) : 'both';
+            $resolvedType = $parentSubject ? $this->resolveTypeForParent($parentSubject, null) : SubjectType::BOTH;
             $is_permanent = $parentSubject ? $parentSubject->is_permanent : false;
         }
 
@@ -293,6 +294,9 @@ class SubjectService
                 $newCode = $this->generateCode($newParentId, $companyId);
             }
             $data['code'] = $newCode;
+            if (isset($data['type'])) {
+                $data['type'] = SubjectType::fromName($data['type']);
+            }
 
             $subject->update(array_intersect_key($data, array_flip(['name', 'parent_id', 'code', 'type', 'is_permanent'])));
 
@@ -312,6 +316,9 @@ class SubjectService
                 }
 
                 $allowedFields['code'] = $newCode;
+                if (isset($allowedFields['type'])) {
+                    $allowedFields['type'] = SubjectType::fromName($allowedFields['type']);
+                }
 
                 $subject->update($allowedFields);
                 if ($allowedFields['code'] !== $oldCode || (isset($allowedFields['type']) && $allowedFields['type'] !== $oldType) || (isset($allowedFields['is_permanent']) && $allowedFields['is_permanent'] !== $oldIsPermanent)) {
@@ -323,13 +330,13 @@ class SubjectService
         return $subject->fresh();
     }
 
-    private function resolveTypeForParent(Subject $parent, ?string $requestedType): string
+    private function resolveTypeForParent(Subject $parent, SubjectType|string|null $requestedType): SubjectType
     {
-        if ($parent->type !== 'both') {
+        if (! $parent->type->isBoth()) {
             return $parent->type;
         }
 
-        return $requestedType ?? 'both';
+        return $requestedType ? SubjectType::fromName($requestedType) : SubjectType::BOTH;
     }
 
     /**
@@ -355,11 +362,11 @@ class SubjectService
 
     public function getAllowedTypesForSubject(?Subject $parentSubject): array
     {
-        if (is_null($parentSubject) || $parentSubject->type === 'both') {
-            return ['debtor', 'creditor', 'both'];
+        if (is_null($parentSubject) || $parentSubject->type->isBoth()) {
+            return SubjectType::valueNames();
         }
 
-        return [$parentSubject->type];
+        return [$parentSubject->type->valueName()];
     }
 
     /**

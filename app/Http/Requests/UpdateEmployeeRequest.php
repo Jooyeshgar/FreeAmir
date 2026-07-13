@@ -13,7 +13,6 @@ use App\Models\Employee;
 use App\Models\WorkShift;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Enum;
 
 class UpdateEmployeeRequest extends FormRequest
 {
@@ -35,13 +34,13 @@ class UpdateEmployeeRequest extends FormRequest
             'father_name' => ['nullable', 'string', 'max:100'],
             'national_code' => ['nullable', 'string', 'size:10', Rule::unique('employees', 'national_code')->ignore($employee->id)->where('company_id', getActiveCompany())],
             'passport_number' => ['nullable', 'string', 'max:20'],
-            'nationality' => ['required', new Enum(EmployeeNationality::class)],
-            'gender' => ['nullable', new Enum(EmployeeGender::class)],
-            'marital_status' => ['nullable', new Enum(EmployeeMaritalStatus::class)],
+            'nationality' => ['required', Rule::in(EmployeeNationality::valueNames())],
+            'gender' => ['nullable', Rule::in(EmployeeGender::valueNames())],
+            'marital_status' => ['nullable', Rule::in(EmployeeMaritalStatus::valueNames())],
             'children_count' => ['nullable', 'integer', 'min:0'],
             'birth_date' => ['nullable', 'date'],
             'birth_place' => ['nullable', 'string', 'max:100'],
-            'duty_status' => ['nullable', new Enum(EmployeeDutyStatus::class)],
+            'duty_status' => ['nullable', Rule::in(EmployeeDutyStatus::valueNames())],
 
             // Contact
             'phone' => ['nullable', 'string', 'max:20'],
@@ -49,7 +48,7 @@ class UpdateEmployeeRequest extends FormRequest
 
             // Insurance
             'insurance_number' => ['nullable', 'string', 'max:20'],
-            'insurance_type' => ['nullable', new Enum(EmployeeInsuranceType::class)],
+            'insurance_type' => ['nullable', Rule::in(EmployeeInsuranceType::valueNames())],
 
             // Banking
             'bank_name' => ['nullable', 'string', 'max:100'],
@@ -58,11 +57,11 @@ class UpdateEmployeeRequest extends FormRequest
             'shaba_number' => ['nullable', 'string', 'max:30'],
 
             // Education
-            'education_level' => ['nullable', new Enum(EmployeeEducationLevel::class)],
+            'education_level' => ['nullable', Rule::in(EmployeeEducationLevel::valueNames())],
             'field_of_study' => ['nullable', 'string', 'max:100'],
 
             // Employment
-            'employment_type' => ['nullable', new Enum(EmployeeEmploymentType::class)],
+            'employment_type' => ['nullable', Rule::in(EmployeeEmploymentType::valueNames())],
             'contract_start_date' => ['nullable', 'date'],
             'contract_end_date' => ['nullable', 'date', 'after_or_equal:contract_start_date'],
 
@@ -95,5 +94,32 @@ class UpdateEmployeeRequest extends FormRequest
         $this->merge([
             'is_active' => $this->has('is_active'),
         ]);
+    }
+
+    public function validated($key = null, $default = null)
+    {
+        $data = parent::validated($key, $default);
+
+        if ($key !== null) {
+            return $data;
+        }
+
+        $casts = [
+            'nationality' => EmployeeNationality::class,
+            'gender' => EmployeeGender::class,
+            'marital_status' => EmployeeMaritalStatus::class,
+            'duty_status' => EmployeeDutyStatus::class,
+            'insurance_type' => EmployeeInsuranceType::class,
+            'education_level' => EmployeeEducationLevel::class,
+            'employment_type' => EmployeeEmploymentType::class,
+        ];
+
+        foreach ($casts as $field => $enumClass) {
+            if (array_key_exists($field, $data) && $data[$field] !== null && $data[$field] !== '') {
+                $data[$field] = $enumClass::fromName($data[$field]);
+            }
+        }
+
+        return $data;
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
@@ -33,7 +34,7 @@ class EmployeePortalController extends Controller
     private function validatePersonnelRequestInput(Request $request): array
     {
         $validated = $request->validate([
-            'request_type' => ['required', 'string', 'in:'.implode(',', array_column(PersonnelRequestType::cases(), 'value'))],
+            'request_type' => ['required', 'string', 'in:'.implode(',', PersonnelRequestType::valueNames())],
             'request_date' => ['required', 'string'],
             'start_time' => ['required', 'regex:'.self::FLEXIBLE_TIME_REGEX],
             'end_time' => ['required', 'regex:'.self::FLEXIBLE_TIME_REGEX],
@@ -133,6 +134,7 @@ class EmployeePortalController extends Controller
             ->selectRaw('status, COUNT(*) as count')
             ->groupBy('status')
             ->pluck('count', 'status')
+            ->mapWithKeys(fn ($count, $status) => [PersonnelRequestStatus::tryFromName($status)?->valueName() => $count])
             ->toArray();
 
         $lastMonthlyAttendance = $employee->monthlyAttendances()
@@ -301,16 +303,16 @@ class EmployeePortalController extends Controller
         $pendingCounts = [
             'leaves' => PersonnelRequest::where('employee_id', $employee->id)
                 ->whereIn('request_type', array_map(fn ($t) => $t->value, PersonnelRequestType::leaveTypes()))
-                ->where('status', 'pending')->count(),
+                ->where('status', PersonnelRequestStatus::PENDING)->count(),
             'missions' => PersonnelRequest::where('employee_id', $employee->id)
                 ->whereIn('request_type', array_map(fn ($t) => $t->value, PersonnelRequestType::missionTypes()))
-                ->where('status', 'pending')->count(),
+                ->where('status', PersonnelRequestStatus::PENDING)->count(),
             'work_orders' => PersonnelRequest::where('employee_id', $employee->id)
                 ->whereIn('request_type', array_map(fn ($t) => $t->value, PersonnelRequestType::workOrderTypes()))
-                ->where('status', 'pending')->count(),
+                ->where('status', PersonnelRequestStatus::PENDING)->count(),
             'other' => PersonnelRequest::where('employee_id', $employee->id)
                 ->whereIn('request_type', array_map(fn ($t) => $t->value, PersonnelRequestType::otherTypes()))
-                ->where('status', 'pending')->count(),
+                ->where('status', PersonnelRequestStatus::PENDING)->count(),
         ];
 
         return view('employee-portal.personnel-requests.index', compact(
@@ -337,7 +339,7 @@ class EmployeePortalController extends Controller
         };
 
         $requestTypes = array_column(
-            array_map(fn ($case) => ['value' => $case->value, 'label' => $case->label()], $cases),
+            array_map(fn ($case) => ['value' => $case->valueName(), 'label' => $case->label()], $cases),
             'label',
             'value'
         );
@@ -383,11 +385,11 @@ class EmployeePortalController extends Controller
         PersonnelRequest::create([
             'employee_id' => $employee->id,
             'company_id' => getActiveCompany(),
-            'request_type' => $validated['request_type'],
+            'request_type' => PersonnelRequestType::fromName($validated['request_type']),
             'start_date' => $startDatetime,
             'end_date' => $endDatetime,
             'reason' => $validated['reason'] ?? null,
-            'status' => 'pending',
+            'status' => PersonnelRequestStatus::PENDING,
         ]);
 
         $tab = $request->get('tab', 'leaves');
@@ -409,7 +411,7 @@ class EmployeePortalController extends Controller
      */
     public function editPersonnelRequest(Request $request, PersonnelRequest $personnelRequest): View
     {
-        if ($personnelRequest->status !== 'pending') {
+        if (! $personnelRequest->status?->isPending()) {
             abort(403, __('Only pending requests can be edited.'));
         }
 
@@ -429,7 +431,7 @@ class EmployeePortalController extends Controller
         };
 
         $requestTypes = array_column(
-            array_map(fn ($case) => ['value' => $case->value, 'label' => $case->label()], $cases),
+            array_map(fn ($case) => ['value' => $case->valueName(), 'label' => $case->label()], $cases),
             'label',
             'value'
         );
@@ -441,7 +443,7 @@ class EmployeePortalController extends Controller
             default => __('Edit Leave Request'),
         };
 
-        $currentRequestType = old('request_type', $personnelRequest->request_type->value);
+        $currentRequestType = old('request_type', $personnelRequest->request_type->valueName());
 
         return view('employee-portal.personnel-requests.edit', compact('personnelRequest', 'requestTypes', 'tab', 'title', 'currentRequestType'));
     }
@@ -451,7 +453,7 @@ class EmployeePortalController extends Controller
      */
     public function updatePersonnelRequest(Request $request, PersonnelRequest $personnelRequest): RedirectResponse
     {
-        if ($personnelRequest->status !== 'pending') {
+        if (! $personnelRequest->status?->isPending()) {
             throw ValidationException::withMessages([
                 'status' => __('Only pending requests can be edited.'),
             ]);
@@ -480,7 +482,7 @@ class EmployeePortalController extends Controller
         }
 
         $personnelRequest->update([
-            'request_type' => $validated['request_type'],
+            'request_type' => PersonnelRequestType::fromName($validated['request_type']),
             'start_date' => $startDatetime,
             'end_date' => $endDatetime,
             'reason' => $validated['reason'] ?? null,
@@ -494,7 +496,7 @@ class EmployeePortalController extends Controller
 
     public function destroyPersonnelRequest(Request $request, PersonnelRequest $personnelRequest): RedirectResponse
     {
-        if ($personnelRequest->status !== 'pending') {
+        if (! $personnelRequest->status?->isPending()) {
             throw ValidationException::withMessages([
                 'status' => __('Only pending requests can be deleted.'),
             ]);

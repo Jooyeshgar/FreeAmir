@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\SubjectType;
 use App\Models\Subject;
 use App\Services\SubjectService;
 use Illuminate\Foundation\Http\FormRequest;
@@ -20,7 +21,7 @@ class StoreSubjectRequest extends FormRequest
             'name' => 'required|max:60',
             'parent_id' => 'nullable|exists:subjects,id',
             'subject_code' => 'nullable|string|max:3',
-            'type' => ['required', Rule::in(['debtor', 'creditor', 'both'])],
+            'type' => ['required', Rule::in(SubjectType::valueNames())],
             'is_permanent' => 'nullable|boolean',
         ];
     }

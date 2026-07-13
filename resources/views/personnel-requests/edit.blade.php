@@ -8,10 +8,10 @@
                 <h2 class="card-title">{{ $personnelRequest->request_type?->label() }}</h2>
                 <x-show-message-bags />
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4"
-                    x-data="{ requestType: '{{ old('request_type', $personnelRequest->request_type->value ?? 'LEAVE_HOURLY') }}' }">
+                    x-data="{ requestType: '{{ old('request_type', $personnelRequest->request_type->valueName() ?? 'LEAVE_HOURLY') }}' }">
 
                     <x-select name="request_type" id="request_type" title="{{ __('Request Type') }}" :options="$requestTypes" 
-                        :selected="old('request_type', $personnelRequest->request_type->value ?? 'LEAVE_HOURLY')" x-model="requestType" required/>
+                        :selected="old('request_type', $personnelRequest->request_type->valueName() ?? 'LEAVE_HOURLY')" x-model="requestType" required/>
 
                     <x-date-picker name="request_date" id="request_date" :title="__('Date')" :value="old('request_date', isset($personnelRequest) ? convertToJalali($personnelRequest->start_date) : '')" :placeholder="__('Date')" required />
                     

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Models\AttendanceLog;
 use App\Models\Company;
@@ -768,7 +769,7 @@ class AttendanceServiceCalculationTest extends TestCase
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'start_date' => '2025-03-10 10:00:00',
             'end_date' => '2025-03-10 17:00:00',
-            'status' => 'approved',
+            'status' => PersonnelRequestStatus::APPROVED,
         ]);
         $this->service->syncPersonnelRequestLogs($request);
 
@@ -801,7 +802,7 @@ class AttendanceServiceCalculationTest extends TestCase
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'start_date' => '2025-03-10 09:00:00',
             'end_date' => '2025-03-10 15:00:00',
-            'status' => 'approved',
+            'status' => PersonnelRequestStatus::APPROVED,
         ]);
         $this->service->syncPersonnelRequestLogs($request);
 
@@ -833,7 +834,7 @@ class AttendanceServiceCalculationTest extends TestCase
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'start_date' => '2025-03-10 09:00:00',
             'end_date' => '2025-03-10 19:00:00',
-            'status' => 'approved',
+            'status' => PersonnelRequestStatus::APPROVED,
         ]);
         $this->service->syncPersonnelRequestLogs($request);
 
@@ -877,7 +878,7 @@ class AttendanceServiceCalculationTest extends TestCase
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'start_date' => '2025-03-10 10:00:00',
             'end_date' => '2025-03-10 15:00:00',
-            'status' => 'approved',
+            'status' => PersonnelRequestStatus::APPROVED,
         ]);
 
         $log = $this->service->recalculateLog($log);
@@ -914,7 +915,7 @@ class AttendanceServiceCalculationTest extends TestCase
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'start_date' => '2025-03-10 09:00:00',
             'end_date' => '2025-03-10 17:00:00',
-            'status' => 'approved',
+            'status' => PersonnelRequestStatus::APPROVED,
         ]);
 
         $log = $this->service->recalculateLog($log);
@@ -950,7 +951,7 @@ class AttendanceServiceCalculationTest extends TestCase
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'start_date' => '2025-03-10 09:00:00',
             'end_date' => '2025-03-10 17:00:00',
-            'status' => 'approved',
+            'status' => PersonnelRequestStatus::APPROVED,
         ]);
 
         $log = $this->service->recalculateLog($log);
@@ -987,7 +988,7 @@ class AttendanceServiceCalculationTest extends TestCase
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'start_date' => '2025-03-10 13:00:00',
             'end_date' => '2025-03-10 16:00:00',
-            'status' => 'approved',
+            'status' => PersonnelRequestStatus::APPROVED,
         ]);
         $this->service->syncPersonnelRequestLogs($request);
 
@@ -1018,7 +1019,7 @@ class AttendanceServiceCalculationTest extends TestCase
             'request_type' => $type->value,
             'start_date' => $start,
             'end_date' => $end,
-            'status' => 'approved',
+            'status' => PersonnelRequestStatus::APPROVED,
         ]);
 
         $this->service->syncPersonnelRequestLogs($request);

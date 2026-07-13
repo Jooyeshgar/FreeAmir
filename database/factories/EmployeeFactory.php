@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Enums\EmployeeGender;
+use App\Enums\EmployeeNationality;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\WorkShift;
@@ -20,8 +22,8 @@ class EmployeeFactory extends Factory
             'first_name' => $this->faker->firstName(),
             'last_name' => $this->faker->lastName(),
             'father_name' => $this->faker->optional()->firstName('male'),
-            'nationality' => 'iranian',
-            'gender' => $this->faker->randomElement(['male', 'female']),
+            'nationality' => $this->faker->randomElement(EmployeeNationality::cases()),
+            'gender' => $this->faker->randomElement(EmployeeGender::cases()),
             'work_site_id' => WorkSite::factory(),
             'work_shift_id' => WorkShift::factory(),
             'is_active' => true,

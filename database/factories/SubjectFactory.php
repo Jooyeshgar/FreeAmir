@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\SubjectType;
 use App\Models\Company;
 use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -17,7 +18,7 @@ class SubjectFactory extends Factory
             'parent_id' => null,
             'code' => uniqid('tmp', false),
             'name' => $this->faker?->name,
-            'type' => 'both',
+            'type' => SubjectType::BOTH,
         ];
     }
 

@@ -3,23 +3,19 @@
 namespace App\Enums;
 
 use Illuminate\Support\Facades\Lang;
+use ValueError;
 
-enum InvoiceType: string
+enum InvoiceType: int
 {
-    case BUY = 'buy';
-    case SELL = 'sell';
-    case RETURN_BUY = 'return_buy';
-    case RETURN_SELL = 'return_sell';
-    case VOID = 'void';
+    case BUY = 1;
+    case SELL = 2;
+    case RETURN_BUY = 3;
+    case RETURN_SELL = 4;
+    case VOID = 5;
 
-    /**
-     * Get translated label for the invoice type.
-     *
-     * @return string
-     */
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::BUY => Lang::get('Buy'),
             self::SELL => Lang::get('Sell'),
             self::RETURN_BUY => Lang::get('Return from Buy'),
@@ -28,56 +24,76 @@ enum InvoiceType: string
         };
     }
 
-    /**
-     * Check if this is a sell type (sell or return from sell).
-     *
-     * @return bool
-     */
+    public function valueName(): string
+    {
+        return match ($this) {
+            self::BUY => 'buy',
+            self::SELL => 'sell',
+            self::RETURN_BUY => 'return_buy',
+            self::RETURN_SELL => 'return_sell',
+            self::VOID => 'void',
+        };
+    }
+
     public function isSell(): bool
     {
         return in_array($this, [self::SELL, self::RETURN_SELL]);
     }
 
-    /**
-     * Check if this is a void type.
-     *
-     * @return bool
-     */
     public function isVoid(): bool
     {
         return $this === self::VOID;
     }
 
-    /**
-     * Check if this is a buy type (buy or return from buy).
-     *
-     * @return bool
-     */
     public function isBuy(): bool
     {
         return in_array($this, [self::BUY, self::RETURN_BUY]);
     }
 
-    /**
-     * Check if this is a return type (return from buy or return from sell).
-     *
-     * @return bool
-     */
     public function isReturn(): bool
     {
         return in_array($this, [self::RETURN_BUY, self::RETURN_SELL]);
     }
 
-    /**
-     * Get all invoice types as an associative array for dropdowns.
-     *
-     * @return array
-     */
     public static function options(): array
     {
         return array_reduce(self::cases(), function ($carry, $case) {
-            $carry[$case->value] = $case->label();
+            $carry[$case->valueName()] = $case->label();
+
             return $carry;
         }, []);
+    }
+
+    public static function valueNames(): array
+    {
+        return array_map(fn (self $case) => $case->valueName(), self::cases());
+    }
+
+    public static function fromName(self|int|string $value): self
+    {
+        return self::tryFromName($value) ?? throw new ValueError(sprintf('"%s" is not a valid %s', (string) $value, self::class));
+    }
+
+    public static function tryFromName(self|int|string|null $value): ?self
+    {
+        if ($value instanceof self) {
+            return $value;
+        }
+
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_int($value) || (is_string($value) && ctype_digit($value))) {
+            return self::tryFrom((int) $value);
+        }
+
+        foreach (self::cases() as $case) {
+            if ($case->valueName() === $value || $case->name === $value) {
+                return $case;
+            }
+        }
+
+        return null;
     }
 }
