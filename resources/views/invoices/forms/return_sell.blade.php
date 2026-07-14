@@ -5,12 +5,24 @@
                 'returned_invoice_id',
                 $invoice->returned_invoice_id ?? ($prefilledReturnedInvoiceId ?? null),
             );
-            $initialSelectedValue = $initialReturnedInvoiceId ? "invoice-$initialReturnedInvoiceId" : null;
-            $disableReturnedInvoiceSelect = $invoice->exists || ($lockReturnedInvoiceSelection ?? false);
             $includeLastYearsInvoices = old(
                 'include_last_years_invoices',
                 $invoice->exists && ! $invoice->returned_invoice_id,
             );
+            $initialSelectedValue = $includeLastYearsInvoices
+                ? 'invoice-lastYearsInvoices'
+                : ($initialReturnedInvoiceId ? "invoice-$initialReturnedInvoiceId" : null);
+            $disableReturnedInvoiceSelect = $invoice->exists || ($lockReturnedInvoiceSelection ?? false);
+            $returnedInvoiceOptions = [
+                [
+                    'id' => 'lastYearsInvoices',
+                    'groupId' => 0,
+                    'groupName' => 'General',
+                    'text' => __('Include last years invoices'),
+                    'type' => 'invoice',
+                ],
+                ...$returnInvoices,
+            ];
         @endphp
         <div class="flex w-1/3">
             <div class="flex-wrap w-full" x-data="{
@@ -18,35 +30,21 @@
                 invoiceCustomers: @js(collect($returnInvoices)->pluck('customer_id', 'id')),
                 selectedValue: '{{ $initialSelectedValue }}',
                 includeLastYearsInvoices: @js((bool) $includeLastYearsInvoices),
-                updateIncludeLastYearsInvoices() {
-                    const returnedInvoiceSelect = document.getElementById('returned-invoice-select');
-                    const returnedInvoiceButton = returnedInvoiceSelect?.querySelector('button');
-                    if (returnedInvoiceButton) {
-                        returnedInvoiceButton.disabled = {{ $disableReturnedInvoiceSelect ? 'true' : 'false' }} || this.includeLastYearsInvoices;
-                    }
-
-                    if (this.includeLastYearsInvoices) {
-                        this.returnedInvoiceId = null;
-                        this.selectedValue = null;
-                    }
-
+                notifyLastYearsInvoicesChanged() {
                     window.dispatchEvent(new CustomEvent('include-last-years-invoices-changed', {
                         detail: { enabled: this.includeLastYearsInvoices }
                     }));
                 },
             }">
-                <div class="flex items-center justify-between whitespace-nowrap">
-                    <span class="text-gray-500">{{ __('Returned Invoice') }}</span>
-                    <x-checkbox name="include_last_years_invoices" id="include-last-years-invoices"
-                        title="{{ __('Include last years invoices') }}" value="1" :checked="$includeLastYearsInvoices"
-                        x-model="includeLastYearsInvoices" x-init="$nextTick(() => updateIncludeLastYearsInvoices())"
-                        x-on:change="updateIncludeLastYearsInvoices()" />
-                </div>
-                <x-select-box url="{{ route('invoices.search', ['invoice_type' => 'return_sell']) }}" :options="[['headerGroup' => 'invoice', 'options' => $returnInvoices]]"
+                <span class="text-gray-500">{{ __('Returned Invoice') }}</span>
+                <x-select-box url="{{ route('invoices.search', ['invoice_type' => 'return_sell']) }}" :options="[['headerGroup' => 'invoice', 'options' => $returnedInvoiceOptions]]"
                     id="returned-invoice-select"
-                    x-model="selectedValue" x-init="if (!selectedValue && returnedInvoiceId) {
+                    x-model="selectedValue" x-init="if (includeLastYearsInvoices) {
+                        selectedValue = 'invoice-lastYearsInvoices';
+                    } else if (!selectedValue && returnedInvoiceId) {
                         selectedValue = 'invoice-' + returnedInvoiceId;
                     }
+                    $nextTick(() => notifyLastYearsInvoicesChanged());
                     if (returnedInvoiceId) {
                         window.dispatchEvent(new CustomEvent('return-invoice-selected', { detail: { invoiceId: returnedInvoiceId } }));
                         const customerId = invoiceCustomers[returnedInvoiceId] ?? null;
@@ -56,27 +54,37 @@
                         }
                     }" placeholder="{{ __('Select Invoice') }}"
                     @selected="
-                        returnedInvoiceId = $event.detail.id;
-                        window.dispatchEvent(new CustomEvent('return-invoice-selected', { detail: { invoiceId: returnedInvoiceId } }));
-                        const customerId = $event.detail.customer_id ?? invoiceCustomers[returnedInvoiceId] ?? null;
-                        if (customerId) {
-                            window.__returnInvoiceCustomerId = customerId;
-                            window.dispatchEvent(new CustomEvent('return-invoice-customer-selected', { detail: { customerId } }));
+                        includeLastYearsInvoices = $event.detail.id === 'lastYearsInvoices';
+                        returnedInvoiceId = includeLastYearsInvoices ? null : $event.detail.id;
+                        notifyLastYearsInvoicesChanged();
+                        if (includeLastYearsInvoices) {
+                            window.__returnInvoiceCustomerId = null;
+                            window.dispatchEvent(new CustomEvent('return-invoice-selected', { detail: { invoiceId: null } }));
+                            window.dispatchEvent(new CustomEvent('return-invoice-customer-selected', { detail: { customerId: null } }));
+                        } else {
+                            window.dispatchEvent(new CustomEvent('return-invoice-selected', { detail: { invoiceId: returnedInvoiceId } }));
+                            const customerId = $event.detail.customer_id ?? invoiceCustomers[returnedInvoiceId] ?? null;
+                            if (customerId) {
+                                window.__returnInvoiceCustomerId = customerId;
+                                window.dispatchEvent(new CustomEvent('return-invoice-customer-selected', { detail: { customerId } }));
+                            }
                         }
                     "
-                    :disabled="$disableReturnedInvoiceSelect || $includeLastYearsInvoices" />
+                    :disabled="$disableReturnedInvoiceSelect" />
+                <x-input name="include_last_years_invoices" :value="$includeLastYearsInvoices ? 1 : 0"
+                    x-bind:value="includeLastYearsInvoices ? 1 : 0" hidden />
                 <x-input name="returned_invoice_id" x-bind:value="returnedInvoiceId" hidden />
             </div>
         </div>
 
         <x-input id="invoice_type" name="invoice_type" value="return_sell" hidden />
-        <div class="flex w-1/3 pt-3">
+        <div class="flex w-1/3">
             <x-text-input input_name="title" title="{{ __('Invoice Name') }}"
                 input_value="{{ old('title') ?? ($invoice->title ?? '') }}" placeholder="{{ __('Invoice Name') }}"
                 label_text_class="text-gray-500" label_class="w-1/2"></x-text-input>
         </div>
 
-        <div class="flex w-1/4 pt-3">
+        <div class="flex w-1/4">
             @php
                 $matchedReturnedInvoice = $initialReturnedInvoiceId
                     ? collect($returnInvoices)->firstWhere('id', (int) $initialReturnedInvoiceId)
@@ -88,6 +96,7 @@
             <div class="flex flex-wrap w-3/4" x-data="{
                 customer_id: '{{ $initialCustomerId }}',
                 selectedValue: '{{ $initialSelectedValue }}',
+                lastYearsInvoices: @js((bool) $includeLastYearsInvoices),
                 customerSelectRender: true,
                 refreshCustomerSelect() {
                     this.customerSelectRender = false;
@@ -95,11 +104,11 @@
                         this.customerSelectRender = true;
                     });
                 }
-            }"
+            }" x-on:include-last-years-invoices-changed.window="lastYearsInvoices = $event.detail.enabled"
                 @return-invoice-customer-selected.window="
-                if ($event.detail?.customerId) {
-                    customer_id = $event.detail.customerId;
-                    selectedValue = 'customer-' + customer_id;
+                if ($event.detail && 'customerId' in $event.detail) {
+                    customer_id = $event.detail.customerId || '';
+                    selectedValue = customer_id ? 'customer-' + customer_id : '';
                     refreshCustomerSelect();
                 }
             ">
@@ -109,7 +118,8 @@
                     <x-select-box url="{{ route('invoices.search-customer') }}" :options="[['headerGroup' => 'customer', 'options' => $customers]]"
                         x-model="selectedValue" x-init="if (!selectedValue && customer_id) {
                             selectedValue = 'customer-' + customer_id;
-                        }" placeholder="{{ __('Select Customer') }}"
+                        }
+                        disabled = !lastYearsInvoices;" placeholder="{{ __('Select Customer') }}"
                         @selected="customer_id = $event.detail.id;" :disabled="!$includeLastYearsInvoices"
                         x-on:include-last-years-invoices-changed.window="disabled = !$event.detail.enabled" />
                 </template>
@@ -210,7 +220,7 @@
                         @endphp
 
                         <x-select-box url="{{ route('invoices.search-product-service') }}" :options="$options"
-                            x-model="selectedValue" x-init="selectedValue = initItemSelection(transaction)"
+                            x-model="selectedValue" x-init="selectedValue = initItemSelection(transaction); disabled = !lastYearsInvoices"
                             placeholder="{{ __('Select Product/Service') }}"
                             @selected="selectItem(transaction, $event.detail.type, $event.detail.id)"
                             :disabled="!$includeLastYearsInvoices"
@@ -278,6 +288,15 @@
                 </div>
             </template>
         </div>
+
+        <button class="flex justify-content gap-4 align-center w-full px-4" id="addTransaction"
+            x-show="lastYearsInvoices" @click="addTransaction" type="button">
+            <div
+                class="bg-gray-200 max-h-10 min-h-10 hover:bg-gray-300 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600 border-none btn w-full rounded-md btn-active">
+                <span class="text-2xl">+</span>
+                {{ __('Add Transaction') }}
+            </div>
+        </button>
     </div>
     <hr style="">
     <div class="flex flex-row justify-between" x-data="{ subtractionsInput: '{{ old('subtraction') ?? ($invoice->subtraction ?? 0) }}' }">
@@ -379,7 +398,20 @@
                 },
                 loadInvoiceItems(invoiceId) {
                     if (!invoiceId) {
-                        this.transactions = [];
+                        this.transactions = [{
+                            id: 1,
+                            transaction_id: null,
+                            inventory_subject_id: null,
+                            subject: null,
+                            desc: null,
+                            quantity: 1,
+                            unit: null,
+                            off: null,
+                            vat: null,
+                            total: null,
+                            product_id: null,
+                            service_id: null
+                        }];
                         return;
                     }
 
