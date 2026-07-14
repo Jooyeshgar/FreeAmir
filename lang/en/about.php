@@ -7,6 +7,7 @@ return [
     'system_information' => 'System Information',
     'environment' => 'Environment',
     'debug_mode' => 'Debug Mode',
+    'email_verification' => 'Email Verification',
     'enabled' => 'Enabled',
     'disabled' => 'Disabled',
     'database' => 'Database',

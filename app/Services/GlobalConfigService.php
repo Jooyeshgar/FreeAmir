@@ -11,6 +11,7 @@ class GlobalConfigService
         'app_env' => ['local', 'production'],
         'app_locale' => ['fa', 'en'],
         'app_debug' => ['true', 'false'],
+        'app_email_verification' => ['true', 'false'],
     ];
 
     public function all(): array

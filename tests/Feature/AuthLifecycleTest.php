@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Company;
+use App\Models\Config;
+use App\Models\Scopes\FiscalYearScope;
 use App\Models\User;
 use App\Notifications\UserVerificationNotification;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -63,6 +65,49 @@ class AuthLifecycleTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
+    public function test_global_setting_can_disable_verification_for_login(): void
+    {
+        Config::withoutGlobalScope(FiscalYearScope::class)->create([
+            'key' => 'app_email_verification',
+            'value' => 'false',
+            'type' => 3,
+            'category' => 1,
+            'company_id' => null,
+        ]);
+        $user = User::factory()->unverified()->create();
+
+        $response = $this->post(route('login'), [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+
+        $response->assertRedirect(route('registered-user.company.create'));
+        $this->assertAuthenticatedAs($user);
+        $this->assertTrue($user->hasVerifiedEmail());
+    }
+
+    public function test_verification_notice_redirects_unverified_user_when_verification_is_disabled(): void
+    {
+        config(['app.email_verification' => false]);
+        $user = User::factory()->unverified()->create();
+
+        $response = $this->actingAs($user)->get(route('verification.notice'));
+
+        $response->assertRedirect(route('registered-user.company.create'));
+    }
+
+    public function test_resending_verification_redirects_without_sending_notification_when_verification_is_disabled(): void
+    {
+        config(['app.email_verification' => false]);
+        Notification::fake();
+        $user = User::factory()->unverified()->create();
+
+        $response = $this->actingAs($user)->post(route('verification.send'));
+
+        $response->assertRedirect(route('registered-user.company.create'));
+        Notification::assertNothingSent();
+    }
+
     public function test_login_rejects_invalid_credentials(): void
     {
         $user = User::factory()->create();
@@ -105,6 +150,46 @@ class AuthLifecycleTest extends TestCase
         $this->assertNull($user->email_verified_at);
         $this->assertTrue(Hash::check('password123', $user->password));
         Notification::assertSentTo($user, UserVerificationNotification::class, fn (UserVerificationNotification $notification, array $channels): bool => in_array('mail', $channels, true));
+    }
+
+    public function test_registration_bypasses_verification_and_sends_no_email_when_disabled(): void
+    {
+        config(['app.email_verification' => false]);
+        Notification::fake();
+
+        $response = $this->post(route('register.email'), [
+            'name' => 'New User',
+            'email' => 'new.user@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ]);
+
+        $user = User::where('email', 'new.user@example.com')->firstOrFail();
+
+        $response->assertRedirect(route('registered-user.company.create'));
+        $this->assertAuthenticatedAs($user);
+        $this->assertNull($user->email_verified_at);
+        $this->assertTrue($user->hasVerifiedEmail());
+        Notification::assertNothingSent();
+    }
+
+    public function test_unverified_user_is_not_treated_as_verified_when_verification_is_enabled(): void
+    {
+        config(['app.email_verification' => true]);
+
+        $user = User::factory()->unverified()->create();
+
+        $this->assertFalse($user->hasVerifiedEmail());
+    }
+
+    public function test_user_model_does_not_send_verification_notification_when_disabled(): void
+    {
+        config(['app.email_verification' => false]);
+        Notification::fake();
+
+        User::factory()->unverified()->create()->sendEmailVerificationNotification();
+
+        Notification::assertNothingSent();
     }
 
     public function test_registration_rejects_duplicate_email_and_unconfirmed_password(): void

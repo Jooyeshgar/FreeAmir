@@ -46,6 +46,8 @@ return [
 
     'debug' => (bool) env('APP_DEBUG', false),
 
+    'email_verification' => (bool) env('APP_EMAIL_VERIFICATION', true),
+
     /*
     |--------------------------------------------------------------------------
     | Application URL

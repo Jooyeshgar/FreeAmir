@@ -2225,6 +2225,7 @@
     "app_env": "app_env",
     "app_locale": "app_locale",
     "app_debug": "app_debug",
+    "app_email_verification": "app_email_verification",
     "approved": "approved",
     "approved inactive": "approved inactive",
     "are available.": "are available.",

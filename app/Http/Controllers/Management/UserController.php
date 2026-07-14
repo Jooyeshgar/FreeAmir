@@ -8,7 +8,6 @@ use App\Models\Employee;
 use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
-use App\Notifications\UserVerificationNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -83,7 +82,7 @@ class UserController extends Controller
         });
 
         try {
-            $user->notify(new UserVerificationNotification);
+            $user->sendEmailVerificationNotification();
         } catch (\Throwable $exception) {
             Log::error('Management user verification notification could not be sent.', ['user_id' => $user->id, 'exception' => $exception]);
 

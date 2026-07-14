@@ -36,7 +36,7 @@ class ConfigLoader
     {
         config(['amir.'.$config->key => $config->value]);
         if (str_starts_with($config->key, 'app_')) {
-            $value = $config->key === 'app_debug' ? str($config->value)->toBoolean() : $config->value;
+            $value = in_array($config->key, ['app_debug', 'app_email_verification'], true) ? str($config->value)->toBoolean() : $config->value;
             config([str_replace('app_', 'app.', $config->key) => $value]);
 
             if ($config->key === 'app_locale') {

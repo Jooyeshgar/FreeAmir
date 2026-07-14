@@ -2245,6 +2245,7 @@
     "app_env": "محیط برنامه",
     "app_locale": "محل برنامه",
     "app_debug": "اشکال‌زدایی برنامه",
+    "app_email_verification": "تأیید ایمیل",
     "approved": "تایید شده است",
     "approved inactive": "تایید غیر فعال",
     "are available.": "موجود است.",

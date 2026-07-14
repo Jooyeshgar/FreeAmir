@@ -7,6 +7,7 @@ return [
     'system_information' => 'اطلاعات سیستم',
     'environment' => 'محیط اجرا',
     'debug_mode' => 'حالت اشکال‌زدایی',
+    'email_verification' => 'تأیید ایمیل',
     'enabled' => 'فعال',
     'disabled' => 'غیرفعال',
     'database' => 'پایگاه داده',

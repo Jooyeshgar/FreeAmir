@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Notifications\UserVerificationNotification;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -33,8 +32,12 @@ class RegisterController extends Controller
         $user = User::create($validated);
         Auth::login($user);
 
+        if ($user->hasVerifiedEmail()) {
+            return $this->verifiedRedirect($user);
+        }
+
         try {
-            $user->notify(new UserVerificationNotification);
+            $user->sendEmailVerificationNotification();
         } catch (\Throwable $exception) {
             Log::error('Registration verification notification could not be sent.', ['user_id' => $user->id, 'exception' => $exception]);
 
@@ -64,7 +67,7 @@ class RegisterController extends Controller
         }
 
         try {
-            $user->notify(new UserVerificationNotification);
+            $user->sendEmailVerificationNotification();
         } catch (\Throwable $exception) {
             Log::error('Verification notification could not be resent.', ['user_id' => $user->id, 'exception' => $exception]);
 
