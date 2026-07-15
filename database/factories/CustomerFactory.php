@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Enums\CustomerType;
 use App\Models\Bank;
+use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Subject;
@@ -16,6 +17,10 @@ class CustomerFactory extends Factory
     public function definition()
     {
         $companyId = (int) getActiveCompany();
+        if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
+            throw new \LogicException('An active company is required to create a customer.');
+        }
+
         $bankIds = Bank::withoutGlobalScopes()->where('company_id', $companyId)->pluck('id')->toArray();
 
         $group = CustomerGroup::withoutGlobalScopes()->where('company_id', $companyId)->whereNotNull('subject_id')->inRandomOrder()->first();

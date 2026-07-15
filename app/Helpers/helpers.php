@@ -1,13 +1,31 @@
 <?php
 
+use App\Models\Company;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
-function getActiveCompany()
+function getActiveCompany(): int
 {
-    return config('active-company-id') ?? Cookie::get('active-company-id') ?? 1; // defualt 'active-company-id' for seeders: 1
+    $configuredCompanyId = config('active-company-id');
+    if ($configuredCompanyId !== null) {
+        return (int) $configuredCompanyId;
+    }
+
+    $cookieCompanyId = Cookie::get('active-company-id');
+    if ($cookieCompanyId !== null) {
+        return (int) $cookieCompanyId;
+    }
+
+    // During tests/CLI execution there may be no request cookie. Use the
+    // first persisted company deterministically; fresh databases still use 1
+    // until the companies table is available.
+    try {
+        return (int) (Company::withoutGlobalScopes()->orderBy('id')->value('id') ?? 1);
+    } catch (Throwable) {
+        return 1;
+    }
 }
 
 /**

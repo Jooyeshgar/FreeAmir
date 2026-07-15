@@ -28,7 +28,7 @@
                                     <a href="{{ route('users.edit', $user) }}" class="btn btn-sm btn-ghost text-yellow-600 hover:text-yellow-900">{{ __('Edit') }}</a>
                                 @endcan
                                 @if ($user->employee)
-                                    @can('hr.employees.show')
+                                    @canany(['hr.employees.show', 'users.show'])
                                         <a href="{{ route('hr.employees.show', $user->employee) }}" class="btn btn-sm btn-outline btn-success">{{ __('View Employee') }}</a>
                                     @endcan
                                 @else

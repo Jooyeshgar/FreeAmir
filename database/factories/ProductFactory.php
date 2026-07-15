@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Company;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Subject;
@@ -14,6 +15,9 @@ class ProductFactory extends Factory
     public function definition(): array
     {
         $companyId = (int) getActiveCompany();
+        if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
+            throw new \LogicException('An active company is required to create a product.');
+        }
 
         return [
             'code' => $this->faker->unique()->numerify('#####'),

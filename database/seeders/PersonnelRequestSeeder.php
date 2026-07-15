@@ -13,10 +13,9 @@ use Illuminate\Database\Seeder;
 
 class PersonnelRequestSeeder extends Seeder
 {
-    public function __construct(private readonly AttendanceService $service) {}
-
     public function run(): void
     {
+        $service = app(AttendanceService::class);
         $companyId = (int) getActiveCompany();
         $employees = Employee::withoutGlobalScopes()->where('company_id', $companyId)->get();
         if ($employees->isEmpty()) {
@@ -100,7 +99,7 @@ class PersonnelRequestSeeder extends Seeder
 
                 if ($row['status']->isApproved()) {
                     $request->load('employee.workShift');
-                    $this->service->syncPersonnelRequestLogs($request);
+                    $service->syncPersonnelRequestLogs($request);
                 }
             }
         }

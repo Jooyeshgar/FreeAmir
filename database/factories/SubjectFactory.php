@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\SubjectType;
+use App\Models\Company;
 use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -11,6 +12,9 @@ class SubjectFactory extends Factory
     public function definition(): array
     {
         $companyId = (int) getActiveCompany();
+        if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
+            throw new \LogicException('An active company is required to create a subject.');
+        }
 
         return [
             'company_id' => $companyId,

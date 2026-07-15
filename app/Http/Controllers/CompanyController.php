@@ -352,14 +352,7 @@ class CompanyController extends Controller
             $company->users()->syncWithoutDetaching([$creator->id]);
 
             if ($sourceCompanyId === null) {
-                $activeCompanyId = config('active-company-id');
-                config(['active-company-id' => $company->id]);
-
-                try {
-                    app(DatabaseSeeder::class)->run();
-                } finally {
-                    config(['active-company-id' => $activeCompanyId]);
-                }
+                app(DatabaseSeeder::class)->run($company->id);
             }
 
             $creator->assignRole(Role::firstOrCreate(['name' => 'admin']));

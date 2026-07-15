@@ -7,6 +7,7 @@ use App\Models\Document;
 use App\Services\HomeService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 
 class HomeController extends Controller
 {

@@ -15,7 +15,7 @@ class DocumentFactory extends Factory
         $company = Company::withoutGlobalScopes()->find(getActiveCompany());
 
         if (! $company) {
-            $company = Company::factory()->create(['id' => getActiveCompany()]);
+            throw new \LogicException('An active company is required to create a document.');
         }
 
         return [
