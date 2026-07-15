@@ -1,18 +1,5 @@
 <x-login-layout>
-    <header class="bg-gray-200 py-2 px-4 flex items-center justify-between">
-        <div class="flex items-center">
-            <img src="/images/logo.png" alt="Logo" width="50" class="mr-2">
-            <h1 class="font-bold">{{ __('Amirs free accounting software') }}</h1>
-        </div>
-        <div class="language-select">
-            <form action="" class="language-picker__form">
-                <select name="language" class="locale select pr-10 pl-3 py-2">
-                    <option lang="fa" value="fa" selected>{{ __('Farsi') }}</option>
-                    <option lang="en" value="en">{{ __('English') }}</option>
-                </select>
-            </form>
-        </div>
-    </header>
+    @include('auth.partials.header')
 
     <div x-data="loginForm()" class="login-bg bg-cover bg-center rounded-t-3xl flex-1 border-8 border-gray-200 p-0 border-opacity-85 overflow-hidden">
         <div class="flex items-center justify-center rounded-3xl">
@@ -25,10 +12,16 @@
                     <x-text-input class="mt-1 w-full max-w-xs" title="{{ __('Email') }}" input_name="email" type="email" placeHolder="{{ __('Enter your email') }}" x-model="email" />
                     <x-text-input class="mt-1 w-full max-w-xs" title="{{ __('Password') }}" input_name="password" type="password" placeHolder="{{ __('Enter your password') }}" />
                     <div class="flex items-center justify-between mt-4 pl-2">
-                        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-8 rounded">{{ __('Login') }}</button>
-                        <button type="button" class="bg-gray-300 hover:bg-gray-400 text-black py-2 px-8 rounded">{{ __('Forgot Password') }}</button>
+                        <button type="submit" class="btn bg-blue-500 hover:bg-blue-600 text-white py-2 px-8 rounded">{{ __('Login') }}</button>
+                        <a href="{{ route('password.request') }}" class="btn bg-gray-300 hover:bg-gray-400 text-black py-2 px-8 rounded">{{ __('Forgot Password') }}</a>
                     </div>
                 </form>
+
+                @if(config('app.registration'))
+                    <div class="mt-3">
+                        <p class="text-center">{{ __('Don\'t have an account?') }} <a class="text-info" href="{{ route('register') }}">{{ __('Sign up') }}</a></p>
+                    </div>
+                @endif
 
                 @if (!app()->isProduction())
                     <div class="overflow-x-auto mt-3">
@@ -54,19 +47,7 @@
             </div>
         </div>
 
-        <div class="flex justify-center mt-4">
-            <div class="flex space-x-4">
-                <a href="https://github.com/Jooyeshgar/FreeAmir?tab=GPL-3.0-1-ov-file" class="ml-4 bg-gray-300 hover:bg-gray-400 text-black py-2 px-5 rounded">
-                    {{ __('Terms of Service') }}
-                </a>
-                <a href="https://github.com/Jooyeshgar/FreeAmir?tab=GPL-3.0-1-ov-file" class="mx-5 bg-gray-300 hover:bg-gray-400 text-black py-2 px-5 rounded">
-                    {{ __('Privacy Policy') }}
-                </a>
-                <a href="https://github.com/Jooyeshgar/FreeAmir/issues" class="bg-gray-300 hover:bg-gray-400 text-black py-2 px-5 rounded">
-                    {{ __('Need help?') }}
-                </a>
-            </div>
-        </div>
+        @include('auth.partials.footer')
     </div>
     <script>
         function loginForm() {

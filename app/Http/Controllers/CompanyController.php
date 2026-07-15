@@ -6,17 +6,21 @@ use App\Enums\FiscalYearSection;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\DocumentFile;
+use App\Models\User;
 use App\Services\FiscalYearService;
 use Cookie;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Spatie\Permission\Models\Role;
 
 class CompanyController extends Controller
 {
@@ -41,7 +45,8 @@ class CompanyController extends Controller
      */
     public function index(): View
     {
-        $companies = Company::paginate(12);
+        $user = auth()->user();
+        $companies = ($user->hasRole('Super-Admin') ? Company::query() : $user->companies())->paginate(12);
 
         return view('companies.index', [
             'companies' => $companies,
@@ -60,6 +65,47 @@ class CompanyController extends Controller
             'company' => null,
             'previousYears' => $previousYears,
         ]);
+    }
+
+    public function createCompanyForRegisteredUser(): View|RedirectResponse
+    {
+        if (auth()->user()->companies()->exists()) {
+            return redirect()->route('home');
+        }
+
+        return view('auth.create-company');
+    }
+
+    public function storeCompanyForRegisteredUser(Request $request): RedirectResponse
+    {
+        if ($request->user()->companies()->exists()) {
+            return redirect()->route('home');
+        }
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:50', 'regex:/^[\w\d\s]*$/u'],
+            'fiscal_year' => ['required', 'integer', 'digits:4'],
+            'currency' => ['nullable', 'string', 'max:50'],
+            'phone_number' => ['nullable', 'regex:/^09\d{9}$/'],
+        ]);
+
+        $data['currency'] ??= 'Rial';
+
+        try {
+            $company = $this->createCompany($request->user(), $data);
+            Cookie::queue('active-company-id', $company->id, 362 * 24 * 60);
+
+            return redirect()->route('home')->with('success', __('Company created successfully.'));
+        } catch (\Throwable $e) {
+            Log::error('Registered user company initialization failed.', [
+                'creator_id' => $request->user()->id,
+                'company_name' => $data['name'] ?? null,
+                'fiscal_year' => $data['fiscal_year'] ?? null,
+                'exception' => $e,
+            ]);
+
+            return back()->withInput()->with('error', __('Company initialization failed. No data was saved. Please try again.'));
+        }
     }
 
     /**
@@ -101,14 +147,28 @@ class CompanyController extends Controller
 
         $data['currency'] ??= 'Rial'; // default
 
-        if (! empty($validated['source_year_id'])) {
-            FiscalYearService::createWithCopiedData(
-                $data,
-                $validated['source_year_id'],
-                $validated['tables_to_copy'] ?? []
-            );
-        } else {
-            FiscalYearService::importData([], $data);
+        try {
+            $this->createCompany($request->user(), $data, isset($validated['source_year_id']) ? (int) $validated['source_year_id'] : null, $validated['tables_to_copy'] ?? []);
+        } catch (\Throwable $e) {
+            Log::error('Company initialization failed.', [
+                'creator_id' => $request->user()->id,
+                'company_name' => $data['name'] ?? null,
+                'fiscal_year' => $data['fiscal_year'] ?? null,
+                'source_company_id' => $validated['source_year_id'] ?? null,
+                'exception' => $e,
+            ]);
+
+            if (! empty($data['logo'])) {
+                Storage::delete('public/'.$data['logo']);
+            }
+
+            foreach (['certificate_path', 'private_key_path'] as $key) {
+                if (! empty($data[$key])) {
+                    Storage::delete($data[$key]);
+                }
+            }
+
+            return back()->withInput()->with('error', __('Company initialization failed. No data was saved. Please try again.'));
         }
 
         return redirect(route('companies.index'))
@@ -120,6 +180,8 @@ class CompanyController extends Controller
      */
     public function edit(Company $company): View
     {
+        $this->ensureCompanyAccess($company);
+
         return view('companies.edit', [
             'company' => $company,
         ]);
@@ -130,6 +192,8 @@ class CompanyController extends Controller
      */
     public function update(Request $request, Company $company): RedirectResponse
     {
+        $this->ensureCompanyAccess($company);
+
         $certRules = [
             'certificate' => $this->certificateRules(),
             'private_key' => $this->privateKeyRules(),
@@ -168,6 +232,8 @@ class CompanyController extends Controller
      */
     public function destroy(Company $company): RedirectResponse
     {
+        $this->ensureCompanyAccess($company);
+
         try {
             DB::transaction(function () use ($company) {
                 $documentIds = Document::withoutGlobalScopes()->where('company_id', $company->id)->pluck('id');
@@ -224,6 +290,13 @@ class CompanyController extends Controller
         }];
     }
 
+    private function ensureCompanyAccess(Company $company): void
+    {
+        $user = auth()->user();
+
+        abort_unless($user->hasRole('Super-Admin') || $user->companies()->whereKey($company->id)->exists(), 403);
+    }
+
     private function privateKeyRules(): array
     {
         return ['nullable', 'file', 'extensions:pem', function ($_, $value, $fail) {
@@ -270,6 +343,22 @@ class CompanyController extends Controller
         Storage::put($path, Crypt::encryptString(file_get_contents($file)));
 
         return $path;
+    }
+
+    private function createCompany(User $creator, array $companyData, ?int $sourceCompanyId = null, array $sectionsToCopy = []): Company
+    {
+        return DB::transaction(function () use ($creator, $companyData, $sourceCompanyId, $sectionsToCopy) {
+            $company = $sourceCompanyId === null ? Company::create($companyData) : FiscalYearService::createWithCopiedData($companyData, $sourceCompanyId, $sectionsToCopy);
+            $company->users()->syncWithoutDetaching([$creator->id]);
+
+            if ($sourceCompanyId === null) {
+                app(DatabaseSeeder::class)->run($company->id);
+            }
+
+            $creator->assignRole(Role::firstOrCreate(['name' => 'admin']));
+
+            return $company;
+        });
     }
 
     public function setActiveCompany(Company $company): RedirectResponse

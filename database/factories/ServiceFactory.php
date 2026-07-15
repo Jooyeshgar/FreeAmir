@@ -14,8 +14,10 @@ class ServiceFactory extends Factory
 
     public function definition(): array
     {
-        $companyId = Company::withoutGlobalScopes()->inRandomOrder()->value('id')
-            ?? Company::factory()->create()->id;
+        $companyId = (int) getActiveCompany();
+        if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
+            throw new \LogicException('An active company is required to create a service.');
+        }
 
         self::$generatedCodesByCompany[$companyId] ??= [];
 

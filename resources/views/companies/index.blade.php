@@ -3,7 +3,9 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="card-actions">
-                <a href="{{ route('companies.create') }}" class="btn btn-primary">{{ __('Create Company') }}</a>
+                @can('companies.create')
+                    <a href="{{ route('companies.create') }}" class="btn btn-primary">{{ __('Create Company') }}</a>
+                @endcan
             </div>
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
@@ -29,19 +31,23 @@
                             <td class="px-4 py-2">{{ formatDate($company->closed_at) }}</td>
                             <td class="px-4 py-2">{{ $company->closedBy ? $company->closedBy->name : '' }}</td>
                             <td class="px-4 py-2">
-                                <a href="{{ route('companies.edit', $company) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                @can('companies.edit')
+                                    <a href="{{ route('companies.edit', $company) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                @endcan
                                 @can('companies.close-fiscal-year')
                                     <a href="{{ route('companies.closing-wizard', $company) }}"
                                         class="btn btn-sm btn-warning {{ $company->closed_at ? 'btn-disabled pointer-events-none' : '' }}">
                                         {{ __('Close Fiscal Year') }}
                                     </a>
                                 @endcan
-                                <form action="{{ route('companies.destroy', $company) }}" method="POST" class="inline-block"
-                                    onsubmit="return confirm('{{ __('Are you sure you want to delete this company?') }}');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                </form>
+                                @can('companies.destroy')
+                                    <form action="{{ route('companies.destroy', $company) }}" method="POST" class="inline-block"
+                                        onsubmit="return confirm('{{ __('Are you sure you want to delete this company?') }}');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                    </form>
+                                @endcan
                             </td>
                         </tr>
                     @endforeach

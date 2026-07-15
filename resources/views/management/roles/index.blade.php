@@ -10,7 +10,9 @@
                 <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
             </form>
             <div class="card-actions">
-                <a href="{{ route('roles.create') }}" class="btn btn-primary">{{ __('Add new Role') }}</a>
+                @can('roles.create')
+                    <a href="{{ route('roles.create') }}" class="btn btn-primary">{{ __('Add new Role') }}</a>
+                @endcan
             </div>
 
             <table class='table w-full mt-4 overflow-auto'>
@@ -24,14 +26,18 @@
                         <td class="center-align" style="direction: ltr">{{ $role->name }}</td>
                         <td class="center-align">{{ $role->guard_name }}</td>
                         <td class="center-align">
-                            <a class="btn btn-sm btn-info" href="{{ route('roles.edit', $role->id) }}">
-                                {{ __('Edit') }}</a>
-                            <form action="{{ route('roles.destroy', $role->id) }}" method="POST" class="inline-block">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" onclick="return confirm('{{ __('Are you sure?') }}')"
-                                    class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                            </form>
+                            @can('roles.edit')
+                                <a class="btn btn-sm btn-info" href="{{ route('roles.edit', $role->id) }}">
+                                    {{ __('Edit') }}</a>
+                            @endcan
+                            @can('roles.destroy')
+                                <form action="{{ route('roles.destroy', $role->id) }}" method="POST" class="inline-block">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" onclick="return confirm('{{ __('Are you sure?') }}')"
+                                        class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                </form>
+                            @endcan
                         </td>
                     </tr>
                 @endforeach

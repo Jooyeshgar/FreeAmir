@@ -46,6 +46,10 @@ return [
 
     'debug' => (bool) env('APP_DEBUG', false),
 
+    'registration' => (bool) env('APP_REGISTRATION', true),
+
+    'email_verification' => (bool) env('APP_REGISTRATION', true) && (bool) env('APP_EMAIL_VERIFICATION', true),
+
     /*
     |--------------------------------------------------------------------------
     | Application URL

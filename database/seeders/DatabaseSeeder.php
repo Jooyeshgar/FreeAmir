@@ -10,19 +10,27 @@ class DatabaseSeeder extends Seeder
     /**
      * Seed the application's database.
      */
-    public function run(): void
+    public function run(?int $companyId = null): void
     {
-        $this->call([
-            CompanySeeder::class,
-            SubjectSeeder::class,
-            ConfigSeeder::class,
-            BankSeeder::class,
-            CustomerGroupSeeder::class,
-            ProductGroupSeeder::class,
-            ServiceGroupSeeder::class,
-            OrgChartSeeder::class,
-            OrganizationUnitSeeder::class,
-            RolesAndPermissionsSeeder::class,
-        ]);
+        $companyId ??= (int) getActiveCompany();
+        $previousActiveCompanyId = config('active-company-id');
+        config(['active-company-id' => $companyId]);
+
+        try {
+            $this->call([
+                CompanySeeder::class,
+                SubjectSeeder::class,
+                ConfigSeeder::class,
+                BankSeeder::class,
+                CustomerGroupSeeder::class,
+                ProductGroupSeeder::class,
+                ServiceGroupSeeder::class,
+                OrgChartSeeder::class,
+                OrganizationUnitSeeder::class,
+                RolesAndPermissionsSeeder::class,
+            ]);
+        } finally {
+            config(['active-company-id' => $previousActiveCompanyId]);
+        }
     }
 }

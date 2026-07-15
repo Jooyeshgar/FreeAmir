@@ -32,7 +32,7 @@
     @endif
 </div>
 
-@can('management.roles.*')
+@canany(['users.create', 'users.update'])
     <div class="divider"></div>
     <h3 class="label">{{ __('Roles') }}</h3>
     <div class="grid gap-3 grid-cols-5">
@@ -41,7 +41,7 @@
                 :checked="in_array($role->name, $oldRoles)" />
         @endforeach
     </div>
-@endcan
+@endcanany
 
 <div class="divider"></div>
 <h3 class="label">{{ __('Companies') }}</h3>

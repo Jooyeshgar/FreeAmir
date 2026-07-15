@@ -39,6 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'check-permission' => \App\Http\Middleware\CheckPermission::class,
             'ensure-employee' => \App\Http\Middleware\EnsureEmployee::class,
             'api-company' => \App\Http\Middleware\SetApiCompany::class,
+            'ensure-feature-enabled' => \App\Http\Middleware\EnsureFeatureEnabled::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

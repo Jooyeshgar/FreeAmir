@@ -10,7 +10,7 @@ class BankAccountSeeder extends Seeder
 {
     public function run()
     {
-        $banks = Bank::withoutGlobalScopes()->take(5)->get();
+        $banks = Bank::withoutGlobalScopes()->where('company_id', getActiveCompany())->take(5)->get();
 
         foreach ($banks as $bank) {
             BankAccount::factory()->count(1)->withBank($bank)->withSubject()->create();

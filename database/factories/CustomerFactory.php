@@ -16,12 +16,16 @@ class CustomerFactory extends Factory
 
     public function definition()
     {
-        $bankIds = Bank::withoutGlobalScopes()->pluck('id')->toArray();
+        $companyId = (int) getActiveCompany();
+        if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
+            throw new \LogicException('An active company is required to create a customer.');
+        }
 
-        $companyId = Company::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveCompany() ?? Company::factory()->create()->id;
+        $bankIds = Bank::withoutGlobalScopes()->where('company_id', $companyId)->pluck('id')->toArray();
+
         $group = CustomerGroup::withoutGlobalScopes()->where('company_id', $companyId)->whereNotNull('subject_id')->inRandomOrder()->first();
 
-        $customerIds = Customer::withoutGlobalScopes()->pluck('id')->toArray();
+        $customerIds = Customer::withoutGlobalScopes()->where('company_id', $companyId)->pluck('id')->toArray();
 
         return [
             'company_id' => $companyId,

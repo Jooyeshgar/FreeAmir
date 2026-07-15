@@ -9,7 +9,9 @@
                 <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
             </form>
             <div class="card-actions">
-                <a href="{{ route('permissions.create') }}" class="btn btn-primary">{{ __('Add new Permission') }}</a>
+                @can('permissions.create')
+                    <a href="{{ route('permissions.create') }}" class="btn btn-primary">{{ __('Add new Permission') }}</a>
+                @endcan
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
@@ -21,16 +23,20 @@
                             </p>
                             <span class="badge badge-ghost badge-sm">{{ $permission->guard_name }}</span>
                             <div class="card-actions justify-end mt-2">
-                                <a class="btn btn-xs btn-info" href="{{ route('permissions.edit', $permission->id) }}">
-                                    {{ __('Edit') }}
-                                </a>
-                                <form action="{{ route('permissions.destroy', $permission->id) }}" method="post" class="inline mb-0">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="btn btn-xs btn-error" type="submit" onclick="return confirm('{{ __('Are you sure?') }}')">
-                                        {{ __('Delete') }}
-                                    </button>
-                                </form>
+                                @can('permissions.edit')
+                                    <a class="btn btn-xs btn-info" href="{{ route('permissions.edit', $permission->id) }}">
+                                        {{ __('Edit') }}
+                                    </a>
+                                @endcan
+                                @can('permissions.destroy')
+                                    <form action="{{ route('permissions.destroy', $permission->id) }}" method="post" class="inline mb-0">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="btn btn-xs btn-error" type="submit" onclick="return confirm('{{ __('Are you sure?') }}')">
+                                            {{ __('Delete') }}
+                                        </button>
+                                    </form>
+                                @endcan
                             </div>
                         </div>
                     </div>

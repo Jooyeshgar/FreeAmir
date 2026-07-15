@@ -6,7 +6,7 @@ use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\EmployeeController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('companies', [CompanyController::class, 'index'])
         ->middleware('check-permission:companies.index')
         ->name('api.companies.index');
