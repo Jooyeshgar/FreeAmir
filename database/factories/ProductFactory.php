@@ -2,7 +2,6 @@
 
 namespace Database\Factories;
 
-use App\Models\Company;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Subject;
@@ -14,7 +13,7 @@ class ProductFactory extends Factory
 
     public function definition(): array
     {
-        $companyId = Company::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveCompany() ?? Company::factory()->create()->id;
+        $companyId = (int) getActiveCompany();
 
         return [
             'code' => $this->faker->unique()->numerify('#####'),

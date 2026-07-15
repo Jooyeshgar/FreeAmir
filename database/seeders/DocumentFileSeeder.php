@@ -10,7 +10,7 @@ class DocumentFileSeeder extends Seeder
 {
     public function run(): void
     {
-        $documents = Document::withoutGlobalScopes()->get();
+        $documents = Document::withoutGlobalScopes()->where('company_id', getActiveCompany())->get();
 
         foreach ($documents->take(10) as $document) {
             DocumentFile::factory()->count(2)->withDocument($document)->create();

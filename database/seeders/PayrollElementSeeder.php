@@ -12,6 +12,7 @@ class PayrollElementSeeder extends Seeder
 {
     public function run(): void
     {
+        $companyId = (int) getActiveCompany();
         $elements = [
             [
                 'title' => 'حق مسکن',
@@ -177,8 +178,8 @@ class PayrollElementSeeder extends Seeder
             $data['calc_type'] = PayrollElementCalcType::fromName($data['calc_type']);
 
             PayrollElement::withoutGlobalScopes()->updateOrCreate(
-                ['company_id' => 1, 'system_code' => $data['system_code']->value],
-                array_merge($data, ['company_id' => 1])
+                ['company_id' => $companyId, 'system_code' => $data['system_code']->value],
+                array_merge($data, ['company_id' => $companyId])
             );
         }
     }

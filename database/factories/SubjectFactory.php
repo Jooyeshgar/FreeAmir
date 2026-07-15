@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Enums\SubjectType;
-use App\Models\Company;
 use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -11,7 +10,7 @@ class SubjectFactory extends Factory
 {
     public function definition(): array
     {
-        $companyId = Company::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveCompany() ?? Company::factory()->create()->id;
+        $companyId = (int) getActiveCompany();
 
         return [
             'company_id' => $companyId,

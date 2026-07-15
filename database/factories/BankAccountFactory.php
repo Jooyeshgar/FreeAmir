@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Enums\BankAccountType;
 use App\Models\Bank;
-use App\Models\Company;
 use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -13,8 +12,8 @@ class BankAccountFactory extends Factory
 {
     public function definition(): array
     {
-        $bankIds = Bank::withoutGlobalScopes()->where('company_id', 1)->pluck('id')->toArray();
-        $companyIds = Company::pluck('id')->toArray();
+        $companyId = (int) getActiveCompany();
+        $bankIds = Bank::withoutGlobalScopes()->where('company_id', $companyId)->pluck('id')->toArray();
 
         return [
             'name' => $this->faker->name,
@@ -22,7 +21,7 @@ class BankAccountFactory extends Factory
             'type' => $this->faker->randomElement(BankAccountType::cases()),
             'owner' => $this->faker->name,
             'bank_id' => $this->faker->randomElement($bankIds),
-            'company_id' => $this->faker->randomElement($companyIds),
+            'company_id' => $companyId,
             'bank_branch' => $this->faker->address,
             'bank_address' => $this->faker->streetAddress,
             'bank_phone' => substr($this->faker->phoneNumber, 0, 15),

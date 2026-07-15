@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Company;
 use App\Models\Document;
 use App\Services\HomeService;
+use Database\Seeders\DemoSeeder;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
 
 class HomeController extends Controller
 {
@@ -30,12 +31,24 @@ class HomeController extends Controller
     {
         abort_if(! config('app.debug') || app()->isProduction(), 404);
 
-        if (Document::exists()) {
+        $companyId = (int) getActiveCompany();
+        $user = auth()->user();
+
+        abort_unless($user->hasRole('Super-Admin') || $user->companies()->whereKey($companyId)->exists(), 403);
+
+        if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
+            return redirect()->route('home')->with('error', __('Please select a valid company first.'));
+        }
+
+        // Seeders use this value when no HTTP cookie is available (for example when they are invoked through Artisan from this request).
+        config(['active-company-id' => $companyId]);
+
+        if (Document::withoutGlobalScopes()->where('company_id', $companyId)->exists()) {
             return redirect()->route('home')->with('error', __('Cannot add demo data to a non-empty database.'));
         }
 
         try {
-            Artisan::call('db:seed', ['--class' => 'DemoSeeder']);
+            app(DemoSeeder::class)->run($companyId);
         } catch (\Exception $e) {
             return redirect()->route('home')->with('error', __('An error occurred while seeding demo data.'));
         }

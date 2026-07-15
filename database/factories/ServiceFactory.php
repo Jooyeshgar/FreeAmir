@@ -14,8 +14,7 @@ class ServiceFactory extends Factory
 
     public function definition(): array
     {
-        $companyId = Company::withoutGlobalScopes()->inRandomOrder()->value('id')
-            ?? Company::factory()->create()->id;
+        $companyId = (int) getActiveCompany();
 
         self::$generatedCodesByCompany[$companyId] ??= [];
 

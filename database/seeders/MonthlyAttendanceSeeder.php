@@ -12,13 +12,14 @@ class MonthlyAttendanceSeeder extends Seeder
 {
     public function run(): void
     {
-        $employees = Employee::withoutGlobalScopes()->where('company_id', 1)->get();
+        $companyId = (int) getActiveCompany();
+        $employees = Employee::withoutGlobalScopes()->where('company_id', $companyId)->get();
         if ($employees->isEmpty()) {
             return;
         }
 
         foreach ($employees as $employee) {
-            $logs = AttendanceLog::withoutGlobalScopes()->where('company_id', 1)->where('employee_id', $employee->id)->orderBy('log_date')->get();
+            $logs = AttendanceLog::withoutGlobalScopes()->where('company_id', $companyId)->where('employee_id', $employee->id)->orderBy('log_date')->get();
             if ($logs->isEmpty()) {
                 continue;
             }
@@ -100,7 +101,7 @@ class MonthlyAttendanceSeeder extends Seeder
 
                 $attendance = MonthlyAttendance::withoutGlobalScopes()->updateOrCreate(
                     [
-                        'company_id' => 1,
+                        'company_id' => $employee->company_id,
                         'employee_id' => $employee->id,
                         'year' => $jYear,
                         'month' => $jMonth,
@@ -123,7 +124,7 @@ class MonthlyAttendanceSeeder extends Seeder
                     ]
                 );
 
-                AttendanceLog::withoutGlobalScopes()->where('company_id', 1)->where('employee_id', $employee->id)
+                AttendanceLog::withoutGlobalScopes()->where('company_id', $companyId)->where('employee_id', $employee->id)
                     ->whereBetween('log_date', [$startDate->toDateString(), $effectiveEnd->toDateString()])
                     ->update(['monthly_attendance_id' => $attendance->id]);
             }

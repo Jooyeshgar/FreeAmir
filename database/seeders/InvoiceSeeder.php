@@ -11,10 +11,13 @@ class InvoiceSeeder extends Seeder
 {
     public function run(): void
     {
-        $company = Company::find(getActiveCompany()) ?? Company::factory()->create();
+        $company = Company::withoutGlobalScopes()->find(getActiveCompany());
+
+        if (! $company) {
+            return;
+        }
         $date = jalali_to_gregorian($company->fiscal_year, 1, 1);
         $startOfYear = Carbon::create($date[0], $date[1], $date[2]);
-        
         $randomDateInMonth = function (int $monthOffset) use ($startOfYear) {
             $monthStart = (clone $startOfYear)->addMonths($monthOffset)->startOfMonth();
             $monthEnd = (clone $monthStart)->endOfMonth();

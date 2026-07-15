@@ -13,12 +13,13 @@ class SalaryDecreeSeeder extends Seeder
 {
     public function run(): void
     {
-        $employees = Employee::withoutGlobalScopes()->where('company_id', 1)->get();
+        $companyId = (int) getActiveCompany();
+        $employees = Employee::withoutGlobalScopes()->where('company_id', $companyId)->get();
         if ($employees->isEmpty()) {
             return;
         }
 
-        $elements = PayrollElement::withoutGlobalScopes()->where('company_id', 1)->get()->keyBy(fn ($element) => $element->system_code->valueName());
+        $elements = PayrollElement::withoutGlobalScopes()->where('company_id', $companyId)->get()->keyBy(fn ($element) => $element->system_code->valueName());
         if ($elements->isEmpty()) {
             return;
         }
@@ -44,7 +45,7 @@ class SalaryDecreeSeeder extends Seeder
 
             $decree = SalaryDecree::withoutGlobalScopes()->updateOrCreate(
                 [
-                    'company_id' => 1,
+                    'company_id' => $employee->company_id,
                     'employee_id' => $employee->id,
                 ],
                 [
