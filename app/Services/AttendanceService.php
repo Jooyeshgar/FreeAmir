@@ -517,11 +517,11 @@ class AttendanceService
         ], strict: true);
 
         if ($isDailyType) {
-            $duration = $this->shiftWorkMinutes($personnelRequest->employee->workShift);
             $current = $start->copy()->startOfDay();
             $endDay = $end->copy()->startOfDay();
 
             while ($current->lte($endDay)) {
+                $duration = $this->shiftWorkMinutesForDate($personnelRequest->employee->workShift, $current);
                 $log = $this->applyDeltaToLog($employeeId, $companyId, $current, $field, $delta * $duration);
                 if ($log) {
                     $this->recalculateLog($log);
@@ -565,6 +565,44 @@ class AttendanceService
         $total = (int) $start->diffInMinutes($end, false);
 
         return max(0, $total);
+    }
+
+    /**
+     * Return the assigned shift duration for a specific date.
+     *
+     * A half-day Thursday uses thursday_exit_time. Off-day mission requests still retain the normal shift duration so they can be reported and paid.
+     */
+    public function shiftWorkMinutesForDate(?WorkShift $workShift, Carbon|string $date): int
+    {
+        $date = $date instanceof Carbon ? $date : Carbon::parse($date);
+
+        if ($date->dayOfWeek === Carbon::THURSDAY && $workShift?->thursday_status === ThursdayStatus::HALF_DAY && $workShift->thursday_exit_time) {
+            $workShift = clone $workShift;
+            $workShift->end_time = $workShift->thursday_exit_time;
+        }
+
+        return $this->shiftWorkMinutes($workShift);
+    }
+
+    /**
+     * Return the assigned shift bounds for a dated daily personnel request.
+     *
+     * @return array{start:string, end:string}
+     */
+    public function shiftTimesForDate(?WorkShift $workShift, Carbon|string $date): array
+    {
+        $date = $date instanceof Carbon ? $date : Carbon::parse($date);
+        $start = $workShift?->start_time ?? self::DEFAULT_SHIFT_START;
+        $end = $workShift?->end_time ?? self::DEFAULT_SHIFT_END;
+
+        if ($date->dayOfWeek === Carbon::THURSDAY && $workShift?->thursday_status === ThursdayStatus::HALF_DAY && $workShift->thursday_exit_time) {
+            $end = $workShift->thursday_exit_time;
+        }
+
+        return [
+            'start' => Carbon::createFromTimeString($start)->format('H:i'),
+            'end' => Carbon::createFromTimeString($end)->format('H:i'),
+        ];
     }
 
     // ══════════════════════════════════════════════════════════════════════

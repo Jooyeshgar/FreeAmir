@@ -6,10 +6,12 @@ use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
+use App\Models\Employee;
 use App\Models\MonthlyAttendance;
 use App\Models\Payroll;
 use App\Models\PersonnelRequest;
 use App\Models\PublicHoliday;
+use App\Services\AttendanceService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,6 +21,8 @@ use Illuminate\View\View;
 class EmployeePortalController extends Controller
 {
     private const FLEXIBLE_TIME_REGEX = '/^(\d{1,2}):(\d{1,2})$/';
+
+    public function __construct(private readonly AttendanceService $attendanceService) {}
 
     /**
      * Return the employee record for the currently authenticated user.
@@ -363,10 +367,7 @@ class EmployeePortalController extends Controller
     {
         $employee = $this->currentEmployee();
 
-        if (isset($request['request_type']) && in_array($request['request_type'], ['LEAVE_DAILY', 'LEAVE_WITHOUT_PAY', 'MISSION_DAILY'])) {
-            $request['start_time'] = Carbon::createFromTimeString($employee->workShift->start_time)->format('H:i');
-            $request['end_time'] = Carbon::createFromTimeString($employee->workShift->end_time)->format('H:i');
-        }
+        $this->applyDailyRequestShiftTimes($request, $employee);
 
         $validated = $this->validatePersonnelRequestInput($request);
 
@@ -467,6 +468,8 @@ class EmployeePortalController extends Controller
             ]);
         }
 
+        $this->applyDailyRequestShiftTimes($request, $employee);
+
         $validated = $this->validatePersonnelRequestInput($request);
 
         $gregorianDate = convertToGregorian($validated['request_date']);
@@ -516,5 +519,20 @@ class EmployeePortalController extends Controller
 
         return redirect()->route('employee-portal.personnel-requests.index', ['tab' => $tab])
             ->with('success', __('Your request has been deleted successfully.'));
+    }
+
+    private function applyDailyRequestShiftTimes(Request $request, ?Employee $employee): void
+    {
+        if ($employee === null || ! $request->filled('request_date') || ! in_array($request->input('request_type'), ['LEAVE_DAILY', 'LEAVE_WITHOUT_PAY', 'MISSION_DAILY'], true)) {
+            return;
+        }
+
+        $gregorianDate = str_replace('/', '-', convertToGregorian($request->input('request_date')));
+        $times = $this->attendanceService->shiftTimesForDate($employee->workShift, Carbon::parse($gregorianDate));
+
+        $request->merge([
+            'start_time' => $times['start'],
+            'end_time' => $times['end'],
+        ]);
     }
 }
