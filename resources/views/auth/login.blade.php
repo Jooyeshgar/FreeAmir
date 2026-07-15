@@ -17,9 +17,11 @@
                     </div>
                 </form>
 
-                <div class="mt-3">
-                    <p class="text-center">{{ __('Don\'t have an account?') }} <a class="text-info" href="{{ route('register') }}">{{ __('Sign up') }}</a></p>
-                </div>
+                @if(config('app.registration'))
+                    <div class="mt-3">
+                        <p class="text-center">{{ __('Don\'t have an account?') }} <a class="text-info" href="{{ route('register') }}">{{ __('Sign up') }}</a></p>
+                    </div>
+                @endif
 
                 @if (!app()->isProduction())
                     <div class="overflow-x-auto mt-3">

@@ -46,7 +46,9 @@
                                         {{ $subject?->fullname() ?? __('N/A') }}
                                     </td>
                                     <td class="px-4 py-2">
-                                        <a href="{{ route('configs.edit', strtolower($configTitle['value'])) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                        @can('configs.edit')
+                                            <a href="{{ route('configs.edit', strtolower($configTitle['value'])) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                        @endcan
                                     </td>
                                 </tr>
                             @endforeach

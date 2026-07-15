@@ -45,7 +45,8 @@ class CompanyController extends Controller
      */
     public function index(): View
     {
-        $companies = Company::paginate(12);
+        $user = auth()->user();
+        $companies = ($user->hasRole('Super-Admin') ? Company::query() : $user->companies())->paginate(12);
 
         return view('companies.index', [
             'companies' => $companies,
@@ -179,6 +180,8 @@ class CompanyController extends Controller
      */
     public function edit(Company $company): View
     {
+        $this->ensureCompanyAccess($company);
+
         return view('companies.edit', [
             'company' => $company,
         ]);
@@ -189,6 +192,8 @@ class CompanyController extends Controller
      */
     public function update(Request $request, Company $company): RedirectResponse
     {
+        $this->ensureCompanyAccess($company);
+
         $certRules = [
             'certificate' => $this->certificateRules(),
             'private_key' => $this->privateKeyRules(),
@@ -227,6 +232,8 @@ class CompanyController extends Controller
      */
     public function destroy(Company $company): RedirectResponse
     {
+        $this->ensureCompanyAccess($company);
+
         try {
             DB::transaction(function () use ($company) {
                 $documentIds = Document::withoutGlobalScopes()->where('company_id', $company->id)->pluck('id');
@@ -281,6 +288,13 @@ class CompanyController extends Controller
                 $fail(__('The certificate file must contain a valid X.509 certificate.'));
             }
         }];
+    }
+
+    private function ensureCompanyAccess(Company $company): void
+    {
+        $user = auth()->user();
+
+        abort_unless($user->hasRole('Super-Admin') || $user->companies()->whereKey($company->id)->exists(), 403);
     }
 
     private function privateKeyRules(): array
@@ -348,7 +362,7 @@ class CompanyController extends Controller
                 }
             }
 
-            $creator->assignRole(Role::firstOrCreate(['name' => 'Super-Admin']));
+            $creator->assignRole(Role::firstOrCreate(['name' => 'admin']));
 
             return $company;
         });

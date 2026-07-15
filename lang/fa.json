@@ -2245,6 +2245,7 @@
     "app_env": "محیط برنامه",
     "app_locale": "محل برنامه",
     "app_debug": "اشکال‌زدایی برنامه",
+    "app_registration": "ثبت‌نام برنامه",
     "app_email_verification": "تأیید ایمیل",
     "approved": "تایید شده است",
     "approved inactive": "تایید غیر فعال",
@@ -2510,5 +2511,6 @@
     "Enter your company's currency": "واحد پول شرکت خود را وارد کنید",
     "Enter your company's phone number": "شماره تلفن شرکت خود را وارد کنید",
     "Enter your new password": "رمز عبور جدید خود را وارد کنید",
-    "Confirm your new password": "رمز عبور جدید خود را تأیید کنید"
+    "Confirm your new password": "رمز عبور جدید خود را تأیید کنید",
+    "Registration is currently disabled.": "ثبت‌نام در حال حاضر غیرفعال است."
 }

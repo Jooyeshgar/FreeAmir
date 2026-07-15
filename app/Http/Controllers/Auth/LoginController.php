@@ -31,7 +31,7 @@ class LoginController extends Controller
         $request->session()->regenerate();
         $user = $request->user();
 
-        if (! $user->hasVerifiedEmail()) {
+        if (config('app.email_verification') && ! $user->hasVerifiedEmail()) {
             return redirect()->route('verification.notice')->with('error', __('Please verify your account before continuing.'));
         }
 

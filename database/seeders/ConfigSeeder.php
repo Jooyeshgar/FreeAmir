@@ -53,7 +53,7 @@ class ConfigSeeder extends Seeder
             config(['amir.'.$config['key'] => $config['value']]);
         }
 
-        foreach (['app_env', 'app_locale', 'app_debug', 'app_email_verification'] as $key) {
+        foreach (['app_env', 'app_locale', 'app_debug', 'app_registration', 'app_email_verification'] as $key) {
             Config::withoutGlobalScope(FiscalYearScope::class)->updateOrCreate(
                 ['key' => $key, 'company_id' => null],
                 ['value' => null, 'type' => 3, 'category' => 1, 'desc' => __($key)],

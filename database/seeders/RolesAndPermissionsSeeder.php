@@ -194,6 +194,16 @@ class RolesAndPermissionsSeeder extends Seeder
         $superAdmin = Role::firstOrCreate(['name' => 'Super-Admin']);
         $superAdmin->syncPermissions(Permission::all());
 
+        $admin = Role::firstOrCreate(['name' => 'admin']);
+        $admin->syncPermissions(
+            Permission::query()
+                ->where('name', 'NOT LIKE', 'roles.%')
+                ->where('name', 'NOT LIKE', 'permissions.%')
+                ->where('name', '!=', 'update-global-configs')
+                ->pluck('name')
+                ->toArray()
+        );
+
         $accountant = Role::firstOrCreate(['name' => __('Accountant')]);
         $accountant->syncPermissions(
             Permission::query()

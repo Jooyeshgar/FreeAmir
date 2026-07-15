@@ -32,16 +32,18 @@ class RegisterController extends Controller
         $user = User::create($validated);
         Auth::login($user);
 
-        if ($user->hasVerifiedEmail()) {
-            return $this->verifiedRedirect($user);
-        }
-
         try {
             $user->sendEmailVerificationNotification();
         } catch (\Throwable $exception) {
             Log::error('Registration verification notification could not be sent.', ['user_id' => $user->id, 'exception' => $exception]);
 
-            return redirect()->route('verification.notice')->with('error', __('Your account was created, but the verification notification could not be sent. Please try again.'));
+            $response = config('app.email_verification') ? redirect()->route('verification.notice') : $this->verifiedRedirect($user);
+
+            return $response->with('error', __('Your account was created, but the verification notification could not be sent. Please try again.'));
+        }
+
+        if (! config('app.email_verification')) {
+            return $this->verifiedRedirect($user)->with('success', __('Registration completed. Please use the verification notification to verify your account.'));
         }
 
         return redirect()->route('verification.notice')->with('success', __('Registration completed. Please use the verification notification to verify your account.'));

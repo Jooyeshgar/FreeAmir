@@ -11,6 +11,7 @@ class GlobalConfigService
         'app_env' => ['local', 'production'],
         'app_locale' => ['fa', 'en'],
         'app_debug' => ['true', 'false'],
+        'app_registration' => ['true', 'false'],
         'app_email_verification' => ['true', 'false'],
     ];
 
@@ -28,6 +29,12 @@ class GlobalConfigService
 
     public function update(array $values): void
     {
+        $registration = array_key_exists('app_registration', $values) ? $values['app_registration'] : (config('app.registration') ? 'true' : 'false');
+
+        if ($registration === 'false') {
+            $values['app_email_verification'] = 'false';
+        }
+
         foreach (array_keys(self::SETTINGS) as $key) {
             if (! array_key_exists($key, $values)) {
                 continue;

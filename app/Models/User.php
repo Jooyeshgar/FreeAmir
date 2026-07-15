@@ -52,21 +52,15 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function hasVerifiedEmail(): bool
     {
-        if (! config('app.email_verification')) {
-            return true;
-        }
-
         return ! is_null($this->email_verified_at);
     }
 
     /**
-     * Send the email verification notification when verification is required.
+     * Send the email verification notification.
      */
     public function sendEmailVerificationNotification(): void
     {
-        if (config('app.email_verification')) {
-            $this->notify(new UserVerificationNotification);
-        }
+        $this->notify(new UserVerificationNotification);
     }
 
     public function companies()

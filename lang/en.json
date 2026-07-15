@@ -2225,6 +2225,7 @@
     "app_env": "app_env",
     "app_locale": "app_locale",
     "app_debug": "app_debug",
+    "app_registration": "app_registration",
     "app_email_verification": "app_email_verification",
     "approved": "approved",
     "approved inactive": "approved inactive",
@@ -2486,5 +2487,6 @@
     "Enter your company's currency": "Enter your company's currency",
     "Enter your company's phone number": "Enter your company's phone number",
     "Enter your new password": "Enter your new password",
-    "Confirm your new password": "Confirm your new password"
+    "Confirm your new password": "Confirm your new password",
+    "Registration is currently disabled.": "Registration is currently disabled."
 }

@@ -27,12 +27,16 @@
                 </div>
             </div>
             <div class="card-actions">
-                <a href="{{ route('users.edit', $user) }}" class="text-yellow-600 hover:text-yellow-900 btn btn-pr">{{ __('Edit') }}</a>
-                <form action="{{ route('users.destroy', $user) }}" method="post" class="inline">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="text-red-600 hover:text-red-900 btn btn-pr">{{ __('Delete') }}</button>
-                </form>
+                @can('users.edit')
+                    <a href="{{ route('users.edit', $user) }}" class="text-yellow-600 hover:text-yellow-900 btn btn-pr">{{ __('Edit') }}</a>
+                @endcan
+                @can('users.destroy')
+                    <form action="{{ route('users.destroy', $user) }}" method="post" class="inline">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="text-red-600 hover:text-red-900 btn btn-pr">{{ __('Delete') }}</button>
+                    </form>
+                @endcan
             </div>
         </div>
     </div>

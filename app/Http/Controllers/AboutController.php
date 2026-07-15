@@ -25,12 +25,14 @@ class AboutController extends Controller
             'app_env' => config('app.env'),
             'app_debug' => config('app.debug') ? 'true' : 'false',
             'app_locale' => app()->getLocale(),
+            'app_registration' => config('app.registration') ? 'true' : 'false',
             'app_email_verification' => config('app.email_verification') ? 'true' : 'false',
         ];
         $options = [
             'app_env' => ['local' => __('local'), 'production' => __('production')],
             'app_debug' => ['true' => __('Enabled'), 'false' => __('Disabled')],
             'app_locale' => ['fa' => __('Persian'), 'en' => __('English')],
+            'app_registration' => ['true' => __('Enabled'), 'false' => __('Disabled')],
             'app_email_verification' => ['true' => __('Enabled'), 'false' => __('Disabled')],
         ];
         $gcSettings = [];
@@ -63,6 +65,7 @@ class AboutController extends Controller
             'app_env' => ['nullable', Rule::in($this->globalConfigService::SETTINGS['app_env'])],
             'app_locale' => ['nullable', Rule::in($this->globalConfigService::SETTINGS['app_locale'])],
             'app_debug' => ['nullable', Rule::in($this->globalConfigService::SETTINGS['app_debug'])],
+            'app_registration' => ['nullable', Rule::in($this->globalConfigService::SETTINGS['app_registration'])],
             'app_email_verification' => ['nullable', Rule::in($this->globalConfigService::SETTINGS['app_email_verification'])],
         ]);
 
@@ -79,6 +82,7 @@ class AboutController extends Controller
             'app_env' => __('about.environment'),
             'app_debug' => __('about.debug_mode'),
             'app_locale' => __('about.locale'),
+            'app_registration' => __('about.registration'),
             'app_email_verification' => __('about.email_verification'),
         ];
     }

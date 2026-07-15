@@ -46,7 +46,9 @@ return [
 
     'debug' => (bool) env('APP_DEBUG', false),
 
-    'email_verification' => (bool) env('APP_EMAIL_VERIFICATION', true),
+    'registration' => (bool) env('APP_REGISTRATION', true),
+
+    'email_verification' => (bool) env('APP_REGISTRATION', true) && (bool) env('APP_EMAIL_VERIFICATION', true),
 
     /*
     |--------------------------------------------------------------------------
