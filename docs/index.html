@@ -58,14 +58,20 @@
     <div x-data="{ menuOpen: false, activeTab: 'financial' }" class="min-h-screen overflow-hidden">
         <header class="sticky top-0 z-50 border-b border-stone-200/80 bg-paper/90 backdrop-blur">
             <nav class="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 lg:px-8" aria-label="ناوبری اصلی">
-                <a href="#top" class="flex items-center gap-3">
-                    <span
-                        class="grid h-11 w-11 place-items-center rounded-lg bg-ink text-lg font-black text-white">ا</span>
-                    <span>
-                        <span class="block text-base font-black">امیر</span>
-                        <span class="block text-xs text-stone-500">حسابداری و ERP آزاد برای ایران</span>
-                    </span>
-                </a>
+                <div class="flex items-center gap-4">
+                    <a href="#top" class="flex items-center gap-3">
+                        <span
+                            class="grid h-11 w-11 place-items-center rounded-lg bg-ink text-lg font-black text-white">ا</span>
+                        <span>
+                            <span class="block text-base font-black">امیر</span>
+                            <span class="hidden text-xs text-stone-500 sm:block">حسابداری و ERP آزاد برای ایران</span>
+                        </span>
+                    </a>
+                    <a href="https://app.freeamir.ir/register"
+                        class="rounded-lg bg-mint px-4 py-2 text-sm font-black text-white transition hover:bg-teal-800">
+                        ثبت‌نام
+                    </a>
+                </div>
 
                 <button type="button"
                     class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-stone-300 text-ink md:hidden"
