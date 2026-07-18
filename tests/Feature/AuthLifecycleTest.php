@@ -383,8 +383,11 @@ class AuthLifecycleTest extends TestCase
         Notification::assertNothingSent();
     }
 
-    public function test_verified_new_user_can_create_a_company_while_database_seeder_runs_in_that_company_context(): void
+    public function test_verified_new_user_can_create_a_company_with_default_data_and_admin_permissions(): void
     {
+        $admin = Role::firstOrCreate(['name' => __('Admin')]);
+        $admin->syncPermissions(Permission::firstOrCreate(['name' => 'users.index']));
+
         $previousCompany = Company::create([
             'name' => 'Existing Company',
             'fiscal_year' => 1404,
