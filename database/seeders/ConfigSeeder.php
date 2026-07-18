@@ -10,9 +10,9 @@ use RuntimeException;
 
 class ConfigSeeder extends Seeder
 {
-    public function run(): void
+    public function run(?int $companyId = null): void
     {
-        $companyId = (int) getActiveCompany();
+        $companyId ??= (int) getActiveCompany();
         $configs = [
             ['type' => 3, 'category' => 1, 'key' => 'wage', 'value' => '10', 'desc' => 'حقوق پرسنل', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'cust_subject', 'value' => '4', 'desc' => 'مشتریان', 'company_id' => 1],

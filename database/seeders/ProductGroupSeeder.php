@@ -7,9 +7,9 @@ use Illuminate\Database\Seeder;
 
 class ProductGroupSeeder extends Seeder
 {
-    public function run(): void
+    public function run(?int $companyId = null): void
     {
-        $companyId = (int) getActiveCompany();
+        $companyId ??= (int) getActiveCompany();
 
         if (ProductGroup::withoutGlobalScopes()->where('company_id', $companyId)->where('name', 'عمومی')->exists()) {
             return;

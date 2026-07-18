@@ -25,18 +25,23 @@ class UserController extends Controller
      */
     public function index()
     {
-        $users = User::query()
-            ->unless(auth()->user()->hasRole('Super-Admin'), function ($query) {
-                $companyIds = auth()->user()->companies()->pluck('companies.id');
+        $actor = auth()->user();
+        $isProduction = app()->environment('production');
 
-                $query->whereHas('companies', function ($query) {
-                    $query->where('companies.id', getActiveCompany());
-                })->whereDoesntHave('companies', function ($query) use ($companyIds) {
-                    $query->whereNotIn('companies.id', $companyIds);
-                });
+        if ($isProduction) {
+            abort_unless($actor->hasAnyRole(['Super-Admin', __('Admin')]), 403);
+        }
+
+        $users = User::query()
+            ->unless($actor->hasRole('Super-Admin'), function ($query) use ($actor) {
+                $companyIds = $actor->companies()->pluck('companies.id');
+
+                $query->whereHas('companies', fn ($query) => $query->where('companies.id', getActiveCompany()))
+                    ->whereDoesntHave('companies', fn ($query) => $query->whereNotIn('companies.id', $companyIds));
             })
+            ->when($isProduction, fn ($query) => $query->whereDoesntHave('roles', fn ($query) => $query->where('name', 'Super-Admin')))
             ->with('employee')
-            ->paginate(30);
+            ->paginate(10);
 
         return view('users.index', compact('users'));
     }

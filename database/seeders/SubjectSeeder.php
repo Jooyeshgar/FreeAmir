@@ -18,9 +18,9 @@ class SubjectSeeder extends Seeder
      * expenses, COGS, sales returns/discounts). Non-permanent subjects are the
      * ones that should reset each fiscal year and feed the profit calculation.
      */
-    public function run(): void
+    public function run(?int $companyId = null): void
     {
-        $companyId = (int) getActiveCompany();
+        $companyId ??= (int) getActiveCompany();
         // Root subjects classified as non-permanent (income statement / temporary).
         // Their children inherit the same flag.
         $nonPermanentRoots = [

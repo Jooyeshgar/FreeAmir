@@ -9,7 +9,12 @@ use App\Models\DocumentFile;
 use App\Models\User;
 use App\Services\FiscalYearService;
 use Cookie;
-use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\BankSeeder;
+use Database\Seeders\ConfigSeeder;
+use Database\Seeders\CustomerGroupSeeder;
+use Database\Seeders\ProductGroupSeeder;
+use Database\Seeders\ServiceGroupSeeder;
+use Database\Seeders\SubjectSeeder;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -86,7 +91,7 @@ class CompanyController extends Controller
             'name' => ['required', 'string', 'max:50', 'regex:/^[\w\d\s]*$/u'],
             'fiscal_year' => ['required', 'integer', 'digits:4'],
             'currency' => ['nullable', 'string', 'max:50'],
-            'phone_number' => ['nullable', 'regex:/^09\d{9}$/'],
+            'phone_number' => ['required', 'regex:/^09\d{9}$/'],
         ]);
 
         $data['currency'] ??= 'Rial';
@@ -352,7 +357,16 @@ class CompanyController extends Controller
             $company->users()->syncWithoutDetaching([$creator->id]);
 
             if ($sourceCompanyId === null) {
-                app(DatabaseSeeder::class)->run($company->id);
+                foreach ([
+                    SubjectSeeder::class,
+                    ConfigSeeder::class,
+                    BankSeeder::class,
+                    CustomerGroupSeeder::class,
+                    ProductGroupSeeder::class,
+                    ServiceGroupSeeder::class,
+                ] as $seeder) {
+                    app($seeder)->run($company->id);
+                }
             }
 
             $creator->assignRole(Role::firstOrCreate(['name' => __('Admin')]));
