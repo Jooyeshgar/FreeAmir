@@ -3,7 +3,7 @@
 ])
 
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="light">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ app()->isLocale('fa') ? 'rtl' : 'ltr' }}" data-theme="light">
 
 <head>
     <meta charset="utf-8">
@@ -21,7 +21,7 @@
 
 </head>
 
-<body class="relative min-h-screen overflow-x-hidden bg-base-200 text-base-content" dir="{{ app()->getLocale() == 'fa' ? 'rtl' : 'ltr' }}">
+<body class="relative min-h-screen overflow-x-hidden bg-base-200 text-base-content">
 
     <x-header />
 
