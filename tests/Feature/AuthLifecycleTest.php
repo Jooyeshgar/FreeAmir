@@ -47,7 +47,7 @@ class AuthLifecycleTest extends TestCase
             'users.edit',
         ])->mapWithKeys(fn (string $name) => [$name => Permission::create(['name' => $name])]);
 
-        $adminRole = Role::create(['name' => 'admin']);
+        $adminRole = Role::create(['name' => __('Admin')]);
         $adminRole->syncPermissions($permissions);
         Role::create(['name' => 'Super-Admin']);
 
@@ -408,7 +408,7 @@ class AuthLifecycleTest extends TestCase
 
         $this->assertSame($previousCompany->id, config('active-company-id'));
         $this->assertTrue($company->users()->whereKey($user->id)->exists());
-        $this->assertTrue($user->fresh()->hasRole('admin'));
+        $this->assertTrue($user->fresh()->hasRole(__('Admin')));
         $this->assertFalse($user->fresh()->hasRole('Super-Admin'));
         $this->assertTrue($user->fresh()->can('users.index'));
         $this->assertFalse($user->fresh()->can('roles.index'));

@@ -355,7 +355,7 @@ class CompanyController extends Controller
                 app(DatabaseSeeder::class)->run($company->id);
             }
 
-            $creator->assignRole(Role::firstOrCreate(['name' => 'admin']));
+            $creator->assignRole(Role::firstOrCreate(['name' => __('Admin')]));
 
             return $company;
         });

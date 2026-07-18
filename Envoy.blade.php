@@ -9,8 +9,8 @@
     exit;
     }
 
-    $php = $_ENV['DEPLOY_PHP_CMD'] ?? 'ea-php82';
-    $composer = $_ENV['DEPLOY_COMPOSER_CMD'] ?? 'ea-php82 $(which composer)';
+    $php = $_ENV['DEPLOY_PHP_CMD'] ?? 'ea-php83';
+    $composer = $_ENV['DEPLOY_COMPOSER_CMD'] ?? 'ea-php83 $(which composer)';
     $php_fpm = $_ENV['DEPLOY_PHP_FPM'] ?? null;
     $server = $_ENV['DEPLOY_SERVER'] ?? null;
     $repo = $_ENV['DEPLOY_REPOSITORY'] ?? null;
@@ -67,52 +67,6 @@
     health_check
 @endstory
 
-@task('installing_apache', ['on' => 'accRoot'])
-    if command -v apachectl > /dev/null 2>&1; then
-        echo "Apache is already installed."
-    else
-        echo "Apache is not installed. Installing now..."
-        apt update
-
-        apt install -y apache2
-
-        if command -v apachectl > /dev/null 2>&1; then
-            echo "Apache has been installed successfully."
-        else
-            echo "Failed to install Apache."
-        fi
-    fi
-@endtask
-
-@task('installing_php', ['on' => 'accRoot'])
-    if command -v php > /dev/null 2>&1; then
-        echo "PHP is already installed."
-        php -v  # Display the installed PHP version
-    else
-        echo "PHP is not installed. Installing now..."
-        apt update
-
-        apt install -y php composer php-xml php-curl
-
-        if command -v php > /dev/null 2>&1; then
-            echo "PHP has been installed successfully."
-            php -v  # Display the installed PHP version
-        else
-            echo "Failed to install PHP."
-        fi
-    fi
-@endtask
-
-@task('installing_docker')
-    if ! command -v docker &> /dev/null; then
-        echo "Docker is not installed. Installing Docker..."
-        apt update
-        apt install -y docker.io docker-compose-v2
-    else
-        echo "Docker is already installed."
-    fi
-@endtask
-
 @task('deployment_start')
     cd {{ $path }}
     echo "Deployment ({{ $date }}) started"
@@ -133,7 +87,7 @@
     echo "Installing composer dependencies..."
     cd {{ $release }}
     rm -rf {{ $release }}/composer.lock
-    {{ $composer }} install --no-interaction --quiet --no-dev --prefer-dist --optimize-autoloader
+    {{ $composer }} install --no-interaction --no-scripts --quiet --no-dev --prefer-dist --optimize-autoloader
 @endtask
 
 @task('deployment_migrate')
@@ -170,7 +124,8 @@
 @endtask
 
 @task('deployment_reload')
-    {{ $php }} {{ $path }}/current/artisan storage:link
+    rm -rf {{ $release }}/storage
+    ln -s {{ $path }}/storage {{ $release }}/storage
 @endtask
 
 @task('deployment_finish')
