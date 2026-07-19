@@ -75,15 +75,15 @@ class OrganizationUnitController extends Controller
     {
         $organizationUnit->update($this->validatePayload($request, $organizationUnit));
 
-        return redirect()->route('hr.organization-units.index')
+        return redirect()->route('hr.organization-units.index', $request->query())
             ->with('success', __('Organization unit updated successfully.'));
     }
 
-    public function destroy(OrganizationUnit $organizationUnit): RedirectResponse
+    public function destroy(Request $request, OrganizationUnit $organizationUnit): RedirectResponse
     {
         $organizationUnit->delete();
 
-        return redirect()->route('hr.organization-units.index')
+        return redirect()->route('hr.organization-units.index', $request->query())
             ->with('success', __('Organization unit deleted successfully.'));
     }
 

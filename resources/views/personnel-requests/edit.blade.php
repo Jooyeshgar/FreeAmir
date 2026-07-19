@@ -1,6 +1,6 @@
 <x-app-layout :title="$personnelRequest->request_type?->label()">
     <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('hr.personnel-requests.update', $personnelRequest) }}" method="POST">
+        <form action="{{ route('hr.personnel-requests.update', array_merge(['personnel_request' => $personnelRequest->id], request()->query())) }}" method="POST">
             @csrf
             @method('PUT')
             <x-input name="tab" value="{{ $tab }}" hidden />

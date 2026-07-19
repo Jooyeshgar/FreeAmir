@@ -417,7 +417,7 @@ class InvoiceController extends Controller
         $items = InvoiceService::mapTransactionsToItems($validated['transactions'], true);
 
         if ($invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {
-            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->valueName()])->with('error', __('Invoice has associated approved ancillary costs and cannot be edited.'));
+            return redirect()->route('invoices.index', array_merge($request->query(), ['invoice_type' => $invoice->invoice_type->valueName()]))->with('error', __('Invoice has associated approved ancillary costs and cannot be edited.'));
         }
 
         $approved = false;
@@ -433,23 +433,23 @@ class InvoiceController extends Controller
         $isServiceBuy = in_array($result['invoice']->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_BUY]) && $result['invoice']->items->where('itemable_type', Product::class)->isEmpty();
 
         return redirect()
-            ->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type->valueName(), 'service_buy' => $isServiceBuy ? '1' : null])
+            ->route('invoices.index', array_merge($request->query(), ['invoice_type' => $result['invoice']->invoice_type->valueName(), 'service_buy' => $isServiceBuy ? '1' : null]))
             ->with($msgType, $msg);
     }
 
-    public function destroy(Invoice $invoice)
+    public function destroy(Request $request, Invoice $invoice)
     {
         if ($invoice->status->isApproved()) {
-            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->valueName()])->with('error', __('Only unapproved invoices can be deleted.'));
+            return redirect()->route('invoices.index', array_merge($request->query(), ['invoice_type' => $invoice->invoice_type->valueName()]))->with('error', __('Only unapproved invoices can be deleted.'));
         }
 
         if ($invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {
-            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->valueName()])->with('error', __('Invoice has associated approved ancillary costs and cannot be deleted.'));
+            return redirect()->route('invoices.index', array_merge($request->query(), ['invoice_type' => $invoice->invoice_type->valueName()]))->with('error', __('Invoice has associated approved ancillary costs and cannot be deleted.'));
         }
 
         InvoiceService::deleteInvoice($invoice->id);
 
-        return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->valueName()])->with('info', __('Invoice deleted successfully.'));
+        return redirect()->route('invoices.index', array_merge($request->query(), ['invoice_type' => $invoice->invoice_type->valueName()]))->with('info', __('Invoice deleted successfully.'));
     }
 
     private function invoiceMessage(array $result, string $action = 'created', bool $approved = false)
@@ -649,14 +649,14 @@ class InvoiceController extends Controller
         return (object) $grouped;
     }
 
-    public function changeStatus(Invoice $invoice, string $status)
+    public function changeStatus(Request $request, Invoice $invoice, string $status)
     {
         $sellAllowedStatuses = ['approved', 'unapproved', 'ready_to_approve', 'rejected'];
         $defaultAllowedStatuses = ['approved', 'unapproved'];
         $allowedStatuses = $invoice->invoice_type === InvoiceType::SELL ? $sellAllowedStatuses : $defaultAllowedStatuses;
 
         if (! in_array($status, $allowedStatuses)) {
-            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->valueName()])
+            return redirect()->route('invoices.index', array_merge($request->query(), ['invoice_type' => $invoice->invoice_type->valueName()]))
                 ->with('error', __('Invalid status action.'));
         }
 

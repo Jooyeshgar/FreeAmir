@@ -70,7 +70,7 @@
                                     href="{{ route('service-groups.show', $service->serviceGroup) }}">{{ $service->serviceGroup ? $service->serviceGroup->name : '' }}</a>
                             </td>
                             <td class="px-4 py-2">
-                                <a href="{{ route('services.edit', $service) }}"
+                                <a href="{{ route('services.edit', array_merge(['service' => $service->id], request()->query())) }}"
                                     class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                 @if ($service->invoiceItems()->exists())
                                     <span class="tooltip"
@@ -79,7 +79,7 @@
                                             title="{{ __('Cannot delete service that is used in invoice items') }}">{{ __('Delete') }}</button>
                                     </span>
                                 @else
-                                    <form action="{{ route('services.destroy', $service) }}" method="POST"
+                                    <form action="{{ route('services.destroy', array_merge(['service' => $service->id], request()->query())) }}" method="POST"
                                         class="inline-block">
                                         @csrf
                                         @method('DELETE')

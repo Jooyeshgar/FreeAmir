@@ -106,7 +106,7 @@ class MonthlyAttendanceController extends Controller
         return redirect()->route('attendance.monthly-attendances.index')->with('success', __('Monthly attendance calculated successfully for all selected employees.'));
     }
 
-    public function show(MonthlyAttendance $monthlyAttendance): View
+    public function show(Request $request, MonthlyAttendance $monthlyAttendance): View
     {
         $monthlyAttendance->load([
             'employee.workShift',
@@ -154,7 +154,7 @@ class MonthlyAttendanceController extends Controller
 
         return view('monthly-attendances.show', compact('monthlyAttendance', 'decrees', 'allDays'))
             ->with('isAdminView', true)
-            ->with('backRoute', route('attendance.monthly-attendances.index'));
+            ->with('backRoute', route('attendance.monthly-attendances.index', $request->query()));
     }
 
     public function edit(MonthlyAttendance $monthlyAttendance): View
@@ -186,18 +186,18 @@ class MonthlyAttendanceController extends Controller
 
         $monthlyAttendance->update($validated);
 
-        return redirect()->route('attendance.monthly-attendances.show', $monthlyAttendance)
+        return redirect()->route('attendance.monthly-attendances.show', array_merge(['monthly_attendance' => $monthlyAttendance->id], $request->query()))
             ->with('success', __('Monthly attendance updated successfully.'));
     }
 
-    public function destroy(MonthlyAttendance $monthlyAttendance): RedirectResponse
+    public function destroy(Request $request, MonthlyAttendance $monthlyAttendance): RedirectResponse
     {
         $monthlyAttendance->employee->leave_remain += $monthlyAttendance->paid_leave - $monthlyAttendance->employee->workShift->paid_leave;
         $monthlyAttendance->employee->save();
 
         $monthlyAttendance->delete();
 
-        return redirect()->route('attendance.monthly-attendances.index')
+        return redirect()->route('attendance.monthly-attendances.index', $request->query())
             ->with('success', __('Monthly attendance deleted successfully.'));
     }
 

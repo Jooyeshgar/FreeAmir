@@ -177,14 +177,14 @@
                                     <a href="{{ route('product-groups.show', $product->productGroup) }}">{{ $product->productGroup->name }}</a>
                                 </td>
                                 <td class="px-4 py-2">
-                                    <a href="{{ route('products.edit', $product) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                    <a href="{{ route('products.edit', array_merge(['product' => $product->id], request()->query())) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                     @if ($product->invoiceItems()->exists())
                                         <span class="tooltip" data-tip="{{ __('Cannot delete product that is used in invoice items') }}">
                                             <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" disabled
                                                 title="{{ __('Cannot delete product that is used in invoice items') }}">{{ __('Delete') }}</button>
                                         </span>
                                     @else
-                                        <form action="{{ route('products.destroy', $product) }}" method="POST" class="inline-block">
+                                        <form action="{{ route('products.destroy', array_merge(['product' => $product->id], request()->query())) }}" method="POST" class="inline-block">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>

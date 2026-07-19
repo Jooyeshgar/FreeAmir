@@ -4,7 +4,7 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <span class="card-title">{{ $role ? __('Edit Role') : __('Add Role') }}</span>
-            <form action="{{ $role ? route('roles.update', $role->id) : route('roles.store') }}" method="POST">
+            <form action="{{ $role ? route('roles.update', array_merge(['role' => $role->id], request()->query())) : route('roles.store') }}" method="POST">
                 @csrf
                 @isset($role)
                     @method('PATCH')

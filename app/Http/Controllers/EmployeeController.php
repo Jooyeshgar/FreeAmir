@@ -174,15 +174,15 @@ class EmployeeController extends Controller
 
         $employee->update($validated);
 
-        return redirect()->route('hr.employees.index')
+        return redirect()->route('hr.employees.index', $request->query())
             ->with('success', __('Employee updated successfully.'));
     }
 
-    public function destroy(Employee $employee): RedirectResponse
+    public function destroy(Request $request, Employee $employee): RedirectResponse
     {
         $employee->delete();
 
-        return redirect()->route('hr.employees.index')
+        return redirect()->route('hr.employees.index', $request->query())
             ->with('success', __('Employee deleted successfully.'));
     }
 

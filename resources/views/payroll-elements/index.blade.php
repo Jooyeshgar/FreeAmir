@@ -68,13 +68,13 @@
                             </td>
                             <td class="flex gap-2">
                                 @can('salary.payroll-elements.edit')
-                                    <a href="{{ route('salary.payroll-elements.edit', $element) }}" class="btn btn-sm btn-info">
+                                    <a href="{{ route('salary.payroll-elements.edit', array_merge(['payroll_element' => $element->id], request()->query())) }}" class="btn btn-sm btn-info">
                                         {{ __('Edit') }}
                                     </a>
                                 @endcan
                                 @can('salary.payroll-elements.delete')
                                     @unless ($element->is_system_locked)
-                                        <form action="{{ route('salary.payroll-elements.destroy', $element) }}" method="POST" class="inline-block"
+                                        <form action="{{ route('salary.payroll-elements.destroy', array_merge(['payroll_element' => $element->id], request()->query())) }}" method="POST" class="inline-block"
                                             onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                             @csrf
                                             @method('DELETE')

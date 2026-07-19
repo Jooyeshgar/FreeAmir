@@ -490,7 +490,7 @@ class EmployeePortalController extends Controller
 
         $tab = $request->get('tab', 'leaves');
 
-        return redirect()->route('employee-portal.personnel-requests.index', ['tab' => $tab])
+        return redirect()->route('employee-portal.personnel-requests.index', array_merge($request->query(), ['tab' => $tab]))
             ->with('success', __('Your request has been updated successfully.'));
     }
 
@@ -514,7 +514,7 @@ class EmployeePortalController extends Controller
 
         $tab = $request->get('tab', 'leaves');
 
-        return redirect()->route('employee-portal.personnel-requests.index', ['tab' => $tab])
+        return redirect()->route('employee-portal.personnel-requests.index', array_merge($request->query(), ['tab' => $tab]))
             ->with('success', __('Your request has been deleted successfully.'));
     }
 }

@@ -124,17 +124,17 @@ class CustomerController extends Controller
 
         $this->service->update($customer, $validatedData);
 
-        return redirect()->route('customers.index')->with('success', __('Customer updated successfully.'));
+        return redirect()->route('customers.index', $request->query())->with('success', __('Customer updated successfully.'));
     }
 
-    public function destroy(Customer $customer)
+    public function destroy(Request $request, Customer $customer)
     {
         try {
             $this->service->delete($customer);
 
-            return redirect()->route('customers.index')->with('success', __('Customer deleted successfully.'));
+            return redirect()->route('customers.index', $request->query())->with('success', __('Customer deleted successfully.'));
         } catch (\Exception $e) {
-            return redirect()->route('customers.index')->with('error', $e->getMessage());
+            return redirect()->route('customers.index', $request->query())->with('error', $e->getMessage());
         }
     }
 

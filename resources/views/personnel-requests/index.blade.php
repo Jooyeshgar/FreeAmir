@@ -147,7 +147,7 @@
                                     @endcan
                                     @if($personnelRequest->status?->isPending())
                                         @can('hr.personnel-requests.edit')
-                                            <a href="{{ route('hr.personnel-requests.edit', ['tab' => $tab, 'personnel_request' => $personnelRequest->id]) }}" class="btn btn-sm btn-info">
+                                            <a href="{{ route('hr.personnel-requests.edit', array_merge(request()->query(), ['tab' => $tab, 'personnel_request' => $personnelRequest->id])) }}" class="btn btn-sm btn-info">
                                                 {{ __('Edit') }}
                                             </a>
                                         @endcan
@@ -156,7 +156,7 @@
                                     @endif
                                     @if(! $personnelRequest->status?->isApproved())
                                         @can('hr.personnel-requests.delete')
-                                            <form action="{{ route('hr.personnel-requests.destroy', ['tab' => $tab, 'personnel_request' => $personnelRequest->id]) }}" method="POST" class="inline-block"
+                                            <form action="{{ route('hr.personnel-requests.destroy', array_merge(request()->query(), ['tab' => $tab, 'personnel_request' => $personnelRequest->id])) }}" method="POST" class="inline-block"
                                                 onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                                 @csrf
                                                 @method('DELETE')

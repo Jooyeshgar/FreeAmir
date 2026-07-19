@@ -115,7 +115,7 @@
                 <div class="modal-box w-11/12 max-w-2xl overflow-visible relative">
                     <h3 class="font-bold text-lg">{{ __('Transfer Transactions') }}</h3>
 
-                    <form action="{{ route('subjects.transfer') }}" method="POST" x-data="{ createNewSubject: true }">
+                    <form action="{{ route('subjects.transfer', request()->query()) }}" method="POST" x-data="{ createNewSubject: true }">
                         @csrf
                         <x-input name="source_subject_id" x-bind:value="transferSourceId" hidden />
 

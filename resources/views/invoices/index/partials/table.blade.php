@@ -110,7 +110,7 @@
                     @endcan
 
                     @if (!$editDisabled)
-                        <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                        <a href="{{ route('invoices.edit', array_merge(['invoice' => $invoice->id], request()->query())) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                     @else
                         <span class="tooltip" data-tip="{{ $editTooltip }}">
                             <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Edit') }}</button>
@@ -118,7 +118,7 @@
                     @endif
 
                     @if (!$deleteDisabled)
-                        <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" class="inline-block">
+                        <form action="{{ route('invoices.destroy', array_merge(['invoice' => $invoice->id], request()->query())) }}" method="POST" class="inline-block">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>

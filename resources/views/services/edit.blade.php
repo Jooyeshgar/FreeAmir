@@ -1,6 +1,6 @@
 <x-app-layout :title="__('Edit Services')">
     <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('services.update', $service) }}" method="POST">
+        <form action="{{ route('services.update', array_merge(['service' => $service->id], request()->query())) }}" method="POST">
             @csrf
             @method('PUT')
             <div class="card-body">

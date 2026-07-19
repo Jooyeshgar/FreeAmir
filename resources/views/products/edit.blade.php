@@ -1,6 +1,6 @@
 <x-app-layout :title="__('Edit Products')">
     <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('products.update', $product) }}" method="POST">
+        <form action="{{ route('products.update', array_merge(['product' => $product->id], request()->query())) }}" method="POST">
             @csrf
             @method('PUT')
             <div class="card-body">

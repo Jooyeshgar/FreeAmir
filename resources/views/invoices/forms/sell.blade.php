@@ -277,7 +277,7 @@
 </x-card>
 
 <div class="mt-4 flex gap-2 justify-end">
-    <a href="{{ route('invoices.index', ['invoice_type' => 'sell']) }}" type="submit"
+    <a href="{{ route('invoices.index', array_merge(request()->query(), ['invoice_type' => 'sell'])) }}" type="submit"
         class="btn btn-default rounded-md dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-600">{{ __('cancel') }}</a>
     <button id="submitForm" type="submit" class="btn text-white btn-primary rounded-md">{{ __('save') }}
     </button>

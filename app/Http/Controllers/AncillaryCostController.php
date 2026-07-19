@@ -196,7 +196,7 @@ class AncillaryCostController extends Controller
                 ->with($msgType, $msg);
         }
 
-        return redirect()->route('ancillary-costs.index')->with($msgType, $msg);
+        return redirect()->route('ancillary-costs.index', $request->query())->with($msgType, $msg);
     }
 
     private function ancillaryCostMessage(array $result, string $action = 'created', bool $approved = false)
@@ -220,7 +220,7 @@ class AncillaryCostController extends Controller
         ];
     }
 
-    public function destroy(Invoice $invoice, AncillaryCost $ancillaryCost)
+    public function destroy(Request $request, Invoice $invoice, AncillaryCost $ancillaryCost)
     {
         $this->ensureInvoiceMatchesAncillaryCost($invoice, $ancillaryCost);
         if (AncillaryCostService::getEditDeleteStatus($ancillaryCost)['allowed'] === false) {
@@ -235,7 +235,7 @@ class AncillaryCostController extends Controller
                 ->with('success', __('Ancillary Cost deleted successfully.'));
         }
 
-        return redirect()->route('ancillary-costs.index')->with('success', __('Ancillary Cost deleted successfully.'));
+        return redirect()->route('ancillary-costs.index', $request->query())->with('success', __('Ancillary Cost deleted successfully.'));
     }
 
     public function getBuyInvoiceProducts($invoice_id)
@@ -247,7 +247,7 @@ class AncillaryCostController extends Controller
         }
 
         $invoiceItems = $invoice->items()
-            ->where('itemable_type', \App\Models\Product::class)
+            ->where('itemable_type', Product::class)
             ->with('itemable')
             ->get();
 
@@ -262,12 +262,11 @@ class AncillaryCostController extends Controller
         return response()->json(['products' => $products]);
     }
 
-    public function changeStatus(AncillaryCost $ancillaryCost, string $status, AncillaryCostService $service, ?Invoice $invoice = null)
+    public function changeStatus(Request $request, AncillaryCost $ancillaryCost, string $status, AncillaryCostService $service, ?Invoice $invoice = null)
     {
         $this->ensureInvoiceMatchesAncillaryCost($invoice, $ancillaryCost);
         if (! in_array($status, ['approve', 'unapprove'])) {
-            return redirect()->route('ancillary-costs.index')
-                ->with('error', __('Invalid status action.'));
+            return redirect()->route('ancillary-costs.index', $request->query())->with('error', __('Invalid status action.'));
         }
 
         auth()->user()->can('ancillary-costs.approve');

@@ -98,25 +98,25 @@ class PermissionController extends Controller
         $permission->syncRoles($roles);
 
         if ($permission->update(['name' => $validated['name']])) {
-            return redirect(route('permissions.index'))
+            return redirect(route('permissions.index', $request->query()))
                 ->with('success', __('Permission updated successfully'));
         }
 
-        return redirect(route('permissions.index'))
+        return redirect(route('permissions.index', $request->query()))
             ->with('error', __('An error occurred, Try again.'));
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Permission $permission)
+    public function destroy(Request $request, Permission $permission)
     {
         if ($permission->delete()) {
-            return redirect(route('permissions.index'))
+            return redirect(route('permissions.index', $request->query()))
                 ->with('success', __('Permission deleted successfully.'));
         }
 
-        return redirect(route('permissions.index'))
+        return redirect(route('permissions.index', $request->query()))
             ->with('error', __('An error occurred, Try again.'));
     }
 }

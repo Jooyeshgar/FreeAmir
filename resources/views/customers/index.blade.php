@@ -182,13 +182,13 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                                                 </svg>
                                             </a>
-                                            <a href="{{ route('customers.edit', $customer) }}" class="btn btn-xs btn-ghost btn-square" title="{{ __('Edit') }}">
+                                            <a href="{{ route('customers.edit', array_merge(['customer' => $customer->id], request()->query())) }}" class="btn btn-xs btn-ghost btn-square" title="{{ __('Edit') }}">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                         d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L8.582 18.07a4.5 4.5 0 0 1-1.897 1.13L3 20.25l1.05-3.685a4.5 4.5 0 0 1 1.13-1.897l11.682-11.681Z" />
                                                 </svg>
                                             </a>
-                                            <form action="{{ route('customers.destroy', $customer) }}" method="POST"
+                                            <form action="{{ route('customers.destroy', array_merge(['customer' => $customer->id], request()->query())) }}" method="POST"
                                                 onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                                 @csrf
                                                 @method('DELETE')

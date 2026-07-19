@@ -72,15 +72,15 @@ class OrgChartController extends Controller
 
         $orgChart->update($validated);
 
-        return redirect()->route('hr.org-charts.index')
+        return redirect()->route('hr.org-charts.index', $request->query())
             ->with('success', __('Organization chart node updated successfully.'));
     }
 
-    public function destroy(OrgChart $orgChart)
+    public function destroy(Request $request, OrgChart $orgChart)
     {
         $orgChart->delete();
 
-        return redirect()->route('hr.org-charts.index')
+        return redirect()->route('hr.org-charts.index', $request->query())
             ->with('success', __('Organization chart node deleted successfully.'));
     }
 }

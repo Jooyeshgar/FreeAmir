@@ -99,20 +99,20 @@ class PayrollElementController extends Controller
 
         $payrollElement->update($validated);
 
-        return redirect()->route('salary.payroll-elements.index')
+        return redirect()->route('salary.payroll-elements.index', $request->query())
             ->with('success', __('Payroll element updated successfully.'));
     }
 
-    public function destroy(PayrollElement $payrollElement): RedirectResponse
+    public function destroy(Request $request, PayrollElement $payrollElement): RedirectResponse
     {
         if ($payrollElement->is_system_locked) {
-            return redirect()->route('salary.payroll-elements.index')
+            return redirect()->route('salary.payroll-elements.index', $request->query())
                 ->with('error', __('This payroll element is system-locked and cannot be deleted.'));
         }
 
         $payrollElement->delete();
 
-        return redirect()->route('salary.payroll-elements.index')
+        return redirect()->route('salary.payroll-elements.index', $request->query())
             ->with('success', __('Payroll element deleted successfully.'));
     }
 }

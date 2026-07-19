@@ -136,16 +136,16 @@ class SalaryDecreeController extends Controller
             }
         });
 
-        return redirect()->route('salary.salary-decrees.index')
+        return redirect()->route('salary.salary-decrees.index', $request->query())
             ->with('success', __('Salary decree updated successfully.'));
     }
 
-    public function destroy(SalaryDecree $salaryDecree): RedirectResponse
+    public function destroy(Request $request, SalaryDecree $salaryDecree): RedirectResponse
     {
         $salaryDecree->benefits()->delete();
         $salaryDecree->delete();
 
-        return redirect()->route('salary.salary-decrees.index')
+        return redirect()->route('salary.salary-decrees.index', $request->query())
             ->with('success', __('Salary decree deleted successfully.'));
     }
 }

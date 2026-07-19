@@ -247,7 +247,7 @@
                                                 </a>
                                             @endif
                                             @can('hr.employees.edit')
-                                                <a href="{{ route('hr.employees.edit', $employee) }}" class="btn btn-xs btn-ghost btn-square"
+                                                <a href="{{ route('hr.employees.edit', array_merge(['employee' => $employee->id], request()->query())) }}" class="btn btn-xs btn-ghost btn-square"
                                                     title="{{ __('Edit') }}">
                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -256,7 +256,7 @@
                                                 </a>
                                             @endcan
                                             @can('hr.employees.delete')
-                                                <form action="{{ route('hr.employees.destroy', $employee) }}" method="POST"
+                                                <form action="{{ route('hr.employees.destroy', array_merge(['employee' => $employee->id], request()->query())) }}" method="POST"
                                                     onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                                     @csrf
                                                     @method('DELETE')

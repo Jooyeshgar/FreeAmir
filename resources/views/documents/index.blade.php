@@ -11,7 +11,7 @@
         <div class="flex flex-wrap items-center justify-start gap-2">
             <a href="{{ route('documents.create') }}" class="btn btn-primary btn-sm">{{ __('Create Document') }}</a>
             @can('documents.approve')
-                <form action="{{ route('documents.approve-all') }}" method="POST" class="inline-block" id="approve-all-form">
+                <form action="{{ route('documents.approve-all', request()->query()) }}" method="POST" class="inline-block" id="approve-all-form">
                     @csrf
                     <button type="submit" class="btn btn-success btn-sm">
                         {{ __('Approve All') }}
@@ -160,7 +160,7 @@
                                             </button>
                                         </span>
                                     @else
-                                        <a href="{{ route('documents.edit', $document->id) }}" class="btn btn-sm btn-warning btn-square" title="{{ __('Edit') }}">
+                                        <a href="{{ route('documents.edit', array_merge(['document' => $document->id], request()->query())) }}" class="btn btn-sm btn-warning btn-square" title="{{ __('Edit') }}">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -179,7 +179,7 @@
                                             </button>
                                         </span>
                                     @else
-                                        <form action="{{ route('documents.change-status', $document->id) }}" method="POST" class="inline-block">
+                                        <form action="{{ route('documents.change-status', array_merge(['document' => $document->id], request()->query())) }}" method="POST" class="inline-block">
                                             @csrf
                                             <button type="submit" class="btn btn-sm btn-square {{ $document->approved_at ? 'btn-error' : 'btn-success' }}"
                                                 title="{{ $document->approved_at ? __('Unapprove') : __('Approve') }}">
@@ -211,7 +211,7 @@
                                             </button>
                                         </span>
                                     @elseif (!$document->approved_at)
-                                        <form action="{{ route('documents.destroy', $document) }}" method="POST" class="inline-block delete-form">
+                                        <form action="{{ route('documents.destroy', array_merge(['document' => $document->id], request()->query())) }}" method="POST" class="inline-block delete-form">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-error btn-square" title="{{ __('Delete') }}">

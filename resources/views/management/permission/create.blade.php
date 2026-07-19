@@ -4,7 +4,7 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <span class="card-title">{{ $permission ? __('Edit Permission') : __('Add Permission') }}</span>
-            <form action="{{ $permission ? route('permissions.update', $permission->id) : route('permissions.store') }}"
+            <form action="{{ $permission ? route('permissions.update', array_merge(['permission' => $permission->id], request()->query())) : route('permissions.store') }}"
                 method="POST">
                 @csrf
                 @isset($permission)

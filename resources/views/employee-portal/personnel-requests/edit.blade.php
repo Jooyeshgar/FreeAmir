@@ -1,6 +1,6 @@
 <x-app-layout :title="$personnelRequest->request_type?->label()">
     <div class="card bg-base-100 shadow-xl">
-        <form action="{{ route('employee-portal.personnel-requests.update', $personnelRequest) }}" method="POST">
+        <form action="{{ route('employee-portal.personnel-requests.update', array_merge(['personnel_request' => $personnelRequest->id], request()->query())) }}" method="POST">
             @csrf
             @method('PUT')
             <x-input name="tab" value="{{ $tab }}" hidden />
@@ -11,7 +11,7 @@
                 @include('employee-portal.personnel-requests.form')
 
                 <div class="card-actions justify-end mt-4">
-                    <a href="{{ route('employee-portal.personnel-requests.index', ['tab' => $tab]) }}" class="btn btn-ghost">{{ __('Cancel') }}</a>
+                    <a href="{{ route('employee-portal.personnel-requests.index', array_merge(request()->query(), ['tab' => $tab])) }}" class="btn btn-ghost">{{ __('Cancel') }}</a>
                     <button type="submit" class="btn btn-primary">{{ __('Update') }}</button>
                 </div>
             </div>

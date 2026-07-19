@@ -24,12 +24,12 @@
                             <span class="badge badge-ghost badge-sm">{{ $permission->guard_name }}</span>
                             <div class="card-actions justify-end mt-2">
                                 @can('permissions.edit')
-                                    <a class="btn btn-xs btn-info" href="{{ route('permissions.edit', $permission->id) }}">
+                                    <a class="btn btn-xs btn-info" href="{{ route('permissions.edit', array_merge(['permission' => $permission->id], request()->query())) }}">
                                         {{ __('Edit') }}
                                     </a>
                                 @endcan
                                 @can('permissions.destroy')
-                                    <form action="{{ route('permissions.destroy', $permission->id) }}" method="post" class="inline mb-0">
+                                    <form action="{{ route('permissions.destroy', array_merge(['permission' => $permission->id], request()->query())) }}" method="post" class="inline mb-0">
                                         @csrf
                                         @method('DELETE')
                                         <button class="btn btn-xs btn-error" type="submit" onclick="return confirm('{{ __('Are you sure?') }}')">

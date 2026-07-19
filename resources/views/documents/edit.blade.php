@@ -6,7 +6,7 @@
     </div>
     <div>
 
-        <form action="{{ route('documents.update', $document) }}" method="POST">
+        <form action="{{ route('documents.update', array_merge(['document' => $document->id], request()->query())) }}" method="POST">
             <x-show-message-bags />
             @csrf
             @method('PUT')

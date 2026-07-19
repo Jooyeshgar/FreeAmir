@@ -348,14 +348,14 @@
                             </button>
                         </span>
                     @else
-                        <a href="{{ route('documents.edit', $document->id) }}" class="btn btn-primary gap-2">
+                        <a href="{{ route('documents.edit', array_merge(['document' => $document->id], request()->query())) }}" class="btn btn-primary gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                             {{ __('Edit') }}
                         </a>
-                        <form action="{{ route('documents.change-status', $document->id) }}" method="POST" class="inline-block">
+                        <form action="{{ route('documents.change-status', array_merge(['document' => $document->id], request()->query())) }}" method="POST" class="inline-block">
                             @csrf
                             <button type="submit" class="btn btn-active gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -378,7 +378,7 @@
                             </button>
                         </span>
                     @else
-                        <form action="{{ route('documents.destroy', $document) }}" method="POST" class="inline-block"
+                        <form action="{{ route('documents.destroy', array_merge(['document' => $document->id], request()->query())) }}" method="POST" class="inline-block"
                             onsubmit="return confirm('{{ __('Are you sure you want to delete this document?') }}')">
                             @csrf
                             @method('DELETE')

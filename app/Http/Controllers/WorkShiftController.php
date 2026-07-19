@@ -104,15 +104,15 @@ class WorkShiftController extends Controller
             'is_active' => $request->boolean('is_active'),
         ]));
 
-        return redirect()->route('attendance.work-shifts.index')
+        return redirect()->route('attendance.work-shifts.index', $request->query())
             ->with('success', __('Work shift updated successfully.'));
     }
 
-    public function destroy(WorkShift $workShift): RedirectResponse
+    public function destroy(Request $request, WorkShift $workShift): RedirectResponse
     {
         $workShift->delete();
 
-        return redirect()->route('attendance.work-shifts.index')
+        return redirect()->route('attendance.work-shifts.index', $request->query())
             ->with('success', __('Work shift deleted successfully.'));
     }
 

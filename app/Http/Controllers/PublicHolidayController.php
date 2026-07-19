@@ -69,15 +69,15 @@ class PublicHolidayController extends Controller
 
         $publicHoliday->update($validated);
 
-        return redirect()->route('salary.public-holidays.index')
+        return redirect()->route('salary.public-holidays.index', $request->query())
             ->with('success', __('Public holiday updated successfully.'));
     }
 
-    public function destroy(PublicHoliday $publicHoliday): RedirectResponse
+    public function destroy(Request $request, PublicHoliday $publicHoliday): RedirectResponse
     {
         $publicHoliday->delete();
 
-        return redirect()->route('salary.public-holidays.index')
+        return redirect()->route('salary.public-holidays.index', $request->query())
             ->with('success', __('Public holiday deleted successfully.'));
     }
 }

@@ -126,7 +126,7 @@ class ProductController extends Controller
 
         $this->productService->update($product, $validatedData);
 
-        return redirect()->route('products.index')->with('success', __('Product updated successfully.'));
+        return redirect()->route('products.index', $request->query())->with('success', __('Product updated successfully.'));
     }
 
     public function show(Product $product)
@@ -152,11 +152,11 @@ class ProductController extends Controller
         return view('products.show', compact('product', 'historyItems'));
     }
 
-    public function destroy(Product $product)
+    public function destroy(Request $request, Product $product)
     {
         $this->productService->delete($product);
 
-        return redirect()->route('products.index')->with('success', __('Product deleted successfully.'));
+        return redirect()->route('products.index', $request->query())->with('success', __('Product deleted successfully.'));
     }
 
     public function export(): StreamedResponse

@@ -43,12 +43,12 @@
                             <td>{{ $orgChart->description ?? '-' }}</td>
                             <td class="flex gap-2">
                                 @can('hr.org-charts.edit')
-                                    <a href="{{ route('hr.org-charts.edit', $orgChart) }}" class="btn btn-sm btn-info">
+                                    <a href="{{ route('hr.org-charts.edit', array_merge(['org_chart' => $orgChart->id], request()->query())) }}" class="btn btn-sm btn-info">
                                         {{ __('Edit') }}
                                     </a>
                                 @endcan
                                 @can('hr.org-charts.delete')
-                                    <form action="{{ route('hr.org-charts.destroy', $orgChart) }}" method="POST" class="inline-block"
+                                    <form action="{{ route('hr.org-charts.destroy', array_merge(['org_chart' => $orgChart->id], request()->query())) }}" method="POST" class="inline-block"
                                         onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                         @csrf
                                         @method('DELETE')

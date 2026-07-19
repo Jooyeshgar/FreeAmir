@@ -1,6 +1,6 @@
 <x-app-layout title="{{ __('Edit Invoice') }} #{{ formatDocumentNumber($invoice->number) }}">
     <div>
-        <form action="{{ route('invoices.update', $invoice) }}" method="POST">
+        <form action="{{ route('invoices.update', array_merge(['invoice' => $invoice->id], request()->query())) }}" method="POST">
             @csrf
             @method('PUT')
             <div class="card-body">

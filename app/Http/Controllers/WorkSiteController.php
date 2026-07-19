@@ -75,15 +75,15 @@ class WorkSiteController extends Controller
             ['is_active' => $request->boolean('is_active', false)]
         ));
 
-        return redirect()->route('salary.work-sites.index')
+        return redirect()->route('salary.work-sites.index', $request->query())
             ->with('success', __('Work site updated successfully.'));
     }
 
-    public function destroy(WorkSite $workSite): RedirectResponse
+    public function destroy(Request $request, WorkSite $workSite): RedirectResponse
     {
         $workSite->delete();
 
-        return redirect()->route('salary.work-sites.index')
+        return redirect()->route('salary.work-sites.index', $request->query())
             ->with('success', __('Work site deleted successfully.'));
     }
 }

@@ -59,12 +59,12 @@
                                 </td>
                                 <td class="flex gap-2">
                                     @can('hr.organization-units.edit')
-                                        <a href="{{ route('hr.organization-units.edit', $organizationUnit) }}" class="btn btn-sm btn-info">
+                                        <a href="{{ route('hr.organization-units.edit', array_merge(['organization_unit' => $organizationUnit->id], request()->query())) }}" class="btn btn-sm btn-info">
                                             {{ __('Edit') }}
                                         </a>
                                     @endcan
                                     @can('hr.organization-units.destroy')
-                                        <form action="{{ route('hr.organization-units.destroy', $organizationUnit) }}" method="POST" class="inline-block"
+                                        <form action="{{ route('hr.organization-units.destroy', array_merge(['organization_unit' => $organizationUnit->id], request()->query())) }}" method="POST" class="inline-block"
                                             onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                             @csrf
                                             @method('DELETE')

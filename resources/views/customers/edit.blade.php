@@ -1,6 +1,6 @@
 <x-app-layout :title="__('Edit customer')">
     <div class="card-title">{{ __('Edit customer') }}</div>
-    <form action="{{ route('customers.update', $customer) }}" method="POST" class="relative">
+    <form action="{{ route('customers.update', array_merge(['customer' => $customer->id], request()->query())) }}" method="POST" class="relative">
         <div class="card bg-base-100 shadow-xl rounded-xl">
             @csrf
             @method('PUT')

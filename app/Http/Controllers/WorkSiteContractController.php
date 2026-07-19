@@ -77,15 +77,15 @@ class WorkSiteContractController extends Controller
 
         $workSiteContract->update($validated);
 
-        return redirect()->route('salary.work-site-contracts.index')
+        return redirect()->route('salary.work-site-contracts.index', $request->query())
             ->with('success', __('Work site contract updated successfully.'));
     }
 
-    public function destroy(WorkSiteContract $workSiteContract)
+    public function destroy(Request $request, WorkSiteContract $workSiteContract)
     {
         $workSiteContract->delete();
 
-        return redirect()->route('salary.work-site-contracts.index')
+        return redirect()->route('salary.work-site-contracts.index', $request->query())
             ->with('success', __('Work site contract deleted successfully.'));
     }
 }

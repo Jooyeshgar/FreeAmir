@@ -35,12 +35,12 @@
                             <td>{{ $publicHoliday->name }}</td>
                             <td class="flex gap-2">
                                 @can('salary.public-holidays.edit')
-                                    <a href="{{ route('salary.public-holidays.edit', $publicHoliday) }}" class="btn btn-sm btn-info">
+                                    <a href="{{ route('salary.public-holidays.edit', array_merge(['public_holiday' => $publicHoliday->id], request()->query())) }}" class="btn btn-sm btn-info">
                                         {{ __('Edit') }}
                                     </a>
                                 @endcan
                                 @can('salary.public-holidays.delete')
-                                    <form action="{{ route('salary.public-holidays.destroy', $publicHoliday) }}" method="POST" class="inline-block"
+                                    <form action="{{ route('salary.public-holidays.destroy', array_merge(['public_holiday' => $publicHoliday->id], request()->query())) }}" method="POST" class="inline-block"
                                         onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                         @csrf
                                         @method('DELETE')

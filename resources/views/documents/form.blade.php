@@ -195,7 +195,7 @@
     </div>
 </x-card>
 <div class="mt-4 flex gap-2 justify-end">
-    <a href="{{ route('documents.index') }}" type="submit" class="btn btn-default rounded-md dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-600"> {{ __('cancel') }}
+    <a href="{{ route('documents.index', request()->query()) }}" type="submit" class="btn btn-default rounded-md dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-600"> {{ __('cancel') }}
     </a>
     @if(! $document->exists)
         <button id="submitFormPlus" type="submit" name="submit_action" value="create_new" class="btn btn-default rounded-md dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-600">

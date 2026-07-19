@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Management;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -21,14 +22,12 @@ class RoleController extends Controller
 
     public $messages = [];
 
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -110,25 +109,25 @@ class RoleController extends Controller
         }
 
         if ($role->update($validated)) {
-            return redirect()->route('roles.index')
+            return redirect()->route('roles.index', $request->query())
                 ->with('success', __('Role updated successfully.'));
         }
 
-        return redirect()->route('roles.index')
+        return redirect()->route('roles.index', $request->query())
             ->with('error', 'An error occurred, Try again.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Role $role)
+    public function destroy(Request $request, Role $role)
     {
         if ($role->delete()) {
-            return redirect(route('roles.index'))
+            return redirect(route('roles.index', $request->query()))
                 ->with('success', __('Role deleted successfully.'));
         }
 
-        return redirect(route('roles.index'))
+        return redirect(route('roles.index', $request->query()))
             ->with('error', 'An error occurred, Try again.');
     }
 }

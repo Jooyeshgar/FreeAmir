@@ -27,11 +27,11 @@
                         <td class="center-align">{{ $role->guard_name }}</td>
                         <td class="center-align">
                             @can('roles.edit')
-                                <a class="btn btn-sm btn-info" href="{{ route('roles.edit', $role->id) }}">
+                                <a class="btn btn-sm btn-info" href="{{ route('roles.edit', array_merge(['role' => $role->id], request()->query())) }}">
                                     {{ __('Edit') }}</a>
                             @endcan
                             @can('roles.destroy')
-                                <form action="{{ route('roles.destroy', $role->id) }}" method="POST" class="inline-block">
+                                <form action="{{ route('roles.destroy', array_merge(['role' => $role->id], request()->query())) }}" method="POST" class="inline-block">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" onclick="return confirm('{{ __('Are you sure?') }}')"

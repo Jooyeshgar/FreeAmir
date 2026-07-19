@@ -53,12 +53,12 @@
                             </td>
                             <td class="flex gap-2">
                                 @can('attendance.work-shifts.edit')
-                                    <a href="{{ route('attendance.work-shifts.edit', $workShift) }}" class="btn btn-sm btn-info">
+                                    <a href="{{ route('attendance.work-shifts.edit', array_merge(['work_shift' => $workShift->id], request()->query())) }}" class="btn btn-sm btn-info">
                                         {{ __('Edit') }}
                                     </a>
                                 @endcan
                                 @can('attendance.work-shifts.delete')
-                                    <form action="{{ route('attendance.work-shifts.destroy', $workShift) }}" method="POST" class="inline-block mb-0"
+                                    <form action="{{ route('attendance.work-shifts.destroy', array_merge(['work_shift' => $workShift->id], request()->query())) }}" method="POST" class="inline-block mb-0"
                                         onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                         @csrf
                                         @method('DELETE')

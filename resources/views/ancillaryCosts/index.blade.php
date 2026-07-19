@@ -75,7 +75,10 @@
 
                                 @can('ancillary-costs.approve')
                                     @if ($ancillaryCost->changeStatusValidation['allowed'])
-                                        <form method="POST" action="{{ route('ancillary-costs.change-status', [$ancillaryCost, $ancillaryCost->status?->isApproved() ? 'unapprove' : 'approve']) }}" class="inline-block">
+                                        <form method="POST" action="{{ route('ancillary-costs.change-status', [
+                                            'ancillary_cost' => $ancillaryCost->id,
+                                            'status' => $ancillaryCost->status?->isApproved() ? 'unapprove' : 'approve',
+                                        ]).(request()->getQueryString() ? '?'.request()->getQueryString() : '') }}" class="inline-block">
                                             @csrf
                                             <button type="submit" x-data="{}" class="btn btn-sm {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }}">
                                                 {{ __($ancillaryCost->status?->isApproved() ? 'Unapprove' : 'Approve') }}

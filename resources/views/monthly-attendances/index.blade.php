@@ -80,17 +80,17 @@
                                 <td>{{ $attendance->overtime }}</td>
                                 <td class="flex gap-2">
                                     @can('attendance.monthly-attendances.show')
-                                        <a href="{{ route('attendance.monthly-attendances.show', $attendance) }}" class="btn btn-sm btn-info">
+                                        <a href="{{ route('attendance.monthly-attendances.show', array_merge(['monthly_attendance' => $attendance->id], request()->query())) }}" class="btn btn-sm btn-info">
                                             {{ __('View') }}
                                         </a>
                                     @endcan
                                     @can('attendance.monthly-attendances.edit')
-                                        <a href="{{ route('attendance.monthly-attendances.edit', $attendance) }}" class="btn btn-sm btn-warning">
+                                        <a href="{{ route('attendance.monthly-attendances.edit', array_merge(['monthly_attendance' => $attendance->id], request()->query())) }}" class="btn btn-sm btn-warning">
                                             {{ __('Edit') }}
                                         </a>
                                     @endcan
                                     @can('attendance.monthly-attendances.delete')
-                                        <form action="{{ route('attendance.monthly-attendances.destroy', $attendance) }}" method="POST" class="inline-block"
+                                        <form action="{{ route('attendance.monthly-attendances.destroy', array_merge(['monthly_attendance' => $attendance->id], request()->query())) }}" method="POST" class="inline-block"
                                             onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                             @csrf
                                             @method('DELETE')
@@ -105,7 +105,7 @@
                                         </a>
                                     @else
                                         @can('salary.payrolls.create')
-                                            <a href="{{ route('attendance.monthly-attendances.show', $attendance) }}" class="btn btn-sm btn-ghost btn-outline">
+                                            <a href="{{ route('attendance.monthly-attendances.show', array_merge(['monthly_attendance' => $attendance->id], request()->query())) }}" class="btn btn-sm btn-ghost btn-outline">
                                                 {{ __('Create Payroll') }}
                                             </a>
                                         @endcan

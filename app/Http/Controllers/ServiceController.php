@@ -77,14 +77,14 @@ class ServiceController extends Controller
 
         $this->serviceService->update($service, $validatedData);
 
-        return redirect()->route('services.index')->with('success', __('Service updated successfully.'));
+        return redirect()->route('services.index', $request->query())->with('success', __('Service updated successfully.'));
     }
 
-    public function destroy(Service $service)
+    public function destroy(Request $request, Service $service)
     {
         $this->serviceService->delete($service);
 
-        return redirect()->route('services.index')->with('success', __('Service deleted successfully.'));
+        return redirect()->route('services.index', $request->query())->with('success', __('Service deleted successfully.'));
     }
 
     public function export(): StreamedResponse

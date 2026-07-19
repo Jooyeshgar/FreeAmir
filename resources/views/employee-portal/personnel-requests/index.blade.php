@@ -94,10 +94,10 @@
                                 </td>
                                 <td>
                                     @if ($req->status?->isPending())
-                                        <a href="{{ route('employee-portal.personnel-requests.edit', ['tab' => $tab, 'personnel_request' => $req->id]) }}" class="btn btn-sm btn-info">
+                                        <a href="{{ route('employee-portal.personnel-requests.edit', array_merge(request()->query(), ['tab' => $tab, 'personnel_request' => $req->id])) }}" class="btn btn-sm btn-info">
                                             {{ __('Edit') }}
                                         </a>
-                                        <form action="{{ route('employee-portal.personnel-requests.destroy', ['tab' => $tab, 'personnel_request' => $req->id]) }}" method="POST" class="inline-block"
+                                        <form action="{{ route('employee-portal.personnel-requests.destroy', array_merge(request()->query(), ['tab' => $tab, 'personnel_request' => $req->id])) }}" method="POST" class="inline-block"
                                             onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                             @csrf
                                             @method('DELETE')

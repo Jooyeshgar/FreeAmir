@@ -209,7 +209,7 @@ class SubjectController extends Controller
             return redirect()->back()->withErrors(['code' => $e->getMessage()])->withInput();
         }
 
-        $response = redirect()->route('subjects.index')
+        $response = redirect()->route('subjects.index', $request->query())
             ->with('success', __(':count transactions transferred successfully. Total sum: :sum', ['count' => $result['count'], 'sum' => formatNumber($result['sum'] ?? 0)]));
 
         if (isset($result['source_removed'])) {

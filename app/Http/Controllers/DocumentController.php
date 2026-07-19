@@ -187,12 +187,12 @@ class DocumentController extends Controller
         return redirect()->route('documents.sort-numbers');
     }
 
-    public function edit($id)
+    public function edit(Request $request, $id)
     {
         $document = Document::find($id);
         if ($document) {
             if ($document->documentable) {
-                return redirect()->route('documents.index')->with('error', __('Cannot edit this document because it is linked to').' '.__(class_basename($document->documentable_type)).'.');
+                return redirect()->route('documents.index', $request->query())->with('error', __('Cannot edit this document because it is linked to').' '.__(class_basename($document->documentable_type)).'.');
             }
 
             $transactionModels = $document->transactions()->with('subject')->get();
@@ -248,7 +248,7 @@ class DocumentController extends Controller
 
             return view('documents.edit', compact('previousDocumentNumber', 'document', 'subjects', 'transactions', 'total'));
         } else {
-            return redirect()->route('documents.index')->with('error', 'Document not found.');
+            return redirect()->route('documents.index', $request->query())->with('error', 'Document not found.');
         }
     }
 
@@ -266,14 +266,14 @@ class DocumentController extends Controller
 
         DocumentService::updateDocumentTransactions($document->id, $request->input('transactions'));
 
-        return redirect()->route('documents.index')->with('success', __('Document updated successfully.'));
+        return redirect()->route('documents.index', $request->query())->with('success', __('Document updated successfully.'));
     }
 
-    public function destroy(int $documentId)
+    public function destroy(Request $request, int $documentId)
     {
         DocumentService::deleteDocument($documentId);
 
-        return redirect()->route('documents.index')->with('success', __('Document deleted successfully.'));
+        return redirect()->route('documents.index', $request->query())->with('success', __('Document deleted successfully.'));
     }
 
     /**
@@ -428,7 +428,7 @@ class DocumentController extends Controller
         $status = $document->approved_at ? 'unapproved' : 'approved';
         DocumentService::changeDocumentStatus($document, $request->user(), $status);
 
-        return redirect()->route('documents.index')->with('success', __('Document status changed successfully.'));
+        return redirect()->route('documents.index', $request->query())->with('success', __('Document status changed successfully.'));
     }
 
     public function approveAll(Request $request)
@@ -445,6 +445,6 @@ class DocumentController extends Controller
             $message .= ' '.__(':skipped documents were skipped because their transactions are not balanced.', ['skipped' => $result['skipped']]);
         }
 
-        return redirect()->route('documents.index')->with('success', $message);
+        return redirect()->route('documents.index', $request->query())->with('success', $message);
     }
 }
