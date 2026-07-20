@@ -48,6 +48,10 @@ class Subject extends Model
                 throw new Exception(__('Cannot delete subject with children'));
             }
 
+            if ($subject->monthlyBudgets()->exists()) {
+                throw new Exception(__('Cannot delete subject with monthly budgets'));
+            }
+
             if ($subject->transactions()->exists()) {
                 throw new Exception(__('Cannot delete subject with transactions'));
             }
@@ -106,6 +110,11 @@ class Subject extends Model
     public function transactions()
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    public function monthlyBudgets(): HasMany
+    {
+        return $this->hasMany(MonthlyBudget::class);
     }
 
     public function getRoot()
