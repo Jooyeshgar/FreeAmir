@@ -23,10 +23,12 @@ use App\Services\PaymentService;
 use DB;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use PDF;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class InvoiceController extends Controller
 {
@@ -54,6 +56,100 @@ class InvoiceController extends Controller
             fn ($q) => $q->with('latestMoadianHistory')
         );
 
+        $isServiceBuy = $this->isServiceBuyFilterActive($request, $invoiceType);
+        $this->applyInvoiceFilters($builder, $request, $invoiceType, $isServiceBuy);
+
+        $statsBuilder = $builder->clone();
+
+        $builder->when($status !== null, fn ($invoice) => $invoice->where('status', $status));
+
+        $invoices = $builder->paginate(25);
+
+        $statusCounts = $statsBuilder->reorder()->toBase()->select('status', DB::raw('count(*) as total'))->groupBy('status')->pluck('total', 'status');
+
+        $invoices->transform(function ($invoice) {
+            $invoice->changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
+
+            return $invoice;
+        });
+
+        $totalsBuilder = $statsBuilder->clone();
+        $invoices->totalAmount = $totalsBuilder->toBase()->sum('amount');
+
+        $itemTotals = DB::table('invoice_items')->whereIn('invoice_id', $statsBuilder->clone()->toBase()->select('id'))
+            ->selectRaw('itemable_type, SUM(quantity) as total_quantity')->groupBy('itemable_type')->pluck('total_quantity', 'itemable_type');
+
+        $invoices->totalProductsQuantity = $itemTotals[Product::class] ?? 0;
+        $invoices->totalServicesQuantity = $itemTotals[Service::class] ?? 0;
+
+        return view('invoices.index', ['invoices' => $invoices, 'statusCounts' => $statusCounts, 'service_buy' => $isServiceBuy]);
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $invoiceType = InvoiceType::tryFromName($request->invoice_type);
+        $status = InvoiceStatus::tryFromName($request->status);
+
+        $builder = Invoice::with(['customer', 'document', 'items'])->orderByDesc('date')->orderByDesc('number');
+
+        $isServiceBuy = $this->isServiceBuyFilterActive($request, $invoiceType);
+        $this->applyInvoiceFilters($builder, $request, $invoiceType, $isServiceBuy);
+
+        $builder->when($status !== null, fn ($invoice) => $invoice->where('status', $status));
+
+        $headers = [
+            __('Invoice Number'),
+            __('Customer Name'),
+            __('Date'),
+            __('Document Number'),
+            __('Before discounts and tax'),
+            __('Discounts'),
+            __('Tax'),
+            __('Amount'),
+            __('Amount - Discounts'),
+        ];
+
+        $filename = 'invoices_'.now()->format('YmdHis').'.csv';
+
+        return response()->streamDownload(function () use ($builder, $headers) {
+            $file = fopen('php://output', 'w');
+
+            // UTF-8 BOM so Excel reads translated headers and Persian text correctly.
+            fwrite($file, "\xEF\xBB\xBF");
+            fputcsv($file, $headers);
+
+            $builder->chunk(200, function ($invoices) use ($file) {
+                foreach ($invoices as $invoice) {
+                    $subtotal = $invoice->items->sum(fn ($item) => (float) $item->quantity * (float) $item->unit_price);
+                    $discounts = (float) $invoice->items->sum('unit_discount');
+
+                    fputcsv($file, [
+                        $invoice->number,
+                        $invoice->customer?->name,
+                        formatDate($invoice->date),
+                        $invoice->document?->number,
+                        $subtotal,
+                        $discounts,
+                        (float) $invoice->items->sum('vat'),
+                        (float) $invoice->amount - (float) $invoice->subtraction,
+                        $subtotal - $discounts,
+                    ]);
+                }
+            });
+
+            fclose($file);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    private function isServiceBuyFilterActive(Request $request, ?InvoiceType $invoiceType): bool
+    {
+        return in_array($invoiceType, [InvoiceType::BUY, InvoiceType::RETURN_BUY], true) && $request->boolean('service_buy');
+    }
+
+    private function applyInvoiceFilters(Builder $builder, Request $request, ?InvoiceType $invoiceType, bool $isServiceBuy): void
+    {
         $builder->when($invoiceType !== null,
             fn ($invoice) => $invoice->where('invoice_type', $invoiceType)
         );
@@ -80,14 +176,11 @@ class InvoiceController extends Controller
             })
         );
 
-        $service_buy = in_array($invoiceType, [InvoiceType::BUY, InvoiceType::RETURN_BUY], true)
-            && $request->filled('service_buy') && $request->service_buy == '1';
-
-        $builder->when($service_buy, fn ($q) => $q->whereHas('items', function ($item) {
+        $builder->when($isServiceBuy, fn ($q) => $q->whereHas('items', function ($item) {
             $item->where('itemable_type', Service::class);
         }));
 
-        $builder->when(! $service_buy && ! in_array($invoiceType, [InvoiceType::SELL, InvoiceType::RETURN_SELL], true), fn ($q) => $q->whereHas('items', function ($item) {
+        $builder->when(! $isServiceBuy && ! in_array($invoiceType, [InvoiceType::SELL, InvoiceType::RETURN_SELL], true), fn ($q) => $q->whereHas('items', function ($item) {
             $item->where('itemable_type', Product::class);
         }));
 
@@ -102,40 +195,6 @@ class InvoiceController extends Controller
                 }
             }
         );
-
-        $statsBuilder = $builder->clone();
-
-        $builder->when($status !== null,
-            fn ($invoice) => $invoice->where('status', $status)
-        );
-
-        $invoices = $builder->paginate(25);
-
-        $statusCounts = $statsBuilder->reorder()
-            ->toBase()
-            ->select('status', DB::raw('count(*) as total'))
-            ->groupBy('status')
-            ->pluck('total', 'status');
-
-        $invoices->transform(function ($invoice) {
-            $invoice->changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
-
-            return $invoice;
-        });
-
-        $totalsBuilder = $statsBuilder->clone();
-        $invoices->totalAmount = $totalsBuilder->toBase()->sum('amount');
-
-        $itemTotals = DB::table('invoice_items')
-            ->whereIn('invoice_id', $statsBuilder->clone()->toBase()->select('id'))
-            ->selectRaw('itemable_type, SUM(quantity) as total_quantity')
-            ->groupBy('itemable_type')
-            ->pluck('total_quantity', 'itemable_type');
-
-        $invoices->totalProductsQuantity = $itemTotals[Product::class] ?? 0;
-        $invoices->totalServicesQuantity = $itemTotals[Service::class] ?? 0;
-
-        return view('invoices.index', compact('invoices', 'statusCounts', 'service_buy'));
     }
 
     /**
