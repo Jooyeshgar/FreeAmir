@@ -47,12 +47,7 @@ class InvoiceCsvExportTest extends TestCase
 
     public function test_export_uses_filters_and_writes_the_nine_requested_columns(): void
     {
-        $document = Document::create([
-            'number' => 7001,
-            'date' => '2026-06-10',
-            'creator_id' => $this->user->id,
-            'company_id' => $this->companyId,
-        ]);
+        $document = Document::create(['number' => 7001, 'date' => '2026-06-10', 'creator_id' => $this->user->id, 'company_id' => $this->companyId]);
 
         $included = $this->invoice([
             'number' => 1001,
@@ -89,10 +84,10 @@ class InvoiceCsvExportTest extends TestCase
             'Date',
             'Document Number',
             'Before discounts and tax',
-            'Total deductions',
-            'Collected tax',
-            'Payable amount',
-            'amount - discounts',
+            'Discounts',
+            'Tax',
+            'Amount',
+            'Amount - Discounts',
         ], $rows[0]);
         $this->assertCount(2, $rows);
         $this->assertEquals(1001, (float) $rows[1][0]);
@@ -120,9 +115,9 @@ class InvoiceCsvExportTest extends TestCase
             'تاریخ',
             'شماره',
             'قبل از تخفیف و مالیات',
-            'مجموع کسورات',
-            'مالیات جمع آوری شده',
-            'مبلغ قابل پرداخت',
+            'تخفیف ها',
+            'مالیات',
+            'مبلغ',
             'مبلغ پس از تخفیف',
         ], $headers);
     }
