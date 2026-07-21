@@ -83,8 +83,9 @@ class MonthlyBudgetController extends Controller
         $validated = $request->validate([
             'month' => ['nullable', 'integer', 'between:1,12'],
         ]);
-        $fiscalYear = $this->activeFiscalYear();
-        $selectedMonth = (int) ($validated['month'] ?? $this->defaultMonth($fiscalYear));
+        $fiscalYear = (int) (config('active-company-fiscal-year') ?? toEnglish(jdate('Y')));
+        $currentYear = (int) toEnglish(jdate('Y'));
+        $selectedMonth = (int) ($validated['month'] ?? ($fiscalYear === $currentYear ? toEnglish(jdate('n')) : 1));
         $subjects = Subject::query()->where('is_permanent', false)->orderBy('code')->get(['id', 'code', 'name', 'parent_id']);
         $subjectTree = $this->subjectService->buildSubjectTreeFromCollection($subjects);
         $selectedSubject = Subject::query()->where('is_permanent', false)->find($request->old('subject_id'));
@@ -97,17 +98,5 @@ class MonthlyBudgetController extends Controller
             ],
             $this->service->analysis($selectedMonth, $calculateExpenses)
         ));
-    }
-
-    private function activeFiscalYear(): int
-    {
-        return (int) (config('active-company-fiscal-year') ?? toEnglish(jdate('Y')));
-    }
-
-    private function defaultMonth(int $fiscalYear): int
-    {
-        $currentYear = (int) toEnglish(jdate('Y'));
-
-        return $fiscalYear === $currentYear ? (int) toEnglish(jdate('n')) : 1;
     }
 }

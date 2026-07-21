@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\FiscalYearSection;
 use App\Enums\SubjectType;
 use App\Models\Company;
 use App\Models\Document;
@@ -9,8 +10,10 @@ use App\Models\MonthlyBudget;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\FiscalYearService;
 use App\Services\MonthlyBudgetService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -22,6 +25,8 @@ class MonthlyBudgetTest extends TestCase
 
     private User $user;
 
+    private MonthlyBudgetService $service;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -30,12 +35,60 @@ class MonthlyBudgetTest extends TestCase
         $this->user = User::factory()->create();
         $this->company->users()->syncWithoutDetaching([$this->user->id]);
 
+        $this->service = new MonthlyBudgetService;
+
         $this->withCookies(['active-company-id' => (string) $this->company->id]);
         $_COOKIE['active-company-id'] = (string) $this->company->id;
         config([
             'active-company-id' => $this->company->id,
             'active-company-fiscal-year' => 1405,
         ]);
+    }
+
+    private function temporarySubject(string $name, SubjectType $type): Subject
+    {
+        return Subject::factory()->create([
+            'company_id' => $this->company->id,
+            'name' => $name,
+            'type' => $type,
+            'is_permanent' => false,
+            'parent_id' => null,
+        ]);
+    }
+
+    private function budget(Subject $subject, string $type, float|int|string $amount, int $month): MonthlyBudget
+    {
+        return MonthlyBudget::create([
+            'company_id' => $this->company->id,
+            'subject_id' => $subject->id,
+            'month' => $month,
+            'budget_type' => $type,
+            'forecast_amount' => $amount,
+        ]);
+    }
+
+    private function transaction(Subject $subject, int $value, int $month): void
+    {
+        $document = Document::create([
+            'number' => Document::withoutGlobalScopes()->max('number') + 1,
+            'date' => jalali_to_gregorian(1405, $month, 10, '-'),
+            'creator_id' => $this->user->id,
+            'title' => 'budget actual',
+            'company_id' => $this->company->id,
+        ]);
+
+        Transaction::create([
+            'value' => $value,
+            'subject_id' => $subject->id,
+            'document_id' => $document->id,
+            'user_id' => $this->user->id,
+            'desc' => 'budget test',
+        ]);
+    }
+
+    private function grant(string ...$permissions): void
+    {
+        $this->user->givePermissionTo(collect($permissions)->map(fn (string $permission) => Permission::firstOrCreate(['name' => $permission]))->all());
     }
 
     public function test_authorized_user_can_view_subject_level_budget_analysis(): void
@@ -184,7 +237,7 @@ class MonthlyBudgetTest extends TestCase
         $this->transaction($expense, -500, 6);
         $this->transaction($unbudgetedExpense, -900, 5);
 
-        $analysis = $this->service()->analysis(5, true);
+        $analysis = $this->service->analysis(5, true);
         $expenseLine = $analysis['budgetLines']->firstWhere('type', 'expense');
 
         $this->assertSame(1200.0, $analysis['actualIncome']);
@@ -201,7 +254,7 @@ class MonthlyBudgetTest extends TestCase
         $this->budget($expense, 'expense', 800, 5);
         $this->transaction($expense, -700, 5);
 
-        $withoutCalculation = $this->service()->analysis(5);
+        $withoutCalculation = $this->service->analysis(5);
 
         $this->assertNull($withoutCalculation['actualExpense']);
         $this->assertNull($withoutCalculation['expenseVariance']);
@@ -237,54 +290,63 @@ class MonthlyBudgetTest extends TestCase
         $subject->delete();
     }
 
-    private function service(): MonthlyBudgetService
+    public function test_subjects_export_includes_monthly_budgets(): void
     {
-        return new MonthlyBudgetService;
-    }
-
-    private function temporarySubject(string $name, SubjectType $type): Subject
-    {
-        return Subject::factory()->create([
-            'company_id' => $this->company->id,
-            'name' => $name,
-            'type' => $type,
-            'is_permanent' => false,
-            'parent_id' => null,
-        ]);
-    }
-
-    private function budget(Subject $subject, string $type, float|int|string $amount, int $month): MonthlyBudget
-    {
-        return MonthlyBudget::create([
+        $subject = Subject::factory()->create(['is_permanent' => false]);
+        $budget = MonthlyBudget::create([
             'company_id' => $this->company->id,
             'subject_id' => $subject->id,
-            'month' => $month,
-            'budget_type' => $type,
-            'forecast_amount' => $amount,
+            'month' => 4,
+            'budget_type' => 'income',
+            'forecast_amount' => 125000,
         ]);
+
+        $exportData = FiscalYearService::exportData($this->company->id, [FiscalYearSection::SUBJECTS->value]);
+
+        $this->assertArrayHasKey('monthly_budgets', $exportData);
+        $this->assertCount(1, $exportData['monthly_budgets']);
+        $this->assertSame($budget->id, $exportData['monthly_budgets'][0]['id']);
     }
 
-    private function transaction(Subject $subject, int $value, int $month): void
+    public function test_monthly_budgets_are_imported_with_remapped_subjects(): void
     {
-        $document = Document::create([
-            'number' => Document::withoutGlobalScopes()->max('number') + 1,
-            'date' => jalali_to_gregorian(1405, $month, 10, '-'),
-            'creator_id' => $this->user->id,
-            'title' => 'budget actual',
+        $subject = Subject::factory()->create(['is_permanent' => false]);
+        MonthlyBudget::create([
             'company_id' => $this->company->id,
+            'subject_id' => $subject->id,
+            'month' => 7,
+            'budget_type' => 'expense',
+            'forecast_amount' => 98765.43,
         ]);
 
-        Transaction::create([
-            'value' => $value,
-            'subject_id' => $subject->id,
-            'document_id' => $document->id,
-            'user_id' => $this->user->id,
-            'desc' => 'budget test',
-        ]);
+        $exportData = FiscalYearService::exportData($this->company->id, [FiscalYearSection::SUBJECTS->value]);
+        $target = FiscalYearService::importData($exportData, ['name' => 'Next Year', 'fiscal_year' => 1404]);
+
+        $importedSubject = Subject::withoutGlobalScopes()->where('company_id', $target->id)->sole();
+        $importedBudget = MonthlyBudget::withoutGlobalScopes()->where('company_id', $target->id)->sole();
+
+        $this->assertSame($importedSubject->id, $importedBudget->subject_id);
+        $this->assertSame(7, $importedBudget->month);
+        $this->assertSame('expense', $importedBudget->budget_type);
+        $this->assertSame('98765.43', $importedBudget->forecast_amount);
     }
 
-    private function grant(string ...$permissions): void
+    public function test_monthly_budgets_without_subjects_are_logged_and_skipped(): void
     {
-        $this->user->givePermissionTo(collect($permissions)->map(fn (string $permission) => Permission::firstOrCreate(['name' => $permission]))->all());
+        Log::spy();
+
+        $target = FiscalYearService::importData([
+            'monthly_budgets' => [[
+                'id' => 10,
+                'company_id' => $this->company->id,
+                'subject_id' => 20,
+                'month' => 2,
+                'budget_type' => 'income',
+                'forecast_amount' => '1000.00',
+            ]],
+        ], ['name' => 'No Subjects', 'fiscal_year' => 1404]);
+
+        $this->assertSame(0, MonthlyBudget::withoutGlobalScopes()->where('company_id', $target->id)->count());
+        Log::shouldHaveReceived('warning')->once()->with('Skipping monthly budgets import due to missing subject mapping.', ['target_year_id' => $target->id]);
     }
 }
