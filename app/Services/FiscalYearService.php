@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\AncillaryCostType;
+use App\Enums\BankAccountType;
+use App\Enums\CustomerType;
 use App\Enums\EmployeeDutyStatus;
 use App\Enums\EmployeeEducationLevel;
 use App\Enums\EmployeeEmploymentType;
@@ -10,7 +13,16 @@ use App\Enums\EmployeeInsuranceType;
 use App\Enums\EmployeeMaritalStatus;
 use App\Enums\EmployeeNationality;
 use App\Enums\FiscalYearSection;
+use App\Enums\InvoiceStatus;
+use App\Enums\InvoiceType;
+use App\Enums\PayrollElementCalcType;
+use App\Enums\PayrollElementCategory;
+use App\Enums\PayrollElementSystemCode;
+use App\Enums\PayrollStatus;
+use App\Enums\PersonnelRequestStatus;
+use App\Enums\PersonnelRequestType;
 use App\Enums\SubjectType;
+use App\Enums\ThursdayStatus;
 use App\Models\AncillaryCost;
 use App\Models\AncillaryCostItem;
 use App\Models\AttendanceLog;
@@ -1017,6 +1029,10 @@ class FiscalYearService
                 continue;
             }
 
+            $pr = self::_normalizeEnumAttributes($pr, [
+                'request_type' => PersonnelRequestType::class,
+                'status' => PersonnelRequestStatus::class,
+            ]);
             $newPr = new PersonnelRequest;
             $newPr->fill(collect($pr)->except(['id', 'payroll_id', 'employee_id'])->toArray());
             $newPr->employee_id = $employeeMapping[$oldEmployeeId];
@@ -1062,6 +1078,7 @@ class FiscalYearService
                 continue;
             }
 
+            $p = self::_normalizeEnumAttributes($p, ['status' => PayrollStatus::class]);
             $newP = new Payroll;
             $newP->fill(collect($p)->except(['id', 'decree_id', 'employee_id'])->toArray());
             $newP->employee_id = $employeeMapping[$oldEmployeeId];
@@ -1126,6 +1143,10 @@ class FiscalYearService
                 continue;
             }
 
+            $psh = self::_normalizeEnumAttributes($psh, [
+                'from_status' => PayrollStatus::class,
+                'to_status' => PayrollStatus::class,
+            ]);
             $newPsh = new PayrollStatusHistory;
             $newPsh->fill(collect($psh)->except(['id', 'payroll_id'])->toArray());
             $newPsh->payroll_id = $payrollMapping[$oldPayrollId];
@@ -1282,6 +1303,7 @@ class FiscalYearService
     protected static function _importTaxSlabs(array $taxSlabsData, int $targetYearId): void
     {
         foreach ($taxSlabsData as $ts) {
+            $ts = self::_normalizeEnumAttributes($ts, ['calc_type' => PayrollElementCalcType::class]);
             $newTs = new TaxSlab;
             $newTs->fill(collect($ts)->except(['id'])->toArray());
             $newTs->company_id = $targetYearId;
@@ -1325,6 +1347,7 @@ class FiscalYearService
     {
         $mapping = [];
         foreach ($workShiftsData as $ws) {
+            $ws = self::_normalizeEnumAttributes($ws, ['thursday_status' => ThursdayStatus::class]);
             $newWs = new WorkShift;
             $newWs->fill(collect($ws)->except(['id'])->toArray());
             $newWs->company_id = $targetYearId;
@@ -1363,6 +1386,11 @@ class FiscalYearService
     {
         $mapping = [];
         foreach ($payrollElementsData as $pe) {
+            $pe = self::_normalizeEnumAttributes($pe, [
+                'system_code' => PayrollElementSystemCode::class,
+                'category' => PayrollElementCategory::class,
+                'calc_type' => PayrollElementCalcType::class,
+            ]);
             $newPe = new PayrollElement;
             $newPe->fill(collect($pe)->except(['id'])->toArray());
             $newPe->company_id = $targetYearId;
@@ -1455,6 +1483,25 @@ class FiscalYearService
         }
 
         return $employeeData;
+    }
+
+    private static function _normalizeEnumAttributes(array $data, array $enumAttributes): array
+    {
+        foreach ($enumAttributes as $attribute => $enumClass) {
+            if (! array_key_exists($attribute, $data) || $data[$attribute] === null) {
+                continue;
+            }
+
+            if ($data[$attribute] === '') {
+                unset($data[$attribute]);
+
+                continue;
+            }
+
+            $data[$attribute] = $enumClass::fromName($data[$attribute]);
+        }
+
+        return $data;
     }
 
     /**
@@ -1578,6 +1625,7 @@ class FiscalYearService
                 continue;
             }
 
+            $accountData = self::_normalizeEnumAttributes($accountData, ['type' => BankAccountType::class]);
             $newAccount = new BankAccount;
             $newAccount->fill(collect($accountData)->except(['id'])->toArray());
             $newAccount->bank_id = $bankMapping[$oldBankId];
@@ -1653,6 +1701,8 @@ class FiscalYearService
             }
 
             $oldIntroducerId = $customerData['introducer_id'] ?? null;
+
+            $customerData = self::_normalizeEnumAttributes($customerData, ['type' => CustomerType::class]);
 
             $newCustomer = new Customer;
             $newCustomer->fill(collect($customerData)->except(['id', 'group_id', 'subject_id', 'company_id', 'introducer_id'])->toArray());
@@ -2229,6 +2279,10 @@ class FiscalYearService
             }
             $oldDocumentId = $invoiceData['document_id'] ?? null;
 
+            $invoiceData = self::_normalizeEnumAttributes($invoiceData, [
+                'invoice_type' => InvoiceType::class,
+                'status' => InvoiceStatus::class,
+            ]);
             $newInvoice = new Invoice;
             $newInvoice->fill(collect($invoiceData)->except(['id', 'customer_id', 'document_id'])->toArray());
             $newInvoice->customer_id = $customerMapping[$oldCustomerId];
@@ -2259,6 +2313,10 @@ class FiscalYearService
                 continue;
             }
 
+            $invoiceData = self::_normalizeEnumAttributes($invoiceData, [
+                'invoice_type' => InvoiceType::class,
+                'status' => InvoiceStatus::class,
+            ]);
             $newInvoice = new Invoice;
             $newInvoice->fill(collect($invoiceData)->except(['id', 'customer_id', 'document_id', 'returned_invoice_id'])->toArray());
             $newInvoice->customer_id = $customerMapping[$oldCustomerId];
@@ -2341,6 +2399,10 @@ class FiscalYearService
             }
             $oldDocumentId = $ancillaryCostData['document_id'] ?? null;
 
+            $ancillaryCostData = self::_normalizeEnumAttributes($ancillaryCostData, [
+                'type' => AncillaryCostType::class,
+                'status' => InvoiceStatus::class,
+            ]);
             $newAncillaryCost = new AncillaryCost;
             $newAncillaryCost->fill(collect($ancillaryCostData)->except(['id', 'invoice_id', 'document_id', 'customer_id'])->toArray());
             $newAncillaryCost->invoice_id = $invoiceMapping[$oldInvoiceId];
@@ -2379,6 +2441,7 @@ class FiscalYearService
                 continue;
             }
 
+            $ancillaryCostItemData = self::_normalizeEnumAttributes($ancillaryCostItemData, ['type' => AncillaryCostType::class]);
             $newAncillaryCostItem = new AncillaryCostItem;
             $newAncillaryCostItem->fill(collect($ancillaryCostItemData)->except(['id', 'ancillary_cost_id', 'product_id'])->toArray());
             $newAncillaryCostItem->ancillary_cost_id = $ancillaryCostMapping[$oldAncillaryCostId];
