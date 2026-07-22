@@ -4,7 +4,6 @@ namespace App\Providers;
 
 use App\Faker\PersianProductProvider;
 use App\Faker\PersianServiceProvider;
-use Faker\Generator;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Gate;
@@ -17,7 +16,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->afterResolving(Generator::class, function (Generator $faker) {
+        $this->app->afterResolving(\Faker\Generator::class, function (\Faker\Generator $faker) {
             $registered = [];
             foreach ($faker->getProviders() as $provider) {
                 $registered[get_class($provider)] = true;
@@ -36,7 +35,7 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void
+   public function boot(): void
     {
         Paginator::defaultView('vendor.pagination.daisyui');
         Paginator::defaultSimpleView('vendor.pagination.daisyui-simple');
@@ -49,5 +48,5 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
-    }
+    }   
 }
