@@ -394,6 +394,9 @@ class CompanyController extends Controller
 
             $creator->assignRole(Role::firstOrCreate(['name' => __('Admin')]));
 
+            // The authorization check before company creation caches this user's wildcard permissions.
+            $creator->forgetWildcardPermissionIndex();
+
             return $company;
         });
     }
