@@ -72,4 +72,18 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasOne(Employee::class, 'user_id');
     }
+
+    /**
+     * Resolve the privileged administrator identity in one central place.
+     */
+    public function isSuperAdmin(): bool
+    {
+        $roleName = config('admin.super_admin_role', 'Super-Admin');
+
+        if ($this->relationLoaded('roles')) {
+            return $this->roles->contains('name', $roleName);
+        }
+
+        return $this->roles()->where('name', $roleName)->exists();
+    }
 }

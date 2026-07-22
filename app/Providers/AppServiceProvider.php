@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Faker\PersianProductProvider;
 use App\Faker\PersianServiceProvider;
+use App\Services\AuditLogger;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Gate;
@@ -43,10 +44,12 @@ class AppServiceProvider extends ServiceProvider
         App::setLocale(config('app.locale', 'fa'));
 
         Gate::before(function ($user, $ability) {
-            if ($user->hasRole('Super-Admin')) {
+            if ($user->isSuperAdmin()) {
                 return true;
             }
         });
+
+        AuditLogger::register();
 
     }   
 }

@@ -7,6 +7,11 @@ Route::get('/login', [Controllers\Auth\LoginController::class, 'showLoginForm'])
 Route::post('/login', [Controllers\Auth\LoginController::class, 'login']);
 Route::get('/logout', [Controllers\Auth\LoginController::class, 'logout'])->name('logout');
 
+Route::middleware(['auth', 'can:admin.access'])->prefix('admin')->as('admin.')->group(function () {
+    Route::get('audit-logs', [Controllers\Admin\AuditLogController::class, 'index'])->name('audit-logs.index');
+    Route::get('audit-logs/{auditLog}', [Controllers\Admin\AuditLogController::class, 'show'])->name('audit-logs.show');
+});
+
 Route::get('/forgot-password', [Controllers\Auth\PasswordResetController::class, 'showForgotPasswordForm'])->name('password.request');
 Route::post('/forgot-password', [Controllers\Auth\PasswordResetController::class, 'sendResetLink'])->middleware('throttle:6,1')->name('password.email');
 Route::get('/reset-password/{token}', [Controllers\Auth\PasswordResetController::class, 'showResetPasswordForm'])->name('password.reset');
