@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\Document;
 use App\Services\HomeService;
 use Database\Seeders\DemoSeeder;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 
@@ -28,6 +29,11 @@ class HomeController extends Controller
 
     public function __construct(private readonly HomeService $service) {}
 
+    public function superAdminDashboard(): View
+    {
+        return view('super-admin.dashboard', $this->service->superAdminOverview());
+    }
+
     public function seedDemoData()
     {
         abort_if(! config('app.debug') || app()->isProduction(), 404);
@@ -35,7 +41,7 @@ class HomeController extends Controller
         $companyId = (int) getActiveCompany();
         $user = auth()->user();
 
-        abort_unless($user->hasRole('Super-Admin') || $user->companies()->whereKey($companyId)->exists(), 403);
+        abort_unless($user->can('access-super-admin-panel') || $user->companies()->whereKey($companyId)->exists(), 403);
 
         if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
             return redirect()->route('home')->with('error', __('Please select a valid company first.'));
@@ -74,8 +80,12 @@ class HomeController extends Controller
     {
         $user = auth()->user();
 
-        // Use can() (not Spatie's hasAnyPermission) so AppServiceProvider's Gate::before
-        // hook for Super-Admin is honored.
+        if ($user->can('access-super-admin-panel')) {
+            return redirect()->route('super-admin.dashboard');
+        }
+
+        // Use can() (not Spatie's hasAnyPermission) so AppServiceProvider's
+        // platform-access capability hook is honored.
         $hasBusinessPerms = collect(self::BUSINESS_PERMISSIONS)->contains(fn ($perm) => $user->can($perm));
         $canSeePersonalPortal = $user->can('employee-portal.dashboard') && ! $hasBusinessPerms;
 

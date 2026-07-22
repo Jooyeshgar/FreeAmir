@@ -1,4 +1,4 @@
-<x-app-layout :title="__('about.about_freeamir')">
+<x-platform-layout :title="__('about.about_freeamir')">
 
     <div class="mx-auto max-w-4xl space-y-4 px-4 py-6">
 
@@ -265,4 +265,4 @@
         @endforeach
     @endcan
 
-</x-app-layout>
+</x-platform-layout>

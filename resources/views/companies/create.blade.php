@@ -2,7 +2,7 @@
     use App\Enums\FiscalYearSection;
 @endphp
 
-<x-app-layout :title="__('Create Company')">
+<x-platform-layout :title="__('Create Company')">
     <x-show-message-bags />
 
     <div class="card bg-base-100 shadow-xl">
@@ -10,10 +10,11 @@
             <span class="card-title">{{ __('Add Company') }}</span>
             <form action="{{ route('companies.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
-                <fieldset id="previousYears" class="grid grid-cols-2 gap-6 border p-5 my-3" 
-                    x-data="{
-                        subjectsChecked: @js(in_array(FiscalYearSection::SUBJECTS->value, old('tables_to_copy', array_map(fn ($c) => $c->value, FiscalYearSection::cases())))),
-                    }">
+                @cannot('access-super-admin-panel')
+                    <fieldset id="previousYears" class="grid grid-cols-2 gap-6 border p-5 my-3"
+                        x-data="{
+                            subjectsChecked: @js(in_array(FiscalYearSection::SUBJECTS->value, old('tables_to_copy', array_map(fn ($c) => $c->value, FiscalYearSection::cases())))),
+                        }">
                     <legend>{{ __('Previous Years') }}</legend>
                     <div class="fieldset">
                         <label for="source_year_id" class="label">
@@ -63,7 +64,8 @@
                             </table>
                         </div>
                     </div>
-                </fieldset>
+                    </fieldset>
+                @endcannot
 
                 <fieldset id="companyForm" class="grid grid-cols-2 gap-6 border p-5 my-3">
                     <legend>{{ __('company') }}</legend>
@@ -119,4 +121,4 @@
             </form>
         </div>
     </div>
-</x-app-layout>
+</x-platform-layout>

@@ -254,6 +254,35 @@ main {
     .app-main-menu > li > details > summary:hover {
         @apply bg-base-200 text-base-content;
     }
+
+    .super-admin-content > .card,
+    .super-admin-content > form > .card {
+        @apply overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none;
+    }
+
+    .super-admin-content .card-body {
+        @apply p-5 sm:p-6;
+    }
+
+    .super-admin-content .card-title {
+        @apply mb-4 text-lg font-bold tracking-tight text-slate-900 dark:text-white;
+    }
+
+    .super-admin-content :is(.input, .select, .textarea, .file-input) {
+        @apply rounded-xl bg-slate-50 dark:bg-slate-950/50;
+    }
+
+    .super-admin-content fieldset {
+        @apply rounded-xl border-slate-200 bg-slate-50/60 dark:border-slate-800 dark:bg-slate-950/30;
+    }
+
+    .super-admin-content .table thead {
+        @apply text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400;
+    }
+
+    .super-admin-content .btn {
+        @apply rounded-xl;
+    }
 }
 
 #originalTransactions .removeButton {

@@ -11,7 +11,7 @@ class AboutController extends Controller
 {
     public function __construct(private readonly GlobalConfigService $globalConfigService) {}
 
-    public function index()
+    public function index(Request $request)
     {
         $dbConnected = false;
         $dbDriver = config('database.default');
@@ -44,7 +44,9 @@ class AboutController extends Controller
             ];
         }
 
-        return view('about', [
+        $view = $request->user()?->can('access-super-admin-panel') ? 'super-admin.settings' : 'about';
+
+        return view($view, [
             'version' => config('app.version'),
             'appEnv' => config('app.env'),
             'debugMode' => config('app.debug'),

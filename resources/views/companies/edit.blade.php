@@ -1,4 +1,4 @@
-<x-app-layout :title="__('Edit Company')">
+<x-platform-layout :title="__('Edit Company')">
     <x-show-message-bags />
 
     <div class="card bg-base-100 shadow-xl">
@@ -69,4 +69,4 @@
             </form>
         </div>
     </div>
-</x-app-layout>
+</x-platform-layout>

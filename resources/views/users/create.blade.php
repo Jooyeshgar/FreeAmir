@@ -1,4 +1,4 @@
-<x-app-layout :title="__('Create User')">
+<x-platform-layout :title="__('Create User')">
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <form method="post" action="{{ route('users.store') }}">
@@ -14,4 +14,4 @@
             </form>
         </div>
     </div>
-</x-app-layout>
+</x-platform-layout>

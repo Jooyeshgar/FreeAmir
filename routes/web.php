@@ -27,6 +27,10 @@ Route::middleware(['auth', 'ensure-feature-enabled:email_verification'])->group(
     Route::post('/registered-user/company', [Controllers\CompanyController::class, 'storeCompanyForRegisteredUser'])->name('registered-user.company.store');
 });
 
+Route::middleware(['auth', 'permission:access-super-admin-panel', 'ensure-feature-enabled:email_verification'])->prefix('super-admin')->as('super-admin.')->group(function () {
+    Route::get('/', [Controllers\HomeController::class, 'superAdminDashboard'])->name('dashboard');
+});
+
 Route::group(['middleware' => ['auth', 'ensure-employee', 'ensure-feature-enabled:email_verification'], 'prefix' => 'employee-portal', 'as' => 'employee-portal.'], function () {
     Route::get('/employee', [Controllers\EmployeePortalController::class, 'employeeShow'])->name('employee.show');
     Route::get('/change-employee-information', [Controllers\EmployeePortalController::class, 'changeEmployeeInformation'])->name('change-employee-information');
