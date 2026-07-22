@@ -1,6 +1,6 @@
 @props(['title' => config('app.name')])
 
-@can('access-super-admin-panel')
+@if (session('interface_mode') === 'management' && auth()->user()->can('access-super-admin-panel'))
     <x-super-admin-layout :title="$title">
         <div class="super-admin-content">
             {{ $slot }}
@@ -10,4 +10,4 @@
     <x-app-layout :title="$title">
         {{ $slot }}
     </x-app-layout>
-@endcan
+@endif

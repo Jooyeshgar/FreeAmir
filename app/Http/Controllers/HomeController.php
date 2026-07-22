@@ -29,8 +29,10 @@ class HomeController extends Controller
 
     public function __construct(private readonly HomeService $service) {}
 
-    public function superAdminDashboard(): View
+    public function managementDashboard(Request $request): View
     {
+        $request->session()->put('interface_mode', 'management');
+
         return view('super-admin.dashboard', $this->service->superAdminOverview());
     }
 
@@ -76,13 +78,19 @@ class HomeController extends Controller
         return redirect()->route('home')->with('success', __('Refresh database completed successfully.'));
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $user = auth()->user();
 
         if ($user->can('access-super-admin-panel')) {
-            return redirect()->route('super-admin.dashboard');
+            $hasCurrentWorkspace = $user->companies()->whereKey(getActiveCompany())->where('fiscal_year', toEnglish(jdate('Y')))->exists();
+
+            if (! $hasCurrentWorkspace) {
+                return redirect()->route('management.dashboard');
+            }
         }
+
+        $request->session()->put('interface_mode', 'workspace');
 
         // Use can() (not Spatie's hasAnyPermission) so AppServiceProvider's
         // platform-access capability hook is honored.

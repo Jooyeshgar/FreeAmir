@@ -194,7 +194,7 @@
                 <div class="flex items-center justify-between gap-4 py-4"><dt class="text-sm text-slate-500">{{ __('Registration') }}</dt><dd class="badge {{ config('app.registration') ? 'badge-success badge-outline' : 'badge-ghost' }}">{{ config('app.registration') ? __('Enabled') : __('Disabled') }}</dd></div>
                 <div class="flex items-center justify-between gap-4 py-4"><dt class="text-sm text-slate-500">{{ __('Email verification') }}</dt><dd class="badge {{ config('app.email_verification') ? 'badge-success badge-outline' : 'badge-ghost' }}">{{ config('app.email_verification') ? __('Enabled') : __('Disabled') }}</dd></div>
             </dl>
-            <div class="p-5 pt-3"><a href="{{ route('about') }}" class="btn btn-outline btn-sm btn-block">{{ __('Application settings') }}</a></div>
+            <div class="p-5 pt-3"><a href="{{ route('management.settings') }}" class="btn btn-outline btn-sm btn-block">{{ __('Settings') }}</a></div>
         </article>
     </section>
 </x-super-admin-layout>

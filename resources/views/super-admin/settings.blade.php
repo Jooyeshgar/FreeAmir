@@ -1,10 +1,10 @@
-<x-super-admin-layout :title="__('Application settings')">
+<x-super-admin-layout :title="__('Settings')">
     <x-show-message-bags />
 
     <section class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
             <p class="text-xs font-bold uppercase tracking-[0.16em] text-emerald-600 dark:text-emerald-400">{{ __('System') }}</p>
-            <h1 class="mt-1 text-2xl font-bold tracking-tight">{{ __('Application settings') }}</h1>
+            <h1 class="mt-1 text-2xl font-bold tracking-tight">{{ __('Settings') }}</h1>
             <p class="mt-2 max-w-2xl text-sm text-slate-500 dark:text-slate-400">{{ __('Configure platform-wide behavior and review the application environment.') }}</p>
         </div>
         <span @class([
@@ -62,7 +62,6 @@
     <section class="mt-6 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <header class="border-b border-slate-200/80 px-5 py-4 dark:border-slate-800">
             <h2 class="font-bold">{{ __('Runtime information') }}</h2>
-            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('Read-only details about this installation.') }}</p>
         </header>
         <dl class="grid md:grid-cols-2 xl:grid-cols-4">
             <div class="border-b border-slate-100 p-5 dark:border-slate-800 xl:border-e"><dt class="text-xs text-slate-500">{{ __('Application version') }}</dt><dd class="mt-2 font-mono text-sm font-semibold">{{ localizeNumber($version) }}</dd></div>

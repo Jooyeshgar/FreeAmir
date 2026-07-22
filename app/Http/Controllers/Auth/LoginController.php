@@ -38,7 +38,7 @@ class LoginController extends Controller
         }
 
         if ($user->can('access-super-admin-panel')) {
-            return redirect()->intended(route('super-admin.dashboard'));
+            return redirect()->intended(route('management.dashboard'));
         }
 
         if (! $user->companies()->exists()) {

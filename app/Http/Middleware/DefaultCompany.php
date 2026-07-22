@@ -14,7 +14,7 @@ class DefaultCompany
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -25,6 +25,7 @@ class DefaultCompany
                 Cookie::forget('active-company-id');
 
                 config([
+                    'active-company-id' => null,
                     'active-company-name' => null,
                     'active-company-fiscal-year' => null,
                 ]);
@@ -32,6 +33,7 @@ class DefaultCompany
                 $this->setDefaultCompany();
             } else {
                 config([
+                    'active-company-id' => $company->id,
                     'active-company-name' => $company->name,
                     'active-company-fiscal-year' => $company->fiscal_year,
                 ]);
@@ -51,6 +53,7 @@ class DefaultCompany
                 Cookie::queue('active-company-id', $company->id, 362 * 24 * 60);
 
                 config([
+                    'active-company-id' => $company->id,
                     'active-company-name' => $company->name,
                     'active-company-fiscal-year' => $company->fiscal_year,
                 ]);

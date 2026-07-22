@@ -2582,7 +2582,7 @@
     "Saved values override the corresponding environment configuration.": "Saved values override the corresponding environment configuration.",
     "Save application settings": "Save application settings",
     "Runtime information": "Runtime information",
-    "Read-only details about this installation.": "Read-only details about this installation.",
+    "Settings": "Settings",
     "Application version": "Application version",
     "PHP version": "PHP version",
     "Laravel version": "Laravel version",
@@ -2621,5 +2621,7 @@
     "Permission name": "Permission name",
     "Assigned roles": "Assigned roles",
     "Select at least one role that should receive this permission.": "Select at least one role that should receive this permission.",
-    "Access policy": "Access policy"
+    "Access policy": "Access policy",
+    "Admin panel": "Admin panel",
+    "Workspace": "Workspace"
 }

@@ -55,7 +55,12 @@ class UserController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        return view('users.index', compact('users'));
+        $view = $request->session()->get('interface_mode') === 'management'
+            && $actor->can('access-super-admin-panel')
+                ? 'users.index'
+                : 'users.workspace-index';
+
+        return view($view, compact('users'));
     }
 
     /**

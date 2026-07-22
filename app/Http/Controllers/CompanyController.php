@@ -68,7 +68,12 @@ class CompanyController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        return view('companies.index', [
+        $view = $request->session()->get('interface_mode') === 'management'
+            && $user->can('access-super-admin-panel')
+                ? 'companies.index'
+                : 'companies.workspace-index';
+
+        return view($view, [
             'companies' => $companies,
         ]);
     }

@@ -1,5 +1,9 @@
 @props(['title' => __('Super-Admin Panel')])
 
+@php
+    $hasCurrentWorkspace = auth()->user()->companies()->whereKey(getActiveCompany())->where('fiscal_year', toEnglish(jdate('Y')))->exists();
+@endphp
+
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="light">
 
@@ -27,7 +31,7 @@
     <header class="sticky top-0 z-30 w-full border-b border-base-content/8 bg-base-100/90 backdrop-blur-md">
         <div class="h-1 bg-linear-to-r from-emerald-500 via-teal-500 to-cyan-500"></div>
         <div class="navbar min-h-14 items-center justify-between gap-3 px-3 min-[1430px]:mx-auto min-[1430px]:w-[1430px]">
-            <a href="{{ route('super-admin.dashboard') }}"
+            <a href="{{ $hasCurrentWorkspace ? route('home') : route('management.dashboard') }}"
                 class="flex shrink-0 items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-base-200"
                 aria-label="{{ __(config('app.name')) }}">
                 <img src="/images/logo.png" alt="{{ __(config('app.name')) }}" class="h-9 w-9 object-contain">
@@ -40,6 +44,11 @@
             <nav aria-label="{{ __('User menu') }}">
                 <ul class="app-main-menu menu menu-horizontal flex-nowrap px-1" data-main-menu>
                     <li class="!flex flex-row items-center gap-1">
+                        @if ($hasCurrentWorkspace)
+                            <a href="{{ route('home') }}" class="btn btn-ghost btn-sm">
+                                {{ __('Workspace') }}
+                            </a>
+                        @endif
                         <label class="swap swap-rotate btn btn-ghost btn-square btn-sm" aria-label="{{ __('Dark mode') }}">
                             <input type="checkbox" value="dark" class="theme-controller">
                             <svg class="swap-off h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0-16v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" /></svg>
@@ -52,7 +61,7 @@
                             </summary>
                             <ul class="app-main-menu-panel z-50 mt-2 w-60">
                                 <li class="menu-title"><span class="truncate">{{ auth()->user()->email }}</span></li>
-                                <li><a href="{{ route('about') }}">{{ __('Application settings') }}</a></li>
+                                <li><a href="{{ route('management.settings') }}">{{ __('Settings') }}</a></li>
                                 <li><a href="{{ route('logout') }}" class="text-error">{{ __('Logout') }}</a></li>
                             </ul>
                         </details>
@@ -68,9 +77,9 @@
             <ul class="app-main-menu menu menu-horizontal ml-auto flex-nowrap px-1"
                 dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}" data-main-menu>
                 <li>
-                    <a href="{{ route('super-admin.dashboard') }}" @class([
+                    <a href="{{ route('management.dashboard') }}" @class([
                         'text-sm',
-                        'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' => request()->routeIs('super-admin.dashboard'),
+                        'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' => request()->routeIs('management.dashboard'),
                     ])>{{ __('Dashboard') }}</a>
                 </li>
                 <li>
@@ -101,10 +110,10 @@
                     <details class="app-main-menu-dropdown" data-main-menu-dropdown>
                         <summary @class([
                             'text-sm',
-                            'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' => request()->routeIs('about'),
+                            'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' => request()->routeIs('management.settings'),
                         ])>{{ __('System') }}</summary>
                         <ul class="app-main-menu-panel z-50 mt-2 w-52">
-                            <li><a href="{{ route('about') }}" @class(['active' => request()->routeIs('about')])>{{ __('Application settings') }}</a></li>
+                            <li><a href="{{ route('management.settings') }}" @class(['active' => request()->routeIs('management.settings')])>{{ __('Settings') }}</a></li>
                         </ul>
                     </details>
                 </li>

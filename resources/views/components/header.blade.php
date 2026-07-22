@@ -11,6 +11,13 @@
 
         <nav aria-label="{{ __('User menu') }}">
             <ul class="app-main-menu flex shrink-0 items-center menu menu-horizontal px-1" data-main-menu>
+                @can('access-super-admin-panel')
+                    <li>
+                        <a href="{{ route('management.dashboard') }}" class="btn btn-ghost btn-sm">
+                            {{ __('Admin panel') }}
+                        </a>
+                    </li>
+                @endcan
                 <li>
                     <label class="swap swap-rotate btn btn-ghost btn-square btn-sm" aria-label="{{ __('Dark mode') }}">
                         <input type="checkbox" value="dark" class="theme-controller" />

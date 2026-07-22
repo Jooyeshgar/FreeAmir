@@ -2605,7 +2605,7 @@
     "Saved values override the corresponding environment configuration.": "مقادیر ذخیره‌شده، تنظیمات متناظر محیط اجرا را جایگزین می‌کنند.",
     "Save application settings": "ذخیره تنظیمات برنامه",
     "Runtime information": "اطلاعات محیط اجرا",
-    "Read-only details about this installation.": "جزئیات فقط‌خواندنی این نصب.",
+    "Settings": "تنظیمات",
     "Application version": "نسخه برنامه",
     "PHP version": "نسخه PHP",
     "Laravel version": "نسخه Laravel",
@@ -2644,5 +2644,7 @@
     "Permission name": "نام دسترسی",
     "Assigned roles": "نقش‌های تخصیص‌یافته",
     "Select at least one role that should receive this permission.": "حداقل یک نقش را برای دریافت این دسترسی انتخاب کنید.",
-    "Access policy": "سیاست دسترسی"
+    "Access policy": "سیاست دسترسی",
+    "Admin panel": "پنل مدیریت",
+    "Workspace": "فضای کاری"
 }
