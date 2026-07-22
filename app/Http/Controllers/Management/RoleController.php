@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Management;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -12,7 +13,6 @@ class RoleController extends Controller
 {
     public $rules = [
         'name' => 'required | string | min:3 | max:255',
-        'description' => 'nullable | string | min:3 | max:255',
     ];
 
     public $searchRules = [
@@ -21,25 +21,25 @@ class RoleController extends Controller
 
     public $messages = [];
 
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
         $validated = Validator::make($request->all(), $this->searchRules, $this->messages)->validate();
-        $query = Role::where('name', '!=', 'Super-Admin')->orderBy('id', 'desc');
+        $query = Role::where('name', '!=', 'Super-Admin')
+            ->withCount(['permissions', 'users'])
+            ->orderBy('id', 'desc');
 
         if (isset($validated['search']) && $search = $validated['search']) {
             $query->where('name', 'like', "%{$search}%");
         }
 
-        $roles = $query->paginate(20);
+        $roles = $query->paginate(20)->withQueryString();
 
         return view('management.roles.index', [
             'roles' => $roles,
@@ -51,7 +51,7 @@ class RoleController extends Controller
      */
     public function create()
     {
-        $permissions = Permission::all();
+        $permissions = Permission::query()->orderBy('name')->get();
 
         return view('management.roles.create', [
             'role' => null,
@@ -85,7 +85,7 @@ class RoleController extends Controller
      */
     public function edit(Role $role)
     {
-        $permissions = Permission::all();
+        $permissions = Permission::query()->orderBy('name')->get();
         $syncedPerms = $role->permissions()->pluck('id');
 
         return view('management.roles.create', [

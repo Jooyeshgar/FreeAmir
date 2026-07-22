@@ -48,12 +48,32 @@ class CompanyController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
         $user = auth()->user();
-        $companies = ($user->hasRole('Super-Admin') ? Company::query() : $user->companies())->paginate(12);
+        $companies = ($user->can('access-super-admin-panel') ? Company::query() : $user->companies())
+            ->with('closedBy:id,name')->withCount('users')->when($request->filled('search'), function ($query) use ($request) {
+                $search = trim((string) $request->input('search'));
 
-        return view('companies.index', [
+                $query->where(function ($query) use ($search) {
+                    $query->where('companies.name', 'like', "%{$search}%")
+                        ->orWhere('companies.economical_code', 'like', "%{$search}%")
+                        ->orWhere('companies.national_code', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->input('status') === 'open', fn ($query) => $query->whereNull('companies.closed_at'))
+            ->when($request->input('status') === 'closed', fn ($query) => $query->whereNotNull('companies.closed_at'))
+            ->orderByDesc('companies.fiscal_year')
+            ->orderBy('companies.name')
+            ->paginate(12)
+            ->withQueryString();
+
+        $view = $request->session()->get('interface_mode') === 'management'
+            && $user->can('access-super-admin-panel')
+                ? 'companies.index'
+                : 'companies.workspace-index';
+
+        return view($view, [
             'companies' => $companies,
         ]);
     }
@@ -61,10 +81,12 @@ class CompanyController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create(): View
+    public function create(Request $request): View
     {
+        abort_if($request->user()->can('access-super-admin-panel'), 404);
+
         // Get previous fiscal years for the current company
-        $previousYears = auth()->user()->companies()->orderByDesc('fiscal_year')->get();
+        $previousYears = $request->user()->companies()->orderByDesc('fiscal_year')->get();
 
         return view('companies.create', [
             'company' => null,
@@ -72,8 +94,10 @@ class CompanyController extends Controller
         ]);
     }
 
-    public function createCompanyForRegisteredUser(): View|RedirectResponse
+    public function createCompanyForRegisteredUser(Request $request): View|RedirectResponse
     {
+        abort_if($request->user()->can('access-super-admin-panel'), 404);
+
         if (auth()->user()->companies()->exists()) {
             return redirect()->route('home');
         }
@@ -83,6 +107,8 @@ class CompanyController extends Controller
 
     public function storeCompanyForRegisteredUser(Request $request): RedirectResponse
     {
+        abort_if($request->user()->can('access-super-admin-panel'), 404);
+
         if ($request->user()->companies()->exists()) {
             return redirect()->route('home');
         }
@@ -118,6 +144,8 @@ class CompanyController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        abort_if($request->user()->can('access-super-admin-panel'), 404);
+
         $fiscalYearRules = [
             'source_year_id' => [
                 'nullable',
@@ -299,7 +327,7 @@ class CompanyController extends Controller
     {
         $user = auth()->user();
 
-        abort_unless($user->hasRole('Super-Admin') || $user->companies()->whereKey($company->id)->exists(), 403);
+        abort_unless($user->can('access-super-admin-panel') || $user->companies()->whereKey($company->id)->exists(), 403);
     }
 
     private function privateKeyRules(): array
@@ -370,6 +398,9 @@ class CompanyController extends Controller
             }
 
             $creator->assignRole(Role::firstOrCreate(['name' => __('Admin')]));
+
+            // The authorization check before company creation caches this user's wildcard permissions.
+            $creator->forgetWildcardPermissionIndex();
 
             return $company;
         });

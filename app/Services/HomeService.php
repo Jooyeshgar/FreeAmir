@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
@@ -16,10 +17,44 @@ use App\Models\Transaction;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Spatie\Permission\Models\Role;
 
 class HomeService
 {
     public function __construct(private readonly SubjectService $subjectService) {}
+
+    /**
+     * Build the platform-wide dashboard payload for authorized administrators.
+     */
+    public function superAdminOverview(): array
+    {
+        return [
+            'metrics' => [
+                'businesses' => Company::query()->distinct()->count('name'),
+                'fiscalYears' => Company::query()->count(),
+                'openFiscalYears' => Company::query()->whereNull('closed_at')->count(),
+                'users' => User::query()->count(),
+                'verifiedUsers' => User::query()->whereNotNull('email_verified_at')->count(),
+                'unassignedUsers' => User::query()->doesntHave('companies')->count(),
+            ],
+            'recentCompanies' => Company::query()
+                ->withCount('users')
+                ->orderByDesc('id')
+                ->limit(5)
+                ->get(),
+            'recentUsers' => User::query()
+                ->with('roles:id,name')
+                ->withCount('companies')
+                ->latest()
+                ->limit(5)
+                ->get(),
+            'roles' => Role::query()
+                ->withCount('users')
+                ->orderByDesc('users_count')
+                ->orderBy('name')
+                ->get(),
+        ];
+    }
 
     /**
      * Build the personal portal payload for an employee user.

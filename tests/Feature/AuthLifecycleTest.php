@@ -79,12 +79,14 @@ class AuthLifecycleTest extends TestCase
         $companies->assertOk();
         $companies->assertSee('Admin Company');
         $companies->assertDontSee('Other Company');
+        $companies->assertDontSee(__('Companies and fiscal years'));
         $this->actingAs($admin)->get(route('companies.edit', $otherCompany))->assertForbidden();
 
         $users = $this->actingAs($admin)->get(route('users.index'));
         $users->assertOk();
         $users->assertSee('Own Company User');
         $users->assertDontSee('Other Company User');
+        $users->assertDontSee(__('Platform users'));
         $this->actingAs($admin)->get(route('users.edit', $otherUser))->assertForbidden();
 
         $this->actingAs($admin)->get(route('users.create'))
@@ -102,7 +104,7 @@ class AuthLifecycleTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'escalated@example.com']);
     }
 
-    public function test_role_and_permission_index_buttons_follow_action_permissions(): void
+    public function test_role_and_permission_pages_are_not_available_in_the_workspace(): void
     {
         $roleIndex = Permission::create(['name' => 'roles.index']);
         $permissionIndex = Permission::create(['name' => 'permissions.index']);
@@ -115,17 +117,102 @@ class AuthLifecycleTest extends TestCase
         $viewer->assignRole($viewerRole);
         config(['active-company-id' => $company->id]);
 
-        $roles = $this->actingAs($viewer)->get(route('roles.index'));
-        $roles->assertOk();
-        $roles->assertDontSee(route('roles.create'), false);
-        $roles->assertDontSee(route('roles.edit', $viewerRole), false);
-        $roles->assertDontSee(route('roles.destroy', $viewerRole), false);
+        $workspace = $this->actingAs($viewer)->get(route('about'));
+        $workspace->assertOk();
+        $workspace->assertDontSee(route('roles.index'), false);
+        $workspace->assertDontSee(route('permissions.index'), false);
 
-        $permissions = $this->actingAs($viewer)->get(route('permissions.index'));
-        $permissions->assertOk();
-        $permissions->assertDontSee(route('permissions.create'), false);
-        $permissions->assertDontSee(route('permissions.edit', $roleIndex), false);
-        $permissions->assertDontSee(route('permissions.destroy', $roleIndex), false);
+        $this->get(route('roles.index'))->assertForbidden();
+        $this->get(route('permissions.index'))->assertForbidden();
+    }
+
+    public function test_platform_management_routes_use_the_management_prefix(): void
+    {
+        foreach ([
+            'management.dashboard',
+            'management.settings',
+            'update-global-configs',
+            'companies.index',
+            'users.index',
+            'roles.index',
+            'permissions.index',
+            'configs.index',
+        ] as $routeName) {
+            $this->assertStringStartsWith('/management', parse_url(route($routeName), PHP_URL_PATH));
+        }
+    }
+
+    public function test_platform_admin_can_switch_between_management_and_current_workspace(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo(
+            Permission::create(['name' => 'access-super-admin-panel']),
+            Permission::create(['name' => 'home']),
+            Permission::create(['name' => 'customers.index']),
+            Permission::create(['name' => 'companies.index']),
+            Permission::create(['name' => 'users.index']),
+            Permission::create(['name' => 'roles.index']),
+            Permission::create(['name' => 'permissions.index']),
+        );
+
+        $company = Company::create([
+            'name' => 'Current Workspace',
+            'fiscal_year' => (int) toEnglish(jdate('Y')),
+            'currency' => 'Rial',
+        ]);
+        $user->companies()->attach($company);
+
+        $workspace = $this->actingAs($user)
+            ->withCookie('active-company-id', (string) $company->id)
+            ->get(route('home'));
+
+        $workspace->assertOk();
+        $workspace->assertSee(route('management.dashboard'), false);
+        $workspace->assertDontSee(route('roles.index'), false);
+        $workspace->assertDontSee(route('permissions.index'), false);
+        $this->assertSame($company->id, config('active-company-id'));
+
+        $about = $this->get(route('about'));
+        $about->assertOk();
+        $about->assertDontSee(route('update-global-configs'), false);
+        $about->assertDontSee('gc_modal_', false);
+
+        $sharedIndexRoutes = [
+            'companies.index' => __('Companies and fiscal years'),
+            'users.index' => __('Platform users'),
+        ];
+
+        foreach ($sharedIndexRoutes as $routeName => $managementHeading) {
+            $this->get(route($routeName))
+                ->assertOk()
+                ->assertDontSee(__('Super-Admin Panel'))
+                ->assertDontSee($managementHeading);
+        }
+
+        foreach ([
+            'roles.index' => __('Roles and access policies'),
+            'permissions.index' => __('Permission catalog'),
+        ] as $routeName => $managementHeading) {
+            $this->get(route($routeName))
+                ->assertOk()
+                ->assertSee(__('Super-Admin Panel'))
+                ->assertSee($managementHeading);
+        }
+
+        $management = $this->get(route('management.dashboard'));
+        $management->assertOk();
+        $management->assertSee(route('home'), false);
+
+        foreach ($sharedIndexRoutes as $routeName => $managementHeading) {
+            $this->get(route($routeName))
+                ->assertOk()
+                ->assertSee(__('Super-Admin Panel'))
+                ->assertSee($managementHeading);
+        }
+
+        $company->update(['fiscal_year' => (int) toEnglish(jdate('Y')) - 1]);
+
+        $this->get(route('home'))->assertRedirect(route('management.dashboard'));
     }
 
     private function company(string $name): Company

@@ -1,5 +1,5 @@
-<x-app-layout :title="__('Edit User')">
-    <div class="card bg-base-100 shadow-xl">
+<x-platform-layout :title="__('Edit User')">
+    <div class="card bg-base-100">
         <div class="card-body">
             <form method="post" action="{{ route('users.update', $user) }}">
                 @csrf
@@ -15,4 +15,4 @@
             </form>
         </div>
     </div>
-</x-app-layout>
+</x-platform-layout>

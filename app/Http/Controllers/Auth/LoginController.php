@@ -37,6 +37,10 @@ class LoginController extends Controller
             return redirect()->route('verification.notice')->with('error', __('Please verify your account before continuing.'));
         }
 
+        if ($user->can('access-super-admin-panel')) {
+            return redirect()->intended(route('management.dashboard'));
+        }
+
         if (! $user->companies()->exists()) {
             return redirect()->route('registered-user.company.create');
         }

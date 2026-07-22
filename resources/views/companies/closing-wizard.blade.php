@@ -1,4 +1,4 @@
-<x-app-layout title="{{ __('Year-End Closing Wizard') }} – {{ $company->name }} {{ $company->fiscal_year }}">
+<x-platform-layout title="{{ __('Year-End Closing Wizard') }} – {{ $company->name }} {{ $company->fiscal_year }}">
     <div class="card bg-base-100 shadow-xl">
 
         {{-- Header --}}
@@ -294,4 +294,4 @@
 
         </div>
     </div>
-</x-app-layout>
+</x-platform-layout>

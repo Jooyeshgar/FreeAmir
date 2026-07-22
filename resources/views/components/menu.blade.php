@@ -290,8 +290,7 @@
             @endcanany
 
             {{-- System --}}
-            @canany(['companies.index', 'users.index', 'permissions.index', 'roles.index', 'configs.index',
-                'backups.create'])
+            @canany(['companies.index', 'users.index', 'configs.index', 'backups.create'])
                 <li>
                     <details>
                         <summary>{{ __('System') }}</summary>
@@ -301,12 +300,6 @@
                             @endcan
                             @can('users.index')
                                 <li><a href="{{ route('users.index') }}">{{ __('Users') }}</a></li>
-                            @endcan
-                            @can('permissions.index')
-                                <li><a href="{{ route('permissions.index') }}">{{ __('Permissions') }}</a></li>
-                            @endcan
-                            @can('roles.index')
-                                <li><a href="{{ route('roles.index') }}">{{ __('Roles') }}</a></li>
                             @endcan
                             @can('configs.index')
                                 <li><a href="{{ route('configs.index') }}">{{ __('Configs') }}</a></li>

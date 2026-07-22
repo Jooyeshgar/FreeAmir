@@ -13,7 +13,7 @@
         $hasEmployees = isset($employees) && $employees->isNotEmpty();
     @endphp
 
-    @if ($user)
+    @if ($user && auth()->user()->cannot('access-super-admin-panel'))
         <div>
             <x-select name="employee_id" id="employee_id" title="{{ __('Employee') }}" :options="$employeeOptions"
                 :selected="old('employee_id') ?? $user?->employee?->id" :disabled="$user?->employee || !$hasEmployees" />

@@ -11,7 +11,7 @@ class AboutController extends Controller
 {
     public function __construct(private readonly GlobalConfigService $globalConfigService) {}
 
-    public function index()
+    public function index(Request $request)
     {
         $dbConnected = false;
         $dbDriver = config('database.default');
@@ -44,7 +44,15 @@ class AboutController extends Controller
             ];
         }
 
-        return view('about', [
+        $isManagementSettings = $request->routeIs('management.settings');
+
+        if ($isManagementSettings) {
+            $request->session()->put('interface_mode', 'management');
+        }
+
+        $view = $isManagementSettings ? 'super-admin.settings' : 'about';
+
+        return view($view, [
             'version' => config('app.version'),
             'appEnv' => config('app.env'),
             'debugMode' => config('app.debug'),
@@ -73,7 +81,7 @@ class AboutController extends Controller
 
         $updated = implode(', ', array_intersect_key($this->settingTitles(), $validated));
 
-        return redirect()->route('about')->with('success', __(':setting updated successfully.', ['setting' => $updated]));
+        return redirect()->route('management.settings')->with('success', __(':setting updated successfully.', ['setting' => $updated]));
     }
 
     private function settingTitles(): array
