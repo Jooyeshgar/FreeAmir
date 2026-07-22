@@ -121,6 +121,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
 
     Route::get('invoices/inactive', [Controllers\InvoiceController::class, 'inactiveInvoices'])->name('invoices.inactive');
     Route::get('invoices/inactive/approve', [Controllers\InvoiceController::class, 'approveInactiveInvoices'])->name('invoices.inactive.approve');
+    Route::get('invoices/export', [Controllers\InvoiceController::class, 'export'])->name('invoices.export');
     Route::prefix('invoices')->group(function () {
         Route::get('ancillary-costs/search-customer', [Controllers\AncillaryCostController::class, 'searchCustomer'])->name('ancillary-costs.search-customer');
         Route::get('ancillary-costs/search-invoice', [Controllers\AncillaryCostController::class, 'searchInvoice'])->name('ancillary-costs.search-invoice');

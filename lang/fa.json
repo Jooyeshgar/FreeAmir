@@ -141,6 +141,7 @@
     "Allowed": "مجاز",
     "Amirs free accounting software": "نرم‌افزار حسابداری آزاد امیر",
     "Amount": "مبلغ",
+    "Amount - Discounts": "مبلغ پس از تخفیف",
     "Amount is required for each ancillary cost.": "برای هر هزینه جانبی مبلغ الزامی است.",
     "Amount must be a number.": "مبلغ باید یک عدد باشد.",
     "Amount must be at least :min.": "مبلغ باید حداقل :min باشد.",
