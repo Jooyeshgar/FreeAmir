@@ -1932,6 +1932,7 @@
     "The item id must be an integer.": "شناسه مورد باید یک عدد صحیح باشد.",
     "The item id must be unique for each row.": "شناسه مورد باید برای هر ردیف منحصر به فرد باشد.",
     "The latest moadian submission failed.": "آخرین ارسال به مودیان ناموفق بود.",
+    "The original invoice must be sent successfully to Moadian before sending its void invoice.": "پیش از ارسال فاکتور ابطالی به مودیان، فاکتور اصلی باید با موفقیت به مودیان ارسال شده باشد.",
     "The paid leave exceeds the employee's remaining leave balance.": "مرخصی با حقوق از مانده مرخصی باقی‌مانده کارمند بیشتر است.",
     "The payment date cannot be earlier than the invoice date.": "تاریخ پرداخت نمی‌تواند زودتر از تاریخ فاکتور باشد",
     "The private key file must contain valid PEM-formatted content.": "فایل کلید خصوصی باید حاوی محتوای معتبر با فرمت PEM باشد.",

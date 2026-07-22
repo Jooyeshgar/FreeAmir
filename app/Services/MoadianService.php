@@ -84,6 +84,19 @@ class MoadianService
             $decision->addMessage('error', __('Cannot send an invoice to moadian that already has successful status from moadian.'));
         }
 
+        if ($invoice->invoice_type === InvoiceType::VOID) {
+            $originalInvoice = $invoice->voidedInvoice;
+            $originalHasMoadianSuccess = $originalInvoice?->moadianHistories->contains(function ($history) {
+                $data = $history->data;
+
+                return strtoupper($data['status'] ?? '') === 'SUCCESS';
+            }) ?? false;
+
+            if (! $originalHasMoadianSuccess) {
+                $decision->addMessage('error', __('The original invoice must be sent successfully to Moadian before sending its void invoice.'));
+            }
+        }
+
         foreach ($invoice->items as $item) {
             if (! $item->itemable->sstid) {
                 $decision->addMessage('error', __('All invoice items must have a valid SSTID.'));

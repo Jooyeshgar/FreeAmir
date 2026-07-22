@@ -180,7 +180,7 @@ class InvoiceController extends Controller
             $item->where('itemable_type', Service::class);
         }));
 
-        $builder->when(! $isServiceBuy && ! in_array($invoiceType, [InvoiceType::SELL, InvoiceType::RETURN_SELL], true), fn ($q) => $q->whereHas('items', function ($item) {
+        $builder->when(! $isServiceBuy && in_array($invoiceType, [InvoiceType::BUY, InvoiceType::RETURN_BUY], true), fn ($q) => $q->whereHas('items', function ($item) {
             $item->where('itemable_type', Product::class);
         }));
 
@@ -347,7 +347,7 @@ class InvoiceController extends Controller
             'document.transactions',
             'items',
             'voidInvoice',
-            'voidedInvoice',
+            'voidedInvoice.moadianHistories',
             'ancillaryCosts',
             'ancillaryCosts.customer',
             'ancillaryCosts.document',

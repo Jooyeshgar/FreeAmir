@@ -10,8 +10,11 @@ use App\Models\CustomerGroup;
 use App\Models\Invoice;
 use App\Models\MoadianHistory;
 use App\Models\ProductGroup;
+use App\Models\Service;
+use App\Models\ServiceGroup;
 use App\Models\User;
 use App\Services\InvoiceService;
+use App\Services\MoadianService;
 use Cookie;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -141,18 +144,56 @@ class VoidSellInvoiceTest extends TestCase
         $this->assertEqualsWithDelta(100, $product->average_cost, 0.01);
     }
 
-    public function test_sell_invoice_can_be_voided_from_show_page(): void
+    public function test_approved_sell_invoice_can_be_voided_from_show_page_without_moadian_history(): void
     {
         $product = $this->createProduct();
 
         $this->buy([$this->productItem($product, 10, 100)], true, 7041, '2026-07-01');
         $sell = $this->sell([$this->productItem($product, 4, 180)], true, 7042, '2026-07-02')['invoice'];
 
-        MoadianHistory::create(['invoice_id' => $sell->id, 'data' => ['status' => 'SUCCESS']]);
-
         $this->get(route('invoices.show', $sell))->assertOk()->assertSee(route('invoices.void-form', $sell));
 
         $this->post(route('invoices.void', $sell), ['date' => '1405/04/12', 'invoice_number' => 7043])->assertRedirect(); // 2026-07-03
+    }
+
+    public function test_void_invoice_can_only_be_sent_to_moadian_after_original_invoice_succeeds(): void
+    {
+        $product = $this->createProduct();
+
+        $this->buy([$this->productItem($product, 10, 100)], true, 7141, '2026-07-01');
+        $sell = $this->sell([$this->productItem($product, 4, 180)], true, 7142, '2026-07-02')['invoice'];
+        $this->post(route('invoices.void', $sell), ['date' => '1405/04/12', 'invoice_number' => 7143])->assertRedirect(); // 2026-07-03
+
+        $voidInvoice = $this->findInvoice($sell->voidInvoice()->firstOrFail()->id);
+        $message = __('The original invoice must be sent successfully to Moadian before sending its void invoice.');
+
+        $decision = (new MoadianService)->validateSendMoadian($voidInvoice);
+
+        $this->assertTrue($decision->messages->contains(fn ($item) => $item->text === $message));
+
+        MoadianHistory::create(['invoice_id' => $sell->id, 'data' => ['status' => 'SUCCESS']]);
+
+        $decision = (new MoadianService)->validateSendMoadian($this->findInvoice($voidInvoice->id));
+
+        $this->assertFalse($decision->messages->contains(fn ($item) => $item->text === $message));
+    }
+
+    public function test_void_invoice_send_button_reflects_original_moadian_status(): void
+    {
+        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'invoices.send-moadian']));
+        $product = $this->createProduct();
+
+        $this->buy([$this->productItem($product, 10, 100)], true, 7151, '2026-07-01');
+        $sell = $this->sell([$this->productItem($product, 4, 180)], true, 7152, '2026-07-02')['invoice'];
+        $this->post(route('invoices.void', $sell), ['date' => '1405/04/12', 'invoice_number' => 7153])->assertRedirect(); // 2026-07-03
+
+        $voidInvoice = $sell->voidInvoice()->firstOrFail();
+
+        $this->get(route('invoices.show', $voidInvoice))->assertOk()->assertSee(__('The original invoice must be sent successfully to Moadian before sending its void invoice.'))->assertDontSee('action="'.route('invoices.send-moadian', $voidInvoice).'"', false);
+
+        MoadianHistory::create(['invoice_id' => $sell->id, 'data' => ['status' => 'success']]);
+
+        $this->get(route('invoices.show', $voidInvoice))->assertOk()->assertSee('action="'.route('invoices.send-moadian', $voidInvoice).'"', false);
     }
 
     public function test_sell_index_can_filter_only_voided_sell_invoices(): void
@@ -175,6 +216,30 @@ class VoidSellInvoiceTest extends TestCase
 
         $buyIndexResponse->assertOk();
         $buyIndexResponse->assertDontSee(__('Voided'));
+    }
+
+    public function test_void_index_lists_a_voided_service_sale(): void
+    {
+        $serviceGroup = ServiceGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
+        $service = Service::factory()->withGroup($serviceGroup)->withSubject()->create(['company_id' => $this->companyId]);
+        $sell = $this->sell([[
+            'itemable_type' => 'service',
+            'itemable_id' => $service->id,
+            'quantity' => 2,
+            'unit' => 500,
+            'unit_discount' => 0,
+            'vat' => 0,
+        ]], true, 7161, '2026-07-01')['invoice'];
+
+        $this->post(route('invoices.void', $sell), [
+            'date' => '1405/04/11',
+            'invoice_number' => 7162,
+        ])->assertRedirect(); // 2026-07-02
+
+        $response = $this->get(route('invoices.index', ['invoice_type' => 'void']));
+
+        $response->assertOk();
+        $response->assertSee((string) formatDocumentNumber(7162));
     }
 
     public function test_voiding_is_blocked_for_unapproved_sell_invoice(): void

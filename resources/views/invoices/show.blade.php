@@ -929,28 +929,41 @@
                             return strtoupper($data['status'] ?? '') === 'SUCCESS';
                         });
 
+                        $originalHasMoadianSuccess = !$invoice->invoice_type->isVoid() ||
+                            ($invoice->voidedInvoice?->moadianHistories->contains(function ($history) {
+                                $data = $history->data;
+
+                                return strtoupper($data['status'] ?? '') === 'SUCCESS';
+                            }) ?? false);
+
                         $canChangeStatus = ($canApprove || $canUnapprove) && !$hasMoadianSuccess;
                     @endphp
 
                     @can('invoices.send-moadian')
                         @if ($isMoadianSendable)
-                            @if ($invoice->status->isApproved() && !$hasMoadianSuccess)
-                                <form method="POST" action="{{ route('invoices.send-moadian', $invoice) }}">
-                                    @csrf
-                                    <button type="submit" class="btn btn-success">{{ __('Send Moadian') }}</button>
-                                </form>
-                            @elseif ($hasMoadianSuccess)
+                            @if ($hasMoadianSuccess)
                                 <span class="tooltip"
                                     data-tip="{{ __('This invoice has already been sent successfully to Moadian and cannot be sent again.') }}">
                                     <button class="btn btn-success btn-disabled cursor-not-allowed"
                                         title="{{ __('This invoice has already been sent successfully to Moadian and cannot be sent again.') }}">{{ __('Send Moadian') }}</button>
                                 </span>
-                            @else
+                            @elseif (!$invoice->status->isApproved())
                                 <span class="tooltip"
                                     data-tip="{{ __('Approve the invoice first to send to moadian') }}">
                                     <button class="btn btn-error btn-disabled cursor-not-allowed"
                                         title="{{ __('Approve the invoice first to send to moadian') }}">{{ __('Send Moadian') }}</button>
                                 </span>
+                            @elseif (!$originalHasMoadianSuccess)
+                                <span class="tooltip"
+                                    data-tip="{{ __('The original invoice must be sent successfully to Moadian before sending its void invoice.') }}">
+                                    <button class="btn btn-error btn-disabled cursor-not-allowed"
+                                        title="{{ __('The original invoice must be sent successfully to Moadian before sending its void invoice.') }}">{{ __('Send Moadian') }}</button>
+                                </span>
+                            @else
+                                <form method="POST" action="{{ route('invoices.send-moadian', $invoice) }}">
+                                    @csrf
+                                    <button type="submit" class="btn btn-success">{{ __('Send Moadian') }}</button>
+                                </form>
                             @endif
                         @endif
                     @endcan
@@ -960,8 +973,7 @@
                             @if (
                                 $invoice->status->isApproved() &&
                                     !$invoice->voidInvoice &&
-                                    $invoice->getReturnInvoice()->isEmpty() &&
-                                    $hasMoadianSuccess)
+                                    $invoice->getReturnInvoice()->isEmpty())
                                 <a href="{{ route('invoices.void-form', $invoice) }}" class="btn btn-warning">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
                                         viewBox="0 0 24 24" stroke="currentColor">
@@ -976,7 +988,7 @@
                                         ? __('Invoice has voided already.')
                                         : ($invoice->getReturnInvoice()->isNotEmpty()
                                             ? __('Only approved sell invoices without return invoices can be voided.')
-                                            : __('Invoice must be approved and sent to Moadian before voiding'));
+                                            : __('Invoice must be approved before voiding.'));
                                 @endphp
                                 <span class="tooltip" data-tip="{{ $voidDisabledTip }}">
                                     <button class="btn btn-warning gap-2 btn-disabled cursor-not-allowed">
