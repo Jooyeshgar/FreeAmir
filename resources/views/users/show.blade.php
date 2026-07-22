@@ -1,4 +1,4 @@
-<x-app-layout :title="__('User Details') . ' - ' . $user->name">
+<x-platform-layout :title="__('User Details') . ' - ' . $user->name">
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <h2 class="text-2xl font-bold">{{ $user->name }}</h2>
@@ -40,4 +40,4 @@
             </div>
         </div>
     </div>
-</x-app-layout>
+</x-platform-layout>

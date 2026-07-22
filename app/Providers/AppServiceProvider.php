@@ -43,7 +43,7 @@ class AppServiceProvider extends ServiceProvider
         App::setLocale(config('app.locale', 'fa'));
 
         Gate::before(function ($user, $ability) {
-            if ($user->hasRole('Super-Admin')) {
+            if ($ability !== 'access-super-admin-panel' && $user->can('access-super-admin-panel')) {
                 return true;
             }
         });

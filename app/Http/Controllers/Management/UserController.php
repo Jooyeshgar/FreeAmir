@@ -23,25 +23,37 @@ class UserController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         $actor = auth()->user();
         $isProduction = app()->environment('production');
 
         if ($isProduction) {
-            abort_unless($actor->hasAnyRole(['Super-Admin', __('Admin')]), 403);
+            abort_unless($actor->can('access-super-admin-panel') || $actor->hasRole(__('Admin')), 403);
         }
 
         $users = User::query()
-            ->unless($actor->hasRole('Super-Admin'), function ($query) use ($actor) {
+            ->unless($actor->can('access-super-admin-panel'), function ($query) use ($actor) {
                 $companyIds = $actor->companies()->pluck('companies.id');
 
                 $query->whereHas('companies', fn ($query) => $query->where('companies.id', getActiveCompany()))
                     ->whereDoesntHave('companies', fn ($query) => $query->whereNotIn('companies.id', $companyIds));
             })
-            ->when($isProduction, fn ($query) => $query->whereDoesntHave('roles', fn ($query) => $query->where('name', 'Super-Admin')))
-            ->with('employee')
-            ->paginate(10);
+            ->when($isProduction && ! $actor->can('access-super-admin-panel'), fn ($query) => $query->whereDoesntHave('roles', fn ($query) => $query->where('name', 'Super-Admin')))
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = trim((string) $request->input('search'));
+
+                $query->where(fn ($query) => $query
+                    ->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%"));
+            })
+            ->when($request->input('verification') === 'verified', fn ($query) => $query->whereNotNull('email_verified_at'))
+            ->when($request->input('verification') === 'pending', fn ($query) => $query->whereNull('email_verified_at'))
+            ->with(['employee', 'roles:id,name'])
+            ->withCount('companies')
+            ->latest()
+            ->paginate(12)
+            ->withQueryString();
 
         return view('users.index', compact('users'));
     }
@@ -230,7 +242,7 @@ class UserController extends Controller
     private function assignableRoles()
     {
         return Role::query()
-            ->when(! auth()->user()->hasRole('Super-Admin'), fn ($query) => $query->where('name', '!=', 'Super-Admin'))
+            ->when(! auth()->user()->can('access-super-admin-panel'), fn ($query) => $query->where('name', '!=', 'Super-Admin'))
             ->get();
     }
 
@@ -238,7 +250,7 @@ class UserController extends Controller
     {
         $user = auth()->user();
 
-        return ($user->hasRole('Super-Admin') ? Company::query() : $user->companies())->get();
+        return ($user->can('access-super-admin-panel') ? Company::query() : $user->companies())->get();
     }
 
     private function validateAssignments(Request $request): void
@@ -260,7 +272,7 @@ class UserController extends Controller
     {
         $actor = auth()->user();
 
-        if ($actor->hasRole('Super-Admin')) {
+        if ($actor->can('access-super-admin-panel')) {
             return;
         }
 

@@ -23,11 +23,11 @@ class PermissionController extends Controller
     {
         $validated = Validator::make($request->all(), $this->searchRules, $this->messages)->validate();
 
-        $query = Permission::orderBy('id', 'desc');
+        $query = Permission::query()->withCount('roles')->orderBy('name');
         if (isset($validated['search']) and $search = $validated['search']) {
             $query->where('name', 'like', "%{$search}%");
         }
-        $permissions = $query->paginate(20);
+        $permissions = $query->paginate(20)->withQueryString();
 
         return view('management.permission.index', [
             'permissions' => $permissions,
@@ -39,7 +39,7 @@ class PermissionController extends Controller
      */
     public function create()
     {
-        $roles = Role::all();
+        $roles = Role::query()->orderBy('name')->get();
 
         return view('management.permission.create', [
             'permission' => null,
@@ -78,7 +78,7 @@ class PermissionController extends Controller
     {
         return view('management.permission.create', [
             'permission' => $permission,
-            'roles' => Role::all(),
+            'roles' => Role::query()->orderBy('name')->get(),
             'syncedRoles' => $permission->roles()->pluck('id'),
         ]);
     }

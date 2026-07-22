@@ -174,6 +174,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $extras = [
             'home',
+            'access-super-admin-panel',
             'api.access',
             'change-company',
             'update-global-configs',
@@ -199,6 +200,7 @@ class RolesAndPermissionsSeeder extends Seeder
             Permission::query()
                 ->where('name', 'NOT LIKE', 'roles.%')
                 ->where('name', 'NOT LIKE', 'permissions.%')
+                ->where('name', '!=', 'access-super-admin-panel')
                 ->where('name', '!=', 'update-global-configs')
                 ->pluck('name')
                 ->toArray()
@@ -211,6 +213,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 ->where('name', 'NOT LIKE', 'roles.%')
                 ->where('name', 'NOT LIKE', 'permissions.%')
                 ->where('name', 'NOT LIKE', 'configs.%')
+                ->where('name', '!=', 'access-super-admin-panel')
                 ->where('name', '!=', 'update-global-configs')
                 ->where('name', 'NOT LIKE', 'api.%')
                 ->where('name', 'NOT LIKE', 'api-tokens.%')
