@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/login', [Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [Controllers\Auth\LoginController::class, 'login']);
 Route::get('/logout', [Controllers\Auth\LoginController::class, 'logout'])->name('logout');
+Route::post('/locale', [Controllers\Auth\LoginController::class, 'locale'])->name('locale');
 
 Route::get('/forgot-password', [Controllers\Auth\PasswordResetController::class, 'showForgotPasswordForm'])->name('password.request');
 Route::post('/forgot-password', [Controllers\Auth\PasswordResetController::class, 'sendResetLink'])->middleware('throttle:6,1')->name('password.email');

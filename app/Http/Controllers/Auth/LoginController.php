@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 
 class LoginController extends Controller
@@ -58,5 +60,17 @@ class LoginController extends Controller
                 'email' => strtolower(trim($request->input('email'))),
             ]);
         }
+    }
+
+    public function locale(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'locale' => ['required', 'in:fa,en'],
+        ]);
+
+        $request->session()->put('locale', $validated['locale']);
+        App::setLocale($validated['locale']);
+
+        return back();
     }
 }

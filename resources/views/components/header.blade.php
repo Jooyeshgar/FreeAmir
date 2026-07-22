@@ -29,6 +29,29 @@
                 <li>
                     <details class="app-main-menu-dropdown" data-main-menu-dropdown>
                         <summary class="text-sm">
+                            {{ app()->isLocale('fa') ? __('Farsi') : __('English') }}
+                        </summary>
+                        <form id="locale-fa-form" method="POST" action="{{ route('locale') }}" class="hidden">
+                            @csrf
+                            <input type="hidden" name="locale" value="fa">
+                        </form>
+                        <form id="locale-en-form" method="POST" action="{{ route('locale') }}" class="hidden">
+                            @csrf
+                            <input type="hidden" name="locale" value="en">
+                        </form>
+                        <ul class="app-main-menu-panel z-50 w-52">
+                            <li>
+                                <button type="submit" form="locale-fa-form" lang="fa">{{ __('Farsi') }}</button>
+                            </li>
+                            <li>
+                                <button type="submit" form="locale-en-form" lang="en">{{ __('English') }}</button>
+                            </li>
+                        </ul>
+                    </details>
+                </li>
+                <li>
+                    <details class="app-main-menu-dropdown" data-main-menu-dropdown>
+                        <summary class="text-sm">
                             {{ cookie('active-company-id') ? config('active-company-name') . ' - ' . config('active-company-fiscal-year') : __('Please Select a Company') }}
                         </summary>
                         <ul class="app-main-menu-panel z-50 w-52">

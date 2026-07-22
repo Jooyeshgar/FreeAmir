@@ -4,10 +4,12 @@
         <h1 class="font-bold">{{ __('Amirs free accounting software') }}</h1>
     </div>
     <div class="language-select">
-        <form action="" class="language-picker__form">
-            <select name="language" class="locale select pr-10 pl-3 py-2">
-                <option lang="fa" value="fa" selected>{{ __('Farsi') }}</option>
-                <option lang="en" value="en">{{ __('English') }}</option>
+        <form method="POST" action="{{ route('locale') }}" class="language-picker__form">
+            @csrf
+            <label for="auth-locale" class="sr-only">{{ __('Language') }}</label>
+            <select id="auth-locale" name="locale" class="locale select pr-10 pl-3 py-2" onchange="this.form.submit()">
+                <option lang="fa" value="fa" @selected(app()->isLocale('fa'))>{{ __('Farsi') }}</option>
+                <option lang="en" value="en" @selected(app()->isLocale('en'))>{{ __('English') }}</option>
             </select>
         </form>
     </div>

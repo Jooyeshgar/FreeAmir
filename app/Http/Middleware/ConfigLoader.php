@@ -29,6 +29,12 @@ class ConfigLoader
             //
         }
 
+        $locale = $request->session()->get('locale');
+
+        if (in_array($locale, ['fa', 'en'], true)) {
+            app()->setLocale($locale);
+        }
+
         return $next($request);
     }
 
