@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
+use App\Enums\ThursdayStatus;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\PersonnelRequest;
@@ -24,6 +25,8 @@ class PersonnelRequestTest extends TestCase
 
     protected Employee $employee;
 
+    protected WorkShift $workShift;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -42,12 +45,12 @@ class PersonnelRequestTest extends TestCase
         $this->withCookies(['active-company-id' => $this->companyId]);
 
         $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
-        $workShift = WorkShift::factory()->create(['company_id' => $this->companyId]);
+        $this->workShift = WorkShift::factory()->create(['company_id' => $this->companyId]);
 
         $this->employee = Employee::factory()->create([
             'company_id' => $this->companyId,
             'work_site_id' => $workSite->id,
-            'work_shift_id' => $workShift->id,
+            'work_shift_id' => $this->workShift->id,
         ]);
     }
 
@@ -198,6 +201,30 @@ class PersonnelRequestTest extends TestCase
             'status' => PersonnelRequestStatus::PENDING->value,
             'approved_by' => null,
         ]);
+    }
+
+    public function test_store_daily_mission_uses_shift_times_for_the_requested_date(): void
+    {
+        $this->workShift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '16:00:00',
+            'thursday_status' => ThursdayStatus::HALF_DAY,
+            'thursday_exit_time' => '12:00:00',
+        ]);
+
+        $response = $this->post(route('hr.personnel-requests.store'), $this->validPayload([
+            'request_type' => PersonnelRequestType::MISSION_DAILY,
+            'request_date' => convertToJalali('2025-03-06', true),
+            'start_time' => '',
+            'end_time' => '',
+            'tab' => 'missions',
+        ]));
+
+        $response->assertRedirect(route('hr.personnel-requests.index', ['tab' => 'missions']));
+        $request = PersonnelRequest::query()->latest('id')->firstOrFail();
+
+        $this->assertSame('2025-03-06 08:00:00', $request->start_date->format('Y-m-d H:i:s'));
+        $this->assertSame('2025-03-06 12:00:00', $request->end_date->format('Y-m-d H:i:s'));
     }
 
     public function test_store_validates_required_fields(): void

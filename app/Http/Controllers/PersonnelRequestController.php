@@ -101,10 +101,9 @@ class PersonnelRequestController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        if (isset($request['request_type']) && in_array($request['request_type'], ['LEAVE_DAILY', 'LEAVE_WITHOUT_PAY', 'MISSION_DAILY']) && isset($request['employee_id'])) {
+        if (isset($request['request_type'], $request['employee_id'])) {
             $employee = Employee::find($request['employee_id']);
-            $request['start_time'] = Carbon::createFromTimeString($employee->workShift->start_time)->format('H:i');
-            $request['end_time'] = Carbon::createFromTimeString($employee->workShift->end_time)->format('H:i');
+            $this->applyDailyRequestShiftTimes($request, $employee);
         }
 
         $request->validate([
@@ -188,6 +187,8 @@ class PersonnelRequestController extends Controller
             ]);
         }
 
+        $this->applyDailyRequestShiftTimes($request, $personnelRequest->employee);
+
         $validated = $request->validate([
             'request_type' => ['required', 'string', 'in:'.implode(',', PersonnelRequestType::valueNames())],
             'request_date' => ['required', 'string'],
@@ -258,5 +259,20 @@ class PersonnelRequestController extends Controller
 
         return redirect()->back()
             ->with('success', __('Personnel request rejected.'));
+    }
+
+    private function applyDailyRequestShiftTimes(Request $request, ?Employee $employee): void
+    {
+        if ($employee === null || ! $request->filled('request_date') || ! in_array($request->input('request_type'), ['LEAVE_DAILY', 'LEAVE_WITHOUT_PAY', 'MISSION_DAILY'], true)) {
+            return;
+        }
+
+        $gregorianDate = str_replace('/', '-', convertToGregorian($request->input('request_date')));
+        $times = $this->attendanceService->shiftTimesForDate($employee->workShift, Carbon::parse($gregorianDate));
+
+        $request->merge([
+            'start_time' => $times['start'],
+            'end_time' => $times['end'],
+        ]);
     }
 }

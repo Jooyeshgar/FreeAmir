@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Enums\PayrollStatus;
+use App\Enums\PersonnelRequestStatus;
+use App\Enums\PersonnelRequestType;
+use App\Enums\ThursdayStatus;
 use App\Models\Company;
 use App\Models\DecreeBenefit;
 use App\Models\Employee;
@@ -11,11 +14,13 @@ use App\Models\OrgChart;
 use App\Models\Payroll;
 use App\Models\PayrollElement;
 use App\Models\PayrollItem;
+use App\Models\PersonnelRequest;
 use App\Models\SalaryDecree;
 use App\Models\TaxSlab;
 use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
+use App\Services\AttendanceService;
 use App\Services\PayrollService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -419,6 +424,65 @@ class PayrollServiceTest extends TestCase
 
         $this->assertArrayHasKey('mission', $result['earnings']);
         $this->assertEquals($expected, $result['earnings']['mission']['amount']);
+    }
+
+    public function test_daily_mission_replaces_base_salary_day_and_uses_its_dated_shift(): void
+    {
+        $this->seedTaxSlabs();
+        $this->shift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '16:00:00',
+            'thursday_status' => ThursdayStatus::HALF_DAY,
+            'thursday_exit_time' => '12:00:00',
+        ]);
+
+        $request = PersonnelRequest::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'request_type' => PersonnelRequestType::MISSION_DAILY,
+            'start_date' => '2025-03-06 08:00:00', // Thursday
+            'end_date' => '2025-03-06 12:00:00',
+            'status' => PersonnelRequestStatus::APPROVED,
+        ]);
+
+        (new AttendanceService)->syncPersonnelRequestLogs($request);
+        $missionMinutes = $this->employee->attendanceLogs()->whereDate('log_date', '2025-03-06')->value('mission');
+        $attendance = $this->makeAttendance([
+            'start_date' => '2025-03-01',
+            'duration' => 31,
+            'mission' => $missionMinutes,
+        ]);
+
+        $result = $this->service->calculate($attendance, $this->makeDecree(), $this->companyId);
+
+        $this->assertSame(240, $missionMinutes, 'The dated Thursday half-day shift must contribute four mission hours.');
+        $this->assertSame(25, $result['prorated_days']);
+        $this->assertEquals(self::DAILY_WAGE * 25, $result['earnings']['base_salary']['amount']);
+        $this->assertEquals(self::DAILY_WAGE * 1.4, $result['earnings']['mission']['amount']);
+    }
+
+    public function test_daily_mission_on_an_off_day_does_not_reduce_base_salary_days(): void
+    {
+        $this->seedTaxSlabs();
+        PersonnelRequest::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'request_type' => PersonnelRequestType::MISSION_DAILY,
+            'start_date' => '2025-03-07 08:00:00', // Friday
+            'end_date' => '2025-03-07 16:00:00',
+            'status' => PersonnelRequestStatus::APPROVED,
+        ]);
+        $attendance = $this->makeAttendance([
+            'start_date' => '2025-03-01',
+            'duration' => 31,
+            'mission' => self::SHIFT_MINUTES,
+        ]);
+
+        $result = $this->service->calculate($attendance, $this->makeDecree(), $this->companyId);
+
+        $this->assertSame(26, $result['prorated_days']);
+        $this->assertEquals(self::DAILY_WAGE * 26, $result['earnings']['base_salary']['amount']);
+        $this->assertEquals(self::DAILY_WAGE * 1.4, $result['earnings']['mission']['amount']);
     }
 
     // -----------------------------------------------------------------------

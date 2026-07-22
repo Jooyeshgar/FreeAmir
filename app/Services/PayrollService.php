@@ -3,11 +3,17 @@
 namespace App\Services;
 
 use App\Enums\PayrollStatus;
+use App\Enums\PersonnelRequestStatus;
+use App\Enums\PersonnelRequestType;
+use App\Enums\ThursdayStatus;
 use App\Models\MonthlyAttendance;
 use App\Models\Payroll;
 use App\Models\PayrollItem;
+use App\Models\PersonnelRequest;
+use App\Models\PublicHoliday;
 use App\Models\SalaryDecree;
 use App\Models\TaxSlab;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -51,6 +57,12 @@ class PayrollService
     private int $hourlyUnpaidLeaveMinutes = 0;
 
     private int $proratedDays = 0;
+
+    private int $dailyMissionWorkingDays = 0;
+
+    private int $dailyMissionDateCount = 0;
+
+    private int $dailyMissionMinutes = 0;
 
     private mixed $workShift = null;
 
@@ -117,7 +129,11 @@ class PayrollService
         $this->unpaidLeaveDays = $this->resolveDailyUnpaidLeaveDays($attendance);
         $shiftMinutes = max(1, (int) ($this->workShift?->duration ?? (8 * 60)));
         $this->hourlyUnpaidLeaveMinutes = max(0, (int) ($attendance->unpaid_leave ?? 0) - ($this->unpaidLeaveDays * $shiftMinutes));
-        $this->proratedDays = max(0, $this->workDays - $this->absentDays - $this->unpaidLeaveDays);
+        $dailyMissions = $this->resolveDailyMissions($attendance);
+        $this->dailyMissionWorkingDays = $dailyMissions['working_days'];
+        $this->dailyMissionDateCount = $dailyMissions['date_count'];
+        $this->dailyMissionMinutes = $dailyMissions['minutes'];
+        $this->proratedDays = max(0, $this->workDays - $this->absentDays - $this->unpaidLeaveDays - $this->dailyMissionWorkingDays);
         $this->benefits = $decree->benefits;
         $this->hourlyWage = $this->resolveHourlyWage();
 
@@ -346,35 +362,68 @@ class PayrollService
 
     private function addWageBasedEarning(int $minutes, string $type, string $systemCode): void
     {
-        if ($minutes <= 0) {
+        $hasDailyMissions = $type === 'mission' && $this->dailyMissionDateCount > 0;
+
+        if ($minutes <= 0 && ! $hasDailyMissions) {
             return;
         }
 
         $element = $this->elements->get($systemCode);
         $coeff = $this->resolveCoefficient($type);
-        $hours = $minutes / 60;
-        $amount = round($hours * $this->hourlyWage * $coeff, 2);
 
-        $typeLabel = match ($type) {
-            'overtime' => __('Overtime'),
-            'auto_overtime' => __('Auto Overtime'),
-            'friday' => __('Friday Premium'),
-            'holiday' => __('Holiday Premium'),
-            'mission' => __('Mission Pay'),
-            default => __(ucfirst($type)),
-        };
+        if ($hasDailyMissions) {
+            $hourlyMinutes = max(0, $minutes - min($minutes, $this->dailyMissionMinutes));
+            $hours = $hourlyMinutes / 60;
+            $dailyAmount = $this->dailyMissionDateCount * $this->dailyWage * $coeff;
+            $hourlyAmount = $hours * $this->hourlyWage * $coeff;
+            $amount = round($dailyAmount + $hourlyAmount, 2);
 
-        $this->addEarning($type, [
-            'element_id' => $element?->id,
-            'amount' => $amount,
-            'unit_count' => $hours,
-            'unit_rate' => round($this->hourlyWage * $coeff, 2),
-            'description' => __(':label (:hours hrs × :rate × :coeff)', [
+            if ($hourlyMinutes > 0) {
+                $description = __('Mission Pay (:days daily missions + :hours hourly mission hrs, coefficient :coeff)', [
+                    'days' => $this->dailyMissionDateCount,
+                    'hours' => number_format($hours, 2),
+                    'coeff' => $coeff,
+                ]);
+                $unitCount = null;
+                $unitRate = null;
+            } else {
+                $description = __('Daily Mission Pay (:days days × :rate/day × :coeff)', [
+                    'days' => $this->dailyMissionDateCount,
+                    'rate' => number_format($this->dailyWage),
+                    'coeff' => $coeff,
+                ]);
+                $unitCount = $this->dailyMissionDateCount;
+                $unitRate = round($this->dailyWage * $coeff, 2);
+            }
+        } else {
+            $hours = $minutes / 60;
+            $amount = round($hours * $this->hourlyWage * $coeff, 2);
+
+            $typeLabel = match ($type) {
+                'overtime' => __('Overtime'),
+                'auto_overtime' => __('Auto Overtime'),
+                'friday' => __('Friday Premium'),
+                'holiday' => __('Holiday Premium'),
+                'mission' => __('Mission Pay'),
+                default => __(ucfirst($type)),
+            };
+
+            $description = __(':label (:hours hrs × :rate × :coeff)', [
                 'label' => $typeLabel,
                 'hours' => number_format($hours, 2),
                 'rate' => number_format($this->hourlyWage),
                 'coeff' => $coeff,
-            ]),
+            ]);
+            $unitCount = $hours;
+            $unitRate = round($this->hourlyWage * $coeff, 2);
+        }
+
+        $this->addEarning($type, [
+            'element_id' => $element?->id,
+            'amount' => $amount,
+            'unit_count' => $unitCount,
+            'unit_rate' => $unitRate,
+            'description' => $description,
             'is_taxable' => $element?->is_taxable ?? true,
             'is_insurable' => $element?->is_insurable ?? true,
         ]);
@@ -424,6 +473,79 @@ class PayrollService
         $shiftMinutes = max(1, (int) ($this->workShift?->duration ?? (8 * 60)));
 
         return intdiv(max(0, (int) ($attendance->unpaid_leave ?? 0)), $shiftMinutes);
+    }
+
+    private function resolveDailyMissions(MonthlyAttendance $attendance): array
+    {
+        if ($attendance->start_date === null || (int) $attendance->duration <= 0) {
+            return ['working_days' => 0, 'date_count' => 0, 'minutes' => 0];
+        }
+
+        $periodStart = $attendance->start_date->copy()->startOfDay();
+        $periodEnd = $periodStart->copy()->addDays((int) $attendance->duration - 1)->endOfDay();
+
+        $requests = PersonnelRequest::withoutGlobalScopes()->where('company_id', $attendance->company_id)
+            ->where('employee_id', $attendance->employee_id)->where('request_type', PersonnelRequestType::MISSION_DAILY->value)
+            ->where('status', PersonnelRequestStatus::APPROVED->value)->where('start_date', '<=', $periodEnd)->where('end_date', '>=', $periodStart)
+            ->get(['start_date', 'end_date']);
+
+        if ($requests->isEmpty()) {
+            return ['working_days' => 0, 'date_count' => 0, 'minutes' => 0];
+        }
+
+        $dates = [];
+        foreach ($requests as $request) {
+            $current = $request->start_date->copy()->startOfDay();
+            $last = $request->end_date->copy()->startOfDay();
+
+            if ($current->lt($periodStart)) {
+                $current = $periodStart->copy();
+            }
+            if ($last->gt($periodEnd)) {
+                $last = $periodEnd->copy()->startOfDay();
+            }
+
+            while ($current->lte($last)) {
+                $dates[$current->toDateString()] = $current->copy();
+                $current->addDay();
+            }
+        }
+
+        $holidayDates = PublicHoliday::withoutGlobalScopes()
+            ->where('company_id', $attendance->company_id)->whereBetween('date', [$periodStart->toDateString(), $periodEnd->toDateString()])
+            ->pluck('date')->map(fn ($date) => $date instanceof Carbon ? $date->toDateString() : (string) $date)->flip();
+
+        $workingDays = 0;
+        $minutes = 0;
+
+        foreach ($dates as $dateString => $date) {
+            $minutes += $this->missionShiftMinutesForDate($date);
+
+            $isFriday = $date->dayOfWeek === Carbon::FRIDAY;
+            $isThursdayHoliday = $date->dayOfWeek === Carbon::THURSDAY && $this->workShift?->thursday_status === ThursdayStatus::HOLIDAY;
+
+            if (! $isFriday && ! $isThursdayHoliday && ! $holidayDates->has($dateString)) {
+                $workingDays++;
+            }
+        }
+
+        return [
+            'working_days' => $workingDays,
+            'date_count' => count($dates),
+            'minutes' => $minutes,
+        ];
+    }
+
+    private function missionShiftMinutesForDate(Carbon $date): int
+    {
+        if ($date->dayOfWeek === Carbon::THURSDAY && $this->workShift?->thursday_status === ThursdayStatus::HALF_DAY && $this->workShift->thursday_exit_time) {
+            $start = Carbon::createFromTimeString($this->workShift->start_time);
+            $end = Carbon::createFromTimeString($this->workShift->thursday_exit_time);
+
+            return max(0, (int) $start->diffInMinutes($end, false));
+        }
+
+        return max(1, (int) ($this->workShift?->duration ?? (8 * 60)));
     }
 
     private function resolveCoefficient(string $type): float
