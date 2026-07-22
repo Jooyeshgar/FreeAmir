@@ -1,4 +1,4 @@
-<x-platform-layout :title="$permission ? __('Edit Permission') : __('Add Permission')">
+<x-platform-layout :title="$permission ? __('Edit Permission') : __('Add Permission')" :management-only="true">
     <x-show-message-bags />
 
     <div class="mb-6 flex items-end justify-between gap-4">

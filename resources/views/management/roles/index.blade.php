@@ -1,4 +1,4 @@
-<x-platform-layout :title="__('Roles')">
+<x-platform-layout :title="__('Roles')" :management-only="true">
     <x-show-message-bags />
 
     <div class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">

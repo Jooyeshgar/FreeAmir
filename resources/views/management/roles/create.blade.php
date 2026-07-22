@@ -1,4 +1,4 @@
-<x-platform-layout :title="$role ? __('Edit Role') : __('Add Role')">
+<x-platform-layout :title="$role ? __('Edit Role') : __('Add Role')" :management-only="true">
     <x-show-message-bags />
 
     <div class="mb-6 flex items-end justify-between gap-4">

@@ -104,7 +104,7 @@ class AuthLifecycleTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'escalated@example.com']);
     }
 
-    public function test_role_and_permission_index_buttons_follow_action_permissions(): void
+    public function test_role_and_permission_pages_are_not_available_in_the_workspace(): void
     {
         $roleIndex = Permission::create(['name' => 'roles.index']);
         $permissionIndex = Permission::create(['name' => 'permissions.index']);
@@ -117,19 +117,13 @@ class AuthLifecycleTest extends TestCase
         $viewer->assignRole($viewerRole);
         config(['active-company-id' => $company->id]);
 
-        $roles = $this->actingAs($viewer)->get(route('roles.index'));
-        $roles->assertOk();
-        $roles->assertDontSee(__('Roles and access policies'));
-        $roles->assertDontSee(route('roles.create'), false);
-        $roles->assertDontSee(route('roles.edit', $viewerRole), false);
-        $roles->assertDontSee(route('roles.destroy', $viewerRole), false);
+        $workspace = $this->actingAs($viewer)->get(route('about'));
+        $workspace->assertOk();
+        $workspace->assertDontSee(route('roles.index'), false);
+        $workspace->assertDontSee(route('permissions.index'), false);
 
-        $permissions = $this->actingAs($viewer)->get(route('permissions.index'));
-        $permissions->assertOk();
-        $permissions->assertDontSee(__('Permission catalog'));
-        $permissions->assertDontSee(route('permissions.create'), false);
-        $permissions->assertDontSee(route('permissions.edit', $roleIndex), false);
-        $permissions->assertDontSee(route('permissions.destroy', $roleIndex), false);
+        $this->get(route('roles.index'))->assertForbidden();
+        $this->get(route('permissions.index'))->assertForbidden();
     }
 
     public function test_platform_management_routes_use_the_management_prefix(): void
@@ -174,6 +168,8 @@ class AuthLifecycleTest extends TestCase
 
         $workspace->assertOk();
         $workspace->assertSee(route('management.dashboard'), false);
+        $workspace->assertDontSee(route('roles.index'), false);
+        $workspace->assertDontSee(route('permissions.index'), false);
         $this->assertSame($company->id, config('active-company-id'));
 
         $about = $this->get(route('about'));
@@ -184,8 +180,6 @@ class AuthLifecycleTest extends TestCase
         $sharedIndexRoutes = [
             'companies.index' => __('Companies and fiscal years'),
             'users.index' => __('Platform users'),
-            'roles.index' => __('Roles and access policies'),
-            'permissions.index' => __('Permission catalog'),
         ];
 
         foreach ($sharedIndexRoutes as $routeName => $managementHeading) {
@@ -193,6 +187,16 @@ class AuthLifecycleTest extends TestCase
                 ->assertOk()
                 ->assertDontSee(__('Super-Admin Panel'))
                 ->assertDontSee($managementHeading);
+        }
+
+        foreach ([
+            'roles.index' => __('Roles and access policies'),
+            'permissions.index' => __('Permission catalog'),
+        ] as $routeName => $managementHeading) {
+            $this->get(route($routeName))
+                ->assertOk()
+                ->assertSee(__('Super-Admin Panel'))
+                ->assertSee($managementHeading);
         }
 
         $management = $this->get(route('management.dashboard'));

@@ -41,12 +41,7 @@ class RoleController extends Controller
 
         $roles = $query->paginate(20)->withQueryString();
 
-        $view = $request->session()->get('interface_mode') === 'management'
-            && $request->user()->can('access-super-admin-panel')
-                ? 'management.roles.index'
-                : 'management.roles.workspace-index';
-
-        return view($view, [
+        return view('management.roles.index', [
             'roles' => $roles,
         ]);
     }

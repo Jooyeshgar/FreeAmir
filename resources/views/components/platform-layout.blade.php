@@ -1,6 +1,9 @@
-@props(['title' => config('app.name')])
+@props([
+    'title' => config('app.name'),
+    'managementOnly' => false,
+])
 
-@if (session('interface_mode') === 'management' && auth()->user()->can('access-super-admin-panel'))
+@if (($managementOnly || session('interface_mode') === 'management') && auth()->user()->can('access-super-admin-panel'))
     <x-super-admin-layout :title="$title">
         <div class="super-admin-content">
             {{ $slot }}

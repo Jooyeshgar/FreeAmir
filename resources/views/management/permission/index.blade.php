@@ -1,4 +1,4 @@
-<x-platform-layout :title="__('Permissions')">
+<x-platform-layout :title="__('Permissions')" :management-only="true">
     <x-show-message-bags />
 
     <div class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">

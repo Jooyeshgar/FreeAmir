@@ -31,6 +31,11 @@ Route::middleware(['auth', 'permission:access-super-admin-panel', 'ensure-featur
     Route::get('/', [Controllers\HomeController::class, 'managementDashboard'])->name('management.dashboard');
     Route::get('/settings', [Controllers\AboutController::class, 'index'])->name('management.settings');
     Route::put('/settings', [Controllers\AboutController::class, 'updateGlobalConfigs'])->name('update-global-configs');
+
+    Route::middleware('check-permission')->group(function () {
+        Route::resource('permissions', Controllers\Management\PermissionController::class)->except(['show']);
+        Route::resource('roles', Controllers\Management\RoleController::class)->except(['show']);
+    });
 });
 
 Route::group(['middleware' => ['auth', 'ensure-employee', 'ensure-feature-enabled:email_verification'], 'prefix' => 'employee-portal', 'as' => 'employee-portal.'], function () {
@@ -161,8 +166,6 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
         Route::post('users/{user}/create-employee', [Controllers\Management\UserController::class, 'createEmployee'])
             ->name('users.create-employee');
         Route::resource('users', Controllers\Management\UserController::class);
-        Route::resource('permissions', Controllers\Management\PermissionController::class)->except(['show']);
-        Route::resource('roles', Controllers\Management\RoleController::class)->except(['show']);
         Route::resource('configs', Controllers\ConfigController::class);
     });
 

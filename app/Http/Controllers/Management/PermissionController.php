@@ -29,12 +29,7 @@ class PermissionController extends Controller
         }
         $permissions = $query->paginate(20)->withQueryString();
 
-        $view = $request->session()->get('interface_mode') === 'management'
-            && $request->user()->can('access-super-admin-panel')
-                ? 'management.permission.index'
-                : 'management.permission.workspace-index';
-
-        return view($view, [
+        return view('management.permission.index', [
             'permissions' => $permissions,
         ]);
     }
