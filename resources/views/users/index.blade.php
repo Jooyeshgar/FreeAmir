@@ -51,6 +51,12 @@
                                 <div class="flex justify-end gap-1">
                                     @can('users.show')<a href="{{ route('users.show', $user) }}" class="btn btn-ghost btn-sm rounded-lg">{{ __('View') }}</a>@endcan
                                     @can('users.edit')<a href="{{ route('users.edit', $user) }}" class="btn btn-ghost btn-sm rounded-lg">{{ __('Edit') }}</a>@endcan
+                                    @if (auth()->user()->canImpersonateUser($user))
+                                        <form action="{{ route('users.impersonate', $user) }}" method="post" onsubmit="return confirm('{{ __('Are you sure you want to impersonate this user?') }}')">
+                                            @csrf
+                                            <button type="submit" class="btn btn-ghost btn-sm rounded-lg text-violet-600 dark:text-violet-400">{{ __('Impersonate') }}</button>
+                                        </form>
+                                    @endif
                                     @cannot('access-super-admin-panel')
                                         @if ($user->employee)
                                             @canany(['hr.employees.show', 'users.show'])<a href="{{ route('hr.employees.show', $user->employee) }}" class="btn btn-ghost btn-sm rounded-lg">{{ __('View Employee') }}</a>@endcanany
@@ -58,7 +64,7 @@
                                             @can('users.create-employee')<form action="{{ route('users.create-employee', $user) }}" method="post">@csrf<button type="submit" class="btn btn-ghost btn-sm rounded-lg">{{ __('Create Employee') }}</button></form>@endcan
                                         @endif
                                     @endcannot
-                                    @can('users.destroy')<form action="{{ route('users.destroy', $user) }}" method="post" onsubmit="return confirm('{{ __('Are you sure?') }}')">@csrf @method('DELETE')<button type="submit" class="btn btn-ghost btn-sm rounded-lg text-error">{{ __('Delete') }}</button></form>@endcan
+                                    @can('users.destroy')<form action="{{ route('users.destroy', $user) }}" method="post" onsubmit="return confirm('{{ __('Are you sure you want to delete this user?') }}')">@csrf @method('DELETE')<button type="submit" class="btn btn-ghost btn-sm rounded-lg text-error">{{ __('Delete') }}</button></form>@endcan
                                 </div>
                             </td>
                         </tr>

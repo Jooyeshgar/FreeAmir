@@ -7,6 +7,7 @@ Route::get('/login', [Controllers\Auth\LoginController::class, 'showLoginForm'])
 Route::post('/login', [Controllers\Auth\LoginController::class, 'login']);
 Route::get('/logout', [Controllers\Auth\LoginController::class, 'logout'])->name('logout');
 Route::post('/locale', [Controllers\Auth\LoginController::class, 'locale'])->name('locale');
+Route::post('/impersonation/leave', [Controllers\Management\UserController::class, 'leaveImpersonation'])->middleware('auth')->name('impersonation.leave');
 
 Route::get('/forgot-password', [Controllers\Auth\PasswordResetController::class, 'showForgotPasswordForm'])->name('password.request');
 Route::post('/forgot-password', [Controllers\Auth\PasswordResetController::class, 'sendResetLink'])->middleware('throttle:6,1')->name('password.email');
@@ -165,6 +166,8 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
         Route::post('companies/{company}/closing-wizard/step3', [Controllers\CompanyController::class, 'closingWizardStep3'])->name('companies.closing-wizard.step3');
         Route::post('users/{user}/create-employee', [Controllers\Management\UserController::class, 'createEmployee'])
             ->name('users.create-employee');
+        Route::post('users/{user}/impersonate', [Controllers\Management\UserController::class, 'impersonate'])
+            ->name('users.impersonate');
         Route::resource('users', Controllers\Management\UserController::class);
         Route::resource('configs', Controllers\ConfigController::class);
     });
