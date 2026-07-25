@@ -273,7 +273,7 @@ main {
     }
 
     .super-admin-content fieldset {
-        @apply rounded-xl border-slate-200 bg-slate-50/60 dark:border-slate-800 dark:bg-slate-950/30;
+        @apply rounded-xl border-slate-200 dark:border-slate-800;
     }
 
     .super-admin-content .table thead {
