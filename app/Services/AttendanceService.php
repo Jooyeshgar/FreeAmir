@@ -66,6 +66,17 @@ class AttendanceService
      */
     public function recalculateLog(AttendanceLog $log): AttendanceLog
     {
+        $log->update($this->calculateLogColumns($log));
+
+        return $log->fresh();
+    }
+
+    /**
+     * Calculate a log using the same employee, shift, holiday, remote-work,
+     * and hourly coverage context used when persisting a recalculation.
+     */
+    public function calculateLogColumns(AttendanceLog $log): array
+    {
         $logDate = $log->log_date instanceof Carbon
             ? $log->log_date
             : Carbon::parse($log->log_date);
@@ -95,11 +106,7 @@ class AttendanceService
 
         $midShiftCoverage = $this->midShiftCoverageMinutes($log, $hourlyCoverageRequests);
 
-        $columns = $this->computeLogColumns($log, $workShift, $isFriday, $isHoliday, $isThursday, $remoteRequest, $midShiftCoverage, $hourlyCoverageRequests);
-
-        $log->update($columns);
-
-        return $log->fresh();
+        return $this->computeLogColumns($log, $workShift, $isFriday, $isHoliday, $isThursday, $remoteRequest, $midShiftCoverage, $hourlyCoverageRequests);
     }
 
     /**

@@ -187,7 +187,7 @@
                                     @if ($item->invoice->status->isApproved())
                                         @php
                                             $invoiceType = $item->invoice->invoice_type;
-                                            $quantityAfter = in_array($invoiceType, [\App\Enums\InvoiceType::BUY, \App\Enums\InvoiceType::RETURN_SELL])
+                                            $quantityAfter = in_array($invoiceType, [\App\Enums\InvoiceType::BUY, \App\Enums\InvoiceType::RETURN_SELL, \App\Enums\InvoiceType::VOID], true)
                                                 ? $item->quantity_at + $item->quantity
                                                 : $item->quantity_at - $item->quantity;
                                         @endphp

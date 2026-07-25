@@ -60,20 +60,14 @@ class AttendanceLogController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        if ($request->has('log_date')) {
-            $request->merge([
-                'log_date' => jalaliInputToGregorian($request->input('log_date'), 'log_date'),
-            ]);
-        }
-
-        $validated = $request->validate([
+        $validated = validator($this->inputWithGregorianLogDate($request), [
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
             'log_date' => ['required', 'date'],
             'entry_time' => ['nullable', 'date_format:H:i'],
             'exit_time' => ['nullable', 'date_format:H:i', 'after_or_equal:entry_time'],
             'is_manual' => ['boolean'],
             'description' => ['nullable', 'string', 'max:1000'],
-        ]);
+        ])->validate();
 
         AttendanceLog::create(array_merge(
             $validated,
@@ -105,13 +99,7 @@ class AttendanceLogController extends Controller
 
     public function update(Request $request, AttendanceLog $attendanceLog): RedirectResponse
     {
-        if ($request->has('log_date')) {
-            $request->merge([
-                'log_date' => jalaliInputToGregorian($request->input('log_date'), 'log_date'),
-            ]);
-        }
-
-        $validated = $request->validate([
+        $validated = validator($this->inputWithGregorianLogDate($request), [
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
             'log_date' => ['required', 'date'],
             'entry_time' => ['nullable', 'date_format:H:i'],
@@ -125,7 +113,7 @@ class AttendanceLogController extends Controller
             'paid_leave' => ['nullable', 'integer', 'min:0'],
             'unpaid_leave' => ['nullable', 'integer', 'min:0'],
             'description' => ['nullable', 'string', 'max:1000'],
-        ]);
+        ])->validate();
 
         // Editing a log always marks it as manually corrected
         $attendanceLog->update(array_merge(
@@ -137,6 +125,21 @@ class AttendanceLogController extends Controller
         $target = $redirectTo && str_starts_with($redirectTo, url('/')) ? $redirectTo : route('attendance.attendance-logs.index');
 
         return redirect()->to($target)->with('success', __('Attendance log updated successfully.'));
+    }
+
+    /**
+     * Convert the submitted Jalali log date without mutating the request, so
+     * validation failures flash the original user-facing date back to the form.
+     */
+    private function inputWithGregorianLogDate(Request $request): array
+    {
+        $input = $request->all();
+
+        if ($request->has('log_date')) {
+            $input['log_date'] = jalaliInputToGregorian($request->input('log_date'), 'log_date');
+        }
+
+        return $input;
     }
 
     public function destroy(Request $request, AttendanceLog $attendanceLog): RedirectResponse
@@ -185,8 +188,8 @@ class AttendanceLogController extends Controller
         // A day is effectively a holiday if it is a public holiday OR a Thursday-holiday
         $isHoliday = $isPublicHoliday || $isThursdayHoliday;
 
-        // Compute what the service WOULD calculate right now (without saving)
-        $computed = $this->attendanceService->computeLogColumns($attendanceLog, $workShift, $isFriday, $isHoliday, $isThursday);
+        // Use the exact same contextual calculation as the Recalculate action.
+        $computed = $this->attendanceService->calculateLogColumns($attendanceLog);
 
         // Effective (real) shift start accounting for float grace window
         $effectiveShiftStart = null;

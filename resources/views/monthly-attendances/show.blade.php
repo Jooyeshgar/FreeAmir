@@ -262,26 +262,35 @@
                                     <td>{{ formatMinutesAsTime($log->delay) }}</td>
                                     <td>{{ formatMinutesAsTime($log->early_leave) }}</td>
                                     <td>
-                                        @if ($log->is_holiday)
-                                            <span class="badge badge-warning badge-sm">{{ __('Holiday') }}</span>
-                                        @elseif ($log->is_friday)
-                                            <span class="badge badge-ghost badge-sm">{{ __('Friday') }}</span>
-                                        @elseif ($log->paid_leave > 0)
-                                            <span class="badge badge-info badge-sm">{{ __('Paid Leave') }}</span>
-                                        @elseif ($log->unpaid_leave > 0)
-                                            <span class="badge badge-error badge-sm">{{ __('Unpaid Leave') }}</span>
-                                        @elseif ($log->remote_work > 0)
-                                            <span class="badge badge-primary badge-sm">{{ __('Remote Work') }}</span>
-                                        @elseif ($log->mission > 0)
-                                            <span class="badge badge-accent badge-sm">{{ __('Mission') }}</span>
-                                        @elseif ($log->worked > 0)
-                                            <span class="badge badge-success badge-sm">{{ __('Present') }}</span>
-                                        @else
-                                            <span class="badge badge-error badge-sm">{{ __('Absent') }}</span>
-                                        @endif
-                                        @if ($log->is_manual)
-                                            <span class="badge badge-ghost badge-sm">{{ __('Manual') }}</span>
-                                        @endif
+                                        <div class="flex flex-wrap gap-1">
+                                            @if ($log->is_holiday)
+                                                <span class="badge badge-warning badge-sm">{{ __('Holiday') }}</span>
+                                            @endif
+                                            @if ($log->is_friday)
+                                                <span class="badge badge-ghost badge-sm">{{ __('Friday') }}</span>
+                                            @endif
+                                            @if ($log->paid_leave > 0)
+                                                <span class="badge badge-info badge-sm">{{ __('Paid Leave') }}</span>
+                                            @endif
+                                            @if ($log->unpaid_leave > 0)
+                                                <span class="badge badge-error badge-sm">{{ __('Unpaid Leave') }}</span>
+                                            @endif
+                                            @if ($log->remote_work > 0)
+                                                <span class="badge badge-primary badge-sm">{{ __('Remote Work') }}</span>
+                                            @endif
+                                            @if ($log->mission > 0)
+                                                <span class="badge badge-accent badge-sm">{{ __('Mission') }}</span>
+                                            @endif
+                                            @if ($log->worked > 0)
+                                                <span class="badge badge-success badge-sm">{{ __('Present') }}</span>
+                                            @endif
+                                            @if (! $log->is_holiday && ! $log->is_friday && $log->paid_leave <= 0 && $log->unpaid_leave <= 0 && $log->remote_work <= 0 && $log->mission <= 0 && $log->worked <= 0)
+                                                <span class="badge badge-error badge-sm">{{ __('Absent') }}</span>
+                                            @endif
+                                            @if ($log->is_manual)
+                                                <span class="badge badge-ghost badge-sm">{{ __('Manual') }}</span>
+                                            @endif
+                                        </div>
                                     </td>
                                     @if ($isAdminView ?? false)
                                         @can('attendance.attendance-logs.edit')
