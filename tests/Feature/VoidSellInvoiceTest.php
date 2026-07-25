@@ -76,6 +76,40 @@ class VoidSellInvoiceTest extends TestCase
         $response->assertSessionHasErrors(['date', 'invoice_number']);
     }
 
+    public function test_void_route_accepts_the_thirty_first_day_of_a_valid_jalali_month(): void
+    {
+        $product = $this->createProduct();
+
+        $this->buy([$this->productItem($product, 10, 100)], true, 7004, '2026-07-20');
+        $sell = $this->sell([$this->productItem($product, 4, 180)], true, 7005, '2026-07-21')['invoice'];
+
+        $response = $this->post(route('invoices.void', $sell), [
+            'date' => '1405/04/31',
+            'invoice_number' => 7006,
+        ]);
+
+        $response->assertRedirect(route('invoices.show', $sell));
+        $response->assertSessionDoesntHaveErrors('date');
+        $this->assertSame('2026-07-22', $sell->voidInvoice()->firstOrFail()->date->format('Y-m-d'));
+    }
+
+    public function test_void_route_rejects_a_nonexistent_jalali_date(): void
+    {
+        $product = $this->createProduct();
+
+        $this->buy([$this->productItem($product, 10, 100)], true, 7007, '2026-09-20');
+        $sell = $this->sell([$this->productItem($product, 4, 180)], true, 7008, '2026-09-21')['invoice'];
+
+        $response = $this->from(route('invoices.void-form', $sell))->post(route('invoices.void', $sell), [
+            'date' => '1405/07/31',
+            'invoice_number' => 7009,
+        ]);
+
+        $response->assertRedirect(route('invoices.void-form', $sell));
+        $response->assertSessionHasErrors('date');
+        $this->assertFalse($sell->voidInvoice()->exists());
+    }
+
     public function test_approved_sell_invoice_can_be_voided_and_restores_inventory(): void
     {
         $product = $this->createProduct();
@@ -310,7 +344,7 @@ class VoidSellInvoiceTest extends TestCase
         $this->buy([$this->productItem($product, 10, 100)], true, 7091, '2026-07-01');
         $sell = $this->sell([$this->productItem($product, 5, 180)], true, 7092, '2026-07-03')['invoice'];
 
-        $response = $this->from(route('invoices.show', $sell))->post(route('invoices.void', $sell), ['date' => '2026-07-02', 'invoice_number' => 7093]);
+        $response = $this->from(route('invoices.show', $sell))->post(route('invoices.void', $sell), ['date' => '1405/04/11', 'invoice_number' => 7093]); // 2026-07-02
 
         $response->assertRedirect(route('invoices.show', $sell));
         $response->assertSessionHas('error', [__('Void invoice date cannot be earlier than the invoice date.')]);

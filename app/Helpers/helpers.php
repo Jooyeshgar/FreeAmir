@@ -313,6 +313,15 @@ function jalaliInputToGregorian(?string $date, string $field = 'date'): string
         ]);
     }
 
+    [$year, $month, $day] = array_map('intval', explode('/', $normalized));
+    $locale = App::getLocale();
+    $isValidDate = ($locale === 'fa' || $locale === 'fa_IR') ? jcheckdate($month, $day, $year) : checkdate($month, $day, $year);
+    if (! $isValidDate) {
+        throw ValidationException::withMessages([
+            $field => [__('validation.date', ['attribute' => $field])],
+        ]);
+    }
+
     $gregorian = convertToGregorian($normalized);
 
     if (empty($gregorian)) {

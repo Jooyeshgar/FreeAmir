@@ -891,7 +891,7 @@ class InvoiceController extends Controller
     public function voidInvoice(Request $request, Invoice $invoice)
     {
         $validated = $request->validate([
-            'date' => ['required', 'date'],
+            'date' => ['required', 'string'],
             'invoice_number' => ['required'],
         ]);
 
@@ -900,7 +900,7 @@ class InvoiceController extends Controller
             return back()->with('error', __('Invoice Number is invalid.'));
         }
 
-        $date = convertToGregorian($validated['date']);
+        $date = jalaliInputToGregorian($validated['date']);
 
         $voidInvoiceDecision = $this->invoiceService->validateVoidingInvoice($invoice, $date);
 
