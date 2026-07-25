@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Enums\PersonnelRequestStatus;
+use App\Models\Activity;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Invoice;
@@ -47,12 +48,23 @@ class HomeService
                 ->with('roles:id,name')
                 ->withCount('companies')
                 ->latest()
-                ->limit(5)
+                ->limit(4)
                 ->get(),
             'roles' => Role::query()
                 ->withCount('users')
                 ->orderByDesc('users_count')
                 ->orderBy('name')
+                ->get(),
+            'activityMetrics' => [
+                'total' => Activity::query()->count(),
+                'today' => Activity::query()->whereDate('created_at', Carbon::today())->count(),
+                'model' => Activity::query()->where('source', 'model')->count(),
+                'request' => Activity::query()->where('source', 'request')->count(),
+            ],
+            'recentActivities' => Activity::query()
+                ->with('user:id,name,email')
+                ->latest('id')
+                ->limit(4)
                 ->get(),
         ];
     }

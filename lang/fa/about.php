@@ -9,6 +9,7 @@ return [
     'debug_mode' => 'حالت اشکال‌زدایی',
     'registration' => 'ثبت‌نام',
     'email_verification' => 'تأیید ایمیل',
+    'activity_logger' => 'ثبت فعالیت‌ها',
     'enabled' => 'فعال',
     'disabled' => 'غیرفعال',
     'database' => 'پایگاه داده',

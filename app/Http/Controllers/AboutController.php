@@ -28,6 +28,7 @@ class AboutController extends Controller
             'app_locale' => ['fa' => __('Persian'), 'en' => __('English')],
             'app_registration' => ['true' => __('Enabled'), 'false' => __('Disabled')],
             'app_email_verification' => ['true' => __('Enabled'), 'false' => __('Disabled')],
+            'app_activity_logger_enabled' => ['true' => __('Enabled'), 'false' => __('Disabled')],
         ];
         $gcSettings = [];
         foreach ($this->settingTitles() as $key => $title) {
@@ -69,6 +70,7 @@ class AboutController extends Controller
             'app_debug' => ['nullable', Rule::in($this->globalConfigService::SETTINGS['app_debug'])],
             'app_registration' => ['nullable', Rule::in($this->globalConfigService::SETTINGS['app_registration'])],
             'app_email_verification' => ['nullable', Rule::in($this->globalConfigService::SETTINGS['app_email_verification'])],
+            'app_activity_logger_enabled' => ['nullable', Rule::in($this->globalConfigService::SETTINGS['app_activity_logger_enabled'])],
         ]);
 
         $this->globalConfigService->update($validated);
@@ -86,6 +88,7 @@ class AboutController extends Controller
             'app_locale' => __('about.locale'),
             'app_registration' => __('about.registration'),
             'app_email_verification' => __('about.email_verification'),
+            'app_activity_logger_enabled' => __('about.activity_logger'),
         ];
     }
 }

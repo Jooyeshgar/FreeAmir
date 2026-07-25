@@ -1,0 +1,269 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Activity;
+use App\Models\Company;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
+use Spatie\Permission\Models\Permission;
+use Tests\TestCase;
+
+class ActivityLogTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_activity_log_page_is_limited_to_super_admin_panel_users(): void
+    {
+        $regularUser = User::factory()->create();
+        $superAdmin = User::factory()->create();
+        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+
+        $this->get(route('management.activity-logs.index'))->assertRedirect(route('login'));
+        $this->actingAs($regularUser)->get(route('management.activity-logs.index'))->assertForbidden();
+        $this->actingAs($superAdmin)->get(route('management.activity-logs.index'))
+            ->assertOk()
+            ->assertViewIs('super-admin.activity-logs.index')
+            ->assertSee(__('Activity log'))
+            ->assertSee('name="source"', false)
+            ->assertSee('name="action"', false)
+            ->assertSee('name="model_type"', false)
+            ->assertSee('name="date_from"', false)
+            ->assertSee('data-jdp', false)
+            ->assertSee('placeholder="'.__('Select date').'"', false)
+            ->assertSee('data-tip="'.__('Model changes track created, updated, and deleted records. User actions track successful write requests.').'"', false);
+    }
+
+    public function test_application_model_changes_are_recorded_with_actor_context_and_without_secrets(): void
+    {
+        $actor = User::factory()->create();
+        $target = User::factory()->create(['name' => 'Before']);
+
+        $this->actingAs($actor);
+        $target->update([
+            'name' => 'After',
+            'password' => Hash::make('new-password'),
+        ]);
+
+        $activity = Activity::query()->where('source', 'model')->where('action', 'updated')->latest('id')->firstOrFail();
+
+        $this->assertSame($actor->id, $activity->user_id);
+        $this->assertSame($actor->id, $activity->user->id);
+        $this->assertTrue(Schema::hasColumn('activity_log', 'user_id'));
+        $this->assertFalse(Schema::hasColumn('activity_log', 'causer_id'));
+        $this->assertFalse(Schema::hasColumn('activity_log', 'causer_type'));
+        $this->assertSame(User::class, $activity->model_type);
+        $this->assertSame($target->id, $activity->model_id);
+        $this->assertSame('After', $activity->details->get('attributes')['name']);
+        $this->assertSame('Before', $activity->details->get('old')['name']);
+        $this->assertArrayNotHasKey('password', $activity->details->get('attributes'));
+        $this->assertArrayNotHasKey('password', $activity->details->get('old'));
+    }
+
+    public function test_successful_write_requests_are_recorded_with_sensitive_input_redacted(): void
+    {
+        $actor = User::factory()->create();
+
+        $this->actingAs($actor)->post(route('locale'), [
+            'locale' => 'fa',
+            'password' => 'do-not-store-this',
+        ])->assertRedirect();
+
+        $activity = Activity::query()->where('source', 'request')->latest('id')->firstOrFail();
+
+        $this->assertSame($actor->id, $activity->user_id);
+        $this->assertSame('post', $activity->action);
+        $this->assertSame('locale', $activity->details->get('route'));
+        $this->assertSame('POST', $activity->details->get('method'));
+        $this->assertSame('[REDACTED]', $activity->details->get('request_input')['password']);
+        $this->assertStringNotContainsString('do-not-store-this', $activity->details->toJson());
+    }
+
+    public function test_activity_log_can_be_filtered_by_action_company_and_date(): void
+    {
+        $superAdmin = User::factory()->create();
+        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $company = Company::factory()->create(['name' => 'Audit Company']);
+
+        activity('model')
+            ->causedBy($superAdmin)
+            ->performedOn($company)
+            ->event('created')
+            ->withProperties(['company_id' => $company->id, 'model_label' => $company->name])
+            ->log('created');
+        activity('request')->causedBy($superAdmin)->event('post')->log('POST locale');
+
+        $this->actingAs($superAdmin)
+            ->get(route('management.activity-logs.index', ['action' => 'created', 'company_id' => $company->id]))
+            ->assertOk()
+            ->assertSee('Audit Company')
+            ->assertDontSee('POST locale')
+            ->assertViewHas('modelOptions', fn ($options): bool => $options->contains(fn (array $option): bool => $option === [
+                'value' => Company::class,
+                'label' => __('Company'),
+            ]));
+
+        $this->get(route('management.activity-logs.index', ['search' => $superAdmin->email]))
+            ->assertOk()
+            ->assertSee('Audit Company');
+
+        $today = jdate('Y/m/d', now()->timestamp, tr_num: 'en');
+
+        $this->get(route('management.activity-logs.index', ['date_from' => $today, 'date_to' => $today]))
+            ->assertOk()
+            ->assertSee('Audit Company');
+    }
+
+    public function test_activity_logging_can_be_changed_from_management_settings(): void
+    {
+        $superAdmin = User::factory()->create();
+        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+
+        $this->actingAs($superAdmin)->get(route('management.settings'))
+            ->assertOk()
+            ->assertSee(__('about.activity_logger'))
+            ->assertSee(__('Record user actions and model changes across the platform.'));
+
+        $this->put(route('update-global-configs'), ['app_activity_logger_enabled' => 'false'])
+            ->assertRedirect(route('management.settings'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('configs', [
+            'key' => 'app_activity_logger_enabled',
+            'value' => 'false',
+            'company_id' => null,
+        ]);
+        $this->assertDatabaseMissing('configs', ['key' => 'activity_logger_enabled']);
+
+        $this->get(route('management.settings'))->assertOk();
+        $this->assertFalse(config('activitylog.enabled'));
+
+        $this->put(route('update-global-configs'), ['app_activity_logger_enabled' => 'true'])
+            ->assertRedirect(route('management.settings'))
+            ->assertSessionHasNoErrors();
+
+        $this->get(route('management.settings'))->assertOk();
+        $this->assertTrue(config('activitylog.enabled'));
+    }
+
+    public function test_management_dashboard_shows_activity_summary_and_recent_events(): void
+    {
+        $superAdmin = User::factory()->create(['name' => 'Audit Administrator']);
+        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $company = Company::factory()->create(['name' => 'Dashboard Audit Company']);
+
+        activity('model')
+            ->causedBy($superAdmin)
+            ->performedOn($company)
+            ->event('updated')
+            ->withProperties(['company_id' => $company->id, 'model_label' => $company->name])
+            ->log('updated');
+        activity('request')
+            ->causedBy($superAdmin)
+            ->event('put')
+            ->withProperties(['route' => 'management.settings', 'method' => 'PUT'])
+            ->log('PUT management.settings');
+
+        $this->actingAs($superAdmin)->get(route('management.dashboard'))
+            ->assertOk()
+            ->assertSee(__('Recent activity'))
+            ->assertSee('Dashboard Audit Company')
+            ->assertSee('management.settings')
+            ->assertSee(route('management.activity-logs.index'), false)
+            ->assertViewHas('activityMetrics', fn (array $metrics): bool => $metrics === [
+                'total' => 2,
+                'today' => 2,
+                'model' => 1,
+                'request' => 1,
+            ])
+            ->assertViewHas('recentActivities', fn ($activities): bool => $activities->count() === 2);
+    }
+
+    public function test_initial_migration_creates_the_final_schema_and_renames_the_config_key(): void
+    {
+        $migration = require database_path('migrations/2026_07_25_000001_create_activity_log_table.php');
+        $migration->down();
+
+        DB::table('configs')->whereIn('key', [
+            'activity_logger_enabled',
+            'app_activity_logger_enabled',
+        ])->delete();
+
+        DB::table('configs')->insert([
+            'key' => 'activity_logger_enabled',
+            'value' => 'false',
+            'type' => 3,
+            'category' => 1,
+            'company_id' => null,
+        ]);
+
+        $migration->up();
+
+        $this->assertTrue(Schema::hasTable('activity_log'));
+        $this->assertTrue(Schema::hasColumn('activity_log', 'user_id'));
+        $this->assertTrue(Schema::hasColumn('activity_log', 'source'));
+        $this->assertTrue(Schema::hasColumn('activity_log', 'action'));
+        $this->assertTrue(Schema::hasColumn('activity_log', 'model_type'));
+        $this->assertTrue(Schema::hasColumn('activity_log', 'model_id'));
+        $this->assertTrue(Schema::hasColumn('activity_log', 'details'));
+        $this->assertFalse(Schema::hasColumn('activity_log', 'log_name'));
+        $this->assertFalse(Schema::hasColumn('activity_log', 'event'));
+        $this->assertFalse(Schema::hasColumn('activity_log', 'subject_type'));
+        $this->assertFalse(Schema::hasColumn('activity_log', 'subject_id'));
+        $this->assertFalse(Schema::hasColumn('activity_log', 'properties'));
+        $this->assertFalse(Schema::hasColumn('activity_log', 'causer_id'));
+        $this->assertFalse(Schema::hasColumn('activity_log', 'causer_type'));
+        $this->assertDatabaseMissing('configs', ['key' => 'activity_logger_enabled']);
+        $this->assertDatabaseHas('configs', [
+            'key' => 'app_activity_logger_enabled',
+            'value' => 'false',
+            'company_id' => null,
+        ]);
+    }
+
+    public function test_impersonated_activity_is_attributed_to_the_real_user(): void
+    {
+        $impersonator = User::factory()->create();
+        $impersonated = User::factory()->create();
+
+        $this->actingAs($impersonator);
+        $this->assertTrue($impersonator->impersonate($impersonated));
+
+        $this->post(route('locale'), ['locale' => 'fa'])->assertRedirect();
+
+        $requestActivity = Activity::query()
+            ->where('source', 'request')
+            ->where('details->route', 'locale')
+            ->latest('id')
+            ->firstOrFail();
+
+        $this->assertSame($impersonator->id, $requestActivity->user_id);
+        $this->assertNotSame($impersonated->id, $requestActivity->user_id);
+        $this->assertSame($impersonated->id, $requestActivity->details->get('impersonated_user_id'));
+
+        $company = Company::factory()->create();
+        $modelActivity = Activity::query()
+            ->where('source', 'model')
+            ->where('model_type', Company::class)
+            ->where('model_id', $company->id)
+            ->latest('id')
+            ->firstOrFail();
+
+        $this->assertSame($impersonator->id, $modelActivity->user_id);
+        $this->assertSame($impersonated->id, $modelActivity->details->get('impersonated_user_id'));
+
+        $this->post(route('impersonation.leave'))->assertRedirect(route('users.index'));
+
+        $leaveActivity = Activity::query()
+            ->where('source', 'request')
+            ->where('details->route', 'impersonation.leave')
+            ->latest('id')
+            ->firstOrFail();
+
+        $this->assertSame($impersonator->id, $leaveActivity->user_id);
+        $this->assertSame($impersonated->id, $leaveActivity->details->get('impersonated_user_id'));
+    }
+}
