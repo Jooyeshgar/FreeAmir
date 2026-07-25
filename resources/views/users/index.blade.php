@@ -56,6 +56,10 @@
                                             @csrf
                                             <button type="submit" class="btn btn-ghost btn-sm rounded-lg text-violet-600 dark:text-violet-400">{{ __('Impersonate') }}</button>
                                         </form>
+                                    @elseif (! $user->hasVerifiedEmail() && auth()->user()->canImpersonateUserIfVerified($user))
+                                        <span class="tooltip" data-tip="{{ __('User is not verified') }}">
+                                            <button type="button" disabled title="{{ __('User is not verified') }}" class="btn btn-ghost btn-sm btn-disabled cursor-not-allowed rounded-lg">{{ __('Impersonate') }}</button>
+                                        </span>
                                     @endif
                                     @cannot('access-super-admin-panel')
                                         @if ($user->employee)

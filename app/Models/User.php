@@ -81,12 +81,17 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function canBeImpersonated(): bool
     {
-        return ! $this->can('access-super-admin-panel');
+        return $this->hasVerifiedEmail() && ! $this->can('access-super-admin-panel');
     }
 
     public function canImpersonateUser(User $user): bool
     {
-        if (! $this->canImpersonate() || $this->is($user) || ! $user->canBeImpersonated()) {
+        return $user->hasVerifiedEmail() && $this->canImpersonateUserIfVerified($user);
+    }
+
+    public function canImpersonateUserIfVerified(User $user): bool
+    {
+        if (! $this->canImpersonate() || $this->is($user) || $user->can('access-super-admin-panel')) {
             return false;
         }
 

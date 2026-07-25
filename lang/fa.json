@@ -2655,5 +2655,6 @@
     "Unable to start impersonation.": "شروع ورود به‌جای کاربر ممکن نیست.",
     "Unable to stop impersonation.": "پایان ورود به‌جای کاربر ممکن نیست.",
     "Are you sure you want to impersonate this user?": "آیا مطمئن هستید که می‌خواهید به‌جای این کاربر وارد شوید؟",
-    "Are you sure you want to delete this user?": "آیا مطمئن هستید که می‌خواهید این کاربر را حذف کنید؟"
+    "Are you sure you want to delete this user?": "آیا مطمئن هستید که می‌خواهید این کاربر را حذف کنید؟",
+    "User is not verified": "کاربر تأیید نشده است"
 }
