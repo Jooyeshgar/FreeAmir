@@ -265,9 +265,9 @@ class AttendanceLogController extends Controller
 
     public function recalculate(AttendanceLog $attendanceLog): RedirectResponse
     {
-        $this->attendanceService->recalculateLog($attendanceLog);
+        $attendanceLog = $this->attendanceService->recalculateLog($attendanceLog);
 
-        return redirect()->back()->with('success', __('Attendance log recalculated successfully.'));
+        return redirect()->route('attendance.attendance-logs.show', $attendanceLog)->with('success', __('Attendance log recalculated successfully.'));
     }
 
     public function recalculateAll(MonthlyAttendance $monthlyAttendance): RedirectResponse

@@ -442,6 +442,53 @@ class AttendanceLogTest extends TestCase
         $this->assertCalculationCheckMatchesStored($log);
     }
 
+    public function test_hourly_leave_covering_full_entry_gap_preserves_shift_end_and_overtime(): void
+    {
+        $workShift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'start_time' => '08:00:00',
+            'end_time' => '16:00:00',
+            'break' => 30,
+            'float' => 60,
+            'max_auto_overtime' => 120,
+        ]);
+        $this->employee->update(['work_shift_id' => $workShift->id]);
+
+        $log = $this->makeAttendanceLog(['log_date' => '2026-02-10', 'entry_time' => '10:35:00', 'exit_time' => '16:15:00']);
+
+        $personnelRequest = PersonnelRequest::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
+            'start_date' => '2026-02-10 08:00:00',
+            'end_date' => '2026-02-10 10:35:00',
+            'status' => PersonnelRequestStatus::APPROVED,
+            'approved_by' => $this->user->id,
+        ]);
+
+        app(AttendanceService::class)->syncPersonnelRequestLogs($personnelRequest);
+
+        $log = $log->fresh();
+
+        $this->assertSame(155, $log->paid_leave);
+        $this->assertSame(340, $log->worked);
+
+        $this->assertSame(0, $log->overtime);
+        $this->assertSame(15, $log->auto_overtime);
+        $this->assertSame(0, $log->delay);
+        $this->assertSame(0, $log->early_leave);
+        $this->assertCalculationCheckMatchesStored($log);
+
+        $this->from(route('attendance.attendance-logs.show', $log))->post(route('attendance.attendance-logs.recalculate', $log))->assertRedirect(route('attendance.attendance-logs.show', $log));
+
+        $log = $log->fresh();
+        $this->assertSame(155, $log->paid_leave);
+        $this->assertSame(340, $log->worked);
+        $this->assertSame(15, $log->auto_overtime);
+        $this->assertSame(0, $log->early_leave);
+        $this->assertCalculationCheckMatchesStored($log);
+    }
+
     // ----------------------------------------------------------------
     // destroy
     // ----------------------------------------------------------------
