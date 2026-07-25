@@ -9,6 +9,7 @@ return [
     'debug_mode' => 'Debug Mode',
     'registration' => 'Registration',
     'email_verification' => 'Email Verification',
+    'activity_logger' => 'Activity Logging',
     'enabled' => 'Enabled',
     'disabled' => 'Disabled',
     'database' => 'Database',

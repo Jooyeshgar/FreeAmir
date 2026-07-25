@@ -41,6 +41,11 @@ class ConfigLoader
     private function apply(Config $config): void
     {
         config(['amir.'.$config->key => $config->value]);
+
+        if ($config->key === 'app_activity_logger_enabled') {
+            config(['activitylog.enabled' => str($config->value)->toBoolean()]);
+        }
+
         if (str_starts_with($config->key, 'app_')) {
             $value = in_array($config->key, ['app_debug', 'app_registration', 'app_email_verification'], true) ? str($config->value)->toBoolean() : $config->value;
             config([str_replace('app_', 'app.', $config->key) => $value]);

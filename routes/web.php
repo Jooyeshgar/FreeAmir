@@ -30,6 +30,7 @@ Route::middleware(['auth', 'ensure-feature-enabled:email_verification'])->group(
 
 Route::middleware(['auth', 'permission:access-super-admin-panel', 'ensure-feature-enabled:email_verification'])->prefix('management')->group(function () {
     Route::get('/', [Controllers\HomeController::class, 'managementDashboard'])->name('management.dashboard');
+    Route::get('/activity-logs', [Controllers\Management\ActivityLogController::class, 'index'])->name('management.activity-logs.index');
     Route::get('/settings', [Controllers\AboutController::class, 'index'])->name('management.settings');
     Route::put('/settings', [Controllers\AboutController::class, 'updateGlobalConfigs'])->name('update-global-configs');
 

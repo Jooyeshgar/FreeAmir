@@ -197,4 +197,69 @@
             <div class="p-5 pt-3"><a href="{{ route('management.settings') }}" class="btn btn-outline btn-sm btn-block">{{ __('Settings') }}</a></div>
         </article>
     </section>
+
+    <section class="mt-6 grid gap-6 xl:grid-cols-3" aria-label="{{ __('Activity log summary') }}">
+        <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 xl:col-span-2">
+            <header class="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+                <div>
+                    <h3 class="font-bold">{{ __('Recent activity') }}</h3>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('Latest user actions and model changes across the platform.') }}</p>
+                </div>
+                <a href="{{ route('management.activity-logs.index') }}" class="btn btn-ghost btn-sm">{{ __('Show all') }}</a>
+            </header>
+
+            <div class="divide-y divide-slate-100 dark:divide-slate-800">
+                @forelse ($recentActivities as $activity)
+                    @php($details = $activity->details ?? collect())
+                    @php($isRequest = $activity->source === 'request')
+                    @php($actionClasses = ['created' => 'badge-success badge-outline', 'updated' => 'badge-info badge-outline', 'deleted' => 'badge-error badge-outline'])
+                    @php($actionClass = $actionClasses[$activity->action] ?? 'badge-ghost')
+                    @php($activitySubject = $isRequest ? ($details->get('route') ?: $activity->description) : class_basename($activity->model_type).' · '.$details->get('model_label', '#'.$activity->model_id))
+
+                    <div class="flex flex-col justify-between gap-3 px-5 py-4 sm:flex-row sm:items-center">
+                        <div class="flex min-w-0 items-center gap-3">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                {{ mb_strtoupper(mb_substr($activity->user?->name ?? '?', 0, 1)) }}
+                            </span>
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="truncate text-sm font-semibold">{{ $activity->user?->name ?? __('System') }}</span>
+                                    <span class="badge badge-sm {{ $actionClass }}">{{ __(ucfirst($activity->action ?? 'activity')) }}</span>
+                                </div>
+                                <p class="mt-1 truncate text-xs text-slate-500" dir="ltr">{{ $activitySubject }}</p>
+                            </div>
+                        </div>
+                        <time datetime="{{ $activity->created_at?->toAtomString() }}" class="shrink-0 text-xs text-slate-500">
+                            {{ formatDateTime($activity->created_at) }}
+                        </time>
+                    </div>
+                @empty
+                    <div class="px-6 py-14 text-center">
+                        <p class="font-semibold">{{ __('No activity has been recorded yet.') }}</p>
+                        <p class="mt-1 text-xs text-slate-500">{{ __('User actions and model changes will appear here.') }}</p>
+                    </div>
+                @endforelse
+            </div>
+        </article>
+
+        <article class="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <header class="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+                <div>
+                    <h3 class="font-bold">{{ __('Events') }}</h3>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('Platform activity overview') }}</p>
+                </div>
+                <span @class(['badge badge-sm', 'badge-success badge-outline' => config('activitylog.enabled'), 'badge-error badge-outline' => ! config('activitylog.enabled')])>
+                    {{ config('activitylog.enabled') ? __('Enabled') : __('Disabled') }}
+                </span>
+            </header>
+
+            <dl class="divide-y divide-slate-100 px-5 dark:divide-slate-800">
+                <div class="flex items-center justify-between gap-4 py-4"><dt class="text-sm text-slate-500">{{ __('Events today') }}</dt><dd class="text-lg font-bold text-emerald-700 dark:text-emerald-300">{{ localizeNumber(number_format($activityMetrics['today'])) }}</dd></div>
+                <div class="flex items-center justify-between gap-4 py-4"><dt class="text-sm text-slate-500">{{ __('Model events') }}</dt><dd class="text-sm font-semibold">{{ localizeNumber(number_format($activityMetrics['model'])) }}</dd></div>
+                <div class="flex items-center justify-between gap-4 py-4"><dt class="text-sm text-slate-500">{{ __('Request events') }}</dt><dd class="text-sm font-semibold">{{ localizeNumber(number_format($activityMetrics['request'])) }}</dd></div>
+                <div class="flex items-center justify-between gap-4 py-4"><dt class="text-sm text-slate-500">{{ __('Total records') }}</dt><dd class="text-sm font-semibold">{{ localizeNumber(number_format($activityMetrics['total'])) }}</dd></div>
+            </dl>
+            <div class="p-5 pt-3"><a href="{{ route('management.activity-logs.index') }}" class="btn btn-outline btn-sm btn-block">{{ __('Open activity log') }}</a></div>
+        </article>
+    </section>
 </x-super-admin-layout>
