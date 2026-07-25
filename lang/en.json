@@ -2623,5 +2623,14 @@
     "Select at least one role that should receive this permission.": "Select at least one role that should receive this permission.",
     "Access policy": "Access policy",
     "Admin panel": "Admin panel",
-    "Workspace": "Workspace"
+    "Workspace": "Workspace",
+    "Impersonate": "Impersonate",
+    "You are now impersonating :name.": "You are now impersonating :name.",
+    "You are impersonating :name.": "You are impersonating :name.",
+    "Return to administrator": "Return to administrator",
+    "Impersonation ended.": "Impersonation ended.",
+    "Unable to start impersonation.": "Unable to start impersonation.",
+    "Unable to stop impersonation.": "Unable to stop impersonation.",
+    "Are you sure you want to impersonate this user?": "Are you sure you want to impersonate this user?",
+    "Are you sure you want to delete this user?": "Are you sure you want to delete this user?"
 }

@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Lab404\Impersonate\Services\ImpersonateManager;
 use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
@@ -27,9 +28,15 @@ class UserController extends Controller
     {
         $actor = auth()->user();
         $isProduction = config('app.env') === 'production';
+        $isManagementUserIndex = $request->session()->get('interface_mode') === 'management' && $actor->can('access-super-admin-panel');
 
         if ($isProduction) {
-            abort_unless($actor->can('access-super-admin-panel') || $actor->hasRole(__('Admin')), 403);
+            abort_unless(
+                $actor->can('access-super-admin-panel') ||
+                $actor->hasApplicationRole('Admin') ||
+                $actor->hasApplicationRole('Accountant'),
+                403
+            );
         }
 
         $users = User::query()
@@ -39,7 +46,10 @@ class UserController extends Controller
                 $query->whereHas('companies', fn ($query) => $query->where('companies.id', getActiveCompany()))
                     ->whereDoesntHave('companies', fn ($query) => $query->whereNotIn('companies.id', $companyIds));
             })
-            ->when($isProduction && ! $actor->can('access-super-admin-panel'), fn ($query) => $query->whereDoesntHave('roles', fn ($query) => $query->where('name', 'Super-Admin')))
+            ->unless($isManagementUserIndex, fn ($query) => $query
+                ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'Super-Admin'))
+                ->whereDoesntHave('permissions', fn ($query) => $query->where('name', 'access-super-admin-panel'))
+                ->whereDoesntHave('roles.permissions', fn ($query) => $query->where('name', 'access-super-admin-panel')))
             ->when($request->filled('search'), function ($query) use ($request) {
                 $search = trim((string) $request->input('search'));
 
@@ -55,10 +65,7 @@ class UserController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        $view = $request->session()->get('interface_mode') === 'management'
-            && $actor->can('access-super-admin-panel')
-                ? 'users.index'
-                : 'users.workspace-index';
+        $view = $isManagementUserIndex ? 'users.index' : 'users.workspace-index';
 
         return view($view, compact('users'));
     }
@@ -93,7 +100,7 @@ class UserController extends Controller
         $this->validateAssignments($request);
 
         DB::transaction(function () use ($request, &$user) {
-            $role = array_values($request->role);
+            $role = $this->rolesWithInheritance(array_values($request->role));
             $company = array_values($request->company);
             $user = new User;
             $user->name = $request->input('name');
@@ -176,7 +183,7 @@ class UserController extends Controller
         DB::transaction(function () use ($request, $user, $employee) {
             $user->name = $request->input('name');
             $user->email = $request->input('email');
-            $role = array_values($request->role);
+            $role = $this->rolesWithInheritance(array_values($request->role));
             $company = array_values($request->company);
 
             if ($request->input('password')) {
@@ -206,6 +213,36 @@ class UserController extends Controller
         $user->delete();
 
         return redirect()->route('users.index')->with('success', __('User deleted successfully!'));
+    }
+
+    public function impersonate(Request $request, User $user, ImpersonateManager $impersonateManager): RedirectResponse
+    {
+        $actor = $request->user();
+
+        abort_if($impersonateManager->isImpersonating(), 403);
+        abort_if($actor->is($user), 403);
+        abort_unless($actor->canImpersonateUser($user), 403);
+
+        $this->ensureUserAccess($user);
+
+        if (! $actor->impersonate($user)) {
+            $impersonateManager->clear();
+            abort(500, __('Unable to start impersonation.'));
+        }
+
+        $request->session()->regenerate();
+
+        return redirect()->to($this->impersonationLandingPage($user))->with('success', __('You are now impersonating :name.', ['name' => $user->name]));
+    }
+
+    public function leaveImpersonation(Request $request, ImpersonateManager $impersonateManager): RedirectResponse
+    {
+        abort_unless($impersonateManager->isImpersonating(), 403);
+        abort_unless($impersonateManager->leave(), 500, __('Unable to stop impersonation.'));
+
+        $request->session()->regenerate();
+
+        return redirect()->route('users.index')->with('success', __('Impersonation ended.'));
     }
 
     public function createEmployee(Request $request, User $user): RedirectResponse
@@ -249,6 +286,19 @@ class UserController extends Controller
         return Role::query()
             ->when(! auth()->user()->can('access-super-admin-panel'), fn ($query) => $query->where('name', '!=', 'Super-Admin'))
             ->get();
+    }
+
+    /**
+     * @param  array<int, string>  $roles
+     * @return array<int, string>
+     */
+    private function rolesWithInheritance(array $roles): array
+    {
+        if (in_array('Super-Admin', $roles, true)) {
+            $roles[] = Role::firstOrCreate(['name' => __('Admin')])->name;
+        }
+
+        return array_values(array_unique($roles));
     }
 
     private function assignableCompanies()
@@ -299,6 +349,19 @@ class UserController extends Controller
         }
 
         return [$firstName, $lastName];
+    }
+
+    private function impersonationLandingPage(User $user): string
+    {
+        if ($user->companies()->exists() && $user->can('home')) {
+            return route('home');
+        }
+
+        if ($user->employee && $user->can('employee-portal.dashboard')) {
+            return route('employee-portal.dashboard');
+        }
+
+        return route('about');
     }
 
     private function uniqueEmployeeCode(int $userId): string

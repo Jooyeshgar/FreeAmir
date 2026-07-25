@@ -69,6 +69,8 @@
                 </ul>
             </nav>
         </div>
+
+        <x-impersonation-banner within-sticky-header />
     </header>
 
     <nav class="relative z-20 w-full border-b border-base-content/8 bg-base-100/75 shadow-sm backdrop-blur"
