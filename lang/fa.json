@@ -2646,5 +2646,14 @@
     "Select at least one role that should receive this permission.": "حداقل یک نقش را برای دریافت این دسترسی انتخاب کنید.",
     "Access policy": "سیاست دسترسی",
     "Admin panel": "پنل مدیریت",
-    "Workspace": "فضای کاری"
+    "Workspace": "فضای کاری",
+    "Impersonate": "ورود به‌جای کاربر",
+    "You are now impersonating :name.": "اکنون به‌جای :name وارد شده‌اید.",
+    "You are impersonating :name.": "شما در حال استفاده از حساب :name هستید.",
+    "Return to administrator": "بازگشت به حساب مدیر",
+    "Impersonation ended.": "ورود به‌جای کاربر پایان یافت.",
+    "Unable to start impersonation.": "شروع ورود به‌جای کاربر ممکن نیست.",
+    "Unable to stop impersonation.": "پایان ورود به‌جای کاربر ممکن نیست.",
+    "Are you sure you want to impersonate this user?": "آیا مطمئن هستید که می‌خواهید به‌جای این کاربر وارد شوید؟",
+    "Are you sure you want to delete this user?": "آیا مطمئن هستید که می‌خواهید این کاربر را حذف کنید؟"
 }

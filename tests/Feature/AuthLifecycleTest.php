@@ -215,6 +215,53 @@ class AuthLifecycleTest extends TestCase
         $this->get(route('home'))->assertRedirect(route('management.dashboard'));
     }
 
+    public function test_super_admin_is_hidden_from_workspace_users_but_visible_in_management_users(): void
+    {
+        $actor = User::factory()->create();
+        $actor->givePermissionTo(
+            Permission::create(['name' => 'access-super-admin-panel']),
+            Permission::create(['name' => 'users.index']),
+        );
+
+        $superAdmin = User::factory()->create(['email' => 'hidden-super-admin@example.com']);
+        $superAdmin->assignRole(Role::create(['name' => 'Super-Admin']));
+
+        $this->actingAs($actor)->withSession(['interface_mode' => 'workspace'])->get(route('users.index'))->assertOk()
+            ->assertDontSee('hidden-super-admin@example.com');
+
+        $this->withSession(['interface_mode' => 'management'])->get(route('users.index'))->assertOk()
+            ->assertSee('hidden-super-admin@example.com');
+    }
+
+    public function test_assigning_super_admin_also_assigns_admin_role(): void
+    {
+        Notification::fake();
+
+        $actor = User::factory()->create();
+        $actor->givePermissionTo(
+            Permission::create(['name' => 'access-super-admin-panel']),
+            Permission::create(['name' => 'users.store']),
+        );
+
+        Role::create(['name' => 'Super-Admin']);
+        Role::create(['name' => __('Admin')]);
+        $company = $this->company('Managed Company');
+
+        $this->actingAs($actor)->post(route('users.store'), [
+            'name' => 'New Super Admin',
+            'email' => 'new-super-admin@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role' => ['Super-Admin'],
+            'company' => [$company->id],
+        ])->assertRedirect(route('users.index'));
+
+        $user = User::where('email', 'new-super-admin@example.com')->firstOrFail();
+
+        $this->assertTrue($user->hasRole('Super-Admin'));
+        $this->assertTrue($user->hasRole(__('Admin')));
+    }
+
     private function company(string $name): Company
     {
         return Company::create([

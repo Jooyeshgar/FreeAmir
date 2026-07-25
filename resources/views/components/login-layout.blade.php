@@ -8,6 +8,8 @@
 </head>
 
 <body>
+    <x-impersonation-banner />
+
     <main class="bg-gray-200 mx-auto  min-h-screen p-0 flex flex-col  ">
         {{ $slot }}
     </main>
