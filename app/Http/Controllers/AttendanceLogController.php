@@ -149,7 +149,11 @@ class AttendanceLogController extends Controller
 
     public function show(AttendanceLog $attendanceLog): View
     {
-        if ($attendanceLog->employee_id !== auth()->user()->employee->id && ! auth()->user()->can('show', $attendanceLog)) {
+        $user = auth()->user();
+        $hasHrPermission = $user->getAllPermissions()->contains(fn ($permission) => str_starts_with($permission->name, 'hr.'));
+        $canViewOtherEmployees = $hasHrPermission || $user->can('attendance.attendance-logs.index');
+
+        if ($attendanceLog->employee_id !== $user->employee?->id && ! $canViewOtherEmployees) {
             abort(403, __('You do not have access to view this attendance log.'));
         }
         $attendanceLog->load(['employee.workShift']);

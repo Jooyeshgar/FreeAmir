@@ -144,6 +144,62 @@ class AttendanceLogTest extends TestCase
     }
 
     // ----------------------------------------------------------------
+    // show authorization
+    // ----------------------------------------------------------------
+
+    public function test_user_with_any_hr_permission_can_view_another_employees_attendance_log(): void
+    {
+        $this->user->syncPermissions([
+            Permission::firstOrCreate(['name' => 'attendance.attendance-logs.show']),
+            Permission::firstOrCreate(['name' => 'hr.org-charts.index']),
+        ]);
+        $this->employee->update(['user_id' => $this->user->id]);
+
+        $otherEmployee = Employee::factory()->create(['company_id' => $this->companyId]);
+        $log = $this->makeAttendanceLog(['employee_id' => $otherEmployee->id]);
+
+        $this->get(route('attendance.attendance-logs.show', $log))->assertOk();
+    }
+
+    public function test_attendance_manager_can_view_another_employees_attendance_log(): void
+    {
+        $this->user->syncPermissions([
+            Permission::firstOrCreate(['name' => 'attendance.attendance-logs.show']),
+            Permission::firstOrCreate(['name' => 'attendance.attendance-logs.index']),
+        ]);
+        $this->employee->update(['user_id' => $this->user->id]);
+
+        $otherEmployee = Employee::factory()->create(['company_id' => $this->companyId]);
+        $log = $this->makeAttendanceLog(['employee_id' => $otherEmployee->id]);
+
+        $this->get(route('attendance.attendance-logs.show', $log))->assertOk();
+    }
+
+    public function test_employee_cannot_view_another_employees_attendance_log(): void
+    {
+        $this->user->syncPermissions([
+            Permission::firstOrCreate(['name' => 'attendance.attendance-logs.show']),
+        ]);
+        $this->employee->update(['user_id' => $this->user->id]);
+
+        $otherEmployee = Employee::factory()->create(['company_id' => $this->companyId]);
+        $log = $this->makeAttendanceLog(['employee_id' => $otherEmployee->id]);
+
+        $this->get(route('attendance.attendance-logs.show', $log))->assertForbidden();
+    }
+
+    public function test_employee_can_view_their_own_attendance_log(): void
+    {
+        $this->user->syncPermissions([
+            Permission::firstOrCreate(['name' => 'attendance.attendance-logs.show']),
+        ]);
+        $this->employee->update(['user_id' => $this->user->id]);
+        $log = $this->makeAttendanceLog();
+
+        $this->get(route('attendance.attendance-logs.show', $log))->assertOk();
+    }
+
+    // ----------------------------------------------------------------
     // create / store
     // ----------------------------------------------------------------
 
