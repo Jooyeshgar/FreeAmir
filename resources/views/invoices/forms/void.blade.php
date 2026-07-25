@@ -29,4 +29,7 @@
             </x-card>
         </div>
     </form>
+    <script type="module">
+        jalaliDatepicker.startWatch();
+    </script>
 </x-app-layout>
