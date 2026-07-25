@@ -32,6 +32,10 @@
                                         @csrf
                                         <button type="submit" class="btn btn-sm btn-ghost text-violet-600 hover:text-violet-900">{{ __('Impersonate') }}</button>
                                     </form>
+                                @elseif (! $user->hasVerifiedEmail() && auth()->user()->canImpersonateUserIfVerified($user))
+                                    <span class="tooltip" data-tip="{{ __('User is not verified') }}">
+                                        <button type="button" disabled title="{{ __('User is not verified') }}" class="btn btn-sm btn-ghost btn-disabled cursor-not-allowed">{{ __('Impersonate') }}</button>
+                                    </span>
                                 @endif
                                 @if ($user->employee)
                                     @canany(['hr.employees.show', 'users.show'])

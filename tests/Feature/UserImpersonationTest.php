@@ -271,26 +271,26 @@ class UserImpersonationTest extends TestCase
         }
     }
 
-    public function test_unverified_target_can_return_to_admin_from_verification_layout(): void
+    public function test_unverified_users_cannot_be_impersonated_with_any_eligible_role(): void
     {
-        config(['app.email_verification' => true]);
+        $superAdmin = $this->userWithRole('Super-Admin', canImpersonate: true);
+        $targets = [];
 
-        $company = $this->company('Shared Company');
-        $admin = $this->userWithRole('Admin', $company, canImpersonate: true);
-        $target = $this->userWithRole('Employee', $company, attributes: [
-            'name' => 'Unverified Target',
-            'email_verified_at' => null,
-        ]);
-        $this->setActiveCompany($company);
+        foreach (['Admin', 'Accountant', 'Warehousekeeper', 'Seller', 'Employee', null] as $targetRole) {
+            $target = $targetRole === null ? User::factory()->create(['email_verified_at' => null]) : $this->userWithRole($targetRole, attributes: ['email_verified_at' => null]);
+            $targets[] = $target;
 
-        $this->actingAs($admin)->post(route('users.impersonate', $target))->assertRedirect(route('about'));
+            $this->actingAs($superAdmin)->post(route('users.impersonate', $target))->assertForbidden();
+            $this->assertFalse($target->canBeImpersonated());
+            $this->assertAuthenticatedAs($superAdmin);
+            $this->assertImpersonationSessionIsClear();
+        }
 
-        $this->get(route('about'))->assertRedirect(route('verification.notice'));
-        $this->get(route('verification.notice'))->assertOk()->assertSee('Unverified Target')
-            ->assertSee(__('Return to administrator'))->assertSee(route('impersonation.leave'), false);
+        $response = $this->withSession(['interface_mode' => 'management'])->get(route('users.index'))->assertOk()->assertSee(__('User is not verified'));
 
-        $this->post(route('impersonation.leave'));
-        $this->assertAuthenticatedAs($admin);
+        foreach ($targets as $target) {
+            $response->assertDontSee(route('users.impersonate', $target), false);
+        }
     }
 
     public function test_logout_while_impersonating_ends_the_entire_authenticated_session(): void
@@ -567,12 +567,15 @@ class UserImpersonationTest extends TestCase
         $company = $this->company('Shared Company');
         $admin = $this->userWithRole('Admin', $company, canImpersonate: true, canViewUsers: true);
         $employee = $this->userWithRole('Employee', $company);
+        $unverifiedEmployee = $this->userWithRole('Employee', $company, attributes: ['email_verified_at' => null]);
         $otherAdmin = $this->userWithRole('Admin', $company);
         $superAdmin = $this->userWithRole('Super-Admin', $company);
         $this->setActiveCompany($company);
 
         $this->actingAs($admin)->get(route('users.index'))->assertOk()->assertDontSee($superAdmin->email)
             ->assertSee(route('users.impersonate', $employee), false)
+            ->assertSee(__('User is not verified'))
+            ->assertDontSee(route('users.impersonate', $unverifiedEmployee), false)
             ->assertDontSee(route('users.impersonate', $otherAdmin), false)
             ->assertDontSee(route('users.impersonate', $superAdmin), false)
             ->assertDontSee(route('users.impersonate', $admin), false);

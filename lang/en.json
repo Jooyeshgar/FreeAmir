@@ -2632,5 +2632,6 @@
     "Unable to start impersonation.": "Unable to start impersonation.",
     "Unable to stop impersonation.": "Unable to stop impersonation.",
     "Are you sure you want to impersonate this user?": "Are you sure you want to impersonate this user?",
-    "Are you sure you want to delete this user?": "Are you sure you want to delete this user?"
+    "Are you sure you want to delete this user?": "Are you sure you want to delete this user?",
+    "User is not verified": "User is not verified"
 }
