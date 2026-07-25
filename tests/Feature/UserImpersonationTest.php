@@ -120,6 +120,14 @@ class UserImpersonationTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_stale_impersonation_session_does_not_render_banner_for_guest(): void
+    {
+        $this->withSession(['impersonated_by' => 999999, 'impersonator_guard' => 'web', 'impersonator_guard_using' => null])
+            ->get(route('login'))->assertOk()->assertDontSee(__('Return to administrator'))->assertDontSee(route('impersonation.leave'), false);
+
+        $this->assertGuest();
+    }
+
     public function test_impersonation_start_route_only_accepts_post_requests(): void
     {
         $target = User::factory()->create();
