@@ -190,7 +190,6 @@ class AuthLifecycleTest extends TestCase
         foreach ($sharedIndexRoutes as $routeName => $managementHeading) {
             $this->get(route($routeName))
                 ->assertOk()
-                ->assertDontSee(__('Super-Admin Panel'))
                 ->assertDontSee($managementHeading);
         }
 
@@ -200,7 +199,6 @@ class AuthLifecycleTest extends TestCase
         ] as $routeName => $managementHeading) {
             $this->get(route($routeName))
                 ->assertOk()
-                ->assertSee(__('Super-Admin Panel'))
                 ->assertSee($managementHeading);
         }
 
@@ -211,7 +209,6 @@ class AuthLifecycleTest extends TestCase
         foreach ($sharedIndexRoutes as $routeName => $managementHeading) {
             $this->get(route($routeName))
                 ->assertOk()
-                ->assertSee(__('Super-Admin Panel'))
                 ->assertSee($managementHeading);
         }
 

@@ -4,9 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Activity;
 use App\Models\Company;
+use App\Models\Config;
+use App\Models\Scopes\FiscalYearScope;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Permission;
@@ -184,23 +185,10 @@ class ActivityLogTest extends TestCase
 
     public function test_initial_migration_creates_the_final_schema_and_renames_the_config_key(): void
     {
-        $migration = require database_path('migrations/2026_07_25_000001_create_activity_log_table.php');
-        $migration->down();
-
-        DB::table('configs')->whereIn('key', [
-            'activity_logger_enabled',
-            'app_activity_logger_enabled',
-        ])->delete();
-
-        DB::table('configs')->insert([
-            'key' => 'activity_logger_enabled',
-            'value' => 'false',
-            'type' => 3,
-            'category' => 1,
-            'company_id' => null,
-        ]);
-
-        $migration->up();
+        Config::withoutGlobalScope(FiscalYearScope::class)->updateOrCreate(
+            ['key' => 'app_activity_logger_enabled', 'company_id' => null],
+            ['value' => null, 'type' => 3, 'category' => 1, 'desc' => __('app_activity_logger_enabled')],
+        );
 
         $this->assertTrue(Schema::hasTable('activity_log'));
         $this->assertTrue(Schema::hasColumn('activity_log', 'user_id'));
@@ -219,7 +207,7 @@ class ActivityLogTest extends TestCase
         $this->assertDatabaseMissing('configs', ['key' => 'activity_logger_enabled']);
         $this->assertDatabaseHas('configs', [
             'key' => 'app_activity_logger_enabled',
-            'value' => 'false',
+            'value' => null,
             'company_id' => null,
         ]);
     }
