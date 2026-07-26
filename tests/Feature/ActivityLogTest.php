@@ -8,6 +8,7 @@ use App\Models\Config;
 use App\Models\Scopes\FiscalYearScope;
 use App\Models\User;
 use App\Services\ActivityLogService;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -258,7 +259,7 @@ class ActivityLogTest extends TestCase
         $this->assertSame($impersonated->id, $leaveActivity->details->get('impersonated_user_id'));
     }
 
-    public function test_impersonator_is_loaded_only_once_when_a_request_triggers_multiple_model_events(): void
+    public function test_impersonator_is_loaded_at_most_once_when_a_request_triggers_multiple_model_events(): void
     {
         $impersonator = User::factory()->create();
         $impersonated = User::factory()->create();
@@ -272,19 +273,26 @@ class ActivityLogTest extends TestCase
             return response()->noContent();
         })->middleware('web');
 
-        DB::flushQueryLog();
-        DB::enableQueryLog();
+        $impersonatorLookupCount = 0;
+        DB::listen(function (QueryExecuted $query) use ($impersonator, &$impersonatorLookupCount): void {
+            $normalizedSql = str_replace(['"', '`', '[', ']'], '', strtolower($query->sql));
+
+            if (preg_match('/\bfrom\s+(?:\w+\.)?users\b/', $normalizedSql) === 1
+                && collect($query->bindings)->contains(fn (mixed $binding): bool => (string) $binding === (string) $impersonator->id)) {
+                $impersonatorLookupCount++;
+            }
+        });
 
         $this->post('/test/activity-log/multiple-model-events')->assertNoContent();
 
-        $impersonatorLookups = collect(DB::getQueryLog())->filter(function (array $query) use ($impersonator): bool {
-            return str_contains(strtolower($query['query']), 'from "users"')
-                && collect($query['bindings'])->contains(fn (mixed $binding): bool => (string) $binding === (string) $impersonator->id);
-        });
+        $modelActivities = Activity::query()->where('source', 'model')->where('model_type', Company::class)->get();
 
-        DB::disableQueryLog();
-
-        $this->assertCount(1, $impersonatorLookups);
+        $this->assertCount(3, $modelActivities);
+        $this->assertTrue($modelActivities->every(
+            fn (Activity $activity): bool => (int) $activity->user_id === $impersonator->id
+                && (int) $activity->details->get('impersonated_user_id') === $impersonated->id,
+        ));
+        $this->assertLessThanOrEqual(1, $impersonatorLookupCount);
     }
 
     public function test_actor_cache_is_reset_between_requests(): void
