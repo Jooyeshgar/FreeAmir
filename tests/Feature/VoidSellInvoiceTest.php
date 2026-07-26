@@ -52,6 +52,7 @@ class VoidSellInvoiceTest extends TestCase
             Permission::firstOrCreate(['name' => 'invoices.void']),
             Permission::firstOrCreate(['name' => 'invoices.void-form']),
             Permission::firstOrCreate(['name' => 'invoices.show']),
+            Permission::firstOrCreate(['name' => 'products.show']),
         ]);
 
         $this->actingAs($this->user);
@@ -155,6 +156,29 @@ class VoidSellInvoiceTest extends TestCase
 
         $this->assertEqualsWithDelta($sellItem->cog_after, $voidItem->cog_after, 0.01);
         $this->assertEqualsWithDelta(6, $voidItem->quantity_at, 0.01);
+    }
+
+    public function test_product_history_adds_void_invoice_quantity_to_remaining_stock(): void
+    {
+        $product = $this->createProduct();
+
+        $this->buy([$this->productItem($product, 10, 100)], true, 7024, '2026-07-01');
+        $sell = $this->sell([$this->productItem($product, 4, 180)], true, 7025, '2026-07-02')['invoice'];
+
+        $this->post(route('invoices.void', $sell), ['date' => '1405/04/12', 'invoice_number' => 7026]); // 2026-07-03
+
+        $voidInvoice = $sell->voidInvoice()->firstOrFail();
+        $response = $this->get(route('products.show', $product));
+
+        $response->assertOk();
+
+        $document = new \DOMDocument;
+        @$document->loadHTML($response->getContent());
+        $xpath = new \DOMXPath($document);
+        $remainingCell = $xpath->query(sprintf('//tr[.//a[@href="%s"]]/td[last()]', route('invoices.show', $voidInvoice)))->item(0);
+
+        $this->assertNotNull($remainingCell);
+        $this->assertSame(formatNumber(10), trim($remainingCell->textContent));
     }
 
     public function test_unapproving_void_invoice_reapplies_the_original_sell_inventory_effect(): void
