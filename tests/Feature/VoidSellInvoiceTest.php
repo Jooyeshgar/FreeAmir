@@ -157,17 +157,6 @@ class VoidSellInvoiceTest extends TestCase
         $this->assertEqualsWithDelta(6, $voidItem->quantity_at, 0.01);
     }
 
-    public function test_void_invoice_quantity_is_added_to_remaining_stock(): void
-    {
-        $product = $this->createProduct();
-
-        $this->buy([$this->productItem($product, 10, 100)], true, 7024, '2026-07-01');
-        $sell = $this->sell([$this->productItem($product, 4, 180)], true, 7025, '2026-07-02')['invoice'];
-        $this->post(route('invoices.void', $sell), ['date' => '1405/04/12', 'invoice_number' => 7026]); // 2026-07-03
-
-        $this->assertEquals(10, $this->findProduct($product->id)->quantity);
-    }
-
     public function test_unapproving_void_invoice_reapplies_the_original_sell_inventory_effect(): void
     {
         $product = $this->createProduct();

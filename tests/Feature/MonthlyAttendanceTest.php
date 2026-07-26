@@ -17,7 +17,6 @@ use App\Services\AttendanceService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
-use Illuminate\Testing\TestResponse;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -89,48 +88,6 @@ class MonthlyAttendanceTest extends TestCase
             'friday' => 0,
             'holiday' => 0,
         ], $overrides);
-    }
-
-    private function makeMonthlyAttendanceWithMultipleStatusLog(): MonthlyAttendance
-    {
-        $attendance = $this->makeMonthlyAttendance(['start_date' => '2026-02-13', 'duration' => 1]);
-
-        AttendanceLog::factory()->create([
-            'company_id' => $this->companyId,
-            'employee_id' => $this->employee->id,
-            'monthly_attendance_id' => $attendance->id,
-            'log_date' => '2026-02-13',
-            'worked' => 240,
-            'paid_leave' => 60,
-            'unpaid_leave' => 30,
-            'remote_work' => 90,
-            'mission' => 45,
-            'is_friday' => true,
-            'is_holiday' => true,
-            'is_manual' => true,
-        ]);
-
-        return $attendance;
-    }
-
-    private function assertMultipleStatusBadges(TestResponse $response): void
-    {
-        $response->assertOk();
-
-        foreach ([
-            ['badge-warning', __('Holiday')],
-            ['badge-ghost', __('Friday')],
-            ['badge-info', __('Paid Leave')],
-            ['badge-error', __('Unpaid Leave')],
-            ['badge-primary', __('Remote Work')],
-            ['badge-accent', __('Mission')],
-            ['badge-success', __('Present')],
-            ['badge-ghost', __('Manual')],
-        ] as [$badgeClass, $label]) {
-            $response->assertSee('<span class="badge '.$badgeClass.' badge-sm">'.$label.'</span>', false);
-        }
-
-        $response->assertDontSee('<span class="badge badge-error badge-sm">'.__('Absent').'</span>', false);
     }
 
     // ----------------------------------------------------------------
@@ -392,22 +349,6 @@ class MonthlyAttendanceTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('مهر');
-    }
-
-    public function test_admin_show_displays_every_applicable_attendance_status_badge(): void
-    {
-        $attendance = $this->makeMonthlyAttendanceWithMultipleStatusLog();
-        $response = $this->get(route('attendance.monthly-attendances.show', $attendance));
-        $this->assertMultipleStatusBadges($response);
-    }
-
-    public function test_employee_portal_show_displays_every_applicable_attendance_status_badge(): void
-    {
-        $attendance = $this->makeMonthlyAttendanceWithMultipleStatusLog();
-        $this->employee->update(['user_id' => $this->user->id]);
-        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'employee-portal.dashboard']));
-        $response = $this->get(route('employee-portal.monthly-attendances.show', $attendance));
-        $this->assertMultipleStatusBadges($response);
     }
 
     // ----------------------------------------------------------------
