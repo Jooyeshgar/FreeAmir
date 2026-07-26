@@ -98,6 +98,23 @@
                             <svg class="swap-on h-5 w-5 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" /></svg>
                         </label>
                         <details class="app-main-menu-dropdown" data-main-menu-dropdown>
+                            <summary class="text-sm">
+                                {{ app()->isLocale('fa') ? __('Farsi') : __('English') }}
+                            </summary>
+                            <form id="management-locale-fa-form" method="POST" action="{{ route('locale') }}" class="hidden">
+                                @csrf
+                                <input type="hidden" name="locale" value="fa">
+                            </form>
+                            <form id="management-locale-en-form" method="POST" action="{{ route('locale') }}" class="hidden">
+                                @csrf
+                                <input type="hidden" name="locale" value="en">
+                            </form>
+                            <ul class="app-main-menu-panel z-50 mt-2 w-40">
+                                <li><button type="submit" form="management-locale-fa-form" lang="fa">{{ __('Farsi') }}</button></li>
+                                <li><button type="submit" form="management-locale-en-form" lang="en">{{ __('English') }}</button></li>
+                            </ul>
+                        </details>
+                        <details class="app-main-menu-dropdown" data-main-menu-dropdown>
                             <summary class="gap-2 text-sm">
                                 <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-emerald-500 to-teal-600 font-bold text-white shadow-sm">{{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}</span>
                                 <span class="hidden max-w-32 truncate sm:block">{{ auth()->user()->name }}</span>

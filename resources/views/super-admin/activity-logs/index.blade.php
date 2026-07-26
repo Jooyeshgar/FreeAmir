@@ -1,32 +1,19 @@
 <x-super-admin-layout :title="__('Activity log')">
-    <section class="relative mb-6 overflow-hidden rounded-3xl bg-slate-950 px-6 py-7 text-white shadow-xl shadow-slate-950/10 sm:px-8 dark:ring-1 dark:ring-white/10">
-        <div class="absolute inset-y-0 end-0 w-2/3 bg-gradient-to-s from-emerald-500/20 via-cyan-500/10 to-transparent"></div>
-        <div class="absolute -end-16 -top-24 h-64 w-64 rounded-full border border-white/10"></div>
-        <div class="absolute -end-4 -top-10 h-40 w-40 rounded-full border border-white/10"></div>
+    <section class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div>
+            <p class="text-xs font-bold uppercase tracking-[0.16em] text-emerald-600 dark:text-emerald-400">{{ __('System') }}</p>
+            <h1 class="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{{ __('Activity log') }}</h1>
+            <p class="mt-2 max-w-2xl text-sm text-slate-500 dark:text-slate-400">{{ __('Review user actions and model changes across every company.') }}</p>
+        </div>
 
-        <div class="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
-            <div class="flex items-start gap-4">
-                <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-emerald-300 ring-1 ring-inset ring-white/10 backdrop-blur">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-6 w-6" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                </span>
-                <div>
-                    <p class="text-xs font-bold uppercase tracking-[0.2em] text-emerald-300">{{ __('System activity') }}</p>
-                    <h1 class="mt-1 text-2xl font-black tracking-tight sm:text-3xl">{{ __('Activity log') }}</h1>
-                    <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-300">{{ __('Review user actions and model changes across every company.') }}</p>
-                </div>
-            </div>
-
-            <div class="flex flex-wrap items-center gap-3">
-                <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-semibold ring-1 ring-inset ring-white/10 backdrop-blur">
-                    <span @class(['h-2.5 w-2.5 rounded-full', 'bg-emerald-400 shadow-[0_0_0_4px_rgba(52,211,153,0.14)]' => $recordingEnabled, 'bg-rose-400 shadow-[0_0_0_4px_rgba(251,113,133,0.14)]' => ! $recordingEnabled])></span>
-                    {{ $recordingStatusLabel }}
-                </span>
-                <a href="{{ route('management.settings') }}" class="btn btn-sm border-white/15 bg-white/10 text-white hover:border-white/25 hover:bg-white/15">
-                    {{ __('Settings') }}
-                </a>
-            </div>
+        <div class="flex flex-wrap items-center gap-3">
+            <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                <span @class(['h-2.5 w-2.5 rounded-full', 'bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.14)]' => $recordingEnabled, 'bg-rose-500 shadow-[0_0_0_4px_rgba(244,63,94,0.14)]' => ! $recordingEnabled])></span>
+                {{ $recordingStatusLabel }}
+            </span>
+            <a href="{{ route('management.settings') }}" class="btn btn-outline btn-sm">
+                {{ __('Settings') }}
+            </a>
         </div>
     </section>
 
