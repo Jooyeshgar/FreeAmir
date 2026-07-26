@@ -205,23 +205,19 @@ class AttendanceService
         }
 
         // ── Normal working day ─────────────────────────────────────────────
+        $bounds = $this->shiftDelayEarlyLeave($log, $workShift);
+
         // Determine explicit coverage boundaries if request objects are passed
         $explicitDelayCoverage = 0;
         $explicitEarlyLeaveCoverage = 0;
-        $fullEntryGapIsCovered = false;
 
         if ($hourlyCoverageRequests !== null) {
             $entryTime = $log->entry_time ? Carbon::parse($log->entry_time)->format('H:i:s') : null;
             $exitTime = $log->exit_time ? Carbon::parse($log->exit_time)->format('H:i:s') : null;
-            $shiftStartTime = $workShift?->start_time ? Carbon::parse($workShift->start_time)->format('H:i:s') : null;
 
             foreach ($hourlyCoverageRequests as $req) {
                 $reqStart = Carbon::parse($req->start_date)->format('H:i:s');
                 $reqEnd = Carbon::parse($req->end_date)->format('H:i:s');
-
-                if ($entryTime && $shiftStartTime && $reqStart <= $shiftStartTime && $reqEnd >= $entryTime) {
-                    $fullEntryGapIsCovered = true;
-                }
 
                 // Leave occurring prior to physical check-in covers morning delays
                 if ($entryTime) {
@@ -242,8 +238,6 @@ class AttendanceService
                 }
             }
         }
-
-        $bounds = $this->shiftDelayEarlyLeave($log, $workShift, $fullEntryGapIsCovered);
 
         // Hourly leave/mission taken while the clock was running (mid-shift) is already inside the clocked window,
         // so it must be removed from worked and is NOT available to absorb delay / early_leave (it covered the mid-shift gap, not the edges).
@@ -800,7 +794,7 @@ class AttendanceService
      *
      * @return array{delay: int, early_leave: int, overtime: int}
      */
-    private function shiftDelayEarlyLeave(AttendanceLog $log, ?WorkShift $workShift, bool $fullEntryGapIsCovered = false): array
+    private function shiftDelayEarlyLeave(AttendanceLog $log, ?WorkShift $workShift): array
     {
         $empty = ['delay' => 0, 'early_leave' => 0, 'overtime' => 0];
 
@@ -818,29 +812,23 @@ class AttendanceService
             return $empty;
         }
 
+        $float = max(0, (int) ($workShift->float ?? 0));
+        $floatCutoff = $shiftStart->copy()->addMinutes($float);
+        $lateMinutes = (int) $floatCutoff->diffInMinutes($entry, false);
+
         // Minutes employee arrived before shift start (positive = early arrival). These count as overtime.
         $earlyArrivalMinutes = 0;
 
-        if ($fullEntryGapIsCovered) {
-            // Approved leave covers the complete gap from shift start until check-in, so it must not slide the shift end via float.
-            $arrivalDelay = max(0, (int) $shiftStart->diffInMinutes($entry, false));
-            $adjustedEnd = $shiftEnd;
+        if ($lateMinutes <= 0) {
+            // Within or before the grace window.
+            $rawOffset = (int) $shiftStart->diffInMinutes($entry, false);
+            $earlyArrivalMinutes = max(0, -$rawOffset); // > 0 only when arrived before shift start
+            $offset = max(0, $rawOffset);               // > 0 only when arrived after start but within float
+            $adjustedEnd = $shiftEnd->copy()->addMinutes($offset);
+            $arrivalDelay = 0;
         } else {
-            $float = max(0, (int) ($workShift->float ?? 0));
-            $floatCutoff = $shiftStart->copy()->addMinutes($float);
-            $lateMinutes = (int) $floatCutoff->diffInMinutes($entry, false);
-
-            if ($lateMinutes <= 0) {
-                // Within or before the grace window.
-                $rawOffset = (int) $shiftStart->diffInMinutes($entry, false);
-                $earlyArrivalMinutes = max(0, -$rawOffset); // > 0 only when arrived before shift start
-                $offset = max(0, $rawOffset);               // > 0 only when arrived after start but within float
-                $adjustedEnd = $shiftEnd->copy()->addMinutes($offset);
-                $arrivalDelay = 0;
-            } else {
-                $arrivalDelay = $lateMinutes;
-                $adjustedEnd = $shiftEnd->copy()->addMinutes($float);
-            }
+            $arrivalDelay = $lateMinutes;
+            $adjustedEnd = $shiftEnd->copy()->addMinutes($float);
         }
 
         $exitOffset = (int) $adjustedEnd->diffInMinutes($exit, false);
