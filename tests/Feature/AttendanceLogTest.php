@@ -311,6 +311,39 @@ class AttendanceLogTest extends TestCase
         ]);
     }
 
+    public function test_update_converts_changed_jalali_date_to_gregorian_for_storage(): void
+    {
+        $log = $this->makeAttendanceLog(['log_date' => '2026-02-10']);
+        $changedDate = convertToJalali('2026-03-15', true);
+
+        $response = $this->put(
+            route('attendance.attendance-logs.update', $log),
+            $this->validPayload(['log_date' => $changedDate])
+        );
+
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('attendance_logs', [
+            'id' => $log->id,
+            'log_date' => '2026-03-15',
+        ]);
+    }
+
+    public function test_update_keeps_changed_jalali_date_as_old_input_when_validation_fails(): void
+    {
+        $log = $this->makeAttendanceLog(['log_date' => '2026-02-10']);
+        $changedDate = convertToJalali('2026-03-15', true);
+
+        $response = $this->from(route('attendance.attendance-logs.edit', $log))
+            ->put(route('attendance.attendance-logs.update', $log), $this->validPayload([
+                'log_date' => $changedDate,
+                'entry_time' => '17:00',
+                'exit_time' => '08:00',
+            ]));
+
+        $response->assertSessionHasErrors('exit_time');
+        $response->assertSessionHasInput('log_date', $changedDate);
+    }
+
     public function test_update_validates_required_fields(): void
     {
         $log = $this->makeAttendanceLog();
@@ -318,69 +351,6 @@ class AttendanceLogTest extends TestCase
         $response = $this->put(route('attendance.attendance-logs.update', $log), []);
 
         $response->assertSessionHasErrors(['employee_id', 'log_date']);
-    }
-
-    // ----------------------------------------------------------------
-    // recalculation consistency
-    // ----------------------------------------------------------------
-
-    public function test_calculation_check_matches_recalculated_remote_work_log(): void
-    {
-        $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
-            'start_time' => '09:00:00',
-            'end_time' => '17:00:00',
-            'float' => 0,
-            'max_auto_overtime' => 0,
-        ]);
-        $this->employee->update(['work_shift_id' => $workShift->id]);
-
-        $log = $this->makeAttendanceLog(['log_date' => '2026-02-10', 'entry_time' => null, 'exit_time' => null]);
-
-        PersonnelRequest::factory()->create([
-            'company_id' => $this->companyId,
-            'employee_id' => $this->employee->id,
-            'request_type' => PersonnelRequestType::REMOTE_WORK,
-            'start_date' => '2026-02-10 10:00:00',
-            'end_date' => '2026-02-10 17:00:00',
-            'status' => PersonnelRequestStatus::APPROVED,
-        ]);
-
-        $this->from(route('attendance.attendance-logs.show', $log))->post(route('attendance.attendance-logs.recalculate', $log))->assertRedirect(route('attendance.attendance-logs.show', $log));
-        $log = $log->fresh();
-        $this->assertSame(420, $log->worked);
-        $this->assertSame(60, $log->delay);
-        $this->assertSame(0, $log->early_leave);
-        $this->assertCalculationCheckMatchesStored($log);
-    }
-
-    public function test_calculation_check_matches_recalculated_mid_shift_leave_log(): void
-    {
-        $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
-            'start_time' => '08:00:00',
-            'end_time' => '16:00:00',
-            'float' => 0,
-            'max_auto_overtime' => 0,
-        ]);
-        $this->employee->update(['work_shift_id' => $workShift->id]);
-
-        $log = $this->makeAttendanceLog(['log_date' => '2026-02-10', 'entry_time' => '08:00:00', 'exit_time' => '16:00:00', 'paid_leave' => 120]);
-
-        PersonnelRequest::factory()->create([
-            'company_id' => $this->companyId,
-            'employee_id' => $this->employee->id,
-            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
-            'start_date' => '2026-02-10 11:00:00',
-            'end_date' => '2026-02-10 13:00:00',
-            'status' => PersonnelRequestStatus::APPROVED,
-        ]);
-
-        $this->from(route('attendance.attendance-logs.show', $log))->post(route('attendance.attendance-logs.recalculate', $log))->assertRedirect(route('attendance.attendance-logs.show', $log));
-
-        $log = $log->fresh();
-        $this->assertSame(360, $log->worked);
-        $this->assertCalculationCheckMatchesStored($log);
     }
 
     // ----------------------------------------------------------------

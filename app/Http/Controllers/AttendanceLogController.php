@@ -60,15 +60,11 @@ class AttendanceLogController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        if ($request->has('log_date')) {
-            $request->merge([
-                'log_date' => jalaliInputToGregorian($request->input('log_date'), 'log_date'),
-            ]);
-        }
+        $gregorianLogDate = $request->has('log_date') ? jalaliInputToGregorian($request->input('log_date'), 'log_date') : null;
 
         $validated = $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
-            'log_date' => ['required', 'date'],
+            'log_date' => ['required', 'string'],
             'entry_time' => ['nullable', 'date_format:H:i'],
             'exit_time' => ['nullable', 'date_format:H:i', 'after_or_equal:entry_time'],
             'is_manual' => ['boolean'],
@@ -79,6 +75,7 @@ class AttendanceLogController extends Controller
             $validated,
             [
                 'company_id' => getActiveCompany(),
+                'log_date' => $gregorianLogDate,
                 'is_manual' => $request->boolean('is_manual'),
             ]
         ));
@@ -105,15 +102,11 @@ class AttendanceLogController extends Controller
 
     public function update(Request $request, AttendanceLog $attendanceLog): RedirectResponse
     {
-        if ($request->has('log_date')) {
-            $request->merge([
-                'log_date' => jalaliInputToGregorian($request->input('log_date'), 'log_date'),
-            ]);
-        }
+        $gregorianLogDate = $request->has('log_date') ? jalaliInputToGregorian($request->input('log_date'), 'log_date') : null;
 
         $validated = $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
-            'log_date' => ['required', 'date'],
+            'log_date' => ['required', 'string'],
             'entry_time' => ['nullable', 'date_format:H:i'],
             'exit_time' => ['nullable', 'date_format:H:i', 'after_or_equal:entry_time'],
             'worked' => ['integer', 'min:0'],
@@ -130,7 +123,10 @@ class AttendanceLogController extends Controller
         // Editing a log always marks it as manually corrected
         $attendanceLog->update(array_merge(
             $validated,
-            ['is_manual' => true]
+            [
+                'log_date' => $gregorianLogDate,
+                'is_manual' => true,
+            ]
         ));
 
         $redirectTo = $request->input('redirect_to');
