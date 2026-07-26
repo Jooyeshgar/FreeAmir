@@ -1174,4 +1174,115 @@ class AttendanceLogTest extends TestCase
         $this->assertEquals(30, $log3->overtime + $log3->auto_overtime);
         $this->assertEquals(28, $log3->paid_leave);
     }
+
+    public function test_recalculation_applies_hourly_leave_at_shift_start_without_delay_or_early_leave(): void
+    {
+        $workShift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'start_time' => '07:30:00',
+            'end_time' => '15:30:00',
+            'break' => 30,
+            'float' => 60,
+            'max_auto_overtime' => 60,
+        ]);
+
+        $deviceId = 'DEVICE-002';
+        $this->employee->update(['device_id' => $deviceId, 'work_shift_id' => $workShift->id]);
+
+        $logDate = '2026-02-11';
+        $personnelRequest = PersonnelRequest::create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'status' => PersonnelRequestStatus::PENDING,
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
+            'start_date' => $logDate.' 07:30:00',
+            'end_date' => $logDate.' 10:00:00',
+        ]);
+
+        $personnelRequest->update(['status' => PersonnelRequestStatus::APPROVED, 'approved_by' => auth()->user()->id]);
+
+        app(AttendanceService::class)->syncPersonnelRequestLogs($personnelRequest);
+
+        $tsv = $this->makeTsvContent($deviceId, $logDate, '09:58', '16:19');
+        $tmpPath = tempnam(sys_get_temp_dir(), 'tsv_');
+        file_put_contents($tmpPath, $tsv);
+        $uploadedFile = new UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
+
+        $result = app(AttendanceLogImportService::class)->import(
+            $uploadedFile,
+            AttendanceImportType::DeviceTsv,
+            $this->companyId,
+            null,
+            null,
+            'ignore'
+        );
+
+        $this->assertEquals(1, $result['imported']);
+        $this->assertEquals(0, $result['skipped']);
+
+        $log = AttendanceLog::query()->where('employee_id', $this->employee->id)->where('log_date', $logDate)->firstOrFail();
+
+        $this->assertEquals('09:58:00', $log->entry_time);
+        $this->assertEquals('16:19:00', $log->exit_time);
+        $this->assertEquals(51, $log->auto_overtime + $log->overtime);
+        $this->assertEquals(0, $log->delay);
+        $this->assertEquals(0, $log->early_leave);
+    }
+
+    public function test_recalculation_applies_hourly_leave_until_entry_and_calculates_overtime(): void
+    {
+        $workShift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'start_time' => '08:00:00',
+            'end_time' => '16:00:00',
+            'break' => 30,
+            'float' => 60,
+            'max_auto_overtime' => 60,
+        ]);
+
+        $deviceId = 'DEVICE-002';
+        $this->employee->update(['device_id' => $deviceId, 'work_shift_id' => $workShift->id]);
+
+        $logDate = '2026-02-11';
+        $personnelRequest = PersonnelRequest::create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'status' => PersonnelRequestStatus::PENDING,
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
+            'start_date' => $logDate.' 08:00:00',
+            'end_date' => $logDate.' 10:02:00',
+        ]);
+
+        $personnelRequest->update([
+            'status' => PersonnelRequestStatus::APPROVED,
+            'approved_by' => auth()->user()->id,
+        ]);
+
+        app(AttendanceService::class)->syncPersonnelRequestLogs($personnelRequest);
+
+        $tsv = $this->makeTsvContent($deviceId, $logDate, '10:02', '16:28');
+        $tmpPath = tempnam(sys_get_temp_dir(), 'tsv_');
+        file_put_contents($tmpPath, $tsv);
+        $uploadedFile = new UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
+
+        $result = app(AttendanceLogImportService::class)->import(
+            $uploadedFile,
+            AttendanceImportType::DeviceTsv,
+            $this->companyId,
+            null,
+            null,
+            'ignore'
+        );
+
+        $this->assertEquals(1, $result['imported']);
+        $this->assertEquals(0, $result['skipped']);
+
+        $log = AttendanceLog::query()->where('employee_id', $this->employee->id)->where('log_date', $logDate)->firstOrFail();
+
+        $this->assertEquals('10:02:00', $log->entry_time);
+        $this->assertEquals('16:28:00', $log->exit_time);
+        $this->assertEquals(15, $log->auto_overtime + $log->overtime);
+        $this->assertEquals(0, $log->delay);
+        $this->assertEquals(0, $log->early_leave);
+    }
 }
