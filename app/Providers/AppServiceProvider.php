@@ -20,6 +20,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->scoped(ActivityLogService::class);
+
         $this->app->afterResolving(Generator::class, function (Generator $faker) {
             $registered = [];
             foreach ($faker->getProviders() as $provider) {

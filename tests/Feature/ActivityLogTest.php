@@ -7,8 +7,11 @@ use App\Models\Company;
 use App\Models\Config;
 use App\Models\Scopes\FiscalYearScope;
 use App\Models\User;
+use App\Services\ActivityLogService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -253,5 +256,49 @@ class ActivityLogTest extends TestCase
 
         $this->assertSame($impersonator->id, $leaveActivity->user_id);
         $this->assertSame($impersonated->id, $leaveActivity->details->get('impersonated_user_id'));
+    }
+
+    public function test_impersonator_is_loaded_only_once_when_a_request_triggers_multiple_model_events(): void
+    {
+        $impersonator = User::factory()->create();
+        $impersonated = User::factory()->create();
+
+        $this->actingAs($impersonator);
+        $this->assertTrue($impersonator->impersonate($impersonated));
+
+        Route::post('/test/activity-log/multiple-model-events', function () {
+            Company::factory()->count(3)->create();
+
+            return response()->noContent();
+        })->middleware('web');
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        $this->post('/test/activity-log/multiple-model-events')->assertNoContent();
+
+        $impersonatorLookups = collect(DB::getQueryLog())->filter(function (array $query) use ($impersonator): bool {
+            return str_contains(strtolower($query['query']), 'from "users"')
+                && collect($query['bindings'])->contains(fn (mixed $binding): bool => (string) $binding === (string) $impersonator->id);
+        });
+
+        DB::disableQueryLog();
+
+        $this->assertCount(1, $impersonatorLookups);
+    }
+
+    public function test_actor_cache_is_reset_between_requests(): void
+    {
+        $firstUser = User::factory()->create();
+        $secondUser = User::factory()->create();
+
+        Route::get('/test/activity-log/resolved-actor', function (ActivityLogService $activityLogService) {
+            return response()->json([
+                'actor_id' => $activityLogService->resolveActor(request()->user())?->getKey(),
+            ]);
+        })->middleware('web');
+
+        $this->actingAs($firstUser)->get('/test/activity-log/resolved-actor')->assertOk()->assertJsonPath('actor_id', $firstUser->id);
+        $this->actingAs($secondUser)->get('/test/activity-log/resolved-actor')->assertOk()->assertJsonPath('actor_id', $secondUser->id);
     }
 }

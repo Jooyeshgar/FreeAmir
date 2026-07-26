@@ -18,15 +18,32 @@ class ActivityLogService
 
     private const IGNORED_MODEL_ATTRIBUTES = ['created_at', 'updated_at'];
 
+    private ?User $cachedActor = null;
+
+    private bool $actorCached = false;
+
+    private ?Request $actorRequest = null;
+
+    private int|string|null $actorAuthenticatedUserId = null;
+
     public function __construct(private readonly ImpersonateManager $impersonateManager) {}
 
     public function resolveActor(?User $authenticatedUser = null): ?User
     {
-        if ($this->impersonateManager->isImpersonating()) {
-            return User::query()->find($this->impersonateManager->getImpersonatorId());
+        $authenticatedUser ??= auth()->user();
+        $currentRequest = app()->bound('request') ? request() : null;
+        $authenticatedUserId = $authenticatedUser?->getAuthIdentifier();
+
+        if ($this->actorCached && $this->actorRequest === $currentRequest && $this->actorAuthenticatedUserId === $authenticatedUserId) {
+            return $this->cachedActor;
         }
 
-        return $authenticatedUser ?? auth()->user();
+        $this->cachedActor = $this->impersonateManager->isImpersonating() ? User::query()->find($this->impersonateManager->getImpersonatorId()) : $authenticatedUser;
+        $this->actorCached = true;
+        $this->actorRequest = $currentRequest;
+        $this->actorAuthenticatedUserId = $authenticatedUserId;
+
+        return $this->cachedActor;
     }
 
     /**
