@@ -222,6 +222,16 @@
                                 $placeholderIsFriday = $isPlaceholder && !empty($log->_is_friday);
                                 $placeholderIsHoliday = $isPlaceholder && !empty($log->_is_holiday);
                                 $isOffDay = $isPlaceholder ? $placeholderIsFriday || $placeholderIsHoliday : $log->is_friday || $log->is_holiday;
+                                $hasPhysicalPresence = !$isPlaceholder && $log->worked > $log->remote_work;
+                                $hasAttendanceStatus = !$isPlaceholder && (
+                                    $log->is_holiday
+                                    || $log->is_friday
+                                    || $log->paid_leave > 0
+                                    || $log->unpaid_leave > 0
+                                    || $log->remote_work > 0
+                                    || $log->mission > 0
+                                    || $hasPhysicalPresence
+                                );
                             @endphp
                             <tr class="{{ $isOffDay ? 'bg-base-200' : '' }} {{ $isPlaceholder && !$isOffDay ? 'opacity-50' : '' }}">
                                 <td>{{ formatDate($log->log_date, 'l') }}</td>
@@ -264,19 +274,26 @@
                                     <td>
                                         @if ($log->is_holiday)
                                             <span class="badge badge-warning badge-sm">{{ __('Holiday') }}</span>
-                                        @elseif ($log->is_friday)
+                                        @endif
+                                        @if ($log->is_friday)
                                             <span class="badge badge-ghost badge-sm">{{ __('Friday') }}</span>
-                                        @elseif ($log->paid_leave > 0)
+                                        @endif
+                                        @if ($log->paid_leave > 0)
                                             <span class="badge badge-info badge-sm">{{ __('Paid Leave') }}</span>
-                                        @elseif ($log->unpaid_leave > 0)
+                                        @endif
+                                        @if ($log->unpaid_leave > 0)
                                             <span class="badge badge-error badge-sm">{{ __('Unpaid Leave') }}</span>
-                                        @elseif ($log->remote_work > 0)
+                                        @endif
+                                        @if ($log->remote_work > 0)
                                             <span class="badge badge-primary badge-sm">{{ __('Remote Work') }}</span>
-                                        @elseif ($log->mission > 0)
+                                        @endif
+                                        @if ($log->mission > 0)
                                             <span class="badge badge-accent badge-sm">{{ __('Mission') }}</span>
-                                        @elseif ($log->worked > 0)
+                                        @endif
+                                        @if ($hasPhysicalPresence)
                                             <span class="badge badge-success badge-sm">{{ __('Present') }}</span>
-                                        @else
+                                        @endif
+                                        @if (!$hasAttendanceStatus)
                                             <span class="badge badge-error badge-sm">{{ __('Absent') }}</span>
                                         @endif
                                         @if ($log->is_manual)

@@ -351,6 +351,45 @@ class MonthlyAttendanceTest extends TestCase
         $response->assertSee('مهر');
     }
 
+    public function test_admin_and_employee_monthly_attendance_show_all_log_statuses(): void
+    {
+        $attendance = $this->makeMonthlyAttendance([
+            'year' => 1403,
+            'month' => 10,
+            'start_date' => '2025-01-06',
+            'duration' => 1,
+        ]);
+
+        AttendanceLog::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'monthly_attendance_id' => $attendance->id,
+            'log_date' => '2025-01-06',
+            'entry_time' => '08:00:00',
+            'exit_time' => '12:00:00',
+            'worked' => 360,
+            'remote_work' => 120,
+            'paid_leave' => 60,
+        ]);
+
+        $this->employee->update(['user_id' => $this->user->id]);
+        $this->user->givePermissionTo(
+            Permission::firstOrCreate(['name' => 'employee-portal.dashboard'])
+        );
+
+        $responses = [
+            $this->get(route('attendance.monthly-attendances.show', $attendance)),
+            $this->get(route('employee-portal.monthly-attendances.show', $attendance)),
+        ];
+
+        foreach ($responses as $response) {
+            $response->assertOk();
+            $response->assertSeeHtml('<span class="badge badge-info badge-sm">'.__('Paid Leave').'</span>');
+            $response->assertSeeHtml('<span class="badge badge-primary badge-sm">'.__('Remote Work').'</span>');
+            $response->assertSeeHtml('<span class="badge badge-success badge-sm">'.__('Present').'</span>');
+        }
+    }
+
     // ----------------------------------------------------------------
     // edit / update
     // ----------------------------------------------------------------
