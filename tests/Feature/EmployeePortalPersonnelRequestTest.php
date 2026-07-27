@@ -36,6 +36,9 @@ class EmployeePortalPersonnelRequestTest extends TestCase
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'employee-portal.dashboard'])
         );
+        $this->user->givePermissionTo(
+            Permission::firstOrCreate(['name' => 'home'])
+        );
 
         $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
         $workShift = WorkShift::factory()->create(['company_id' => $this->companyId]);
@@ -71,6 +74,38 @@ class EmployeePortalPersonnelRequestTest extends TestCase
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'status' => PersonnelRequestStatus::PENDING,
         ], $overrides));
+    }
+
+    public function test_home_shows_request_counts_for_current_employee_in_status_badges(): void
+    {
+        $this->makePersonnelRequest(['status' => PersonnelRequestStatus::PENDING]);
+        $this->makePersonnelRequest(['status' => PersonnelRequestStatus::PENDING]);
+        $this->makePersonnelRequest(['status' => PersonnelRequestStatus::APPROVED]);
+        $this->makePersonnelRequest(['status' => PersonnelRequestStatus::REJECTED]);
+        $this->makePersonnelRequest(['status' => PersonnelRequestStatus::REJECTED]);
+        $this->makePersonnelRequest(['status' => PersonnelRequestStatus::REJECTED]);
+
+        $otherEmployee = Employee::factory()->create(['company_id' => $this->companyId]);
+        PersonnelRequest::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $otherEmployee->id,
+            'status' => PersonnelRequestStatus::PENDING,
+        ]);
+
+        $response = $this->get(route('home'));
+
+        $response->assertOk()
+            ->assertViewHas('requestsCount', [
+                'pending' => 2,
+                'approved' => 1,
+                'rejected' => 3,
+            ])
+            ->assertSee('badge badge-sm badge-warning', false)
+            ->assertSee('badge badge-sm badge-success', false)
+            ->assertSee('badge badge-sm badge-error', false)
+            ->assertSeeText(PersonnelRequestStatus::PENDING->label())
+            ->assertSeeText(PersonnelRequestStatus::APPROVED->label())
+            ->assertSeeText(PersonnelRequestStatus::REJECTED->label());
     }
 
     public function test_store_accepts_flexible_time_format_and_normalizes_it(): void

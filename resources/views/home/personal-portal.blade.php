@@ -22,7 +22,11 @@
                 'tone' => 'warning',
                 'title' => __('Requests'),
                 'value' => localizeNumber($approvedCount + $rejectedCount + $pendingCount),
-                'meta' => __('Approved') . ': ' . localizeNumber($approvedCount) . ' • ' . __('In Pending') . ': ' . localizeNumber($pendingCount) . ' • ' . __('rejected') . ': ' . localizeNumber($rejectedCount),
+                'badges' => [
+                    ['class' => 'badge-warning', 'label' => __('Pending'), 'count' => $pendingCount],
+                    ['class' => 'badge-success', 'label' => __('Approved'), 'count' => $approvedCount],
+                    ['class' => 'badge-error', 'label' => __('Rejected'), 'count' => $rejectedCount],
+                ],
                 'href' => route('employee-portal.personnel-requests.index'),
                 'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
             ],
@@ -76,7 +80,15 @@
 
                     <div>
                         <div class="text-lg font-bold leading-7 text-base-content">{{ $card['value'] }}</div>
-                        @if (! empty($card['meta']))
+                        @if (! empty($card['badges']))
+                            <div class="mt-1 flex flex-wrap gap-1">
+                                @foreach ($card['badges'] as $badge)
+                                    <span class="badge badge-sm {{ $badge['class'] }}">
+                                        {{ $badge['label'] }}: {{ localizeNumber($badge['count']) }}
+                                    </span>
+                                @endforeach
+                            </div>
+                        @elseif (! empty($card['meta']))
                             <div class="text-xs text-base-content/60">{{ $card['meta'] }}</div>
                         @endif
                     </div>

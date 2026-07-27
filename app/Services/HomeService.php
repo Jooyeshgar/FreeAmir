@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Enums\PersonnelRequestStatus;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Invoice;
@@ -76,11 +77,9 @@ class HomeService
             ->limit(5)
             ->get();
 
-        $requestsCount = $employee->personnelRequests()
-            ->selectRaw('status, COUNT(*) as count')
-            ->groupBy('status')
-            ->pluck('count', 'status')
-            ->toArray();
+        $requestsCount = collect(PersonnelRequestStatus::cases())->mapWithKeys(fn (PersonnelRequestStatus $status) => [
+            $status->valueName() => $employee->personnelRequests()->where('status', $status)->count(),
+        ])->toArray();
 
         $lastMonthlyAttendance = $employee->monthlyAttendances()
             ->orderByDesc('year')
