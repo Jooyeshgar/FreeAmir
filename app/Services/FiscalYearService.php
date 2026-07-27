@@ -44,6 +44,7 @@ use App\Models\Employee;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\MonthlyAttendance;
+use App\Models\MonthlyBudget;
 use App\Models\OrganizationUnit;
 use App\Models\OrgChart;
 use App\Models\Payment;
@@ -281,6 +282,15 @@ class FiscalYearService
                 // --- Import Process (Order Matters!) ---
                 if (in_array('subjects', $sectionsToImport) && isset($importData['subjects'])) {
                     $idMappings['subjects'] = self::_importSubjects($importData['subjects'], $targetYearId);
+                }
+                if (! empty($importData['monthly_budgets'])) {
+                    $subjectMapping = $idMappings['subjects'] ?? [];
+
+                    if (empty($subjectMapping)) {
+                        Log::warning('Skipping monthly budgets import due to missing subject mapping.', ['target_year_id' => $targetYearId]);
+                    } else {
+                        self::_importMonthlyBudgets($importData['monthly_budgets'], $targetYearId, $subjectMapping);
+                    }
                 }
                 if (in_array('configs', $sectionsToImport) && isset($importData['configs'])) {
                     $subjectMapping = $idMappings['subjects'] ?? [];
@@ -713,6 +723,10 @@ class FiscalYearService
             $sourceData['subjects'] = Subject::withoutGlobalScope(FiscalYearScope::class)
                 ->where('company_id', $sourceYearId)
                 ->orderBy('parent_id') // Ensure parents likely come before children
+                ->get()->toArray();
+
+            $sourceData['monthly_budgets'] = MonthlyBudget::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
                 ->get()->toArray();
         }
         if (in_array('configs', $sections)) {
@@ -1558,6 +1572,29 @@ class FiscalYearService
                     self::_processSubjectChildren($childData['id'], $subjectsByOldParentId, $targetYearId, $mapping);
                 }
             }
+        }
+    }
+
+    /**
+     * Import monthly budgets with their subject IDs remapped to the target fiscal year.
+     *
+     * @param  array  $subjectMapping  Mapping of old subject ID to new subject ID.
+     */
+    protected static function _importMonthlyBudgets(array $monthlyBudgetsData, int $targetYearId, array $subjectMapping): void
+    {
+        foreach ($monthlyBudgetsData as $monthlyBudgetData) {
+            $oldSubjectId = $monthlyBudgetData['subject_id'] ?? null;
+            if ($oldSubjectId === null || ! isset($subjectMapping[$oldSubjectId])) {
+                Log::warning('Skipping monthly budget import due to missing subject mapping.', ['old_monthly_budget_id' => $monthlyBudgetData['id'] ?? 'N/A', 'old_subject_id' => $oldSubjectId, 'target_year_id' => $targetYearId]);
+
+                continue;
+            }
+
+            $newMonthlyBudget = new MonthlyBudget;
+            $newMonthlyBudget->fill(collect($monthlyBudgetData)->except(['id', 'company_id', 'subject_id'])->toArray());
+            $newMonthlyBudget->company_id = $targetYearId;
+            $newMonthlyBudget->subject_id = $subjectMapping[$oldSubjectId];
+            $newMonthlyBudget->save();
         }
     }
 

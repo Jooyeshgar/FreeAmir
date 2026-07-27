@@ -50,6 +50,18 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    onClick: (event, elements, chart) => {
+                        const links = @json($links);
+                        if (!links.length) return;
+                        const points = chart.getElementsAtEventForMode(event, 'index', { intersect: true }, true);
+                        const index = points[0]?.index;
+                        if (index !== undefined && links[index]) window.location.href = links[index];
+                    },
+                    onHover: (event, elements, chart) => {
+                        if (!@json(! empty($links))) return;
+                        const points = chart.getElementsAtEventForMode(event, 'index', { intersect: true }, true);
+                        event.native.target.style.cursor = points.length ? 'pointer' : 'default';
+                    },
                     scales: {
                         x: {
                             grid: {
