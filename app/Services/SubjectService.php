@@ -97,7 +97,7 @@ class SubjectService
             9 => [1, 30],
             10 => [1, 30],
             11 => [1, 30],
-            12 => [1, 29],
+            12 => [1, jcheckdate(12, 30, $year) ? 30 : 29],
         ];
 
         $subjectIds = $subject->getAllDescendantIds();
