@@ -39,7 +39,7 @@ class FreeAmirImportFormat extends DocumentImportFormat
         'نوع حساب' => 'subject_type',
         'ماهیت حساب' => 'subject_type',
         'دائم/موقت' => 'subject_is_permanent',
-        'نوع سرفصل' => 'subject_is_permanent',
+        'نوع سرفصل' => 'subject_type',
         'شرح ردیف' => 'transaction_desc',
         'بدهکار' => 'debit',
         'بستانکار' => 'credit',
@@ -122,6 +122,16 @@ class FreeAmirImportFormat extends DocumentImportFormat
     public static function normalizeHeader(string $header): string
     {
         $header = trim($header);
+
+        if (in_array($header, self::ALL_COLUMNS, true)) {
+            return $header;
+        }
+
+        foreach (self::ALL_COLUMNS as $column) {
+            if ($header === __($column)) {
+                return $column;
+            }
+        }
 
         return self::HEADER_NORMALIZE_MAP[$header] ?? $header;
     }
