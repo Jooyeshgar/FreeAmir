@@ -636,15 +636,24 @@ class MonthlyBudgetTest extends TestCase
         $this->assertDatabaseMissing('monthly_budgets', ['id' => $budget->id]);
     }
 
-    public function test_subject_with_monthly_budget_cannot_be_deleted(): void
+    public function test_deleting_subject_deletes_monthly_budget(): void
     {
         $subject = $this->temporarySubject('Rent', SubjectType::DEBTOR);
-        $this->budget($subject, 'expense', 800, 5);
-
-        $this->expectException(\Exception::class);
-        $this->expectExceptionMessage(__('Cannot delete subject with monthly budgets'));
+        $budget = $this->budget($subject, 'expense', 800, 5);
 
         $subject->delete();
+
+        $this->assertDatabaseMissing('monthly_budgets', ['id' => $budget->id]);
+    }
+
+    public function test_deleting_company_deletes_monthly_budget(): void
+    {
+        $subject = $this->temporarySubject('Rent', SubjectType::DEBTOR);
+        $budget = $this->budget($subject, 'expense', 800, 5);
+
+        $this->company->delete();
+
+        $this->assertDatabaseMissing('monthly_budgets', ['id' => $budget->id]);
     }
 
     public function test_subjects_export_includes_monthly_budgets(): void
