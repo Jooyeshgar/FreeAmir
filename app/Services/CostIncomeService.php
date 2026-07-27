@@ -93,22 +93,15 @@ class CostIncomeService
         $nonPermanentSubjects = Subject::where('is_permanent', false)->whereIsRoot()->get();
 
         foreach ($nonPermanentSubjects as $subject) {
-            $balance = (int) $this->subjectService->sumSubject($subject);
-
-            if ($balance === 0) {
-                continue;
-            }
-
             $monthly = $this->subjectService->sumSubjectWithDateRange($subject);
-            $bucket = $balance > 0 ? 'income' : 'cost';
 
             foreach (self::MONTHS as $number => $name) {
-                $amount = (int) abs($monthly[$number] ?? 0);
+                $amount = (int) ($monthly[$number] ?? 0);
 
-                if ($bucket === 'income') {
+                if ($amount > 0) {
                     $income[$name] += $amount;
-                } else {
-                    $cost[$name] += $amount;
+                } elseif ($amount < 0) {
+                    $cost[$name] += abs($amount);
                 }
             }
         }
