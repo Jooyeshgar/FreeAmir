@@ -33,8 +33,10 @@
             $balance = 0;
         @endphp
         @foreach ($transactionsChunk as $transactions)
-            <div class="bg-white px-2 pt-3 print:pl-8">
-                <div class="flex justify-between items-start p-4 border border-black rounded-lg mb-4">
+            <div class="bg-white px-2 pt-3 print:pl-8"
+                @if (!$loop->first) style="break-before: page; page-break-before: always;" @endif>
+                <div class="flex justify-between items-start p-4 border border-black rounded-lg mb-4"
+                    style="break-after: avoid-page; page-break-after: avoid;">
                     <div class="flex-grow text-center">
                         <h1 class="text-xl font-bold">{{ config('active-company-name') }}</h1>
                         <p class="text-lg">{{ __('Ledger Report') }}</p>
@@ -45,7 +47,7 @@
                         <p>{{ __('Page :current of :total', ['current' => formatNumber($current), 'total' => formatNumber($pagecount)]) }}</p>
                     </div>
                 </div>
-                <table class="w-full border-collapse px-4 border-black max-w-full table-fixed break-inside-avoid-page">
+                <table class="w-full border-collapse px-4 border-black max-w-full table-fixed">
                     <tr class="bg-gray-200">
                         <th class="border border-black p-2 w-8">{{ __('Document') }}</th>
                         <th class="border border-black p-2 w-11">{{ __('Date') }}</th>

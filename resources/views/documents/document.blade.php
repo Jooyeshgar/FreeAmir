@@ -17,9 +17,48 @@
     $groupedTransactions = $allTransactions->groupBy('ledgerSign')->sortKeys();
 @endphp
 
+@pushOnce('styles')
+    <style>
+        @media print {
+            .document-print-table {
+                break-inside: auto;
+                page-break-inside: auto;
+            }
+
+            .document-print-table thead {
+                display: table-header-group;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+
+            .document-print-table tbody,
+            .document-print-table tfoot {
+                display: table-row-group;
+            }
+
+            .document-print-table tr {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
+            .document-print-table thead tr,
+            .document-print-table thead th,
+            .document-print-table thead td {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+
+            .document-print-table thead tr {
+                break-after: avoid-page;
+                page-break-after: avoid;
+            }
+        }
+    </style>
+@endPushOnce
+
 <div class="bg-white px-2 print:pl-8">
-    <table class="w-full border-collapse px-4 border-black max-w-full table-fixed break-inside-avoid-page">
-        <thead class="print:table-header-group">
+    <table class="document-print-table w-full border-collapse px-4 border-black max-w-full table-fixed">
+        <thead>
             <tr>
                 <th class="w-8"></th>
                 <th class="w-1/6"></th>
@@ -90,7 +129,7 @@
                 @endforeach
             @endforeach
         </tbody>
-        <tfoot class="print:table-footer-group">
+        <tfoot>
             <tr>
                 <td class="border border-black p-2 text-center"></td>
                 <td class="border border-black p-2"></td>

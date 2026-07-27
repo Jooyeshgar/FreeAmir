@@ -31,8 +31,10 @@
         </div>
     @else
         @foreach ($transactionsChunk as $transactions)
-            <div class="bg-white px-2 print:pl-8">
-                <div class="border border-gray-300 p-4 rounded mb-6 flex">
+            <div class="bg-white px-2 print:pl-8"
+                @if (!$loop->first) style="break-before: page; page-break-before: always;" @endif>
+                <div class="border border-gray-300 p-4 rounded mb-6 flex"
+                    style="break-after: avoid-page; page-break-after: avoid;">
                     <div class="flex-grow text-center mb-4">
                         <h1 class="text-xl font-bold">{{ config('active-company-name') }}</h1>
                         <p class="text-lg">{{ __('Journal Report') }}</p>
@@ -72,9 +74,6 @@
                     </tbody>
                 </table>
             </div>
-            @if (!$loop->last)
-                <div class="break-after-page"></div>
-            @endif
             @php
                 $current++;
             @endphp

@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportsController extends Controller
@@ -65,37 +66,55 @@ class ReportsController extends Controller
 
     public function result(Request $request)
     {
+        $request->merge([
+            'start_date' => $this->normalizeReportDateInput($request->input('start_date')),
+            'end_date' => $this->normalizeReportDateInput($request->input('end_date')),
+        ]);
+
         if ($request->input('action') === 'preview') {
             return redirect()->route('transactions.index', $request->except(['action', 'report_for']));
         }
+
+        $dateRule = function (string $attribute, mixed $value, $fail): void {
+            try {
+                jalaliInputToGregorian((string) $value, $attribute);
+            } catch (ValidationException) {
+                $fail(__('validation.date_format', [
+                    'attribute' => str_replace('_', ' ', $attribute),
+                    'format' => 'Y/m/d',
+                ]));
+            }
+        };
 
         $rules = [
             'report_for' => 'required|in:Journal,Ledger,subLedger,Document',
             'start_document_number' => 'nullable|numeric',
             'end_document_number' => 'nullable|numeric',
-            'start_date' => 'nullable|date_format:Y/m/d',
-            'end_date' => 'nullable|date_format:Y/m/d',
+            'start_date' => ['bail', 'nullable', 'string', $dateRule],
+            'end_date' => ['bail', 'nullable', 'string', $dateRule],
         ];
 
         if ($request->report_for != 'Journal' && $request->report_for != 'Document') {
             $rules['subject_id'] = 'required';
         }
 
-        Validator::make($request->all(), $rules)->after(function ($validator) use ($request) {
+        $validated = Validator::make($request->all(), $rules)->after(function ($validator) use ($request) {
             // Optional consistency checks
             if ($request->filled('start_document_number') && $request->filled('end_document_number')) {
                 if ((int) $request->start_document_number > (int) $request->end_document_number) {
                     $validator->errors()->add('start_document_number', __('Start document number cannot be greater than end document number.'));
                 }
             }
-            if ($request->filled('start_date') && $request->filled('end_date')) {
-                $start = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($request->start_date));
-                $end = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($request->end_date));
-                if ($start->isAfter($end)) {
-                    $validator->errors()->add('start_date', __('Start date cannot be greater than end date.'));
-                }
-            }
         })->validate();
+
+        $startDate = isset($validated['start_date']) ? jalaliInputToGregorian($validated['start_date'], 'start_date') : null;
+        $endDate = isset($validated['end_date']) ? jalaliInputToGregorian($validated['end_date'], 'end_date') : null;
+
+        if ($startDate && $endDate && Carbon::parse($startDate)->isAfter(Carbon::parse($endDate))) {
+            throw ValidationException::withMessages([
+                'start_date' => __('Start date cannot be greater than end date.'),
+            ]);
+        }
 
         if ($request->report_for == 'Journal' && $request->input('action') === 'export_csv') {
             return $this->documentImportExportService->export([
@@ -131,15 +150,11 @@ class ReportsController extends Controller
             }
 
             // Date filters (convert Jalali -> Gregorian)
-            if ($request->filled('start_date') && $request->filled('end_date')) {
-                $startDate = jalali_to_gregorian_date($request->start_date);
-                $endDate = jalali_to_gregorian_date($request->end_date);
+            if ($startDate && $endDate) {
                 $documents->whereBetween('date', [$startDate, $endDate]);
-            } elseif ($request->filled('start_date')) {
-                $startDate = jalali_to_gregorian_date($request->start_date);
+            } elseif ($startDate) {
                 $documents->where('date', '>=', $startDate);
-            } elseif ($request->filled('end_date')) {
-                $endDate = jalali_to_gregorian_date($request->end_date);
+            } elseif ($endDate) {
                 $documents->where('date', '<=', $endDate);
             }
 
@@ -188,18 +203,17 @@ class ReportsController extends Controller
             });
         }
 
-        if ($request->filled('start_date') && $request->filled('end_date')) {
-            $transactions = $transactions->whereHas('document', function ($q) use ($request) {
-                $q->where('date', '>=', jalali_to_gregorian_date($request->start_date))
-                    ->where('date', '<=', jalali_to_gregorian_date($request->end_date));
+        if ($startDate && $endDate) {
+            $transactions = $transactions->whereHas('document', function ($q) use ($startDate, $endDate) {
+                $q->where('date', '>=', $startDate)->where('date', '<=', $endDate);
             });
-        } elseif ($request->filled('start_date')) {
-            $transactions = $transactions->whereHas('document', function ($q) use ($request) {
-                $q->where('date', '>=', jalali_to_gregorian_date($request->start_date));
+        } elseif ($startDate) {
+            $transactions = $transactions->whereHas('document', function ($q) use ($startDate) {
+                $q->where('date', '>=', $startDate);
             });
-        } elseif ($request->filled('end_date')) {
-            $transactions = $transactions->whereHas('document', function ($q) use ($request) {
-                $q->where('date', '<=', jalali_to_gregorian_date($request->end_date));
+        } elseif ($endDate) {
+            $transactions = $transactions->whereHas('document', function ($q) use ($endDate) {
+                $q->where('date', '<=', $endDate);
             });
         }
 
@@ -269,5 +283,20 @@ class ReportsController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    private function normalizeReportDateInput(mixed $date): mixed
+    {
+        if (! is_string($date)) {
+            return $date;
+        }
+
+        $normalized = toEnglish(str_replace('-', '/', trim($date)));
+
+        if (preg_match('/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/', $normalized, $matches)) {
+            return sprintf('%04d/%02d/%02d', $matches[1], $matches[2], $matches[3]);
+        }
+
+        return $normalized;
     }
 }
