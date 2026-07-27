@@ -169,13 +169,20 @@
                                         </span>
                                     </td>
                                     <td class="text-end tabular-nums">
-                                        <div class="font-semibold">{{ formatNumber($line['forecast']) }}</div>
                                         @if ($line['source'] === 'manual')
-                                            <div class="mt-1 text-[11px] text-base-content/50">
-                                                <span class="badge badge-primary badge-ghost badge-xs">{{ __('Manual') }}</span>
-                                                {{ __('System average') }}: {{ formatNumber($line['systemForecast']) }}
+                                            <div class="space-y-2">
+                                                <div>
+                                                    <div class="font-semibold">{{ formatNumber($line['forecast']) }}</div>
+                                                </div>
+                                                <div>
+                                                    <div class="font-medium text-base-content/70">
+                                                        <span class="badge badge-ghost badge-xs">{{ __('System average') }}</span>
+                                                        {{ formatNumber($line['systemForecast']) }}
+                                                    </div>
+                                                </div>
                                             </div>
                                         @else
+                                            <div class="font-semibold">{{ formatNumber($line['forecast']) }}</div>
                                             <div class="mt-1 text-[11px] text-base-content/50"><span class="badge badge-ghost badge-xs">{{ __('System average') }}</span></div>
                                         @endif
                                     </td>
@@ -223,8 +230,10 @@
                     <div class="modal-box w-11/12 max-w-6xl p-0">
                         <div class="flex items-center justify-between border-b border-base-300 px-5 py-4">
                             <div>
-                                <h3 class="text-lg font-bold">{{ __('Forecasts') }}</h3>
-                                <p class="mt-1 text-xs text-base-content/50">{{ $selectedMonthLabel }} · {{ localizeNumber($budgetLines->count()) }}</p>
+                                <h3 class="text-lg font-bold">{{ __('Forecasts') }}</h3> 
+                                <p class="mt-1 text-xs text-base-content/50">{{ $selectedMonthLabel }}
+                                    <span class="badge badge-neutral badge-sm">{{ localizeNumber($budgetLines->count()) }}</span>
+                                </p>
                             </div>
                             <form method="dialog">
                                 <button class="btn btn-circle btn-ghost btn-sm" aria-label="{{ __('Close') }}">✕</button>
@@ -258,14 +267,23 @@
                                                 </span>
                                             </td>
                                             <td class="text-end tabular-nums">
-                                                <div class="font-semibold">{{ formatNumber($line['forecast']) }}</div>
                                                 @if ($line['source'] === 'manual')
-                                                    <div class="mt-1 text-[11px] text-base-content/50">
-                                                        <span class="badge badge-primary badge-ghost badge-xs">{{ __('Manual') }}</span>
-                                                        {{ __('System average') }}: {{ formatNumber($line['systemForecast']) }}
+                                                    <div class="space-y-2">
+                                                        <div class="flex justify-end gap-4">
+                                                            <div class="font-semibold">{{ formatNumber($line['forecast']) }}</div>
+                                                        </div>
+                                                        <div>
+                                                            <div class="font-medium text-base-content/70">
+                                                                <span class="badge badge-ghost badge-xs">{{ __('System average') }}</span>
+                                                                {{ formatNumber($line['systemForecast']) }}
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 @else
-                                                    <div class="mt-1 text-[11px] text-base-content/50"><span class="badge badge-ghost badge-xs">{{ __('System average') }}</span></div>
+                                                    <div class="font-semibold">{{ formatNumber($line['forecast']) }}</div>
+                                                    <div class="mt-1 text-[11px] text-base-content/50">
+                                                        <span class="badge badge-ghost badge-xs">{{ __('System average') }}</span>
+                                                    </div>
                                                 @endif
                                             </td>
                                             <td class="text-end tabular-nums">
@@ -326,7 +344,7 @@
             <article class="card border border-base-300 bg-base-100 shadow-sm">
                 <div class="card-body p-5">
                     <div>
-                        <h2 class="card-title text-base">{{ __('Income Breakdown') }} · {{ __('Forecast') }}</h2>
+                        <h2 class="card-title text-base">{{ __('Forecast Income Breakdown') }}</h2>
                         <p class="text-xs text-base-content/50">{{ __('Forecast values for the five largest items.') }}</p>
                     </div>
                     <div class="mt-2">
@@ -338,7 +356,7 @@
             <article class="card border border-base-300 bg-base-100 shadow-sm">
                 <div class="card-body p-5">
                     <div>
-                        <h2 class="card-title text-base">{{ __('Income Breakdown') }} · {{ __('Actual') }}</h2>
+                        <h2 class="card-title text-base">{{ __('Actual Income Breakdown') }}</h2>
                         <p class="text-xs text-base-content/50">{{ __('Actual values for the five largest items.') }}</p>
                     </div>
                     <div class="mt-2">
@@ -350,7 +368,7 @@
             <article class="card border border-base-300 bg-base-100 shadow-sm">
                 <div class="card-body p-5">
                     <div>
-                        <h2 class="card-title text-base">{{ __('Cost Breakdown') }} · {{ __('Forecast') }}</h2>
+                        <h2 class="card-title text-base">{{ __('Forecast Cost Breakdown') }}</h2>
                         <p class="text-xs text-base-content/50">{{ __('Forecast values for the five largest items.') }}</p>
                     </div>
                     <div class="mt-2">
@@ -362,7 +380,7 @@
             <article class="card border border-base-300 bg-base-100 shadow-sm">
                 <div class="card-body p-5">
                     <div>
-                        <h2 class="card-title text-base">{{ __('Cost Breakdown') }} · {{ __('Actual') }}</h2>
+                        <h2 class="card-title text-base">{{ __('Actual Cost Breakdown') }}</h2>
                         <p class="text-xs text-base-content/50">{{ __('Actual values for the five largest items.') }}</p>
                     </div>
                     <div class="mt-2">
