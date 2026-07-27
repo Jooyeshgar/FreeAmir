@@ -19,12 +19,14 @@
                     <button type="submit" class="btn btn-error btn-sm">{{ __('Refresh Database') }}</button>
                 </form>
             </div>
-            <p class="text-sm opacity-80 w-full">
-                {!! __('To disable database refresh, disable :debug in page :settings.', [
-                    'debug' => __('about.debug_mode'),
-                    'settings' => '<a href="'.route('about').'" class="link">'.__('about.about').'</a>',
-                ]) !!}
-            </p>
+            @can('update-global-configs')
+                <p class="text-sm opacity-80 w-full">
+                    {!! __('To disable database refresh, disable :debug on the :settings page.', [
+                        'debug' => __('about.debug_mode'),
+                        'settings' => '<a href="'.route('management.settings').'" class="link">'.__('Settings').'</a>',
+                    ]) !!}
+                </p>
+            @endcan
         </div>
     @endif
 @endcan

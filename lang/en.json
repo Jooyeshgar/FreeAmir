@@ -1993,7 +1993,7 @@
     "To Date": "To Date",
     "To Document Number": "To Document Number",
     "To approve all, first resolve all blocked ancillary costs.": "To approve all, first resolve all blocked ancillary costs.",
-    "To disable database refresh, disable :debug in page :settings.": "To disable database refresh, disable :debug in page :settings.",
+    "To disable database refresh, disable :debug on the :settings page.": "To disable database refresh, disable :debug on the :settings page.",
     "To return a sales invoice, reduce the quantity of at least one item or remove an item. Returning all items with their original quantities is equivalent to voiding the sales invoice, so you must void it.": "To return a sales invoice, reduce the quantity of at least one item or remove an item. Returning all items with their original quantities is equivalent to voiding the sales invoice, so you must void it.",
     "Token name": "Token name",
     "Top 10 Best Sellers": "Top 10 Best Sellers",

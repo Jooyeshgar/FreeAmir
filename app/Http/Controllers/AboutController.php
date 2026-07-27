@@ -21,13 +21,7 @@ class AboutController extends Controller
         } catch (\Exception $e) {
         }
 
-        $current = [
-            'app_env' => config('app.env'),
-            'app_debug' => config('app.debug') ? 'true' : 'false',
-            'app_locale' => app()->getLocale(),
-            'app_registration' => config('app.registration') ? 'true' : 'false',
-            'app_email_verification' => config('app.email_verification') ? 'true' : 'false',
-        ];
+        $stored = $this->globalConfigService->all();
         $options = [
             'app_env' => ['local' => __('local'), 'production' => __('production')],
             'app_debug' => ['true' => __('Enabled'), 'false' => __('Disabled')],
@@ -39,7 +33,7 @@ class AboutController extends Controller
         foreach ($this->settingTitles() as $key => $title) {
             $gcSettings[$key] = [
                 'title' => $title,
-                'current' => $current[$key],
+                'current' => $stored[$key],
                 'options' => $options[$key],
             ];
         }

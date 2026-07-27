@@ -26,7 +26,7 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $actor = auth()->user();
-        $isProduction = app()->environment('production');
+        $isProduction = config('app.env') === 'production';
 
         if ($isProduction) {
             abort_unless($actor->can('access-super-admin-panel') || $actor->hasRole(__('Admin')), 403);

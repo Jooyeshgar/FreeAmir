@@ -30,9 +30,9 @@ Route::middleware(['auth', 'ensure-feature-enabled:email_verification'])->group(
 Route::middleware(['auth', 'permission:access-super-admin-panel', 'ensure-feature-enabled:email_verification'])->prefix('management')->group(function () {
     Route::get('/', [Controllers\HomeController::class, 'managementDashboard'])->name('management.dashboard');
     Route::get('/settings', [Controllers\AboutController::class, 'index'])->name('management.settings');
-    Route::put('/settings', [Controllers\AboutController::class, 'updateGlobalConfigs'])->name('update-global-configs');
 
     Route::middleware('check-permission')->group(function () {
+        Route::put('/settings', [Controllers\AboutController::class, 'updateGlobalConfigs'])->name('update-global-configs');
         Route::resource('permissions', Controllers\Management\PermissionController::class)->except(['show']);
         Route::resource('roles', Controllers\Management\RoleController::class)->except(['show']);
     });

@@ -189,7 +189,7 @@
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('Current application mode') }}</p>
             </header>
             <dl class="divide-y divide-slate-100 px-5 dark:divide-slate-800">
-                <div class="flex items-center justify-between gap-4 py-4"><dt class="text-sm text-slate-500">{{ __('Environment') }}</dt><dd class="badge badge-ghost">{{ app()->environment() }}</dd></div>
+                <div class="flex items-center justify-between gap-4 py-4"><dt class="text-sm text-slate-500">{{ __('Environment') }}</dt><dd class="badge badge-ghost">{{ __(config('app.env')) }}</dd></div>
                 <div class="flex items-center justify-between gap-4 py-4"><dt class="text-sm text-slate-500">{{ __('Version') }}</dt><dd class="text-sm font-semibold">{{ localizeNumber(config('app.version')) }}</dd></div>
                 <div class="flex items-center justify-between gap-4 py-4"><dt class="text-sm text-slate-500">{{ __('Registration') }}</dt><dd class="badge {{ config('app.registration') ? 'badge-success badge-outline' : 'badge-ghost' }}">{{ config('app.registration') ? __('Enabled') : __('Disabled') }}</dd></div>
                 <div class="flex items-center justify-between gap-4 py-4"><dt class="text-sm text-slate-500">{{ __('Email verification') }}</dt><dd class="badge {{ config('app.email_verification') ? 'badge-success badge-outline' : 'badge-ghost' }}">{{ config('app.email_verification') ? __('Enabled') : __('Disabled') }}</dd></div>

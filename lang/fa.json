@@ -2008,7 +2008,7 @@
     "To Date": "تا تاریخ",
     "To Document Number": "به شماره سند",
     "To approve all, first resolve all blocked ancillary costs.": "برای تأیید همه، ابتدا تمام هزینه های جانبی مسدود شده را حل کنید.",
-    "To disable database refresh, disable :debug in page :settings.": "برای غیرفعال کردن نوسازی پایگاه داده‌ها، :debug را در صفحه :settings غیرفعال کنید.",
+    "To disable database refresh, disable :debug on the :settings page.": "برای غیرفعال کردن نوسازی پایگاه داده‌ها، :debug را در صفحه :settings غیرفعال کنید.",
     "To return a sales invoice, reduce the quantity of at least one item or remove an item. Returning all items with their original quantities is equivalent to voiding the sales invoice, so you must void it.": "برای بازگرداندن فاکتور فروش، مقدار حداقل یک مورد را کاهش دهید یا یک مورد را حذف کنید. بازگرداندن همه اقلام با مقدار اصلی آنها معادل باطل کردن فاکتور فروش است، بنابراین باید آن را باطل کنید.",
     "Token name": "نام رمز",
     "Top 10 Best Sellers": "ده کالای پرفروش",

@@ -38,7 +38,7 @@ class HomeController extends Controller
 
     public function seedDemoData()
     {
-        abort_if(! config('app.debug') || app()->isProduction(), 404);
+        abort_if(! config('app.debug') || config('app.env') === 'production', 404);
 
         $companyId = (int) getActiveCompany();
         $user = auth()->user();
@@ -67,7 +67,7 @@ class HomeController extends Controller
 
     public function refreshDatabase()
     {
-        abort_if(! config('app.debug') || app()->isProduction(), 404);
+        abort_if(! config('app.debug') || config('app.env') === 'production', 404);
 
         try {
             Artisan::call('migrate:fresh', ['--seed' => true]);
@@ -117,7 +117,7 @@ class HomeController extends Controller
             'canInventory' => $canInventory,
             'canPopularItems' => $canPopularItems,
             'hasDocument' => Document::exists(),
-            'isDebugMode' => config('app.debug') && ! app()->isProduction(),
+            'isDebugMode' => config('app.debug') && config('app.env') !== 'production',
         ];
 
         if ($canFinancial) {
