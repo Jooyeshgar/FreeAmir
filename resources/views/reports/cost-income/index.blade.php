@@ -31,11 +31,9 @@
 
                 @if ($monthsWithoutDocuments !== [])
                     <div class="mt-3 flex flex-wrap items-center gap-2">
-                        @foreach ($monthsWithoutDocuments as $monthLabel)
-                            <span class="badge badge-error badge-outline badge-sm">
-                                {{ $monthLabel }}: {{ __('No accounting document exists for calculating actual income and expense.') }}
-                            </span>
-                        @endforeach
+                        <span class="badge badge-error badge-outline badge-sm">
+                            {{ $monthsWithoutDocumentsLabel }}: {{ __('No accounting document exists for calculating actual income and expense.') }}
+                        </span>
                     </div>
                 @endif
             </div>

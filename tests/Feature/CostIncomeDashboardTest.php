@@ -34,7 +34,8 @@ class CostIncomeDashboardTest extends TestCase
     {
         parent::setUp();
 
-        config(['cache.default' => 'array']);
+        config(['cache.default' => 'array', 'app.locale' => 'fa']);
+        app()->setLocale('fa');
         Cache::flush();
 
         $company = Company::factory()->create(['fiscal_year' => 1405]);
@@ -70,11 +71,25 @@ class CostIncomeDashboardTest extends TestCase
         $response->assertViewHas('forecastIncome');
         $response->assertViewHas('forecastExpense');
         $response->assertViewHas('monthlyBudgetLinks', fn (array $links) => count($links) === 12 && str_contains($links[0], 'month=1'));
+        $response->assertViewHas('monthsWithoutDocumentsLabel', fn (string $label) => str_contains($label, '، ') && str_contains($label, ' و '));
         $response->assertViewHas('debtors');
         $response->assertViewHas('creditors');
         $response->assertSee('"type":"line"', false);
         $response->assertSee("getElementsAtEventForMode(event, 'index', { intersect: true }", false);
         $response->assertDontSee("getElementsAtEventForMode(event, 'index', { intersect: false }", false);
+    }
+
+    public function test_missing_document_months_use_the_configured_english_list_separators(): void
+    {
+        config(['app.locale' => 'en']);
+        app()->setLocale('en');
+        $this->grant('reports.cost-income');
+
+        $response = $this->actingAs($this->user)->get(route('reports.cost-income'));
+
+        $response->assertOk();
+        $response->assertViewHas('monthsWithoutDocumentsLabel', fn (string $label) => str_contains($label, ', ')
+            && str_contains($label, ' and ') && ! str_contains($label, '، ') && ! str_contains($label, ' و '));
     }
 
     public function test_user_without_permission_is_forbidden(): void

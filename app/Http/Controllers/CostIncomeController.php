@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\CostIncomeService;
 use App\Services\MonthlyBudgetService;
+use Illuminate\Support\Arr;
 
 class CostIncomeController extends Controller
 {
@@ -20,6 +21,7 @@ class CostIncomeController extends Controller
         $forecastExpense = array_combine($forecastChart['labels'], $forecastChart['forecastExpense']);
         $monthlyBudgetLinks = collect(array_keys(MonthlyBudgetService::MONTHS))->map(fn (int $month) => route('budgets.index', ['month' => $month]))->values()->all();
         $monthsWithoutDocuments = collect($forecastChart['labels'])->filter(fn (string $label, int $index) => ($forecastChart['documentCounts'][$index] ?? 0) === 0)->values()->all();
+        $monthsWithoutDocumentsLabel = Arr::join($monthsWithoutDocuments, config('app.locale') === 'fa' ? '، ' : ', ', ' '.__('and').' ');
 
         return view('reports.cost-income.index', [
             'totalIncome' => $summary['totalIncome'],
@@ -34,6 +36,7 @@ class CostIncomeController extends Controller
             'forecastExpense' => $forecastExpense,
             'monthlyBudgetLinks' => $monthlyBudgetLinks,
             'monthsWithoutDocuments' => $monthsWithoutDocuments,
+            'monthsWithoutDocumentsLabel' => $monthsWithoutDocumentsLabel,
             'debtors' => $topCustomers['debtors'],
             'creditors' => $topCustomers['creditors'],
             'invoices' => $invoices,
