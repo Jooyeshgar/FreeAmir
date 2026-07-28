@@ -17,29 +17,52 @@
                     {{ __('Warehouse Report') }}
                 </button>
             @endcan
-            <a href="{{ route('products.export') }}" class="btn btn-outline btn-sm">{{ __('Export CSV') }}</a>
+            <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('product-csv-modal').showModal()">{{ __('Export CSV') }}</button>
             <a href="{{ route('products.import') }}" class="btn btn-outline btn-sm">{{ __('Import CSV') }}</a>
         </div>
     </div>
 
+    <dialog id="product-csv-modal" class="modal">
+        <div class="modal-box max-w-3xl">
+            <h3 class="text-lg font-bold">{{ __('Export CSV') }}</h3>
+
+            <form action="{{ route('products.export') }}" method="GET">
+                <x-input name="cols_submitted" value="1" hidden />
+
+                <div class="mt-2 text-info">{{ __('The name column is always exported.') }}</div>
+
+                <div class="mt-4">
+                    <div class="mb-2 flex items-center justify-between">
+                        <span class="text-sm font-semibold">{{ __('Optional columns') }}</span>
+                        <div class="text-xs [&_.fieldset]:m-0 [&_.label]:p-0 [&_.checkbox]:checkbox-sm">
+                            <x-checkbox name="" id="product-csv-cols-toggle" :title="__('Select All')" :checked="true"
+                                onchange="document.querySelectorAll('#product-csv-modal input[name=&quot;columns[]&quot;]').forEach(cb => cb.checked = this.checked)" />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3">
+                        @foreach ($csvColumns as $key => $label)
+                            @continue($key === 'name')
+                            <div class="[&_.fieldset]:m-0 [&_.label]:p-0 [&_.checkbox]:checkbox-sm">
+                                <x-checkbox name="columns[]" :id="'product-csv-column-'.$key" :value="$key" :title="$label" :checked="true"
+                                    onchange="document.getElementById('product-csv-cols-toggle').checked = document.querySelectorAll('#product-csv-modal input[name=&quot;columns[]&quot;]:checked').length === document.querySelectorAll('#product-csv-modal input[name=&quot;columns[]&quot;]').length" />
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="modal-action">
+                    <button type="button" class="btn btn-ghost" onclick="document.getElementById('product-csv-modal').close()">{{ __('Cancel') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ __('Export CSV') }}</button>
+                </div>
+            </form>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button aria-label="close"></button>
+        </form>
+    </dialog>
+
     @can('products.report')
-        @php
-            $optionalColumns = [
-                'inbound'=>__('Inbound'),
-                'outbound'=>__('Outbound'),
-                'stock'=>__('Stock'),
-                'category' => __('Category'),
-                'code' => __('Product code'),
-                'selling_price' => __('Sale price'),
-                'cost_of_goods' => __('Cost of goods'),
-                'last_item_cost' => __('Last item cost'),
-                'sales_profit' => __('Sales profit'),
-                'revenue_account' => __('Revenue account amount'),
-                'cogs_account' => __('COGS account amount'),
-                'inventory_account' => __('Inventory account amount'),
-                'sales_return_account' => __('Sales return account amount'),
-            ];
-        @endphp
         <dialog id="report-pdf-modal" class="modal">
             <div class="modal-box max-w-2xl">
                 <h3 class="text-lg font-bold">{{ __('Warehouse Report') }}</h3>
@@ -58,19 +81,17 @@
                     <div class="mt-4">
                         <div class="mb-2 flex items-center justify-between">
                             <span class="text-sm font-semibold">{{ __('Optional columns') }}</span>
-                            <label class="flex cursor-pointer items-center gap-2 text-xs">
-                                <input type="checkbox" id="report-cols-toggle" class="checkbox checkbox-sm" checked
-                                    onchange="document.querySelectorAll('#report-pdf-modal input[name=&quot;columns[]&quot;]').forEach(cb => cb.checked = this.checked)">
-                                <span>{{ __('Select All') }}</span>
-                            </label>
+                            <div class="text-xs [&_.fieldset]:m-0 [&_.label]:p-0 [&_.checkbox]:checkbox-sm">
+                                <x-checkbox name="" id="report-cols-toggle" :title="__('Select All')" :checked="true"
+                                    onchange="document.querySelectorAll('#report-pdf-modal input[name=&quot;columns[]&quot;]').forEach(cb => cb.checked = this.checked)" />
+                            </div>
                         </div>
                         <div class="grid grid-cols-1 gap-1 sm:grid-cols-2">
-                            @foreach ($optionalColumns as $key => $label)
-                                <label class="flex cursor-pointer items-center gap-2">
-                                    <input type="checkbox" name="columns[]" value="{{ $key }}" class="checkbox checkbox-sm" checked
-                                        onchange="document.getElementById('report-cols-toggle').checked = document.querySelectorAll('#report-pdf-modal input[name=&quot;columns[]&quot;]:checked').length === document.querySelectorAll('#report-pdf-modal input[name=&quot;columns[]&quot;]').length">
-                                    <span class="label-text">{{ $label }}</span>
-                                </label>
+                            @foreach ($reportColumns as $key => $label)
+                                <div class="[&_.fieldset]:m-0 [&_.label]:p-0 [&_.checkbox]:checkbox-sm">
+                                    <x-checkbox name="columns[]" :id="'report-column-'.$key" :value="$key" :title="$label" :checked="true"
+                                        onchange="document.getElementById('report-cols-toggle').checked = document.querySelectorAll('#report-pdf-modal input[name=&quot;columns[]&quot;]:checked').length === document.querySelectorAll('#report-pdf-modal input[name=&quot;columns[]&quot;]').length" />
+                                </div>
                             @endforeach
                         </div>
                     </div>

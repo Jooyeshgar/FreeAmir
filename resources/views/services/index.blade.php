@@ -10,10 +10,50 @@
 
         <div class="flex flex-wrap items-center justify-start gap-2">
             <a href="{{ route('services.create') }}" class="btn btn-primary btn-sm">{{ __('Create service') }}</a>
-            <a href="{{ route('services.export') }}" class="btn btn-outline btn-sm">{{ __('Export CSV') }}</a>
+            <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('service-csv-modal').showModal()">{{ __('Export CSV') }}</button>
             <a href="{{ route('services.import') }}" class="btn btn-outline btn-sm">{{ __('Import CSV') }}</a>
         </div>
     </div>
+
+    <dialog id="service-csv-modal" class="modal">
+        <div class="modal-box max-w-2xl">
+            <h3 class="text-lg font-bold">{{ __('Export CSV') }}</h3>
+
+            <form action="{{ route('services.export') }}" method="GET">
+                <x-input name="cols_submitted" value="1" hidden />
+
+                <div class="mt-2 text-info">{{ __('The name column is always exported.') }}</div>
+
+                <div class="mt-4">
+                    <div class="mb-2 flex items-center justify-between">
+                        <span class="text-sm font-semibold">{{ __('Optional columns') }}</span>
+                        <div class="text-xs [&_.fieldset]:m-0 [&_.label]:p-0 [&_.checkbox]:checkbox-sm">
+                            <x-checkbox name="" id="service-csv-cols-toggle" :title="__('Select All')" :checked="true"
+                                onchange="document.querySelectorAll('#service-csv-modal input[name=&quot;columns[]&quot;]').forEach(cb => cb.checked = this.checked)" />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                        @foreach ($csvColumns as $key => $label)
+                            @continue($key === 'name')
+                            <div class="[&_.fieldset]:m-0 [&_.label]:p-0 [&_.checkbox]:checkbox-sm">
+                                <x-checkbox name="columns[]" :id="'service-csv-column-'.$key" :value="$key" :title="$label" :checked="true"
+                                    onchange="document.getElementById('service-csv-cols-toggle').checked = document.querySelectorAll('#service-csv-modal input[name=&quot;columns[]&quot;]:checked').length === document.querySelectorAll('#service-csv-modal input[name=&quot;columns[]&quot;]').length" />
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="modal-action">
+                    <button type="button" class="btn btn-ghost" onclick="document.getElementById('service-csv-modal').close()">{{ __('Cancel') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ __('Export CSV') }}</button>
+                </div>
+            </form>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button aria-label="close"></button>
+        </form>
+    </dialog>
 
     {{-- Service List --}}
     <div class="card bg-base-100 shadow-sm border border-base-200 mx-1 mb-6">

@@ -12,6 +12,7 @@ use App\Services\ProductService;
 use App\Services\WarehouseDashboardService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use PDF;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -92,7 +93,11 @@ class ProductController extends Controller
             return $product;
         });
 
-        return view('products.index', compact('products'));
+        return view('products.index', [
+            'products' => $products,
+            'csvColumns' => $this->exportColumnMapping(),
+            'reportColumns' => $this->reportColumnMapping(),
+        ]);
     }
 
     public function create()
@@ -159,39 +164,58 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with('success', __('Product deleted successfully.'));
     }
 
-    public function export(): StreamedResponse
+    public function export(Request $request): StreamedResponse
     {
+        $columnMapping = $this->selectedExportColumns($request);
+
+        $selectedOptionalColumns = array_values(array_intersect(
+            array_keys($this->reportColumnMapping()),
+            array_keys($columnMapping),
+        ));
+
+        $reportRows = $this->warehouseDashboardService->report([
+            'cols_submitted' => true,
+            'columns' => $selectedOptionalColumns,
+        ])['rows']->keyBy(fn (array $row) => (string) $row['code']);
+
         $filename = 'products_'.now()->format('YmdHis').'.csv';
 
-        return response()->streamDownload(function () {
+        return response()->streamDownload(function () use ($columnMapping, $reportRows) {
             $file = fopen('php://output', 'w');
 
-            // UTF-8 BOM so Excel reads Persian text correctly.
+            // UTF-8 BOM so Excel reads translated headers and Persian text correctly.
             fwrite($file, "\xEF\xBB\xBF");
-            fputcsv($file, ProductImportService::COLUMNS);
+            fputcsv($file, array_values($columnMapping));
 
             Product::with('productGroup', 'incomeSubject', 'cogsSubject', 'inventorySubject', 'salesReturnsSubject')
                 ->orderBy('code')
-                ->chunk(200, function ($products) use ($file) {
+                ->chunk(200, function ($products) use ($file, $columnMapping, $reportRows) {
                     foreach ($products as $product) {
-                        fputcsv($file, [
-                            $product->code,
-                            $product->name,
-                            $product->productGroup?->name,
-                            $product->incomeSubject?->code,
-                            $product->cogsSubject?->code,
-                            $product->inventorySubject?->code,
-                            $product->salesReturnsSubject?->code,
-                            $product->sstid,
-                            $product->location,
-                            $product->quantity,
-                            $product->quantity_warning,
-                            $product->oversell,
-                            $product->selling_price,
-                            $product->discount_formula,
-                            $product->description,
-                            $product->vat,
+                        $reportRow = $reportRows->get((string) $product->code, []);
+                        $row = array_merge($reportRow, [
+                            'name' => $product->name,
+                            'category' => $product->productGroup?->name,
+                            'code' => $product->code,
+                            'stock' => $product->quantity,
+                            'selling_price' => $product->selling_price,
+                            'cost_of_goods' => $product->average_cost,
+                            'income_subject_code' => $product->incomeSubject?->code,
+                            'cogs_subject_code' => $product->cogsSubject?->code,
+                            'inventory_subject_code' => $product->inventorySubject?->code,
+                            'sales_returns_subject_code' => $product->salesReturnsSubject?->code,
+                            'sstid' => $product->sstid,
+                            'location' => $product->location,
+                            'quantity_warning' => $product->quantity_warning,
+                            'oversell' => $product->oversell,
+                            'discount_formula' => $product->discount_formula,
+                            'description' => $product->description,
+                            'vat' => $product->vat,
                         ]);
+
+                        fputcsv($file, array_map(
+                            fn (string $column) => $row[$column] ?? null,
+                            array_keys($columnMapping),
+                        ));
                     }
                 });
 
@@ -252,5 +276,61 @@ class ProductController extends Controller
                 'options' => (object) $grouped,
             ],
         ]);
+    }
+
+    private function exportColumnMapping(): array
+    {
+        return [
+            'name' => __('Product name'),
+            ...$this->reportColumnMapping(),
+            'income_subject_code' => __('Revenue subject code'),
+            'cogs_subject_code' => __('COGS subject code'),
+            'inventory_subject_code' => __('Inventory subject code'),
+            'sales_returns_subject_code' => __('Sales returns subject code'),
+            'sstid' => __('Product SSTID'),
+            'location' => __('Location in warehouse'),
+            'quantity_warning' => __('Quantity warning'),
+            'oversell' => __('Oversell'),
+            'discount_formula' => __('Discount formula'),
+            'description' => __('Description'),
+            'vat' => __('VAT'),
+        ];
+    }
+
+    private function reportColumnMapping(): array
+    {
+        return [
+            'inbound' => __('Inbound'),
+            'outbound' => __('Outbound'),
+            'stock' => __('Stock'),
+            'category' => __('Category'),
+            'code' => __('Product code'),
+            'selling_price' => __('Sale price'),
+            'cost_of_goods' => __('Cost of goods'),
+            'last_item_cost' => __('Last item cost'),
+            'sales_profit' => __('Sales profit'),
+            'revenue_account' => __('Revenue account amount'),
+            'cogs_account' => __('COGS account amount'),
+            'inventory_account' => __('Inventory account amount'),
+            'sales_return_account' => __('Sales return account amount'),
+        ];
+    }
+
+    private function selectedExportColumns(Request $request): array
+    {
+        $availableColumns = $this->exportColumnMapping();
+        $validated = $request->validate([
+            'cols_submitted' => ['nullable', 'boolean'],
+            'columns' => ['nullable', 'array'],
+            'columns.*' => ['string', Rule::in(array_keys($availableColumns))],
+        ]);
+
+        if (! $request->boolean('cols_submitted')) {
+            return $availableColumns;
+        }
+
+        $selectedColumns = array_unique(['name', ...(array) ($validated['columns'] ?? [])]);
+
+        return array_intersect_key($availableColumns, array_flip($selectedColumns));
     }
 }
