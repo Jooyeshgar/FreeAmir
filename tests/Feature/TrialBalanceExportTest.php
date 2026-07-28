@@ -131,4 +131,36 @@ class TrialBalanceExportTest extends TestCase
 
         $response->assertForbidden();
     }
+
+    public function test_trial_balance_filters_accept_the_thirty_first_day_of_a_valid_jalali_month(): void
+    {
+        $response = $this->get(route('reports.trial-balance', [
+            'start_date' => '1405/04/31',
+            'end_date' => '1405/04/31',
+        ]));
+
+        $response->assertOk();
+        $response->assertSessionDoesntHaveErrors(['start_date', 'end_date']);
+    }
+
+    public function test_trial_balance_filters_reject_a_nonexistent_jalali_date(): void
+    {
+        $response = $this->from(route('reports.trial-balance'))->get(route('reports.trial-balance', [
+            'start_date' => '1405/07/31',
+        ]));
+
+        $response->assertRedirect(route('reports.trial-balance'));
+        $response->assertSessionHasErrors('start_date');
+    }
+
+    public function test_trial_balance_filters_compare_converted_jalali_dates(): void
+    {
+        $response = $this->from(route('reports.trial-balance'))->get(route('reports.trial-balance', [
+            'start_date' => '1405/04/31',
+            'end_date' => '1405/04/30',
+        ]));
+
+        $response->assertRedirect(route('reports.trial-balance'));
+        $response->assertSessionHasErrors('start_date');
+    }
 }

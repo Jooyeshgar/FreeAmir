@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TrialBalanceService
@@ -61,6 +62,8 @@ class TrialBalanceService
 
     public function exportCsv(Request $request): StreamedResponse
     {
+        $this->validateTrialBalanceFilters($request);
+
         $filters = $this->normalizeTrialBalanceFilters($request);
         $subjects = Subject::whereIsRoot()->orderBy('code')->get();
         $filename = 'trial_balance_'.Carbon::now()->format('Ymd_His').'.csv';
@@ -99,11 +102,22 @@ class TrialBalanceService
 
     private function validateTrialBalanceFilters(Request $request): void
     {
+        $dateRule = function (string $attribute, mixed $value, $fail): void {
+            try {
+                jalaliInputToGregorian((string) $value, $attribute);
+            } catch (ValidationException) {
+                $fail(__('validation.date_format', [
+                    'attribute' => str_replace('_', ' ', $attribute),
+                    'format' => 'Y/m/d',
+                ]));
+            }
+        };
+
         Validator::make($request->all(), [
             'start_document_number' => 'nullable|numeric',
             'end_document_number' => 'nullable|numeric',
-            'start_date' => 'nullable|date_format:Y/m/d',
-            'end_date' => 'nullable|date_format:Y/m/d',
+            'start_date' => ['bail', 'nullable', 'string', $dateRule],
+            'end_date' => ['bail', 'nullable', 'string', $dateRule],
         ])->after(function ($validator) use ($request) {
             if ($request->filled('start_document_number') && $request->filled('end_document_number')) {
                 if ((int) $request->start_document_number > (int) $request->end_document_number) {
@@ -111,8 +125,12 @@ class TrialBalanceService
                 }
             }
 
-            if ($request->filled('start_date') && $request->filled('end_date')) {
-                if (jalali_to_gregorian_date($request->start_date) > jalali_to_gregorian_date($request->end_date)) {
+            if ($request->filled('start_date') && $request->filled('end_date')
+                && ! $validator->errors()->hasAny(['start_date', 'end_date'])) {
+                $startDate = jalaliInputToGregorian($request->input('start_date'), 'start_date');
+                $endDate = jalaliInputToGregorian($request->input('end_date'), 'end_date');
+
+                if ($startDate > $endDate) {
                     $validator->errors()->add('start_date', __('Start date cannot be greater than end date.'));
                 }
             }
@@ -122,8 +140,8 @@ class TrialBalanceService
     private function normalizeTrialBalanceFilters(Request $request): array
     {
         return [
-            'start_date' => $request->filled('start_date') ? jalali_to_gregorian_date($request->input('start_date')) : null,
-            'end_date' => $request->filled('end_date') ? jalali_to_gregorian_date($request->input('end_date')) : null,
+            'start_date' => $request->filled('start_date') ? jalaliInputToGregorian($request->input('start_date'), 'start_date') : null,
+            'end_date' => $request->filled('end_date') ? jalaliInputToGregorian($request->input('end_date'), 'end_date') : null,
             'start_document_number' => $request->filled('start_document_number') ? (int) $request->input('start_document_number') : 3,
             'end_document_number' => $request->filled('end_document_number') ? (int) $request->input('end_document_number') : null,
         ];
