@@ -15,6 +15,8 @@ use Illuminate\View\View;
 
 class PersonnelRequestController extends Controller
 {
+    private const FLEXIBLE_TIME_REGEX = '/^(\d{1,2}):(\d{1,2})$/';
+
     public function __construct(private readonly AttendanceService $attendanceService) {}
 
     public function index(Request $request): View
@@ -110,9 +112,14 @@ class PersonnelRequestController extends Controller
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
             'request_type' => ['required', 'string', 'in:'.implode(',', PersonnelRequestType::valueNames())],
             'request_date' => ['required', 'string'],
-            'start_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
-            'end_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
+            'start_time' => ['required', 'regex:'.self::FLEXIBLE_TIME_REGEX],
+            'end_time' => ['required', 'regex:'.self::FLEXIBLE_TIME_REGEX],
             'reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $request->merge([
+            'start_time' => $this->normalizeFlexibleTime($request->start_time, 'start_time'),
+            'end_time' => $this->normalizeFlexibleTime($request->end_time, 'end_time'),
         ]);
 
         $gregorianDate = str_replace('/', '-', convertToGregorian($request->request_date));
@@ -192,14 +199,17 @@ class PersonnelRequestController extends Controller
         $validated = $request->validate([
             'request_type' => ['required', 'string', 'in:'.implode(',', PersonnelRequestType::valueNames())],
             'request_date' => ['required', 'string'],
-            'start_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
-            'end_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
+            'start_time' => ['required', 'regex:'.self::FLEXIBLE_TIME_REGEX],
+            'end_time' => ['required', 'regex:'.self::FLEXIBLE_TIME_REGEX],
             'reason' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $gregorianDate = str_replace('/', '-', convertToGregorian($request->request_date));
-        $validated['start_date'] = $gregorianDate.' '.$request->start_time;
-        $validated['end_date'] = $gregorianDate.' '.$request->end_time;
+        $validated['start_time'] = $this->normalizeFlexibleTime($validated['start_time'], 'start_time');
+        $validated['end_time'] = $this->normalizeFlexibleTime($validated['end_time'], 'end_time');
+
+        $gregorianDate = str_replace('/', '-', convertToGregorian($validated['request_date']));
+        $validated['start_date'] = $gregorianDate.' '.$validated['start_time'];
+        $validated['end_date'] = $gregorianDate.' '.$validated['end_time'];
         $validated['request_type'] = PersonnelRequestType::fromName($validated['request_type']);
 
         if (strtotime($validated['end_date']) < strtotime($validated['start_date'])) {
@@ -274,5 +284,25 @@ class PersonnelRequestController extends Controller
             'start_time' => $times['start'],
             'end_time' => $times['end'],
         ]);
+    }
+
+    private function normalizeFlexibleTime(string $time, string $field): string
+    {
+        if (! preg_match(self::FLEXIBLE_TIME_REGEX, $time, $matches)) {
+            throw ValidationException::withMessages([
+                $field => __('The :attribute format is invalid.', ['attribute' => $field]),
+            ]);
+        }
+
+        $hour = (int) $matches[1];
+        $minute = (int) $matches[2];
+
+        if ($hour > 23 || $minute > 59) {
+            throw ValidationException::withMessages([
+                $field => __('The :attribute format is invalid.', ['attribute' => $field]),
+            ]);
+        }
+
+        return sprintf('%02d:%02d', $hour, $minute);
     }
 }

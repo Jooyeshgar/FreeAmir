@@ -243,6 +243,31 @@ class PersonnelRequestTest extends TestCase
         $response->assertSessionHasErrors();
     }
 
+    public function test_store_accepts_flexible_time_format_and_normalizes_it(): void
+    {
+        $response = $this->post(route('hr.personnel-requests.store'), $this->validPayload([
+            'start_time' => '7:3',
+            'end_time' => '7:30',
+        ]));
+
+        $response->assertRedirect(route('hr.personnel-requests.index', ['tab' => 'leaves']));
+
+        $personnelRequest = PersonnelRequest::query()->latest('id')->firstOrFail();
+
+        $this->assertSame('07:03:00', $personnelRequest->start_date->format('H:i:s'));
+        $this->assertSame('07:30:00', $personnelRequest->end_date->format('H:i:s'));
+    }
+
+    public function test_store_rejects_invalid_flexible_time_values(): void
+    {
+        $response = $this->post(route('hr.personnel-requests.store'), $this->validPayload([
+            'start_time' => '7:99',
+            'end_time' => '8:00',
+        ]));
+
+        $response->assertSessionHasErrors(['start_time']);
+    }
+
     public function test_store_rejects_invalid_request_type(): void
     {
         $response = $this->post(route('hr.personnel-requests.store'), $this->validPayload([
@@ -319,6 +344,26 @@ class PersonnelRequestTest extends TestCase
         );
 
         $response->assertSessionHasErrors(['end_time']);
+    }
+
+    public function test_update_accepts_flexible_time_format_and_normalizes_it(): void
+    {
+        $personnelRequest = $this->makePersonnelRequest();
+
+        $response = $this->put(
+            route('hr.personnel-requests.update', $personnelRequest),
+            $this->validPayload([
+                'start_time' => '9:5',
+                'end_time' => '9:45',
+            ])
+        );
+
+        $response->assertRedirect(route('hr.personnel-requests.index', ['tab' => 'leaves']));
+
+        $personnelRequest->refresh();
+
+        $this->assertSame('09:05:00', $personnelRequest->start_date->format('H:i:s'));
+        $this->assertSame('09:45:00', $personnelRequest->end_date->format('H:i:s'));
     }
 
     // ----------------------------------------------------------------
