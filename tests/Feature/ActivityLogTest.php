@@ -125,7 +125,10 @@ class ActivityLogTest extends TestCase
     public function test_activity_logging_can_be_changed_from_management_settings(): void
     {
         $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $superAdmin->givePermissionTo(
+            Permission::create(['name' => 'access-super-admin-panel']),
+            Permission::create(['name' => 'update-global-configs']),
+        );
 
         $this->actingAs($superAdmin)->get(route('management.settings'))
             ->assertOk()
