@@ -81,65 +81,11 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function canBeImpersonated(): bool
     {
-        return $this->hasVerifiedEmail() && ! $this->can('access-super-admin-panel');
+        return $this->companies()->exists() && ! $this->can('access-super-admin-panel');
     }
 
     public function canImpersonateUser(User $user): bool
     {
-        return $user->hasVerifiedEmail() && $this->canImpersonateUserIfVerified($user);
-    }
-
-    public function canImpersonateUserIfVerified(User $user): bool
-    {
-        if (! $this->canImpersonate() || $this->is($user) || $user->can('access-super-admin-panel')) {
-            return false;
-        }
-
-        if ($this->hasApplicationRole('Super-Admin')) {
-            return true;
-        }
-
-        if ($user->hasApplicationRole('Admin')) {
-            return false;
-        }
-
-        if ($this->hasApplicationRole('Admin')) {
-            return true;
-        }
-
-        if (! $this->hasApplicationRole('Accountant')) {
-            return false;
-        }
-
-        if ($user->hasAnyApplicationRole(['Super-Admin', 'Admin', 'Accountant'])) {
-            return false;
-        }
-
-        return $user->hasAnyApplicationRole(['Warehousekeeper', 'Seller', 'Employee']);
-    }
-
-    public function hasApplicationRole(string $role): bool
-    {
-        return $this->hasAnyRole($this->applicationRoleNames($role));
-    }
-
-    /**
-     * @param  array<int, string>  $roles
-     */
-    private function hasAnyApplicationRole(array $roles): bool
-    {
-        return collect($roles)->contains(fn (string $role) => $this->hasApplicationRole($role));
-    }
-
-    /**
-     * Role names are currently localized by RolesAndPermissionsSeeder, so
-     * recognize both supported locales as well as the canonical name.
-     *
-     * @return array<int, string>
-     */
-    private function applicationRoleNames(string $role): array
-    {
-        return collect(['en', 'fa'])->map(fn (string $locale) => trans($role, [], $locale))
-            ->push($role)->unique()->values()->all();
+        return $this->canImpersonate() && ! $this->is($user) && $user->canBeImpersonated();
     }
 }

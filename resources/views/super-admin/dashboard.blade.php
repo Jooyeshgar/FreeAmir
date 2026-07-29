@@ -114,7 +114,7 @@
                                         {{ $company->closed_at ? __('Closed') : __('Open') }}
                                     </span>
                                 </td>
-                                <td><a href="{{ route('companies.edit', $company) }}" class="btn btn-ghost btn-xs">{{ __('Manage') }}</a></td>
+                                <td><a href="{{ route('companies.edit', $company) }}" class="btn btn-ghost btn-xs">{{ __('Edit') }}</a></td>
                             </tr>
                         @empty
                             <tr><td colspan="5" class="py-10 text-center text-slate-500">{{ __('No companies have been created yet.') }}</td></tr>
@@ -163,7 +163,7 @@
                         @forelse ($recentUsers as $user)
                             <tr>
                                 <td>
-                                    <div class="font-semibold">{{ $user->name }}</div>
+                                    <a href="{{ route('users.show', $user) }}" class="font-semibold text-violet-700 hover:underline dark:text-violet-400">{{ $user->name }}</a>
                                     <div class="mt-0.5 text-xs text-slate-500">{{ $user->email }}</div>
                                 </td>
                                 <td><span class="text-sm">{{ $user->roles->pluck('name')->join('، ') ?: __('No role') }}</span></td>
@@ -173,7 +173,28 @@
                                         {{ $user->hasVerifiedEmail() ? __('Verified') : __('Pending') }}
                                     </span>
                                 </td>
-                                <td><a href="{{ route('users.edit', $user) }}" class="btn btn-ghost btn-xs">{{ __('Manage') }}</a></td>
+                                <td>
+                                    <div class="flex justify-end gap-1">
+                                        @unless ($user->hasVerifiedEmail())
+                                            <form action="{{ route('users.verify', $user) }}" method="post" onsubmit="return confirm('{{ __('Are you sure you want to verify this user?') }}')">
+                                                @csrf
+                                                <button type="submit" class="btn btn-ghost btn-xs text-success">{{ __('Verify') }}</button>
+                                            </form>
+                                        @endunless
+                                        @if (auth()->user()->canImpersonateUser($user))
+                                            <form action="{{ route('users.impersonate', $user) }}" method="post" onsubmit="return confirm('{{ __('Are you sure you want to impersonate this user?') }}')">
+                                                @csrf
+                                                <button type="submit" class="btn btn-ghost btn-xs text-violet-600 dark:text-violet-400">{{ __('Impersonate') }}</button>
+                                            </form>
+                                        @else
+                                            @php($impersonationUnavailableReason = (int) $user->companies_count === 0 ? __('User has no company') : __('Impersonation is not available for this user.'))
+                                            <span class="tooltip" data-tip="{{ $impersonationUnavailableReason }}">
+                                                <button type="button" disabled aria-disabled="true" title="{{ $impersonationUnavailableReason }}" class="btn btn-ghost btn-xs btn-disabled cursor-not-allowed">{{ __('Impersonate') }}</button>
+                                            </span>
+                                        @endif
+                                        <a href="{{ route('users.edit', $user) }}" class="btn btn-ghost btn-xs">{{ __('Edit') }}</a>
+                                    </div>
+                                </td>
                             </tr>
                         @empty
                             <tr><td colspan="5" class="py-10 text-center text-slate-500">{{ __('No users have been created yet.') }}</td></tr>

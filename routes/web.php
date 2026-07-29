@@ -31,6 +31,8 @@ Route::middleware(['auth', 'ensure-feature-enabled:email_verification'])->group(
 Route::middleware(['auth', 'permission:access-super-admin-panel', 'ensure-feature-enabled:email_verification'])->prefix('management')->group(function () {
     Route::get('/', [Controllers\HomeController::class, 'managementDashboard'])->name('management.dashboard');
     Route::get('/settings', [Controllers\AboutController::class, 'index'])->name('management.settings');
+    Route::get('/users/{user}', [Controllers\Management\UserController::class, 'show'])->whereNumber('user')->name('users.show');
+    Route::post('/users/{user}/verify', [Controllers\Management\UserController::class, 'verify'])->name('users.verify');
 
     Route::middleware('check-permission')->group(function () {
         Route::put('/settings', [Controllers\AboutController::class, 'updateGlobalConfigs'])->name('update-global-configs');
@@ -168,7 +170,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
             ->name('users.create-employee');
         Route::post('users/{user}/impersonate', [Controllers\Management\UserController::class, 'impersonate'])
             ->name('users.impersonate');
-        Route::resource('users', Controllers\Management\UserController::class);
+        Route::resource('users', Controllers\Management\UserController::class)->except(['show']);
         Route::resource('configs', Controllers\ConfigController::class);
     });
 

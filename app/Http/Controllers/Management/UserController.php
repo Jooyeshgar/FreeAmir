@@ -8,6 +8,7 @@ use App\Models\Employee;
 use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -31,12 +32,7 @@ class UserController extends Controller
         $isManagementUserIndex = $request->session()->get('interface_mode') === 'management' && $actor->can('access-super-admin-panel');
 
         if ($isProduction) {
-            abort_unless(
-                $actor->can('access-super-admin-panel') ||
-                $actor->hasApplicationRole('Admin') ||
-                $actor->hasApplicationRole('Accountant'),
-                403
-            );
+            abort_unless($actor->can('access-super-admin-panel'), 403);
         }
 
         $users = User::query()
@@ -128,7 +124,13 @@ class UserController extends Controller
      */
     public function show(User $user)
     {
+        abort_unless(auth()->user()->can('access-super-admin-panel'), 403);
+
         $this->ensureUserAccess($user);
+        $user->load([
+            'roles:id,name',
+            'companies' => fn ($query) => $query->orderByDesc('fiscal_year')->orderBy('name'),
+        ]);
 
         return view('users.show', compact('user'));
     }
@@ -138,6 +140,7 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
+        $this->ensureUserRoleManagementAccess($user);
         $this->ensureUserAccess($user);
 
         $roles = $this->assignableRoles();
@@ -152,6 +155,7 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user)
     {
+        $this->ensureUserRoleManagementAccess($user);
         $this->ensureUserAccess($user);
 
         $request->validate([
@@ -208,6 +212,7 @@ class UserController extends Controller
      */
     public function destroy(User $user)
     {
+        $this->ensureUserRoleManagementAccess($user);
         $this->ensureUserAccess($user);
 
         $user->delete();
@@ -233,6 +238,17 @@ class UserController extends Controller
         $request->session()->regenerate();
 
         return redirect()->to($this->impersonationLandingPage($user))->with('success', __('You are now impersonating :name.', ['name' => $user->name]));
+    }
+
+    public function verify(Request $request, User $user): RedirectResponse
+    {
+        abort_unless($request->user()->can('access-super-admin-panel'), 403);
+
+        if (! $user->hasVerifiedEmail() && $user->markEmailAsVerified()) {
+            event(new Verified($user));
+        }
+
+        return back()->with('success', __('User verified successfully.'));
     }
 
     public function leaveImpersonation(Request $request, ImpersonateManager $impersonateManager): RedirectResponse
@@ -284,7 +300,7 @@ class UserController extends Controller
     private function assignableRoles()
     {
         return Role::query()
-            ->when(! auth()->user()->can('access-super-admin-panel'), fn ($query) => $query->where('name', '!=', 'Super-Admin'))
+            ->when(! auth()->user()->hasRole('Super-Admin'), fn ($query) => $query->where('name', '!=', 'Super-Admin'))
             ->get();
     }
 
@@ -317,9 +333,17 @@ class UserController extends Controller
         $invalidCompanies = collect($request->input('company', []))->map(fn ($id) => (string) $id)->diff($allowedCompanies);
 
         if ($invalidRoles->isNotEmpty() || $invalidCompanies->isNotEmpty()) {
-            throw ValidationException::withMessages([
-                'company' => __('You may only assign roles and companies available to you.'),
-            ]);
+            $errors = [];
+
+            if ($invalidRoles->isNotEmpty()) {
+                $errors['role'] = __('You may only assign roles and companies available to you.');
+            }
+
+            if ($invalidCompanies->isNotEmpty()) {
+                $errors['company'] = __('You may only assign roles and companies available to you.');
+            }
+
+            throw ValidationException::withMessages($errors);
         }
     }
 
@@ -336,6 +360,11 @@ class UserController extends Controller
         $hasInaccessibleCompany = $user->companies()->whereNotIn('companies.id', $companyIds)->exists();
 
         abort_unless($hasActiveCompany && ! $hasInaccessibleCompany, 403);
+    }
+
+    private function ensureUserRoleManagementAccess(User $user): void
+    {
+        abort_if($user->hasRole('Super-Admin') && ! auth()->user()->hasRole('Super-Admin'), 403);
     }
 
     private function splitName(string $name): array

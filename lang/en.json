@@ -2633,5 +2633,22 @@
     "Unable to stop impersonation.": "Unable to stop impersonation.",
     "Are you sure you want to impersonate this user?": "Are you sure you want to impersonate this user?",
     "Are you sure you want to delete this user?": "Are you sure you want to delete this user?",
-    "User is not verified": "User is not verified"
+    "User is not verified": "User is not verified",
+    "Verify": "Verify",
+    "Are you sure you want to verify this user?": "Are you sure you want to verify this user?",
+    "User verified successfully.": "User verified successfully.",
+    "User has no company": "User has no company",
+    "Impersonation is not available for this user.": "Impersonation is not available for this user.",
+    "Back to users": "Back to users",
+    "User ID": "User ID",
+    "Profile overview": "Profile overview",
+    "Verification status": "Verification status",
+    "Assigned companies": "Assigned companies",
+    ":count company|:count companies": ":count company|:count companies",
+    "Edit company": "Edit company",
+    "Account timeline": "Account timeline",
+    "Last updated": "Last updated",
+    "Verified at": "Verified at",
+    "No roles assigned": "No roles assigned",
+    "Delete this user account permanently.": "Delete this user account permanently."
 }

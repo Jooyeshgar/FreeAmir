@@ -2656,5 +2656,22 @@
     "Unable to stop impersonation.": "پایان ورود به‌جای کاربر ممکن نیست.",
     "Are you sure you want to impersonate this user?": "آیا مطمئن هستید که می‌خواهید به‌جای این کاربر وارد شوید؟",
     "Are you sure you want to delete this user?": "آیا مطمئن هستید که می‌خواهید این کاربر را حذف کنید؟",
-    "User is not verified": "کاربر تأیید نشده است"
+    "User is not verified": "کاربر تأیید نشده است",
+    "Verify": "تأیید",
+    "Are you sure you want to verify this user?": "آیا مطمئن هستید که می‌خواهید این کاربر را تأیید کنید؟",
+    "User verified successfully.": "کاربر با موفقیت تأیید شد.",
+    "User has no company": "کاربر شرکتی ندارد",
+    "Impersonation is not available for this user.": "ورود به‌جای این کاربر امکان‌پذیر نیست.",
+    "Back to users": "بازگشت به کاربران",
+    "User ID": "شناسه کاربر",
+    "Profile overview": "نمای کلی پروفایل",
+    "Verification status": "وضعیت تأیید",
+    "Assigned companies": "شرکت‌های تخصیص‌یافته",
+    ":count company|:count companies": ":count شرکت|:count شرکت",
+    "Edit company": "ویرایش شرکت",
+    "Account timeline": "تاریخچه حساب",
+    "Last updated": "آخرین به‌روزرسانی",
+    "Verified at": "زمان تأیید",
+    "No roles assigned": "هیچ نقشی تخصیص داده نشده است",
+    "Delete this user account permanently.": "این حساب کاربری را برای همیشه حذف کنید."
 }

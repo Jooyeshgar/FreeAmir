@@ -175,7 +175,7 @@ class UserImpersonationTest extends TestCase
         $this->assertImpersonationSessionIsClear();
     }
 
-    public function test_roleless_user_with_direct_permission_cannot_impersonate(): void
+    public function test_roleless_user_with_direct_permission_can_impersonate(): void
     {
         $company = $this->company('Shared Company');
         $actor = User::factory()->create();
@@ -184,15 +184,15 @@ class UserImpersonationTest extends TestCase
         $target = $this->userWithRole('Employee', $company);
         $this->setActiveCompany($company);
 
-        $this->actingAs($actor)->post(route('users.impersonate', $target))->assertForbidden();
+        $this->actingAs($actor)->post(route('users.impersonate', $target))->assertRedirect(route('about'));
 
-        $this->assertAuthenticatedAs($actor);
+        $this->assertAuthenticatedAs($target);
     }
 
     public function test_nested_impersonation_is_forbidden_and_original_session_is_preserved(): void
     {
         $superAdmin = $this->userWithRole('Super-Admin', canImpersonate: true);
-        $admin = $this->userWithRole('Admin', canImpersonate: true);
+        $admin = $this->userWithRole('Admin', $this->company('Admin Company'), canImpersonate: true);
         $employee = $this->userWithRole('Employee');
 
         $this->actingAs($superAdmin)->post(route('users.impersonate', $admin))->assertRedirect(route('about'));
@@ -239,7 +239,7 @@ class UserImpersonationTest extends TestCase
 
         $company = $this->company('Shared Company');
         $actor = $this->userWithRole('Admin', $company, canImpersonate: true);
-        $target = $this->userWithRole('Admin', $company);
+        $target = $this->userWithRole('Super-Admin', $company);
         $this->setActiveCompany($company);
 
         $this->actingAs($actor)->post(route('users.impersonate', $target))->assertForbidden();
@@ -271,22 +271,51 @@ class UserImpersonationTest extends TestCase
         }
     }
 
-    public function test_unverified_users_cannot_be_impersonated_with_any_eligible_role(): void
+    public function test_unverified_users_with_a_company_can_be_impersonated_with_any_eligible_role(): void
     {
         $superAdmin = $this->userWithRole('Super-Admin', canImpersonate: true);
+        $company = $this->company('Target Company');
         $targets = [];
 
         foreach (['Admin', 'Accountant', 'Warehousekeeper', 'Seller', 'Employee', null] as $targetRole) {
             $target = $targetRole === null ? User::factory()->create(['email_verified_at' => null]) : $this->userWithRole($targetRole, attributes: ['email_verified_at' => null]);
+            $target->companies()->attach($company);
             $targets[] = $target;
 
+            $this->actingAs($superAdmin)->post(route('users.impersonate', $target))->assertRedirect(route('about'));
+            $this->assertTrue($target->canBeImpersonated());
+            $this->assertAuthenticatedAs($target);
+
+            $this->post(route('impersonation.leave'))->assertRedirect(route('users.index'));
+            $this->assertAuthenticatedAs($superAdmin);
+            $this->assertImpersonationSessionIsClear();
+        }
+
+        $response = $this->withSession(['interface_mode' => 'management'])->get(route('users.index'))->assertOk();
+
+        foreach ($targets as $target) {
+            $response->assertSee(route('users.impersonate', $target), false);
+        }
+    }
+
+    public function test_users_without_a_company_cannot_be_impersonated(): void
+    {
+        $superAdmin = $this->userWithRole('Super-Admin', canImpersonate: true);
+        $targets = [
+            User::factory()->create(),
+            User::factory()->create(['email_verified_at' => null]),
+        ];
+
+        foreach ($targets as $target) {
             $this->actingAs($superAdmin)->post(route('users.impersonate', $target))->assertForbidden();
+
             $this->assertFalse($target->canBeImpersonated());
             $this->assertAuthenticatedAs($superAdmin);
             $this->assertImpersonationSessionIsClear();
         }
 
-        $response = $this->withSession(['interface_mode' => 'management'])->get(route('users.index'))->assertOk()->assertSee(__('User is not verified'));
+        $response = $this->withSession(['interface_mode' => 'management'])->get(route('users.index'))->assertOk();
+        $response->assertSee(__('User has no company'));
 
         foreach ($targets as $target) {
             $response->assertDontSee(route('users.impersonate', $target), false);
@@ -337,7 +366,7 @@ class UserImpersonationTest extends TestCase
     {
         $superAdmin = $this->userWithRole('Super-Admin', canImpersonate: true);
         $superAdmin->assignRole($this->role('Admin'));
-        $admin = $this->userWithRole('Admin');
+        $admin = $this->userWithRole('Admin', $this->company('Admin Company'));
 
         $this->actingAs($superAdmin)->post(route('users.impersonate', $admin))->assertRedirect(route('about'));
 
@@ -347,17 +376,18 @@ class UserImpersonationTest extends TestCase
     public function test_no_user_can_impersonate_a_super_admin(): void
     {
         $actor = $this->userWithRole('Super-Admin', canImpersonate: true);
-        $target = $this->userWithRole('Super-Admin');
+        $target = $this->userWithRole('Super-Admin', $this->company('Super Admin Company'));
 
         $this->actingAs($actor)->post(route('users.impersonate', $target))->assertForbidden();
 
+        $this->assertFalse($target->canBeImpersonated());
         $this->assertAuthenticatedAs($actor);
     }
 
     public function test_user_with_direct_platform_access_permission_cannot_be_impersonated(): void
     {
         $actor = $this->userWithRole('Super-Admin', canImpersonate: true);
-        $target = $this->userWithRole('Employee');
+        $target = $this->userWithRole('Employee', $this->company('Platform User Company'));
         $target->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
 
         $this->actingAs($actor)->post(route('users.impersonate', $target))->assertForbidden();
@@ -368,7 +398,7 @@ class UserImpersonationTest extends TestCase
     public function test_user_with_platform_access_inherited_from_a_role_cannot_be_impersonated(): void
     {
         $actor = $this->userWithRole('Super-Admin', canImpersonate: true);
-        $target = $this->userWithRole('Employee');
+        $target = $this->userWithRole('Employee', $this->company('Platform Role Company'));
         $platformRole = Role::create(['name' => 'Platform Auditor']);
         $platformRole->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
         $target->assignRole($platformRole);
@@ -378,14 +408,14 @@ class UserImpersonationTest extends TestCase
         $this->assertAuthenticatedAs($actor);
     }
 
-    public function test_admin_can_impersonate_each_lower_role_and_roleless_users(): void
+    public function test_admin_can_impersonate_every_non_super_admin_role_and_roleless_users(): void
     {
         $company = $this->company('Shared Company');
         $admin = $this->userWithRole('Admin', $company, canImpersonate: true);
         $this->setActiveCompany($company);
         $this->actingAs($admin);
 
-        foreach (['Accountant', 'Warehousekeeper', 'Seller', 'Employee', null] as $targetRole) {
+        foreach (['Admin', 'Accountant', 'Warehousekeeper', 'Seller', 'Employee', null] as $targetRole) {
             $target = $targetRole === null ? User::factory()->create() : $this->userWithRole($targetRole);
             $target->companies()->attach($company);
 
@@ -397,27 +427,28 @@ class UserImpersonationTest extends TestCase
         }
     }
 
-    public function test_company_admin_cannot_impersonate_another_admin(): void
+    public function test_company_admin_can_impersonate_another_admin(): void
     {
         $company = $this->company('Shared Company');
         $actor = $this->userWithRole('Admin', $company, canImpersonate: true);
         $target = $this->userWithRole('Admin', $company);
         $this->setActiveCompany($company);
 
-        $this->actingAs($actor)->post(route('users.impersonate', $target))->assertForbidden();
+        $this->actingAs($actor)->post(route('users.impersonate', $target))->assertRedirect(route('about'));
 
-        $this->assertAuthenticatedAs($actor);
+        $this->assertAuthenticatedAs($target);
     }
 
-    public function test_accountant_can_impersonate_allowed_lower_roles(): void
+    public function test_accountant_can_impersonate_every_non_super_admin_role_and_roleless_users(): void
     {
         $company = $this->company('Shared Company');
         $accountant = $this->userWithRole('Accountant', $company, canImpersonate: true);
         $this->setActiveCompany($company);
         $this->actingAs($accountant);
 
-        foreach (['Warehousekeeper', 'Seller', 'Employee'] as $targetRole) {
-            $target = $this->userWithRole($targetRole, $company);
+        foreach (['Admin', 'Accountant', 'Warehousekeeper', 'Seller', 'Employee', null] as $targetRole) {
+            $target = $targetRole === null ? User::factory()->create() : $this->userWithRole($targetRole);
+            $target->companies()->attach($company);
 
             $this->post(route('users.impersonate', $target))->assertRedirect(route('about'));
             $this->assertAuthenticatedAs($target);
@@ -427,24 +458,20 @@ class UserImpersonationTest extends TestCase
         }
     }
 
-    public function test_accountant_cannot_impersonate_equal_higher_or_roleless_users(): void
+    public function test_accountant_cannot_impersonate_a_super_admin(): void
     {
         $company = $this->company('Shared Company');
         $accountant = $this->userWithRole('Accountant', $company, canImpersonate: true);
         $this->setActiveCompany($company);
-        $this->actingAs($accountant);
+        $target = $this->userWithRole('Super-Admin', $company);
 
-        foreach (['Super-Admin', 'Admin', 'Accountant', null] as $targetRole) {
-            $target = $targetRole === null ? User::factory()->create() : $this->userWithRole($targetRole);
-            $target->companies()->attach($company);
+        $this->actingAs($accountant)->post(route('users.impersonate', $target))->assertForbidden();
 
-            $this->post(route('users.impersonate', $target))->assertForbidden();
-            $this->assertAuthenticatedAs($accountant);
-            $this->assertImpersonationSessionIsClear();
-        }
+        $this->assertAuthenticatedAs($accountant);
+        $this->assertImpersonationSessionIsClear();
     }
 
-    public function test_accountant_cannot_impersonate_user_with_accountant_and_lower_roles(): void
+    public function test_accountant_can_impersonate_user_with_accountant_and_lower_roles(): void
     {
         $company = $this->company('Shared Company');
         $accountant = $this->userWithRole('Accountant', $company, canImpersonate: true);
@@ -457,7 +484,9 @@ class UserImpersonationTest extends TestCase
         ]);
         $this->setActiveCompany($company);
 
-        $this->actingAs($accountant)->post(route('users.impersonate', $target))->assertForbidden();
+        $this->actingAs($accountant)->post(route('users.impersonate', $target))->assertRedirect(route('about'));
+
+        $this->assertAuthenticatedAs($target);
     }
 
     public function test_accountant_can_impersonate_user_with_multiple_lower_roles(): void
@@ -478,7 +507,7 @@ class UserImpersonationTest extends TestCase
         $this->assertAuthenticatedAs($target);
     }
 
-    public function test_lower_roles_cannot_impersonate_even_with_direct_permission(): void
+    public function test_lower_roles_can_impersonate_with_direct_permission(): void
     {
         $company = $this->company('Shared Company');
         $target = $this->userWithRole('Employee', $company);
@@ -488,7 +517,10 @@ class UserImpersonationTest extends TestCase
             $actor = $this->userWithRole($actorRole, $company);
             $actor->givePermissionTo($this->impersonationPermission());
 
-            $this->actingAs($actor)->post(route('users.impersonate', $target))->assertForbidden();
+            $this->actingAs($actor)->post(route('users.impersonate', $target))->assertRedirect(route('about'));
+            $this->assertAuthenticatedAs($target);
+
+            $this->post(route('impersonation.leave'))->assertRedirect(route('users.index'));
             $this->assertAuthenticatedAs($actor);
             $this->assertImpersonationSessionIsClear();
         }
@@ -562,7 +594,7 @@ class UserImpersonationTest extends TestCase
         $this->assertAuthenticatedAs($target);
     }
 
-    public function test_workspace_admin_list_shows_only_allowed_impersonation_buttons(): void
+    public function test_workspace_admin_list_shows_buttons_for_every_eligible_user(): void
     {
         $company = $this->company('Shared Company');
         $admin = $this->userWithRole('Admin', $company, canImpersonate: true, canViewUsers: true);
@@ -574,14 +606,13 @@ class UserImpersonationTest extends TestCase
 
         $this->actingAs($admin)->get(route('users.index'))->assertOk()->assertDontSee($superAdmin->email)
             ->assertSee(route('users.impersonate', $employee), false)
-            ->assertSee(__('User is not verified'))
-            ->assertDontSee(route('users.impersonate', $unverifiedEmployee), false)
-            ->assertDontSee(route('users.impersonate', $otherAdmin), false)
+            ->assertSee(route('users.impersonate', $otherAdmin), false)
+            ->assertSee(route('users.impersonate', $unverifiedEmployee), false)
             ->assertDontSee(route('users.impersonate', $superAdmin), false)
             ->assertDontSee(route('users.impersonate', $admin), false);
     }
 
-    public function test_accountant_list_shows_buttons_only_for_allowed_lower_roles(): void
+    public function test_accountant_list_shows_buttons_for_every_eligible_user(): void
     {
         $company = $this->company('Shared Company');
         $accountant = $this->userWithRole('Accountant', $company, canImpersonate: true, canViewUsers: true);
@@ -591,14 +622,14 @@ class UserImpersonationTest extends TestCase
 
         $this->actingAs($accountant)->get(route('users.index'))->assertOk()
             ->assertSee(route('users.impersonate', $employee), false)
-            ->assertDontSee(route('users.impersonate', $otherAccountant), false)
+            ->assertSee(route('users.impersonate', $otherAccountant), false)
             ->assertDontSee(route('users.impersonate', $accountant), false);
     }
 
     public function test_management_list_shows_admin_action_but_never_super_admin_action(): void
     {
         $actor = $this->userWithRole('Super-Admin', canImpersonate: true, canViewUsers: true);
-        $admin = $this->userWithRole('Admin');
+        $admin = $this->userWithRole('Admin', $this->company('Admin Company'));
         $otherSuperAdmin = $this->userWithRole('Super-Admin');
 
         $this->actingAs($actor)->withSession(['interface_mode' => 'management'])->get(route('users.index'))->assertOk()
@@ -623,7 +654,7 @@ class UserImpersonationTest extends TestCase
         $this->assertAuthenticatedAs($target);
     }
 
-    public function test_localized_role_names_are_recognized_after_locale_changes(): void
+    public function test_localized_roles_can_impersonate_based_on_permission_after_locale_changes(): void
     {
         $company = $this->company('Shared Company');
         $adminRole = Role::create(['name' => trans('Admin', [], 'fa')]);
