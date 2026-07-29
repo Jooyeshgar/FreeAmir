@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Models\Service;
 use App\Models\ServiceGroup;
+use App\Models\Subject;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -29,6 +31,35 @@ class ServiceImportService
         'description',
     ];
 
+    /** Translation keys used by the service CSV export for importable columns. */
+    private const HEADER_TRANSLATIONS = [
+        'code' => 'Service Code',
+        'name' => 'Name',
+        'group_name' => 'Service group',
+        'income_subject_code' => 'Revenue subject code',
+        'cogs_subject_code' => 'COGS subject code',
+        'sales_returns_subject_code' => 'Sales returns subject code',
+        'sstid' => 'Service SSTID',
+        'selling_price' => 'Sell price',
+        'vat' => 'VAT',
+        'description' => 'Description',
+    ];
+
+    private const SUBJECT_COLUMNS = [
+        'income_subject_code' => [
+            'id_column' => 'subject_id',
+            'group_relation' => 'subject',
+        ],
+        'cogs_subject_code' => [
+            'id_column' => 'cogs_subject_id',
+            'group_relation' => 'cogsSubject',
+        ],
+        'sales_returns_subject_code' => [
+            'id_column' => 'sales_returns_subject_id',
+            'group_relation' => 'salesReturnsSubject',
+        ],
+    ];
+
     /** Service fields copied straight from the CSV row (no special handling). */
     private const PLAIN_FIELDS = [
         'sstid', 'description',
@@ -42,6 +73,7 @@ class ServiceImportService
     public function __construct(
         private readonly ServiceService $serviceService,
         private readonly ServiceGroupService $serviceGroupService,
+        private readonly SubjectService $subjectService,
     ) {}
 
     /**
@@ -127,10 +159,12 @@ class ServiceImportService
                     }
                 }
 
-                // 3. Match an existing service by code, then upsert accordingly.
+                // 3. Match the service and restore any explicitly exported subject relations.
                 $existing = $code !== null
                     ? Service::where('code', $code)->first()
                     : null;
+
+                $data = array_merge($data, $this->resolveSubjects($row, $group, $name, $companyId, $existing, $line));
 
                 try {
                     if ($existing) {
@@ -188,8 +222,8 @@ class ServiceImportService
 
         $map = [];
         foreach ($header as $position => $label) {
-            $key = strtolower(trim((string) $label));
-            if (in_array($key, self::COLUMNS, true)) {
+            $key = $this->canonicalHeader((string) $label);
+            if ($key !== null) {
                 $map[$key] = $position;
             }
         }
@@ -241,6 +275,110 @@ class ServiceImportService
         $code = trim((string) $code);
 
         return $code === '' ? null : $code;
+    }
+
+    /** Resolve canonical, English, Persian, and currently active translated headers. */
+    private function canonicalHeader(string $label): ?string
+    {
+        $normalized = $this->normalizeHeader($label);
+
+        foreach (self::COLUMNS as $column) {
+            if ($normalized === $this->normalizeHeader($column)) {
+                return $column;
+            }
+        }
+
+        $locales = array_unique(array_filter(['en', 'fa', app()->getLocale(), config('app.fallback_locale')]));
+
+        foreach (self::HEADER_TRANSLATIONS as $column => $translationKey) {
+            if ($normalized === $this->normalizeHeader($translationKey)) {
+                return $column;
+            }
+
+            foreach ($locales as $locale) {
+                if ($normalized === $this->normalizeHeader(Lang::get($translationKey, [], $locale))) {
+                    return $column;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeHeader(string $header): string
+    {
+        return mb_strtolower(trim(preg_replace('/^\xEF\xBB\xBF/', '', $header)));
+    }
+
+    /**
+     * Resolve exported subject codes to the correct service account branches.
+     * Missing subjects are created with the requested code under the selected group.
+     */
+    private function resolveSubjects(array $row, ServiceGroup $group, string $name, int $companyId, ?Service $existing, int $line): array
+    {
+        $group->loadMissing(array_column(self::SUBJECT_COLUMNS, 'group_relation'));
+        $resolved = [];
+
+        foreach (self::SUBJECT_COLUMNS as $codeColumn => $config) {
+            $subjectCode = $this->normalizeSubjectCode($row[$codeColumn] ?? null);
+            if ($subjectCode === null) {
+                continue;
+            }
+
+            $parent = $group->{$config['group_relation']};
+            if (! $parent) {
+                $this->fail(__('Line :line: could not resolve the :account accounting subject for group ":group".', [
+                    'line' => $line,
+                    'account' => $codeColumn,
+                    'group' => $group->name,
+                ]));
+            }
+
+            if (strlen($subjectCode) <= strlen($parent->code) || substr($subjectCode, 0, -3) !== $parent->code) {
+                $this->fail(__('Line :line: subject code :code is not a child of the expected account for group ":group".', [
+                    'line' => $line,
+                    'code' => formatCode($subjectCode),
+                    'group' => $group->name,
+                ]));
+            }
+
+            $subject = Subject::withoutGlobalScopes()->where('company_id', $companyId)->where('code', $subjectCode)->first();
+
+            if ($existing && $existing->{$config['id_column']} && (int) $existing->{$config['id_column']} !== (int) $subject?->id) {
+                $this->fail(__('Line :line: subject code :code does not match the existing service account relation.', [
+                    'line' => $line,
+                    'code' => formatCode($subjectCode),
+                ]));
+            }
+
+            if ($subject) {
+                $linked = $subject->subjectable;
+                if ($linked !== null && (! $existing || ! $linked->is($existing))) {
+                    $this->fail(__('Line :line: subject code :code is already linked to another record.', [
+                        'line' => $line,
+                        'code' => formatCode($subjectCode),
+                    ]));
+                }
+            } else {
+                $subject = $this->subjectService->createSubject([
+                    'name' => $name,
+                    'parent_id' => $parent->id,
+                    'company_id' => $companyId,
+                    'code' => substr($subjectCode, -3),
+                ]);
+            }
+
+            $resolved[$config['id_column']] = $subject->id;
+        }
+
+        return $resolved;
+    }
+
+    private function normalizeSubjectCode($code): ?string
+    {
+        $code = $this->normalizeCode($code);
+
+        return $code === null ? null : preg_replace('/[^0-9]/', '', toEnglish($code));
     }
 
     /**
