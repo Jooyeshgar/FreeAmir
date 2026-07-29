@@ -41,7 +41,7 @@ class CostIncomeService
         $costBreakdown = [];
 
         foreach ($roots as $root) {
-            $rootBalance = (int) $this->subjectService->sumSubject($root);
+            $rootBalance = (int) $this->subjectService->sumSubject($root, true, false, true);
 
             if ($rootBalance > 0) {
                 $totalIncome += $rootBalance;
@@ -53,7 +53,7 @@ class CostIncomeService
 
             if ($children->isNotEmpty()) {
                 foreach ($children as $child) {
-                    $balance = (int) $this->subjectService->sumSubject($child);
+                    $balance = (int) $this->subjectService->sumSubject($child, true, false, true);
                     $this->placeBreakdown($balance, $child->name, $incomeBreakdown, $costBreakdown);
                 }
             } else {
@@ -93,7 +93,7 @@ class CostIncomeService
         $nonPermanentSubjects = Subject::where('is_permanent', false)->whereIsRoot()->get();
 
         foreach ($nonPermanentSubjects as $subject) {
-            $monthly = $this->subjectService->sumSubjectWithDateRange($subject);
+            $monthly = $this->subjectService->sumSubjectWithDateRange($subject, true);
 
             foreach (self::MONTHS as $number => $name) {
                 $amount = (int) ($monthly[$number] ?? 0);

@@ -21,7 +21,7 @@
                             @endif
                         </div>
                         <p class="mt-1.5 max-w-2xl text-sm leading-6 text-base-content/60">
-                            {{ __('Manual forecasts take priority; otherwise the average actual amount from previous documented months is used.') }}
+                            {{ __('Manual forecasts take priority. Completed months use actual amounts; other system forecasts average the actual amounts of prior completed months.') }}
                         </p>
                     </div>
                 </div>
@@ -126,7 +126,7 @@
                             <span class="badge badge-neutral badge-sm">{{ localizeNumber($budgetLines->count()) }}</span>
                             <span class="badge badge-primary badge-outline badge-sm">{{ trans_choice(':count manual forecasts', $manualForecastsCount, ['count' => localizeNumber($manualForecastsCount)]) }}</span>
                         </div>
-                        <p class="mt-1 text-xs text-base-content/50">{{ __('System forecasts are calculated from the average actual values of previous months that contain accounting documents.') }}</p>
+                        <p class="mt-1 text-xs text-base-content/50">{{ __('Completed months use actual amounts as system forecasts; other months average the actual amounts of prior completed months.') }}</p>
                     </div>
                     @if ($hasMoreBudgetLines)
                         <button type="button" class="btn btn-outline btn-primary btn-sm"
@@ -137,8 +137,8 @@
                 </div>
 
                 @if ($hasOverlappingForecasts)
-                    <div role="alert" class="alert alert-warning mx-5 mt-4 text-sm">
-                        {{ __('Some forecasts overlap because an ancestor and descendant have the same forecast type. Each row shows its full subtree actual, while summary actuals count overlapping transactions only once.') }}
+                    <div role="alert" class="alert alert-info mx-5 mt-4 text-sm">
+                        {{ __('Child forecasts shown below a manually forecast root are details only and are already included in the root total.') }}
                     </div>
                 @endif
 
@@ -158,8 +158,18 @@
                             @forelse ($displayBudgetLines as $line)
                                 <tr class="group hover:bg-base-200/40">
                                     <td>
-                                        <div class="min-w-56">
-                                            <div class="font-medium text-base-content">{{ $line['subject']->name }}</div>
+                                        <div @class(['min-w-56', 'ps-6' => $line['isChild']])>
+                                            <div class="flex items-center gap-1.5 font-medium text-base-content">
+                                                @if ($line['isChild'])
+                                                    <span class="text-base-content/35">↳</span>
+                                                @endif
+                                                <span>{{ $line['subject']->name }}</span>
+                                                @if ($line['isRemainder'])
+                                                    <span class="badge badge-ghost badge-xs">{{ __('Remainder excluding child forecasts') }}</span>
+                                                @elseif (! $line['includedInSummary'])
+                                                    <span class="badge badge-info badge-outline badge-xs">{{ __('Included in parent total') }}</span>
+                                                @endif
+                                            </div>
                                             <div class="mt-0.5 font-mono text-[11px] text-base-content/45">{{ formatCode($line['subject']->code) }}</div>
                                         </div>
                                     </td>
@@ -176,14 +186,14 @@
                                                 </div>
                                                 <div>
                                                     <div class="font-medium text-base-content/70">
-                                                        <span class="badge badge-ghost badge-xs">{{ __('System average') }}</span>
+                                                        <span class="badge badge-ghost badge-xs">{{ __('System forecast') }}</span>
                                                         {{ formatNumber($line['systemForecast']) }}
                                                     </div>
                                                 </div>
                                             </div>
                                         @else
                                             <div class="font-semibold">{{ formatNumber($line['forecast']) }}</div>
-                                            <div class="mt-1 text-[11px] text-base-content/50"><span class="badge badge-ghost badge-xs">{{ __('System average') }}</span></div>
+                                            <div class="mt-1 text-[11px] text-base-content/50"><span class="badge badge-ghost badge-xs">{{ __('System forecast') }}</span></div>
                                         @endif
                                     </td>
                                     <td class="text-end tabular-nums">
@@ -256,8 +266,18 @@
                                     @forelse ($allBudgetLinesByForecast as $line)
                                         <tr class="group hover:bg-base-200/40">
                                             <td>
-                                                <div class="min-w-56">
-                                                    <div class="font-medium text-base-content">{{ $line['subject']->name }}</div>
+                                                <div @class(['min-w-56', 'ps-6' => $line['isChild']])>
+                                                    <div class="flex items-center gap-1.5 font-medium text-base-content">
+                                                        @if ($line['isChild'])
+                                                            <span class="text-base-content/35">↳</span>
+                                                        @endif
+                                                        <span>{{ $line['subject']->name }}</span>
+                                                        @if ($line['isRemainder'])
+                                                            <span class="badge badge-ghost badge-xs">{{ __('Remainder excluding child forecasts') }}</span>
+                                                        @elseif (! $line['includedInSummary'])
+                                                            <span class="badge badge-info badge-outline badge-xs">{{ __('Included in parent total') }}</span>
+                                                        @endif
+                                                    </div>
                                                     <div class="mt-0.5 font-mono text-[11px] text-base-content/45">{{ formatCode($line['subject']->code) }}</div>
                                                 </div>
                                             </td>
@@ -274,7 +294,7 @@
                                                         </div>
                                                         <div>
                                                             <div class="font-medium text-base-content/70">
-                                                                <span class="badge badge-ghost badge-xs">{{ __('System average') }}</span>
+                                                                <span class="badge badge-ghost badge-xs">{{ __('System forecast') }}</span>
                                                                 {{ formatNumber($line['systemForecast']) }}
                                                             </div>
                                                         </div>
@@ -282,7 +302,7 @@
                                                 @else
                                                     <div class="font-semibold">{{ formatNumber($line['forecast']) }}</div>
                                                     <div class="mt-1 text-[11px] text-base-content/50">
-                                                        <span class="badge badge-ghost badge-xs">{{ __('System average') }}</span>
+                                                        <span class="badge badge-ghost badge-xs">{{ __('System forecast') }}</span>
                                                     </div>
                                                 @endif
                                             </td>

@@ -11,6 +11,7 @@ use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\CostIncomeService;
+use App\Services\MonthlyBudgetService;
 use App\Services\SubjectService;
 use App\Services\TrialBalanceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -79,6 +80,23 @@ class CostIncomeDashboardTest extends TestCase
         $response->assertDontSee("getElementsAtEventForMode(event, 'index', { intersect: false }", false);
     }
 
+    public function test_budget_editor_sees_bulk_forecast_modal_with_current_and_future_months_selected(): void
+    {
+        $this->grant('reports.cost-income', 'budgets.store', 'budgets.search-subjects');
+
+        $response = $this->actingAs($this->user)->get(route('reports.cost-income'));
+        $currentMonth = (int) toEnglish(jdate('n'));
+
+        $response->assertOk()
+            ->assertViewHas('defaultForecastMonths', range($currentMonth, 12))
+            ->assertViewHas('forecastMonths', fn (array $months) => count($months) === 12)
+            ->assertSee('cost-income-forecast-modal', false)
+            ->assertSee(__('New Forecast'))
+            ->assertSee('name="months[]"', false)
+            ->assertSee('name="forecast_amount"', false)
+            ->assertSee('name="subject_id"', false);
+    }
+
     public function test_missing_document_months_use_the_configured_english_list_separators(): void
     {
         config(['app.locale' => 'en']);
@@ -134,6 +152,20 @@ class CostIncomeDashboardTest extends TestCase
 
         $this->assertSame(1000, $summary['totalIncome']);
         $this->assertSame(0, $summary['totalCost']);
+    }
+
+    public function test_unapproved_documents_are_excluded_from_actuals_and_system_forecasts(): void
+    {
+        $income = $this->nonPermanentSubject('Draft-only income', SubjectType::CREDITOR);
+        $this->transaction($income->id, 1000, jalali_to_gregorian(1405, 1, 10, '-'), approved: false);
+
+        $monthly = $this->service()->monthlyIncomeAndCost();
+        $analysis = app(MonthlyBudgetService::class)->analysis(1);
+
+        $this->assertSame(0.0, (float) $monthly['income']['فروردین']);
+        $this->assertFalse($analysis['hasDocuments']);
+        $this->assertNull($analysis['actualIncome']);
+        $this->assertSame(0.0, $analysis['forecastIncome']);
     }
 
     public function test_summary_margin_is_zero_when_there_is_no_income(): void
@@ -350,9 +382,9 @@ class CostIncomeDashboardTest extends TestCase
         return $customer;
     }
 
-    private function transaction(int $subjectId, float $value, ?string $date = null): Transaction
+    private function transaction(int $subjectId, float $value, ?string $date = null, bool $approved = true): Transaction
     {
-        $document = $this->makeDocument($date ?? jalali_to_gregorian(1405, 1, 1, '-'));
+        $document = $this->makeDocument($date ?? jalali_to_gregorian(1405, 1, 1, '-'), $approved);
 
         return Transaction::create([
             'value' => $value,
@@ -363,12 +395,14 @@ class CostIncomeDashboardTest extends TestCase
         ]);
     }
 
-    private function makeDocument(string $date): Document
+    private function makeDocument(string $date, bool $approved = true): Document
     {
         return Document::create([
             'number' => Document::withoutGlobalScopes()->max('number') + 1,
             'date' => $date,
             'creator_id' => $this->user->id,
+            'approved_at' => $approved ? now() : null,
+            'approver_id' => $approved ? $this->user->id : null,
             'title' => 'test',
             'company_id' => $this->companyId,
         ]);

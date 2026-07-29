@@ -20,14 +20,15 @@ class MonthlyBudgetController extends Controller
         return $this->renderIndex($request);
     }
 
-    public function searchSubjects(Request $request, string $month)
+    public function searchSubjects(Request $request, string $month, ?string $scope = null)
     {
-        $request->merge(['month' => $month]);
+        $request->merge(['month' => $month, 'scope' => $scope]);
         $validated = $request->validate([
             'q' => ['required', 'string', 'max:100'],
             'month' => ['required', 'integer', 'between:1,12'],
+            'scope' => ['nullable', Rule::in(['all'])],
         ]);
-        $unavailableSubjectIds = $this->service->subjectSelectionRestrictions((int) $validated['month']);
+        $unavailableSubjectIds = ($validated['scope'] ?? null) === 'all' ? [] : $this->service->subjectSelectionRestrictions((int) $validated['month']);
 
         $subjects = Subject::query()->whereIn('id', $this->service->forecastableSubjectIds())->whereNotIn('id', $unavailableSubjectIds)
             ->where('name', 'like', '%'.$validated['q'].'%')->orderBy('code')->limit(25)->get(['id', 'name', 'code', 'parent_id']);
@@ -43,25 +44,38 @@ class MonthlyBudgetController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'month' => ['required', 'integer', 'between:1,12'],
+        $isBulkForecast = $request->input('source') === 'cost-income';
+        $validated = $request->validate(array_merge([
             'subject_id' => [
                 'required',
                 'integer',
                 Rule::exists('subjects', 'id')->where('company_id', getActiveCompany())->where('is_permanent', false),
             ],
             'forecast_amount' => ['required', 'numeric', 'regex:/^-?\d+(\.\d{1,2})?$/', 'not_in:0', 'between:-9999999999999999.99,9999999999999999.99'],
-        ]);
-        $month = (int) $validated['month'];
+            'source' => ['nullable', Rule::in(['cost-income'])],
+        ], $isBulkForecast ? [
+            'months' => ['required', 'array', 'min:1'],
+            'months.*' => ['required', 'integer', 'distinct', 'between:1,12'],
+        ] : [
+            'month' => ['required', 'integer', 'between:1,12'],
+        ]));
         $subject = Subject::query()->findOrFail((int) $validated['subject_id']);
+        $normalizedForecast = $this->service->normalizeSignedForecast($subject, $validated['forecast_amount']);
+
+        if ($isBulkForecast) {
+            $this->service->saveForecastForMonths($validated['months'], array_merge($validated, $normalizedForecast));
+
+            return redirect()->route('reports.cost-income')->with('success', __('Forecast saved successfully for the selected months.'));
+        }
+
+        $month = (int) $validated['month'];
 
         if (! $this->service->subjectIsAvailableForForecast($month, (int) $validated['subject_id'])) {
             throw ValidationException::withMessages([
-                'subject_id' => __('The selected subject overlaps an existing forecast for this month.'),
+                'subject_id' => __('The selected subject already has a forecast for this month.'),
             ]);
         }
 
-        $normalizedForecast = $this->service->normalizeSignedForecast($subject, $validated['forecast_amount']);
         $this->service->saveForecast($month, array_merge($validated, $normalizedForecast));
 
         return redirect()->route('budgets.index', ['month' => $month])->with('success', __('Forecast saved successfully.'));
@@ -103,7 +117,7 @@ class MonthlyBudgetController extends Controller
         $currency = config('amir.currency') ?? __('Rial');
         $incomeLinesCount = $analysis['budgetLines']->where('type', 'income')->count();
         $expenseLinesCount = $analysis['budgetLines']->where('type', 'expense')->count();
-        $allBudgetLinesByForecast = $analysis['budgetLines']->sortByDesc('forecast')->values();
+        $allBudgetLinesByForecast = $analysis['budgetLines']->values();
         $displayBudgetLines = $allBudgetLinesByForecast->take(5);
         $incomeAchievement = $analysis['actualsCalculated'] && $analysis['forecastIncome'] > 0 ? max(0, ($analysis['actualIncome'] / $analysis['forecastIncome']) * 100) : 0;
         $expenseUtilization = $analysis['actualsCalculated'] && $analysis['forecastExpense'] > 0 ? max(0, ($analysis['actualExpense'] / $analysis['forecastExpense']) * 100) : 0;
@@ -122,13 +136,13 @@ class MonthlyBudgetController extends Controller
         }
 
         $incomeItemDatasets = $this->itemComparisonDatasets(
-            $analysis['budgetLines']->where('type', 'income'),
+            $analysis['budgetLines']->where('type', 'income')->where('includedInSummary', true),
             $analysis['actualsCalculated'],
             '#2563eb',
             '#16a34a'
         );
         $expenseItemDatasets = $this->itemComparisonDatasets(
-            $analysis['budgetLines']->where('type', 'expense'),
+            $analysis['budgetLines']->where('type', 'expense')->where('includedInSummary', true),
             $analysis['actualsCalculated'],
             '#f59e0b',
             '#dc2626'

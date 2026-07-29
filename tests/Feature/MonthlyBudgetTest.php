@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\FiscalYearService;
 use App\Services\MonthlyBudgetService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Spatie\Permission\Models\Permission;
@@ -82,12 +83,14 @@ class MonthlyBudgetTest extends TestCase
         ]);
     }
 
-    private function transaction(Subject $subject, int $value, int $month): void
+    private function transaction(Subject $subject, int $value, int $month, bool $approved = true): void
     {
         $document = Document::create([
             'number' => Document::withoutGlobalScopes()->max('number') + 1,
             'date' => jalali_to_gregorian((int) $this->company->fiscal_year, $month, 10, '-'),
             'creator_id' => $this->user->id,
+            'approved_at' => $approved ? now() : null,
+            'approver_id' => $approved ? $this->user->id : null,
             'title' => 'budget actual',
             'company_id' => $this->company->id,
         ]);
@@ -132,7 +135,7 @@ class MonthlyBudgetTest extends TestCase
         $response->assertSee('monthlyBudgetVarianceChart', false);
     }
 
-    public function test_forecast_table_shows_five_largest_lines_and_all_lines_in_a_modal(): void
+    public function test_forecast_table_shows_first_five_hierarchical_lines_and_all_lines_in_a_modal(): void
     {
         foreach (range(1, 6) as $index) {
             $subject = $this->temporarySubject('Top forecast '.$index, SubjectType::CREDITOR);
@@ -140,11 +143,9 @@ class MonthlyBudgetTest extends TestCase
         }
         $this->grant('budgets.index');
 
-        $this->actingAs($this->user)->get(route('budgets.index', ['month' => 5]))->assertOk()->assertViewHas('displayBudgetLines', function ($lines) {
-            return $lines->count() === 5
-                && $lines->first()['forecast'] === 600.0
-                && $lines->last()['forecast'] === 200.0;
-        })->assertViewHas('allBudgetLinesByForecast', fn ($lines) => $lines->count() === 6)->assertViewHas('hasMoreBudgetLines', true)
+        $this->actingAs($this->user)->get(route('budgets.index', ['month' => 5]))->assertOk()
+            ->assertViewHas('displayBudgetLines', fn ($lines) => $lines->count() === 5)
+            ->assertViewHas('allBudgetLinesByForecast', fn ($lines) => $lines->count() === 6)->assertViewHas('hasMoreBudgetLines', true)
             ->assertSee(__('View all'))->assertSee('all-monthly-forecasts-modal', false);
     }
 
@@ -238,6 +239,19 @@ class MonthlyBudgetTest extends TestCase
             ->assertUnprocessable()->assertJsonValidationErrors('month');
     }
 
+    public function test_bulk_budget_subject_search_includes_the_same_subject_with_an_existing_forecast(): void
+    {
+        $subject = $this->temporarySubject('Existing bulk forecast', SubjectType::CREDITOR);
+        $this->budget($subject, 'income', 500, 5);
+        $this->grant('budgets.search-subjects');
+
+        $this->actingAs($this->user)->getJson(route('budgets.search-subjects', [
+            'month' => 5,
+            'scope' => 'all',
+            'q' => 'Existing bulk',
+        ]))->assertOk()->assertJsonCount(1)->assertJsonPath('0.id', $subject->id);
+    }
+
     public function test_manual_forecast_is_created_and_cannot_be_selected_again_for_the_same_month(): void
     {
         $subject = $this->temporarySubject('Rent', SubjectType::DEBTOR);
@@ -283,6 +297,89 @@ class MonthlyBudgetTest extends TestCase
         ]);
     }
 
+    public function test_bulk_forecast_is_created_for_every_selected_month(): void
+    {
+        $subject = $this->temporarySubject('Bulk sales', SubjectType::CREDITOR);
+        $this->grant('budgets.store');
+
+        $this->actingAs($this->user)->put(route('budgets.store'), [
+            'source' => 'cost-income',
+            'months' => [5, 6, 12],
+            'subject_id' => $subject->id,
+            'forecast_amount' => 125000.25,
+        ])->assertRedirect(route('reports.cost-income'))->assertSessionHasNoErrors();
+
+        foreach ([5, 6, 12] as $month) {
+            $this->assertDatabaseHas('monthly_budgets', [
+                'company_id' => $this->company->id,
+                'subject_id' => $subject->id,
+                'month' => $month,
+                'budget_type' => 'income',
+                'forecast_amount' => 125000.25,
+            ]);
+        }
+    }
+
+    public function test_bulk_forecast_updates_the_same_subject_in_an_existing_month(): void
+    {
+        $subject = $this->temporarySubject('Updated bulk sales', SubjectType::CREDITOR);
+        $existingBudget = $this->budget($subject, 'income', 500, 6);
+        $this->grant('budgets.store');
+
+        $this->actingAs($this->user)->put(route('budgets.store'), [
+            'source' => 'cost-income',
+            'months' => [5, 6],
+            'subject_id' => $subject->id,
+            'forecast_amount' => 900,
+        ])->assertRedirect(route('reports.cost-income'))->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('monthly_budgets', [
+            'subject_id' => $subject->id,
+            'month' => 5,
+            'forecast_amount' => 900,
+        ]);
+        $this->assertDatabaseHas('monthly_budgets', [
+            'id' => $existingBudget->id,
+            'subject_id' => $subject->id,
+            'month' => 6,
+            'forecast_amount' => 900,
+        ]);
+        $this->assertDatabaseCount('monthly_budgets', 2);
+    }
+
+    public function test_bulk_forecast_requires_a_month_and_can_create_a_root_alongside_its_child(): void
+    {
+        $root = $this->temporarySubject('Bulk expenses', SubjectType::DEBTOR);
+        $child = $this->childSubject($root, 'Existing bulk expense', SubjectType::DEBTOR);
+        $this->budget($child, 'expense', 500, 6);
+        $this->grant('budgets.store');
+
+        $this->actingAs($this->user)->from(route('reports.cost-income'))->put(route('budgets.store'), [
+            'source' => 'cost-income',
+            'subject_id' => $root->id,
+            'forecast_amount' => -900,
+        ])->assertRedirect(route('reports.cost-income'))->assertSessionHasErrors('months');
+
+        $this->actingAs($this->user)->from(route('reports.cost-income'))->put(route('budgets.store'), [
+            'source' => 'cost-income',
+            'months' => [5, 6],
+            'subject_id' => $root->id,
+            'forecast_amount' => -900,
+        ])->assertRedirect(route('reports.cost-income'))->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('monthly_budgets', [
+            'subject_id' => $root->id,
+            'month' => 5,
+            'forecast_amount' => 900,
+        ]);
+        $this->assertDatabaseHas('monthly_budgets', [
+            'subject_id' => $root->id,
+            'month' => 6,
+            'forecast_amount' => 900,
+        ]);
+        $this->assertDatabaseCount('monthly_budgets', 3);
+    }
+
     public function test_signed_forecast_amount_is_validated_against_subject_type(): void
     {
         $income = $this->temporarySubject('Signed income', SubjectType::CREDITOR);
@@ -315,8 +412,9 @@ class MonthlyBudgetTest extends TestCase
         ]);
     }
 
-    public function test_manual_forecast_wins_and_system_average_is_available_for_comparison(): void
+    public function test_manual_forecast_wins_and_completed_month_average_is_available_for_comparison(): void
     {
+        $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 3, 15, '-').' 12:00:00'));
         $expense = $this->temporarySubject('Average expense', SubjectType::DEBTOR);
         $this->transaction($expense, -100, 1);
         $this->transaction($expense, -300, 2);
@@ -333,6 +431,44 @@ class MonthlyBudgetTest extends TestCase
 
         $this->assertSame('system', $systemLine['source']);
         $this->assertSame(200.0, $systemLine['forecast']);
+    }
+
+    public function test_system_forecast_rolls_leaf_invoice_and_payroll_postings_up_to_their_roots(): void
+    {
+        $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 3, 15, '-').' 12:00:00'));
+
+        // Invoice builders post revenue and COGS to the product/service subject, below the configured root and group subjects.
+        // Payroll accounting may likewise be posted to a personnel/department leaf below wages.
+        $incomeRoot = $this->temporarySubject('Sales revenue', SubjectType::CREDITOR);
+        $productIncomeGroup = $this->childSubject($incomeRoot, 'Product income group', SubjectType::CREDITOR);
+        $productIncomeLeaf = $this->childSubject($productIncomeGroup, 'Product income', SubjectType::CREDITOR);
+
+        $cogsRoot = $this->temporarySubject('Cost of goods sold', SubjectType::DEBTOR);
+        $productCogsGroup = $this->childSubject($cogsRoot, 'Product COGS group', SubjectType::DEBTOR);
+        $productCogsLeaf = $this->childSubject($productCogsGroup, 'Product COGS', SubjectType::DEBTOR);
+
+        $wageRoot = $this->temporarySubject('Personnel costs', SubjectType::DEBTOR);
+        $wageGroup = $this->childSubject($wageRoot, 'Salary costs', SubjectType::DEBTOR);
+        $employeeWageLeaf = $this->childSubject($wageGroup, 'Employee salary', SubjectType::DEBTOR);
+
+        $this->transaction($productIncomeLeaf, 300, 1);
+        $this->transaction($productCogsLeaf, -90, 1);
+        $this->transaction($employeeWageLeaf, -60, 1);
+        $this->transaction($productIncomeLeaf, 600, 2);
+        $this->transaction($productCogsLeaf, -180, 2);
+        $this->transaction($employeeWageLeaf, -120, 2);
+
+        $firstMonth = $this->service->analysis(1);
+        $currentMonth = $this->service->analysis(3);
+
+        $this->assertEqualsCanonicalizing(
+            [$incomeRoot->id, $cogsRoot->id, $wageRoot->id],
+            $currentMonth['budgetLines']->pluck('subject.id')->all()
+        );
+        $this->assertSame(300.0, $firstMonth['forecastIncome']);
+        $this->assertSame(150.0, $firstMonth['forecastExpense']);
+        $this->assertSame(450.0, $currentMonth['forecastIncome']);
+        $this->assertSame(225.0, $currentMonth['forecastExpense']);
     }
 
     public function test_forecast_selector_is_limited_to_roots_and_direct_children(): void
@@ -381,7 +517,7 @@ class MonthlyBudgetTest extends TestCase
         $this->assertDatabaseCount('monthly_budgets', 0);
     }
 
-    public function test_forecast_selector_hides_overlapping_branches_and_preserves_available_siblings(): void
+    public function test_forecast_selector_only_hides_subjects_already_forecast_for_the_month(): void
     {
         $root = $this->temporarySubject('Root', SubjectType::DEBTOR);
         $forecastedChild = $this->childSubject($root, 'Forecasted child', SubjectType::DEBTOR);
@@ -396,16 +532,17 @@ class MonthlyBudgetTest extends TestCase
         $this->grant('budgets.index');
 
         $this->actingAs($this->user)->get(route('budgets.index', ['month' => 5]))->assertOk()
-            ->assertViewHas('subjects', function (array $subjects) use ($availableRoot, $availableSibling, $forecastedRoot, $root) {
+            ->assertViewHas('subjects', function (array $subjects) use ($availableRoot, $availableSibling, $forecastedChild, $forecastedRoot, $root) {
                 $rootIds = collect($subjects)->pluck('id');
-                $siblingOption = collect($subjects)->firstWhere('id', $availableSibling->id);
+                $rootOption = collect($subjects)->firstWhere('id', $root->id);
 
-                return $siblingOption['parent_id'] === null && ! $rootIds->contains($root->id) && $rootIds->contains($availableRoot->id)
-                    && $rootIds->contains($availableSibling->id) && ! $rootIds->contains($forecastedRoot->id);
+                return $rootIds->contains($root->id) && $rootIds->contains($availableRoot->id) && ! $rootIds->contains($forecastedRoot->id)
+                    && collect($rootOption['children'])->contains('id', $availableSibling->id)
+                    && ! collect($rootOption['children'])->contains('id', $forecastedChild->id);
             });
     }
 
-    public function test_search_and_store_reject_existing_forecast_ancestors_and_descendants(): void
+    public function test_search_and_store_allow_root_and_direct_child_forecasts_but_reject_duplicates_and_deeper_levels(): void
     {
         $root = $this->temporarySubject('Budget root', SubjectType::DEBTOR);
         $forecastedChild = $this->childSubject($root, 'Budget forecasted child', SubjectType::DEBTOR);
@@ -414,15 +551,22 @@ class MonthlyBudgetTest extends TestCase
         $this->budget($forecastedChild, 'expense', 800, 5);
         $this->grant('budgets.search-subjects', 'budgets.store');
 
-        $this->actingAs($this->user)->getJson(route('budgets.search-subjects', ['q' => 'Budget', 'month' => 5]))->assertOk()->assertJsonCount(1)->assertJsonPath('0.id', $sibling->id);
+        $search = $this->actingAs($this->user)->getJson(route('budgets.search-subjects', ['q' => 'Budget', 'month' => 5]))->assertOk()->assertJsonCount(2);
+        $this->assertEqualsCanonicalizing([$root->id, $sibling->id], collect($search->json())->pluck('id')->all());
 
-        foreach ([$root, $forecastedChild, $grandchild] as $unavailableSubject) {
+        foreach ([$forecastedChild, $grandchild] as $unavailableSubject) {
             $this->actingAs($this->user)->put(route('budgets.store'), [
                 'month' => 5,
                 'subject_id' => $unavailableSubject->id,
                 'forecast_amount' => -100,
             ])->assertSessionHasErrors('subject_id');
         }
+
+        $this->actingAs($this->user)->put(route('budgets.store'), [
+            'month' => 5,
+            'subject_id' => $root->id,
+            'forecast_amount' => -200,
+        ])->assertSessionHasNoErrors();
 
         $this->actingAs($this->user)->put(route('budgets.store'), [
             'month' => 5,
@@ -434,6 +578,7 @@ class MonthlyBudgetTest extends TestCase
             'month' => 5,
             'subject_id' => $sibling->id,
         ]);
+        $this->assertDatabaseCount('monthly_budgets', 3);
     }
 
     public function test_rollover_replaces_current_lines_with_exact_previous_subject_forecasts(): void
@@ -479,11 +624,11 @@ class MonthlyBudgetTest extends TestCase
         $this->assertSame(1200.0, $analysis['actualIncome']);
         $this->assertSame(1500.0, $analysis['actualExpense']);
         $this->assertSame(200.0, $analysis['incomeVariance']);
-        $this->assertSame(-700.0, $analysis['expenseVariance']);
+        $this->assertSame(200.0, $analysis['expenseVariance']);
         $this->assertSame(600.0, $expenseLine['actual']);
         $this->assertSame(25.0, $expenseLine['variancePercent']);
         $this->assertSame('system', $unbudgetedLine['source']);
-        $this->assertSame(0.0, $unbudgetedLine['forecast']);
+        $this->assertSame(900.0, $unbudgetedLine['forecast']);
         $this->assertSame(900.0, $unbudgetedLine['actual']);
     }
 
@@ -534,22 +679,57 @@ class MonthlyBudgetTest extends TestCase
         $this->assertCount(12, $chart['labels']);
         $this->assertSame(1000.0, $chart['forecastIncome'][1]);
         $this->assertSame(1250.0, $chart['actualIncome'][1]);
-        $this->assertSame(1250.0, $chart['forecastIncome'][2]);
+        $this->assertSame(0.0, $chart['forecastIncome'][2]);
         $this->assertSame(800.0, $chart['forecastExpense'][10]);
         $this->assertSame(650.0, $chart['actualExpense'][10]);
-        $this->assertSame(625.0, $chart['forecastIncome'][11]);
-        $this->assertSame(325.0, $chart['forecastExpense'][11]);
+        $this->assertSame(0.0, $chart['forecastIncome'][11]);
+        $this->assertSame(0.0, $chart['forecastExpense'][11]);
         $this->assertNull($chart['actualIncome'][0]);
         $this->assertSame(1, $chart['documentCounts'][1]);
         $this->assertSame([
-            'forecastIncome' => 12875.0,
-            'forecastExpense' => 1125.0,
+            'forecastIncome' => 1000.0,
+            'forecastExpense' => 800.0,
             'actualIncome' => 1250.0,
             'actualExpense' => 650.0,
         ], $fullYearAnalysis['totals']);
     }
 
-    public function test_overlapping_forecast_subtrees_are_shown_per_line_but_counted_once_in_summary(): void
+    public function test_system_forecasts_show_roots_only_and_split_out_manually_forecast_direct_children(): void
+    {
+        $this->setFiscalYear((int) toEnglish(jdate('Y')) - 1);
+        $root = $this->temporarySubject('Root expense', SubjectType::DEBTOR);
+        $manualChild = $this->childSubject($root, 'Manual child expense', SubjectType::DEBTOR);
+        $manualGrandchild = $this->childSubject($manualChild, 'Manual child detail', SubjectType::DEBTOR);
+        $systemChild = $this->childSubject($root, 'System child expense', SubjectType::DEBTOR);
+
+        $this->transaction($root, -100, 5);
+        $this->transaction($manualChild, -200, 5);
+        $this->transaction($manualGrandchild, -300, 5);
+        $this->transaction($systemChild, -400, 5);
+
+        $rootOnly = $this->service->analysis(5);
+
+        $this->assertCount(1, $rootOnly['budgetLines']);
+        $this->assertSame($root->id, $rootOnly['budgetLines']->sole()['subject']->id);
+        $this->assertSame(1000.0, $rootOnly['forecastExpense']);
+
+        $this->budget($manualChild, 'expense', 800, 5);
+        $split = $this->service->analysis(5);
+        $rootLine = $split['budgetLines']->first(fn (array $line) => $line['subject']->id === $root->id);
+        $childLine = $split['budgetLines']->first(fn (array $line) => $line['subject']->id === $manualChild->id);
+
+        $this->assertCount(2, $split['budgetLines']);
+        $this->assertTrue($rootLine['isRemainder']);
+        $this->assertTrue($rootLine['includedInSummary']);
+        $this->assertSame(500.0, $rootLine['forecast']);
+        $this->assertTrue($childLine['isChild']);
+        $this->assertTrue($childLine['includedInSummary']);
+        $this->assertSame(800.0, $childLine['forecast']);
+        $this->assertSame(1300.0, $split['forecastExpense']);
+        $this->assertSame(1000.0, $split['actualExpense']);
+    }
+
+    public function test_manual_root_total_controls_summary_while_manual_child_is_shown_as_detail(): void
     {
         $this->setFiscalYear((int) toEnglish(jdate('Y')) - 1);
         $root = $this->temporarySubject('Expense root', SubjectType::DEBTOR);
@@ -571,13 +751,15 @@ class MonthlyBudgetTest extends TestCase
         $this->assertSame(500.0, $childLine['actual']);
         $this->assertTrue($rootLine['includedInSummary']);
         $this->assertFalse($childLine['includedInSummary']);
+        $this->assertSame(1000.0, $analysis['forecastExpense']);
         $this->assertSame(600.0, $analysis['actualExpense']);
         $this->assertTrue($analysis['hasOverlappingForecasts']);
+        $this->assertSame([$root->id, $child->id], $analysis['budgetLines']->pluck('subject.id')->all());
 
         $this->grant('budgets.index');
-        $this->actingAs($this->user)->get(route('budgets.index', ['month' => 5]))->assertOk()
-            ->assertViewHas('actualsCalculated', true)
-            ->assertSee(__('Some forecasts overlap because an ancestor and descendant have the same forecast type. Each row shows its full subtree actual, while summary actuals count overlapping transactions only once.'));
+        $this->actingAs($this->user)->get(route('budgets.index', ['month' => 5]))->assertOk()->assertViewHas('actualsCalculated', true)
+            ->assertSee(__('Child forecasts shown below a manually forecast root are details only and are already included in the root total.'))
+            ->assertSee(__('Included in parent total'));
     }
 
     public function test_actuals_are_calculated_when_the_month_has_documents_and_missing_documents_are_flagged(): void
