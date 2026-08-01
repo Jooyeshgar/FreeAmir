@@ -19,4 +19,14 @@ class Bank extends Model
     {
         static::addGlobalScope(new FiscalYearScope);
     }
+
+    public function accounts()
+    {
+        return $this->hasMany(BankAccount::class);
+    }
+
+    public function cheques()
+    {
+        return $this->hasMany(Cheque::class);
+    }
 }

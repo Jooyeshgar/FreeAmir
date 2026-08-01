@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ChequeType;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Http\Requests\StoreInvoiceRequest;
+use App\Models\Bank;
+use App\Models\BankAccount;
+use App\Models\Checkbook;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
@@ -15,6 +19,7 @@ use App\Models\ProductGroup;
 use App\Models\Service;
 use App\Models\ServiceGroup;
 use App\Services\AncillaryCostService;
+use App\Services\ChequeService;
 use App\Services\FiscalYearTransferService;
 use App\Services\GroupActionService;
 use App\Services\InvoiceService;
@@ -333,7 +338,7 @@ class InvoiceController extends Controller
             ->with($msgType, $msg);
     }
 
-    public function show(Invoice $invoice, PaymentService $paymentService)
+    public function show(Invoice $invoice, PaymentService $paymentService, ChequeService $chequeService)
     {
         $changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
 
@@ -356,12 +361,17 @@ class InvoiceController extends Controller
             'payments.document.transactions.subject',
             'payments.payer.subject',
             'payments.creator',
+            'payments.cheque',
         ]);
 
         $paymentDecision = $paymentService->validateInvoicePayment($invoice);
         $settlementSubjects = $paymentService->settlementSubjects();
         $paidAmount = $paymentService->paidAmount($invoice);
         $remainingAmount = $paymentService->remainingAmount($invoice);
+        $chequeDirection = $chequeService->directionForInvoice($invoice);
+        $chequeBanks = $chequeDirection ? Bank::orderBy('name')->get() : collect();
+        $chequeBankAccounts = $chequeDirection === ChequeType::PAYABLE ? BankAccount::with('bank')->orderBy('name')->get() : collect();
+        $chequeCheckbooks = $chequeDirection === ChequeType::PAYABLE ? Checkbook::with('bankAccount')->where('is_active', true)->orderBy('title')->get() : collect();
 
         $ancillaryCostProductIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->unique()->values()->all();
         $canCreateAncillaryCost = $invoice->invoice_type === InvoiceType::BUY && ! $isServiceBuy && empty(InvoiceService::notAllowedInvoiceForAncillaryCosts($invoice, $ancillaryCostProductIds));
@@ -370,7 +380,7 @@ class InvoiceController extends Controller
             $q->where('users.id', auth()->id());
         })->where('id', '!=', getActiveCompany())->get();
 
-        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'paidAmount', 'remainingAmount', 'fiscalYears', 'canCreateAncillaryCost'));
+        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'paidAmount', 'remainingAmount', 'chequeDirection', 'chequeBanks', 'chequeBankAccounts', 'chequeCheckbooks', 'fiscalYears', 'canCreateAncillaryCost'));
     }
 
     public function print(Invoice $invoice)

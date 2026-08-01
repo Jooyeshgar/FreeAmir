@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ImportCustomerRequest;
 use App\Http\Requests\StoreCustomerRequest;
+use App\Models\Cheque;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Invoice;
@@ -149,9 +150,21 @@ class CustomerController extends Controller
             ->where('customer_id', $customer->id)
             ->orderByDesc('date')
             ->orderByDesc('id')
-            ->paginate(15);
+            ->paginate(15, ['*'], 'orders_page')
+            ->withQueryString();
 
-        return view('customers.show', compact('customer', 'orders', 'subjectBalance'));
+        $cheques = Cheque::query()
+            ->with(['party', 'endorsedTo', 'bank', 'bankAccount'])
+            ->where(function ($query) use ($customer) {
+                $query->where('customer_id', $customer->id)
+                    ->orWhere('endorsed_to_id', $customer->id);
+            })
+            ->orderBy('due_date')
+            ->orderByDesc('id')
+            ->paginate(15, ['*'], 'cheques_page')
+            ->withQueryString();
+
+        return view('customers.show', compact('customer', 'orders', 'cheques', 'subjectBalance'));
     }
 
     public function export(): StreamedResponse
