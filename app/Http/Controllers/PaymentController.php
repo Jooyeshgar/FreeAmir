@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ChequeType;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Services\ChequeService;
 use App\Services\PaymentService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class PaymentController extends Controller
 {
-    public function __construct(private readonly PaymentService $paymentService) {}
+    public function __construct(private readonly PaymentService $paymentService, private readonly ChequeService $chequeService) {}
 
     public function store(Request $request, Invoice $invoice)
     {
@@ -32,6 +35,53 @@ class PaymentController extends Controller
         }
 
         return redirect()->route('invoices.show', $invoice)->with('success', __('Payment recorded successfully.'));
+    }
+
+    public function storeCheque(Request $request, Invoice $invoice)
+    {
+        $direction = $this->chequeService->directionForInvoice($invoice);
+        abort_unless($direction, 422, __('This invoice type cannot be settled by cheque.'));
+
+        $request->merge([
+            'amount' => convertToFloat($request->input('amount', 0)),
+            'sayad_number' => preg_replace('/\D/', '', toEnglish((string) $request->input('sayad_number'))),
+            'serial' => trim(toEnglish((string) $request->input('serial'))),
+            'issue_date' => $request->filled('issue_date') ? jalaliInputToGregorian($request->input('issue_date'), 'issue_date') : null,
+            'due_date' => $request->filled('due_date') ? jalaliInputToGregorian($request->input('due_date'), 'due_date') : null,
+        ]);
+        if ($request->filled('checkbook_leaf_number')) {
+            $request->merge(['checkbook_leaf_number' => convertToInt($request->input('checkbook_leaf_number'))]);
+        }
+
+        $companyId = getActiveCompany();
+        $validated = $request->validate([
+            'amount' => ['required', 'numeric', 'gt:0'],
+            'issue_date' => ['required', 'date'],
+            'due_date' => ['required', 'date', 'after_or_equal:issue_date'],
+            'serial' => ['nullable', 'required_without:checkbook_leaf_number', 'string', 'max:50'],
+            'sayad_number' => ['required', 'regex:/^\d{16}$/', Rule::unique('cheques', 'sayad_number')],
+            'bank_id' => ['required', Rule::exists('banks', 'id')->where('company_id', $companyId)],
+            'bank_account_id' => [
+                Rule::requiredIf($direction === ChequeType::PAYABLE),
+                'nullable',
+                Rule::exists('bank_accounts', 'id')->where('company_id', $companyId),
+            ],
+            'checkbook_id' => ['nullable', Rule::exists('checkbooks', 'id')->where('company_id', $companyId)],
+            'checkbook_leaf_number' => ['nullable', 'integer', 'min:1'],
+            'branch_name' => ['nullable', 'string', 'max:100'],
+            'branch_city' => ['nullable', 'string', 'max:100'],
+            'description' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $this->chequeService->register($request->user(), [
+            ...$validated,
+            'invoice_id' => $invoice->id,
+            'direction' => $direction->value,
+            'purpose' => ChequeType::SETTLEMENT->value,
+            'party_id' => $invoice->customer_id,
+        ]);
+
+        return redirect()->route('invoices.show', $invoice)->with('success', __('Invoice payment cheque registered successfully.'));
     }
 
     public function destroy(Invoice $invoice, Payment $payment)

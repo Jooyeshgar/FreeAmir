@@ -679,8 +679,18 @@
                                 @foreach ($invoice->payments as $payment)
                                     <tr class="hover:bg-base-300">
                                         <td class="px-4 py-3">
-                                            {{ $payment->created_at ? formatDate($payment->created_at) : '—' }}</td>
-                                        <td class="px-4 py-3">{{ $payment->settlementSubject()?->fullname() ?? '—' }}
+                                            {{ $payment->date ? formatDate($payment->date) : '—' }}</td>
+                                        <td class="px-4 py-3">
+                                            @if($payment->cheque)
+                                                @can('cheques.show')
+                                                    <a class="link link-primary" href="{{ route('cheques.show', $payment->cheque) }}">{{ __('Cheque') }} {{ localizeNumber($payment->cheque->serial) }}</a>
+                                                @else
+                                                    {{ __('Cheque') }} {{ localizeNumber($payment->cheque->serial) }}
+                                                @endcan
+                                                <span class="badge badge-outline badge-sm ms-1">{{ $payment->cheque->status->label() }}</span>
+                                            @else
+                                                {{ $payment->settlementSubject()?->fullname() ?? '—' }}
+                                            @endif
                                         </td>
                                         <td class="px-4 py-3 text-right">{{ formatNumber((float) $payment->amount) }}
                                         </td>
@@ -702,7 +712,7 @@
                                         <td class="px-4 py-3">{{ $payment->description ?? '—' }}</td>
                                         <td class="px-4 py-3">
                                             <div class="flex flex-wrap gap-2 items-center">
-                                                @if ($payment->document)
+                                                @if ($payment->document && !$payment->cheque_id)
                                                     @can('invoices.payments.destroy-document')
                                                         <form class="m-0" method="POST"
                                                             action="{{ route('invoices.payments.destroy-document', [$invoice, $payment]) }}"
@@ -713,7 +723,7 @@
                                                                 class="btn btn-xs btn-warning">{{ __('Remove Document') }}</button>
                                                         </form>
                                                     @endcan
-                                                @elseif ($payment->settlement_subject_id)
+                                                @elseif (!$payment->cheque_id && $payment->settlement_subject_id)
                                                     @can('invoices.payments.create-document')
                                                         <form class="m-0" method="POST"
                                                             action="{{ route('invoices.payments.create-document', [$invoice, $payment]) }}">
@@ -727,11 +737,11 @@
                                                 @can('invoices.payments.destroy')
                                                     <form class="m-0" method="POST"
                                                         action="{{ route('invoices.payments.destroy', [$invoice, $payment]) }}"
-                                                        onsubmit="return confirm('{{ __('Are you sure you want to remove this payment? Its accounting document will be reversed.') }}')">
+                                                        onsubmit="return confirm('{{ $payment->cheque_id ? __('Unlink this cheque from the invoice? The cheque and its accounting document will be preserved.') : __('Are you sure you want to remove this payment? Its accounting document will be reversed.') }}')">
                                                         @csrf
                                                         @method('DELETE')
                                                         <button type="submit"
-                                                            class="btn btn-xs btn-error">{{ __('Delete') }}</button>
+                                                            class="btn btn-xs btn-error">{{ $payment->cheque_id ? __('Unlink') : __('Delete') }}</button>
                                                     </form>
                                                 @endcan
                                             </div>
@@ -748,7 +758,7 @@
                 @endif
 
                 @can('invoices.payments.store')
-                    <div class="flex mt-4">
+                    <div class="flex flex-wrap gap-2 mt-4">
                         @if ($paymentDecision->hasErrors())
                             <span class="tooltip"
                                 data-tip="{{ $paymentDecision->messages->pluck('text')->implode(' ') }}">
@@ -764,6 +774,18 @@
                                 </svg>
                                 {{ __('Record Payment') }}
                             </button>
+                            @if($chequeDirection)
+                                @can('invoices.payments.store-cheque')
+                                    <button class="btn btn-secondary gap-2" onclick="cheque_payment_modal.showModal()">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                                            viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M3 7h18M5 11h14M7 15h4m-6 4h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2Z" />
+                                        </svg>
+                                        {{ __('Pay by cheque') }}
+                                    </button>
+                                @endcan
+                            @endif
                         @endif
                     </div>
 
@@ -876,12 +898,119 @@
                             <button>{{ __('close') }}</button>
                         </form>
                     </dialog>
+                    @if($chequeDirection)
+                        @can('invoices.payments.store-cheque')
+                            <dialog id="cheque_payment_modal" class="modal">
+                                <div class="modal-box max-w-3xl">
+                                    <div class="flex items-center justify-between gap-3 mb-4">
+                                        <div>
+                                            <h3 class="text-lg font-bold">{{ __('Pay invoice by cheque') }}</h3>
+                                            <p class="text-sm opacity-70">{{ $chequeDirection->label() }} · {{ $invoice->customer?->name }}</p>
+                                        </div>
+                                        <span class="badge badge-secondary">{{ __('Remaining Amount') }}: {{ formatNumber($remainingAmount) }}</span>
+                                    </div>
+                                    <form method="POST" action="{{ route('invoices.payments.store-cheque', $invoice) }}"
+                                        class="space-y-4" x-data="{ checkbook: '' }">
+                                        @csrf
+                                        <div class="grid gap-4 md:grid-cols-2">
+                                            <div x-data="{ amountInput: '{{ $remainingAmount }}' }">
+                                                <label class="label"><span class="label-text">{{ __('Amount') }}</span></label>
+                                                <x-text-input input_name="amount" input_class="input-bordered locale-number"
+                                                    input_value="{{ $remainingAmount }}" required x-model="amountInput"
+                                                    @input="amountInput = $store.utils.cleanupNumber($event.target.value)"
+                                                    x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(amountInput))" />
+                                            </div>
+                                            <div>
+                                                <label class="label"><span class="label-text">{{ __('16-digit Sayad number') }}</span></label>
+                                                <x-text-input input_name="sayad_number" input_class="input-bordered font-mono"
+                                                    inputmode="numeric" minlength="16" maxlength="16" required />
+                                            </div>
+                                            <div>
+                                                <label class="label"><span class="label-text">{{ __('Issue date') }}</span></label>
+                                                <x-text-input data-jdp input_name="issue_date" autocomplete="off" readonly
+                                                    input_class="input-bordered" input_value="{{ convertToJalali(now(), true) }}" required />
+                                            </div>
+                                            <div>
+                                                <label class="label"><span class="label-text">{{ __('Due date') }}</span></label>
+                                                <x-text-input data-jdp input_name="due_date" autocomplete="off" readonly
+                                                    input_class="input-bordered" required />
+                                            </div>
+                                            <div>
+                                                <label class="label"><span class="label-text">{{ __('Bank') }}</span></label>
+                                                <select name="bank_id" class="select select-bordered w-full" required>
+                                                    <option value="">{{ __('Select bank') }}</option>
+                                                    @foreach($chequeBanks as $bank)
+                                                        <option value="{{ $bank->id }}">{{ $bank->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            @if($chequeDirection === \App\Enums\ChequeType::PAYABLE)
+                                                <div>
+                                                    <label class="label"><span class="label-text">{{ __('Bank account') }}</span></label>
+                                                    <select name="bank_account_id" class="select select-bordered w-full" required>
+                                                        <option value="">{{ __('Select bank account') }}</option>
+                                                        @foreach($chequeBankAccounts as $account)
+                                                            <option value="{{ $account->id }}">{{ $account->bank?->name }} — {{ $account->name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label class="label"><span class="label-text">{{ __('Checkbook') }}</span></label>
+                                                    <select name="checkbook_id" class="select select-bordered w-full" x-model="checkbook">
+                                                        <option value="">{{ __('Without checkbook') }}</option>
+                                                        @foreach($chequeCheckbooks as $checkbook)
+                                                            <option value="{{ $checkbook->id }}">{{ $checkbook->title }} ({{ localizeNumber($checkbook->next_leaf_number) }}–{{ localizeNumber($checkbook->end_leaf_number) }})</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                                <div x-show="checkbook">
+                                                    <label class="label"><span class="label-text">{{ __('Cheque leaf number') }}</span></label>
+                                                    <x-text-input input_name="checkbook_leaf_number" input_class="input-bordered"
+                                                        inputmode="numeric" x-bind:required="checkbook" />
+                                                </div>
+                                            @endif
+                                            <div x-show="!checkbook">
+                                                <label class="label"><span class="label-text">{{ __('Cheque serial') }}</span></label>
+                                                <x-text-input input_name="serial" input_class="input-bordered" x-bind:required="!checkbook" />
+                                            </div>
+                                            <div>
+                                                <label class="label"><span class="label-text">{{ __('Branch name') }}</span></label>
+                                                <x-text-input input_name="branch_name" input_class="input-bordered" />
+                                            </div>
+                                            <div>
+                                                <label class="label"><span class="label-text">{{ __('Branch city') }}</span></label>
+                                                <x-text-input input_name="branch_city" input_class="input-bordered" />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="label"><span class="label-text">{{ __('Description') }}</span></label>
+                                            <textarea name="description" class="textarea textarea-bordered w-full" rows="2"></textarea>
+                                        </div>
+                                        <div class="alert alert-info text-sm">
+                                            <span>{{ __('The cheque registration document will settle this invoice. Bank clearance remains a separate cheque lifecycle action.') }}</span>
+                                        </div>
+                                        <div class="modal-action">
+                                            <button type="submit" class="btn btn-secondary">{{ __('Register cheque and pay') }}</button>
+                                            <button type="button" class="btn" onclick="cheque_payment_modal.close()">{{ __('Cancel') }}</button>
+                                        </div>
+                                    </form>
+                                </div>
+                                <form method="dialog" class="modal-backdrop"><button>{{ __('close') }}</button></form>
+                            </dialog>
+                        @endcan
+                    @endif
                     @pushOnce('scripts')
                         <script type="module">
                             jalaliDatepicker.startWatch({
                                 persianDigits: true,
                                 container: '#payment_modal'
                             });
+                            @if($chequeDirection)
+                                jalaliDatepicker.startWatch({
+                                    persianDigits: true,
+                                    container: '#cheque_payment_modal'
+                                });
+                            @endif
                         </script>
                     @endPushOnce
                 @endcan

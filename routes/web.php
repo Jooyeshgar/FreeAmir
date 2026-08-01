@@ -123,6 +123,15 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::resource('bank-accounts', Controllers\BankAccountController::class);
     Route::resource('banks', Controllers\BankController::class);
 
+    Route::get('cheques/report', [Controllers\ChequeController::class, 'report'])->name('cheques.report');
+    Route::get('cheques/calendar', [Controllers\ChequeController::class, 'calendar'])->name('cheques.calendar');
+    Route::get('cheques/weighted-average-maturity', [Controllers\ChequeWeightedAverageMaturityController::class, 'index'])->name('cheques.weighted-average-maturity');
+    Route::post('cheques/weighted-average-maturity', [Controllers\ChequeWeightedAverageMaturityController::class, 'calculate'])->name('cheques.weighted-average-maturity.calculate');
+    Route::get('cheques/{cheque}/print', [Controllers\ChequeController::class, 'print'])->name('cheques.print');
+    Route::post('cheques/{cheque}/transition/{action}', [Controllers\ChequeController::class, 'transition'])->name('cheques.transition');
+    Route::resource('cheques', Controllers\ChequeController::class);
+    Route::resource('checkbooks', Controllers\CheckbookController::class)->except(['show']);
+
     Route::get('invoices/search/{invoice_type}', [Controllers\InvoiceController::class, 'search'])->name('invoices.search');
     Route::get('invoices/get-items/{invoice}', [Controllers\InvoiceController::class, 'getItems'])->name('invoices.get-items');
     Route::get('invoices/search-customer', [Controllers\InvoiceController::class, 'searchCustomer'])->name('invoices.search-customer');
@@ -157,6 +166,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::post('invoices/{invoice}/void', [Controllers\InvoiceController::class, 'voidInvoice'])->name('invoices.void');
     Route::post('invoices/{invoice}/change-status/{status}', [Controllers\InvoiceController::class, 'changeStatus'])->name('invoices.change-status');
     Route::post('invoices/{invoice}/payments', [Controllers\PaymentController::class, 'store'])->name('invoices.payments.store');
+    Route::post('invoices/{invoice}/payments/cheque', [Controllers\PaymentController::class, 'storeCheque'])->name('invoices.payments.store-cheque');
     Route::delete('invoices/{invoice}/payments/{payment}', [Controllers\PaymentController::class, 'destroy'])->name('invoices.payments.destroy');
     Route::post('invoices/{invoice}/payments/{payment}/document', [Controllers\PaymentController::class, 'createDocument'])->name('invoices.payments.create-document');
     Route::delete('invoices/{invoice}/payments/{payment}/document', [Controllers\PaymentController::class, 'destroyDocument'])->name('invoices.payments.destroy-document');

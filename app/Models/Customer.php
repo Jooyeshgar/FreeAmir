@@ -95,4 +95,14 @@ class Customer extends Model
     {
         return $this->hasMany(Comment::class, 'customer_id');
     }
+
+    public function cheques(): HasMany
+    {
+        return $this->hasMany(Cheque::class);
+    }
+
+    public function endorsedCheques(): HasMany
+    {
+        return $this->hasMany(Cheque::class, 'endorsed_to_id');
+    }
 }
