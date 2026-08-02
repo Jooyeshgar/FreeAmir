@@ -154,7 +154,7 @@ class CustomerController extends Controller
             ->withQueryString();
 
         $cheques = Cheque::query()
-            ->with(['party', 'endorsedTo', 'bank', 'bankAccount'])
+            ->with(['customer', 'endorsedTo', 'bankAccount.bank'])
             ->where(function ($query) use ($customer) {
                 $query->where('customer_id', $customer->id)
                     ->orWhere('endorsed_to_id', $customer->id);

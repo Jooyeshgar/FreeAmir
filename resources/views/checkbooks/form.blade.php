@@ -16,8 +16,8 @@
                 <x-text-input label_text_class="text-gray-500" name="start_leaf_number" title="{{ __('cheques start_leaf') }}" :value="old('start_leaf_number', $checkbook->start_leaf_number)" type="number" required />
                 <x-text-input label_text_class="text-gray-500" name="end_leaf_number" title="{{ __('cheques end_leaf') }}" :value="old('end_leaf_number', $checkbook->end_leaf_number)" type="number" required />
                 <x-text-input label_text_class="text-gray-500" name="next_leaf_number" title="{{ __('cheques next_leaf') }}" :value="old('next_leaf_number', $checkbook->next_leaf_number)" type="number" />
-                <x-checkbox id="is_active" name="is_active" title="{{ __('cheques active') }}" :checked="old('is_active', $checkbook->exists ? $checkbook->is_active : true)" />
                 <input type="hidden" name="is_active" value="0">
+                <x-checkbox id="is_active" name="is_active" title="{{ __('cheques active') }}" :checked="old('is_active', $checkbook->exists ? $checkbook->is_active : true)" />
             </div>
 
             <div class="card-actions justify-end">

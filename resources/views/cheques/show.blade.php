@@ -13,9 +13,6 @@
                         @if ($cheque->histories->whereNotNull('from_status')->isEmpty())
                             <a class="btn btn-outline btn-sm" href="{{ route('cheques.edit', $cheque) }}">{{ __('cheques edit') }}</a>
                         @endif
-                        @if ($cheque->direction === \App\Enums\ChequeType::PAYABLE)
-                            <a class="btn btn-outline btn-sm" target="_blank" href="{{ route('cheques.print', $cheque) }}">{{ __('cheques print') }}</a>
-                        @endif
                         <form method="POST" action="{{ route('cheques.destroy', $cheque) }}">
                             @csrf
                             @method('DELETE')
@@ -28,14 +25,13 @@
                     @foreach ([
                         __('cheques fields sayad') => localizeNumber($cheque->sayad_number),
                         __('cheques fields amount') => formatNumber($cheque->amount),
-                        __('cheques fields party') => $cheque->party?->name,
+                        __('cheques fields party') => $cheque->customer?->name,
                         __('cheques fields direction') => $cheque->direction->label(),
                         __('cheques fields purpose') => $cheque->purpose->label(),
                         __('cheques fields issue_date') => formatDate($cheque->write_date),
                         __('cheques fields due_date') => formatDate($cheque->due_date),
-                        __('cheques fields bank') => $cheque->bank?->name,
+                        __('cheques fields bank') => $cheque->bankAccount?->bank?->name,
                         __('cheques fields bank_account') => $cheque->bankAccount?->name,
-                        __('cheques fields branch') => trim(($cheque->branch_name ?? '') . ' ' . ($cheque->branch_city ?? '')),
                         __('cheques fields endorsed_to') => $cheque->endorsedTo?->name,
                         __('cheques fields description') => $cheque->desc,
                     ] as $label => $value)
@@ -87,27 +83,15 @@
 
         <div class="card bg-base-100 shadow-xl">
             <div class="card-body">
-                <div class="flex justify-between">
-                    <h2 class="card-title text-base">{{ __('cheques timeline') }}</h2>
-                    @if ($cheque->histories->whereNull('reverted_at')->whereNotNull('from_status')->isNotEmpty())
-                        <form method="POST" action="{{ route('cheques.transition', [$cheque, 'revert']) }}">
-                            @csrf
-                            <input type="hidden" name="version" value="{{ $cheque->version }}">
-                            <button class="btn btn-warning btn-xs" onclick="return confirm('{{ __('cheques confirm_revert') }}')">{{ __('cheques revert_latest') }}</button>
-                        </form>
-                    @endif
-                </div>
+                <h2 class="card-title text-base">{{ __('cheques timeline') }}</h2>
                 <div class="mt-4 space-y-3">
                     @foreach ($cheque->histories->reverse() as $history)
-                        <div class="border-s-4 {{ $history->reverted_at ? 'border-base-300 opacity-50' : 'border-primary' }} ps-4 py-1">
+                        <div class="border-s-4 border-primary ps-4 py-1">
                             <div class="flex flex-wrap gap-2">
-                                <strong>{{ __('cheques event ' . $history->event) }}</strong>
-                                <span>{{ formatDateTime($history->occurred_at) }}</span>
-                                @if ($history->reverted_at)
-                                    <span class="badge badge-ghost badge-sm">{{ __('cheques reverted') }}</span>
-                                @endif
+                                <strong>{{ $history->from_status?->label() ?? '—' }} → {{ $history->to_status->label() }}</strong>
+                                <span>{{ formatDateTime($history->created_at) }}</span>
                             </div>
-                            <div class="text-sm opacity-70">{{ $history->actor?->name }}
+                            <div class="text-sm opacity-70">{{ $history->user?->name }}
                                 @if ($history->document_id)
                                     <a class="link" href="{{ route('documents.show', $history->document_id) }}">{{ __('cheques document') }}</a>
                                 @endif

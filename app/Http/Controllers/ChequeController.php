@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ChequeType;
-use App\Models\Bank;
 use App\Models\BankAccount;
 use App\Models\Checkbook;
 use App\Models\Cheque;
@@ -20,11 +19,7 @@ class ChequeController extends Controller
 
     public function index(Request $request)
     {
-        $cheques = $this->filteredQuery($request)
-            ->with(['party', 'endorsedTo', 'bank', 'bankAccount'])
-            ->latest('due_date')
-            ->paginate(20)
-            ->withQueryString();
+        $cheques = $this->filteredQuery($request)->with(['customer', 'endorsedTo', 'bankAccount.bank'])->latest('due_date')->paginate(20)->withQueryString();
 
         return view('cheques.index', [
             'cheques' => $cheques,
@@ -52,10 +47,7 @@ class ChequeController extends Controller
 
     public function show(Cheque $cheque)
     {
-        $cheque->load([
-            'party', 'endorsedTo', 'bank', 'bankAccount.bank', 'checkbook', 'creator',
-            'histories.actor', 'histories.document', 'histories.payment', 'histories.revertedBy',
-        ]);
+        $cheque->load(['customer', 'endorsedTo', 'bankAccount.bank', 'checkbook', 'creator', 'histories.user', 'histories.document', 'histories.payment']);
 
         return view('cheques.show', [
             'cheque' => $cheque,
@@ -90,7 +82,7 @@ class ChequeController extends Controller
 
     public function transition(Request $request, Cheque $cheque, string $action)
     {
-        $this->chequeService->transition($cheque, $request->user(), $action, $this->validateTransition($request));
+        $cheque = $this->chequeService->transition($cheque, $request->user(), $action, $this->validateTransition($request));
 
         return redirect()->route('cheques.show', $cheque)->with('success', __('cheques messages transitioned'));
     }
@@ -98,42 +90,15 @@ class ChequeController extends Controller
     public function report(Request $request)
     {
         $query = $this->filteredQuery($request);
-        $byStatus = (clone $query)
-            ->selectRaw('status, COUNT(*) as count, SUM(amount) as total')
-            ->groupBy('status')
-            ->get()
+        $byStatus = (clone $query)->selectRaw('status, COUNT(*) as count, SUM(amount) as total')->groupBy('status')->get()
             ->mapWithKeys(fn (Cheque $row) => [$row->getRawOriginal('status') => $row]);
 
-        $upcoming = (clone $query)
-            ->whereIn('status', [ChequeType::REGISTERED, ChequeType::DEPOSITED, ChequeType::ISSUED])
-            ->whereBetween('due_date', [now()->toDateString(), now()->addDays(30)->toDateString()])
-            ->with('party')
-            ->orderBy('due_date')
-            ->get();
+        $upcoming = (clone $query)->whereIn('status', [ChequeType::REGISTERED, ChequeType::DEPOSITED, ChequeType::ISSUED])->whereBetween('due_date', [now()->toDateString(), now()->addDays(30)->toDateString()])
+            ->with('customer')->orderBy('due_date')->get();
 
-        $overdue = (clone $query)
-            ->whereIn('status', [ChequeType::REGISTERED, ChequeType::DEPOSITED, ChequeType::ISSUED])
-            ->whereDate('due_date', '<', now()->toDateString())
-            ->sum('amount');
+        $overdue = (clone $query)->whereIn('status', [ChequeType::REGISTERED, ChequeType::DEPOSITED, ChequeType::ISSUED])->whereDate('due_date', '<', now()->toDateString())->sum('amount');
 
         return view('cheques.report', compact('byStatus', 'upcoming', 'overdue'));
-    }
-
-    public function calendar(Request $request)
-    {
-        $from = $request->filled('from') ? jalaliInputToGregorian($request->input('from'), 'from') : now()->startOfMonth()->toDateString();
-        $to = $request->filled('to') ? jalaliInputToGregorian($request->input('to'), 'to') : now()->endOfMonth()->toDateString();
-        $cheques = Cheque::with('party')->whereBetween('due_date', [$from, $to])->orderBy('due_date')->get();
-
-        return view('cheques.calendar', compact('cheques', 'from', 'to'));
-    }
-
-    public function print(Cheque $cheque)
-    {
-        abort_unless($cheque->direction === ChequeType::PAYABLE, 404);
-        $cheque->load(['party', 'bankAccount.bank', 'checkbook']);
-
-        return view('cheques.print', compact('cheque'));
     }
 
     private function filteredQuery(Request $request): Builder
@@ -142,9 +107,7 @@ class ChequeController extends Controller
         $q = trim(toEnglish((string) $request->input('q')));
         if ($q !== '') {
             $query->where(function (Builder $builder) use ($q) {
-                $builder->where('serial', 'like', "%{$q}%")
-                    ->orWhere('sayad_number', 'like', "%{$q}%")
-                    ->orWhereHas('party', fn (Builder $party) => $party->where('name', 'like', "%{$q}%"));
+                $builder->where('serial', 'like', "%{$q}%")->orWhere('sayad_number', 'like', "%{$q}%")->orWhereHas('customer', fn (Builder $customer) => $customer->where('name', 'like', "%{$q}%"));
             });
         }
 
@@ -173,7 +136,6 @@ class ChequeController extends Controller
     {
         return [
             'selectedDirection' => ChequeType::tryFrom((int) $direction) ?? ChequeType::RECEIVABLE,
-            'banks' => Bank::orderBy('name')->get(),
             'bankAccounts' => BankAccount::with('bank')->orderBy('name')->get(),
             'checkbooks' => Checkbook::with('bankAccount')->where('is_active', true)->orderBy('title')->get(),
             'parties' => Customer::orderBy('name')->get(['id', 'name']),
@@ -211,28 +173,20 @@ class ChequeController extends Controller
                 Rule::unique('cheques', 'sayad_number')->ignore($cheque?->id),
             ],
             'party_id' => ['required', Rule::exists('customers', 'id')->where('company_id', $companyId)],
-            'bank_id' => ['required', Rule::exists('banks', 'id')->where('company_id', $companyId)],
             'bank_account_id' => [
                 Rule::requiredIf($request->integer('direction') === ChequeType::PAYABLE->value),
                 'nullable',
                 Rule::exists('bank_accounts', 'id')->where('company_id', $companyId),
             ],
             'checkbook_id' => ['nullable', Rule::exists('checkbooks', 'id')->where('company_id', $companyId)],
-            'checkbook_leaf_number' => ['nullable', 'integer', 'min:1'],
-            'branch_name' => ['nullable', 'string', 'max:100'],
-            'branch_city' => ['nullable', 'string', 'max:100'],
+            'checkbook_leaf_number' => [Rule::requiredIf($request->filled('checkbook_id')), 'nullable', 'integer', 'min:1'],
             'description' => ['nullable', 'string', 'max:1000'],
             'version' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        $validator->after(function ($validator) use ($request) {
+        $validator->after(function ($validator) use ($request, $cheque) {
             if ($validator->errors()->isNotEmpty()) {
                 return;
-            }
-
-            $account = $request->filled('bank_account_id') ? BankAccount::find($request->integer('bank_account_id')) : null;
-            if ($account && (int) $account->bank_id !== $request->integer('bank_id')) {
-                $validator->errors()->add('bank_account_id', __('cheques validation account_bank_mismatch'));
             }
 
             if ($request->filled('checkbook_id')) {
@@ -240,12 +194,18 @@ class ChequeController extends Controller
                 $leaf = $request->integer('checkbook_leaf_number');
                 if (! $checkbook || (int) $checkbook->bank_account_id !== $request->integer('bank_account_id')) {
                     $validator->errors()->add('checkbook_id', __('cheques validation checkbook_account_mismatch'));
-                } elseif (! $leaf || ! $checkbook->contains($leaf)) {
+                } elseif (! $checkbook->is_active && $checkbook->id !== $cheque?->checkbook_id) {
+                    $validator->errors()->add('checkbook_id', __('cheques validation leaf_out_of_range'));
+                } elseif (! $leaf || $leaf < $checkbook->start_leaf_number || $leaf > $checkbook->end_leaf_number) {
                     $validator->errors()->add('checkbook_leaf_number', __('cheques validation leaf_out_of_range'));
+                } elseif ($checkbook->cheques()->where('checkbook_leaf_number', $leaf)->when($cheque, fn (Builder $query) => $query->whereKeyNot($cheque->id))->exists()) {
+                    $validator->errors()->add('checkbook_leaf_number', __('cheques validation leaf_already_used'));
                 }
                 if ($request->integer('direction') !== ChequeType::PAYABLE->value) {
                     $validator->errors()->add('checkbook_id', __('cheques validation checkbook_payable_only'));
                 }
+            } elseif ($request->filled('checkbook_leaf_number')) {
+                $validator->errors()->add('checkbook_leaf_number', __('cheques validation leaf_out_of_range'));
             }
         });
 

@@ -29,9 +29,9 @@
                                     @endunless
                                 </td>
                                 <td>{{ $checkbook->bankAccount?->bank?->name }} — {{ $checkbook->bankAccount?->name }}</td>
-                                <td>{{ localizeNumber($checkbook->serialFor($checkbook->start_leaf_number)) }} – {{ localizeNumber($checkbook->serialFor($checkbook->end_leaf_number)) }}</td>
+                                <td>{{ localizeNumber(($checkbook->serial_prefix ?? '').$checkbook->start_leaf_number) }} – {{ localizeNumber(($checkbook->serial_prefix ?? '').$checkbook->end_leaf_number) }}</td>
                                 <td>{{ localizeNumber($checkbook->next_leaf_number) }}</td>
-                                <td>{{ localizeNumber($checkbook->remainingLeaves()) }}</td>
+                                <td>{{ localizeNumber(max(0, $checkbook->end_leaf_number - $checkbook->next_leaf_number + 1)) }}</td>
                                 <td><a class="btn btn-ghost btn-xs" href="{{ route('checkbooks.edit', $checkbook) }}">{{ __('cheques edit') }}</a>
                                     <form class="inline" method="POST" action="{{ route('checkbooks.destroy', $checkbook) }}">
                                         @csrf

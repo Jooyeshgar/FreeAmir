@@ -6,8 +6,6 @@
                 <h1 class="card-title">{{ __('cheques title') }}</h1>
                 <div class="flex flex-wrap gap-2">
                     <a href="{{ route('cheques.report') }}" class="btn btn-outline btn-sm">{{ __('cheques report') }}</a>
-                    <a href="{{ route('cheques.calendar') }}" class="btn btn-outline btn-sm">{{ __('cheques calendar') }}</a>
-                    <a href="{{ route('cheques.weighted-average-maturity') }}" class="btn btn-outline btn-sm">{{ __('cheques weighted_average_maturity') }}</a>
                     <a href="{{ route('checkbooks.index') }}" class="btn btn-outline btn-sm">{{ __('cheques checkbooks') }}</a>
                     <a href="{{ route('cheques.create') }}" class="btn btn-primary btn-sm">{{ __('cheques create') }}</a>
                 </div>
@@ -66,7 +64,7 @@
                                 <span class="badge badge-warning badge-sm ms-1">{{ $cheque->purpose->label() }}</span>
                             @endif
                         </td>
-                        <td>{{ $cheque->party?->name }}</td>
+                        <td>{{ $cheque->customer?->name }}</td>
                         <td class="font-semibold">{{ formatNumber($cheque->amount) }}</td>
                         <td class="{{ $cheque->due_date->isPast() && !in_array($cheque->status, [\App\Enums\ChequeType::CLEARED, \App\Enums\ChequeType::CANCELLED, \App\Enums\ChequeType::RETURNED]) ? 'text-error font-bold' : '' }}">
                             {{ formatDate($cheque->due_date) }}

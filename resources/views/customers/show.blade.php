@@ -335,20 +335,17 @@
                                     @endif
                                     @if ($isEndorsee)
                                         <span class="badge badge-secondary">{{ __('cheques role endorsee') }}</span>
-                                        @if (!$isOriginalParty && $cheque->party)
+                                        @if (!$isOriginalParty && $cheque->customer)
                                             <div class="text-xs opacity-60 mt-1">
-                                                {{ __('cheques original_party', ['party' => $cheque->party->name]) }}
+                                                {{ __('cheques original_party', ['party' => $cheque->customer->name]) }}
                                             </div>
                                         @endif
                                     @endif
                                 </td>
                                 <td class="px-4 py-3">
-                                    <div>{{ $cheque->bank?->name ?? '-' }}</div>
+                                    <div>{{ $cheque->bankAccount?->bank?->name ?? '-' }}</div>
                                     @if ($cheque->bankAccount)
                                         <div class="text-xs opacity-60">{{ $cheque->bankAccount->name }} · {{ localizeNumber($cheque->bankAccount->number) }}</div>
-                                    @endif
-                                    @if ($cheque->branch_name || $cheque->branch_city)
-                                        <div class="text-xs opacity-60">{{ collect([$cheque->branch_name, $cheque->branch_city])->filter()->join(' - ') }}</div>
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-center font-semibold">{{ formatNumber($cheque->amount) }}</td>
