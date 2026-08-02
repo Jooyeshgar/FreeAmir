@@ -2713,7 +2713,6 @@
     "cheques remaining": "Remaining",
     "cheques active": "Active",
     "cheques inactive": "Inactive",
-    "cheques print_offsets": "Physical print offsets (millimetres)",
     "cheques direction receivable": "Notes receivable",
     "cheques direction payable": "Notes payable",
     "cheques purpose settlement": "Settlement",

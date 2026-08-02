@@ -22,12 +22,9 @@ class Cheque extends Model
         'status',
         'customer_id',
         'endorsed_to_id',
-        'bank_id',
         'bank_account_id',
         'checkbook_id',
         'checkbook_leaf_number',
-        'branch_name',
-        'branch_city',
         'desc',
         'created_by',
         'version',
@@ -53,14 +50,9 @@ class Cheque extends Model
         });
     }
 
-    public function party(): BelongsTo
-    {
-        return $this->belongsTo(Customer::class, 'customer_id');
-    }
-
     public function customer(): BelongsTo
     {
-        return $this->party();
+        return $this->belongsTo(Customer::class);
     }
 
     public function endorsedTo(): BelongsTo
@@ -68,19 +60,9 @@ class Cheque extends Model
         return $this->belongsTo(Customer::class, 'endorsed_to_id');
     }
 
-    public function bank(): BelongsTo
-    {
-        return $this->belongsTo(Bank::class);
-    }
-
     public function bankAccount(): BelongsTo
     {
         return $this->belongsTo(BankAccount::class);
-    }
-
-    public function account(): BelongsTo
-    {
-        return $this->belongsTo(BankAccount::class, 'account_id');
     }
 
     public function checkbook(): BelongsTo

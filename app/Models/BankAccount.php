@@ -51,14 +51,4 @@ class BankAccount extends Model
     {
         return $this->belongsTo(Bank::class);
     }
-
-    public function cheques()
-    {
-        return $this->hasMany(Cheque::class);
-    }
-
-    public function checkbooks()
-    {
-        return $this->hasMany(Checkbook::class);
-    }
 }
