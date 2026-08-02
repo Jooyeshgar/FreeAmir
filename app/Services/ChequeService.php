@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Enums\ChequeType;
 use App\Enums\InvoiceType;
-use App\Models\Bank;
 use App\Models\BankAccount;
 use App\Models\Checkbook;
 use App\Models\Cheque;
@@ -49,7 +48,7 @@ class ChequeService
             $serial = $data['serial'] ?: null;
             if ($checkbook) {
                 $this->reserveCheckbookLeaf($checkbook, (int) $data['checkbook_leaf_number']);
-                $serial = $checkbook->serialFor((int) $data['checkbook_leaf_number']);
+                $serial = ($checkbook->serial_prefix ?? '').$data['checkbook_leaf_number'];
             }
 
             $status = $this->initialStatus($direction, $purpose);
@@ -65,12 +64,9 @@ class ChequeService
                 'purpose' => $purpose,
                 'status' => $status,
                 'customer_id' => $data['party_id'],
-                'bank_id' => $data['bank_id'],
                 'bank_account_id' => $data['bank_account_id'] ?? null,
                 'checkbook_id' => $checkbook?->id,
                 'checkbook_leaf_number' => $data['checkbook_leaf_number'] ?? null,
-                'branch_name' => $data['branch_name'] ?? null,
-                'branch_city' => $data['branch_city'] ?? null,
                 'desc' => $data['description'] ?? null,
                 'created_by' => $user->id,
                 'version' => 1,
@@ -79,7 +75,7 @@ class ChequeService
             $document = $this->postInitialDocument($user, $cheque);
             $payment = $invoice ? $this->paymentService->saveChequePayment($user, $invoice, $cheque, $document, $this->subject($direction === ChequeType::RECEIVABLE ? '013001' : '020001')) : null;
 
-            $this->history($cheque, $user, $this->initialEvent($direction, $purpose), null, $status, $document, $payment, ['description' => $data['description'] ?? null]);
+            $this->history($cheque, $user, null, $status, $document, $payment, ['description' => $data['description'] ?? null]);
 
             return $cheque->fresh();
         });
@@ -116,7 +112,7 @@ class ChequeService
             $serial = $data['serial'] ?: null;
             if ($checkbook) {
                 $this->reserveCheckbookLeaf($checkbook, (int) $data['checkbook_leaf_number'], $locked);
-                $serial = $checkbook->serialFor((int) $data['checkbook_leaf_number']);
+                $serial = ($checkbook->serial_prefix ?? '').$data['checkbook_leaf_number'];
             }
 
             if ($initialHistory?->document_id) {
@@ -135,12 +131,9 @@ class ChequeService
                 'status' => $status,
                 'customer_id' => $data['party_id'],
                 'endorsed_to_id' => null,
-                'bank_id' => $data['bank_id'],
                 'bank_account_id' => $data['bank_account_id'] ?? null,
                 'checkbook_id' => $checkbook?->id,
                 'checkbook_leaf_number' => $data['checkbook_leaf_number'] ?? null,
-                'branch_name' => $data['branch_name'] ?? null,
-                'branch_city' => $data['branch_city'] ?? null,
                 'desc' => $data['description'] ?? null,
                 'version' => $locked->version + 1,
             ]);
@@ -153,22 +146,16 @@ class ChequeService
                 $initialPayment = null;
             }
             $historyData = [
-                'event' => $this->initialEvent($direction, $purpose),
                 'to_status' => $status,
-                'actor_id' => $user->id,
+                'user_id' => $user->id,
                 'document_id' => $document?->id,
                 'payment_id' => $initialPayment?->id,
-                'metadata' => array_filter([
-                    'description' => $data['description'] ?? null,
-                    'updated' => true,
-                ], fn ($value) => $value !== null),
-                'occurred_at' => now(),
                 'desc' => $data['description'] ?? null,
             ];
             if ($initialHistory) {
                 $initialHistory->update($historyData);
             } else {
-                $this->history($locked, $user, $historyData['event'], null, $status, $document, $initialPayment, ['description' => $data['description'] ?? null, 'updated' => true]);
+                $this->history($locked, $user, null, $status, $document, $initialPayment, ['description' => $data['description'] ?? null]);
             }
 
             foreach (array_unique(array_filter([$oldCheckbookId, $checkbook?->id])) as $checkbookId) {
@@ -218,10 +205,6 @@ class ChequeService
                 throw ValidationException::withMessages(['cheque' => __('cheques validation concurrent_change')]);
             }
 
-            if ($action === 'revert') {
-                return $this->revertLatest($locked, $user);
-            }
-
             if (! in_array($action, $locked->availableActions(), true)) {
                 throw ValidationException::withMessages(['status' => __('cheques validation invalid_transition')]);
             }
@@ -254,7 +237,7 @@ class ChequeService
             'bank_account_id' => $account->id,
             'version' => $cheque->version + 1,
         ]);
-        $this->history($cheque, $user, 'deposit', $from, ChequeType::DEPOSITED, $document, null, [
+        $this->history($cheque, $user, $from, ChequeType::DEPOSITED, $document, null, [
             'bank_account_id' => $account->id,
             'previous_bank_account_id' => $previousAccountId,
             'description' => $data['description'] ?? null,
@@ -282,7 +265,7 @@ class ChequeService
         DocumentService::syncDocumentable($document, $payment);
 
         $cheque->update(['status' => ChequeType::CLEARED, 'version' => $cheque->version + 1]);
-        $this->history($cheque, $user, 'clear', $from, ChequeType::CLEARED, $document, $payment, [
+        $this->history($cheque, $user, $from, ChequeType::CLEARED, $document, $payment, [
             'bank_account_id' => $account->id,
             'description' => $data['description'] ?? null,
         ]);
@@ -315,7 +298,7 @@ class ChequeService
             'endorsed_to_id' => $vendor->id,
             'version' => $cheque->version + 1,
         ]);
-        $this->history($cheque, $user, 'endorse', $from, ChequeType::ENDORSED, $document, $payment, [
+        $this->history($cheque, $user, $from, ChequeType::ENDORSED, $document, $payment, [
             'endorsed_to_id' => $vendor->id,
             'description' => $data['description'] ?? null,
         ]);
@@ -332,7 +315,7 @@ class ChequeService
         $document = $this->post($user, $cheque, 'bounce', $entries, $data['date'] ?? null);
 
         $cheque->update(['status' => ChequeType::BOUNCED, 'version' => $cheque->version + 1]);
-        $this->history($cheque, $user, 'bounce', $from, ChequeType::BOUNCED, $document, null, [
+        $this->history($cheque, $user, $from, ChequeType::BOUNCED, $document, null, [
             'description' => $data['description'] ?? null,
         ]);
 
@@ -348,7 +331,7 @@ class ChequeService
         ], $data['date'] ?? null);
 
         $cheque->update(['status' => ChequeType::RETURNED, 'version' => $cheque->version + 1]);
-        $this->history($cheque, $user, 'return', $from, ChequeType::RETURNED, $document, null, [
+        $this->history($cheque, $user, $from, ChequeType::RETURNED, $document, null, [
             'description' => $data['description'] ?? null,
         ]);
 
@@ -367,7 +350,7 @@ class ChequeService
         }
 
         $cheque->update(['status' => ChequeType::CANCELLED, 'version' => $cheque->version + 1]);
-        $this->history($cheque, $user, 'cancel', $from, ChequeType::CANCELLED, $document, null, [
+        $this->history($cheque, $user, $from, ChequeType::CANCELLED, $document, null, [
             'description' => $data['description'] ?? null,
         ]);
 
@@ -388,45 +371,10 @@ class ChequeService
             'status' => $to,
             'version' => $cheque->version + 1,
         ]);
-        $this->history($cheque, $user, 'execute', $from, $to, $document, null, [
+        $this->history($cheque, $user, $from, $to, $document, null, [
             'previous_purpose' => ChequeType::GUARANTEE->value,
             'description' => $data['description'] ?? null,
         ]);
-
-        return $cheque->fresh();
-    }
-
-    private function revertLatest(Cheque $cheque, User $user): Cheque
-    {
-        $history = $cheque->histories()->reorder()->whereNull('reverted_at')->whereNotNull('from_status')->latest('occurred_at')->latest('id')->first();
-
-        if (! $history || $history->to_status !== $cheque->status) {
-            throw ValidationException::withMessages(['status' => __('cheques validation nothing_to_revert')]);
-        }
-
-        if ($history->payment_id) {
-            Payment::whereKey($history->payment_id)->delete();
-        }
-        if ($history->document_id) {
-            DocumentService::deleteDocument($history->document_id);
-        }
-
-        $updates = [
-            'status' => $history->from_status,
-            'version' => $cheque->version + 1,
-        ];
-        if ($history->event === 'endorse') {
-            $updates['endorsed_to_id'] = null;
-        }
-        if ($history->event === 'deposit') {
-            $updates['bank_account_id'] = $history->metadata['previous_bank_account_id'] ?? null;
-        }
-        if ($history->event === 'execute') {
-            $updates['purpose'] = ChequeType::GUARANTEE;
-        }
-
-        $cheque->update($updates);
-        $history->update(['reverted_at' => now(), 'reverted_by' => $user->id]);
 
         return $cheque->fresh();
     }
@@ -439,15 +387,6 @@ class ChequeService
             $direction === ChequeType::RECEIVABLE => ChequeType::REGISTERED,
             default => ChequeType::ISSUED,
         };
-    }
-
-    private function initialEvent(ChequeType $direction, ChequeType $purpose): string
-    {
-        if ($purpose === ChequeType::GUARANTEE) {
-            return 'guarantee_register';
-        }
-
-        return $direction === ChequeType::RECEIVABLE ? 'register' : 'issue';
     }
 
     private function postInitialDocument(User $user, Cheque $cheque): ?Document
@@ -469,7 +408,7 @@ class ChequeService
 
     private function reserveCheckbookLeaf(Checkbook $checkbook, int $leaf, ?Cheque $except = null): void
     {
-        if (! $checkbook->is_active || ! $checkbook->contains($leaf)) {
+        if (! $checkbook->is_active || $leaf < $checkbook->start_leaf_number || $leaf > $checkbook->end_leaf_number) {
             throw ValidationException::withMessages(['checkbook_leaf_number' => __('cheques validation leaf_out_of_range')]);
         }
 
@@ -525,16 +464,9 @@ class ChequeService
         if (! Customer::whereKey($data['party_id'] ?? null)->exists()) {
             throw ValidationException::withMessages(['party_id' => __('validation.exists', ['attribute' => __('cheques fields party')])]);
         }
-        if (! Bank::whereKey($data['bank_id'] ?? null)->exists()) {
-            throw ValidationException::withMessages(['bank_id' => __('validation.exists', ['attribute' => __('cheques fields bank')])]);
-        }
-
         $account = ! empty($data['bank_account_id']) ? BankAccount::find($data['bank_account_id']) : null;
         if ($direction === ChequeType::PAYABLE && ! $account) {
             throw ValidationException::withMessages(['bank_account_id' => __('cheques validation bank_account_required')]);
-        }
-        if ($account && (int) $account->bank_id !== (int) $data['bank_id']) {
-            throw ValidationException::withMessages(['bank_account_id' => __('cheques validation account_bank_mismatch')]);
         }
         if (! empty($data['checkbook_id']) && $direction !== ChequeType::PAYABLE) {
             throw ValidationException::withMessages(['checkbook_id' => __('cheques validation checkbook_payable_only')]);
@@ -615,19 +547,15 @@ class ChequeService
         ]);
     }
 
-    private function history(Cheque $cheque, User $user, string $event, ?ChequeType $from, ChequeType $to, ?Document $document, ?Payment $payment, array $metadata): ChequeHistory
+    private function history(Cheque $cheque, User $user, ?ChequeType $from, ChequeType $to, ?Document $document, ?Payment $payment, array $metadata): ChequeHistory
     {
         return ChequeHistory::create([
-            'company_id' => $cheque->company_id,
             'cheque_id' => $cheque->id,
-            'event' => $event,
             'from_status' => $from,
             'to_status' => $to,
-            'actor_id' => $user->id,
+            'user_id' => $user->id,
             'document_id' => $document?->id,
             'payment_id' => $payment?->id,
-            'metadata' => array_filter($metadata, fn ($value) => $value !== null),
-            'occurred_at' => now(),
             'desc' => $metadata['description'] ?? null,
         ]);
     }
@@ -644,7 +572,7 @@ class ChequeService
 
     private function partySubject(Cheque $cheque): int
     {
-        $subjectId = (int) ($cheque->party?->subject_id ?: $cheque->party?->subject?->id);
+        $subjectId = (int) ($cheque->customer?->subject_id ?: $cheque->customer?->subject?->id);
         if (! $subjectId) {
             throw ValidationException::withMessages(['party_id' => __('cheques validation party_subject_required')]);
         }

@@ -54,21 +54,3 @@ The cheque registration/issuance document is also linked to the invoice's `Payme
 does not create a duplicate accounting document. Clearing the cheque later remains an independent lifecycle
 posting. Unlinking the payment preserves the cheque and its document, while deleting the cheque removes the
 payment and recalculates the invoice status.
-
-## Weighted Average Maturity
-
-Weighted maturity is calculated from a selected base date:
-
-`weighted days = sum(amount × days-to-due) / sum(amount)`
-
-Optional financial cost uses simple annual interest:
-
-`cost = sum(amount × days-to-due) × annual rate / 36500`
-
-## Physical printing
-
-Each checkbook stores a serial prefix/range, next available leaf, and millimetre offsets for payee,
-amount, amount in words, date, and memo. Printing uses a 210 mm × 95 mm page; offsets should be calibrated
-with a blank sheet before printing on a cheque leaf.
-
-Changes to the posting matrix require accounting-domain review and corresponding feature tests.

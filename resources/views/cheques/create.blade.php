@@ -51,15 +51,6 @@
                     <span class="label-text mb-2">{{ __('cheques fields serial') }}</span>
                     <input name="serial" value="{{ old('serial', $cheque?->serial) }}" class="input input-bordered">
                 </label>
-                <label class="form-control">
-                    <span class="label-text mb-2">{{ __('cheques fields bank') }}</span>
-                    <select name="bank_id" class="select select-bordered" required>
-                        <option value="">{{ __('cheques select') }}</option>
-                        @foreach ($banks as $bank)
-                            <option value="{{ $bank->id }}" @selected((string) old('bank_id', $cheque?->bank_id) === (string) $bank->id)>{{ $bank->name }}</option>
-                        @endforeach
-                    </select>
-                </label>
                 <label class="form-control" x-show="direction === '{{ \App\Enums\ChequeType::PAYABLE->value }}'">
                     <span class="label-text mb-2">{{ __('cheques fields bank_account') }}</span>
                     <select name="bank_account_id" class="select select-bordered" :required="direction === '{{ \App\Enums\ChequeType::PAYABLE->value }}'">
@@ -85,14 +76,6 @@
                 <label class="form-control" x-show="direction === '{{ \App\Enums\ChequeType::PAYABLE->value }}' && checkbook">
                     <span class="label-text mb-2">{{ __('cheques fields leaf_number') }}</span>
                     <input name="checkbook_leaf_number" value="{{ old('checkbook_leaf_number', $cheque?->checkbook_leaf_number) }}" class="input input-bordered" inputmode="numeric">
-                </label>
-                <label class="form-control">
-                    <span class="label-text mb-2">{{ __('cheques fields branch_name') }}</span>
-                    <input name="branch_name" value="{{ old('branch_name', $cheque?->branch_name) }}" class="input input-bordered">
-                </label>
-                <label class="form-control">
-                    <span class="label-text mb-2">{{ __('cheques fields branch_city') }}</span>
-                    <input name="branch_city" value="{{ old('branch_city', $cheque?->branch_city) }}" class="input input-bordered">
                 </label>
             </div>
             <label class="form-control mt-4">

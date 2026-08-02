@@ -124,10 +124,6 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::resource('banks', Controllers\BankController::class);
 
     Route::get('cheques/report', [Controllers\ChequeController::class, 'report'])->name('cheques.report');
-    Route::get('cheques/calendar', [Controllers\ChequeController::class, 'calendar'])->name('cheques.calendar');
-    Route::get('cheques/weighted-average-maturity', [Controllers\ChequeWeightedAverageMaturityController::class, 'index'])->name('cheques.weighted-average-maturity');
-    Route::post('cheques/weighted-average-maturity', [Controllers\ChequeWeightedAverageMaturityController::class, 'calculate'])->name('cheques.weighted-average-maturity.calculate');
-    Route::get('cheques/{cheque}/print', [Controllers\ChequeController::class, 'print'])->name('cheques.print');
     Route::post('cheques/{cheque}/transition/{action}', [Controllers\ChequeController::class, 'transition'])->name('cheques.transition');
     Route::resource('cheques', Controllers\ChequeController::class);
     Route::resource('checkbooks', Controllers\CheckbookController::class)->except(['show']);

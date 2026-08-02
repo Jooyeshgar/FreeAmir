@@ -35,7 +35,7 @@
                                     <td><a class="link"
                                             href="{{ route('cheques.show', $cheque) }}">{{ localizeNumber($cheque->serial) }}</a>
                                     </td>
-                                    <td>{{ $cheque->party?->name }}</td>
+                                    <td>{{ $cheque->customer?->name }}</td>
                                     <td>{{ formatDate($cheque->due_date) }}</td>
                                     <td>{{ formatNumber($cheque->amount) }}</td>
                             </tr>@empty<tr>

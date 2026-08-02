@@ -18,7 +18,6 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\User;
 use App\Services\ChequeService;
-use App\Services\ChequeWeightedAverageMaturityService;
 use App\Services\PaymentService;
 use Cookie;
 use Illuminate\Database\Schema\Blueprint;
@@ -121,22 +120,14 @@ class ChequeManagementTest extends TestCase
         $this->assertSame($cheque->sayad_number, $payment->reference_number);
     }
 
-    public function test_latest_clearance_can_be_reverted_without_removing_deposit_or_registration(): void
+    public function test_revert_is_rejected_when_history_model_has_no_reversal_fields(): void
     {
         $cheque = $this->receivedCheque();
         $cheque = $this->service->transition($cheque, $this->user, 'deposit', ['bank_account_id' => $this->account->id]);
         $cheque = $this->service->transition($cheque, $this->user, 'clear');
-        $clearHistory = $cheque->histories()->reorder()->latest('id')->firstOrFail();
-        $clearDocumentId = $clearHistory->document_id;
-        $clearPaymentId = $clearHistory->payment_id;
 
-        $cheque = $this->service->transition($cheque, $this->user, 'revert');
-
-        $this->assertSame(ChequeType::DEPOSITED, $cheque->status);
-        $this->assertNull(Document::find($clearDocumentId));
-        $this->assertNull(Payment::find($clearPaymentId));
-        $this->assertNotNull($clearHistory->fresh()->reverted_at);
-        $this->assertCount(2, $cheque->histories()->whereNull('reverted_at')->get());
+        $this->expectException(ValidationException::class);
+        $this->service->transition($cheque, $this->user, 'revert');
     }
 
     public function test_received_cheque_can_be_endorsed_to_vendor_as_a_cheque_payment(): void
@@ -187,18 +178,6 @@ class ChequeManagementTest extends TestCase
         $this->service->transition($this->receivedCheque(), $this->user, 'clear');
     }
 
-    public function test_weighted_average_maturity_uses_amount_weighted_due_dates_and_calculates_cost(): void
-    {
-        $first = $this->receivedCheque(dueDate: '2026-01-11', amount: 100);
-        $second = $this->receivedCheque(dueDate: '2026-01-31', amount: 300);
-
-        $result = app(ChequeWeightedAverageMaturityService::class)->calculate(collect([$first, $second]), '2026-01-01', 10);
-
-        $this->assertEqualsWithDelta(25, $result['weighted_days'], 0.001);
-        $this->assertSame('2026-01-26', $result['average_due_date']->toDateString());
-        $this->assertEqualsWithDelta(2.7397, $result['financial_cost'], 0.001);
-    }
-
     public function test_checkbook_leaf_range_generates_serial_and_prevents_reuse(): void
     {
         $checkbook = Checkbook::create([
@@ -245,9 +224,30 @@ class ChequeManagementTest extends TestCase
             $this->assertContains(Schema::getColumnType('cheques', $column), ['smallint', 'integer']);
         }
 
-        foreach (['status', 'from_status', 'to_status'] as $column) {
+        foreach (['from_status', 'to_status'] as $column) {
             $this->assertContains(Schema::getColumnType('cheque_histories', $column), ['smallint', 'integer']);
         }
+    }
+
+    public function test_checkbook_controller_creates_an_active_book_and_rejects_a_duplicate_title(): void
+    {
+        $this->withoutMiddleware();
+        $data = [
+            'bank_account_id' => $this->account->id,
+            'title' => 'Main HTTP book',
+            'serial_prefix' => 'HTTP-',
+            'start_leaf_number' => 1,
+            'end_leaf_number' => 10,
+            'is_active' => '1',
+        ];
+
+        $this->post(route('checkbooks.store'), $data)->assertRedirect(route('checkbooks.index'));
+
+        $checkbook = Checkbook::where('title', $data['title'])->firstOrFail();
+        $this->assertTrue($checkbook->is_active);
+        $this->assertSame(1, $checkbook->next_leaf_number);
+
+        $this->post(route('checkbooks.store'), $data)->assertSessionHasErrors('title');
     }
 
     public function test_cheque_translations_are_loaded_from_json_catalogs(): void
@@ -444,7 +444,6 @@ class ChequeManagementTest extends TestCase
             'due_date' => toEnglish(formatDate($invoice->date->copy()->addMonth())),
             'serial' => 'HTTP-CHEQUE',
             'sayad_number' => (string) $this->sayadSequence++,
-            'bank_id' => $this->bank->id,
             'description' => 'HTTP invoice cheque',
         ]);
 
@@ -487,11 +486,8 @@ class ChequeManagementTest extends TestCase
             route('cheques.edit', $received),
             route('cheques.show', $received),
             route('cheques.report'),
-            route('cheques.calendar'),
-            route('cheques.weighted-average-maturity'),
             route('checkbooks.index'),
             route('checkbooks.create'),
-            route('cheques.print', $issued),
         ] as $url) {
             $this->get($url)->assertOk();
         }
@@ -550,7 +546,6 @@ class ChequeManagementTest extends TestCase
             'serial' => 'S-'.$this->sayadSequence,
             'sayad_number' => (string) $this->sayadSequence++,
             'party_id' => $party->id,
-            'bank_id' => $this->bank->id,
             'bank_account_id' => null,
             'description' => 'Test cheque',
         ];

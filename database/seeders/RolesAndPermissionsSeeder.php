@@ -89,7 +89,7 @@ class RolesAndPermissionsSeeder extends Seeder
             // Banks / bank accounts
             'bank-accounts' => [...self::CRUD, 'search-bank'],
             'banks' => self::CRUD,
-            'cheques' => [...self::CRUD, 'report', 'calendar', 'weighted-average-maturity', 'weighted-average-maturity.calculate', 'print', 'transition'],
+            'cheques' => [...self::CRUD, 'report', 'transition'],
             'checkbooks' => self::CRUD_NO_SHOW,
 
             // Invoices and their statuses
