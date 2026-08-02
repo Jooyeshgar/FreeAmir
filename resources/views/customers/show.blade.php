@@ -285,26 +285,26 @@
                 </div>
             @endif
 
-            {{-- Cheques where this customer is the original party or endorsee --}}
-            <div class="divider text-lg font-semibold">{{ __('cheques customer_section') }}</div>
+            {{-- Cheques where this customer is the original account side or endorsee --}}
+            <div class="divider text-lg font-semibold">{{ __('Customer cheques') }}</div>
             <div class="overflow-x-auto">
                 <table class="table w-full mt-4 overflow-auto">
                     <thead>
                         <tr>
-                            <th class="px-4 py-3">{{ __('cheques fields serial') }}</th>
-                            <th class="px-4 py-3">{{ __('cheques fields direction') }}</th>
-                            <th class="px-4 py-3">{{ __('cheques customer_role') }}</th>
-                            <th class="px-4 py-3">{{ __('cheques fields bank') }}</th>
-                            <th class="px-4 py-3 text-center">{{ __('cheques fields amount') }}</th>
-                            <th class="px-4 py-3">{{ __('cheques fields due_date') }}</th>
-                            <th class="px-4 py-3">{{ __('cheques fields status') }}</th>
+                            <th class="px-4 py-3">{{ __('Cheque number') }}</th>
+                            <th class="px-4 py-3">{{ __('Direction') }}</th>
+                            <th class="px-4 py-3">{{ __('Account side role') }}</th>
+                            <th class="px-4 py-3">{{ __('Bank') }}</th>
+                            <th class="px-4 py-3 text-center">{{ __('Amount') }}</th>
+                            <th class="px-4 py-3">{{ __('Due date') }}</th>
+                            <th class="px-4 py-3">{{ __('Status') }}</th>
                             <th class="px-4 py-3 text-center">{{ __('Action') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($cheques as $cheque)
                             @php
-                                $isOriginalParty = $cheque->customer_id === $customer->id;
+                                $isOriginalAccountSide = $cheque->customer_id === $customer->id;
                                 $isEndorsee = $cheque->endorsed_to_id === $customer->id;
                                 $isOutstanding = !in_array($cheque->status, [
                                     \App\Enums\ChequeType::CLEARED,
@@ -315,13 +315,18 @@
                             <tr class="hover:bg-base-300">
                                 <td class="px-4 py-3">
                                     @can('cheques.show')
-                                        <a class="link link-primary font-mono" href="{{ route('cheques.show', $cheque) }}">
-                                            {{ localizeNumber($cheque->serial) }}
+                                        <a class="link link-primary" href="{{ route('cheques.show', $cheque) }}">
+                                            {{ localizeNumber($cheque->cheque_number) ?: '—' }}
                                         </a>
                                     @else
-                                        <span class="font-mono">{{ localizeNumber($cheque->serial) }}</span>
+                                        <span>{{ localizeNumber($cheque->cheque_number) ?: '—' }}</span>
                                     @endcan
-                                    <div class="text-xs opacity-60 font-mono">{{ localizeNumber($cheque->sayad_number) }}</div>
+                                    <div class="text-xs opacity-60">
+                                        {{ __('Cheque serial') }}: {{ localizeNumber($cheque->serial) ?: '—' }}
+                                    </div>
+                                    <div class="text-xs opacity-60">
+                                        {{ __('Sayad number') }}: {{ localizeNumber($cheque->sayad_number) }}
+                                    </div>
                                 </td>
                                 <td class="px-4 py-3">
                                     <div>{{ $cheque->direction->label() }}</div>
@@ -330,14 +335,14 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3">
-                                    @if ($isOriginalParty)
-                                        <span class="badge badge-outline">{{ __('cheques role original_party') }}</span>
+                                    @if ($isOriginalAccountSide)
+                                        <span class="badge badge-outline">{{ __('Original account side') }}</span>
                                     @endif
                                     @if ($isEndorsee)
-                                        <span class="badge badge-secondary">{{ __('cheques role endorsee') }}</span>
-                                        @if (!$isOriginalParty && $cheque->customer)
+                                        <span class="badge badge-secondary">{{ __('Endorsee') }}</span>
+                                        @if (!$isOriginalAccountSide && $cheque->customer)
                                             <div class="text-xs opacity-60 mt-1">
-                                                {{ __('cheques original_party', ['party' => $cheque->customer->name]) }}
+                                                {{ __('Original account side: :accountSide', ['accountSide' => $cheque->customer->name]) }}
                                             </div>
                                         @endif
                                     @endif
@@ -345,7 +350,7 @@
                                 <td class="px-4 py-3">
                                     <div>{{ $cheque->bankAccount?->bank?->name ?? '-' }}</div>
                                     @if ($cheque->bankAccount)
-                                        <div class="text-xs opacity-60">{{ $cheque->bankAccount->name }} · {{ localizeNumber($cheque->bankAccount->number) }}</div>
+                                        <div class="text-xs opacity-60">{{ $cheque->bankAccount->name }} - {{ localizeNumber($cheque->bankAccount->number) }}</div>
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-center font-semibold">{{ formatNumber($cheque->amount) }}</td>
@@ -366,7 +371,7 @@
                         @empty
                             <tr>
                                 <td colspan="8" class="text-center py-8 text-gray-500">
-                                    {{ __('cheques customer_empty') }}
+                                    {{ __('No cheques are associated with this customer.') }}
                                 </td>
                             </tr>
                         @endforelse

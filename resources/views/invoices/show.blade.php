@@ -683,10 +683,15 @@
                                         <td class="px-4 py-3">
                                             @if($payment->cheque)
                                                 @can('cheques.show')
-                                                    <a class="link link-primary" href="{{ route('cheques.show', $payment->cheque) }}">{{ __('Cheque') }} {{ localizeNumber($payment->cheque->serial) }}</a>
+                                                    <a class="link link-primary" href="{{ route('cheques.show', $payment->cheque) }}">
+                                                        {{ __('Cheque number') }}: {{ localizeNumber($payment->cheque->cheque_number) ?: '—' }}
+                                                    </a>
                                                 @else
-                                                    {{ __('Cheque') }} {{ localizeNumber($payment->cheque->serial) }}
+                                                    {{ __('Cheque number') }}: {{ localizeNumber($payment->cheque->cheque_number) ?: '—' }}
                                                 @endcan
+                                                <div class="text-xs opacity-60">
+                                                    {{ __('Cheque serial') }}: {{ localizeNumber($payment->cheque->serial) ?: '—' }}
+                                                </div>
                                                 <span class="badge badge-outline badge-sm ms-1">{{ $payment->cheque->status->label() }}</span>
                                             @else
                                                 {{ $payment->settlementSubject()?->fullname() ?? '—' }}
@@ -766,7 +771,7 @@
                                     class="btn btn-primary btn-disabled cursor-not-allowed">{{ __('Record Payment') }}</button>
                             </span>
                         @else
-                            <button class="btn btn-primary gap-2" onclick="payment_modal.showModal()">
+                            <button type="button" class="btn btn-primary gap-2" onclick="payment_modal.showModal()">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -776,7 +781,7 @@
                             </button>
                             @if($chequeDirection)
                                 @can('invoices.payments.store-cheque')
-                                    <button class="btn btn-secondary gap-2" onclick="cheque_payment_modal.showModal()">
+                                    <button type="button" class="btn btn-secondary gap-2" onclick="cheque_payment_modal.showModal()">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
                                             viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -873,7 +878,8 @@
                                 </div>
                                 <div>
                                     <label class="label"><span class="label-text">{{ __('Date') }}</span></label>
-                                    <x-text-input data-jdp input_name="date" autocomplete="off" readonly
+                                    <x-text-input data-jdp input_name="date" id_input="invoice_payment_date"
+                                        autocomplete="off" readonly
                                         input_class="input-bordered" input_value="{{ convertToJalali(now(), true) }}" />
                                 </div>
                                 <div>
@@ -905,12 +911,11 @@
                                     <div class="flex items-center justify-between gap-3 mb-4">
                                         <div>
                                             <h3 class="text-lg font-bold">{{ __('Pay invoice by cheque') }}</h3>
-                                            <p class="text-sm opacity-70">{{ $chequeDirection->label() }} · {{ $invoice->customer?->name }}</p>
+                                            <p class="text-sm opacity-70">{{ $chequeDirection->label() }} - {{ $invoice->customer?->name }}</p>
                                         </div>
                                         <span class="badge badge-secondary">{{ __('Remaining Amount') }}: {{ formatNumber($remainingAmount) }}</span>
                                     </div>
-                                    <form method="POST" action="{{ route('invoices.payments.store-cheque', $invoice) }}"
-                                        class="space-y-4" x-data="{ checkbook: '' }">
+                                    <form method="POST" action="{{ route('invoices.payments.store-cheque', $invoice) }}">
                                         @csrf
                                         <div class="grid gap-4 md:grid-cols-2">
                                             <div x-data="{ amountInput: '{{ $remainingAmount }}' }">
@@ -926,13 +931,19 @@
                                                     inputmode="numeric" minlength="16" maxlength="16" required />
                                             </div>
                                             <div>
+                                                <label class="label"><span class="label-text">{{ __('Cheque number') }}</span></label>
+                                                <x-text-input input_name="cheque_number" input_class="input-bordered" maxlength="50" />
+                                            </div>
+                                            <div>
                                                 <label class="label"><span class="label-text">{{ __('Issue date') }}</span></label>
-                                                <x-text-input data-jdp input_name="issue_date" autocomplete="off" readonly
+                                                <x-text-input data-jdp input_name="issue_date" id_input="cheque_issue_date"
+                                                    autocomplete="off" readonly
                                                     input_class="input-bordered" input_value="{{ convertToJalali(now(), true) }}" required />
                                             </div>
                                             <div>
                                                 <label class="label"><span class="label-text">{{ __('Due date') }}</span></label>
-                                                <x-text-input data-jdp input_name="due_date" autocomplete="off" readonly
+                                                <x-text-input data-jdp input_name="due_date" id_input="cheque_due_date"
+                                                    autocomplete="off" readonly
                                                     input_class="input-bordered" required />
                                             </div>
                                             <div>
@@ -954,44 +965,19 @@
                                                         @endforeach
                                                     </select>
                                                 </div>
-                                                <div>
-                                                    <label class="label"><span class="label-text">{{ __('Checkbook') }}</span></label>
-                                                    <select name="checkbook_id" class="select select-bordered w-full" x-model="checkbook">
-                                                        <option value="">{{ __('Without checkbook') }}</option>
-                                                        @foreach($chequeCheckbooks as $checkbook)
-                                                            <option value="{{ $checkbook->id }}">{{ $checkbook->title }} ({{ localizeNumber($checkbook->next_leaf_number) }}–{{ localizeNumber($checkbook->end_leaf_number) }})</option>
-                                                        @endforeach
-                                                    </select>
-                                                </div>
-                                                <div x-show="checkbook">
-                                                    <label class="label"><span class="label-text">{{ __('Cheque leaf number') }}</span></label>
-                                                    <x-text-input input_name="checkbook_leaf_number" input_class="input-bordered"
-                                                        inputmode="numeric" x-bind:required="checkbook" />
-                                                </div>
                                             @endif
-                                            <div x-show="!checkbook">
+                                            <div>
                                                 <label class="label"><span class="label-text">{{ __('Cheque serial') }}</span></label>
-                                                <x-text-input input_name="serial" input_class="input-bordered" x-bind:required="!checkbook" />
-                                            </div>
-                                            <div>
-                                                <label class="label"><span class="label-text">{{ __('Branch name') }}</span></label>
-                                                <x-text-input input_name="branch_name" input_class="input-bordered" />
-                                            </div>
-                                            <div>
-                                                <label class="label"><span class="label-text">{{ __('Branch city') }}</span></label>
-                                                <x-text-input input_name="branch_city" input_class="input-bordered" />
+                                                <x-text-input input_name="serial" input_class="input-bordered" />
                                             </div>
                                         </div>
                                         <div>
                                             <label class="label"><span class="label-text">{{ __('Description') }}</span></label>
                                             <textarea name="description" class="textarea textarea-bordered w-full" rows="2"></textarea>
                                         </div>
-                                        <div class="alert alert-info text-sm">
-                                            <span>{{ __('The cheque registration document will settle this invoice. Bank clearance remains a separate cheque lifecycle action.') }}</span>
-                                        </div>
                                         <div class="modal-action">
-                                            <button type="submit" class="btn btn-secondary">{{ __('Register cheque and pay') }}</button>
                                             <button type="button" class="btn" onclick="cheque_payment_modal.close()">{{ __('Cancel') }}</button>
+                                            <button type="submit" class="btn btn-secondary">{{ __('Register cheque and pay') }}</button>
                                         </div>
                                     </form>
                                 </div>
@@ -1001,16 +987,49 @@
                     @endif
                     @pushOnce('scripts')
                         <script type="module">
+                            const invoiceModalDateSelector = [
+                                '#payment_modal input[data-jdp]',
+                                '#cheque_payment_modal input[data-jdp]'
+                            ].join(', ');
+
+                            const prepareInvoiceModalDatepicker = (input) => {
+                                const modal = input.closest('dialog');
+                                if (!modal) {
+                                    return;
+                                }
+
+                                jalaliDatepicker.updateOptions({
+                                    persianDigits: true,
+                                    selector: invoiceModalDateSelector,
+                                    container: `#${modal.id}`
+                                });
+
+                                for (const elementName of ['jdp-container', 'jdp-overlay']) {
+                                    const element = document.querySelector(elementName);
+                                    if (element && element.parentElement !== modal) {
+                                        modal.appendChild(element);
+                                    }
+                                }
+                            };
+
                             jalaliDatepicker.startWatch({
                                 persianDigits: true,
+                                selector: invoiceModalDateSelector,
                                 container: '#payment_modal'
                             });
-                            @if($chequeDirection)
-                                jalaliDatepicker.startWatch({
-                                    persianDigits: true,
-                                    container: '#cheque_payment_modal'
+
+                            document.querySelectorAll(invoiceModalDateSelector).forEach((input) => {
+                                input.addEventListener('pointerdown', (event) => {
+                                    event.preventDefault();
+                                    prepareInvoiceModalDatepicker(input);
+                                    input.focus({ preventScroll: true });
+                                    jalaliDatepicker.show(input);
                                 });
-                            @endif
+
+                                input.addEventListener('focusin', () => {
+                                    prepareInvoiceModalDatepicker(input);
+                                });
+                            });
                         </script>
                     @endPushOnce
                 @endcan
