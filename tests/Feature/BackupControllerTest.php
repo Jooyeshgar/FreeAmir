@@ -2,11 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Enums\BankAccountType;
+use App\Enums\ChequeType;
+use App\Enums\CustomerType;
 use App\Enums\FiscalYearSection;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Enums\PayrollStatus;
 use App\Enums\SubjectType;
+use App\Models\Bank;
+use App\Models\BankAccount;
+use App\Models\Cheque;
+use App\Models\ChequeHistory;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
@@ -15,9 +22,11 @@ use App\Models\DocumentFile;
 use App\Models\Employee;
 use App\Models\Invoice;
 use App\Models\OrganizationUnit;
+use App\Models\Payment;
 use App\Models\Payroll;
 use App\Models\PayrollStatusHistory;
 use App\Models\Scopes\FiscalYearScope;
+use App\Models\Subject;
 use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
@@ -175,6 +184,160 @@ class BackupControllerTest extends TestCase
         $this->assertSame($this->company->name, $decoded['meta']['source_company_name']);
         $this->assertSame([FiscalYearSection::SUBJECTS->value], $decoded['meta']['sections_exported']);
         $this->assertArrayHasKey(FiscalYearSection::SUBJECTS->value, $decoded);
+    }
+
+    public function test_cheques_and_histories_are_exported_and_restored_with_remapped_relations(): void
+    {
+        $groupSubject = Subject::create([
+            'company_id' => $this->company->id,
+            'code' => '100',
+            'name' => 'Customer groups',
+            'parent_id' => null,
+            'type' => SubjectType::BOTH,
+        ]);
+        $customerSubject = Subject::create([
+            'company_id' => $this->company->id,
+            'code' => '100001',
+            'name' => 'Cheque customer',
+            'parent_id' => $groupSubject->id,
+            'type' => SubjectType::BOTH,
+        ]);
+        $bankSubject = Subject::create([
+            'company_id' => $this->company->id,
+            'code' => '200',
+            'name' => 'Banks',
+            'parent_id' => null,
+            'type' => SubjectType::BOTH,
+        ]);
+        $accountSubject = Subject::create([
+            'company_id' => $this->company->id,
+            'code' => '200001',
+            'name' => 'Cheque bank account',
+            'parent_id' => $bankSubject->id,
+            'type' => SubjectType::BOTH,
+        ]);
+
+        $group = CustomerGroup::create([
+            'company_id' => $this->company->id,
+            'subject_id' => $groupSubject->id,
+            'name' => 'Cheque customers',
+        ]);
+        $customer = Customer::create([
+            'company_id' => $this->company->id,
+            'group_id' => $group->id,
+            'subject_id' => $customerSubject->id,
+            'name' => 'Backup customer',
+            'type' => CustomerType::INDIVIDUAL,
+        ]);
+        $bank = Bank::create([
+            'company_id' => $this->company->id,
+            'name' => 'Backup bank',
+        ]);
+        $account = BankAccount::create([
+            'company_id' => $this->company->id,
+            'bank_id' => $bank->id,
+            'subject_id' => $accountSubject->id,
+            'name' => 'Backup account',
+            'number' => 'CHEQUE-BACKUP-1',
+            'type' => BankAccountType::CURRENT,
+        ]);
+        $cheque = Cheque::create([
+            'company_id' => $this->company->id,
+            'amount' => 1250000,
+            'write_date' => '2026-07-01',
+            'due_date' => '2026-08-01',
+            'serial' => 'SERIAL-42',
+            'cheque_number' => '42',
+            'sayad_number' => '1234567890123456',
+            'direction' => ChequeType::RECEIVABLE,
+            'purpose' => ChequeType::SETTLEMENT,
+            'status' => ChequeType::REGISTERED,
+            'customer_id' => $customer->id,
+            'bank_account_id' => $account->id,
+            'desc' => 'Cheque backup test',
+        ]);
+        $document = Document::factory()->create([
+            'company_id' => $this->company->id,
+            'documentable_type' => Cheque::class,
+            'documentable_id' => $cheque->id,
+        ]);
+        $invoice = Invoice::create([
+            'company_id' => $this->company->id,
+            'number' => 42,
+            'date' => '2026-07-01',
+            'invoice_type' => InvoiceType::SELL,
+            'status' => InvoiceStatus::APPROVED,
+            'customer_id' => $customer->id,
+            'creator_id' => $this->user->id,
+            'subtraction' => 0,
+            'vat' => 0,
+            'amount' => 1250000,
+        ]);
+        $payment = Payment::create([
+            'invoice_id' => $invoice->id,
+            'cheque_id' => $cheque->id,
+            'payer_id' => $customer->id,
+            'document_id' => $document->id,
+            'settlement_subject_id' => $customerSubject->id,
+            'creator_id' => $this->user->id,
+            'amount' => 1250000,
+            'date' => '2026-07-01',
+            'reference_number' => $cheque->sayad_number,
+            'description' => 'Cheque payment',
+        ]);
+        ChequeHistory::create([
+            'cheque_id' => $cheque->id,
+            'to_status' => ChequeType::REGISTERED,
+            'user_id' => $this->user->id,
+            'document_id' => $document->id,
+            'payment_id' => $payment->id,
+            'desc' => 'Registered',
+        ]);
+
+        $sections = [
+            FiscalYearSection::SUBJECTS->value,
+            FiscalYearSection::BANKS->value,
+            FiscalYearSection::CUSTOMERS->value,
+            FiscalYearSection::DOCUMENTS->value,
+            FiscalYearSection::INVOICES->value,
+            FiscalYearSection::CHEQUES->value,
+        ];
+        $payload = FiscalYearService::exportData($this->company->id, $sections);
+
+        $this->assertCount(1, $payload['cheques']);
+        $this->assertCount(1, $payload['cheque_histories']);
+        $this->assertCount(1, $payload['payments']);
+        $this->assertSame($sections, $payload['meta']['sections_exported']);
+
+        Cheque::withoutGlobalScope(FiscalYearScope::class)->whereKey($cheque->id)->delete();
+
+        $newCompany = FiscalYearService::importData($payload, [
+            'name' => 'Restored Cheques',
+            'fiscal_year' => 1406,
+        ]);
+
+        $restoredCheque = Cheque::withoutGlobalScope(FiscalYearScope::class)
+            ->where('company_id', $newCompany->id)
+            ->firstOrFail();
+        $restoredHistory = $restoredCheque->histories()->firstOrFail();
+        $restoredDocument = Document::withoutGlobalScope(FiscalYearScope::class)
+            ->findOrFail($restoredHistory->document_id);
+        $restoredCustomer = Customer::withoutGlobalScope(FiscalYearScope::class)
+            ->findOrFail($restoredCheque->customer_id);
+        $restoredAccount = BankAccount::withoutGlobalScope(FiscalYearScope::class)
+            ->findOrFail($restoredCheque->bank_account_id);
+        $restoredPayment = Payment::findOrFail($restoredHistory->payment_id);
+        $restoredInvoice = Invoice::withoutGlobalScope(FiscalYearScope::class)
+            ->findOrFail($restoredPayment->invoice_id);
+
+        $this->assertSame('1234567890123456', $restoredCheque->sayad_number);
+        $this->assertSame('Backup customer', $restoredCustomer->name);
+        $this->assertSame('Backup account', $restoredAccount->name);
+        $this->assertSame($restoredCheque->id, $restoredDocument->documentable_id);
+        $this->assertSame(Cheque::class, $restoredDocument->documentable_type);
+        $this->assertSame(ChequeType::REGISTERED, $restoredHistory->to_status);
+        $this->assertSame($restoredCheque->id, $restoredPayment->cheque_id);
+        $this->assertSame($newCompany->id, $restoredInvoice->company_id);
     }
 
     public function test_import_uploads_zip_and_creates_new_company(): void

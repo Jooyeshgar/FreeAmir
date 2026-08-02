@@ -90,7 +90,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'bank-accounts' => [...self::CRUD, 'search-bank'],
             'banks' => self::CRUD,
             'cheques' => [...self::CRUD, 'report', 'transition'],
-            'checkbooks' => self::CRUD_NO_SHOW,
 
             // Invoices and their statuses
             'invoices' => [

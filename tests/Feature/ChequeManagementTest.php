@@ -3,13 +3,11 @@
 namespace Tests\Feature;
 
 use App\Enums\ChequeType;
-use App\Enums\CustomerType;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Http\Middleware\CheckPermission;
 use App\Models\Bank;
 use App\Models\BankAccount;
-use App\Models\Checkbook;
 use App\Models\Cheque;
 use App\Models\Company;
 use App\Models\Customer;
@@ -20,7 +18,6 @@ use App\Models\User;
 use App\Services\ChequeService;
 use App\Services\PaymentService;
 use Cookie;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -47,6 +44,8 @@ class ChequeManagementTest extends TestCase
 
     private int $sayadSequence = 1000000000000000;
 
+    private int $invoiceSequence = 1;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -57,24 +56,17 @@ class ChequeManagementTest extends TestCase
         $_COOKIE['active-company-id'] = (string) $companyId;
 
         DB::table('subjects')->insert([
-            ['id' => 1, 'code' => '010', 'name' => 'Banks', 'parent_id' => null, 'type' => 'both', 'company_id' => $companyId],
-            ['id' => 6, 'code' => '013', 'name' => 'Notes receivable', 'parent_id' => null, 'type' => 'both', 'company_id' => $companyId],
-            ['id' => 22, 'code' => '020', 'name' => 'Notes payable', 'parent_id' => null, 'type' => 'both', 'company_id' => $companyId],
-            ['id' => 67, 'code' => '014', 'name' => 'Notes in collection', 'parent_id' => null, 'type' => 'both', 'company_id' => $companyId],
-            ['id' => 44, 'code' => '013001', 'name' => 'Notes receivable detail', 'parent_id' => 6, 'type' => 'both', 'company_id' => $companyId],
-            ['id' => 46, 'code' => '020001', 'name' => 'Notes payable detail', 'parent_id' => 22, 'type' => 'both', 'company_id' => $companyId],
-            ['id' => 68, 'code' => '014001', 'name' => 'Notes in collection detail', 'parent_id' => 67, 'type' => 'both', 'company_id' => $companyId],
-            ['id' => 201, 'code' => '012001001', 'name' => 'Customer subject', 'parent_id' => null, 'type' => 'both', 'company_id' => $companyId],
-            ['id' => 202, 'code' => '012001002', 'name' => 'Vendor subject', 'parent_id' => null, 'type' => 'both', 'company_id' => $companyId],
-            ['id' => 203, 'code' => '010001', 'name' => 'Bank account subject', 'parent_id' => 1, 'type' => 'both', 'company_id' => $companyId],
+            ['id' => 1, 'code' => '010', 'name' => 'Banks', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
+            ['id' => 6, 'code' => '013', 'name' => 'Notes receivable', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
+            ['id' => 22, 'code' => '020', 'name' => 'Notes payable', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
+            ['id' => 67, 'code' => '014', 'name' => 'Notes in collection', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
+            ['id' => 44, 'code' => '013001', 'name' => 'Notes receivable detail', 'parent_id' => 6, 'type' => 3, 'company_id' => $companyId],
+            ['id' => 46, 'code' => '020001', 'name' => 'Notes payable detail', 'parent_id' => 22, 'type' => 3, 'company_id' => $companyId],
+            ['id' => 68, 'code' => '014001', 'name' => 'Notes in collection detail', 'parent_id' => 67, 'type' => 3, 'company_id' => $companyId],
+            ['id' => 201, 'code' => '012001001', 'name' => 'Customer subject', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
+            ['id' => 202, 'code' => '012001002', 'name' => 'Vendor subject', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
+            ['id' => 203, 'code' => '010001', 'name' => 'Bank account subject', 'parent_id' => 1, 'type' => 3, 'company_id' => $companyId],
         ]);
-
-        if (DB::getDriverName() === 'sqlite'
-            && ! in_array(Schema::getColumnType('customers', 'type'), ['integer', 'tinyint', 'smallint'], true)) {
-            Schema::table('customers', function (Blueprint $table) {
-                $table->unsignedTinyInteger('type')->default(CustomerType::INDIVIDUAL->value)->change();
-            });
-        }
 
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
@@ -115,8 +107,7 @@ class ChequeManagementTest extends TestCase
 
         $payment = Payment::where('cheque_id', $cheque->id)->firstOrFail();
         $this->assertNull($payment->invoice_id);
-        $this->assertSame('cheque', $payment->method);
-        $this->assertSame('inbound', $payment->direction);
+        $this->assertSame(ChequeType::RECEIVABLE, $payment->cheque->direction);
         $this->assertSame($cheque->sayad_number, $payment->reference_number);
     }
 
@@ -133,12 +124,12 @@ class ChequeManagementTest extends TestCase
     public function test_received_cheque_can_be_endorsed_to_vendor_as_a_cheque_payment(): void
     {
         $cheque = $this->receivedCheque();
-        $cheque = $this->service->transition($cheque, $this->user, 'endorse', ['party_id' => $this->vendor->id]);
+        $cheque = $this->service->transition($cheque, $this->user, 'endorse', ['account_side_id' => $this->vendor->id]);
 
         $this->assertSame(ChequeType::ENDORSED, $cheque->status);
         $this->assertSame($this->vendor->id, $cheque->endorsed_to_id);
         $payment = Payment::where('cheque_id', $cheque->id)->firstOrFail();
-        $this->assertSame($this->vendor->id, $payment->payee_id);
+        $this->assertTrue($payment->cheque->is($cheque));
         $this->assertBalanced($payment->document);
     }
 
@@ -152,8 +143,8 @@ class ChequeManagementTest extends TestCase
 
         $this->assertSame(ChequeType::CLEARED, $cheque->status);
         $payment = Payment::where('cheque_id', $cheque->id)->firstOrFail();
-        $this->assertSame('outbound', $payment->direction);
-        $this->assertSame($this->vendor->id, $payment->payee_id);
+        $this->assertSame(ChequeType::PAYABLE, $payment->cheque->direction);
+        $this->assertSame($this->vendor->id, $payment->cheque->customer_id);
         $this->assertBalanced($payment->document);
     }
 
@@ -174,36 +165,12 @@ class ChequeManagementTest extends TestCase
 
     public function test_invalid_lifecycle_transition_is_rejected(): void
     {
-        $this->expectException(ValidationException::class);
-        $this->service->transition($this->receivedCheque(), $this->user, 'clear');
-    }
-
-    public function test_checkbook_leaf_range_generates_serial_and_prevents_reuse(): void
-    {
-        $checkbook = Checkbook::create([
-            'bank_account_id' => $this->account->id,
-            'title' => 'Main book',
-            'serial_prefix' => 'A-',
-            'start_leaf_number' => 100,
-            'end_leaf_number' => 102,
-            'next_leaf_number' => 100,
-            'is_active' => true,
-        ]);
-        $data = array_merge($this->data(ChequeType::PAYABLE, ChequeType::SETTLEMENT, $this->vendor), [
-            'serial' => null,
-            'bank_account_id' => $this->account->id,
-            'checkbook_id' => $checkbook->id,
-            'checkbook_leaf_number' => 100,
-        ]);
-
-        $cheque = $this->service->register($this->user, $data);
-
-        $this->assertSame('A-100', $cheque->serial);
-        $this->assertSame(101, $checkbook->fresh()->next_leaf_number);
-
-        $this->expectException(ValidationException::class);
-        $data['sayad_number'] = (string) $this->sayadSequence++;
-        $this->service->register($this->user, $data);
+        try {
+            $this->service->transition($this->receivedCheque(), $this->user, 'clear');
+            $this->fail('Expected an invalid cheque transition to be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertSame([__('This action is not allowed in the current status.')], $exception->errors()['status']);
+        }
     }
 
     public function test_http_validation_requires_exactly_sixteen_sayad_digits(): void
@@ -229,42 +196,39 @@ class ChequeManagementTest extends TestCase
         }
     }
 
-    public function test_checkbook_controller_creates_an_active_book_and_rejects_a_duplicate_title(): void
-    {
-        $this->withoutMiddleware();
-        $data = [
-            'bank_account_id' => $this->account->id,
-            'title' => 'Main HTTP book',
-            'serial_prefix' => 'HTTP-',
-            'start_leaf_number' => 1,
-            'end_leaf_number' => 10,
-            'is_active' => '1',
-        ];
-
-        $this->post(route('checkbooks.store'), $data)->assertRedirect(route('checkbooks.index'));
-
-        $checkbook = Checkbook::where('title', $data['title'])->firstOrFail();
-        $this->assertTrue($checkbook->is_active);
-        $this->assertSame(1, $checkbook->next_leaf_number);
-
-        $this->post(route('checkbooks.store'), $data)->assertSessionHasErrors('title');
-    }
-
     public function test_cheque_translations_are_loaded_from_json_catalogs(): void
     {
         $originalLocale = app()->getLocale();
 
         app()->setLocale('en');
-        $this->assertSame('Cheque Management', __('cheques title'));
+        $this->assertSame('Cheque Management', __('Cheque Management'));
+        $this->assertSame('Cheque number', __('Cheque number'));
         $this->assertSame('Received', ChequeType::REGISTERED->label());
 
         app()->setLocale('fa');
-        $this->assertSame('مدیریت چک‌ها', __('cheques title'));
+        $this->assertSame('مدیریت چک‌ها', __('Cheque Management'));
+        $this->assertSame('شماره چک', __('Cheque number'));
         $this->assertSame('دریافت‌شده', ChequeType::REGISTERED->label());
 
         app()->setLocale($originalLocale);
         $this->assertFileDoesNotExist(lang_path('en/cheques.php'));
         $this->assertFileDoesNotExist(lang_path('fa/cheques.php'));
+    }
+
+    public function test_cheque_validation_messages_use_sentence_translation_keys(): void
+    {
+        $originalLocale = app()->getLocale();
+
+        app()->setLocale('en');
+        $this->assertSame('A bank account is required.', __('A bank account is required.'));
+
+        app()->setLocale('fa');
+        $this->assertSame('انتخاب حساب بانکی الزامی است.', __('A bank account is required.'));
+
+        app()->setLocale($originalLocale);
+
+        $faTranslations = json_decode(file_get_contents(lang_path('fa.json')), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertArrayHasKey('A bank account is required.', $faTranslations);
     }
 
     public function test_untransacted_cheque_can_be_updated_and_its_accounting_document_is_rebuilt(): void
@@ -274,11 +238,13 @@ class ChequeManagementTest extends TestCase
         $data = $this->data(ChequeType::RECEIVABLE, ChequeType::SETTLEMENT, $this->customer, '2026-03-01', 2500);
         $data['sayad_number'] = $cheque->sayad_number;
         $data['serial'] = 'UPDATED-1';
+        $data['cheque_number'] = '987654';
         $data['version'] = $cheque->version;
 
         $updated = $this->service->update($cheque, $this->user, $data);
 
         $this->assertSame('UPDATED-1', $updated->serial);
+        $this->assertSame('987654', $updated->cheque_number);
         $this->assertSame('2500.00', $updated->amount);
         $this->assertSame('2026-03-01', $updated->due_date->toDateString());
         $this->assertSame(ChequeType::REGISTERED, $updated->status);
@@ -331,8 +297,7 @@ class ChequeManagementTest extends TestCase
         $this->assertSame(ChequeType::REGISTERED, $cheque->status);
         $this->assertSame($cheque->id, $payment->cheque_id);
         $this->assertSame($invoice->id, $payment->invoice_id);
-        $this->assertSame('cheque', $payment->method);
-        $this->assertSame('inbound', $payment->direction);
+        $this->assertSame(ChequeType::RECEIVABLE, $payment->cheque->direction);
         $this->assertSame($history->document_id, $payment->document_id);
         $this->assertSame($history->payment_id, $payment->id);
         $this->assertBalanced($payment->document);
@@ -350,8 +315,8 @@ class ChequeManagementTest extends TestCase
         $payment = $invoice->payments()->firstOrFail();
 
         $this->assertSame(ChequeType::ISSUED, $cheque->status);
-        $this->assertSame('outbound', $payment->direction);
-        $this->assertSame($invoice->customer_id, $payment->payee_id);
+        $this->assertSame(ChequeType::PAYABLE, $payment->cheque->direction);
+        $this->assertSame($invoice->customer_id, $payment->cheque->customer_id);
         $this->assertBalanced($payment->document);
         $this->assertTrue($invoice->fresh()->status->isPaid());
     }
@@ -443,6 +408,7 @@ class ChequeManagementTest extends TestCase
             'issue_date' => toEnglish(formatDate($invoice->date)),
             'due_date' => toEnglish(formatDate($invoice->date->copy()->addMonth())),
             'serial' => 'HTTP-CHEQUE',
+            'cheque_number' => 'HTTP-123',
             'sayad_number' => (string) $this->sayadSequence++,
             'description' => 'HTTP invoice cheque',
         ]);
@@ -450,10 +416,26 @@ class ChequeManagementTest extends TestCase
         $response->assertRedirect(route('invoices.show', $invoice));
         $this->assertDatabaseHas('payments', [
             'invoice_id' => $invoice->id,
-            'method' => 'cheque',
-            'direction' => 'inbound',
         ]);
+        $this->assertSame(ChequeType::RECEIVABLE, $invoice->payments()->firstOrFail()->cheque->direction);
         $this->assertTrue($invoice->fresh()->status->isPaid());
+    }
+
+    public function test_invoice_cheque_modal_has_stable_date_fields_and_cheque_number(): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+        $this->user->givePermissionTo([
+            Permission::findOrCreate('invoices.payments.store'),
+            Permission::findOrCreate('invoices.payments.store-cheque'),
+        ]);
+        $invoice = $this->invoice(InvoiceType::SELL, $this->customer, 1000);
+
+        $this->get(route('invoices.show', $invoice))
+            ->assertOk()
+            ->assertSee('name="cheque_number"', false)
+            ->assertSee('id="cheque_issue_date"', false)
+            ->assertSee('id="cheque_due_date"', false)
+            ->assertSee('preventScroll: true', false);
     }
 
     public function test_deleting_invoice_detaches_but_preserves_its_cheque_and_accounting_document(): void
@@ -486,11 +468,54 @@ class ChequeManagementTest extends TestCase
             route('cheques.edit', $received),
             route('cheques.show', $received),
             route('cheques.report'),
-            route('checkbooks.index'),
-            route('checkbooks.create'),
         ] as $url) {
             $this->get($url)->assertOk();
         }
+    }
+
+    public function test_cheque_index_renders_and_applies_all_supported_filters(): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+        $matching = $this->receivedCheque(ChequeType::GUARANTEE, '2026-02-10', 1500);
+        $this->receivedCheque(ChequeType::SETTLEMENT, '2026-02-10', 1500);
+        $this->issuedCheque();
+
+        $dueDate = toEnglish(formatDate($matching->due_date));
+        $filters = [
+            'q' => $matching->cheque_number,
+            'direction' => ChequeType::RECEIVABLE->value,
+            'purpose' => ChequeType::GUARANTEE->value,
+            'status' => ChequeType::GUARANTEE_RECEIVED->value,
+            'amount_min' => 1400,
+            'amount_max' => 1600,
+            'due_from' => $dueDate,
+            'due_to' => $dueDate,
+            'customer_id' => $this->customer->id,
+        ];
+
+        $this->get(route('cheques.index', $filters))
+            ->assertOk()
+            ->assertViewHas('cheques', fn ($cheques) => $cheques->total() === 1 && $cheques->first()->is($matching))
+            ->assertSee('name="purpose"', false)
+            ->assertSee(route('cheques.report', $filters));
+    }
+
+    public function test_cheque_form_renders_constraints_and_conditional_bank_account_controls(): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+
+        $this->get(route('cheques.create', ['direction' => ChequeType::PAYABLE->value]))
+            ->assertOk()
+            ->assertSee(__('Register cheque'))
+            ->assertSee('x-model="direction"', false)
+            ->assertSee('searchSelect({', false)
+            ->assertSee('name="account_side_id"', false)
+            ->assertSee('name="bank_account_id"', false)
+            ->assertSee('name="cheque_number"', false)
+            ->assertSee(':disabled="direction !==', false)
+            ->assertSee('minlength="16"', false)
+            ->assertSee('maxlength="16"', false)
+            ->assertSee('maxlength="1000"', false);
     }
 
     public function test_customer_show_lists_original_and_endorsed_cheques_only(): void
@@ -502,7 +527,7 @@ class ChequeManagementTest extends TestCase
             $this->data(ChequeType::RECEIVABLE, ChequeType::SETTLEMENT, $this->vendor),
         );
         $endorsedCheque = $this->service->transition($endorsedCheque, $this->user, 'endorse', [
-            'party_id' => $this->customer->id,
+            'account_side_id' => $this->customer->id,
         ]);
         $unrelatedCheque = $this->issuedCheque();
 
@@ -516,11 +541,11 @@ class ChequeManagementTest extends TestCase
                     && $cheques->contains('id', $endorsedCheque->id)
                     && ! $cheques->contains('id', $unrelatedCheque->id);
             })
-            ->assertSee(localizeNumber($originalCheque->serial))
-            ->assertSee(localizeNumber($endorsedCheque->serial))
-            ->assertDontSee(localizeNumber($unrelatedCheque->serial))
-            ->assertSee(__('cheques role original_party'))
-            ->assertSee(__('cheques role endorsee'));
+            ->assertSee(localizeNumber($originalCheque->cheque_number))
+            ->assertSee(localizeNumber($endorsedCheque->cheque_number))
+            ->assertDontSee(localizeNumber($unrelatedCheque->cheque_number))
+            ->assertSee(__('Original account side'))
+            ->assertSee(__('Endorsee'));
     }
 
     private function receivedCheque(ChequeType $purpose = ChequeType::SETTLEMENT, string $dueDate = '2026-02-01', float $amount = 1000): Cheque
@@ -535,7 +560,7 @@ class ChequeManagementTest extends TestCase
         ]));
     }
 
-    private function data(ChequeType $direction, ChequeType $purpose, Customer $party, string $dueDate = '2026-02-01', float $amount = 1000): array
+    private function data(ChequeType $direction, ChequeType $purpose, Customer $accountSide, string $dueDate = '2026-02-01', float $amount = 1000): array
     {
         return [
             'direction' => $direction->value,
@@ -544,28 +569,21 @@ class ChequeManagementTest extends TestCase
             'issue_date' => '2026-01-01',
             'due_date' => $dueDate,
             'serial' => 'S-'.$this->sayadSequence,
+            'cheque_number' => 'N-'.$this->sayadSequence,
             'sayad_number' => (string) $this->sayadSequence++,
-            'party_id' => $party->id,
+            'account_side_id' => $accountSide->id,
             'bank_account_id' => null,
             'description' => 'Test cheque',
         ];
     }
 
-    private function invoice(InvoiceType $type, Customer $party, float $amount): Invoice
+    private function invoice(InvoiceType $type, Customer $accountSide, float $amount): Invoice
     {
-        if (DB::getDriverName() === 'sqlite'
-            && ! in_array(Schema::getColumnType('invoices', 'status'), ['integer', 'tinyint', 'smallint'], true)) {
-            Schema::table('invoices', function (Blueprint $table) {
-                $table->unsignedTinyInteger('invoice_type')->default(InvoiceType::SELL->value)->change();
-                $table->unsignedTinyInteger('status')->default(InvoiceStatus::PENDING->value)->change();
-            });
-        }
-
         return Invoice::create([
-            'number' => (string) $this->sayadSequence++,
+            'number' => (string) $this->invoiceSequence++,
             'date' => '2026-01-01',
             'creator_id' => $this->user->id,
-            'customer_id' => $party->id,
+            'customer_id' => $accountSide->id,
             'subtraction' => 0,
             'vat' => 0,
             'amount' => $amount,

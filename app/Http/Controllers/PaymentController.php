@@ -46,27 +46,24 @@ class PaymentController extends Controller
             'amount' => convertToFloat($request->input('amount', 0)),
             'sayad_number' => preg_replace('/\D/', '', toEnglish((string) $request->input('sayad_number'))),
             'serial' => trim(toEnglish((string) $request->input('serial'))),
+            'cheque_number' => trim(toEnglish((string) $request->input('cheque_number'))),
             'issue_date' => $request->filled('issue_date') ? jalaliInputToGregorian($request->input('issue_date'), 'issue_date') : null,
             'due_date' => $request->filled('due_date') ? jalaliInputToGregorian($request->input('due_date'), 'due_date') : null,
         ]);
-        if ($request->filled('checkbook_leaf_number')) {
-            $request->merge(['checkbook_leaf_number' => convertToInt($request->input('checkbook_leaf_number'))]);
-        }
 
         $companyId = getActiveCompany();
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'gt:0'],
             'issue_date' => ['required', 'date'],
             'due_date' => ['required', 'date', 'after_or_equal:issue_date'],
-            'serial' => ['nullable', 'required_without:checkbook_leaf_number', 'string', 'max:50'],
+            'serial' => ['nullable', 'string', 'max:50'],
+            'cheque_number' => ['nullable', 'string', 'max:50'],
             'sayad_number' => ['required', 'regex:/^\d{16}$/', Rule::unique('cheques', 'sayad_number')],
             'bank_account_id' => [
                 Rule::requiredIf($direction === ChequeType::PAYABLE),
                 'nullable',
                 Rule::exists('bank_accounts', 'id')->where('company_id', $companyId),
             ],
-            'checkbook_id' => ['nullable', Rule::exists('checkbooks', 'id')->where('company_id', $companyId)],
-            'checkbook_leaf_number' => ['nullable', 'integer', 'min:1'],
             'description' => ['nullable', 'string', 'max:1000'],
         ]);
 
@@ -75,7 +72,7 @@ class PaymentController extends Controller
             'invoice_id' => $invoice->id,
             'direction' => $direction->value,
             'purpose' => ChequeType::SETTLEMENT->value,
-            'party_id' => $invoice->customer_id,
+            'account_side_id' => $invoice->customer_id,
         ]);
 
         return redirect()->route('invoices.show', $invoice)->with('success', __('Invoice payment cheque registered successfully.'));

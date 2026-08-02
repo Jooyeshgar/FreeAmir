@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\AncillaryCostType;
 use App\Enums\BankAccountType;
+use App\Enums\ChequeType;
 use App\Enums\CustomerType;
 use App\Enums\EmployeeDutyStatus;
 use App\Enums\EmployeeEducationLevel;
@@ -437,39 +438,16 @@ class FiscalYearService
                         }
                     }
                 }
-                // if (in_array('cheques', $sectionsToImport)) {
-                // $customerMapping = $idMappings['customers'] ?? [];
-                // $transactionMapping = $idMappings['transactions'] ?? [];
-                // $bankAccountMapping = $idMappings['bank_accounts'] ?? [];
+                if (in_array('cheques', $sectionsToImport) && isset($importData['cheques'])) {
+                    $idMappings['cheques'] = self::_importCheques(
+                        $importData['cheques'],
+                        $targetYearId,
+                        $idMappings['customers'] ?? [],
+                        $idMappings['bank_accounts'] ?? [],
+                    );
 
-                // if (isset($importData['cheques'])) {
-                //     if (! empty($customerMapping) && ! empty($transactionMapping) && ! empty($bankAccountMapping)) {
-                //         $idMappings['cheques'] = self::_importCheques($importData['cheques'], $targetYearId, $customerMapping, $transactionMapping, $bankAccountMapping);
-                //     } else {
-                //         Log::warning('Skipping cheques import due to missing customer or transaction or bank account mappings.', [
-                //             'target_year_id' => $targetYearId,
-                //             'has_customer_mapping' => ! empty($customerMapping),
-                //             'has_trasnaction_mapping' => ! empty($transactionMapping),
-                //             'has_bank_account_mapping' => ! empty($bankAccountMapping),
-                //         ]);
-                //     }
-                // }
-
-                // if (isset($importData['cheque_histories'])) {
-                //     $chequeMapping = $idMappings['cheques'] ?? [];
-                //     if (! empty($chequeMapping) && ! empty($customerMapping) && ! empty($transactionMapping) && ! empty($bankAccountMapping)) {
-                //         self::_importChequeHistories($importData['cheque_histories'], $targetYearId, $chequeMapping, $customerMapping, $transactionMapping, $bankAccountMapping);
-                //     } else {
-                //         Log::warning('Skipping cheque histories import due to missing cheque or customer or transaction or bank account mappings.', [
-                //             'target_year_id' => $targetYearId,
-                //             'has_cheque_mapping' => ! empty($chequeMapping),
-                //             'has_customer_mapping' => ! empty($customerMapping),
-                //             'has_trasnaction_mapping' => ! empty($transactionMapping),
-                //             'has_bank_account_mapping' => ! empty($bankAccountMapping),
-                //         ]);
-                //     }
-                // }
-                // }
+                    self::_syncChequeDocuments($importData['documents'] ?? [], $idMappings['documents'] ?? [], $idMappings['cheques']);
+                }
                 if (in_array('invoices', $sectionsToImport)) {
                     $customerMapping = $idMappings['customers'] ?? [];
                     $documentMapping = $idMappings['documents'] ?? [];
@@ -525,13 +503,25 @@ class FiscalYearService
                         }
                     }
 
-                    if (isset($importData['payments'])) {
-                        if (! empty($idMappings['invoices'])) {
-                            self::_importPayments($importData['payments'], $idMappings['invoices'], $customerMapping, $documentMapping);
-                        } else {
-                            Log::warning('Skipping payment import due to missing invoice mapping.', ['target_year_id' => $targetYearId]);
-                        }
-                    }
+                }
+                if (isset($importData['payments']) && (in_array('invoices', $sectionsToImport) || in_array('cheques', $sectionsToImport))) {
+                    $idMappings['payments'] = self::_importPayments(
+                        $importData['payments'],
+                        $idMappings['invoices'] ?? [],
+                        $idMappings['customers'] ?? [],
+                        $idMappings['documents'] ?? [],
+                        $idMappings['subjects'] ?? [],
+                        $idMappings['cheques'] ?? [],
+                    );
+                }
+                if (in_array('cheques', $sectionsToImport) && isset($importData['cheque_histories'])) {
+                    self::_importChequeHistories(
+                        $importData['cheque_histories'],
+                        $targetYearId,
+                        $idMappings['cheques'] ?? [],
+                        $idMappings['documents'] ?? [],
+                        $idMappings['payments'] ?? [],
+                    );
                 }
                 if (in_array('tax_slabs', $sectionsToImport) && isset($importData['tax_slabs'])) {
                     self::_importTaxSlabs($importData['tax_slabs'], $targetYearId);
@@ -800,15 +790,18 @@ class FiscalYearService
 
             $sourceData['payments'] = ! empty($invoiceIds) ? Payment::whereIn('invoice_id', $invoiceIds)->get()->toArray() : [];
         }
-        // if (in_array('cheques', $sections)) {
-        //     $sourceData['cheques'] = Cheque::withoutGlobalScope(FiscalYearScope::class)
-        //         ->where('company_id', $sourceYearId)
-        //         ->get()->toArray();
+        if (in_array('cheques', $sections)) {
+            $sourceData['cheques'] = Cheque::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
+                ->get()->toArray();
 
-        //     $sourceData['cheque_histories'] = ChequeHistory::withoutGlobalScope(FiscalYearScope::class)
-        //         ->where('company_id', $sourceYearId)
-        //         ->get()->toArray();
-        // }
+            $chequeIds = collect($sourceData['cheques'])->pluck('id')->toArray();
+            $sourceData['cheque_histories'] = ! empty($chequeIds) ? ChequeHistory::whereIn('cheque_id', $chequeIds)->get()->toArray() : [];
+
+            $invoicePayments = collect($sourceData['payments'] ?? []);
+            $chequePayments = ! empty($chequeIds) ? Payment::whereIn('cheque_id', $chequeIds)->get() : collect();
+            $sourceData['payments'] = $invoicePayments->concat($chequePayments)->unique('id')->values()->toArray();
+        }
         if (in_array('employees', $sections)) {
             $sourceData['employees'] = Employee::withoutGlobalScope(FiscalYearScope::class)
                 ->where('company_id', $sourceYearId)
@@ -2162,17 +2155,16 @@ class FiscalYearService
      * Import Cheques.
      *
      * @param  array  $customerMapping  Mapping of old customer ID to new customer ID.
-     * @param  array  $transactionMapping  Mapping of old transaction ID to new transaction ID.
      * @param  array  $bankAccountMapping  Mapping of old bank account ID to new bank account ID.
      * @return array<int, int> Mapping of old cheque ID to new cheque ID.
      */
-    protected static function _importCheques(array $chequesData, int $targetYearId, array $customerMapping, array $transactionMapping, array $bankAccountMapping): array
+    protected static function _importCheques(array $chequesData, int $targetYearId, array $customerMapping, array $bankAccountMapping): array
     {
         $mapping = [];
         foreach ($chequesData as $chequeData) {
             $oldCustomerId = $chequeData['customer_id'] ?? null;
-            $oldTransactionId = $chequeData['transaction_id'] ?? null;
-            $oldBankAccountId = $chequeData['account_id'] ?? null;
+            $oldEndorsedToId = $chequeData['endorsed_to_id'] ?? null;
+            $oldBankAccountId = $chequeData['bank_account_id'] ?? null;
 
             if ($oldCustomerId === null || ! isset($customerMapping[$oldCustomerId])) {
                 Log::warning('Skipping cheque import due to missing customer mapping.', ['old_cheque_id' => $chequeData['id'] ?? 'N/A', 'old_customer_id' => $oldCustomerId, 'target_year_id' => $targetYearId]);
@@ -2180,24 +2172,30 @@ class FiscalYearService
                 continue;
             }
 
-            if ($oldTransactionId === null || ! isset($transactionMapping[$oldTransactionId])) {
-                Log::warning('Skipping cheque import due to missing transaction mapping.', ['old_cheque_id' => $chequeData['id'] ?? 'N/A', 'old_transaction_id' => $oldTransactionId, 'target_year_id' => $targetYearId]);
+            if ($oldEndorsedToId !== null && ! isset($customerMapping[$oldEndorsedToId])) {
+                Log::warning('Skipping cheque import due to missing endorsed customer mapping.', ['old_cheque_id' => $chequeData['id'] ?? 'N/A', 'old_endorsed_to_id' => $oldEndorsedToId, 'target_year_id' => $targetYearId]);
 
                 continue;
             }
 
-            if ($oldBankAccountId === null || ! isset($bankAccountMapping[$oldBankAccountId])) {
+            if ($oldBankAccountId !== null && ! isset($bankAccountMapping[$oldBankAccountId])) {
                 Log::warning('Skipping cheque import due to missing bank account mapping.', ['old_cheque_id' => $chequeData['id'] ?? 'N/A', 'old_bank_account_id' => $oldBankAccountId, 'target_year_id' => $targetYearId]);
 
                 continue;
             }
 
+            $chequeData = self::_normalizeEnumAttributes($chequeData, [
+                'direction' => ChequeType::class,
+                'purpose' => ChequeType::class,
+                'status' => ChequeType::class,
+            ]);
             $newCheque = new Cheque;
-            $newCheque->fill(collect($chequeData)->except(['id', 'customer_id', 'transaction_id', 'account_id'])->toArray());
-            $newCheque->transaction_id = $transactionMapping[$oldTransactionId];
-            $newCheque->account_id = $bankAccountMapping[$oldBankAccountId];
+            $newCheque->fill(collect($chequeData)->except(['id', 'company_id', 'customer_id', 'endorsed_to_id', 'bank_account_id'])->toArray());
             $newCheque->company_id = $targetYearId;
-            $newCheque->save();
+            $newCheque->customer_id = $customerMapping[$oldCustomerId];
+            $newCheque->endorsed_to_id = $oldEndorsedToId !== null ? $customerMapping[$oldEndorsedToId] : null;
+            $newCheque->bank_account_id = $oldBankAccountId !== null ? $bankAccountMapping[$oldBankAccountId] : null;
+            $newCheque->saveQuietly();
 
             $mapping[$chequeData['id']] = $newCheque->id;
         }
@@ -2206,52 +2204,59 @@ class FiscalYearService
     }
 
     /**
+     * Remap accounting documents whose polymorphic owner is a cheque.
+     *
+     * @param  array  $documentMapping  Mapping of old document ID to new document ID.
+     * @param  array  $chequeMapping  Mapping of old cheque ID to new cheque ID.
+     */
+    protected static function _syncChequeDocuments(array $documentsData, array $documentMapping, array $chequeMapping): void
+    {
+        foreach ($documentsData as $documentData) {
+            if (($documentData['documentable_type'] ?? null) !== Cheque::class) {
+                continue;
+            }
+
+            $oldDocumentId = $documentData['id'] ?? null;
+            $oldChequeId = $documentData['documentable_id'] ?? null;
+            if (! isset($documentMapping[$oldDocumentId], $chequeMapping[$oldChequeId])) {
+                continue;
+            }
+
+            Document::withoutGlobalScope(FiscalYearScope::class)
+                ->whereKey($documentMapping[$oldDocumentId])
+                ->update(['documentable_id' => $chequeMapping[$oldChequeId]]);
+        }
+    }
+
+    /**
      * Import Cheque Histories.
      *
      * @param  array  $chequeMapping  Mapping of old cheque ID to new cheque ID.
-     * @param  array  $customerMapping  Mapping of old customer ID to new customer ID.
-     * @param  array  $transactionMapping  Mapping of old transaction ID to new transaction ID.
-     * @param  array  $bankAccountMapping  Mapping of old bank account ID to new bank account ID.
+     * @param  array  $documentMapping  Mapping of old document ID to new document ID.
+     * @param  array  $paymentMapping  Mapping of old payment ID to new payment ID.
      */
-    protected static function _importChequeHistories(array $chequeHistoriesData, int $targetYearId, array $chequeMapping, array $customerMapping, array $transactionMapping, array $bankAccountMapping): void
+    protected static function _importChequeHistories(array $chequeHistoriesData, int $targetYearId, array $chequeMapping, array $documentMapping, array $paymentMapping): void
     {
-        foreach ($chequeHistoriesData as $chequeHistoriyData) {
-            $oldChequeId = $chequeHistoriyData['cheque_id'] ?? null;
-            $oldCustomerId = $chequeHistoriyData['customer_id'] ?? null;
-            $oldTransactionId = $chequeHistoriyData['transaction_id'] ?? null;
-            $oldBankAccountId = $chequeHistoriyData['account_id'] ?? null;
+        foreach ($chequeHistoriesData as $chequeHistoryData) {
+            $oldChequeId = $chequeHistoryData['cheque_id'] ?? null;
 
             if ($oldChequeId === null || ! isset($chequeMapping[$oldChequeId])) {
-                Log::warning('Skipping cheque history import due to missing cheque mapping.', ['old_cheque_history_id' => $chequeHistoriyData['id'] ?? 'N/A', 'old_cheque_id' => $oldChequeId, 'target_year_id' => $targetYearId]);
+                Log::warning('Skipping cheque history import due to missing cheque mapping.', ['old_cheque_history_id' => $chequeHistoryData['id'] ?? 'N/A', 'old_cheque_id' => $oldChequeId, 'target_year_id' => $targetYearId]);
 
                 continue;
             }
 
-            if ($oldCustomerId === null || ! isset($customerMapping[$oldCustomerId])) {
-                Log::warning('Skipping cheque history import due to missing customer mapping.', ['old_cheque_history_id' => $chequeHistoriyData['id'] ?? 'N/A', 'old_customer_id' => $oldCustomerId, 'target_year_id' => $targetYearId]);
-
-                continue;
-            }
-
-            if ($oldTransactionId === null || ! isset($transactionMapping[$oldTransactionId])) {
-                Log::warning('Skipping cheque history import due to missing transaction mapping.', ['old_cheque_history_id' => $chequeHistoriyData['id'] ?? 'N/A', 'old_transaction_id' => $oldTransactionId, 'target_year_id' => $targetYearId]);
-
-                continue;
-            }
-
-            if ($oldBankAccountId === null || ! isset($bankAccountMapping[$oldBankAccountId])) {
-                Log::warning('Skipping cheque history import due to missing bank account mapping.', ['old_cheque_history_id' => $chequeHistoriyData['id'] ?? 'N/A', 'old_bank_account_id' => $oldBankAccountId, 'target_year_id' => $targetYearId]);
-
-                continue;
-            }
-
+            $oldDocumentId = $chequeHistoryData['document_id'] ?? null;
+            $oldPaymentId = $chequeHistoryData['payment_id'] ?? null;
+            $chequeHistoryData = self::_normalizeEnumAttributes($chequeHistoryData, [
+                'from_status' => ChequeType::class,
+                'to_status' => ChequeType::class,
+            ]);
             $newChequeHistory = new ChequeHistory;
-            $newChequeHistory->fill(collect($chequeHistoriyData)->except(['id', 'customer_id', 'cheque_id', 'transaction_id', 'account_id'])->toArray());
+            $newChequeHistory->fill(collect($chequeHistoryData)->except(['id', 'cheque_id', 'document_id', 'payment_id'])->toArray());
             $newChequeHistory->cheque_id = $chequeMapping[$oldChequeId];
-            $newChequeHistory->customer_id = $customerMapping[$oldCustomerId];
-            $newChequeHistory->transaction_id = $transactionMapping[$oldTransactionId];
-            $newChequeHistory->account_id = $bankAccountMapping[$oldBankAccountId];
-            $newChequeHistory->company_id = $targetYearId;
+            $newChequeHistory->document_id = $oldDocumentId !== null ? ($documentMapping[$oldDocumentId] ?? null) : null;
+            $newChequeHistory->payment_id = $oldPaymentId !== null ? ($paymentMapping[$oldPaymentId] ?? null) : null;
             $newChequeHistory->save();
         }
     }
@@ -2456,27 +2461,51 @@ class FiscalYearService
      * @param  array  $invoiceMapping  Mapping of old invoice ID to new invoice ID.
      * @param  array  $customerMapping  Mapping of old customer ID to new customer ID.
      * @param  array  $documentMapping  Mapping of old document ID to new document ID.
+     * @param  array  $subjectMapping  Mapping of old subject ID to new subject ID.
+     * @param  array  $chequeMapping  Mapping of old cheque ID to new cheque ID.
+     * @return array<int, int> Mapping of old payment ID to new payment ID.
      */
-    protected static function _importPayments(array $paymentsData, array $invoiceMapping, array $customerMapping, array $documentMapping): void
+    protected static function _importPayments(array $paymentsData, array $invoiceMapping, array $customerMapping, array $documentMapping, array $subjectMapping, array $chequeMapping): array
     {
+        $mapping = [];
+
         foreach ($paymentsData as $paymentData) {
             $oldInvoiceId = $paymentData['invoice_id'] ?? null;
-            if ($oldInvoiceId === null || ! isset($invoiceMapping[$oldInvoiceId])) {
+            $oldChequeId = $paymentData['cheque_id'] ?? null;
+
+            if ($oldInvoiceId !== null && ! isset($invoiceMapping[$oldInvoiceId])) {
                 Log::warning('Skipping payment import due to missing invoice mapping.', ['old_payment_id' => $paymentData['id'] ?? 'N/A', 'old_invoice_id' => $oldInvoiceId]);
+
+                continue;
+            }
+            if ($oldChequeId !== null && ! isset($chequeMapping[$oldChequeId])) {
+                Log::warning('Skipping payment import due to missing cheque mapping.', ['old_payment_id' => $paymentData['id'] ?? 'N/A', 'old_cheque_id' => $oldChequeId]);
+
+                continue;
+            }
+            if ($oldInvoiceId === null && $oldChequeId === null) {
+                Log::warning('Skipping payment import because it is not associated with an invoice or cheque.', ['old_payment_id' => $paymentData['id'] ?? 'N/A']);
 
                 continue;
             }
 
             $oldPayerId = $paymentData['payer_id'] ?? null;
             $oldDocumentId = $paymentData['document_id'] ?? null;
+            $oldSubjectId = $paymentData['settlement_subject_id'] ?? null;
 
             $newPayment = new Payment;
-            $newPayment->fill(collect($paymentData)->except(['id', 'invoice_id', 'payer_id', 'document_id'])->toArray());
-            $newPayment->invoice_id = $invoiceMapping[$oldInvoiceId];
+            $newPayment->fill(collect($paymentData)->except(['id', 'invoice_id', 'cheque_id', 'payer_id', 'payee_id', 'document_id', 'settlement_subject_id'])->toArray());
+            $newPayment->invoice_id = $oldInvoiceId !== null ? $invoiceMapping[$oldInvoiceId] : null;
+            $newPayment->cheque_id = $oldChequeId !== null ? $chequeMapping[$oldChequeId] : null;
             $newPayment->payer_id = $oldPayerId !== null ? ($customerMapping[$oldPayerId] ?? null) : null;
             $newPayment->document_id = $oldDocumentId !== null ? ($documentMapping[$oldDocumentId] ?? null) : null;
+            $newPayment->settlement_subject_id = $oldSubjectId !== null ? ($subjectMapping[$oldSubjectId] ?? null) : null;
             $newPayment->save();
+
+            $mapping[$paymentData['id']] = $newPayment->id;
         }
+
+        return $mapping;
     }
 
     protected static function validateClosingFiscalYear(Company $company): array

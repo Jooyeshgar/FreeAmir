@@ -16,6 +16,7 @@ class Cheque extends Model
         'write_date',
         'due_date',
         'serial',
+        'cheque_number',
         'sayad_number',
         'direction',
         'purpose',
@@ -23,10 +24,7 @@ class Cheque extends Model
         'customer_id',
         'endorsed_to_id',
         'bank_account_id',
-        'checkbook_id',
-        'checkbook_leaf_number',
         'desc',
-        'created_by',
         'version',
     ];
 
@@ -37,7 +35,6 @@ class Cheque extends Model
         'direction' => ChequeType::class,
         'purpose' => ChequeType::class,
         'status' => ChequeType::class,
-        'checkbook_leaf_number' => 'integer',
         'version' => 'integer',
     ];
 
@@ -65,24 +62,14 @@ class Cheque extends Model
         return $this->belongsTo(BankAccount::class);
     }
 
-    public function checkbook(): BelongsTo
-    {
-        return $this->belongsTo(Checkbook::class);
-    }
-
     public function histories(): HasMany
     {
-        return $this->hasMany(ChequeHistory::class)->orderBy('occurred_at')->orderBy('id');
+        return $this->hasMany(ChequeHistory::class);
     }
 
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
-    }
-
-    public function creator(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function availableActions(): array

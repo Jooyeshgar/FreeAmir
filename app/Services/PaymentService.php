@@ -133,7 +133,6 @@ class PaymentService
             'invoice_id' => $invoice?->id,
             'cheque_id' => $cheque->id,
             'payer_id' => $cheque->direction === ChequeType::RECEIVABLE ? $cheque->customer_id : null,
-            'payee_id' => $cheque->direction === ChequeType::PAYABLE ? $cheque->customer_id : null,
             'amount' => $cheque->amount,
             'date' => $cheque->write_date,
             'description' => $cheque->desc,
@@ -141,8 +140,6 @@ class PaymentService
             'document_id' => $document->id,
             'settlement_subject_id' => $settlementSubjectId,
             'creator_id' => $user->id,
-            'method' => 'cheque',
-            'direction' => $cheque->direction === ChequeType::RECEIVABLE ? 'inbound' : 'outbound',
         ];
 
         if ($payment) {

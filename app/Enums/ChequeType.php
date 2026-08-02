@@ -26,11 +26,22 @@ enum ChequeType: int
 
     public function label(): string
     {
-        return match ($this) {
-            self::RECEIVABLE, self::PAYABLE => __('cheques direction '.$this->valueName()),
-            self::SETTLEMENT, self::GUARANTEE => __('cheques purpose '.$this->valueName()),
-            default => __('cheques status '.$this->valueName()),
-        };
+        return __(match ($this) {
+            self::RECEIVABLE => 'Notes receivable',
+            self::PAYABLE => 'Notes payable',
+            self::SETTLEMENT => 'Settlement',
+            self::GUARANTEE => 'Guarantee',
+            self::REGISTERED => 'Received',
+            self::DEPOSITED => 'Deposited',
+            self::CLEARED => 'Cleared',
+            self::BOUNCED => 'Bounced',
+            self::RETURNED => 'Returned',
+            self::ENDORSED => 'Endorsed',
+            self::ISSUED => 'Issued',
+            self::CANCELLED => 'Cancelled',
+            self::GUARANTEE_RECEIVED => 'Guarantee received',
+            self::GUARANTEE_GIVEN => 'Guarantee given',
+        });
     }
 
     public function valueName(): string

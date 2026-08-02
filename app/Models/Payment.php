@@ -12,14 +12,11 @@ class Payment extends Model
         'reference_number',
         'description',
         'payer_id',
-        'payee_id',
         'document_id',
         'settlement_subject_id',
         'creator_id',
         'invoice_id',
         'cheque_id',
-        'method',
-        'direction',
     ];
 
     protected $casts = [
@@ -30,11 +27,6 @@ class Payment extends Model
     public function payer()
     {
         return $this->belongsTo(Customer::class, 'payer_id');
-    }
-
-    public function payee()
-    {
-        return $this->belongsTo(Customer::class, 'payee_id');
     }
 
     public function document()

@@ -126,7 +126,6 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::get('cheques/report', [Controllers\ChequeController::class, 'report'])->name('cheques.report');
     Route::post('cheques/{cheque}/transition/{action}', [Controllers\ChequeController::class, 'transition'])->name('cheques.transition');
     Route::resource('cheques', Controllers\ChequeController::class);
-    Route::resource('checkbooks', Controllers\CheckbookController::class)->except(['show']);
 
     Route::get('invoices/search/{invoice_type}', [Controllers\InvoiceController::class, 'search'])->name('invoices.search');
     Route::get('invoices/get-items/{invoice}', [Controllers\InvoiceController::class, 'getItems'])->name('invoices.get-items');

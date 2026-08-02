@@ -1,90 +1,144 @@
-<x-app-layout :title="$cheque ? __('cheques edit') : __('cheques create')">
+@php
+    $formTitle = $cheque ? __('Edit cheque') : __('Register cheque');
+    $selectedDirectionValue = (string) old('direction', $cheque?->direction->value ?? $selectedDirection->value);
+    $payableDirectionValue = (string) \App\Enums\ChequeType::PAYABLE->value;
+@endphp
+
+<x-app-layout :title="$formTitle">
     <x-show-message-bags />
-    <div class="card bg-base-100 shadow-xl" x-data="{ direction: '{{ old('direction', $cheque?->direction->value ?? $selectedDirection->value) }}', checkbook: '{{ old('checkbook_id', $cheque?->checkbook_id) }}' }">
-        <form method="POST" action="{{ $cheque ? route('cheques.update', $cheque) : route('cheques.store') }}" class="card-body">
+
+    <div class="card bg-base-100 shadow-xl">
+        <form method="POST" action="{{ $cheque ? route('cheques.update', $cheque) : route('cheques.store') }}">
             @csrf
             @if ($cheque)
                 @method('PUT')
-                <input type="hidden" name="version" value="{{ $cheque->version }}">
+                <x-input name="version" :value="$cheque->version" hidden />
             @endif
-            <h1 class="card-title">{{ $cheque ? __('cheques edit') : __('cheques create') }}</h1>
 
-            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <label class="form-control">
-                    <span class="label-text mb-2">{{ __('cheques fields direction') }}</span>
-                    <select name="direction" class="select select-bordered" x-model="direction" required>
-                        @foreach (\App\Enums\ChequeType::directions() as $direction)
-                            <option value="{{ $direction->value }}" @selected((string) old('direction', $cheque?->direction->value ?? $selectedDirection->value) === (string) $direction->value)>
-                                {{ $direction->label() }}
-                            </option>
-                        @endforeach
-                    </select>
-                </label>
-                <label class="form-control">
-                    <span class="label-text mb-2">{{ __('cheques fields purpose') }}</span>
-                    <select name="purpose" class="select select-bordered" required>
-                        @foreach (\App\Enums\ChequeType::purposes() as $purpose)
-                            <option value="{{ $purpose->value }}" @selected((string) old('purpose', $cheque?->purpose->value ?? \App\Enums\ChequeType::SETTLEMENT->value) === (string) $purpose->value)>{{ $purpose->label() }}</option>
-                        @endforeach
-                    </select>
-                </label>
-                <label class="form-control">
-                    <span class="label-text mb-2">{{ __('cheques fields party') }}</span>
-                    <select name="party_id" class="select select-bordered" required>
-                        <option value="">{{ __('cheques select') }}</option>
-                        @foreach ($parties as $party)
-                            <option value="{{ $party->id }}" @selected((string) old('party_id', $cheque?->customer_id) === (string) $party->id)>{{ $party->name }}</option>
-                        @endforeach
-                    </select>
-                </label>
-                <label class="form-control">
-                    <span class="label-text mb-2">{{ __('cheques fields amount') }}</span>
-                    <input name="amount" value="{{ old('amount', $cheque?->amount) }}" class="input input-bordered" inputmode="decimal" required>
-                </label>
-                <x-date-picker name="issue_date" id="issue_date" :title="__('cheques fields issue_date')" :value="old('issue_date', $cheque ? toEnglish(formatDate($cheque->write_date)) : null)" required />
-                <x-date-picker name="due_date" id="due_date" :title="__('cheques fields due_date')" :value="old('due_date', $cheque ? toEnglish(formatDate($cheque->due_date)) : null)" required />
-                <label class="form-control">
-                    <span class="label-text mb-2">{{ __('cheques fields sayad') }}</span>
-                    <input name="sayad_number" value="{{ old('sayad_number', $cheque?->sayad_number) }}" class="input input-bordered font-mono" inputmode="numeric" minlength="16" maxlength="16" required>
-                </label>
-                <label class="form-control" x-show="!checkbook">
-                    <span class="label-text mb-2">{{ __('cheques fields serial') }}</span>
-                    <input name="serial" value="{{ old('serial', $cheque?->serial) }}" class="input input-bordered">
-                </label>
-                <label class="form-control" x-show="direction === '{{ \App\Enums\ChequeType::PAYABLE->value }}'">
-                    <span class="label-text mb-2">{{ __('cheques fields bank_account') }}</span>
-                    <select name="bank_account_id" class="select select-bordered" :required="direction === '{{ \App\Enums\ChequeType::PAYABLE->value }}'">
-                        <option value="">{{ __('cheques select') }}</option>
-                        @foreach ($bankAccounts as $account)
-                            <option value="{{ $account->id }}" @selected((string) old('bank_account_id', $cheque?->bank_account_id) === (string) $account->id)>
-                                {{ $account->bank?->name }} — {{ $account->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </label>
-                <label class="form-control" x-show="direction === '{{ \App\Enums\ChequeType::PAYABLE->value }}'">
-                    <span class="label-text mb-2">{{ __('cheques fields checkbook') }}</span>
-                    <select name="checkbook_id" class="select select-bordered" x-model="checkbook">
-                        <option value="">{{ __('cheques none') }}</option>
-                        @foreach ($checkbooks as $item)
-                            <option value="{{ $item->id }}" @selected((string) old('checkbook_id', $cheque?->checkbook_id) === (string) $item->id)>{{ $item->title }}
-                                ({{ localizeNumber($item->next_leaf_number) }}–{{ localizeNumber($item->end_leaf_number) }})
-                            </option>
-                        @endforeach
-                    </select>
-                </label>
-                <label class="form-control" x-show="direction === '{{ \App\Enums\ChequeType::PAYABLE->value }}' && checkbook">
-                    <span class="label-text mb-2">{{ __('cheques fields leaf_number') }}</span>
-                    <input name="checkbook_leaf_number" value="{{ old('checkbook_leaf_number', $cheque?->checkbook_leaf_number) }}" class="input input-bordered" inputmode="numeric">
-                </label>
-            </div>
-            <label class="form-control mt-4">
-                <span class="label-text mb-2">{{ __('cheques fields description') }}</span>
-                <textarea name="description" class="textarea textarea-bordered" rows="3">{{ old('description', $cheque?->desc) }}</textarea>
-            </label>
-            <div class="card-actions justify-end mt-4">
-                <a class="btn btn-ghost" href="{{ $cheque ? route('cheques.show', $cheque) : route('cheques.index') }}">{{ __('Back') }}</a>
-                <button class="btn btn-primary">{{ __('cheques save') }}</button>
+            <div class="card-body">
+                <h1 class="card-title">{{ $formTitle }}</h1>
+
+                <div class="grid grid-cols-2 gap-6" x-data="{ direction: @js($selectedDirectionValue) }">
+                    <div class="col-span-2 md:col-span-1">
+                        <fieldset class="w-full">
+                            <label for="direction" class="label">{{ __('Direction') }}</label>
+                            <select id="direction" name="direction" x-model="direction"
+                                class="select w-full @error('direction') select-error @enderror">
+                                @foreach (\App\Enums\ChequeType::directions() as $direction)
+                                    <option value="{{ $direction->value }}" @selected($selectedDirectionValue === (string) $direction->value)>
+                                        {{ $direction->label() }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('direction')
+                                <span class="label text-xs text-rose-700">{{ $message }}</span>
+                            @enderror
+                        </fieldset>
+                    </div>
+
+                    <div class="col-span-2 md:col-span-1">
+                        <fieldset class="w-full">
+                            <label for="purpose" class="label">{{ __('Purpose') }}</label>
+                            <select id="purpose" name="purpose" class="select w-full @error('purpose') select-error @enderror">
+                                @foreach (\App\Enums\ChequeType::purposes() as $purpose)
+                                    <option value="{{ $purpose->value }}" @selected((string) old('purpose', $cheque?->purpose->value ?? \App\Enums\ChequeType::SETTLEMENT->value) === (string) $purpose->value)>
+                                        {{ $purpose->label() }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('purpose')
+                                <span class="label text-xs text-rose-700">{{ $message }}</span>
+                            @enderror
+                        </fieldset>
+                    </div>
+
+                    <div class="col-span-2 md:col-span-1">
+                        @php
+                            $initialAccountSideId = old('account_side_id', $cheque?->customer_id);
+                            $initialAccountSideValue = $initialAccountSideId ? "customer-{$initialAccountSideId}" : '';
+                        @endphp
+                        <div class="w-full" x-data="{
+                            accountSideId: @js((string) $initialAccountSideId),
+                            selectedAccountSide: @js($initialAccountSideValue),
+                        }">
+                            <label class="label">{{ __('Account side') }}</label>
+                            <x-select-box :options="[['headerGroup' => 'customer', 'options' => $accountSides]]"
+                                x-model="selectedAccountSide"
+                                placeholder="{{ __('Select account side') }}"
+                                @selected="accountSideId = $event.detail.id" />
+                            <x-input name="account_side_id" x-bind:value="accountSideId" hidden />
+                            @error('account_side_id')
+                                <span class="label text-xs text-rose-700">{{ $message }}</span>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="col-span-2 md:col-span-1">
+                        <x-input name="amount" id="amount" :title="__('Amount')" :value="old('amount', $cheque?->amount)"
+                            inputmode="decimal" />
+                    </div>
+
+                    <div class="col-span-2 md:col-span-1">
+                        <x-date-picker name="issue_date" id="issue_date" :title="__('Issue date')"
+                            :value="old('issue_date', $cheque ? toEnglish(formatDate($cheque->write_date)) : null)" />
+                    </div>
+
+                    <div class="col-span-2 md:col-span-1">
+                        <x-date-picker name="due_date" id="due_date" :title="__('Due date')"
+                            :value="old('due_date', $cheque ? toEnglish(formatDate($cheque->due_date)) : null)" />
+                    </div>
+
+                    <div class="col-span-2 md:col-span-1">
+                        <x-input name="sayad_number" id="sayad_number" :title="__('16-digit Sayad number')"
+                            :value="old('sayad_number', $cheque?->sayad_number)" inputmode="numeric" minlength="16"
+                            maxlength="16" autocomplete="off" />
+                    </div>
+
+                    <div class="col-span-2 md:col-span-1">
+                        <x-input name="cheque_number" id="cheque_number" :title="__('Cheque number')"
+                            :value="old('cheque_number', $cheque?->cheque_number)" maxlength="50" autocomplete="off" />
+                    </div>
+
+                    <div class="col-span-2 md:col-span-1">
+                        <x-input name="serial" id="serial" :title="__('Cheque serial')"
+                            :value="old('serial', $cheque?->serial)" maxlength="50" autocomplete="off" />
+                    </div>
+
+                    <div class="col-span-2 md:col-span-1" x-show="direction === @js($payableDirectionValue)"
+                        style="{{ $selectedDirectionValue === $payableDirectionValue ? '' : 'display: none;' }}">
+                        <fieldset class="w-full">
+                            <label for="bank_account_id" class="label">{{ __('Bank account') }}</label>
+                            <select id="bank_account_id" name="bank_account_id"
+                                class="select w-full @error('bank_account_id') select-error @enderror"
+                                :required="direction === @js($payableDirectionValue)"
+                                :disabled="direction !== @js($payableDirectionValue)">
+                                <option value="">{{ __('Select…') }}</option>
+                                @foreach ($bankAccounts as $account)
+                                    <option value="{{ $account->id }}" @selected((string) old('bank_account_id', $cheque?->bank_account_id) === (string) $account->id)>
+                                        {{ $account->bank?->name }} — {{ $account->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('bank_account_id')
+                                <span class="label text-xs text-rose-700">{{ $message }}</span>
+                            @enderror
+                        </fieldset>
+                    </div>
+
+                    <div class="col-span-2">
+                        <x-textarea name="description" id="description" :title="__('Description')"
+                            :value="old('description', $cheque?->desc)" rows="3" maxlength="1000" />
+                    </div>
+                </div>
+
+                <div class="card-actions justify-end">
+                    <a class="btn btn-ghost" href="{{ $cheque ? route('cheques.show', $cheque) : route('cheques.index') }}">
+                        {{ __('Back') }}
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        {{ $cheque ? __('Save changes') : __('Register cheque') }}
+                    </button>
+                </div>
             </div>
         </form>
     </div>
