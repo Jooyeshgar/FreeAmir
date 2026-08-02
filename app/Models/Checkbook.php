@@ -17,7 +17,6 @@ class Checkbook extends Model
         'start_leaf_number',
         'end_leaf_number',
         'next_leaf_number',
-        'print_settings',
         'is_active',
     ];
 
@@ -25,7 +24,6 @@ class Checkbook extends Model
         'start_leaf_number' => 'integer',
         'end_leaf_number' => 'integer',
         'next_leaf_number' => 'integer',
-        'print_settings' => 'array',
         'is_active' => 'boolean',
     ];
 
@@ -46,20 +44,5 @@ class Checkbook extends Model
     public function cheques(): HasMany
     {
         return $this->hasMany(Cheque::class);
-    }
-
-    public function contains(int $leaf): bool
-    {
-        return $leaf >= $this->start_leaf_number && $leaf <= $this->end_leaf_number;
-    }
-
-    public function serialFor(int $leaf): string
-    {
-        return ($this->serial_prefix ?? '').$leaf;
-    }
-
-    public function remainingLeaves(): int
-    {
-        return max(0, $this->end_leaf_number - $this->next_leaf_number + 1);
     }
 }

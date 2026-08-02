@@ -17,11 +17,8 @@ return new class extends Migration
             $table->unsignedBigInteger('start_leaf_number');
             $table->unsignedBigInteger('end_leaf_number');
             $table->unsignedBigInteger('next_leaf_number');
-            $table->json('print_settings')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
-
-            $table->unique(['company_id', 'bank_account_id', 'title']);
         });
 
         Schema::table('cheques', function (Blueprint $table) {

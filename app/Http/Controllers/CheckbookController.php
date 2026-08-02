@@ -21,7 +21,7 @@ class CheckbookController extends Controller
     {
         return view('checkbooks.form', [
             'checkbook' => new Checkbook,
-            'bankAccounts' => BankAccount::with('bank')->orderBy('name')->get(),
+            'bankAccounts' => BankAccount::with('bank')->get(),
         ]);
     }
 
@@ -74,13 +74,10 @@ class CheckbookController extends Controller
             'end_leaf_number' => ['required', 'integer', 'gte:start_leaf_number'],
             'next_leaf_number' => ['nullable', 'integer', 'gte:start_leaf_number', 'lte:end_leaf_number'],
             'is_active' => ['nullable', 'boolean'],
-            'print_settings' => ['nullable', 'array'],
-            'print_settings.*' => ['nullable', 'numeric', 'between:-100,300'],
         ]);
 
         $validator->after(function ($validator) use ($request, $checkbook) {
-            if ($validator->errors()->isEmpty() && $checkbook
-                && $request->integer('start_leaf_number') > $checkbook->next_leaf_number) {
+            if ($validator->errors()->isEmpty() && $checkbook && $request->integer('start_leaf_number') > $checkbook->next_leaf_number) {
                 $validator->errors()->add('start_leaf_number', __('cheques validation range_excludes_used_leaves'));
             }
         });

@@ -1,12 +1,29 @@
 <x-app-layout :title="$checkbook->exists ? __('cheques edit_checkbook') : __('cheques create_checkbook')">
     <x-show-message-bags />
-    <form class="card bg-base-100 shadow-xl" method="POST" action="{{ $checkbook->exists ? route('checkbooks.update', $checkbook) : route('checkbooks.store') }}">@csrf @if($checkbook->exists) @method('PUT') @endif<div class="card-body"><div class="flex justify-between"><h1 class="card-title">{{ $checkbook->exists ? __('cheques edit_checkbook') : __('cheques create_checkbook') }}</h1><a class="btn btn-ghost btn-sm" href="{{ route('checkbooks.index') }}">{{ __('cheques back') }}</a></div><div class="grid gap-4 md:grid-cols-2">
-        <label class="form-control"><span class="label-text mb-2">{{ __('cheques fields bank_account') }}</span><select name="bank_account_id" class="select select-bordered" required>@foreach($bankAccounts as $account)<option value="{{ $account->id }}" @selected((string)old('bank_account_id', $checkbook->bank_account_id) === (string)$account->id)>{{ $account->bank?->name }} — {{ $account->name }}</option>@endforeach</select></label>
-        <label class="form-control"><span class="label-text mb-2">{{ __('cheques fields title') }}</span><input name="title" value="{{ old('title', $checkbook->title) }}" class="input input-bordered" required></label>
-        <label class="form-control"><span class="label-text mb-2">{{ __('cheques serial_prefix') }}</span><input name="serial_prefix" value="{{ old('serial_prefix', $checkbook->serial_prefix) }}" class="input input-bordered"></label>
-        <label class="form-control"><span class="label-text mb-2">{{ __('cheques start_leaf') }}</span><input type="number" name="start_leaf_number" value="{{ old('start_leaf_number', $checkbook->start_leaf_number) }}" class="input input-bordered" required></label>
-        <label class="form-control"><span class="label-text mb-2">{{ __('cheques end_leaf') }}</span><input type="number" name="end_leaf_number" value="{{ old('end_leaf_number', $checkbook->end_leaf_number) }}" class="input input-bordered" required></label>
-        <label class="form-control"><span class="label-text mb-2">{{ __('cheques next_leaf') }}</span><input type="number" name="next_leaf_number" value="{{ old('next_leaf_number', $checkbook->next_leaf_number) }}" class="input input-bordered"></label>
-        <label class="label cursor-pointer justify-start gap-3"><input type="hidden" name="is_active" value="0"><input type="checkbox" name="is_active" value="1" class="checkbox" @checked(old('is_active', $checkbook->exists ? $checkbook->is_active : true))><span>{{ __('cheques active') }}</span></label>
-    </div><div class="divider">{{ __('cheques print_offsets') }}</div><div class="grid gap-3 md:grid-cols-3">@foreach(['amount_x','amount_y','date_x','date_y','payee_x','payee_y','words_x','words_y','memo_x','memo_y'] as $setting)<label class="form-control"><span class="label-text">{{ __('cheques offset '.$setting) }}</span><input type="number" step="0.1" name="print_settings[{{ $setting }}]" value="{{ old('print_settings.'.$setting, data_get($checkbook->print_settings, $setting)) }}" class="input input-bordered input-sm"></label>@endforeach</div><div class="card-actions justify-end"><button class="btn btn-primary">{{ __('cheques save') }}</button></div></div></form>
+    <form class="card bg-base-100" method="POST" action="{{ $checkbook->exists ? route('checkbooks.update', $checkbook) : route('checkbooks.store') }}">
+        @csrf
+        @if ($checkbook->exists)
+            @method('PUT')
+        @endif
+        <div class="card-body">
+            <h1 class="card-title">{{ $checkbook->exists ? __('cheques edit_checkbook') : __('cheques create_checkbook') }}</h1>
+            <div class="grid gap-4 md:grid-cols-3">
+                <x-select id="bank_account_id" name="bank_account_id" title="{{ __('cheques fields bank_account') }}"
+                    :options="$bankAccounts->mapWithKeys(fn ($account) => [$account->id => $account->name])->all()"
+                    :selected="old('bank_account_id', $checkbook->bank_account_id)" required />
+                <x-text-input label_text_class="text-gray-500" name="title" title="{{ __('cheques fields title') }}" :value="old('title', $checkbook->title)" required />
+                <x-text-input label_text_class="text-gray-500" name="serial_prefix" title="{{ __('cheques serial_prefix') }}" :value="old('serial_prefix', $checkbook->serial_prefix)" />
+                <x-text-input label_text_class="text-gray-500" name="start_leaf_number" title="{{ __('cheques start_leaf') }}" :value="old('start_leaf_number', $checkbook->start_leaf_number)" type="number" required />
+                <x-text-input label_text_class="text-gray-500" name="end_leaf_number" title="{{ __('cheques end_leaf') }}" :value="old('end_leaf_number', $checkbook->end_leaf_number)" type="number" required />
+                <x-text-input label_text_class="text-gray-500" name="next_leaf_number" title="{{ __('cheques next_leaf') }}" :value="old('next_leaf_number', $checkbook->next_leaf_number)" type="number" />
+                <x-checkbox id="is_active" name="is_active" title="{{ __('cheques active') }}" :checked="old('is_active', $checkbook->exists ? $checkbook->is_active : true)" />
+                <input type="hidden" name="is_active" value="0">
+            </div>
+
+            <div class="card-actions justify-end">
+                <a class="btn btn-ghost" href="{{ route('checkbooks.index') }}">{{ __('Back') }}</a>
+                <button class="btn btn-primary">{{ __('cheques save') }}</button>
+            </div>
+        </div>
+    </form>
 </x-app-layout>
