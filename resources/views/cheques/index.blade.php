@@ -15,6 +15,9 @@
 
         <div class="flex flex-wrap items-center justify-start gap-2">
             <a href="{{ route('cheques.create') }}" class="btn btn-sm btn-primary">{{ __('Register cheque') }}</a>
+            @can('cheques.chequebooks.index')
+                <a href="{{ route('cheques.chequebooks.index') }}" class="btn btn-sm btn-outline">{{ __('Chequebooks') }}</a>
+            @endcan
             <a href="{{ route('cheques.report', $activeFilters) }}" class="btn btn-sm btn-outline">{{ __('Cheque Report') }}</a>
         </div>
     </div>

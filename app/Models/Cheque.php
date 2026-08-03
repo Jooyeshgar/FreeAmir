@@ -24,8 +24,8 @@ class Cheque extends Model
         'customer_id',
         'endorsed_to_id',
         'bank_account_id',
+        'chequebook_id',
         'desc',
-        'version',
     ];
 
     protected $casts = [
@@ -35,7 +35,6 @@ class Cheque extends Model
         'direction' => ChequeType::class,
         'purpose' => ChequeType::class,
         'status' => ChequeType::class,
-        'version' => 'integer',
     ];
 
     protected static function booted(): void
@@ -60,6 +59,11 @@ class Cheque extends Model
     public function bankAccount(): BelongsTo
     {
         return $this->belongsTo(BankAccount::class);
+    }
+
+    public function chequebook(): BelongsTo
+    {
+        return $this->belongsTo(Chequebook::class);
     }
 
     public function histories(): HasMany

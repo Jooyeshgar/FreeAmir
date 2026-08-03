@@ -8,6 +8,7 @@ use App\Models\Payment;
 use App\Services\ChequeService;
 use App\Services\PaymentService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 class PaymentController extends Controller
@@ -42,17 +43,20 @@ class PaymentController extends Controller
         $direction = $this->chequeService->directionForInvoice($invoice);
         abort_unless($direction, 422, __('This invoice type cannot be settled by cheque.'));
 
-        $request->merge([
+        $normalized = [
             'amount' => convertToFloat($request->input('amount', 0)),
             'sayad_number' => preg_replace('/\D/', '', toEnglish((string) $request->input('sayad_number'))),
             'serial' => trim(toEnglish((string) $request->input('serial'))),
             'cheque_number' => trim(toEnglish((string) $request->input('cheque_number'))),
-            'issue_date' => $request->filled('issue_date') ? jalaliInputToGregorian($request->input('issue_date'), 'issue_date') : null,
-            'due_date' => $request->filled('due_date') ? jalaliInputToGregorian($request->input('due_date'), 'due_date') : null,
-        ]);
+        ];
 
-        $companyId = getActiveCompany();
-        $validated = $request->validate([
+        foreach (['issue_date', 'due_date'] as $field) {
+            if ($request->filled($field)) {
+                $normalized[$field] = jalaliInputToGregorian($request->input($field), $field);
+            }
+        }
+
+        $validated = Validator::make(array_replace($request->all(), $normalized), [
             'amount' => ['required', 'numeric', 'gt:0'],
             'issue_date' => ['required', 'date'],
             'due_date' => ['required', 'date', 'after_or_equal:issue_date'],
@@ -62,10 +66,11 @@ class PaymentController extends Controller
             'bank_account_id' => [
                 Rule::requiredIf($direction === ChequeType::PAYABLE),
                 'nullable',
-                Rule::exists('bank_accounts', 'id')->where('company_id', $companyId),
+                Rule::exists('bank_accounts', 'id')->where('company_id', getActiveCompany()),
             ],
+            'chequebook_id' => $direction === ChequeType::PAYABLE ? ['nullable', Rule::exists('chequebooks', 'id')->where('company_id', getActiveCompany())] : ['exclude'],
             'description' => ['nullable', 'string', 'max:1000'],
-        ]);
+        ])->validate();
 
         $this->chequeService->register($request->user(), [
             ...$validated,
@@ -81,7 +86,12 @@ class PaymentController extends Controller
     public function destroy(Invoice $invoice, Payment $payment)
     {
         abort_unless($payment->invoice_id === $invoice->id, 404);
-        $this->paymentService->deletePayment($payment);
+
+        if ($payment->cheque) {
+            $this->chequeService->delete($payment->cheque);
+        } else {
+            $this->paymentService->deletePayment($payment);
+        }
 
         return redirect()->route('invoices.show', $invoice)->with('success', __('Payment removed successfully.'));
     }

@@ -13,6 +13,7 @@ use App\Enums\SubjectType;
 use App\Models\Bank;
 use App\Models\BankAccount;
 use App\Models\Cheque;
+use App\Models\Chequebook;
 use App\Models\ChequeHistory;
 use App\Models\Company;
 use App\Models\Customer;
@@ -241,6 +242,15 @@ class BackupControllerTest extends TestCase
             'number' => 'CHEQUE-BACKUP-1',
             'type' => BankAccountType::CURRENT,
         ]);
+        $chequebook = Chequebook::create([
+            'company_id' => $this->company->id,
+            'bank_account_id' => $account->id,
+            'serial_prefix' => 'BACKUP',
+            'first_leaf' => 40,
+            'last_leaf' => 89,
+            'next_leaf' => 43,
+            'desc' => 'Chequebook backup test',
+        ]);
         $cheque = Cheque::create([
             'company_id' => $this->company->id,
             'amount' => 1250000,
@@ -249,11 +259,12 @@ class BackupControllerTest extends TestCase
             'serial' => 'SERIAL-42',
             'cheque_number' => '42',
             'sayad_number' => '1234567890123456',
-            'direction' => ChequeType::RECEIVABLE,
+            'direction' => ChequeType::PAYABLE,
             'purpose' => ChequeType::SETTLEMENT,
-            'status' => ChequeType::REGISTERED,
+            'status' => ChequeType::ISSUED,
             'customer_id' => $customer->id,
             'bank_account_id' => $account->id,
+            'chequebook_id' => $chequebook->id,
             'desc' => 'Cheque backup test',
         ]);
         $document = Document::factory()->create([
@@ -265,7 +276,7 @@ class BackupControllerTest extends TestCase
             'company_id' => $this->company->id,
             'number' => 42,
             'date' => '2026-07-01',
-            'invoice_type' => InvoiceType::SELL,
+            'invoice_type' => InvoiceType::BUY,
             'status' => InvoiceStatus::APPROVED,
             'customer_id' => $customer->id,
             'creator_id' => $this->user->id,
@@ -287,7 +298,7 @@ class BackupControllerTest extends TestCase
         ]);
         ChequeHistory::create([
             'cheque_id' => $cheque->id,
-            'to_status' => ChequeType::REGISTERED,
+            'to_status' => ChequeType::ISSUED,
             'user_id' => $this->user->id,
             'document_id' => $document->id,
             'payment_id' => $payment->id,
@@ -304,6 +315,7 @@ class BackupControllerTest extends TestCase
         ];
         $payload = FiscalYearService::exportData($this->company->id, $sections);
 
+        $this->assertCount(1, $payload['chequebooks']);
         $this->assertCount(1, $payload['cheques']);
         $this->assertCount(1, $payload['cheque_histories']);
         $this->assertCount(1, $payload['payments']);
@@ -326,6 +338,8 @@ class BackupControllerTest extends TestCase
             ->findOrFail($restoredCheque->customer_id);
         $restoredAccount = BankAccount::withoutGlobalScope(FiscalYearScope::class)
             ->findOrFail($restoredCheque->bank_account_id);
+        $restoredChequebook = Chequebook::withoutGlobalScope(FiscalYearScope::class)
+            ->findOrFail($restoredCheque->chequebook_id);
         $restoredPayment = Payment::findOrFail($restoredHistory->payment_id);
         $restoredInvoice = Invoice::withoutGlobalScope(FiscalYearScope::class)
             ->findOrFail($restoredPayment->invoice_id);
@@ -333,9 +347,11 @@ class BackupControllerTest extends TestCase
         $this->assertSame('1234567890123456', $restoredCheque->sayad_number);
         $this->assertSame('Backup customer', $restoredCustomer->name);
         $this->assertSame('Backup account', $restoredAccount->name);
+        $this->assertSame('BACKUP', $restoredChequebook->serial_prefix);
+        $this->assertSame($restoredAccount->id, $restoredChequebook->bank_account_id);
         $this->assertSame($restoredCheque->id, $restoredDocument->documentable_id);
         $this->assertSame(Cheque::class, $restoredDocument->documentable_type);
-        $this->assertSame(ChequeType::REGISTERED, $restoredHistory->to_status);
+        $this->assertSame(ChequeType::ISSUED, $restoredHistory->to_status);
         $this->assertSame($restoredCheque->id, $restoredPayment->cheque_id);
         $this->assertSame($newCompany->id, $restoredInvoice->company_id);
     }

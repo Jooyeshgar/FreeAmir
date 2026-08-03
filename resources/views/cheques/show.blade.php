@@ -32,7 +32,6 @@
                         <form method="POST" action="{{ route('cheques.destroy', $cheque) }}">
                             @csrf
                             @method('DELETE')
-                            <input type="hidden" name="version" value="{{ $cheque->version }}">
                             <button class="btn btn-error btn-outline btn-sm" onclick="return confirm('{{ __('Delete this cheque and all of its accounting entries and payments?') }}')">{{ __('Delete') }}</button>
                         </form>
                     </div>
@@ -50,6 +49,7 @@
                         __('Due date') => formatDate($cheque->due_date),
                         __('Bank') => $cheque->bankAccount?->bank?->name,
                         __('Bank account') => $cheque->bankAccount?->name,
+                        __('Chequebook') => $cheque->chequebook?->displayName(),
                         __('Endorsed to') => $cheque->endorsedTo?->name,
                         __('Description') => $cheque->desc,
                     ] as $label => $value)
@@ -70,13 +70,12 @@
                         @foreach ($cheque->availableActions() as $action)
                             <form method="POST" action="{{ route('cheques.transition', [$cheque, $action]) }}" class="rounded-box border border-base-300 p-4">
                                 @csrf
-                                <input type="hidden" name="version" value="{{ $cheque->version }}">
                                 <h3 class="font-bold mb-3">{{ $actionLabels[$action] }}</h3>
                                 @if ($action === 'deposit')
                                     <select name="bank_account_id" class="select select-bordered select-sm w-full" required>
                                         <option value="">{{ __('Destination bank account') }}</option>
                                         @foreach ($bankAccounts as $account)
-                                            <option value="{{ $account->id }}">{{ $account->bank?->name }} — {{ $account->name }}</option>
+                                            <option value="{{ $account->id }}">{{ $account->name }}</option>
                                         @endforeach
                                     </select>
                                 @elseif($action === 'endorse')
@@ -96,7 +95,7 @@
                                 @endif
                                 <div class="grid grid-cols-2 gap-2 mt-2">
                                     <x-date-picker name="date" :id="'date_' . $action" :value="toEnglish(formatDate(now()))" :placeholder="__('Action date')" />
-                                    <input name="description" class="input input-bordered input-sm" placeholder="{{ __('Note') }}">
+                                    <x-text-input name="description" placeholder="{{ __('Note') }}" />
                                 </div>
                                 <button class="btn btn-primary btn-sm mt-3" onclick="return confirm('{{ __('Continue with this action?') }}')">{{ $actionLabels[$action] }}</button>
                             </form>

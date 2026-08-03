@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\ChequeType;
 use App\Models\BankAccount;
 use App\Models\Cheque;
+use App\Models\Chequebook;
 use App\Models\Customer;
 use App\Services\ChequeService;
 use Illuminate\Database\Eloquent\Builder;
@@ -18,7 +19,7 @@ class ChequeController extends Controller
 
     public function index(Request $request)
     {
-        $cheques = $this->filteredQuery($request)->with(['customer', 'endorsedTo', 'bankAccount.bank'])->latest('due_date')->paginate(20)->withQueryString();
+        $cheques = $this->filteredQuery($request)->with(['customer', 'endorsedTo', 'bankAccount.bank', 'chequebook'])->latest('due_date')->paginate(20)->withQueryString();
 
         return view('cheques.index', [
             'cheques' => $cheques,
@@ -46,7 +47,7 @@ class ChequeController extends Controller
 
     public function show(Cheque $cheque)
     {
-        $cheque->load(['customer', 'endorsedTo', 'bankAccount.bank', 'histories.user', 'histories.document', 'histories.payment']);
+        $cheque->load(['customer', 'endorsedTo', 'bankAccount.bank', 'chequebook', 'histories.user', 'histories.document', 'histories.payment']);
 
         return view('cheques.show', [
             'cheque' => $cheque,
@@ -72,9 +73,9 @@ class ChequeController extends Controller
         return redirect()->route('cheques.show', $cheque)->with('success', __('Cheque updated successfully.'));
     }
 
-    public function destroy(Request $request, Cheque $cheque)
+    public function destroy(Cheque $cheque)
     {
-        $this->chequeService->delete($cheque, $request->user(), $request->filled('version') ? $request->integer('version') : null);
+        $this->chequeService->delete($cheque);
 
         return redirect()->route('cheques.index')->with('success', __('Cheque and its accounting records were deleted.'));
     }
@@ -139,6 +140,7 @@ class ChequeController extends Controller
         return [
             'selectedDirection' => ChequeType::tryFrom((int) $direction) ?? ChequeType::RECEIVABLE,
             'bankAccounts' => BankAccount::with('bank')->get(),
+            'chequebooks' => Chequebook::with('bankAccount.bank')->orderBy('serial_prefix')->get(),
             'accountSides' => Customer::with('group')->get(['id', 'name', 'group_id']),
         ];
     }
@@ -156,11 +158,11 @@ class ChequeController extends Controller
                 $normalized[$field] = jalaliInputToGregorian($request->input($field), $field);
             }
         }
-        $request->merge($normalized);
+        $input = array_replace($request->all(), $normalized);
+        $direction = (int) ($input['direction'] ?? 0);
 
-        $companyId = getActiveCompany();
         $validator = Validator::make(
-            $request->all(),
+            $input,
             [
                 'direction' => ['required', 'integer', Rule::in(ChequeType::directionValues())],
                 'purpose' => ['required', 'integer', Rule::in(ChequeType::purposeValues())],
@@ -173,20 +175,31 @@ class ChequeController extends Controller
                     Rule::unique('cheques', 'sayad_number')->ignore($cheque?->id),
                 ],
                 'cheque_number' => ['nullable', 'string', 'max:50'],
-                'account_side_id' => ['required', Rule::exists('customers', 'id')->where('company_id', $companyId)],
+                'account_side_id' => ['required', Rule::exists('customers', 'id')->where('company_id', getActiveCompany())],
                 'bank_account_id' => [
-                    Rule::requiredIf($request->integer('direction') === ChequeType::PAYABLE->value),
+                    Rule::requiredIf($direction === ChequeType::PAYABLE->value),
                     'nullable',
-                    Rule::exists('bank_accounts', 'id')->where('company_id', $companyId),
+                    Rule::exists('bank_accounts', 'id')->where('company_id', getActiveCompany()),
+                ],
+                'chequebook_id' => [
+                    'nullable',
+                    'exclude_unless:direction,'.ChequeType::PAYABLE->value,
+                    Rule::exists('chequebooks', 'id')->where('company_id', getActiveCompany()),
                 ],
                 'description' => ['nullable', 'string', 'max:1000'],
-                'version' => ['nullable', 'integer', 'min:1'],
             ],
         );
 
-        $validator->after(function ($validator) {
-            if ($validator->errors()->isNotEmpty()) {
+        $validator->after(function ($validator) use ($direction, $input) {
+            if ($validator->errors()->isNotEmpty() || $direction !== ChequeType::PAYABLE->value) {
                 return;
+            }
+
+            if (filled($input['chequebook_id'] ?? null)) {
+                $chequebook = Chequebook::find((int) $input['chequebook_id']);
+                if ($chequebook && (int) $chequebook->bank_account_id !== (int) ($input['bank_account_id'] ?? 0)) {
+                    $validator->errors()->add('chequebook_id', __('The chequebook must belong to the selected bank account.'));
+                }
             }
         });
 
@@ -199,15 +212,12 @@ class ChequeController extends Controller
             $request->merge(['date' => jalaliInputToGregorian($request->input('date'), 'date')]);
         }
 
-        $companyId = getActiveCompany();
-
         return $request->validate(
             [
                 'date' => ['nullable', 'date'],
-                'bank_account_id' => ['nullable', Rule::exists('bank_accounts', 'id')->where('company_id', $companyId)],
-                'account_side_id' => ['nullable', Rule::exists('customers', 'id')->where('company_id', $companyId)],
+                'bank_account_id' => ['nullable', Rule::exists('bank_accounts', 'id')->where('company_id', getActiveCompany())],
+                'account_side_id' => ['nullable', Rule::exists('customers', 'id')->where('company_id', getActiveCompany())],
                 'description' => ['nullable', 'string', 'max:1000'],
-                'version' => ['nullable', 'integer', 'min:1'],
             ],
         );
     }

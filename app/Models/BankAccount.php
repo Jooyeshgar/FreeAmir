@@ -7,6 +7,7 @@ use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class BankAccount extends Model
 {
@@ -50,5 +51,10 @@ class BankAccount extends Model
     public function bank(): BelongsTo
     {
         return $this->belongsTo(Bank::class);
+    }
+
+    public function chequebooks(): HasMany
+    {
+        return $this->hasMany(Chequebook::class);
     }
 }

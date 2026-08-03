@@ -6,6 +6,7 @@ use App\DTO\InvoiceStatusDecision;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
+use App\Models\Cheque;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -223,6 +224,9 @@ class InvoiceService
     {
         DB::transaction(function () use ($invoiceId) {
             $invoice = Invoice::findOrFail($invoiceId);
+
+            $chequeIds = $invoice->payments()->whereNotNull('cheque_id')->pluck('cheque_id')->unique();
+            Cheque::whereIn('id', $chequeIds)->each(fn (Cheque $cheque) => app(ChequeService::class)->delete($cheque));
 
             $invoice->items()->delete();
 

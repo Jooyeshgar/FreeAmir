@@ -10,6 +10,19 @@ return new class extends Migration
     {
         Schema::dropIfExists('cheque_histories');
         Schema::dropIfExists('cheques');
+        Schema::dropIfExists('chequebooks');
+
+        Schema::create('chequebooks', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('bank_account_id')->constrained()->restrictOnDelete();
+            $table->string('serial_prefix', 50)->nullable();
+            $table->unsignedBigInteger('first_leaf');
+            $table->unsignedBigInteger('last_leaf');
+            $table->unsignedBigInteger('next_leaf');
+            $table->text('desc')->nullable();
+            $table->timestamps();
+        });
 
         Schema::create('cheques', function (Blueprint $table) {
             $table->id();
@@ -26,17 +39,15 @@ return new class extends Migration
             $table->foreignId('customer_id')->constrained()->restrictOnDelete();
             $table->foreignId('endorsed_to_id')->nullable()->constrained('customers')->nullOnDelete();
             $table->foreignId('bank_account_id')->nullable()->constrained()->restrictOnDelete();
+            $table->foreignId('chequebook_id')->nullable()->constrained()->nullOnDelete();
             $table->text('desc')->nullable();
-            $table->unsignedInteger('version')->default(1);
             $table->timestamps();
-
-            $table->index(['company_id', 'direction', 'status', 'due_date']);
         });
 
         Schema::table('payments', function (Blueprint $table) {
             $table->dropForeign(['invoice_id']);
             $table->foreignId('invoice_id')->nullable()->change();
-            $table->foreign('invoice_id')->references('id')->on('invoices')->nullOnDelete();
+            $table->foreign('invoice_id')->references('id')->on('invoices')->cascadeOnDelete();
             $table->foreignId('cheque_id')->nullable()->after('invoice_id')->constrained()->cascadeOnDelete();
         });
 
@@ -65,5 +76,6 @@ return new class extends Migration
         });
 
         Schema::dropIfExists('cheques');
+        Schema::dropIfExists('chequebooks');
     }
 };

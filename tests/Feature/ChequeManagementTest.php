@@ -9,6 +9,8 @@ use App\Http\Middleware\CheckPermission;
 use App\Models\Bank;
 use App\Models\BankAccount;
 use App\Models\Cheque;
+use App\Models\Chequebook;
+use App\Models\ChequeHistory;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Models\Document;
@@ -16,6 +18,7 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\User;
 use App\Services\ChequeService;
+use App\Services\InvoiceService;
 use App\Services\PaymentService;
 use Cookie;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -75,13 +78,7 @@ class ChequeManagementTest extends TestCase
         $this->vendor = Customer::create(['company_id' => $companyId, 'name' => 'Vendor', 'subject_id' => 202]);
 
         $this->bank = Bank::create(['name' => 'Test Bank', 'company_id' => $companyId]);
-        $this->account = BankAccount::create([
-            'bank_id' => $this->bank->id,
-            'name' => 'Main account',
-            'number' => '123456',
-            'type' => 1,
-            'subject_id' => 203,
-        ]);
+        $this->account = BankAccount::create(['bank_id' => $this->bank->id, 'name' => 'Main account', 'number' => '123456', 'type' => 1, 'subject_id' => 203]);
         $this->service = app(ChequeService::class);
     }
 
@@ -93,14 +90,11 @@ class ChequeManagementTest extends TestCase
         $this->assertCount(1, $cheque->histories);
         $this->assertBalanced($cheque->histories->first()->document);
 
-        $cheque = $this->service->transition($cheque, $this->user, 'deposit', [
-            'bank_account_id' => $this->account->id,
-            'version' => $cheque->version,
-        ]);
+        $cheque = $this->service->transition($cheque, $this->user, 'deposit', ['bank_account_id' => $this->account->id]);
         $this->assertSame(ChequeType::DEPOSITED, $cheque->status);
         $this->assertSame($this->account->id, $cheque->bank_account_id);
 
-        $cheque = $this->service->transition($cheque, $this->user, 'clear', ['version' => $cheque->version]);
+        $cheque = $this->service->transition($cheque, $this->user, 'clear');
         $this->assertSame(ChequeType::CLEARED, $cheque->status);
         $this->assertCount(3, $cheque->histories);
         $cheque->histories->each(fn ($history) => $this->assertBalanced($history->document));
@@ -148,6 +142,49 @@ class ChequeManagementTest extends TestCase
         $this->assertBalanced($payment->document);
     }
 
+    public function test_payable_cheque_can_optionally_belong_to_a_chequebook(): void
+    {
+        $chequebook = Chequebook::create([
+            'bank_account_id' => $this->account->id,
+            'serial_prefix' => 'PAY',
+            'first_leaf' => 100,
+            'last_leaf' => 149,
+            'next_leaf' => 100,
+        ]);
+
+        $linkedData = [
+            ...$this->data(ChequeType::PAYABLE, ChequeType::SETTLEMENT, $this->vendor),
+            'bank_account_id' => $this->account->id,
+            'chequebook_id' => $chequebook->id,
+        ];
+        unset($linkedData['serial']);
+
+        $linked = $this->service->register($this->user, $linkedData);
+        $unlinked = $this->issuedCheque();
+
+        $this->assertTrue($linked->chequebook->is($chequebook));
+        $this->assertNull($linked->serial);
+        $this->assertTrue($chequebook->cheques()->whereKey($linked->id)->exists());
+        $this->assertNull($unlinked->chequebook_id);
+    }
+
+    public function test_receivable_cheque_cannot_belong_to_a_chequebook(): void
+    {
+        $chequebook = Chequebook::create([
+            'bank_account_id' => $this->account->id,
+            'serial_prefix' => 'PAY',
+            'first_leaf' => 100,
+            'last_leaf' => 149,
+            'next_leaf' => 100,
+        ]);
+
+        $this->expectException(ValidationException::class);
+        $this->service->register($this->user, [
+            ...$this->data(ChequeType::RECEIVABLE, ChequeType::SETTLEMENT, $this->customer),
+            'chequebook_id' => $chequebook->id,
+        ]);
+    }
+
     public function test_guarantee_cheque_is_off_balance_until_executed(): void
     {
         $cheque = $this->receivedCheque(ChequeType::GUARANTEE);
@@ -185,6 +222,59 @@ class ChequeManagementTest extends TestCase
         $this->assertSame(0, Cheque::count());
     }
 
+    public function test_http_cheque_dates_accept_jalali_input_store_gregorian_and_render_jalali(): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+        app()->setLocale('fa');
+
+        $response = $this->post(route('cheques.store'), [
+            ...$this->data(ChequeType::RECEIVABLE, ChequeType::SETTLEMENT, $this->customer),
+            'issue_date' => '۱۴۰۴/۱۰/۱۱',
+            'due_date' => '۱۴۰۴/۱۱/۱۲',
+        ]);
+
+        $cheque = Cheque::latest('id')->firstOrFail();
+        $response->assertRedirect(route('cheques.show', $cheque));
+        $this->assertSame('2026-01-01', $cheque->getRawOriginal('write_date'));
+        $this->assertSame('2026-02-01', $cheque->getRawOriginal('due_date'));
+        $this->get(route('cheques.show', $cheque))->assertOk()->assertSee('۱۴۰۴/۱۰/۱۱')->assertSee('۱۴۰۴/۱۱/۱۲');
+        $this->get(route('cheques.edit', $cheque))->assertOk()->assertSee('value="1404/10/11"', false)->assertSee('value="1404/11/12"', false);
+    }
+
+    public function test_http_cheque_validation_rejects_invalid_jalali_date(): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+        app()->setLocale('fa');
+
+        $this->post(route('cheques.store'), [
+            ...$this->data(ChequeType::RECEIVABLE, ChequeType::SETTLEMENT, $this->customer),
+            'issue_date' => '۱۴۰۴/۱۲/۳۰',
+            'due_date' => '۱۴۰۵/۰۱/۰۱',
+        ])->assertSessionHasErrors('issue_date');
+
+        $this->assertSame(0, Cheque::count());
+    }
+
+    public function test_http_receivable_cheque_excludes_chequebook_input(): void
+    {
+        $this->withoutMiddleware();
+        $chequebook = Chequebook::create([
+            'bank_account_id' => $this->account->id,
+            'serial_prefix' => 'PAY',
+            'first_leaf' => 100,
+            'last_leaf' => 149,
+            'next_leaf' => 100,
+        ]);
+
+        $response = $this->post(route('cheques.store'), [
+            ...$this->data(ChequeType::RECEIVABLE, ChequeType::SETTLEMENT, $this->customer),
+            'chequebook_id' => $chequebook->id,
+        ]);
+
+        $response->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertNull(Cheque::firstOrFail()->chequebook_id);
+    }
+
     public function test_cheque_classifications_use_regular_integer_columns(): void
     {
         foreach (['status', 'direction', 'purpose'] as $column) {
@@ -194,6 +284,17 @@ class ChequeManagementTest extends TestCase
         foreach (['from_status', 'to_status'] as $column) {
             $this->assertContains(Schema::getColumnType('cheque_histories', $column), ['smallint', 'integer']);
         }
+
+        $this->assertTrue(Schema::hasColumns('chequebooks', [
+            'company_id',
+            'bank_account_id',
+            'serial_prefix',
+            'first_leaf',
+            'last_leaf',
+            'next_leaf',
+            'desc',
+        ]));
+        $this->assertTrue(Schema::hasColumn('cheques', 'chequebook_id'));
     }
 
     public function test_cheque_translations_are_loaded_from_json_catalogs(): void
@@ -203,11 +304,13 @@ class ChequeManagementTest extends TestCase
         app()->setLocale('en');
         $this->assertSame('Cheque Management', __('Cheque Management'));
         $this->assertSame('Cheque number', __('Cheque number'));
+        $this->assertSame('Chequebook', __('Chequebook'));
         $this->assertSame('Received', ChequeType::REGISTERED->label());
 
         app()->setLocale('fa');
         $this->assertSame('مدیریت چک‌ها', __('Cheque Management'));
         $this->assertSame('شماره چک', __('Cheque number'));
+        $this->assertSame('دسته‌چک', __('Chequebook'));
         $this->assertSame('دریافت‌شده', ChequeType::REGISTERED->label());
 
         app()->setLocale($originalLocale);
@@ -239,7 +342,6 @@ class ChequeManagementTest extends TestCase
         $data['sayad_number'] = $cheque->sayad_number;
         $data['serial'] = 'UPDATED-1';
         $data['cheque_number'] = '987654';
-        $data['version'] = $cheque->version;
 
         $updated = $this->service->update($cheque, $this->user, $data);
 
@@ -248,7 +350,6 @@ class ChequeManagementTest extends TestCase
         $this->assertSame('2500.00', $updated->amount);
         $this->assertSame('2026-03-01', $updated->due_date->toDateString());
         $this->assertSame(ChequeType::REGISTERED, $updated->status);
-        $this->assertSame(2, $updated->version);
         $this->assertNull(Document::find($oldDocumentId));
         $this->assertCount(1, $updated->histories);
         $this->assertBalanced($updated->histories->first()->document);
@@ -260,7 +361,6 @@ class ChequeManagementTest extends TestCase
             'bank_account_id' => $this->account->id,
         ]);
         $data = $this->data(ChequeType::RECEIVABLE, ChequeType::SETTLEMENT, $this->customer);
-        $data['version'] = $cheque->version;
 
         $this->expectException(ValidationException::class);
         $this->service->update($cheque, $this->user, $data);
@@ -275,7 +375,7 @@ class ChequeManagementTest extends TestCase
         $paymentIds = $cheque->payments()->pluck('id');
         $chequeId = $cheque->id;
 
-        $this->service->delete($cheque, $this->user, $cheque->version);
+        $this->service->delete($cheque);
 
         $this->assertNull(Cheque::withoutGlobalScopes()->find($chequeId));
         $this->assertSame(0, DB::table('cheque_histories')->where('cheque_id', $chequeId)->count());
@@ -287,10 +387,7 @@ class ChequeManagementTest extends TestCase
     {
         $invoice = $this->invoice(InvoiceType::SELL, $this->customer, 1000);
 
-        $cheque = $this->service->register(
-            $this->user,
-            $this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 1000),
-        );
+        $cheque = $this->service->register($this->user, $this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 1000));
         $payment = $invoice->payments()->firstOrFail();
         $history = $cheque->histories()->firstOrFail();
 
@@ -304,14 +401,27 @@ class ChequeManagementTest extends TestCase
         $this->assertTrue($invoice->fresh()->status->isPaid());
     }
 
+    public function test_deleting_invoice_cheque_payment_removes_cheque_and_accounting_document(): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+        $invoice = $this->invoice(InvoiceType::SELL, $this->customer, 1000);
+        $cheque = $this->service->register($this->user, $this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 1000));
+        $payment = $invoice->payments()->firstOrFail();
+        $documentId = $payment->document_id;
+
+        $this->delete(route('invoices.payments.destroy', [$invoice, $payment]))->assertRedirect(route('invoices.show', $invoice));
+
+        $this->assertNull(Payment::find($payment->id));
+        $this->assertNull(Cheque::withoutGlobalScopes()->find($cheque->id));
+        $this->assertNull(Document::withoutGlobalScopes()->find($documentId));
+        $this->assertTrue($invoice->fresh()->status->isApproved());
+    }
+
     public function test_buy_invoice_is_paid_by_issued_cheque(): void
     {
         $invoice = $this->invoice(InvoiceType::BUY, $this->vendor, 1000);
 
-        $cheque = $this->service->register(
-            $this->user,
-            $this->invoiceChequeData($invoice, ChequeType::PAYABLE, 1000),
-        );
+        $cheque = $this->service->register($this->user, $this->invoiceChequeData($invoice, ChequeType::PAYABLE, 1000));
         $payment = $invoice->payments()->firstOrFail();
 
         $this->assertSame(ChequeType::ISSUED, $cheque->status);
@@ -326,10 +436,7 @@ class ChequeManagementTest extends TestCase
         $invoice = $this->invoice(InvoiceType::SELL, $this->customer, 1000);
 
         try {
-            $this->service->register(
-                $this->user,
-                $this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 1001),
-            );
+            $this->service->register($this->user, $this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 1001));
             $this->fail('Expected invoice cheque overpayment to be rejected.');
         } catch (ValidationException) {
             $this->assertSame(0, Cheque::count());
@@ -341,15 +448,11 @@ class ChequeManagementTest extends TestCase
     public function test_updating_invoice_cheque_rebuilds_payment_document_and_invoice_balance(): void
     {
         $invoice = $this->invoice(InvoiceType::SELL, $this->customer, 1000);
-        $cheque = $this->service->register(
-            $this->user,
-            $this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 1000),
-        );
+        $cheque = $this->service->register($this->user, $this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 1000));
         $payment = $invoice->payments()->firstOrFail();
         $oldDocumentId = $payment->document_id;
         $data = $this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 600);
         $data['sayad_number'] = $cheque->sayad_number;
-        $data['version'] = $cheque->version;
 
         $cheque = $this->service->update($cheque, $this->user, $data);
         $payment->refresh();
@@ -366,10 +469,7 @@ class ChequeManagementTest extends TestCase
     public function test_unlinking_invoice_cheque_preserves_it_while_deleting_it_restores_invoice_status(): void
     {
         $invoice = $this->invoice(InvoiceType::SELL, $this->customer, 1000);
-        $cheque = $this->service->register(
-            $this->user,
-            $this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 1000),
-        );
+        $cheque = $this->service->register($this->user, $this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 1000));
         $payment = $invoice->payments()->firstOrFail();
         $documentId = $payment->document_id;
 
@@ -383,7 +483,7 @@ class ChequeManagementTest extends TestCase
         app(PaymentService::class)->syncInvoiceStatus($invoice);
         $this->assertTrue($invoice->fresh()->status->isPaid());
 
-        $this->service->delete($cheque, $this->user, $cheque->version);
+        $this->service->delete($cheque);
 
         $this->assertNull(Payment::find($payment->id));
         $this->assertNull(Document::find($documentId));
@@ -397,11 +497,16 @@ class ChequeManagementTest extends TestCase
             Permission::findOrCreate('invoices.payments.store'),
             Permission::findOrCreate('invoices.payments.store-cheque'),
         ]);
+        $chequebook = Chequebook::create([
+            'bank_account_id' => $this->account->id,
+            'serial_prefix' => 'PAY',
+            'first_leaf' => 100,
+            'last_leaf' => 149,
+            'next_leaf' => 100,
+        ]);
         $invoice = $this->invoice(InvoiceType::SELL, $this->customer, 1000);
 
-        $this->get(route('invoices.show', $invoice))
-            ->assertOk()
-            ->assertSee(__('Pay by cheque'));
+        $this->get(route('invoices.show', $invoice))->assertOk()->assertSee(__('Pay by cheque'));
 
         $response = $this->post(route('invoices.payments.store-cheque', $invoice), [
             'amount' => 1000,
@@ -410,14 +515,17 @@ class ChequeManagementTest extends TestCase
             'serial' => 'HTTP-CHEQUE',
             'cheque_number' => 'HTTP-123',
             'sayad_number' => (string) $this->sayadSequence++,
+            'chequebook_id' => $chequebook->id,
             'description' => 'HTTP invoice cheque',
         ]);
 
         $response->assertRedirect(route('invoices.show', $invoice));
-        $this->assertDatabaseHas('payments', [
-            'invoice_id' => $invoice->id,
-        ]);
-        $this->assertSame(ChequeType::RECEIVABLE, $invoice->payments()->firstOrFail()->cheque->direction);
+        $this->assertDatabaseHas('payments', ['invoice_id' => $invoice->id]);
+        $cheque = $invoice->payments()->firstOrFail()->cheque;
+        $this->assertSame(ChequeType::RECEIVABLE, $cheque->direction);
+        $this->assertNull($cheque->chequebook_id);
+        $this->assertSame($invoice->date->toDateString(), $cheque->write_date->toDateString());
+        $this->assertSame($invoice->date->copy()->addMonth()->toDateString(), $cheque->due_date->toDateString());
         $this->assertTrue($invoice->fresh()->status->isPaid());
     }
 
@@ -438,29 +546,59 @@ class ChequeManagementTest extends TestCase
             ->assertSee('preventScroll: true', false);
     }
 
-    public function test_deleting_invoice_detaches_but_preserves_its_cheque_and_accounting_document(): void
+    public function test_buy_invoice_can_be_paid_with_a_cheque_from_an_optional_chequebook(): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+        $this->user->givePermissionTo([
+            Permission::findOrCreate('invoices.payments.store'),
+            Permission::findOrCreate('invoices.payments.store-cheque'),
+        ]);
+        $chequebook = Chequebook::create([
+            'bank_account_id' => $this->account->id,
+            'serial_prefix' => 'INVOICE',
+            'first_leaf' => 500,
+            'last_leaf' => 549,
+            'next_leaf' => 500,
+        ]);
+        $invoice = $this->invoice(InvoiceType::BUY, $this->vendor, 1000);
+
+        $this->get(route('invoices.show', $invoice))->assertOk()->assertSee('name="chequebook_id"', false);
+
+        $response = $this->post(route('invoices.payments.store-cheque', $invoice), [
+            'amount' => 1000,
+            'issue_date' => toEnglish(formatDate($invoice->date)),
+            'due_date' => toEnglish(formatDate($invoice->date->copy()->addMonth())),
+            'serial' => 'INVOICE-500',
+            'cheque_number' => '500',
+            'sayad_number' => (string) $this->sayadSequence++,
+            'bank_account_id' => $this->account->id,
+            'chequebook_id' => $chequebook->id,
+        ]);
+
+        $response->assertRedirect(route('invoices.show', $invoice));
+        $this->assertTrue($invoice->payments()->firstOrFail()->cheque->chequebook->is($chequebook));
+        $this->assertTrue($invoice->fresh()->status->isPaid());
+    }
+
+    public function test_deleting_invoice_removes_its_cheque_payment_histories_and_accounting_documents(): void
     {
         $invoice = $this->invoice(InvoiceType::SELL, $this->customer, 1000);
-        $cheque = $this->service->register(
-            $this->user,
-            $this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 1000),
-        );
+        $cheque = $this->service->register($this->user, $this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 1000));
         $payment = $invoice->payments()->firstOrFail();
         $documentId = $payment->document_id;
+        $historyIds = $cheque->histories()->pluck('id');
+        InvoiceService::deleteInvoice($invoice->id);
 
-        $invoice->delete();
-
-        $this->assertNotNull($cheque->fresh());
-        $this->assertNull($payment->fresh()->invoice_id);
-        $this->assertNotNull(Document::find($documentId));
-        $this->assertSame($payment->id, $cheque->histories()->firstOrFail()->payment_id);
+        $this->assertNull($cheque->fresh());
+        $this->assertNull($payment->fresh());
+        $this->assertNull(Document::find($documentId));
+        $this->assertSame(0, ChequeHistory::whereIn('id', $historyIds)->count());
     }
 
     public function test_cheque_management_pages_render(): void
     {
         $this->withoutMiddleware(CheckPermission::class);
         $received = $this->receivedCheque();
-        $issued = $this->issuedCheque();
 
         foreach ([
             route('cheques.index'),
@@ -471,6 +609,52 @@ class ChequeManagementTest extends TestCase
         ] as $url) {
             $this->get($url)->assertOk();
         }
+    }
+
+    public function test_chequebook_crud_routes_and_deletion_preserve_associated_cheques(): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+
+        $response = $this->post(route('cheques.chequebooks.store'), [
+            'bank_account_id' => $this->account->id,
+            'serial_prefix' => 'CRUD',
+            'first_leaf' => '۱۰۰',
+            'last_leaf' => '۱۴۹',
+            'description' => 'Primary payable chequebook',
+        ]);
+
+        $chequebook = Chequebook::firstOrFail();
+        $response->assertRedirect(route('cheques.chequebooks.show', $chequebook));
+        $this->assertSame(100, $chequebook->next_leaf);
+
+        $cheque = $this->service->register($this->user, [
+            ...$this->data(ChequeType::PAYABLE, ChequeType::SETTLEMENT, $this->vendor),
+            'bank_account_id' => $this->account->id,
+            'chequebook_id' => $chequebook->id,
+        ]);
+
+        foreach ([
+            route('cheques.chequebooks.index'),
+            route('cheques.chequebooks.show', $chequebook),
+            route('cheques.chequebooks.edit', $chequebook),
+        ] as $url) {
+            $this->get($url)->assertOk();
+        }
+
+        $this->put(route('cheques.chequebooks.update', $chequebook), [
+            'bank_account_id' => $this->account->id,
+            'serial_prefix' => 'UPDATED',
+            'first_leaf' => 100,
+            'last_leaf' => 149,
+            'next_leaf' => 101,
+        ])->assertRedirect(route('cheques.chequebooks.show', $chequebook));
+
+        $this->assertSame('UPDATED', $chequebook->fresh()->serial_prefix);
+        $this->delete(route('cheques.chequebooks.destroy', $chequebook))->assertRedirect(route('cheques.chequebooks.index'));
+
+        $this->assertNull(Chequebook::find($chequebook->id));
+        $this->assertNotNull($cheque->fresh());
+        $this->assertNull($cheque->fresh()->chequebook_id);
     }
 
     public function test_cheque_index_renders_and_applies_all_supported_filters(): void
@@ -522,25 +706,15 @@ class ChequeManagementTest extends TestCase
     {
         $this->withoutMiddleware(CheckPermission::class);
         $originalCheque = $this->receivedCheque();
-        $endorsedCheque = $this->service->register(
-            $this->user,
-            $this->data(ChequeType::RECEIVABLE, ChequeType::SETTLEMENT, $this->vendor),
-        );
-        $endorsedCheque = $this->service->transition($endorsedCheque, $this->user, 'endorse', [
-            'account_side_id' => $this->customer->id,
-        ]);
+        $endorsedCheque = $this->service->register($this->user, $this->data(ChequeType::RECEIVABLE, ChequeType::SETTLEMENT, $this->vendor));
+        $endorsedCheque = $this->service->transition($endorsedCheque, $this->user, 'endorse', ['account_side_id' => $this->customer->id]);
         $unrelatedCheque = $this->issuedCheque();
 
         $response = $this->get(route('customers.show', $this->customer));
 
-        $response->assertOk()
-            ->assertViewIs('customers.show')
-            ->assertViewHas('cheques', function ($cheques) use ($originalCheque, $endorsedCheque, $unrelatedCheque) {
-                return $cheques->total() === 2
-                    && $cheques->contains('id', $originalCheque->id)
-                    && $cheques->contains('id', $endorsedCheque->id)
-                    && ! $cheques->contains('id', $unrelatedCheque->id);
-            })
+        $response->assertOk()->assertViewIs('customers.show')->assertViewHas('cheques', function ($cheques) use ($originalCheque, $endorsedCheque, $unrelatedCheque) {
+            return $cheques->total() === 2 && $cheques->contains('id', $originalCheque->id) && $cheques->contains('id', $endorsedCheque->id) && ! $cheques->contains('id', $unrelatedCheque->id);
+        })
             ->assertSee(localizeNumber($originalCheque->cheque_number))
             ->assertSee(localizeNumber($endorsedCheque->cheque_number))
             ->assertDontSee(localizeNumber($unrelatedCheque->cheque_number))
@@ -555,9 +729,7 @@ class ChequeManagementTest extends TestCase
 
     private function issuedCheque(): Cheque
     {
-        return $this->service->register($this->user, array_merge($this->data(ChequeType::PAYABLE, ChequeType::SETTLEMENT, $this->vendor), [
-            'bank_account_id' => $this->account->id,
-        ]));
+        return $this->service->register($this->user, array_merge($this->data(ChequeType::PAYABLE, ChequeType::SETTLEMENT, $this->vendor), ['bank_account_id' => $this->account->id]));
     }
 
     private function data(ChequeType $direction, ChequeType $purpose, Customer $accountSide, string $dueDate = '2026-02-01', float $amount = 1000): array

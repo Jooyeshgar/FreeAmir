@@ -8,6 +8,7 @@ use App\Enums\InvoiceType;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Bank;
 use App\Models\BankAccount;
+use App\Models\Chequebook;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
@@ -370,6 +371,7 @@ class InvoiceController extends Controller
         $chequeDirection = $chequeService->directionForInvoice($invoice);
         $chequeBanks = $chequeDirection ? Bank::orderBy('name')->get() : collect();
         $chequeBankAccounts = $chequeDirection === ChequeType::PAYABLE ? BankAccount::with('bank')->orderBy('name')->get() : collect();
+        $chequebooks = $chequeDirection === ChequeType::PAYABLE ? Chequebook::with('bankAccount.bank')->orderBy('serial_prefix')->get() : collect();
 
         $ancillaryCostProductIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->unique()->values()->all();
         $canCreateAncillaryCost = $invoice->invoice_type === InvoiceType::BUY && ! $isServiceBuy && empty(InvoiceService::notAllowedInvoiceForAncillaryCosts($invoice, $ancillaryCostProductIds));
@@ -378,7 +380,7 @@ class InvoiceController extends Controller
             $q->where('users.id', auth()->id());
         })->where('id', '!=', getActiveCompany())->get();
 
-        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'paidAmount', 'remainingAmount', 'chequeDirection', 'chequeBanks', 'chequeBankAccounts', 'fiscalYears', 'canCreateAncillaryCost'));
+        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'paidAmount', 'remainingAmount', 'chequeDirection', 'chequeBanks', 'chequeBankAccounts', 'chequebooks', 'fiscalYears', 'canCreateAncillaryCost'));
     }
 
     public function print(Invoice $invoice)
