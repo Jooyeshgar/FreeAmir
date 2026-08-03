@@ -14,6 +14,7 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Subject;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -338,16 +339,17 @@ class ChequeService
         }
 
         $amount = (float) $cheque->amount;
+        $writeDate = Carbon::parse($cheque->getRawOriginal('write_date'))->toDateString();
 
         return $cheque->direction === ChequeType::RECEIVABLE
             ? $this->post($user, $cheque, 'register', [
                 [$this->subject('013001'), -$amount],
                 [$this->accountSideSubject($cheque), $amount],
-            ], $cheque->write_date->toDateString())
+            ], $writeDate)
             : $this->post($user, $cheque, 'issue', [
                 [$this->accountSideSubject($cheque), -$amount],
                 [$this->subject('020001'), $amount],
-            ], $cheque->write_date->toDateString());
+            ], $writeDate);
     }
 
     private function validateRegistrationData(array $data, ChequeType $direction, ?Cheque $except = null): void
@@ -427,11 +429,11 @@ class ChequeService
         return $document;
     }
 
-    private function payment(User $user, Cheque $cheque, Document $document, int $settlementSubjectId, array $data, string $event): Payment
+    private function payment(User $user, Cheque $cheque, Document $document, int $settlementSubjectId, array $data, string $event, ?int $payerId = null): Payment
     {
         return Payment::create([
             'cheque_id' => $cheque->id,
-            'payer_id' => $cheque->direction === ChequeType::RECEIVABLE ? $cheque->customer_id : null,
+            'payer_id' => $payerId ?? ($cheque->direction === ChequeType::RECEIVABLE ? $cheque->customer_id : null),
             'amount' => $cheque->amount,
             'date' => $data['date'] ?? now()->toDateString(),
             'description' => $data['description'] ?? $this->accountingDescription($event, $cheque),
