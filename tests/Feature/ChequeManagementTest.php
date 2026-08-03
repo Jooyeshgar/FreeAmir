@@ -141,7 +141,7 @@ class ChequeManagementTest extends TestCase
             'code' => '012001999',
             'name' => 'Foreign customer subject',
             'parent_id' => null,
-            'type' => 'both',
+            'type' => 3,
             'company_id' => $otherCompany->id,
         ]);
         DB::table('customers')->where('id', $this->customer->id)->update(['subject_id' => 999]);
