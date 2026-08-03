@@ -226,11 +226,13 @@
             </article>
         </section>
 
-        <section class="card border border-base-300 bg-base-100/90 shadow-sm">
+        <section id="personnel-payroll-list" x-data="payrollDashboardSection('personnel-payroll-list')"
+            :class="{ 'opacity-60 pointer-events-none': loading }" :aria-busy="loading"
+            class="card border border-base-300 bg-base-100/90 shadow-sm">
             <div class="card-body p-0">
                 <div class="flex flex-col gap-3 border-b border-base-300 p-4 lg:flex-row lg:items-center lg:justify-between">
                     <div>
-                        <h2 class="card-title text-base">{{ __('Personnel Payroll List') }}</h2>
+                        <h2 class="card-title text-base">{{ __('Personnel Payroll List') }} - {{ $periodLabel }}</h2>
                         <p class="text-xs text-base-content/55">
                             {{ __('Showing :count of :total item(s)', ['count' => formatNumber($payrolls->count()), 'total' => formatNumber($payrolls->total())]) }}
                         </p>
@@ -252,15 +254,22 @@
                             @endforeach
                         </div>
 
-                        <form action="{{ route('salary.payrolls.dashboard') }}" method="GET" class="flex items-center gap-2">
+                        <form action="{{ route('salary.payrolls.dashboard') }}" method="GET" class="flex flex-wrap items-end gap-2"
+                            @submit.prevent="load($event.currentTarget)">
                             <x-input name="year" value="{{ $year }}" hidden />
-                            <x-input name="month" value="{{ $month }}" hidden />
                             @if ($organizationUnitId)
                                 <x-input name="organization_unit_id" value="{{ $organizationUnitId }}" hidden />
                             @endif
                             @if ($statusFilter)
                                 <x-input name="status" value="{{ $statusFilter }}" hidden />
                             @endif
+                            <label class="form-control w-36">
+                                <select name="month" class="select select-sm select-bordered" @change="load($event.target.form)">
+                                    @foreach ($monthNames as $monthNumber => $monthName)
+                                        <option value="{{ $monthNumber }}" @selected($month === $monthNumber)>{{ $monthName }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
                             <x-text-input input_class="input-sm" type="search" name="q" value="{{ $search }}" placeholder="{{ __('Search name or unit...') }}" />
                             <button type="submit" class="btn btn-sm btn-ghost">{{ __('Search') }}</button>
                         </form>
@@ -307,7 +316,7 @@
                                         @if ($payroll->monthlyAttendance)
                                             @php $attendanceLog = $payroll->monthlyAttendance->logs->first(); @endphp
                                             @if ($attendanceLog)
-                                                <a href="{{ route('attendance.attendance-logs.show', $attendanceLog) }}" class="link link-primary">
+                                                <a href="{{ route('attendance.monthly-attendances.show', $attendanceLog->monthly_attendance_id) }}" class="link link-primary">
                                                     {{ formatNumber($payroll->monthlyAttendance->present_days) }}
                                                     /
                                                     {{ formatNumber($payroll->monthlyAttendance->work_days) }}
@@ -349,7 +358,9 @@
             </div>
         </section>
 
-        <section class="card border border-base-300 bg-base-100/90 shadow-sm">
+        <section id="daily-attendance-log" x-data="payrollDashboardSection('daily-attendance-log')"
+            :class="{ 'opacity-60 pointer-events-none': loading }" :aria-busy="loading"
+            class="card border border-base-300 bg-base-100/90 shadow-sm">
             <div class="card-body">
                 <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div>
@@ -358,15 +369,23 @@
                             {{ __('Click any available day to open its attendance log details.') }}
                         </p>
                     </div>
-                    <form action="{{ route('salary.payrolls.dashboard') }}" method="GET" class="flex flex-wrap items-end gap-2">
+                    <form action="{{ route('salary.payrolls.dashboard') }}" method="GET" class="flex flex-wrap items-end gap-2"
+                        @submit.prevent="load($event.currentTarget)">
                         <x-input name="year" value="{{ $year }}" hidden />
-                        <x-input name="month" value="{{ $month }}" hidden />
                         @if ($statusFilter)
                             <x-input name="status" value="{{ $statusFilter }}" hidden />
                         @endif
                         @if ($search)
                             <x-input name="q" value="{{ $search }}" hidden />
                         @endif
+                        <label class="form-control w-36">
+                            <span class="label-text mb-1 text-xs">{{ __('Month') }}</span>
+                            <select name="month" class="select select-sm select-bordered" @change="load($event.target.form)">
+                                @foreach ($monthNames as $monthNumber => $monthName)
+                                    <option value="{{ $monthNumber }}" @selected($month === $monthNumber)>{{ $monthName }}</option>
+                                @endforeach
+                            </select>
+                        </label>
                         <label class="form-control w-44">
                             <span class="label-text mb-1 text-xs">{{ __('Organization Unit') }}</span>
                             <select name="organization_unit_id" class="select select-sm select-bordered">
@@ -433,6 +452,58 @@
 
     @push('scripts')
         <script>
+            window.payrollDashboardSection = (targetId) => ({
+                loading: false,
+                controller: null,
+
+                async load(form) {
+                    const url = new URL(form.action, window.location.origin);
+
+                    new FormData(form).forEach((value, key) => {
+                        if (value !== '') {
+                            url.searchParams.set(key, value);
+                        }
+                    });
+
+                    this.controller?.abort();
+                    const controller = new AbortController();
+                    this.controller = controller;
+                    this.loading = true;
+
+                    try {
+                        const response = await fetch(url, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            signal: controller.signal,
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`Dashboard filter request failed with status ${response.status}`);
+                        }
+
+                        const documentFragment = new DOMParser().parseFromString(await response.text(), 'text/html');
+                        const updatedTarget = documentFragment.getElementById(targetId);
+
+                        if (!updatedTarget) {
+                            throw new Error(`Dashboard section #${targetId} was not found`);
+                        }
+
+                        this.$root.replaceWith(updatedTarget);
+                        window.history.replaceState({}, '', url);
+                    } catch (error) {
+                        if (error.name !== 'AbortError') {
+                            window.location.assign(url);
+                        }
+                    } finally {
+                        if (this.controller === controller) {
+                            this.loading = false;
+                            this.controller = null;
+                        }
+                    }
+                },
+            });
+
             document.addEventListener('DOMContentLoaded', () => {
                 const payrollData = @json($payrollChartData);
                 const attendanceData = @json($attendanceChartData);

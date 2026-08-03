@@ -598,7 +598,7 @@ class PayrollController extends Controller
                 $query->whereHas('employee', fn (Builder $employeeQuery) => $employeeQuery->where('organization_unit_id', $organizationUnitId));
             })
             ->orderBy('employee_id')
-            ->paginate(6, ['*'], 'attendance_page')
+            ->paginate(10, ['*'], 'attendance_page')
             ->withQueryString();
 
         if ($attendances->isEmpty()) {
