@@ -188,6 +188,7 @@ class ChequeService
         }
         $account = BankAccount::findOrFail($data['bank_account_id']);
 
+        $from = $cheque->status;
         $amount = (float) $cheque->amount;
         $document = $this->post($user, $cheque, 'deposit', [
             [$this->subject('014001'), -$amount],
@@ -195,7 +196,7 @@ class ChequeService
         ], $data['date'] ?? null);
 
         $cheque->update(['status' => ChequeType::DEPOSITED, 'bank_account_id' => $account->id]);
-        $this->history($cheque, $user, $cheque->status, ChequeType::DEPOSITED, $document, null, $data['description'] ?? null);
+        $this->history($cheque, $user, $from, ChequeType::DEPOSITED, $document, null, $data['description'] ?? null);
 
         return $cheque->fresh();
     }
@@ -216,6 +217,7 @@ class ChequeService
             throw ValidationException::withMessages(['bank_account_id' => __('The bank account has no accounting subject.')]);
         }
 
+        $from = $cheque->status;
         $amount = (float) $cheque->amount;
         $entries = $cheque->direction === ChequeType::RECEIVABLE
             ? [[$bankSubject, -$amount], [$this->subject('014001'), $amount]]
@@ -226,7 +228,7 @@ class ChequeService
         DocumentService::syncDocumentable($document, $payment);
 
         $cheque->update(['status' => ChequeType::CLEARED]);
-        $this->history($cheque, $user, $cheque->status, ChequeType::CLEARED, $document, $payment, $data['description'] ?? null);
+        $this->history($cheque, $user, $from, ChequeType::CLEARED, $document, $payment, $data['description'] ?? null);
 
         return $cheque->fresh();
     }
@@ -238,10 +240,7 @@ class ChequeService
         }
 
         $vendor = Customer::findOrFail($data['account_side_id']);
-        $vendorSubject = (int) ($vendor->subject_id ?: $vendor->subject?->id);
-        if (! $vendorSubject) {
-            throw ValidationException::withMessages(['account_side_id' => __('The account side has no accounting subject.')]);
-        }
+        $vendorSubject = $this->customerSubject($vendor, $cheque);
 
         $from = $cheque->status;
         $amount = (float) $cheque->amount;
@@ -477,7 +476,7 @@ class ChequeService
 
     private function subject(string $code): int
     {
-        $subject = Subject::where('code', $code)->first();
+        $subject = Subject::where('company_id', getActiveCompany())->where('code', $code)->first();
         if (! $subject) {
             throw ValidationException::withMessages(['accounting' => __('Accounting subject :code is not configured.', ['code' => $code])]);
         }
@@ -487,8 +486,23 @@ class ChequeService
 
     private function accountSideSubject(Cheque $cheque): int
     {
-        $subjectId = (int) ($cheque->customer?->subject_id ?: $cheque->customer?->subject?->id);
-        if (! $subjectId) {
+        $customer = $cheque->customer;
+        if (! $customer) {
+            throw ValidationException::withMessages(['account_side_id' => __('The account side has no accounting subject.')]);
+        }
+
+        return $this->customerSubject($customer, $cheque);
+    }
+
+    private function customerSubject(Customer $customer, Cheque $cheque): int
+    {
+        if ((int) $customer->company_id != (int) $cheque->company_id) {
+            throw ValidationException::withMessages(['account_side_id' => __('The selected account side is invalid.')]);
+        }
+
+        $subjectId = (int) ($customer->subject_id ?: $customer->subject?->id);
+        $subjectBelongsToCompany = $subjectId && Subject::where('company_id', $cheque->company_id)->whereKey($subjectId)->exists();
+        if (! $subjectBelongsToCompany) {
             throw ValidationException::withMessages(['account_side_id' => __('The account side has no accounting subject.')]);
         }
 

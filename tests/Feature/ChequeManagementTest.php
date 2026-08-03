@@ -93,10 +93,16 @@ class ChequeManagementTest extends TestCase
         $cheque = $this->service->transition($cheque, $this->user, 'deposit', ['bank_account_id' => $this->account->id]);
         $this->assertSame(ChequeType::DEPOSITED, $cheque->status);
         $this->assertSame($this->account->id, $cheque->bank_account_id);
+        $depositHistory = $cheque->histories()->latest('id')->firstOrFail();
+        $this->assertSame(ChequeType::REGISTERED, $depositHistory->from_status);
+        $this->assertSame(ChequeType::DEPOSITED, $depositHistory->to_status);
 
         $cheque = $this->service->transition($cheque, $this->user, 'clear');
         $this->assertSame(ChequeType::CLEARED, $cheque->status);
         $this->assertCount(3, $cheque->histories);
+        $clearHistory = $cheque->histories()->latest('id')->firstOrFail();
+        $this->assertSame(ChequeType::DEPOSITED, $clearHistory->from_status);
+        $this->assertSame(ChequeType::CLEARED, $clearHistory->to_status);
         $cheque->histories->each(fn ($history) => $this->assertBalanced($history->document));
 
         $payment = Payment::where('cheque_id', $cheque->id)->firstOrFail();
@@ -125,6 +131,30 @@ class ChequeManagementTest extends TestCase
         $payment = Payment::where('cheque_id', $cheque->id)->firstOrFail();
         $this->assertTrue($payment->cheque->is($cheque));
         $this->assertBalanced($payment->document);
+    }
+
+    public function test_account_side_subject_must_belong_to_cheque_company(): void
+    {
+        $otherCompany = Company::create(['name' => 'Other Company', 'fiscal_year' => 1405]);
+        DB::table('subjects')->insert([
+            'id' => 999,
+            'code' => '012001999',
+            'name' => 'Foreign customer subject',
+            'parent_id' => null,
+            'type' => 'both',
+            'company_id' => $otherCompany->id,
+        ]);
+        DB::table('customers')->where('id', $this->customer->id)->update(['subject_id' => 999]);
+
+        try {
+            $this->receivedCheque();
+            $this->fail('Expected a cross-company account-side subject to be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('account_side_id', $exception->errors());
+        }
+
+        $this->assertSame(0, Cheque::count());
+        $this->assertSame(0, Document::count());
     }
 
     public function test_issued_cheque_posts_notes_payable_then_clears_through_bank_payment(): void
