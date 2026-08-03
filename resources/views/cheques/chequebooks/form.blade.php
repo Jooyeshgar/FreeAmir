@@ -15,7 +15,7 @@
                     <fieldset class="w-full">
                         <label for="bank_account_id" class="label">{{ __('Bank account') }}</label>
                         <select id="bank_account_id" name="bank_account_id" class="select w-full @error('bank_account_id') select-error @enderror" required>
-                            <option value="">{{ __('Select…') }}</option>
+                            <option value="">{{ __('Select bank account') }}</option>
                             @foreach ($bankAccounts as $account)
                                 <option value="{{ $account->id }}" @selected((string) old('bank_account_id', $chequebook?->bank_account_id) === (string) $account->id)>
                                     {{ $account->name }}

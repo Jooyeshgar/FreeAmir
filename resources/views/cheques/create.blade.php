@@ -124,7 +124,7 @@
                                 class="select w-full @error('bank_account_id') select-error @enderror"
                                 :required="direction === @js($payableDirectionValue)"
                                 :disabled="direction !== @js($payableDirectionValue)">
-                                <option value="">{{ __('Select…') }}</option>
+                                <option value="">{{ __('Select bank account') }}</option>
                                 @foreach ($bankAccounts as $account)
                                     <option value="{{ $account->id }}" @selected((string) old('bank_account_id', $cheque?->bank_account_id) === (string) $account->id)>
                                         {{ $account->name }}
