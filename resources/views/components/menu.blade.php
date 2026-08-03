@@ -266,7 +266,7 @@
             @endcanany
 
             {{-- Finance --}}
-            @canany(['bank-accounts.index', 'banks.index', 'cheques.index', 'subjects.index', 'documents.sort-numbers'])
+            @canany(['bank-accounts.index', 'banks.index', 'cheques.index', 'cheques.chequebooks.index', 'subjects.index', 'documents.sort-numbers'])
                 <li>
                     <details>
                         <summary>{{ __('Finance') }}</summary>
@@ -282,6 +282,9 @@
                             @endcan
                             @can('cheques.index')
                                 <li><a href="{{ route('cheques.index') }}">{{ __('Cheque Management') }}</a></li>
+                            @endcan
+                            @can('cheques.chequebooks.index')
+                                <li><a href="{{ route('cheques.chequebooks.index') }}">{{ __('Chequebooks') }}</a></li>
                             @endcan
                             @can('documents.sort-numbers')
                                 <li><a href="{{ route('documents.sort-numbers') }}">{{ __('Sort Documents Number') }}</a>

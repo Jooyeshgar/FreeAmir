@@ -30,6 +30,7 @@ use App\Models\AttendanceLog;
 use App\Models\Bank;
 use App\Models\BankAccount;
 use App\Models\Cheque;
+use App\Models\Chequebook;
 use App\Models\ChequeHistory;
 use App\Models\Comment;
 use App\Models\Company;
@@ -438,15 +439,21 @@ class FiscalYearService
                         }
                     }
                 }
-                if (in_array('cheques', $sectionsToImport) && isset($importData['cheques'])) {
-                    $idMappings['cheques'] = self::_importCheques(
-                        $importData['cheques'],
-                        $targetYearId,
-                        $idMappings['customers'] ?? [],
-                        $idMappings['bank_accounts'] ?? [],
-                    );
+                if (in_array('cheques', $sectionsToImport)) {
+                    if (isset($importData['chequebooks'])) {
+                        $bankAccountMapping = $idMappings['bank_accounts'] ?? [];
+                        $idMappings['chequebooks'] = self::_importChequebooks($importData['chequebooks'], $targetYearId, $bankAccountMapping);
+                    }
 
-                    self::_syncChequeDocuments($importData['documents'] ?? [], $idMappings['documents'] ?? [], $idMappings['cheques']);
+                    if (isset($importData['cheques'])) {
+                        $customerMapping = $idMappings['customers'] ?? [];
+                        $bankAccountMapping = $idMappings['bank_accounts'] ?? [];
+                        $chequebookMapping = $idMappings['chequebooks'] ?? [];
+                        $idMappings['cheques'] = self::_importCheques($importData['cheques'], $targetYearId, $customerMapping, $bankAccountMapping, $chequebookMapping);
+
+                        $documentMapping = $idMappings['documents'] ?? [];
+                        self::_syncChequeDocuments($importData['documents'], $documentMapping, $idMappings['cheques']);
+                    }
                 }
                 if (in_array('invoices', $sectionsToImport)) {
                     $customerMapping = $idMappings['customers'] ?? [];
@@ -791,6 +798,10 @@ class FiscalYearService
             $sourceData['payments'] = ! empty($invoiceIds) ? Payment::whereIn('invoice_id', $invoiceIds)->get()->toArray() : [];
         }
         if (in_array('cheques', $sections)) {
+            $sourceData['chequebooks'] = Chequebook::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
+                ->get()->toArray();
+
             $sourceData['cheques'] = Cheque::withoutGlobalScope(FiscalYearScope::class)
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
@@ -2152,19 +2163,46 @@ class FiscalYearService
     }
 
     /**
-     * Import Cheques.
+     * Import chequebooks and remap their bank accounts.
      *
-     * @param  array  $customerMapping  Mapping of old customer ID to new customer ID.
-     * @param  array  $bankAccountMapping  Mapping of old bank account ID to new bank account ID.
+     * @return array<int, int> Mapping of old chequebook ID to new chequebook ID.
+     */
+    protected static function _importChequebooks(array $chequebooksData, int $targetYearId, array $bankAccountMapping): array
+    {
+        $mapping = [];
+        foreach ($chequebooksData as $chequebookData) {
+            $oldBankAccountId = $chequebookData['bank_account_id'] ?? null;
+            if ($oldBankAccountId === null || ! isset($bankAccountMapping[$oldBankAccountId])) {
+                Log::warning('Skipping chequebook import due to missing bank account mapping.', ['old_chequebook_id' => $chequebookData['id'] ?? 'N/A', 'old_bank_account_id' => $oldBankAccountId, 'target_year_id' => $targetYearId]);
+
+                continue;
+            }
+
+            $newChequebook = new Chequebook;
+            $newChequebook->fill(collect($chequebookData)->except(['id', 'company_id', 'bank_account_id'])->toArray());
+            $newChequebook->company_id = $targetYearId;
+            $newChequebook->bank_account_id = $bankAccountMapping[$oldBankAccountId];
+            $newChequebook->saveQuietly();
+
+            $mapping[$chequebookData['id']] = $newChequebook->id;
+        }
+
+        return $mapping;
+    }
+
+    /**
+     * Import cheques and remap their account side, bank account, and optional chequebook.
+     *
      * @return array<int, int> Mapping of old cheque ID to new cheque ID.
      */
-    protected static function _importCheques(array $chequesData, int $targetYearId, array $customerMapping, array $bankAccountMapping): array
+    protected static function _importCheques(array $chequesData, int $targetYearId, array $customerMapping, array $bankAccountMapping, array $chequebookMapping = []): array
     {
         $mapping = [];
         foreach ($chequesData as $chequeData) {
             $oldCustomerId = $chequeData['customer_id'] ?? null;
             $oldEndorsedToId = $chequeData['endorsed_to_id'] ?? null;
             $oldBankAccountId = $chequeData['bank_account_id'] ?? null;
+            $oldChequebookId = $chequeData['chequebook_id'] ?? null;
 
             if ($oldCustomerId === null || ! isset($customerMapping[$oldCustomerId])) {
                 Log::warning('Skipping cheque import due to missing customer mapping.', ['old_cheque_id' => $chequeData['id'] ?? 'N/A', 'old_customer_id' => $oldCustomerId, 'target_year_id' => $targetYearId]);
@@ -2184,17 +2222,24 @@ class FiscalYearService
                 continue;
             }
 
+            if ($oldChequebookId !== null && ! isset($chequebookMapping[$oldChequebookId])) {
+                Log::warning('Skipping cheque import due to missing chequebook mapping.', ['old_cheque_id' => $chequeData['id'] ?? 'N/A', 'old_chequebook_id' => $oldChequebookId, 'target_year_id' => $targetYearId]);
+
+                continue;
+            }
+
             $chequeData = self::_normalizeEnumAttributes($chequeData, [
                 'direction' => ChequeType::class,
                 'purpose' => ChequeType::class,
                 'status' => ChequeType::class,
             ]);
             $newCheque = new Cheque;
-            $newCheque->fill(collect($chequeData)->except(['id', 'company_id', 'customer_id', 'endorsed_to_id', 'bank_account_id'])->toArray());
+            $newCheque->fill(collect($chequeData)->except(['id', 'company_id', 'customer_id', 'endorsed_to_id', 'bank_account_id', 'chequebook_id'])->toArray());
             $newCheque->company_id = $targetYearId;
             $newCheque->customer_id = $customerMapping[$oldCustomerId];
             $newCheque->endorsed_to_id = $oldEndorsedToId !== null ? $customerMapping[$oldEndorsedToId] : null;
             $newCheque->bank_account_id = $oldBankAccountId !== null ? $bankAccountMapping[$oldBankAccountId] : null;
+            $newCheque->chequebook_id = $oldChequebookId !== null ? $chequebookMapping[$oldChequebookId] : null;
             $newCheque->saveQuietly();
 
             $mapping[$chequeData['id']] = $newCheque->id;

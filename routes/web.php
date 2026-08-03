@@ -123,6 +123,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::resource('bank-accounts', Controllers\BankAccountController::class);
     Route::resource('banks', Controllers\BankController::class);
 
+    Route::resource('cheques/chequebooks', Controllers\ChequebookController::class)->names('cheques.chequebooks');
     Route::get('cheques/report', [Controllers\ChequeController::class, 'report'])->name('cheques.report');
     Route::post('cheques/{cheque}/transition/{action}', [Controllers\ChequeController::class, 'transition'])->name('cheques.transition');
     Route::resource('cheques', Controllers\ChequeController::class);

@@ -12,13 +12,15 @@
             @csrf
             @if ($cheque)
                 @method('PUT')
-                <x-input name="version" :value="$cheque->version" hidden />
             @endif
 
             <div class="card-body">
                 <h1 class="card-title">{{ $formTitle }}</h1>
 
-                <div class="grid grid-cols-2 gap-6" x-data="{ direction: @js($selectedDirectionValue) }">
+                <div class="grid grid-cols-2 gap-6" x-data="{
+                    direction: @js($selectedDirectionValue),
+                    bankAccountId: @js((string) old('bank_account_id', $cheque?->bank_account_id)),
+                }">
                     <div class="col-span-2 md:col-span-1">
                         <fieldset class="w-full">
                             <label for="direction" class="label">{{ __('Direction') }}</label>
@@ -79,13 +81,23 @@
                     </div>
 
                     <div class="col-span-2 md:col-span-1">
-                        <x-date-picker name="issue_date" id="issue_date" :title="__('Issue date')"
-                            :value="old('issue_date', $cheque ? toEnglish(formatDate($cheque->write_date)) : null)" />
+                        <x-text-input data-jdp title="{{ __('Issue date') }}" input_name="issue_date"
+                            id_input="issue_date" placeholder="{{ __('Issue date') }}" readonly required
+                            input_value="{{ old('issue_date') ?? convertToJalali($cheque?->write_date ?? now(), true) }}"
+                            label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
+                        @error('issue_date')
+                            <span class="label text-xs text-rose-700">{{ $message }}</span>
+                        @enderror
                     </div>
 
                     <div class="col-span-2 md:col-span-1">
-                        <x-date-picker name="due_date" id="due_date" :title="__('Due date')"
-                            :value="old('due_date', $cheque ? toEnglish(formatDate($cheque->due_date)) : null)" />
+                        <x-text-input data-jdp title="{{ __('Due date') }}" input_name="due_date"
+                            id_input="due_date" placeholder="{{ __('Due date') }}" readonly required
+                            input_value="{{ old('due_date') ?? ($cheque ? convertToJalali($cheque->due_date, true) : '') }}"
+                            label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
+                        @error('due_date')
+                            <span class="label text-xs text-rose-700">{{ $message }}</span>
+                        @enderror
                     </div>
 
                     <div class="col-span-2 md:col-span-1">
@@ -108,18 +120,36 @@
                         style="{{ $selectedDirectionValue === $payableDirectionValue ? '' : 'display: none;' }}">
                         <fieldset class="w-full">
                             <label for="bank_account_id" class="label">{{ __('Bank account') }}</label>
-                            <select id="bank_account_id" name="bank_account_id"
+                            <select id="bank_account_id" name="bank_account_id" x-model="bankAccountId"
                                 class="select w-full @error('bank_account_id') select-error @enderror"
                                 :required="direction === @js($payableDirectionValue)"
                                 :disabled="direction !== @js($payableDirectionValue)">
                                 <option value="">{{ __('Select…') }}</option>
                                 @foreach ($bankAccounts as $account)
                                     <option value="{{ $account->id }}" @selected((string) old('bank_account_id', $cheque?->bank_account_id) === (string) $account->id)>
-                                        {{ $account->bank?->name }} — {{ $account->name }}
+                                        {{ $account->name }}
                                     </option>
                                 @endforeach
                             </select>
                             @error('bank_account_id')
+                                <span class="label text-xs text-rose-700">{{ $message }}</span>
+                            @enderror
+                        </fieldset>
+                    </div>
+
+                    <div class="col-span-2 md:col-span-1" x-show="direction === @js($payableDirectionValue)" style="{{ $selectedDirectionValue === $payableDirectionValue ? '' : 'display: none;' }}">
+                        <fieldset class="w-full">
+                            <label for="chequebook_id" class="label">{{ __('Chequebook') }}</label>
+                            <select id="chequebook_id" name="chequebook_id" class="select w-full @error('chequebook_id') select-error @enderror" :disabled="direction !== @js($payableDirectionValue)">
+                                <option value="">{{ __('No chequebook') }}</option>
+                                @foreach ($chequebooks as $chequebook)
+                                    <option value="{{ $chequebook->id }}" @selected((string) old('chequebook_id', $cheque?->chequebook_id) === (string) $chequebook->id)>
+                                        {{ $chequebook->displayName() }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <div class="label text-xs opacity-60">{{ __('Optional for payable cheques') }}</div>
+                            @error('chequebook_id')
                                 <span class="label text-xs text-rose-700">{{ $message }}</span>
                             @enderror
                         </fieldset>
@@ -142,4 +172,9 @@
             </div>
         </form>
     </div>
+    @pushOnce('scripts')
+        <script type="module">
+            jalaliDatepicker.startWatch({'persianDigits': true});
+        </script>
+    @endPushOnce
 </x-app-layout>

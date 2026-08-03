@@ -15,7 +15,7 @@ enum FiscalYearSection: string
     case DOCUMENTS = 'documents'; // Represents documents + transactions
     case DOCUMENT_FILES = 'document_files'; // Represents documents_files
     case INVOICES = 'invoices'; // Represents invoices + ancillary_costs
-    case CHEQUES = 'cheques'; // Represents cheques + cheque_histories + cheque-linked payments
+    case CHEQUES = 'cheques'; // Represents chequebooks + cheques + cheque_histories + cheque-linked payments
     case EMPLOYEES = 'employees'; // Represents employees + org_charts + work_sites + work_site_contracts + work_shifts
     case PAYROLLS = 'payrolls'; // salary_decrees + monthly_attendances + attendance_logs + payrolls + payroll_elements + personnel_requests
     case PUBLIC_HOLIDAYS = 'public_holidays';

@@ -740,13 +740,11 @@
                                                 @endif
 
                                                 @can('invoices.payments.destroy')
-                                                    <form class="m-0" method="POST"
-                                                        action="{{ route('invoices.payments.destroy', [$invoice, $payment]) }}"
-                                                        onsubmit="return confirm('{{ $payment->cheque_id ? __('Unlink this cheque from the invoice? The cheque and its accounting document will be preserved.') : __('Are you sure you want to remove this payment? Its accounting document will be reversed.') }}')">
+                                                    <form class="m-0" method="POST" action="{{ route('invoices.payments.destroy', [$invoice, $payment]) }}"
+                                                        onsubmit="return confirm('{{ __('Are you sure you want to remove this payment? Its accounting document will be reversed.') }}')">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button type="submit"
-                                                            class="btn btn-xs btn-error">{{ $payment->cheque_id ? __('Unlink') : __('Delete') }}</button>
+                                                        <button type="submit" class="btn btn-xs btn-error">{{ __('Delete') }}</button>
                                                     </form>
                                                 @endcan
                                             </div>
@@ -961,7 +959,16 @@
                                                     <select name="bank_account_id" class="select select-bordered w-full" required>
                                                         <option value="">{{ __('Select bank account') }}</option>
                                                         @foreach($chequeBankAccounts as $account)
-                                                            <option value="{{ $account->id }}">{{ $account->bank?->name }} — {{ $account->name }}</option>
+                                                            <option value="{{ $account->id }}">{{ $account->name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label class="label"><span class="label-text">{{ __('Chequebook') }}</span></label>
+                                                    <select name="chequebook_id" class="select select-bordered w-full">
+                                                        <option value="">{{ __('No chequebook') }}</option>
+                                                        @foreach($chequebooks as $chequebook)
+                                                            <option value="{{ $chequebook->id }}">{{ $chequebook->displayName() }}</option>
                                                         @endforeach
                                                     </select>
                                                 </div>
@@ -1006,6 +1013,10 @@
 
                                 for (const elementName of ['jdp-container', 'jdp-overlay']) {
                                     const element = document.querySelector(elementName);
+                                    if (elementName === 'jdp-overlay' && element) {
+                                        element.style.position = 'fixed';
+                                    }
+
                                     if (element && element.parentElement !== modal) {
                                         modal.appendChild(element);
                                     }

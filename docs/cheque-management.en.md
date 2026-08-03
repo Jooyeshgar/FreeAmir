@@ -3,7 +3,7 @@
 English | [فارسی](cheque-management.md)
 
 The cheque module manages receivable, payable, and guarantee cheques. Cheques are scoped to the active
-company through `FiscalYearScope`; parties and bank accounts selected in the web forms must also belong to
+company through `FiscalYearScope`; account sides and bank accounts selected in the web forms must also belong to
 that company. Dates are stored as Gregorian dates and entered and displayed through the application's
 Jalali date helpers.
 
@@ -16,11 +16,11 @@ Direction, purpose, and status are represented by the integer-backed `App\Enums\
 in regular `SMALLINT` columns rather than database `ENUM` columns. `directions()`, `purposes()`, and
 `statuses()` return the valid subset for each field.
 
-A cheque requires a direction, purpose, party, positive amount, issue date, due date, and a unique 16-digit
+A cheque requires a direction, purpose, account side, positive amount, issue date, due date, and a unique 16-digit
 Sayad number. The due date cannot be before the issue date. The cheque number and serial are optional. A payable cheque requires
 a bank account at registration; a receivable cheque selects its destination bank account when it is deposited.
 
-The party must have an accounting subject. The module also expects these company subjects to exist:
+The account side must have an accounting subject. The module also expects these company subjects to exist:
 
 | Code | Subject |
 |---|---|
@@ -71,18 +71,18 @@ documents are created, balanced, and approved through `DocumentService`.
 
 | Event | Debit | Credit |
 |---|---|---|
-| Receive settlement cheque | Notes receivable `013001` | Original party |
+| Receive settlement cheque | Notes receivable `013001` | Original account side |
 | Deposit received cheque | Notes in collection `014001` | Notes receivable `013001` |
 | Clear received cheque | Bank account subject | Notes in collection `014001` |
 | Bounce deposited cheque | Notes receivable `013001` | Notes in collection `014001` |
 | Endorse received cheque | Endorsee subject | Notes receivable `013001` |
-| Return received cheque | Original party | Notes receivable `013001` |
-| Issue settlement cheque | Original party | Notes payable `020001` |
+| Return received cheque | Original account side | Notes receivable `013001` |
+| Issue settlement cheque | Original account side | Notes payable `020001` |
 | Clear issued cheque | Notes payable `020001` | Bank account subject |
-| Bounce issued cheque | Notes payable `020001` | Original party |
-| Cancel issued cheque | Notes payable `020001` | Original party |
-| Execute received guarantee | Notes receivable `013001` | Original party |
-| Execute given guarantee | Original party | Notes payable `020001` |
+| Bounce issued cheque | Notes payable `020001` | Original account side |
+| Cancel issued cheque | Notes payable `020001` | Original account side |
+| Execute received guarantee | Notes receivable `013001` | Original account side |
+| Execute given guarantee | Original account side | Notes payable `020001` |
 
 Cancelling an already bounced payable cheque creates no additional document because the bounce already
 reversed the issue entry. Clearance and endorsement create a `Payment` linked through `payments.cheque_id`;
@@ -94,7 +94,7 @@ An approved or partially paid invoice can be settled from its details page by re
 
 - Sales and purchase-return invoices create a receivable cheque.
 - Purchase and sales-return invoices create a payable cheque.
-- The cheque party is the invoice party, and a guarantee cheque cannot settle an invoice.
+- The cheque account side is the invoice account side, and a guarantee cheque cannot settle an invoice.
 - The amount cannot exceed the remaining invoice balance, and the cheque issue date cannot precede the
   invoice date.
 
@@ -102,16 +102,17 @@ The registration or issue document is reused by a `Payment` linked to both the i
 duplicate accounting document is created. Clearing the cheque later remains a separate lifecycle posting.
 
 Removing the payment from the invoice only sets its `invoice_id` to `null`; it preserves the cheque, payment,
-and accounting document and recalculates the invoice status. Deleting the invoice has the same detach-and-
-preserve behavior. Deleting the cheque removes its linked payment and documents and recalculates any affected
-invoice.
+and accounting document and recalculates the invoice status. Deleting an invoice also deletes every cheque
+used to settle it, together with the cheque's payments, complete history, and all accounting documents generated
+by that cheque. Non-cheque invoice payments are deleted by the invoice-payment cascade. Deleting a cheque
+directly applies the same cheque cleanup and recalculates any affected invoice.
 
 ## Lists, reports, and permissions
 
-The cheque list supports search by cheque number, serial, Sayad number, or party, plus direction, status, party, amount range,
+The cheque list supports search by cheque number, serial, Sayad number, or account side, plus direction, status, account side, amount range,
 and due-date filters. The report summarizes count and amount by status, lists open cheques due in the next 30
-days, and totals overdue `registered`, `deposited`, and `issued` cheques. A party's details page lists cheques
-where that party is either the original party or the endorsee.
+days, and totals overdue `registered`, `deposited`, and `issued` cheques. An account side's details page lists cheques
+where that account side is either the original account side or the endorsee.
 
 Cheque pages use the `cheques.*` CRUD, `cheques.report`, and `cheques.transition` permissions. The invoice
 payment flow uses the separate `invoices.payments.store-cheque` permission.
