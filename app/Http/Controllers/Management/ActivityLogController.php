@@ -23,8 +23,7 @@ class ActivityLogController extends Controller
 
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
-            'source' => ['nullable', Rule::in(['model', 'request'])],
-            'action' => ['nullable', Rule::in(['created', 'updated', 'deleted', 'post', 'put', 'patch', 'delete'])],
+            'action' => ['nullable', Rule::in(['created', 'updated', 'deleted'])],
             'user_id' => ['nullable', 'integer'],
             'model_type' => ['nullable', 'string', 'max:255'],
             'company_id' => ['nullable', 'integer'],
@@ -61,7 +60,6 @@ class ActivityLogController extends Controller
         $recordingEnabled = (bool) config('activitylog.enabled');
         $activeFilterCount = collect([
             $data['filters']['search'] ?? null,
-            $data['filters']['source'] ?? null,
             $data['filters']['action'] ?? null,
             $data['filters']['user_id'] ?? null,
             $data['filters']['company_id'] ?? null,
@@ -70,11 +68,12 @@ class ActivityLogController extends Controller
             $request->input('date_to'),
         ])->filter(fn (mixed $value): bool => filled($value))->count();
 
-        $data['activities']->through(fn (Activity $activity): array => $this->activityRow(
+        $rows = $data['activities']->getCollection()->map(fn (Activity $activity): array => $this->activityRow(
             $activity,
             $companyLookup,
             $impersonatedUsers,
         ));
+        $data['activities']->setCollection($this->mergeRequestRows($rows));
 
         return [
             ...$data,
@@ -83,7 +82,7 @@ class ActivityLogController extends Controller
             'actionOptions' => $this->actionOptions(),
             'companyOptions' => $data['companies']->map(fn (Company $company): array => [
                 'value' => $company->id,
-                'label' => $company->name.' · '.localizeNumber($company->fiscal_year),
+                'label' => $company->name.' - '.localizeNumber($company->fiscal_year),
             ]),
             'dateFromValue' => $request->input('date_from', ''),
             'dateToValue' => $request->input('date_to', ''),
@@ -114,22 +113,6 @@ class ActivityLogController extends Controller
             'deleted' => [
                 'label' => __('Deleted'),
                 'style' => 'bg-rose-50 text-rose-700 ring-rose-600/20 dark:bg-rose-950/40 dark:text-rose-300',
-            ],
-            'post' => [
-                'label' => 'HTTP POST',
-                'style' => 'bg-violet-50 text-violet-700 ring-violet-600/20 dark:bg-violet-950/40 dark:text-violet-300',
-            ],
-            'put' => [
-                'label' => 'HTTP PUT',
-                'style' => 'bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-950/40 dark:text-amber-300',
-            ],
-            'patch' => [
-                'label' => 'HTTP PATCH',
-                'style' => 'bg-cyan-50 text-cyan-700 ring-cyan-600/20 dark:bg-cyan-950/40 dark:text-cyan-300',
-            ],
-            'delete' => [
-                'label' => 'HTTP DELETE',
-                'style' => 'bg-orange-50 text-orange-700 ring-orange-600/20 dark:bg-orange-950/40 dark:text-orange-300',
             ],
         ];
     }
@@ -182,37 +165,52 @@ class ActivityLogController extends Controller
         $company = $companyLookup->get($details->get('company_id'));
         $impersonatedUser = $impersonatedUsers->get($details->get('impersonated_user_id'));
         $isRequest = $activity->source === 'request';
-        $action = $this->actionOptions()[$activity->action] ?? [
+        $canonicalAction = match ($activity->action) {
+            'post' => 'created',
+            'put', 'patch' => 'updated',
+            'delete' => 'deleted',
+            default => $activity->action,
+        };
+        if ($canonicalAction === 'created') {
+            $changeKeys = collect();
+        }
+        $action = $this->actionOptions()[$canonicalAction] ?? [
             'label' => __(ucfirst($activity->action ?? 'activity')),
             'style' => 'bg-slate-100 text-slate-700 ring-slate-600/20 dark:bg-slate-800 dark:text-slate-300',
         ];
+        $modelTitle = __(class_basename($activity->model_type ?? 'Activity'));
+        $route = $details->get('route');
 
         return [
             'id' => $activity->id,
+            'userId' => $activity->user_id,
             'isRequest' => $isRequest,
-            'sourceLabel' => $isRequest ? __('User action') : __('Model change'),
             'actionLabel' => $action['label'],
             'actionStyle' => $action['style'],
             'userInitial' => mb_strtoupper(mb_substr($activity->user?->name ?? '?', 0, 1)),
             'userName' => $activity->user?->name ?? __('System'),
-            'userEmail' => $activity->user?->email,
-            'companyLabel' => $company ? $company->name.' · '.localizeNumber($company->fiscal_year) : null,
-            'title' => $isRequest ? $activity->description : __(class_basename($activity->model_type ?? 'Activity')),
+            'userUrl' => $activity->user ? route('users.show', $activity->user) : null,
+            'companyLabel' => $company ? $company->name.' - '.localizeNumber($company->fiscal_year) : null,
+            'title' => $isRequest ? ($route ?: $activity->description) : $modelTitle,
             'titleDetail' => $isRequest ? null : $details->get('model_label', '#'.$activity->model_id),
-            'route' => $isRequest ? $details->get('route') : null,
+            'requestMethod' => $isRequest
+                ? strtoupper((string) ($details->get('method') ?: $activity->action))
+                : null,
+            'route' => $route,
+            'contextLabel' => $route ?: ($isRequest ? $activity->description : $modelTitle.' #'.$activity->model_id),
+            'modelContextLabel' => $isRequest ? null : $modelTitle.' #'.$activity->model_id,
             'modelId' => $isRequest ? null : $activity->model_id,
             'ipAddress' => $details->get('ip_address'),
             'impersonatedUserName' => $impersonatedUser?->name,
             'createdAt' => $activity->created_at?->toAtomString(),
+            'createdAtTimestamp' => $activity->created_at?->getTimestamp(),
             'createdAtLabel' => formatDateTime($activity->created_at),
             'hasDetails' => $isRequest || $changeKeys->isNotEmpty(),
-            'detailsLabel' => $isRequest
-                ? __('Request details')
-                : trans_choice(':count changed field|:count changed fields', $changeKeys->count(), ['count' => localizeNumber($changeKeys->count())]),
             'requestContext' => $isRequest ? [
                 ['label' => __('Route'), 'value' => $details->get('route') ?: '—'],
                 ['label' => __('Method'), 'value' => $details->get('method') ?: '—'],
                 ['label' => __('Path'), 'value' => $details->get('path') ?: '—'],
+                ['label' => __('IP address'), 'value' => $details->get('ip_address') ?: '—'],
                 ['label' => __('User agent'), 'value' => $details->get('user_agent') ?: '—'],
             ] : [],
             'requestInput' => filled($details->get('request_input'))
@@ -224,6 +222,48 @@ class ActivityLogController extends Controller
                 'new' => $this->formatValue($attributes->get($key)),
             ]),
         ];
+    }
+
+    /**
+     * Merge a write request with the model event it caused when both audit rows
+     * belong to the same actor, named route, and moment.
+     *
+     * @param  Collection<int, array<string, mixed>>  $rows
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function mergeRequestRows(Collection $rows): Collection
+    {
+        $rows = $rows->values();
+        $mergedIndexes = [];
+
+        foreach ($rows as $requestIndex => $requestRow) {
+            if (! $requestRow['isRequest'] || blank($requestRow['route'])) {
+                continue;
+            }
+
+            $modelIndex = $rows->search(function (array $modelRow, int $index) use ($requestIndex, $requestRow, $mergedIndexes): bool {
+                return $index > $requestIndex
+                    && ! isset($mergedIndexes[$index])
+                    && ! $modelRow['isRequest']
+                    && $modelRow['userId'] === $requestRow['userId']
+                    && $modelRow['route'] === $requestRow['route']
+                    && abs(($modelRow['createdAtTimestamp'] ?? 0) - ($requestRow['createdAtTimestamp'] ?? 0)) <= 10;
+            });
+
+            if ($modelIndex === false) {
+                continue;
+            }
+
+            $modelRow = $rows[$modelIndex];
+            $modelRow['requestMethod'] = $requestRow['requestMethod'];
+            $modelRow['requestContext'] = $requestRow['requestContext'];
+            $modelRow['requestInput'] = $requestRow['requestInput'];
+            $modelRow['hasDetails'] = true;
+            $rows[$modelIndex] = $modelRow;
+            $mergedIndexes[$requestIndex] = true;
+        }
+
+        return $rows->reject(fn (array $row, int $index): bool => isset($mergedIndexes[$index]))->values();
     }
 
     private function formatValue(mixed $value): string

@@ -123,8 +123,16 @@ class ActivityLogService
                         ->orWhere('email', 'like', "%{$search}%"));
             });
         })
-            ->when($filters['source'] ?? null, fn ($query, string $source) => $query->where('source', $source))
-            ->when($filters['action'] ?? null, fn ($query, string $action) => $query->where('action', $action))
+            ->when($filters['action'] ?? null, function ($query, string $action) {
+                $actions = match ($action) {
+                    'created' => ['created', 'post'],
+                    'updated' => ['updated', 'put', 'patch'],
+                    'deleted' => ['deleted', 'delete'],
+                    default => [$action],
+                };
+
+                $query->whereIn('action', $actions);
+            })
             ->when($filters['user_id'] ?? null, fn ($query, int|string $userId) => $query->where('user_id', $userId))
             ->when($filters['model_type'] ?? null, fn ($query, string $modelType) => $query->where('model_type', $modelType))
             ->when($filters['company_id'] ?? null, fn ($query, int|string $companyId) => $query->where('details->company_id', (int) $companyId))
