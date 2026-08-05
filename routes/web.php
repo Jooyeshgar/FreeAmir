@@ -7,6 +7,7 @@ Route::get('/login', [Controllers\Auth\LoginController::class, 'showLoginForm'])
 Route::post('/login', [Controllers\Auth\LoginController::class, 'login']);
 Route::get('/logout', [Controllers\Auth\LoginController::class, 'logout'])->name('logout');
 Route::post('/locale', [Controllers\Auth\LoginController::class, 'locale'])->name('locale');
+Route::post('/impersonation/leave', [Controllers\Management\UserController::class, 'leaveImpersonation'])->middleware('auth')->name('impersonation.leave');
 
 Route::get('/forgot-password', [Controllers\Auth\PasswordResetController::class, 'showForgotPasswordForm'])->name('password.request');
 Route::post('/forgot-password', [Controllers\Auth\PasswordResetController::class, 'sendResetLink'])->middleware('throttle:6,1')->name('password.email');
@@ -30,6 +31,8 @@ Route::middleware(['auth', 'ensure-feature-enabled:email_verification'])->group(
 Route::middleware(['auth', 'permission:access-super-admin-panel', 'ensure-feature-enabled:email_verification'])->prefix('management')->group(function () {
     Route::get('/', [Controllers\HomeController::class, 'managementDashboard'])->name('management.dashboard');
     Route::get('/settings', [Controllers\AboutController::class, 'index'])->name('management.settings');
+    Route::get('/users/{user}', [Controllers\Management\UserController::class, 'show'])->whereNumber('user')->name('users.show');
+    Route::post('/users/{user}/verify', [Controllers\Management\UserController::class, 'verify'])->name('users.verify');
 
     Route::middleware('check-permission')->group(function () {
         Route::put('/settings', [Controllers\AboutController::class, 'updateGlobalConfigs'])->name('update-global-configs');
@@ -165,7 +168,9 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
         Route::post('companies/{company}/closing-wizard/step3', [Controllers\CompanyController::class, 'closingWizardStep3'])->name('companies.closing-wizard.step3');
         Route::post('users/{user}/create-employee', [Controllers\Management\UserController::class, 'createEmployee'])
             ->name('users.create-employee');
-        Route::resource('users', Controllers\Management\UserController::class);
+        Route::post('users/{user}/impersonate', [Controllers\Management\UserController::class, 'impersonate'])
+            ->name('users.impersonate');
+        Route::resource('users', Controllers\Management\UserController::class)->except(['show']);
         Route::resource('configs', Controllers\ConfigController::class);
     });
 

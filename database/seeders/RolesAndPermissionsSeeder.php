@@ -109,7 +109,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'invoices.payments' => ['store', 'destroy', 'create-document', 'destroy-document'],
 
             // Users / Roles / Permissions / Configs
-            'users' => [...self::CRUD, 'create-employee'],
+            'users' => [...self::CRUD, 'create-employee', 'impersonate'],
             'permissions' => self::CRUD_NO_SHOW,
             'roles' => self::CRUD_NO_SHOW,
             'configs' => self::CRUD,
@@ -206,10 +206,14 @@ class RolesAndPermissionsSeeder extends Seeder
                 ->toArray()
         );
 
+        $superAdmin->users()->each(fn (User $user) => $user->assignRole($admin));
+
         $accountant = Role::firstOrCreate(['name' => __('Accountant')]);
         $accountant->syncPermissions(
             Permission::query()
-                ->where('name', 'NOT LIKE', 'users.%')
+                ->where(fn ($query) => $query
+                    ->where('name', 'NOT LIKE', 'users.%')
+                    ->orWhereIn('name', ['users.index', 'users.impersonate']))
                 ->where('name', 'NOT LIKE', 'roles.%')
                 ->where('name', 'NOT LIKE', 'permissions.%')
                 ->where('name', 'NOT LIKE', 'configs.%')
@@ -281,7 +285,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $companyId = (int) getActiveCompany();
         $users = [
             'super-admin' => [
-                'roles' => ['Super-Admin', __('Employee')],
+                'roles' => ['Super-Admin', __('Admin'), __('Employee')],
                 'org_chart' => 'مدیرعامل',
                 'org_unit' => 'مدیریت',
             ],

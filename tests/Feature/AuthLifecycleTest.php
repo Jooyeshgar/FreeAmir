@@ -8,8 +8,10 @@ use App\Models\Scopes\FiscalYearScope;
 use App\Models\User;
 use App\Notifications\UserVerificationNotification;
 use App\Services\GlobalConfigService;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
@@ -92,6 +94,9 @@ class AuthLifecycleTest extends TestCase
         $this->actingAs($admin)->get(route('users.create'))
             ->assertOk()
             ->assertDontSee('Super-Admin');
+        $this->actingAs($admin)->get(route('users.edit', $ownUser))
+            ->assertOk()
+            ->assertDontSee('Super-Admin');
 
         $this->actingAs($admin)->post(route('users.store'), [
             'name' => 'Escalated User',
@@ -100,7 +105,7 @@ class AuthLifecycleTest extends TestCase
             'password_confirmation' => 'password123',
             'role' => ['Super-Admin'],
             'company' => [$otherCompany->id],
-        ])->assertSessionHasErrors('company');
+        ])->assertSessionHasErrors(['role', 'company']);
         $this->assertDatabaseMissing('users', ['email' => 'escalated@example.com']);
     }
 
@@ -213,6 +218,246 @@ class AuthLifecycleTest extends TestCase
         $company->update(['fiscal_year' => (int) toEnglish(jdate('Y')) - 1]);
 
         $this->get(route('home'))->assertRedirect(route('management.dashboard'));
+    }
+
+    public function test_super_admin_is_hidden_from_workspace_users_but_visible_in_management_users(): void
+    {
+        $actor = User::factory()->create();
+        $actor->givePermissionTo(
+            Permission::create(['name' => 'access-super-admin-panel']),
+            Permission::create(['name' => 'users.index']),
+        );
+
+        $superAdmin = User::factory()->create(['email' => 'hidden-super-admin@example.com']);
+        $superAdmin->assignRole(Role::create(['name' => 'Super-Admin']));
+
+        $this->actingAs($actor)->withSession(['interface_mode' => 'workspace'])->get(route('users.index'))->assertOk()
+            ->assertDontSee('hidden-super-admin@example.com');
+
+        $this->withSession(['interface_mode' => 'management'])->get(route('users.index'))->assertOk()
+            ->assertSee('hidden-super-admin@example.com');
+    }
+
+    public function test_super_admin_dashboard_links_users_and_uses_edit_actions(): void
+    {
+        $actor = User::factory()->create();
+        $actor->assignRole(Role::create(['name' => 'Super-Admin']));
+        $company = $this->company('Recent Fiscal Company');
+        $target = User::factory()->unverified()->create(['name' => 'Recent Unverified User']);
+        $target->companies()->attach($company);
+        $companylessTarget = User::factory()->create(['name' => 'Recent Companyless User']);
+
+        $dashboard = $this->actingAs($actor)->get(route('management.dashboard'))->assertOk();
+
+        $dashboard->assertSee('Recent Unverified User')
+            ->assertSee(route('users.show', $target), false)
+            ->assertSee(route('users.verify', $target), false)
+            ->assertSee(route('users.impersonate', $target), false)
+            ->assertSee(route('users.edit', $target), false)
+            ->assertSee(route('companies.edit', $company), false)
+            ->assertSee('Recent Companyless User')
+            ->assertSee(__('User has no company'))
+            ->assertDontSee(route('users.impersonate', $companylessTarget), false)
+            ->assertSee(__('Edit'))
+            ->assertDontSee('>'.__('Manage').'</a>', false);
+
+        $this->get(route('users.index'))->assertOk()
+            ->assertSee(route('users.show', $target), false)
+            ->assertSee(route('users.verify', $target), false)
+            ->assertSee('Recent Companyless User')
+            ->assertSee(__('User has no company'))
+            ->assertDontSee(route('users.impersonate', $companylessTarget), false);
+    }
+
+    public function test_user_show_displays_profile_roles_company_and_account_timestamps(): void
+    {
+        $actor = User::factory()->create();
+        $actor->assignRole(Role::create(['name' => 'Super-Admin']));
+        $company = Company::create([
+            'name' => 'Profile Company',
+            'fiscal_year' => 1405,
+            'currency' => 'Rial',
+            'address' => 'Profile Street',
+            'phone_number' => '02112345678',
+            'national_code' => '1234567890',
+            'economical_code' => '987654321',
+            'postal_code' => '1111111111',
+        ]);
+        $createdAt = now()->subDays(5)->startOfMinute();
+        $updatedAt = now()->subDays(2)->startOfMinute();
+        $verifiedAt = now()->subDay()->startOfMinute();
+        $target = User::factory()->create([
+            'name' => 'Profile User',
+            'email' => 'profile@example.com',
+            'created_at' => $createdAt,
+            'updated_at' => $updatedAt,
+            'email_verified_at' => $verifiedAt,
+        ]);
+        $target->assignRole(Role::create(['name' => 'Profile Auditor']));
+        $target->companies()->attach($company);
+
+        $this->actingAs($actor)->get(route('users.show', $target))->assertOk()
+            ->assertSee('<table', false)
+            ->assertSee('Profile User')
+            ->assertSee('profile@example.com')
+            ->assertSee('Profile Auditor')
+            ->assertSee('Profile Company')
+            ->assertSee('Profile Street')
+            ->assertSee('1234567890')
+            ->assertSee('987654321')
+            ->assertSee('1111111111')
+            ->assertSee('02112345678')
+            ->assertSee(route('users.destroy', $target), false)
+            ->assertSee(localizeNumber(1405))
+            ->assertSee(formatDateTime($createdAt))
+            ->assertSee(formatDateTime($updatedAt))
+            ->assertSee(formatDateTime($verifiedAt))
+            ->assertSee(__('Verified'));
+    }
+
+    public function test_user_show_requires_super_admin_panel_access(): void
+    {
+        $target = User::factory()->create();
+        $workspaceViewer = User::factory()->create();
+        $workspaceViewer->givePermissionTo(Permission::create(['name' => 'users.show']));
+
+        $this->actingAs($workspaceViewer)->get(route('users.show', $target))->assertForbidden();
+
+        $platformViewer = User::factory()->create();
+        $platformViewer->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+
+        $this->actingAs($platformViewer)->get(route('users.show', $target))->assertOk();
+    }
+
+    public function test_user_show_displays_pending_and_empty_assignment_states(): void
+    {
+        $actor = User::factory()->create();
+        $actor->assignRole(Role::create(['name' => 'Super-Admin']));
+        $target = User::factory()->unverified()->create(['name' => 'Pending Profile User']);
+
+        $this->actingAs($actor)->get(route('users.show', $target))->assertOk()
+            ->assertSee('Pending Profile User')
+            ->assertSee(__('Pending'))
+            ->assertSee(__('Never'))
+            ->assertSee(__('No companies assigned'))
+            ->assertSee(__('No roles assigned'));
+    }
+
+    public function test_super_admin_can_verify_an_unverified_user_from_another_company(): void
+    {
+        Event::fake([Verified::class]);
+
+        $actorCompany = $this->company('Actor Company');
+        $otherCompany = $this->company('Other Company');
+        $actor = User::factory()->create();
+        $actor->companies()->attach($actorCompany);
+        $actor->assignRole(Role::create(['name' => 'Super-Admin']));
+        $target = User::factory()->unverified()->create();
+        $target->companies()->attach($otherCompany);
+
+        $this->actingAs($actor)
+            ->from(route('management.dashboard'))
+            ->post(route('users.verify', $target))
+            ->assertRedirect(route('management.dashboard'))
+            ->assertSessionHas('success', __('User verified successfully.'));
+
+        $this->assertTrue($target->fresh()->hasVerifiedEmail());
+        Event::assertDispatched(Verified::class, fn (Verified $event) => $event->user->is($target));
+    }
+
+    public function test_non_super_admin_cannot_verify_another_user(): void
+    {
+        $actor = User::factory()->create();
+        $target = User::factory()->unverified()->create();
+
+        $this->actingAs($actor)->post(route('users.verify', $target))->assertForbidden();
+
+        $this->assertFalse($target->fresh()->hasVerifiedEmail());
+    }
+
+    public function test_super_admin_can_assign_super_admin_and_inherited_admin_roles(): void
+    {
+        Notification::fake();
+
+        $actor = User::factory()->create();
+        $actor->assignRole(Role::create(['name' => 'Super-Admin']));
+        Role::create(['name' => __('Admin')]);
+        $company = $this->company('Managed Company');
+
+        $this->actingAs($actor)->get(route('users.create'))->assertOk()->assertSee('Super-Admin');
+
+        $this->post(route('users.store'), [
+            'name' => 'New Super Admin',
+            'email' => 'new-super-admin@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role' => ['Super-Admin'],
+            'company' => [$company->id],
+        ])->assertRedirect(route('users.index'));
+
+        $user = User::where('email', 'new-super-admin@example.com')->firstOrFail();
+
+        $this->assertTrue($user->hasRole('Super-Admin'));
+        $this->assertTrue($user->hasRole(__('Admin')));
+    }
+
+    public function test_platform_permission_without_super_admin_role_cannot_view_or_assign_super_admin(): void
+    {
+        Notification::fake();
+
+        $actor = User::factory()->create();
+        $actor->givePermissionTo(
+            Permission::create(['name' => 'access-super-admin-panel']),
+            Permission::create(['name' => 'users.create']),
+            Permission::create(['name' => 'users.store']),
+            Permission::create(['name' => 'users.edit']),
+            Permission::create(['name' => 'users.update']),
+        );
+        Role::create(['name' => 'Super-Admin']);
+        $adminRole = Role::create(['name' => __('Admin')]);
+        $company = $this->company('Platform Company');
+        $target = User::factory()->create();
+        $target->assignRole($adminRole);
+        $target->companies()->attach($company);
+        $superAdminTarget = User::factory()->create();
+        $superAdminTarget->assignRole('Super-Admin');
+        $superAdminTarget->companies()->attach($company);
+
+        $this->actingAs($actor)->get(route('users.create'))->assertOk()->assertDontSee('Super-Admin');
+        $this->get(route('users.edit', $target))->assertOk()->assertDontSee('Super-Admin');
+        $this->get(route('users.edit', $superAdminTarget))->assertForbidden();
+
+        $this->post(route('users.store'), [
+            'name' => 'Forbidden Super Admin',
+            'email' => 'forbidden-super-admin@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role' => ['Super-Admin'],
+            'company' => [$company->id],
+        ])->assertSessionHasErrors('role');
+        $this->assertDatabaseMissing('users', ['email' => 'forbidden-super-admin@example.com']);
+
+        $this->put(route('users.update', $target), [
+            'name' => $target->name,
+            'email' => $target->email,
+            'password' => null,
+            'password_confirmation' => null,
+            'employee_id' => null,
+            'role' => ['Super-Admin'],
+            'company' => [$company->id],
+        ])->assertSessionHasErrors('role');
+        $this->assertFalse($target->fresh()->hasRole('Super-Admin'));
+
+        $this->put(route('users.update', $superAdminTarget), [
+            'name' => $superAdminTarget->name,
+            'email' => $superAdminTarget->email,
+            'password' => null,
+            'password_confirmation' => null,
+            'employee_id' => null,
+            'role' => [$adminRole->name],
+            'company' => [$company->id],
+        ])->assertForbidden();
+        $this->assertTrue($superAdminTarget->fresh()->hasRole('Super-Admin'));
     }
 
     private function company(string $name): Company

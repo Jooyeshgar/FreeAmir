@@ -41,7 +41,14 @@
                             <td>
                                 <div class="flex min-w-56 items-center gap-3">
                                     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-violet-100 to-indigo-100 font-bold text-violet-700 dark:from-violet-950 dark:to-indigo-950 dark:text-violet-300">{{ mb_strtoupper(mb_substr($user->name, 0, 1)) }}</span>
-                                    <div><p class="font-semibold text-slate-900 dark:text-white">{{ $user->name }}</p><p class="mt-0.5 text-xs text-slate-500" dir="ltr">{{ $user->email }}</p></div>
+                                    <div>
+                                        @can('access-super-admin-panel')
+                                            <a href="{{ route('users.show', $user) }}" class="font-semibold text-slate-900 hover:text-violet-700 hover:underline dark:text-white dark:hover:text-violet-400">{{ $user->name }}</a>
+                                        @else
+                                            <p class="font-semibold text-slate-900 dark:text-white">{{ $user->name }}</p>
+                                        @endcan
+                                        <p class="mt-0.5 text-xs text-slate-500" dir="ltr">{{ $user->email }}</p>
+                                    </div>
                                 </div>
                             </td>
                             <td><div class="flex max-w-64 flex-wrap gap-1">@forelse ($user->roles as $role)<span class="badge badge-ghost badge-sm">{{ $role->name }}</span>@empty<span class="text-xs text-slate-400">{{ __('No role') }}</span>@endforelse</div></td>
@@ -49,8 +56,24 @@
                             <td><span @class(['badge', 'badge-success badge-outline' => $user->hasVerifiedEmail(), 'badge-warning badge-outline' => ! $user->hasVerifiedEmail()])>{{ $user->hasVerifiedEmail() ? __('Verified') : __('Pending') }}</span></td>
                             <td>
                                 <div class="flex justify-end gap-1">
-                                    @can('users.show')<a href="{{ route('users.show', $user) }}" class="btn btn-ghost btn-sm rounded-lg">{{ __('View') }}</a>@endcan
                                     @can('users.edit')<a href="{{ route('users.edit', $user) }}" class="btn btn-ghost btn-sm rounded-lg">{{ __('Edit') }}</a>@endcan
+                                    @if (! $user->hasVerifiedEmail() && auth()->user()->can('access-super-admin-panel'))
+                                        <form action="{{ route('users.verify', $user) }}" method="post" onsubmit="return confirm('{{ __('Are you sure you want to verify this user?') }}')">
+                                            @csrf
+                                            <button type="submit" class="btn btn-ghost btn-sm rounded-lg text-success">{{ __('Verify') }}</button>
+                                        </form>
+                                    @endif
+                                    @if (auth()->user()->canImpersonateUser($user))
+                                        <form action="{{ route('users.impersonate', $user) }}" method="post" onsubmit="return confirm('{{ __('Are you sure you want to impersonate this user?') }}')">
+                                            @csrf
+                                            <button type="submit" class="btn btn-ghost btn-sm rounded-lg text-violet-600 dark:text-violet-400">{{ __('Impersonate') }}</button>
+                                        </form>
+                                    @else
+                                        @php($impersonationUnavailableReason = (int) $user->companies_count === 0 ? __('User has no company') : __('Impersonation is not available for this user.'))
+                                        <span class="tooltip" data-tip="{{ $impersonationUnavailableReason }}">
+                                            <button type="button" disabled aria-disabled="true" title="{{ $impersonationUnavailableReason }}" class="btn btn-ghost btn-sm btn-disabled cursor-not-allowed rounded-lg">{{ __('Impersonate') }}</button>
+                                        </span>
+                                    @endif
                                     @cannot('access-super-admin-panel')
                                         @if ($user->employee)
                                             @canany(['hr.employees.show', 'users.show'])<a href="{{ route('hr.employees.show', $user->employee) }}" class="btn btn-ghost btn-sm rounded-lg">{{ __('View Employee') }}</a>@endcanany
@@ -58,7 +81,7 @@
                                             @can('users.create-employee')<form action="{{ route('users.create-employee', $user) }}" method="post">@csrf<button type="submit" class="btn btn-ghost btn-sm rounded-lg">{{ __('Create Employee') }}</button></form>@endcan
                                         @endif
                                     @endcannot
-                                    @can('users.destroy')<form action="{{ route('users.destroy', $user) }}" method="post" onsubmit="return confirm('{{ __('Are you sure?') }}')">@csrf @method('DELETE')<button type="submit" class="btn btn-ghost btn-sm rounded-lg text-error">{{ __('Delete') }}</button></form>@endcan
+                                    @can('users.destroy')<form action="{{ route('users.destroy', $user) }}" method="post" onsubmit="return confirm('{{ __('Are you sure you want to delete this user?') }}')">@csrf @method('DELETE')<button type="submit" class="btn btn-ghost btn-sm rounded-lg text-error">{{ __('Delete') }}</button></form>@endcan
                                 </div>
                             </td>
                         </tr>
