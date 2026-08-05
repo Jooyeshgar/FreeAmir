@@ -27,8 +27,8 @@ enum ChequeType: int
     public function label(): string
     {
         return __(match ($this) {
-            self::RECEIVABLE => 'Notes receivable',
-            self::PAYABLE => 'Notes payable',
+            self::RECEIVABLE => 'Documents receivable',
+            self::PAYABLE => 'Documents payable',
             self::SETTLEMENT => 'Settlement',
             self::GUARANTEE => 'Guarantee',
             self::REGISTERED => 'Received',

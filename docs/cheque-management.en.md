@@ -16,20 +16,34 @@ Direction, purpose, and status are represented by the integer-backed `App\Enums\
 in regular `SMALLINT` columns rather than database `ENUM` columns. `directions()`, `purposes()`, and
 `statuses()` return the valid subset for each field.
 
-A cheque requires a direction, purpose, account side, positive amount, issue date, due date, and a unique 16-digit
-Sayad number. The due date cannot be before the issue date. The cheque number and serial are optional. A payable cheque requires
-a bank account at registration; a receivable cheque selects its destination bank account when it is deposited.
+A cheque requires an operation type (receivable or payable), purpose, account side, positive amount, issue date,
+due date, and a unique 16-digit Sayad number. The due date cannot be before the issue date. The cheque number and
+serial are optional. An issued (payable) cheque requires a bank account at registration; a received (receivable)
+cheque selects its destination bank account when it is deposited.
 
 A payable cheque may optionally be linked to a chequebook belonging to its selected bank account. Receivable
 cheques cannot be linked to chequebooks.
 
-The account side must have an accounting subject. The module also expects these company subjects to exist:
+## Receiving and issuing cheques
 
-| Code | Subject |
-|---|---|
-| `013001` | Notes receivable |
-| `014001` | Notes in collection |
-| `020001` | Notes payable |
+The cheque list provides separate **Receive cheque** and **Issue cheque** buttons. Both buttons open the same
+form and use the same store endpoint; the selected operation type is passed to the form as its `direction` value.
+The form intentionally has no visible direction selector, which prevents users from switching workflows while
+entering a cheque.
+
+The receive-cheque form contains the shared cheque fields. The issue-cheque form additionally displays the bank
+account and optional chequebook fields. When editing an existing cheque, the form preserves its original direction
+and does not offer a control for changing it. The form heading and submit button identify the active operation.
+
+The account side must have an accounting subject. The following company-scoped configurations select the
+subjects used by cheque postings. Their seeded subjects use these default codes, but administrators may point
+the configurations to subjects with different codes:
+
+| Configuration key | Default code | Subject |
+|---|---|---|
+| `cheque_documents_receivable` | `013001` | Documents receivable |
+| `cheque_documents_in_collection` | `014001` | Documents in collection |
+| `cheque_documents_payable` | `020001` | Documents payable |
 
 Every bank account used for clearance must have its own accounting subject.
 
@@ -89,18 +103,18 @@ documents are created, balanced, and approved through `DocumentService`.
 
 | Event | Debit | Credit |
 |---|---|---|
-| Receive settlement cheque | Notes receivable `013001` | Original account side |
-| Deposit received cheque | Notes in collection `014001` | Notes receivable `013001` |
-| Clear received cheque | Bank account subject | Notes in collection `014001` |
-| Bounce deposited cheque | Notes receivable `013001` | Notes in collection `014001` |
-| Endorse received cheque | Endorsee subject | Notes receivable `013001` |
-| Return received cheque | Original account side | Notes receivable `013001` |
-| Issue settlement cheque | Original account side | Notes payable `020001` |
-| Clear issued cheque | Notes payable `020001` | Bank account subject |
-| Bounce issued cheque | Notes payable `020001` | Original account side |
-| Cancel issued cheque | Notes payable `020001` | Original account side |
-| Execute received guarantee | Notes receivable `013001` | Original account side |
-| Execute given guarantee | Original account side | Notes payable `020001` |
+| Receive settlement cheque | Configured documents receivable | Original account side |
+| Deposit received cheque | Configured documents in collection | Configured documents receivable |
+| Clear received cheque | Bank account subject | Configured documents in collection |
+| Bounce deposited cheque | Configured documents receivable | Configured documents in collection |
+| Endorse received cheque | Endorsee subject | Configured documents receivable |
+| Return received cheque | Original account side | Configured documents receivable |
+| Issue settlement cheque | Original account side | Configured documents payable |
+| Clear issued cheque | Configured documents payable | Bank account subject |
+| Bounce issued cheque | Configured documents payable | Original account side |
+| Cancel issued cheque | Configured documents payable | Original account side |
+| Execute received guarantee | Configured documents receivable | Original account side |
+| Execute given guarantee | Original account side | Configured documents payable |
 
 Cancelling an already bounced payable cheque creates no additional document because the bounce already
 reversed the issue entry. Clearance and endorsement create a `Payment` linked through `payments.cheque_id`;
@@ -127,11 +141,11 @@ recalculates any affected invoice.
 
 ## Lists, reports, and permissions
 
-The cheque list supports search by cheque number, serial, Sayad number, or account side, plus direction, status, account side, amount range,
-and due-date filters. The report summarizes count and amount by status, lists open cheques due in the next 30
-days, and totals overdue `registered`, `deposited`, and `issued` cheques. An account side's details page lists cheques
-where that account side is either the original account side or the endorsee.
+The cheque list supports search by cheque number, serial, Sayad number, or account side, plus direction, purpose,
+status, account side, amount-range, and due-date filters. The report summarizes count and amount by status, lists
+open cheques due in the next 30 days, and totals overdue `registered`, `deposited`, and `issued` cheques. An account
+side's details page lists cheques where that account side is either the original account side or the endorsee.
 
 Cheque pages use the `cheques.*` CRUD, `cheques.report`, and `cheques.transition` permissions. Chequebook pages
-use the `cheques.chequebooks.*` CRUD permissions. The invoice payment flow uses the separate
+use the `chequebooks.*` CRUD permissions. The invoice payment flow uses the separate
 `invoices.payments.store-cheque` permission.

@@ -12,6 +12,7 @@ use App\Models\Cheque;
 use App\Models\Chequebook;
 use App\Models\ChequeHistory;
 use App\Models\Company;
+use App\Models\Config;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Invoice;
@@ -61,16 +62,32 @@ class ChequeManagementTest extends TestCase
 
         DB::table('subjects')->insert([
             ['id' => 1, 'code' => '010', 'name' => 'Banks', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
-            ['id' => 6, 'code' => '013', 'name' => 'Notes receivable', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
-            ['id' => 22, 'code' => '020', 'name' => 'Notes payable', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
-            ['id' => 67, 'code' => '014', 'name' => 'Notes in collection', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
-            ['id' => 44, 'code' => '013001', 'name' => 'Notes receivable detail', 'parent_id' => 6, 'type' => 3, 'company_id' => $companyId],
-            ['id' => 46, 'code' => '020001', 'name' => 'Notes payable detail', 'parent_id' => 22, 'type' => 3, 'company_id' => $companyId],
-            ['id' => 68, 'code' => '014001', 'name' => 'Notes in collection detail', 'parent_id' => 67, 'type' => 3, 'company_id' => $companyId],
+            ['id' => 6, 'code' => '013', 'name' => 'Documents receivable', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
+            ['id' => 22, 'code' => '020', 'name' => 'Documents payable', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
+            ['id' => 67, 'code' => '014', 'name' => 'Documents in collection', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
+            ['id' => 44, 'code' => '013001', 'name' => 'Documents receivable detail', 'parent_id' => 6, 'type' => 3, 'company_id' => $companyId],
+            ['id' => 46, 'code' => '020001', 'name' => 'Documents payable detail', 'parent_id' => 22, 'type' => 3, 'company_id' => $companyId],
+            ['id' => 68, 'code' => '014001', 'name' => 'Documents in collection detail', 'parent_id' => 67, 'type' => 3, 'company_id' => $companyId],
             ['id' => 201, 'code' => '012001001', 'name' => 'Customer subject', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
             ['id' => 202, 'code' => '012001002', 'name' => 'Vendor subject', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
             ['id' => 203, 'code' => '010001', 'name' => 'Bank account subject', 'parent_id' => 1, 'type' => 3, 'company_id' => $companyId],
         ]);
+
+        foreach ([
+            'cheque_documents_receivable' => 44,
+            'cheque_documents_in_collection' => 68,
+            'cheque_documents_payable' => 46,
+        ] as $key => $subjectId) {
+            Config::create([
+                'key' => $key,
+                'value' => (string) $subjectId,
+                'desc' => $key,
+                'type' => 3,
+                'category' => 1,
+                'company_id' => $companyId,
+            ]);
+            config(['amir.'.$key => (string) $subjectId]);
+        }
 
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
@@ -110,6 +127,35 @@ class ChequeManagementTest extends TestCase
         $this->assertNull($payment->invoice_id);
         $this->assertSame(ChequeType::RECEIVABLE, $payment->cheque->direction);
         $this->assertSame($cheque->sayad_number, $payment->reference_number);
+    }
+
+    public function test_cheque_postings_use_configured_subjects_instead_of_fixed_codes(): void
+    {
+        DB::table('subjects')->insert([
+            ['id' => 301, 'code' => '091001', 'name' => 'Configured receivable', 'parent_id' => null, 'type' => 3, 'company_id' => 1],
+            ['id' => 302, 'code' => '091002', 'name' => 'Configured in collection', 'parent_id' => null, 'type' => 3, 'company_id' => 1],
+            ['id' => 303, 'code' => '091003', 'name' => 'Configured payable', 'parent_id' => null, 'type' => 3, 'company_id' => 1],
+        ]);
+
+        foreach ([
+            'cheque_documents_receivable' => 301,
+            'cheque_documents_in_collection' => 302,
+            'cheque_documents_payable' => 303,
+        ] as $key => $subjectId) {
+            Config::where('key', $key)->update(['value' => (string) $subjectId]);
+            config(['amir.'.$key => (string) $subjectId]);
+        }
+
+        $received = $this->receivedCheque();
+        $this->assertTrue($received->histories->first()->document->transactions->contains('subject_id', 301));
+
+        $received = $this->service->transition($received, $this->user, 'deposit', ['bank_account_id' => $this->account->id]);
+        $depositDocument = $received->histories()->latest('id')->firstOrFail()->document;
+        $this->assertTrue($depositDocument->transactions->contains('subject_id', 301));
+        $this->assertTrue($depositDocument->transactions->contains('subject_id', 302));
+
+        $issued = $this->issuedCheque();
+        $this->assertTrue($issued->histories->first()->document->transactions->contains('subject_id', 303));
     }
 
     public function test_revert_is_rejected_when_history_model_has_no_reversal_fields(): void
@@ -158,7 +204,7 @@ class ChequeManagementTest extends TestCase
         $this->assertSame(0, Document::count());
     }
 
-    public function test_issued_cheque_posts_notes_payable_then_clears_through_bank_payment(): void
+    public function test_issued_cheque_posts_documents_payable_then_clears_through_bank_payment(): void
     {
         $cheque = $this->issuedCheque();
         $this->assertSame(ChequeType::ISSUED, $cheque->status);
@@ -686,7 +732,7 @@ class ChequeManagementTest extends TestCase
     {
         $this->withoutMiddleware(CheckPermission::class);
 
-        $response = $this->post(route('cheques.chequebooks.store'), [
+        $response = $this->post(route('chequebooks.store'), [
             'bank_account_id' => $this->account->id,
             'serial_prefix' => 'CRUD',
             'first_leaf' => '۱۰۰',
@@ -695,7 +741,7 @@ class ChequeManagementTest extends TestCase
         ]);
 
         $chequebook = Chequebook::firstOrFail();
-        $response->assertRedirect(route('cheques.chequebooks.show', $chequebook));
+        $response->assertRedirect(route('chequebooks.show', $chequebook));
         $this->assertSame(100, $chequebook->next_leaf);
 
         $cheque = $this->service->register($this->user, [
@@ -705,27 +751,59 @@ class ChequeManagementTest extends TestCase
         ]);
 
         foreach ([
-            route('cheques.chequebooks.index'),
-            route('cheques.chequebooks.show', $chequebook),
-            route('cheques.chequebooks.edit', $chequebook),
+            route('chequebooks.index'),
+            route('chequebooks.show', $chequebook),
+            route('chequebooks.edit', $chequebook),
         ] as $url) {
             $this->get($url)->assertOk();
         }
 
-        $this->put(route('cheques.chequebooks.update', $chequebook), [
+        $this->put(route('chequebooks.update', $chequebook), [
             'bank_account_id' => $this->account->id,
             'serial_prefix' => 'UPDATED',
             'first_leaf' => 100,
             'last_leaf' => 149,
             'next_leaf' => 101,
-        ])->assertRedirect(route('cheques.chequebooks.show', $chequebook));
+        ])->assertRedirect(route('chequebooks.show', $chequebook));
 
         $this->assertSame('UPDATED', $chequebook->fresh()->serial_prefix);
-        $this->delete(route('cheques.chequebooks.destroy', $chequebook))->assertRedirect(route('cheques.chequebooks.index'));
+        $this->delete(route('chequebooks.destroy', $chequebook))->assertRedirect(route('chequebooks.index'));
 
         $this->assertNull(Chequebook::find($chequebook->id));
         $this->assertNotNull($cheque->fresh());
         $this->assertNull($cheque->fresh()->chequebook_id);
+    }
+
+    public function test_chequebook_index_applies_supported_filters(): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+
+        $matching = Chequebook::create([
+            'bank_account_id' => $this->account->id,
+            'serial_prefix' => 'ACTIVE-BOOK',
+            'first_leaf' => 100,
+            'last_leaf' => 149,
+            'next_leaf' => 110,
+        ]);
+        Chequebook::create([
+            'bank_account_id' => $this->account->id,
+            'serial_prefix' => 'FINISHED-BOOK',
+            'first_leaf' => 200,
+            'last_leaf' => 249,
+            'next_leaf' => 250,
+        ]);
+
+        $response = $this->get(route('chequebooks.index', [
+            'serial_prefix' => 'ACTIVE',
+            'bank_account_id' => $this->account->id,
+            'availability' => 'available',
+        ]));
+
+        $response->assertOk();
+        $response->assertViewHas('chequebooks', function ($chequebooks) use ($matching) {
+            return $chequebooks->total() === 1 && $chequebooks->first()->is($matching);
+        });
+        $response->assertViewHas('bankAccounts', fn ($bankAccounts) => $bankAccounts->contains($this->account));
     }
 
     public function test_cheque_index_renders_and_applies_all_supported_filters(): void
@@ -752,20 +830,33 @@ class ChequeManagementTest extends TestCase
             ->assertOk()
             ->assertViewHas('cheques', fn ($cheques) => $cheques->total() === 1 && $cheques->first()->is($matching))
             ->assertSee('name="purpose"', false)
+            ->assertSee(route('cheques.create', ['direction' => ChequeType::RECEIVABLE->value]))
+            ->assertSee(route('cheques.create', ['direction' => ChequeType::PAYABLE->value]))
+            ->assertSee(__('Receive cheque'))
+            ->assertSee(__('Issue cheque'))
             ->assertSee(route('cheques.report', $filters));
     }
 
     public function test_cheque_form_renders_constraints_and_conditional_bank_account_controls(): void
     {
         $this->withoutMiddleware(CheckPermission::class);
+        $chequebook = Chequebook::create([
+            'bank_account_id' => $this->account->id,
+            'serial_prefix' => 'FORM',
+            'first_leaf' => 100,
+            'last_leaf' => 149,
+            'next_leaf' => 100,
+        ]);
 
-        $this->get(route('cheques.create', ['direction' => ChequeType::PAYABLE->value]))
+        $this->get(route('cheques.create', ['direction' => ChequeType::PAYABLE->value, 'bank_account_id' => $this->account->id, 'chequebook_id' => $chequebook->id]))
             ->assertOk()
-            ->assertSee(__('Register cheque'))
+            ->assertSee(__('Issue cheque'))
             ->assertSee('x-model="direction"', false)
             ->assertSee('searchSelect({', false)
             ->assertSee('name="account_side_id"', false)
             ->assertSee('name="bank_account_id"', false)
+            ->assertSee('name="chequebook_id"', false)
+            ->assertSee('value="'.$chequebook->id.'" selected', false)
             ->assertSee('name="cheque_number"', false)
             ->assertSee(':disabled="direction !==', false)
             ->assertSee('minlength="16"', false)

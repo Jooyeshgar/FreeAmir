@@ -21,6 +21,12 @@ use InvalidArgumentException;
 
 class ChequeService
 {
+    private const DOCUMENTS_RECEIVABLE_CONFIG = 'cheque_documents_receivable';
+
+    private const DOCUMENTS_IN_COLLECTION_CONFIG = 'cheque_documents_in_collection';
+
+    private const DOCUMENTS_PAYABLE_CONFIG = 'cheque_documents_payable';
+
     public function __construct(private readonly PaymentService $paymentService) {}
 
     public function directionForInvoice(Invoice $invoice): ?ChequeType
@@ -67,7 +73,8 @@ class ChequeService
             ]);
 
             $document = $this->postInitialDocument($user, $cheque);
-            $payment = $invoice ? $this->paymentService->saveChequePayment($user, $invoice, $cheque, $document, $this->subject($direction === ChequeType::RECEIVABLE ? '013001' : '020001')) : null;
+            $paymentSubject = $direction === ChequeType::RECEIVABLE ? self::DOCUMENTS_RECEIVABLE_CONFIG : self::DOCUMENTS_PAYABLE_CONFIG;
+            $payment = $invoice ? $this->paymentService->saveChequePayment($user, $invoice, $cheque, $document, $this->subject($paymentSubject)) : null;
 
             $this->history($cheque, $user, null, $status, $document, $payment, $data['description'] ?? null);
 
@@ -122,7 +129,8 @@ class ChequeService
 
             $document = $this->postInitialDocument($user, $lockedCheque);
             if ($initialPayment && $document) {
-                $initialPayment = $this->paymentService->saveChequePayment($user, $invoice, $lockedCheque, $document, $this->subject($direction === ChequeType::RECEIVABLE ? '013001' : '020001'), $initialPayment);
+                $paymentSubject = $direction === ChequeType::RECEIVABLE ? self::DOCUMENTS_RECEIVABLE_CONFIG : self::DOCUMENTS_PAYABLE_CONFIG;
+                $initialPayment = $this->paymentService->saveChequePayment($user, $invoice, $lockedCheque, $document, $this->subject($paymentSubject), $initialPayment);
             } elseif ($initialPayment) {
                 $initialPayment->delete();
                 $initialPayment = null;
@@ -199,8 +207,8 @@ class ChequeService
         $from = $cheque->status;
         $amount = (float) $cheque->amount;
         $document = $this->post($user, $cheque, 'deposit', [
-            [$this->subject('014001'), -$amount],
-            [$this->subject('013001'), $amount],
+            [$this->subject(self::DOCUMENTS_IN_COLLECTION_CONFIG), -$amount],
+            [$this->subject(self::DOCUMENTS_RECEIVABLE_CONFIG), $amount],
         ], $data['date'] ?? null);
 
         $cheque->update(['status' => ChequeType::DEPOSITED, 'bank_account_id' => $account->id]);
@@ -228,8 +236,8 @@ class ChequeService
         $from = $cheque->status;
         $amount = (float) $cheque->amount;
         $entries = $cheque->direction === ChequeType::RECEIVABLE
-            ? [[$bankSubject, -$amount], [$this->subject('014001'), $amount]]
-            : [[$this->subject('020001'), -$amount], [$bankSubject, $amount]];
+            ? [[$bankSubject, -$amount], [$this->subject(self::DOCUMENTS_IN_COLLECTION_CONFIG), $amount]]
+            : [[$this->subject(self::DOCUMENTS_PAYABLE_CONFIG), -$amount], [$bankSubject, $amount]];
 
         $document = $this->post($user, $cheque, 'clear', $entries, $data['date'] ?? null);
         $payment = $this->payment($user, $cheque, $document, $bankSubject, $data, 'clear');
@@ -254,7 +262,7 @@ class ChequeService
         $amount = (float) $cheque->amount;
         $document = $this->post($user, $cheque, 'endorse', [
             [$vendorSubject, -$amount],
-            [$this->subject('013001'), $amount],
+            [$this->subject(self::DOCUMENTS_RECEIVABLE_CONFIG), $amount],
         ], $data['date'] ?? null);
         $payment = $this->payment($user, $cheque, $document, $vendorSubject, $data, 'endorse', $vendor->id);
         DocumentService::syncDocumentable($document, $payment);
@@ -270,8 +278,8 @@ class ChequeService
         $from = $cheque->status;
         $amount = (float) $cheque->amount;
         $entries = $cheque->direction === ChequeType::RECEIVABLE
-            ? [[$this->subject('013001'), -$amount], [$this->subject('014001'), $amount]]
-            : [[$this->subject('020001'), -$amount], [$this->accountSideSubject($cheque), $amount]];
+            ? [[$this->subject(self::DOCUMENTS_RECEIVABLE_CONFIG), -$amount], [$this->subject(self::DOCUMENTS_IN_COLLECTION_CONFIG), $amount]]
+            : [[$this->subject(self::DOCUMENTS_PAYABLE_CONFIG), -$amount], [$this->accountSideSubject($cheque), $amount]];
         $document = $this->post($user, $cheque, 'bounce', $entries, $data['date'] ?? null);
 
         $cheque->update(['status' => ChequeType::BOUNCED]);
@@ -286,7 +294,7 @@ class ChequeService
         $amount = (float) $cheque->amount;
         $document = $this->post($user, $cheque, 'return', [
             [$this->accountSideSubject($cheque), -$amount],
-            [$this->subject('013001'), $amount],
+            [$this->subject(self::DOCUMENTS_RECEIVABLE_CONFIG), $amount],
         ], $data['date'] ?? null);
 
         $cheque->update(['status' => ChequeType::RETURNED]);
@@ -302,7 +310,7 @@ class ChequeService
         if ($cheque->purpose === ChequeType::SETTLEMENT && $from === ChequeType::ISSUED) {
             $amount = (float) $cheque->amount;
             $document = $this->post($user, $cheque, 'cancel', [
-                [$this->subject('020001'), -$amount],
+                [$this->subject(self::DOCUMENTS_PAYABLE_CONFIG), -$amount],
                 [$this->accountSideSubject($cheque), $amount],
             ], $data['date'] ?? null);
         }
@@ -319,8 +327,8 @@ class ChequeService
         $to = $cheque->direction === ChequeType::RECEIVABLE ? ChequeType::REGISTERED : ChequeType::ISSUED;
         $amount = (float) $cheque->amount;
         $entries = $cheque->direction === ChequeType::RECEIVABLE
-            ? [[$this->subject('013001'), -$amount], [$this->accountSideSubject($cheque), $amount]]
-            : [[$this->accountSideSubject($cheque), -$amount], [$this->subject('020001'), $amount]];
+            ? [[$this->subject(self::DOCUMENTS_RECEIVABLE_CONFIG), -$amount], [$this->accountSideSubject($cheque), $amount]]
+            : [[$this->accountSideSubject($cheque), -$amount], [$this->subject(self::DOCUMENTS_PAYABLE_CONFIG), $amount]];
         $document = $this->post($user, $cheque, 'execute', $entries, $data['date'] ?? null);
 
         $cheque->update(['purpose' => ChequeType::SETTLEMENT, 'status' => $to]);
@@ -350,12 +358,12 @@ class ChequeService
 
         return $cheque->direction === ChequeType::RECEIVABLE
             ? $this->post($user, $cheque, 'register', [
-                [$this->subject('013001'), -$amount],
+                [$this->subject(self::DOCUMENTS_RECEIVABLE_CONFIG), -$amount],
                 [$this->accountSideSubject($cheque), $amount],
             ], $writeDate)
             : $this->post($user, $cheque, 'issue', [
                 [$this->accountSideSubject($cheque), -$amount],
-                [$this->subject('020001'), $amount],
+                [$this->subject(self::DOCUMENTS_PAYABLE_CONFIG), $amount],
             ], $writeDate);
     }
 
@@ -496,11 +504,12 @@ class ChequeService
         return __($key, ['serial' => $cheque->serial ?: $cheque->cheque_number ?: $cheque->sayad_number]);
     }
 
-    private function subject(string $code): int
+    private function subject(string $configKey): int
     {
-        $subject = Subject::where('company_id', getActiveCompany())->where('code', $code)->first();
+        $subjectId = (int) config('amir.'.$configKey);
+        $subject = $subjectId ? Subject::where('company_id', getActiveCompany())->find($subjectId) : null;
         if (! $subject) {
-            throw ValidationException::withMessages(['accounting' => __('Accounting subject :code is not configured.', ['code' => $code])]);
+            throw ValidationException::withMessages(['accounting' => __('Accounting subject configuration :key is missing or invalid.', ['key' => $configKey])]);
         }
 
         return (int) $subject->id;

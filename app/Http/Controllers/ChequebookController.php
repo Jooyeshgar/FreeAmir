@@ -10,16 +10,29 @@ use Illuminate\Validation\ValidationException;
 
 class ChequebookController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $chequebooks = Chequebook::query()->with('bankAccount.bank')->withCount('cheques')->latest()->paginate(20);
+        $filters = $request->validate([
+            'serial_prefix' => ['nullable', 'string', 'max:50'],
+            'bank_account_id' => ['nullable', Rule::exists('bank_accounts', 'id')->where('company_id', getActiveCompany())],
+            'availability' => ['nullable', Rule::in(['available', 'exhausted'])],
+        ]);
 
-        return view('cheques.chequebooks.index', compact('chequebooks'));
+        $chequebooks = Chequebook::query()->with('bankAccount.bank')->withCount('cheques')
+            ->when(filled($filters['serial_prefix'] ?? null), fn ($query) => $query->where('serial_prefix', 'like', '%'.$filters['serial_prefix'].'%'))
+            ->when(filled($filters['bank_account_id'] ?? null), fn ($query) => $query->where('bank_account_id', $filters['bank_account_id']))
+            ->when(($filters['availability'] ?? null) === 'available', fn ($query) => $query->whereColumn('next_leaf', '<=', 'last_leaf'))
+            ->when(($filters['availability'] ?? null) === 'exhausted', fn ($query) => $query->whereColumn('next_leaf', '>', 'last_leaf'))
+            ->latest()->paginate(20)->withQueryString();
+
+        $bankAccounts = BankAccount::with('bank')->orderBy('name')->get();
+
+        return view('chequebooks.index', compact('chequebooks', 'bankAccounts'));
     }
 
     public function create()
     {
-        return view('cheques.chequebooks.form', [
+        return view('chequebooks.form', [
             'chequebook' => null,
             'bankAccounts' => BankAccount::with('bank')->orderBy('name')->get(),
         ]);
@@ -32,20 +45,21 @@ class ChequebookController extends Controller
             'company_id' => getActiveCompany(),
         ]);
 
-        return redirect()->route('cheques.chequebooks.show', $chequebook)->with('success', __('Chequebook created successfully.'));
+        return redirect()->route('chequebooks.show', $chequebook)->with('success', __('Chequebook created successfully.'));
     }
 
     public function show(Chequebook $chequebook)
     {
         $chequebook->load('bankAccount.bank');
-        $cheques = $chequebook->cheques()->with('customer')->latest('due_date')->paginate(20);
+        $cheques = $chequebook->cheques()->with('customer')
+            ->withExists(['histories as has_lifecycle_actions' => fn ($query) => $query->whereNotNull('from_status')])->latest('due_date')->paginate(20);
 
-        return view('cheques.chequebooks.show', compact('chequebook', 'cheques'));
+        return view('chequebooks.show', compact('chequebook', 'cheques'));
     }
 
     public function edit(Chequebook $chequebook)
     {
-        return view('cheques.chequebooks.form', [
+        return view('chequebooks.form', [
             'chequebook' => $chequebook,
             'bankAccounts' => BankAccount::with('bank')->orderBy('name')->get(),
         ]);
@@ -55,14 +69,14 @@ class ChequebookController extends Controller
     {
         $chequebook->update($this->validatedData($request, $chequebook));
 
-        return redirect()->route('cheques.chequebooks.show', $chequebook)->with('success', __('Chequebook updated successfully.'));
+        return redirect()->route('chequebooks.show', $chequebook)->with('success', __('Chequebook updated successfully.'));
     }
 
     public function destroy(Chequebook $chequebook)
     {
         $chequebook->delete();
 
-        return redirect()->route('cheques.chequebooks.index')->with('success', __('Chequebook deleted successfully. Associated cheques were preserved.'));
+        return redirect()->route('chequebooks.index')->with('success', __('Chequebook deleted successfully. Associated cheques were preserved.'));
     }
 
     private function validatedData(Request $request, ?Chequebook $chequebook = null): array

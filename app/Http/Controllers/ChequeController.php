@@ -19,7 +19,11 @@ class ChequeController extends Controller
 
     public function index(Request $request)
     {
-        $cheques = $this->filteredQuery($request)->with(['customer', 'endorsedTo', 'bankAccount.bank', 'chequebook'])->latest('due_date')->paginate(20)->withQueryString();
+        $cheques = $this->filteredQuery($request)->with(['customer', 'endorsedTo', 'bankAccount.bank', 'chequebook'])
+            ->withExists(['histories as has_lifecycle_actions' => fn (Builder $query) => $query->whereNotNull('from_status')])
+            ->latest('due_date')
+            ->paginate(20)
+            ->withQueryString();
 
         return view('cheques.index', [
             'cheques' => $cheques,
