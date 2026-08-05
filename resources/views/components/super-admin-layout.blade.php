@@ -31,15 +31,58 @@
     <header class="sticky top-0 z-30 w-full border-b border-base-content/8 bg-base-100/90 backdrop-blur-md">
         <div class="h-1 bg-linear-to-r from-emerald-500 via-teal-500 to-cyan-500"></div>
         <div class="navbar min-h-14 items-center justify-between gap-3 px-3 min-[1430px]:mx-auto min-[1430px]:w-[1430px]">
-            <a href="{{ $hasCurrentWorkspace ? route('home') : route('management.dashboard') }}"
-                class="flex shrink-0 items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-base-200"
-                aria-label="{{ __(config('app.name')) }}">
-                <img src="/images/logo.png" alt="{{ __(config('app.name')) }}" class="h-9 w-9 object-contain">
-                <div class="hidden sm:block">
-                    <strong class="block text-sm font-bold leading-4">{{ __(config('app.name')) }}</strong>
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">{{ __('Super-Admin Panel') }}</span>
-                </div>
-            </a>
+            <nav class="flex min-w-0 flex-1 items-center gap-1" aria-label="{{ __('Super-Admin navigation') }}">
+                <a href="{{ $hasCurrentWorkspace ? route('home') : route('management.dashboard') }}"
+                    class="flex shrink-0 items-center rounded-lg p-1.5 transition-colors hover:bg-base-200"
+                    aria-label="{{ __(config('app.name')) }}">
+                    <img src="/images/logo.png" alt="{{ __(config('app.name')) }}" class="h-9 w-9 object-contain">
+                </a>
+
+                <ul class="app-main-menu menu menu-horizontal flex-nowrap px-1" data-main-menu>
+                    <li>
+                        <a href="{{ route('management.dashboard') }}" @class([
+                            'text-sm',
+                            'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' => request()->routeIs('management.dashboard'),
+                        ])>{{ __('Dashboard') }}</a>
+                    </li>
+                    <li>
+                        <details class="app-main-menu-dropdown" data-main-menu-dropdown>
+                            <summary @class([
+                                'text-sm',
+                                'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' => request()->routeIs('companies.*', 'users.*'),
+                            ])>{{ __('Organization') }}</summary>
+                            <ul class="app-main-menu-panel z-50 mt-2 w-52">
+                                <li><a href="{{ route('companies.index') }}" @class(['active' => request()->routeIs('companies.*')])>{{ __('Companies') }}</a></li>
+                                <li><a href="{{ route('users.index') }}" @class(['active' => request()->routeIs('users.*')])>{{ __('Users') }}</a></li>
+                            </ul>
+                        </details>
+                    </li>
+                    <li>
+                        <details class="app-main-menu-dropdown" data-main-menu-dropdown>
+                            <summary @class([
+                                'text-sm',
+                                'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' => request()->routeIs('roles.*', 'permissions.*'),
+                            ])>{{ __('Access control') }}</summary>
+                            <ul class="app-main-menu-panel z-50 mt-2 w-52">
+                                <li><a href="{{ route('roles.index') }}" @class(['active' => request()->routeIs('roles.*')])>{{ __('Roles') }}</a></li>
+                                <li><a href="{{ route('permissions.index') }}" @class(['active' => request()->routeIs('permissions.*')])>{{ __('Permissions') }}</a></li>
+                            </ul>
+                        </details>
+                    </li>
+                    <li>
+                        <details class="app-main-menu-dropdown" data-main-menu-dropdown>
+                            <summary @class([
+                                'text-sm',
+                                'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' => request()->routeIs('management.settings', 'management.activity-logs.*'),
+                            ])>{{ __('System') }}</summary>
+                            <ul class="app-main-menu-panel z-50 mt-2 w-52">
+                                <li><a href="{{ route('management.activity-logs.index') }}" @class(['active' => request()->routeIs('management.activity-logs.*')])>{{ __('Activity log') }}</a></li>
+                                <li><a href="{{ route('management.settings') }}" @class(['active' => request()->routeIs('management.settings')])>{{ __('Settings') }}</a></li>
+                            </ul>
+                        </details>
+                    </li>
+                </ul>
+            </nav>
 
             <nav aria-label="{{ __('User menu') }}">
                 <ul class="app-main-menu menu menu-horizontal flex-nowrap px-1" data-main-menu>
@@ -54,6 +97,23 @@
                             <svg class="swap-off h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0-16v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" /></svg>
                             <svg class="swap-on h-5 w-5 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" /></svg>
                         </label>
+                        <details class="app-main-menu-dropdown" data-main-menu-dropdown>
+                            <summary class="text-sm">
+                                {{ app()->isLocale('fa') ? __('Farsi') : __('English') }}
+                            </summary>
+                            <form id="management-locale-fa-form" method="POST" action="{{ route('locale') }}" class="hidden">
+                                @csrf
+                                <input type="hidden" name="locale" value="fa">
+                            </form>
+                            <form id="management-locale-en-form" method="POST" action="{{ route('locale') }}" class="hidden">
+                                @csrf
+                                <input type="hidden" name="locale" value="en">
+                            </form>
+                            <ul class="app-main-menu-panel z-50 mt-2 w-40">
+                                <li><button type="submit" form="management-locale-fa-form" lang="fa">{{ __('Farsi') }}</button></li>
+                                <li><button type="submit" form="management-locale-en-form" lang="en">{{ __('English') }}</button></li>
+                            </ul>
+                        </details>
                         <details class="app-main-menu-dropdown" data-main-menu-dropdown>
                             <summary class="gap-2 text-sm">
                                 <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-emerald-500 to-teal-600 font-bold text-white shadow-sm">{{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}</span>
@@ -72,56 +132,6 @@
 
         <x-impersonation-banner within-sticky-header />
     </header>
-
-    <nav class="relative z-20 w-full border-b border-base-content/8 bg-base-100/75 shadow-sm backdrop-blur"
-        aria-label="{{ __('Super-Admin navigation') }}">
-        <div class="flex min-h-12 items-center px-3 min-[1430px]:mx-auto min-[1430px]:w-[1430px]" dir="ltr">
-            <ul class="app-main-menu menu menu-horizontal ml-auto flex-nowrap px-1"
-                dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}" data-main-menu>
-                <li>
-                    <a href="{{ route('management.dashboard') }}" @class([
-                        'text-sm',
-                        'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' => request()->routeIs('management.dashboard'),
-                    ])>{{ __('Dashboard') }}</a>
-                </li>
-                <li>
-                    <details class="app-main-menu-dropdown" data-main-menu-dropdown>
-                        <summary @class([
-                            'text-sm',
-                            'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' => request()->routeIs('companies.*', 'users.*'),
-                        ])>{{ __('Organization') }}</summary>
-                        <ul class="app-main-menu-panel z-50 mt-2 w-52">
-                            <li><a href="{{ route('companies.index') }}" @class(['active' => request()->routeIs('companies.*')])>{{ __('Companies') }}</a></li>
-                            <li><a href="{{ route('users.index') }}" @class(['active' => request()->routeIs('users.*')])>{{ __('Users') }}</a></li>
-                        </ul>
-                    </details>
-                </li>
-                <li>
-                    <details class="app-main-menu-dropdown" data-main-menu-dropdown>
-                        <summary @class([
-                            'text-sm',
-                            'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' => request()->routeIs('roles.*', 'permissions.*'),
-                        ])>{{ __('Access control') }}</summary>
-                        <ul class="app-main-menu-panel z-50 mt-2 w-52">
-                            <li><a href="{{ route('roles.index') }}" @class(['active' => request()->routeIs('roles.*')])>{{ __('Roles') }}</a></li>
-                            <li><a href="{{ route('permissions.index') }}" @class(['active' => request()->routeIs('permissions.*')])>{{ __('Permissions') }}</a></li>
-                        </ul>
-                    </details>
-                </li>
-                <li>
-                    <details class="app-main-menu-dropdown" data-main-menu-dropdown>
-                        <summary @class([
-                            'text-sm',
-                            'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' => request()->routeIs('management.settings'),
-                        ])>{{ __('System') }}</summary>
-                        <ul class="app-main-menu-panel z-50 mt-2 w-52">
-                            <li><a href="{{ route('management.settings') }}" @class(['active' => request()->routeIs('management.settings')])>{{ __('Settings') }}</a></li>
-                        </ul>
-                    </details>
-                </li>
-            </ul>
-        </div>
-    </nav>
 
     <main class="relative mx-auto mt-5 min-[1430px]:w-[1430px]">
         {{ $slot }}

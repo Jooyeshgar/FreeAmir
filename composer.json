@@ -22,6 +22,7 @@
         "laravel/sanctum": "^4.2",
         "laravel/tinker": "^2.10",
         "nativephp/desktop": "^2.2",
+        "spatie/laravel-activitylog": "^4.10",
         "spatie/laravel-permission": "^6.4"
     },
     "require-dev": {

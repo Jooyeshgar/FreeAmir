@@ -13,6 +13,7 @@ class GlobalConfigService
         'app_debug' => ['true', 'false'],
         'app_registration' => ['true', 'false'],
         'app_email_verification' => ['true', 'false'],
+        'app_activity_logger_enabled' => ['true', 'false'],
     ];
 
     public function all(): array

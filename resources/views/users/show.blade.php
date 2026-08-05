@@ -8,13 +8,13 @@
         </a>
     </div>
 
-    <section class="relative overflow-hidden rounded-3xl border border-slate-600/30 p-5 dark:border-slate-700/50 dark:from-slate-900 dark:via-slate-950 dark:to-black sm:p-6">
-        <div class="pointer-events-none absolute -end-16 -top-24 h-72 w-72 rounded-full border-[42px] border-white/5"></div>
-        <div class="pointer-events-none absolute -bottom-24 start-1/3 h-56 w-56 rounded-full bg-indigo-300/5 blur-2xl"></div>
+    <section class="relative overflow-hidden rounded-3xl border border-indigo-200/70 bg-linear-to-br from-indigo-50 via-white to-sky-50 p-5 text-slate-900 dark:border-slate-700/50 dark:from-slate-900 dark:via-slate-950 dark:to-black dark:text-white sm:p-6">
+        <div class="pointer-events-none absolute -end-16 -top-24 h-72 w-72 rounded-full border-[42px] border-indigo-200/20 dark:border-white/5"></div>
+        <div class="pointer-events-none absolute -bottom-24 start-1/3 h-56 w-56 rounded-full bg-indigo-300/15 blur-2xl dark:bg-indigo-300/5"></div>
 
         <div class="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
             <div class="flex min-w-0 items-center gap-4 sm:gap-5">
-                <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-2xl font-bold ring-1 ring-white/5 backdrop-blur sm:h-18 sm:w-18 sm:text-3xl">
+                <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-indigo-200 bg-indigo-100 text-2xl font-bold text-indigo-700 ring-1 ring-indigo-600/10 backdrop-blur sm:h-18 sm:w-18 sm:text-3xl dark:border-white/15 dark:bg-white/10 dark:text-white dark:ring-white/5">
                     {{ mb_strtoupper(mb_substr($user->name, 0, 1)) }}
                 </div>
                 <div class="min-w-0">
@@ -27,10 +27,10 @@
                             <span class="me-1 h-1.5 w-1.5 rounded-full bg-current opacity-80"></span>
                             {{ $user->hasVerifiedEmail() ? __('Verified') : __('Pending') }}
                         </span>
-                        <span class="rounded-full border border-white/10 bg-black/15 px-2.5 py-1 text-xs font-medium text-slate-100">{{ __('User ID') }}: {{ localizeNumber($user->id) }}</span>
+                        <span class="rounded-full border border-slate-200 bg-white/80 px-2.5 py-1 text-xs font-medium text-slate-600 dark:border-white/10 dark:bg-black/15 dark:text-slate-100">{{ __('User ID') }}: {{ localizeNumber($user->id) }}</span>
                     </div>
-                    <h1 class="truncate text-2xl font-bold tracking-tight sm:text-3xl">{{ $user->name }}</h1>
-                    <p class="mt-1 truncate text-sm text-slate-100/80">{{ $user->email }}</p>
+                    <h1 class="truncate text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">{{ $user->name }}</h1>
+                    <p class="mt-1 truncate text-sm font-medium text-slate-600 dark:text-slate-100/80">{{ $user->email }}</p>
                 </div>
             </div>
 

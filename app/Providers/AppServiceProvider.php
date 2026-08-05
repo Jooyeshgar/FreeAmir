@@ -4,8 +4,12 @@ namespace App\Providers;
 
 use App\Faker\PersianProductProvider;
 use App\Faker\PersianServiceProvider;
+use App\Services\ActivityLogService;
+use Faker\Generator;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -16,7 +20,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->afterResolving(\Faker\Generator::class, function (\Faker\Generator $faker) {
+        $this->app->scoped(ActivityLogService::class);
+
+        $this->app->afterResolving(Generator::class, function (Generator $faker) {
             $registered = [];
             foreach ($faker->getProviders() as $provider) {
                 $registered[get_class($provider)] = true;
@@ -35,7 +41,7 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-   public function boot(): void
+    public function boot(): void
     {
         Paginator::defaultView('vendor.pagination.daisyui');
         Paginator::defaultSimpleView('vendor.pagination.daisyui-simple');
@@ -48,5 +54,12 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
-    }   
+        foreach (['created', 'updated', 'deleted'] as $modelEvent) {
+            Event::listen("eloquent.{$modelEvent}: *", function (string $eventName, array $payload) use ($modelEvent): void {
+                if (isset($payload[0]) && $payload[0] instanceof Model) {
+                    app(ActivityLogService::class)->recordModelEvent($modelEvent, $payload[0]);
+                }
+            });
+        }
+    }
 }

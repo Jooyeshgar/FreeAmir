@@ -119,7 +119,7 @@ Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for bug report
 - [x] Full Moadian integration
 - [ ] Company-specific roles
 - [ ] Workflow approvals
-- [ ] Audit logs
+- [x] Audit logs
 - [ ] API expansion
 - [ ] Mobile / PWA support
 

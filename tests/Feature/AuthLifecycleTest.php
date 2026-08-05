@@ -147,6 +147,23 @@ class AuthLifecycleTest extends TestCase
         }
     }
 
+    public function test_platform_admin_can_change_language_from_the_management_header(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+
+        $management = $this->actingAs($user)->get(route('management.dashboard'));
+
+        $management->assertOk()
+            ->assertSee('id="management-locale-fa-form"', false)
+            ->assertSee('id="management-locale-en-form"', false)
+            ->assertSee('action="'.route('locale').'"', false);
+
+        $this->post(route('locale'), ['locale' => 'en'])->assertRedirect(route('management.dashboard'))->assertSessionHas('locale', 'en');
+
+        $this->get(route('management.dashboard'))->assertOk()->assertSee('<html lang="en"', false);
+    }
+
     public function test_platform_admin_can_switch_between_management_and_current_workspace(): void
     {
         $user = User::factory()->create();
@@ -190,7 +207,6 @@ class AuthLifecycleTest extends TestCase
         foreach ($sharedIndexRoutes as $routeName => $managementHeading) {
             $this->get(route($routeName))
                 ->assertOk()
-                ->assertDontSee(__('Super-Admin Panel'))
                 ->assertDontSee($managementHeading);
         }
 
@@ -200,7 +216,6 @@ class AuthLifecycleTest extends TestCase
         ] as $routeName => $managementHeading) {
             $this->get(route($routeName))
                 ->assertOk()
-                ->assertSee(__('Super-Admin Panel'))
                 ->assertSee($managementHeading);
         }
 
@@ -211,7 +226,6 @@ class AuthLifecycleTest extends TestCase
         foreach ($sharedIndexRoutes as $routeName => $managementHeading) {
             $this->get(route($routeName))
                 ->assertOk()
-                ->assertSee(__('Super-Admin Panel'))
                 ->assertSee($managementHeading);
         }
 
@@ -300,6 +314,9 @@ class AuthLifecycleTest extends TestCase
             ->assertSee('<table', false)
             ->assertSee('Profile User')
             ->assertSee('profile@example.com')
+            ->assertSee('bg-indigo-100', false)
+            ->assertSee('text-indigo-700', false)
+            ->assertSee('text-slate-600 dark:text-slate-100/80', false)
             ->assertSee('Profile Auditor')
             ->assertSee('Profile Company')
             ->assertSee('Profile Street')

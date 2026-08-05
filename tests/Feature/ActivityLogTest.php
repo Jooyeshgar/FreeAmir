@@ -1,0 +1,501 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Activity;
+use App\Models\Company;
+use App\Models\Config;
+use App\Models\Scopes\FiscalYearScope;
+use App\Models\User;
+use App\Services\ActivityLogService;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
+use Spatie\Permission\Models\Permission;
+use Tests\TestCase;
+
+class ActivityLogTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_activity_log_page_is_limited_to_super_admin_panel_users(): void
+    {
+        $regularUser = User::factory()->create();
+        $superAdmin = User::factory()->create();
+        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+
+        $this->get(route('management.activity-logs.index'))->assertRedirect(route('login'));
+        $this->actingAs($regularUser)->get(route('management.activity-logs.index'))->assertForbidden();
+        $this->actingAs($superAdmin)->get(route('management.activity-logs.index'))
+            ->assertOk()
+            ->assertViewIs('super-admin.activity-logs.index')
+            ->assertSee(__('Activity log'))
+            ->assertDontSee('name="source"', false)
+            ->assertSee('name="action"', false)
+            ->assertSee('name="model_type"', false)
+            ->assertSee('name="date_from"', false)
+            ->assertSee('data-jdp', false)
+            ->assertSee('placeholder="'.__('Select date').'"', false);
+    }
+
+    public function test_application_model_changes_are_recorded_with_actor_context_and_without_secrets(): void
+    {
+        $actor = User::factory()->create();
+        $target = User::factory()->create(['name' => 'Before']);
+
+        $this->actingAs($actor);
+        $target->update([
+            'name' => 'After',
+            'password' => Hash::make('new-password'),
+        ]);
+
+        $activity = Activity::query()->where('source', 'model')->where('action', 'updated')->latest('id')->firstOrFail();
+
+        $this->assertSame($actor->id, $activity->user_id);
+        $this->assertSame($actor->id, $activity->user->id);
+        $this->assertTrue(Schema::hasColumn('activity_log', 'user_id'));
+        $this->assertFalse(Schema::hasColumn('activity_log', 'causer_id'));
+        $this->assertFalse(Schema::hasColumn('activity_log', 'causer_type'));
+        $this->assertSame(User::class, $activity->model_type);
+        $this->assertSame($target->id, $activity->model_id);
+        $this->assertSame('After', $activity->details->get('attributes')['name']);
+        $this->assertSame('Before', $activity->details->get('old')['name']);
+        $this->assertArrayNotHasKey('password', $activity->details->get('attributes'));
+        $this->assertArrayNotHasKey('password', $activity->details->get('old'));
+    }
+
+    public function test_successful_write_requests_are_recorded_with_sensitive_input_redacted(): void
+    {
+        $actor = User::factory()->create();
+
+        $this->actingAs($actor)->post(route('locale'), [
+            'locale' => 'fa',
+            'password' => 'do-not-store-this',
+        ])->assertRedirect();
+
+        $activity = Activity::query()->where('source', 'request')->latest('id')->firstOrFail();
+
+        $this->assertSame($actor->id, $activity->user_id);
+        $this->assertSame('post', $activity->action);
+        $this->assertSame('locale', $activity->details->get('route'));
+        $this->assertSame('POST', $activity->details->get('method'));
+        $this->assertSame('[REDACTED]', $activity->details->get('request_input')['password']);
+        $this->assertStringNotContainsString('do-not-store-this', $activity->details->toJson());
+    }
+
+    public function test_activity_log_can_be_filtered_by_action_company_and_date(): void
+    {
+        $superAdmin = User::factory()->create();
+        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $company = Company::factory()->create(['name' => 'Audit Company']);
+
+        activity('model')
+            ->causedBy($superAdmin)
+            ->performedOn($company)
+            ->event('created')
+            ->withProperties([
+                'company_id' => $company->id,
+                'model_label' => $company->name,
+                'attributes' => ['name' => $company->name],
+            ])
+            ->log('created');
+        activity('request')
+            ->causedBy($superAdmin)
+            ->event('post')
+            ->withProperties(['route' => 'locale'])
+            ->log('POST locale');
+
+        $this->actingAs($superAdmin)
+            ->get(route('management.activity-logs.index', ['action' => 'created', 'company_id' => $company->id]))
+            ->assertOk()
+            ->assertSee('Audit Company')
+            ->assertSee(__('Company').' #'.$company->id)
+            ->assertDontSee('POST locale')
+            ->assertViewHas('activities', fn ($activities): bool => $activities->getCollection()->first()['changes']->isEmpty())
+            ->assertViewHas('modelOptions', fn ($options): bool => $options->contains(fn (array $option): bool => $option === [
+                'value' => Company::class,
+                'label' => __('Company'),
+            ]));
+
+        $this->get(route('management.activity-logs.index', ['action' => 'created']))
+            ->assertOk()
+            ->assertSee('Audit Company')
+            ->assertSee('locale')
+            ->assertDontSee('POST locale')
+            ->assertSee('>POST</span>', false)
+            ->assertSee(__('Details'))
+            ->assertSee('x-show="detailsOpen"', false)
+            ->assertSee(route('users.show', $superAdmin), false)
+            ->assertViewHas('activities', fn ($activities): bool => collect($activities->items())->every(fn (array $activity): bool => ! array_key_exists('userEmail', $activity)))
+            ->assertDontSee('HTTP POST')
+            ->assertDontSee(__('Request details'));
+
+        $this->get(route('management.activity-logs.index', ['search' => $superAdmin->email]))
+            ->assertOk()
+            ->assertSee('Audit Company');
+
+        $today = jdate('Y/m/d', now()->timestamp, tr_num: 'en');
+
+        $this->get(route('management.activity-logs.index', ['date_from' => $today, 'date_to' => $today]))
+            ->assertOk()
+            ->assertSee('Audit Company');
+    }
+
+    public function test_activity_log_is_paginated(): void
+    {
+        $superAdmin = User::factory()->create();
+        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+
+        foreach (range(1, 26) as $index) {
+            activity('request')
+                ->causedBy($superAdmin)
+                ->event('post')
+                ->log("POST audit.page.{$index}");
+        }
+
+        $this->actingAs($superAdmin)
+            ->get(route('management.activity-logs.index'))
+            ->assertOk()
+            ->assertViewHas('activities', fn ($activities): bool => $activities->count() === 25 && $activities->lastPage() === 2)
+            ->assertSee('page=2', false);
+    }
+
+    public function test_request_and_its_model_change_are_shown_as_one_activity(): void
+    {
+        $superAdmin = User::factory()->create();
+        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $company = Company::factory()->create(['name' => 'Merged Company']);
+
+        activity('model')
+            ->causedBy($superAdmin)
+            ->performedOn($company)
+            ->event('updated')
+            ->withProperties([
+                'route' => 'companies.update',
+                'model_label' => $company->name,
+                'attributes' => ['name' => 'Merged Company'],
+                'old' => ['name' => 'Old Company'],
+            ])
+            ->log('updated');
+        activity('request')
+            ->causedBy($superAdmin)
+            ->event('put')
+            ->withProperties([
+                'route' => 'companies.update',
+                'method' => 'PUT',
+                'path' => "/companies/{$company->id}",
+                'request_input' => ['name' => 'Merged Company'],
+            ])
+            ->log('PUT companies.update');
+
+        $this->actingAs($superAdmin)
+            ->get(route('management.activity-logs.index'))
+            ->assertOk()
+            ->assertViewHas('activities', function ($activities): bool {
+                $row = $activities->getCollection()->first();
+
+                return $activities->count() === 1
+                    && $row['requestMethod'] === 'PUT'
+                    && $row['changes']->count() === 1
+                    && $row['requestInput'] !== null;
+            })
+            ->assertSee('companies.update')
+            ->assertSee(__('Company').' #'.$company->id)
+            ->assertSee('Old Company')
+            ->assertSee('Merged Company');
+    }
+
+    public function test_store_activity_keeps_request_details_without_rendering_created_fields_as_changes(): void
+    {
+        $superAdmin = User::factory()->create();
+        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $company = Company::factory()->create(['name' => 'Created Company']);
+
+        activity('model')
+            ->causedBy($superAdmin)
+            ->performedOn($company)
+            ->event('created')
+            ->withProperties([
+                'route' => 'companies.store',
+                'model_label' => $company->name,
+                'attributes' => ['name' => $company->name, 'fiscal_year' => 1405],
+            ])
+            ->log('created');
+        activity('request')
+            ->causedBy($superAdmin)
+            ->event('post')
+            ->withProperties([
+                'route' => 'companies.store',
+                'method' => 'POST',
+                'path' => '/companies',
+                'ip_address' => '127.0.0.1',
+                'request_input' => ['name' => $company->name],
+            ])
+            ->log('POST companies.store');
+
+        $this->actingAs($superAdmin)
+            ->get(route('management.activity-logs.index'))
+            ->assertOk()
+            ->assertViewHas('activities', function ($activities) use ($company): bool {
+                $row = $activities->getCollection()->first();
+
+                return $activities->count() === 1
+                    && $row['actionLabel'] === __('Created')
+                    && $row['requestMethod'] === 'POST'
+                    && $row['route'] === 'companies.store'
+                    && $row['modelContextLabel'] === __('Company').' #'.$company->id
+                    && $row['requestInput'] !== null
+                    && $row['requestContext'] !== []
+                    && $row['changes']->isEmpty()
+                    && $row['hasDetails'];
+            })
+            ->assertSee('companies.store')
+            ->assertSee(__('Company').' #'.$company->id)
+            ->assertSee('127.0.0.1')
+            ->assertSee('Created Company')
+            ->assertDontSee('fiscal_year');
+    }
+
+    public function test_unrelated_request_and_model_rows_are_not_merged(): void
+    {
+        $superAdmin = User::factory()->create();
+        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $company = Company::factory()->create();
+
+        activity('model')
+            ->causedBy($superAdmin)
+            ->performedOn($company)
+            ->event('updated')
+            ->withProperties(['route' => 'companies.update', 'attributes' => ['name' => 'Changed'], 'old' => ['name' => 'Before']])
+            ->log('updated');
+        activity('request')
+            ->causedBy($superAdmin)
+            ->event('put')
+            ->withProperties(['route' => 'users.update', 'method' => 'PUT'])
+            ->log('PUT users.update');
+
+        $this->actingAs($superAdmin)
+            ->get(route('management.activity-logs.index'))
+            ->assertOk()
+            ->assertViewHas('activities', fn ($activities): bool => $activities->count() === 2)
+            ->assertSee('companies.update')
+            ->assertSee('users.update');
+    }
+
+    public function test_activity_details_have_responsive_mobile_and_desktop_change_layouts(): void
+    {
+        $superAdmin = User::factory()->create();
+        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $company = Company::factory()->create();
+
+        activity('model')
+            ->causedBy($superAdmin)
+            ->performedOn($company)
+            ->event('updated')
+            ->withProperties(['attributes' => ['name' => 'After'], 'old' => ['name' => 'Before']])
+            ->log('updated');
+
+        $this->actingAs($superAdmin)
+            ->get(route('management.activity-logs.index'))
+            ->assertOk()
+            ->assertSee('aria-controls="activity-details-', false)
+            ->assertSee('space-y-2 sm:hidden', false)
+            ->assertSee('sm:block', false)
+            ->assertSee(__('Previous value'))
+            ->assertSee(__('New value'));
+    }
+
+    public function test_activity_logging_can_be_changed_from_management_settings(): void
+    {
+        $superAdmin = User::factory()->create();
+        $superAdmin->givePermissionTo(
+            Permission::create(['name' => 'access-super-admin-panel']),
+            Permission::create(['name' => 'update-global-configs']),
+        );
+
+        $this->actingAs($superAdmin)->get(route('management.settings'))
+            ->assertOk()
+            ->assertSee(__('about.activity_logger'))
+            ->assertSee(__('Record user actions and model changes across the platform.'));
+
+        $this->put(route('update-global-configs'), ['app_activity_logger_enabled' => 'false'])
+            ->assertRedirect(route('management.settings'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('configs', [
+            'key' => 'app_activity_logger_enabled',
+            'value' => 'false',
+            'company_id' => null,
+        ]);
+        $this->assertDatabaseMissing('configs', ['key' => 'activity_logger_enabled']);
+
+        $this->get(route('management.settings'))->assertOk();
+        $this->assertFalse(config('activitylog.enabled'));
+
+        $this->put(route('update-global-configs'), ['app_activity_logger_enabled' => 'true'])
+            ->assertRedirect(route('management.settings'))
+            ->assertSessionHasNoErrors();
+
+        $this->get(route('management.settings'))->assertOk();
+        $this->assertTrue(config('activitylog.enabled'));
+    }
+
+    public function test_management_dashboard_shows_activity_summary_and_recent_events(): void
+    {
+        $superAdmin = User::factory()->create(['name' => 'Audit Administrator']);
+        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $company = Company::factory()->create(['name' => 'Dashboard Audit Company']);
+
+        activity('model')
+            ->causedBy($superAdmin)
+            ->performedOn($company)
+            ->event('updated')
+            ->withProperties(['company_id' => $company->id, 'model_label' => $company->name])
+            ->log('updated');
+        activity('request')
+            ->causedBy($superAdmin)
+            ->event('put')
+            ->withProperties(['route' => 'management.settings', 'method' => 'PUT'])
+            ->log('PUT management.settings');
+
+        $this->actingAs($superAdmin)->get(route('management.dashboard'))
+            ->assertOk()
+            ->assertSee(__('Recent activity'))
+            ->assertSee('Dashboard Audit Company')
+            ->assertSee('management.settings')
+            ->assertSee(route('management.activity-logs.index'), false)
+            ->assertViewHas('activityMetrics', fn (array $metrics): bool => $metrics === [
+                'total' => 2,
+                'today' => 2,
+                'model' => 1,
+                'request' => 1,
+            ])
+            ->assertViewHas('recentActivities', fn ($activities): bool => $activities->count() === 2);
+    }
+
+    public function test_initial_migration_creates_the_final_schema_and_renames_the_config_key(): void
+    {
+        Config::withoutGlobalScope(FiscalYearScope::class)->updateOrCreate(
+            ['key' => 'app_activity_logger_enabled', 'company_id' => null],
+            ['value' => null, 'type' => 3, 'category' => 1, 'desc' => __('app_activity_logger_enabled')],
+        );
+
+        $this->assertTrue(Schema::hasTable('activity_log'));
+        $this->assertTrue(Schema::hasColumn('activity_log', 'user_id'));
+        $this->assertTrue(Schema::hasColumn('activity_log', 'source'));
+        $this->assertTrue(Schema::hasColumn('activity_log', 'action'));
+        $this->assertTrue(Schema::hasColumn('activity_log', 'model_type'));
+        $this->assertTrue(Schema::hasColumn('activity_log', 'model_id'));
+        $this->assertTrue(Schema::hasColumn('activity_log', 'details'));
+        $this->assertFalse(Schema::hasColumn('activity_log', 'log_name'));
+        $this->assertFalse(Schema::hasColumn('activity_log', 'event'));
+        $this->assertFalse(Schema::hasColumn('activity_log', 'subject_type'));
+        $this->assertFalse(Schema::hasColumn('activity_log', 'subject_id'));
+        $this->assertFalse(Schema::hasColumn('activity_log', 'properties'));
+        $this->assertFalse(Schema::hasColumn('activity_log', 'causer_id'));
+        $this->assertFalse(Schema::hasColumn('activity_log', 'causer_type'));
+        $this->assertDatabaseMissing('configs', ['key' => 'activity_logger_enabled']);
+        $this->assertDatabaseHas('configs', [
+            'key' => 'app_activity_logger_enabled',
+            'value' => null,
+            'company_id' => null,
+        ]);
+    }
+
+    public function test_impersonated_activity_is_attributed_to_the_real_user(): void
+    {
+        $impersonator = User::factory()->create();
+        $impersonated = User::factory()->create();
+
+        $this->actingAs($impersonator);
+        $this->assertTrue($impersonator->impersonate($impersonated));
+
+        $this->post(route('locale'), ['locale' => 'fa'])->assertRedirect();
+
+        $requestActivity = Activity::query()
+            ->where('source', 'request')
+            ->where('details->route', 'locale')
+            ->latest('id')
+            ->firstOrFail();
+
+        $this->assertSame($impersonator->id, $requestActivity->user_id);
+        $this->assertNotSame($impersonated->id, $requestActivity->user_id);
+        $this->assertSame($impersonated->id, $requestActivity->details->get('impersonated_user_id'));
+
+        $company = Company::factory()->create();
+        $modelActivity = Activity::query()
+            ->where('source', 'model')
+            ->where('model_type', Company::class)
+            ->where('model_id', $company->id)
+            ->latest('id')
+            ->firstOrFail();
+
+        $this->assertSame($impersonator->id, $modelActivity->user_id);
+        $this->assertSame($impersonated->id, $modelActivity->details->get('impersonated_user_id'));
+
+        $this->post(route('impersonation.leave'))->assertRedirect(route('users.index'));
+
+        $leaveActivity = Activity::query()
+            ->where('source', 'request')
+            ->where('details->route', 'impersonation.leave')
+            ->latest('id')
+            ->firstOrFail();
+
+        $this->assertSame($impersonator->id, $leaveActivity->user_id);
+        $this->assertSame($impersonated->id, $leaveActivity->details->get('impersonated_user_id'));
+    }
+
+    public function test_impersonator_is_loaded_at_most_once_when_a_request_triggers_multiple_model_events(): void
+    {
+        $impersonator = User::factory()->create();
+        $impersonated = User::factory()->create();
+
+        $this->actingAs($impersonator);
+        $this->assertTrue($impersonator->impersonate($impersonated));
+
+        Route::post('/test/activity-log/multiple-model-events', function () {
+            Company::factory()->count(3)->create();
+
+            return response()->noContent();
+        })->middleware('web');
+
+        $impersonatorLookupCount = 0;
+        DB::listen(function (QueryExecuted $query) use ($impersonator, &$impersonatorLookupCount): void {
+            $normalizedSql = str_replace(['"', '`', '[', ']'], '', strtolower($query->sql));
+
+            if (preg_match('/\bfrom\s+(?:\w+\.)?users\b/', $normalizedSql) === 1
+                && collect($query->bindings)->contains(fn (mixed $binding): bool => (string) $binding === (string) $impersonator->id)) {
+                $impersonatorLookupCount++;
+            }
+        });
+
+        $this->post('/test/activity-log/multiple-model-events')->assertNoContent();
+
+        $modelActivities = Activity::query()->where('source', 'model')->where('model_type', Company::class)->get();
+
+        $this->assertCount(3, $modelActivities);
+        $this->assertTrue($modelActivities->every(
+            fn (Activity $activity): bool => (int) $activity->user_id === $impersonator->id
+                && (int) $activity->details->get('impersonated_user_id') === $impersonated->id,
+        ));
+        $this->assertLessThanOrEqual(1, $impersonatorLookupCount);
+    }
+
+    public function test_actor_cache_is_reset_between_requests(): void
+    {
+        $firstUser = User::factory()->create();
+        $secondUser = User::factory()->create();
+
+        Route::get('/test/activity-log/resolved-actor', function (ActivityLogService $activityLogService) {
+            return response()->json([
+                'actor_id' => $activityLogService->resolveActor(request()->user())?->getKey(),
+            ]);
+        })->middleware('web');
+
+        $this->actingAs($firstUser)->get('/test/activity-log/resolved-actor')->assertOk()->assertJsonPath('actor_id', $firstUser->id);
+        $this->actingAs($secondUser)->get('/test/activity-log/resolved-actor')->assertOk()->assertJsonPath('actor_id', $secondUser->id);
+    }
+}

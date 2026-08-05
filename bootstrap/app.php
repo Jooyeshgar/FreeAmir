@@ -30,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\DefaultCompany::class,
+            \App\Http\Middleware\LogUserActivity::class,
         ]);
 
         // Required middleware aliases used across routes/tests.

@@ -34,6 +34,7 @@
                     'app_locale' => __('Sets the default language and number presentation.'),
                     'app_registration' => __('Allow visitors to create new accounts.'),
                     'app_email_verification' => __('Require new accounts to verify their email address.'),
+                    'app_activity_logger_enabled' => __('Record user actions and model changes across the platform.'),
                 ];
             @endphp
 
@@ -43,7 +44,7 @@
                         <span class="block text-sm font-semibold">{{ $setting['title'] }}</span>
                         <span class="mt-1 block min-h-10 text-xs leading-5 text-slate-500 dark:text-slate-400">{{ $descriptions[$key] }}</span>
                         <select name="{{ $key }}" class="select select-bordered mt-3 w-full bg-white dark:bg-slate-900">
-                            <option value="">{{ __('Use environment default') }}</option>
+                            <option value="">{{ __('Default') }}</option>
                             @foreach ($setting['options'] as $value => $optionLabel)
                                 <option value="{{ $value }}" @selected(old($key, $setting['current']) === $value)>{{ $optionLabel }}</option>
                             @endforeach
