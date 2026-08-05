@@ -541,6 +541,7 @@ class ChequeManagementTest extends TestCase
 
     public function test_deleting_invoice_cheque_payment_removes_all_cheque_records_and_restores_invoice_status(): void
     {
+        $this->withoutMiddleware(CheckPermission::class);
         $invoice = $this->invoice(InvoiceType::SELL, $this->customer, 1000);
         $cheque = $this->service->register($this->user, $this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 1000));
         $payment = $invoice->payments()->firstOrFail();
@@ -548,7 +549,7 @@ class ChequeManagementTest extends TestCase
         $transactionIds = $payment->document->transactions()->pluck('id');
         $historyIds = $cheque->histories()->pluck('id');
 
-        app(PaymentService::class)->deletePayment($payment);
+        $this->delete(route('invoices.payments.destroy', [$invoice, $payment]))->assertRedirect(route('invoices.show', $invoice));
 
         $this->assertNull(Payment::find($payment->id));
         $this->assertNull(Cheque::withoutGlobalScopes()->find($cheque->id));
