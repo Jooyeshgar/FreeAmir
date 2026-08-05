@@ -43,6 +43,10 @@ class ChequeService
                 $this->validateInvoicePaymentData($invoice, $direction, $purpose, $data);
             }
 
+            if (! empty($data['chequebook_id'])) {
+                $data['cheque_number'] = $this->allocateChequebookLeaf((int) $data['chequebook_id']);
+            }
+
             $status = $this->initialStatus($direction, $purpose);
 
             $cheque = Cheque::create([
@@ -82,6 +86,10 @@ class ChequeService
             $direction = ChequeType::from((int) $data['direction']);
             $purpose = ChequeType::from((int) $data['purpose']);
             $this->validateRegistrationData($data, $direction, $lockedCheque);
+
+            if (! empty($data['chequebook_id'])) {
+                $data['cheque_number'] = (int) $data['chequebook_id'] === (int) $lockedCheque->chequebook_id ? $lockedCheque->cheque_number : $this->allocateChequebookLeaf((int) $data['chequebook_id']);
+            }
 
             $initialHistory = $lockedCheque->histories()->whereNull('from_status')->oldest('id')->first();
             $initialPayment = $initialHistory?->payment;
@@ -406,6 +414,20 @@ class ChequeService
         if ($decision->hasErrors()) {
             throw ValidationException::withMessages(['invoice_id' => $decision->messages->pluck('text')->all()]);
         }
+    }
+
+    private function allocateChequebookLeaf(int $chequebookId): string
+    {
+        $chequebook = Chequebook::query()->lockForUpdate()->findOrFail($chequebookId);
+
+        if ($chequebook->next_leaf > $chequebook->last_leaf) {
+            throw ValidationException::withMessages(['chequebook_id' => __('The selected chequebook has no unused leaves.')]);
+        }
+
+        $leaf = $chequebook->next_leaf;
+        $chequebook->increment('next_leaf');
+
+        return (string) $leaf;
     }
 
     private function post(User $user, Cheque $cheque, string $event, array $entries, ?string $date = null): Document

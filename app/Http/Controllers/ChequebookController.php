@@ -78,7 +78,7 @@ class ChequebookController extends Controller
             'serial_prefix' => ['nullable', 'string', 'max:50'],
             'first_leaf' => ['required', 'integer', 'min:0'],
             'last_leaf' => ['required', 'integer', 'gte:first_leaf'],
-            'next_leaf' => ['nullable', 'integer', 'gte:first_leaf', 'lte:last_leaf'],
+            'next_leaf' => ['nullable', 'integer', 'gte:first_leaf', 'lte:'.((int) toEnglish($request->input('last_leaf')) + 1)],
             'description' => ['nullable', 'string', 'max:1000'],
         ]);
 

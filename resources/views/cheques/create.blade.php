@@ -148,7 +148,7 @@
                                     </option>
                                 @endforeach
                             </select>
-                            <div class="label text-xs opacity-60">{{ __('Optional for payable cheques') }}</div>
+                            <div class="label text-xs opacity-60">{{ __('Selecting a chequebook automatically assigns its next leaf as the cheque number.') }}</div>
                             @error('chequebook_id')
                                 <span class="label text-xs text-rose-700">{{ $message }}</span>
                             @enderror

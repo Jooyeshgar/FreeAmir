@@ -16,6 +16,7 @@ use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Services\ChequeService;
 use App\Services\InvoiceService;
@@ -193,9 +194,51 @@ class ChequeManagementTest extends TestCase
         $unlinked = $this->issuedCheque();
 
         $this->assertTrue($linked->chequebook->is($chequebook));
+        $this->assertSame('100', $linked->cheque_number);
         $this->assertNull($linked->serial);
+        $this->assertSame(101, $chequebook->fresh()->next_leaf);
         $this->assertTrue($chequebook->cheques()->whereKey($linked->id)->exists());
         $this->assertNull($unlinked->chequebook_id);
+    }
+
+    public function test_chequebook_leaf_allocation_is_sequential_and_rejects_exhaustion(): void
+    {
+        $chequebook = Chequebook::create([
+            'bank_account_id' => $this->account->id,
+            'serial_prefix' => 'PAY',
+            'first_leaf' => 100,
+            'last_leaf' => 101,
+            'next_leaf' => 100,
+        ]);
+        $data = [
+            ...$this->data(ChequeType::PAYABLE, ChequeType::SETTLEMENT, $this->vendor),
+            'bank_account_id' => $this->account->id,
+            'chequebook_id' => $chequebook->id,
+        ];
+
+        $first = $this->service->register($this->user, $data);
+        $data['sayad_number'] = (string) $this->sayadSequence++;
+        $second = $this->service->register($this->user, $data);
+
+        $this->assertSame('100', $first->cheque_number);
+        $this->assertSame('101', $second->cheque_number);
+        $this->assertSame(102, $chequebook->fresh()->next_leaf);
+
+        $data['sayad_number'] = $first->sayad_number;
+        $updated = $this->service->update($first, $this->user, $data);
+        $this->assertSame('100', $updated->cheque_number);
+        $this->assertSame(102, $chequebook->fresh()->next_leaf);
+
+        $data['sayad_number'] = (string) $this->sayadSequence++;
+        try {
+            $this->service->register($this->user, $data);
+            $this->fail('An exhausted chequebook accepted another cheque.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('chequebook_id', $exception->errors());
+        }
+
+        $this->assertSame(2, $chequebook->cheques()->count());
+        $this->assertSame(102, $chequebook->fresh()->next_leaf);
     }
 
     public function test_receivable_cheque_cannot_belong_to_a_chequebook(): void
@@ -496,27 +539,22 @@ class ChequeManagementTest extends TestCase
         $this->assertEqualsWithDelta(400, app(PaymentService::class)->remainingAmount($invoice), 0.01);
     }
 
-    public function test_unlinking_invoice_cheque_preserves_it_while_deleting_it_restores_invoice_status(): void
+    public function test_deleting_invoice_cheque_payment_removes_all_cheque_records_and_restores_invoice_status(): void
     {
         $invoice = $this->invoice(InvoiceType::SELL, $this->customer, 1000);
         $cheque = $this->service->register($this->user, $this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 1000));
         $payment = $invoice->payments()->firstOrFail();
         $documentId = $payment->document_id;
+        $transactionIds = $payment->document->transactions()->pluck('id');
+        $historyIds = $cheque->histories()->pluck('id');
 
         app(PaymentService::class)->deletePayment($payment);
 
-        $this->assertNull($payment->fresh()->invoice_id);
-        $this->assertNotNull(Document::find($documentId));
-        $this->assertTrue($invoice->fresh()->status->isApproved());
-
-        $payment->update(['invoice_id' => $invoice->id]);
-        app(PaymentService::class)->syncInvoiceStatus($invoice);
-        $this->assertTrue($invoice->fresh()->status->isPaid());
-
-        $this->service->delete($cheque);
-
         $this->assertNull(Payment::find($payment->id));
+        $this->assertNull(Cheque::withoutGlobalScopes()->find($cheque->id));
+        $this->assertSame(0, ChequeHistory::whereIn('id', $historyIds)->count());
         $this->assertNull(Document::find($documentId));
+        $this->assertSame(0, Transaction::whereIn('id', $transactionIds)->count());
         $this->assertTrue($invoice->fresh()->status->isApproved());
     }
 
@@ -592,7 +630,9 @@ class ChequeManagementTest extends TestCase
         ]);
         $invoice = $this->invoice(InvoiceType::BUY, $this->vendor, 1000);
 
-        $this->get(route('invoices.show', $invoice))->assertOk()->assertSee('name="chequebook_id"', false);
+        $this->get(route('invoices.show', $invoice))->assertOk()->assertSee('name="bank_account_id"', false)
+            ->assertSee('name="chequebook_id"', false)->assertDontSee('name="bank_id"', false)
+            ->assertSee(__('If you select a chequebook, it must belong to the selected bank account.'));
 
         $response = $this->post(route('invoices.payments.store-cheque', $invoice), [
             'amount' => 1000,

@@ -369,7 +369,7 @@ class InvoiceController extends Controller
         $paidAmount = $paymentService->paidAmount($invoice);
         $remainingAmount = $paymentService->remainingAmount($invoice);
         $chequeDirection = $chequeService->directionForInvoice($invoice);
-        $chequeBanks = $chequeDirection ? Bank::orderBy('name')->get() : collect();
+        $chequeBanks = $chequeDirection && $chequeDirection !== ChequeType::PAYABLE ? Bank::orderBy('name')->get() : collect();
         $chequeBankAccounts = $chequeDirection === ChequeType::PAYABLE ? BankAccount::with('bank')->orderBy('name')->get() : collect();
         $chequebooks = $chequeDirection === ChequeType::PAYABLE ? Chequebook::with('bankAccount.bank')->orderBy('serial_prefix')->get() : collect();
 

@@ -915,6 +915,9 @@
                                     </div>
                                     <form method="POST" action="{{ route('invoices.payments.store-cheque', $invoice) }}">
                                         @csrf
+                                        <div class="alert alert-info p-1 mb-2 text-sm">
+                                            {{ __('If you select a chequebook, it must belong to the selected bank account.') }}
+                                        </div>
                                         <div class="grid gap-4 md:grid-cols-2">
                                             <div x-data="{ amountInput: '{{ $remainingAmount }}' }">
                                                 <label class="label"><span class="label-text">{{ __('Amount') }}</span></label>
@@ -944,15 +947,17 @@
                                                     autocomplete="off" readonly
                                                     input_class="input-bordered" required />
                                             </div>
-                                            <div>
-                                                <label class="label"><span class="label-text">{{ __('Bank') }}</span></label>
-                                                <select name="bank_id" class="select select-bordered w-full" required>
-                                                    <option value="">{{ __('Select bank') }}</option>
-                                                    @foreach($chequeBanks as $bank)
-                                                        <option value="{{ $bank->id }}">{{ $bank->name }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
+                                            @if($chequeDirection !== \App\Enums\ChequeType::PAYABLE)
+                                                <div>
+                                                    <label class="label"><span class="label-text">{{ __('Bank') }}</span></label>
+                                                    <select name="bank_id" class="select select-bordered w-full" required>
+                                                        <option value="">{{ __('Select bank') }}</option>
+                                                        @foreach($chequeBanks as $bank)
+                                                            <option value="{{ $bank->id }}">{{ $bank->name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                            @endif
                                             @if($chequeDirection === \App\Enums\ChequeType::PAYABLE)
                                                 <div>
                                                     <label class="label"><span class="label-text">{{ __('Bank account') }}</span></label>
