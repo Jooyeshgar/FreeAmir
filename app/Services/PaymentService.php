@@ -3,9 +3,12 @@
 namespace App\Services;
 
 use App\DTO\InvoiceStatusDecision;
+use App\Enums\ChequeType;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\BankAccount;
+use App\Models\Cheque;
+use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Subject;
@@ -13,6 +16,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PaymentService
 {
@@ -40,25 +44,26 @@ class PaymentService
         return Subject::query()->with('parent')->whereIn('id', $ids)->orderBy('code')->get();
     }
 
-    public function paidAmount(Invoice $invoice): float
+    public function paidAmount(Invoice $invoice, ?Payment $except = null): float
     {
-        return (float) $invoice->payments()->whereNotNull('document_id')->sum('amount');
+        return (float) $invoice->payments()->whereNotNull('document_id')->when($except, fn ($query) => $query->where('id', '!=', $except->id))->sum('amount');
     }
 
-    public function remainingAmount(Invoice $invoice): float
+    public function remainingAmount(Invoice $invoice, ?Payment $except = null): float
     {
-        return max((float) $invoice->amount - $this->paidAmount($invoice), 0.0);
+        return max((float) $invoice->amount - $this->paidAmount($invoice, $except), 0.0);
     }
 
-    public function validateInvoicePayment(Invoice $invoice, array $data = []): InvoiceStatusDecision
+    public function validateInvoicePayment(Invoice $invoice, array $data = [], ?Payment $except = null): InvoiceStatusDecision
     {
         $decision = new InvoiceStatusDecision;
 
-        if (! $invoice->status->isApproved() && ! $invoice->status->isPartiallyPaid()) {
+        $editingSettledPayment = $except && $invoice->status->isApprovedOrSettled();
+        if (! $invoice->status->isApproved() && ! $invoice->status->isPartiallyPaid() && ! $editingSettledPayment) {
             $decision->addMessage('error', __('The invoice must be approved before recording a payment.'));
         }
 
-        if ($this->remainingAmount($invoice) <= 0) {
+        if ($this->remainingAmount($invoice, $except) <= 0) {
             $decision->addMessage('error', __('This invoice is fully paid.'));
         }
 
@@ -66,7 +71,7 @@ class PaymentService
             $decision->addMessage('error', __('The selected settlement account is not a valid bank or cash subject.'));
         }
 
-        if (isset($data['amount']) && $data['amount'] > $this->remainingAmount($invoice) + 0.001) {
+        if (isset($data['amount']) && $data['amount'] > $this->remainingAmount($invoice, $except) + 0.001) {
             $decision->addMessage('error', __('Payment amount exceeds the remaining balance of the invoice.'));
         }
 
@@ -110,7 +115,48 @@ class PaymentService
         });
     }
 
-    private function syncInvoiceStatus(Invoice $invoice): void
+    public function saveChequePayment(User $user, ?Invoice $invoice, Cheque $cheque, Document $document, int $settlementSubjectId, ?Payment $payment = null): Payment
+    {
+        if ($invoice) {
+            $decision = $this->validateInvoicePayment($invoice, [
+                'amount' => (float) $cheque->amount,
+                'date' => $cheque->write_date->toDateString(),
+            ], $payment);
+            if ($decision->hasErrors()) {
+                throw ValidationException::withMessages([
+                    'invoice_id' => $decision->messages->pluck('text')->all(),
+                ]);
+            }
+        }
+
+        $attributes = [
+            'invoice_id' => $invoice?->id,
+            'cheque_id' => $cheque->id,
+            'payer_id' => $cheque->direction === ChequeType::RECEIVABLE ? $cheque->customer_id : null,
+            'amount' => $cheque->amount,
+            'date' => $cheque->write_date,
+            'description' => $cheque->desc,
+            'reference_number' => $cheque->sayad_number,
+            'document_id' => $document->id,
+            'settlement_subject_id' => $settlementSubjectId,
+            'creator_id' => $user->id,
+        ];
+
+        if ($payment) {
+            $payment->update($attributes);
+        } else {
+            $payment = Payment::create($attributes);
+        }
+
+        DocumentService::syncDocumentable($document, $payment);
+        if ($invoice) {
+            $this->syncInvoiceStatus($invoice);
+        }
+
+        return $payment->fresh();
+    }
+
+    public function syncInvoiceStatus(Invoice $invoice): void
     {
         if (! $invoice->status->isApprovedOrSettled()) {
             return;
@@ -163,12 +209,39 @@ class PaymentService
     public function deletePayment(Payment $payment): void
     {
         DB::transaction(function () use ($payment) {
-            $invoice = $payment->invoice;
-            if ($payment->document) {
-                DocumentService::deleteDocument($payment->document_id);
+            $lockedPayment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
+
+            if ($lockedPayment->cheque_id) { // payment with cheque
+                $lockedCheque = Cheque::query()->lockForUpdate()->findOrFail($lockedPayment->cheque_id);
+
+                $invoices = Invoice::whereIn('id', $lockedCheque->payments()->whereNotNull('invoice_id')->pluck('invoice_id')->unique())->get();
+
+                $documentIds = $lockedCheque->histories()->pluck('document_id')->merge($lockedCheque->payments()->pluck('document_id'))->merge(
+                    Document::withoutGlobalScopes()->where('documentable_type', $lockedCheque->getMorphClass())->where('documentable_id', $lockedCheque->id)->pluck('id')
+                )->filter()->unique();
+
+                $lockedCheque->payments()->delete();
+                $lockedCheque->delete();
+
+                foreach ($documentIds as $documentId) {
+                    DocumentService::deleteDocument((int) $documentId);
+                }
+
+                foreach ($invoices as $invoice) {
+                    $this->syncInvoiceStatus($invoice);
+                }
+
+                return;
             }
 
-            $payment->delete();
+            $invoice = $lockedPayment->invoice;
+            $documentId = $lockedPayment->document_id;
+
+            $lockedPayment->delete();
+
+            if ($documentId) {
+                DocumentService::deleteDocument((int) $documentId);
+            }
 
             if ($invoice) {
                 $this->syncInvoiceStatus($invoice);
@@ -179,6 +252,12 @@ class PaymentService
     public function removePaymentDocument(Payment $payment): void
     {
         DB::transaction(function () use ($payment) {
+            if ($payment->cheque_id) {
+                throw ValidationException::withMessages([
+                    'payment' => __('A cheque payment document is managed through the cheque lifecycle.'),
+                ]);
+            }
+
             $invoice = $payment->invoice;
             if ($payment->document) {
                 DocumentService::deleteDocument($payment->document_id);
@@ -199,6 +278,12 @@ class PaymentService
 
             if ($payment->document_id) {
                 $decision->addMessage('error', __('This payment already has an accounting document.'));
+
+                return $decision;
+            }
+
+            if ($payment->cheque_id) {
+                $decision->addMessage('error', __('A cheque payment document is managed through the cheque lifecycle.'));
 
                 return $decision;
             }

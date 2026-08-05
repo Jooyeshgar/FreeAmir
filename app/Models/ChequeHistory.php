@@ -2,42 +2,44 @@
 
 namespace App\Models;
 
-use App\Models\Scopes\FiscalYearScope;
+use App\Enums\ChequeType;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ChequeHistory extends Model
 {
     protected $fillable = [
         'cheque_id',
-        'amount',
-        'write_date',
-        'due_date',
-        'serial',
-        'status',
-        'customer_id',
-        'account_id',
-        'transaction_id',
+        'from_status',
+        'to_status',
+        'user_id',
+        'document_id',
+        'payment_id',
         'desc',
-        'date',
     ];
 
-    public static function booted(): void
+    protected $casts = [
+        'from_status' => ChequeType::class,
+        'to_status' => ChequeType::class,
+    ];
+
+    public function cheque(): BelongsTo
     {
-        static::addGlobalScope(new FiscalYearScope());
+        return $this->belongsTo(Cheque::class);
     }
 
-    public function cheque()
+    public function document(): BelongsTo
     {
-        return $this->belongsTo(Cheque::class, 'cheque_id');
+        return $this->belongsTo(Document::class);
     }
 
-    public function customer()
+    public function payment(): BelongsTo
     {
-        return $this->belongsTo(Customer::class, 'customer_id');
+        return $this->belongsTo(Payment::class);
     }
 
-    public function bankAccount()
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(BankAccount::class, 'account_id');
+        return $this->belongsTo(User::class);
     }
 }

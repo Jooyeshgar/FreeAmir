@@ -31,6 +31,9 @@ class ConfigSeeder extends Seeder
             ['type' => 3, 'category' => 1, 'key' => 'cogs_service', 'value' => '106', 'desc' => 'بهای تمام شده خدمات', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'sales_revenue', 'value' => '104', 'desc' => 'درآمد فروش', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'service_revenue', 'value' => '103', 'desc' => 'درآمد خدمات', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'cheque_documents_receivable', 'value' => '44', 'desc' => 'اسناد دریافتنی', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'cheque_documents_in_collection', 'value' => '68', 'desc' => 'اسناد در جریان وصول', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'cheque_documents_payable', 'value' => '46', 'desc' => 'اسناد پرداختنی', 'company_id' => 1],
         ];
 
         $subjectCodes = $this->subjectCodes();
@@ -84,6 +87,9 @@ class ConfigSeeder extends Seeder
             'cogs_service' => '070002',
             'sales_revenue' => '050003',
             'service_revenue' => '050002',
+            'cheque_documents_receivable' => '013001',
+            'cheque_documents_in_collection' => '014001',
+            'cheque_documents_payable' => '020001',
         ];
     }
 }

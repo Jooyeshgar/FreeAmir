@@ -285,6 +285,106 @@
                 </div>
             @endif
 
+            {{-- Cheques where this customer is the original account side or endorsee --}}
+            <div class="divider text-lg font-semibold">{{ __('Customer cheques') }}</div>
+            <div class="overflow-x-auto">
+                <table class="table w-full mt-4 overflow-auto">
+                    <thead>
+                        <tr>
+                            <th class="px-4 py-3">{{ __('Cheque number') }}</th>
+                            <th class="px-4 py-3">{{ __('Direction') }}</th>
+                            <th class="px-4 py-3">{{ __('Account side role') }}</th>
+                            <th class="px-4 py-3">{{ __('Bank') }}</th>
+                            <th class="px-4 py-3 text-center">{{ __('Amount') }}</th>
+                            <th class="px-4 py-3">{{ __('Due date') }}</th>
+                            <th class="px-4 py-3">{{ __('Status') }}</th>
+                            <th class="px-4 py-3 text-center">{{ __('Action') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($cheques as $cheque)
+                            @php
+                                $isOriginalAccountSide = $cheque->customer_id === $customer->id;
+                                $isEndorsee = $cheque->endorsed_to_id === $customer->id;
+                                $isOutstanding = !in_array($cheque->status, [
+                                    \App\Enums\ChequeType::CLEARED,
+                                    \App\Enums\ChequeType::CANCELLED,
+                                    \App\Enums\ChequeType::RETURNED,
+                                ], true);
+                            @endphp
+                            <tr class="hover:bg-base-300">
+                                <td class="px-4 py-3">
+                                    @can('cheques.show')
+                                        <a class="link link-primary" href="{{ route('cheques.show', $cheque) }}">
+                                            {{ localizeNumber($cheque->cheque_number) ?: '—' }}
+                                        </a>
+                                    @else
+                                        <span>{{ localizeNumber($cheque->cheque_number) ?: '—' }}</span>
+                                    @endcan
+                                    <div class="text-xs opacity-60">
+                                        {{ __('Cheque serial') }}: {{ localizeNumber($cheque->serial) ?: '—' }}
+                                    </div>
+                                    <div class="text-xs opacity-60">
+                                        {{ __('Sayad number') }}: {{ localizeNumber($cheque->sayad_number) }}
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <div>{{ $cheque->direction->label() }}</div>
+                                    @if ($cheque->purpose === \App\Enums\ChequeType::GUARANTEE)
+                                        <span class="badge badge-warning badge-sm mt-1">{{ $cheque->purpose->label() }}</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3">
+                                    @if ($isOriginalAccountSide)
+                                        <span class="badge badge-outline">{{ __('Original account side') }}</span>
+                                    @endif
+                                    @if ($isEndorsee)
+                                        <span class="badge badge-secondary">{{ __('Endorsee') }}</span>
+                                        @if (!$isOriginalAccountSide && $cheque->customer)
+                                            <div class="text-xs opacity-60 mt-1">
+                                                {{ __('Original account side: :accountSide', ['accountSide' => $cheque->customer->name]) }}
+                                            </div>
+                                        @endif
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3">
+                                    <div>{{ $cheque->bankAccount?->bank?->name ?? '-' }}</div>
+                                    @if ($cheque->bankAccount)
+                                        <div class="text-xs opacity-60">{{ $cheque->bankAccount->name }} - {{ localizeNumber($cheque->bankAccount->number) }}</div>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-center font-semibold">{{ formatNumber($cheque->amount) }}</td>
+                                <td class="px-4 py-3 {{ $cheque->due_date->isPast() && $isOutstanding ? 'text-error font-bold' : '' }}">
+                                    {{ formatDate($cheque->due_date) }}
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="badge badge-{{ $cheque->status->color() }}">{{ $cheque->status->label() }}</span>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    @can('cheques.show')
+                                        <a href="{{ route('cheques.show', $cheque) }}" class="btn btn-sm btn-info">{{ __('Show') }}</a>
+                                    @else
+                                        <span class="opacity-40">-</span>
+                                    @endcan
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="8" class="text-center py-8 text-gray-500">
+                                    {{ __('No cheques are associated with this customer.') }}
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            @if ($cheques->hasPages())
+                <div class="mt-6 flex justify-center">
+                    {{ $cheques->links() }}
+                </div>
+            @endif
+
             {{-- Orders --}}
             <div class="divider text-lg font-semibold">{{ __('Orders') }}</div>
             <div class="overflow-x-auto">

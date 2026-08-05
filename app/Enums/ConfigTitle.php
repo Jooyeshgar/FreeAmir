@@ -22,6 +22,9 @@ enum ConfigTitle: string
     case SALES_RETURNS = 'SALES_RETURNS';
     case SERVICE_REVENUE = 'SERVICE_REVENUE';
     case COGS_SERVICE = 'COGS_SERVICE';
+    case CHEQUE_DOCUMENTS_RECEIVABLE = 'CHEQUE_DOCUMENTS_RECEIVABLE';
+    case CHEQUE_DOCUMENTS_IN_COLLECTION = 'CHEQUE_DOCUMENTS_IN_COLLECTION';
+    case CHEQUE_DOCUMENTS_PAYABLE = 'CHEQUE_DOCUMENTS_PAYABLE';
 
     // Get translated label
     public function label(): string
@@ -45,6 +48,9 @@ enum ConfigTitle: string
             self::SALES_REVENUE => __('Sales Revenue'),
             self::SERVICE_REVENUE => __('Service Revenue'),
             self::COGS_SERVICE => __('Cost of Services'),
+            self::CHEQUE_DOCUMENTS_RECEIVABLE => __('Documents receivable'),
+            self::CHEQUE_DOCUMENTS_IN_COLLECTION => __('Documents in collection'),
+            self::CHEQUE_DOCUMENTS_PAYABLE => __('Documents payable'),
         };
     }
 }

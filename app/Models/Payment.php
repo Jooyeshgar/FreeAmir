@@ -16,6 +16,7 @@ class Payment extends Model
         'settlement_subject_id',
         'creator_id',
         'invoice_id',
+        'cheque_id',
     ];
 
     protected $casts = [
@@ -58,5 +59,10 @@ class Payment extends Model
     public function invoice()
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    public function cheque()
+    {
+        return $this->belongsTo(Cheque::class);
     }
 }
