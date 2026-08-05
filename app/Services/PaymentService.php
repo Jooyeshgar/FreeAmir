@@ -209,21 +209,39 @@ class PaymentService
     public function deletePayment(Payment $payment): void
     {
         DB::transaction(function () use ($payment) {
-            $invoice = $payment->invoice;
-            if ($payment->cheque_id) {
-                $payment->update(['invoice_id' => null]);
-                if ($invoice) {
+            $lockedPayment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
+
+            if ($lockedPayment->cheque_id) { // payment with cheque
+                $lockedCheque = Cheque::query()->lockForUpdate()->findOrFail($lockedPayment->cheque_id);
+
+                $invoices = Invoice::whereIn('id', $lockedCheque->payments()->whereNotNull('invoice_id')->pluck('invoice_id')->unique())->get();
+
+                $documentIds = $lockedCheque->histories()->pluck('document_id')->merge($lockedCheque->payments()->pluck('document_id'))->merge(
+                    Document::withoutGlobalScopes()->where('documentable_type', $lockedCheque->getMorphClass())->where('documentable_id', $lockedCheque->id)->pluck('id')
+                )->filter()->unique();
+
+                $lockedCheque->payments()->delete();
+                $lockedCheque->delete();
+
+                foreach ($documentIds as $documentId) {
+                    DocumentService::deleteDocument((int) $documentId);
+                }
+
+                foreach ($invoices as $invoice) {
                     $this->syncInvoiceStatus($invoice);
                 }
 
                 return;
             }
 
-            if ($payment->document) {
-                DocumentService::deleteDocument($payment->document_id);
-            }
+            $invoice = $lockedPayment->invoice;
+            $documentId = $lockedPayment->document_id;
 
-            $payment->delete();
+            $lockedPayment->delete();
+
+            if ($documentId) {
+                DocumentService::deleteDocument((int) $documentId);
+            }
 
             if ($invoice) {
                 $this->syncInvoiceStatus($invoice);

@@ -87,11 +87,7 @@ class PaymentController extends Controller
     {
         abort_unless($payment->invoice_id === $invoice->id, 404);
 
-        if ($payment->cheque) {
-            $this->chequeService->delete($payment->cheque);
-        } else {
-            $this->paymentService->deletePayment($payment);
-        }
+        $this->paymentService->deletePayment($payment);
 
         return redirect()->route('invoices.show', $invoice)->with('success', __('Payment removed successfully.'));
     }
