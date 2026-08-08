@@ -2943,7 +2943,6 @@
     "thousand": "هزار",
     "three": "سه",
     "transaction_desc": "شرح ردیف",
-    "transfer": "انتقال دهید",
     "transfer this subject to this level": "این سرفصل را منتقل کنید",
     "trillion": "تریلیون",
     "twelve": "دوازده",
@@ -2960,5 +2959,17 @@
     "— Select Format —": "- انتخاب فرمت -",
     "— Select —": "— انتخاب کنید —",
     "… and :n more.": "… و :n مورد دیگر.",
-    "… and :remaining more records.": "… و :remaining رکوردهای بیشتر."
+    "… and :remaining more records.": "… و :remaining رکوردهای بیشتر.",
+    "transfer": "انتقال دهید",
+    "Check your email": "ایمیل خود را بررسی کنید",
+    "We sent a verification link and a 6-digit code to :email.": "یک لینک تأیید و کد ۶ رقمی به :email فرستادیم.",
+    "Verification code": "کد تأیید",
+    "Enter the code from your email.": "کد موجود در ایمیل را وارد کنید.",
+    "Verify code": "تأیید کد",
+    "To verify your account without entering a code, use the verification link in the email.": "برای تأیید حساب بدون وارد کردن کد، از لینک تأیید موجود در ایمیل استفاده کنید.",
+    "Resend email": "ارسال دوباره ایمیل",
+    "Verify your account using either the magic link or the code below.": "حساب خود را با لینک ورود سریع یا کد زیر تأیید کنید.",
+    "Your 6-digit verification code": "کد تأیید ۶ رقمی شما",
+    "This code expires in :minutes minutes.": "این کد تا :minutes دقیقه اعتبار دارد.",
+    "The verification code is invalid or has expired.": "کد تأیید نامعتبر است یا اعتبار آن به پایان رسیده است."
 }

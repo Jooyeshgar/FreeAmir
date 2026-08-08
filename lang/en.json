@@ -2960,5 +2960,16 @@
     "— Select Format —": "— Select Format —",
     "— Select —": "— Select —",
     "… and :n more.": "… and :n more.",
-    "… and :remaining more records.": "… and :remaining more records."
+    "… and :remaining more records.": "… and :remaining more records.",
+    "Check your email": "Check your email",
+    "We sent a verification link and a 6-digit code to :email.": "We sent a verification link and a 6-digit code to :email.",
+    "Verification code": "Verification code",
+    "Enter the code from your email.": "Enter the code from your email.",
+    "Verify code": "Verify code",
+    "To verify your account without entering a code, use the verification link in the email.": "To verify your account without entering a code, use the verification link in the email.",
+    "Resend email": "Resend email",
+    "Verify your account using either the magic link or the code below.": "Verify your account using either the magic link or the code below.",
+    "Your 6-digit verification code": "Your 6-digit verification code",
+    "This code expires in :minutes minutes.": "This code expires in :minutes minutes.",
+    "The verification code is invalid or has expired.": "The verification code is invalid or has expired."
 }
