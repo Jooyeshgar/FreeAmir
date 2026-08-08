@@ -138,7 +138,7 @@
     </main>
 
     <footer class="mt-8 pb-4 text-center text-xs opacity-60">
-        {{ __(config('app.name')) }} · {{ __('Version') }} {{ localizeNumber(config('app.version')) }}
+        {{ __(config('app.name')) }} - {{ __('Version') }} {{ localizeNumber(config('app.version')) }}
     </footer>
 
     @stack('scripts')
