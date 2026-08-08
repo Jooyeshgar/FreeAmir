@@ -68,7 +68,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
         $this->forceFill([
             'email_verification_otp' => Hash::make($otp),
-            'email_verification_otp_expires_at' => now()->addMinutes(config('auth.verification.expire', 1)),
+            'email_verification_otp_expires_at' => now()->addMinutes(config('app.verification_expire', 1)),
         ])->save();
 
         $this->notify(new UserVerificationNotification($otp));

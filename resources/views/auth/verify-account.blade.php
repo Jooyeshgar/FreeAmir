@@ -27,7 +27,7 @@
                 </p>
 
                 <p style="margin: 24px 0 8px; text-align: center; color: #6b7280; font-size: 13px;">{{ __('Your 6-digit verification code') }}</p>
-                <p style="margin: 0; text-align: center; font-family: monospace; font-size: 30px; font-weight: 700; letter-spacing: 8px; color: #111827;" dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}">{{ $otp }}</p>
+                <p style="margin: 0; text-align: center; font-family: monospace; font-size: 30px; font-weight: 700; letter-spacing: 8px; color: #111827;" dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}">{{ localizeNumber($otp) }}</p>
                 <p style="text-align: center; color: #6b7280; font-size: 13px;">{{ __('This code expires in :minutes minutes.', ['minutes' => localizeNumber($expiresInMinutes)]) }}</p>
 
                 <p>{{ __('If you did not create an account, no further action is required.') }}</p>

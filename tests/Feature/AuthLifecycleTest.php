@@ -892,7 +892,7 @@ class AuthLifecycleTest extends TestCase
     public function test_verification_otp_uses_the_configured_expiration_time(): void
     {
         Notification::fake();
-        config(['auth.verification.expire' => 5]);
+        config(['app.verification_expire' => 5]);
         $this->freezeTime(function (): void {
             $user = User::factory()->unverified()->create();
 
@@ -902,6 +902,13 @@ class AuthLifecycleTest extends TestCase
             $this->assertNotNull($user->email_verification_otp);
             $this->assertSame(now()->addMinutes(5)->timestamp, $user->email_verification_otp_expires_at->timestamp);
             Notification::assertSentTo($user, UserVerificationNotification::class);
+
+            $notification = Notification::sent($user, UserVerificationNotification::class)->first();
+            $mail = $notification->toMail($user);
+            $this->assertSame(5, $mail->viewData['expiresInMinutes']);
+
+            parse_str((string) parse_url($mail->actionUrl, PHP_URL_QUERY), $query);
+            $this->assertSame(now()->addMinutes(5)->timestamp, (int) $query['expires']);
         });
     }
 
