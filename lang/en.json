@@ -2962,7 +2962,7 @@
     "… and :n more.": "… and :n more.",
     "… and :remaining more records.": "… and :remaining more records.",
     "Check your email": "Check your email",
-    "We sent a verification link and a 6-digit code to :email.": "We sent a verification link and a 6-digit code to :email.",
+    "A verification link and a 6-digit code have been sent to :email.": "A verification link and a 6-digit code have been sent to :email.",
     "Verification code": "Verification code",
     "Enter the code from your email.": "Enter the code from your email.",
     "Verify code": "Verify code",

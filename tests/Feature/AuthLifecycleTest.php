@@ -964,6 +964,22 @@ class AuthLifecycleTest extends TestCase
         }
     }
 
+    public function test_verification_otp_rejects_non_string_input_without_an_error(): void
+    {
+        $this->withoutMiddleware(ThrottleRequests::class);
+        $user = User::factory()->unverified()->create([
+            'email_verification_otp' => Hash::make('123456'),
+            'email_verification_otp_expires_at' => now()->addDay(),
+        ]);
+
+        $response = $this->actingAs($user)->from(route('verification.notice'))->post(route('verification.otp'), ['otp' => ['123456']]);
+
+        $response->assertRedirect(route('verification.notice'));
+        $response->assertSessionHasErrors('otp');
+        $this->actingAs($user)->get(route('verification.notice'))->assertOk();
+        $this->assertFalse($user->fresh()->hasVerifiedEmail());
+    }
+
     public function test_verification_otp_is_rejected_when_no_code_has_been_issued(): void
     {
         $this->withoutMiddleware(ThrottleRequests::class);

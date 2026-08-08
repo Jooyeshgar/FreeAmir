@@ -108,14 +108,14 @@ class RegisterController extends Controller
             return $this->verifiedRedirect($user);
         }
 
+        $request->validate(['otp' => ['required', 'string']]);
+        $otp = toEnglish($request->otp);
+
+        validator(['otp' => $otp], ['otp' => ['digits:6']])->validate();
+
         $user->refresh();
-        $otp = toEnglish((string) $request->input('otp'));
 
-        $request->merge(['otp' => $otp])->validate([
-            'otp' => ['required', 'digits:6'],
-        ]);
-
-        if (! $user->email_verification_otp || ! $user->email_verification_otp_expires_at || $user->email_verification_otp_expires_at->isPast() || ! Hash::check($otp, $user->email_verification_otp)) {
+        if (! $user->email_verification_otp_expires_at?->isFuture() || ! Hash::check($otp, $user->email_verification_otp)) {
             return back()->withErrors(['otp' => __('The verification code is invalid or has expired.')]);
         }
 

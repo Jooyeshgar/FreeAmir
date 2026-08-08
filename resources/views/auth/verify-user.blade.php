@@ -7,7 +7,7 @@
                 <div>
                     <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-2xl text-blue-600">✉</div>
                     <h1 class="font-bold text-center">{{ __('Check your email') }}</h1>
-                    <p class="mt-2 text-sm">{{ __('A verification link and a 6-digit code to :email has been sent.', ['email' => auth()->user()->email]) }}</p>
+                    <p class="mt-2 text-sm">{{ __('A verification link and a 6-digit code have been sent to :email.', ['email' => auth()->user()->email]) }}</p>
                 </div>
 
                 <x-show-message-bags />
@@ -15,12 +15,14 @@
                 <form method="POST" action="{{ route('verification.otp') }}" class="mt-3 flex flex-col items-center">
                     @csrf
                     <div class="flex items-start gap-2">
-                        <div x-data="{ otp: @js(toEnglish((string) old('otp', ''))) }">
-                            <x-text-input id_input="otp" input_name="otp" x-model="otp" :input_value="old('otp')" :title="__('Verification code')" label_class="text-sm text-slate-600"
+                        @php($oldOtp = is_string(old('otp')) ? old('otp') : '')
+                        <div x-data="{ otp: @js(toEnglish($oldOtp)) }">
+                            <x-text-input id_input="otp" input_name="otp" x-model="otp" :input_value="$oldOtp" :title="__('Verification code')" label_class="text-sm text-slate-600"
                                 :placeholder="localizeNumber('000000')" inputmode="numeric" autocomplete="one-time-code" maxlength="6" autofocus
                                 aria-describedby="otp-help" input_class="text-center font-mono text-base tracking-[0.25em] direction-ltr"
                                 x-on:input="otp = $store.utils.convertToEnglish($event.target.value).replace(/\D/g, '').slice(0, 6)"
                                 x-effect="$el.value = $store.utils.localizeNumber(otp)" />
+                            <p id="otp-help" class="mt-1 text-xs text-slate-500">{{ __('Enter the code from your email.') }}</p>
                             @error('otp')
                                 <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                             @enderror
