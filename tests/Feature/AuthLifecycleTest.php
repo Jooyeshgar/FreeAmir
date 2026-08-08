@@ -995,6 +995,23 @@ class AuthLifecycleTest extends TestCase
         $this->assertFalse($user->fresh()->hasVerifiedEmail());
     }
 
+    public function test_verification_otp_is_rejected_when_hash_is_missing_but_expiration_is_in_the_future(): void
+    {
+        $this->withoutMiddleware(ThrottleRequests::class);
+        $user = User::factory()->unverified()->create([
+            'email_verification_otp' => null,
+            'email_verification_otp_expires_at' => now()->addDay(),
+        ]);
+
+        $response = $this->actingAs($user)
+            ->from(route('verification.notice'))
+            ->post(route('verification.otp'), ['otp' => '123456']);
+
+        $response->assertRedirect(route('verification.notice'));
+        $response->assertSessionHasErrors('otp');
+        $this->assertFalse($user->fresh()->hasVerifiedEmail());
+    }
+
     public function test_invalid_or_expired_verification_otp_is_rejected(): void
     {
         $this->withoutMiddleware(ThrottleRequests::class);

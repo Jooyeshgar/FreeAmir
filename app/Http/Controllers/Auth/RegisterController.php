@@ -115,7 +115,7 @@ class RegisterController extends Controller
 
         $user->refresh();
 
-        if (! $user->email_verification_otp_expires_at?->isFuture() || ! Hash::check($otp, $user->email_verification_otp)) {
+        if (! $user->email_verification_otp || ! $user->email_verification_otp_expires_at?->isFuture() || ! Hash::check($otp, $user->email_verification_otp)) {
             return back()->withErrors(['otp' => __('The verification code is invalid or has expired.')]);
         }
 
