@@ -70,7 +70,12 @@ class StoreProductRequest extends FormRequest
     {
         $validatedData = $this->validated();
 
-        $validatedData['code'] = empty($validatedData['code']) ? Product::max('code') + 1 : $validatedData['code'];
+        if (empty($validatedData['code'])) {
+            $maxCode = Product::where('company_id', getActiveCompany())->whereRaw('code REGEXP "^[0-9]+$"')
+                ->selectRaw('MAX(CAST(code AS UNSIGNED)) AS max_code')->value('max_code');
+
+            $validatedData['code'] = ($maxCode ?: 0) + 1;
+        }
         $validatedData['selling_price'] = convertToFloat(empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price']);
         $validatedData['quantity_warning'] = convertToFloat(empty($validatedData['quantity_warning']) ? 0 : str_replace(',', '', $validatedData['quantity_warning']));
         $validatedData['quantity'] = convertToFloat(empty($validatedData['quantity']) ? 0 : str_replace(',', '', $validatedData['quantity']));

@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Service;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -19,12 +19,12 @@ class UpdateServiceRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'code' => ['nullable', Rule::unique('services', 'code')->ignore($this->route('service'))],
+            'code' => ['nullable', Rule::unique('services', 'code')->ignore($this->route('service'))->where('company_id', getActiveCompany())],
             'name' => 'required|max:20|string|regex:/^[\w\d\s\-\:\.]*$/u',
             'group' => 'required|exists:service_groups,id|integer',
             'selling_price' => [
@@ -45,7 +45,7 @@ class UpdateServiceRequest extends FormRequest
     {
         $validatedData = $this->validated();
 
-        $validatedData['code'] = empty($validatedData['code']) ? Service::max('code') + 1 : $validatedData['code'];
+        $validatedData['code'] ??= $this->route('service')->code;
         $validatedData['selling_price'] = convertToFloat(empty($validatedData['selling_price']) ? 0 : $validatedData['selling_price']);
         $validatedData['vat'] = convertToFloat(empty($validatedData['vat']) ? 0 : $validatedData['vat']);
         $validatedData['sstid'] = empty($validatedData['sstid']) ? null : $validatedData['sstid'];
