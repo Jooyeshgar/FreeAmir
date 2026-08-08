@@ -118,33 +118,44 @@
                 </article>
             @endcan
 
-            <article class="card overflow-hidden border border-base-300 bg-base-100 shadow-sm">
-                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-base-300 px-5 py-4">
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <h2 class="font-bold text-base-content">{{ __('Forecasts') }}</h2>
-                            <span class="badge badge-neutral badge-sm">{{ localizeNumber($budgetLines->count()) }}</span>
-                            <span class="badge badge-primary badge-outline badge-sm">{{ trans_choice(':count manual forecasts', $manualForecastsCount, ['count' => localizeNumber($manualForecastsCount)]) }}</span>
+            @foreach ([[$displayBudgetLines, false], ...($hasMoreBudgetLines ? [[$allBudgetLinesByForecast, true]] : [])] as [$tableLines, $isModal])
+                @if ($isModal)
+                    <dialog id="all-monthly-forecasts-modal" class="modal">
+                        <div class="modal-box w-11/12 max-w-6xl p-0">
+                            <div class="flex items-center justify-between border-b border-base-300 px-5 py-4">
+                                <div>
+                                    <h3 class="text-lg font-bold">{{ __('Forecasts') }}</h3>
+                                    <p class="mt-1 text-xs text-base-content/50">{{ $selectedMonthLabel }}
+                                        <span class="badge badge-neutral badge-sm">{{ localizeNumber($budgetLines->count()) }}</span>
+                                    </p>
+                                </div>
+                                <form method="dialog"><button class="btn btn-circle btn-ghost btn-sm" aria-label="{{ __('Close') }}">✕</button></form>
+                            </div>
+                @else
+                    <article class="card overflow-hidden border border-base-300 bg-base-100 shadow-sm">
+                        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-base-300 px-5 py-4">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h2 class="font-bold text-base-content">{{ __('Forecasts') }}</h2>
+                                    <span class="badge badge-neutral badge-sm">{{ localizeNumber($budgetLines->count()) }}</span>
+                                    <span class="badge badge-primary badge-outline badge-sm">{{ trans_choice(':count manual forecasts', $manualForecastsCount, ['count' => localizeNumber($manualForecastsCount)]) }}</span>
+                                </div>
+                                <p class="mt-1 text-xs text-base-content/50">{{ __('Completed months use actual amounts as system forecasts; other months average the actual amounts of prior completed months.') }}</p>
+                            </div>
+                            @if ($hasMoreBudgetLines)
+                                <button type="button" class="btn btn-outline btn-primary btn-sm" onclick="document.getElementById('all-monthly-forecasts-modal').showModal()">{{ __('View all') }}</button>
+                            @endif
                         </div>
-                        <p class="mt-1 text-xs text-base-content/50">{{ __('Completed months use actual amounts as system forecasts; other months average the actual amounts of prior completed months.') }}</p>
-                    </div>
-                    @if ($hasMoreBudgetLines)
-                        <button type="button" class="btn btn-outline btn-primary btn-sm"
-                            onclick="document.getElementById('all-monthly-forecasts-modal').showModal()">
-                            {{ __('View all') }}
-                        </button>
-                    @endif
-                </div>
-
-                @if ($hasOverlappingForecasts)
-                    <div role="alert" class="alert alert-info mx-5 mt-4 text-sm">
-                        {{ __('Child forecasts shown below a manually forecast root are details only and are already included in the root total.') }}
-                    </div>
+                        @if ($hasOverlappingForecasts)
+                            <div role="alert" class="alert alert-info mx-5 mt-4 text-sm">
+                                {{ __('Child forecasts shown below a manually forecast root are details only and are already included in the root total.') }}
+                            </div>
+                        @endif
                 @endif
 
-                <div class="overflow-x-auto">
+                <div @class(['max-h-[70vh] overflow-auto' => $isModal, 'overflow-x-auto' => ! $isModal])>
                     <table class="table">
-                        <thead class="bg-base-200/60 text-xs uppercase text-base-content/55">
+                        <thead @class(['text-xs uppercase text-base-content/55', 'sticky top-0 z-10 bg-base-200' => $isModal, 'bg-base-200/60' => ! $isModal])>
                             <tr>
                                 <th>{{ __('Subject') }}</th>
                                 <th>{{ __('Type') }}</th>
@@ -155,14 +166,12 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-base-200">
-                            @forelse ($displayBudgetLines as $line)
+                            @forelse ($tableLines as $line)
                                 <tr class="group hover:bg-base-200/40">
                                     <td>
                                         <div @class(['min-w-56', 'ps-6' => $line['isChild']])>
                                             <div class="flex items-center gap-1.5 font-medium text-base-content">
-                                                @if ($line['isChild'])
-                                                    <span class="text-base-content/35">↳</span>
-                                                @endif
+                                                @if ($line['isChild'])<span class="text-base-content/35">↳</span>@endif
                                                 <span>{{ $line['subject']->name }}</span>
                                                 @if ($line['isRemainder'])
                                                     <span class="badge badge-ghost badge-xs">{{ __('Remainder excluding child forecasts') }}</span>
@@ -179,22 +188,11 @@
                                         </span>
                                     </td>
                                     <td class="text-end tabular-nums">
-                                        @if ($line['source'] === 'manual')
-                                            <div class="space-y-2">
-                                                <div>
-                                                    <div class="font-semibold">{{ formatNumber($line['forecast']) }}</div>
-                                                </div>
-                                                <div>
-                                                    <div class="font-medium text-base-content/70">
-                                                        <span class="badge badge-ghost badge-xs">{{ __('System forecast') }}</span>
-                                                        {{ formatNumber($line['systemForecast']) }}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        @else
-                                            <div class="font-semibold">{{ formatNumber($line['forecast']) }}</div>
-                                            <div class="mt-1 text-[11px] text-base-content/50"><span class="badge badge-ghost badge-xs">{{ __('System forecast') }}</span></div>
-                                        @endif
+                                        <div class="font-semibold">{{ formatNumber($line['forecast']) }}</div>
+                                        <div class="mt-1 text-[11px] text-base-content/50">
+                                            <span class="badge badge-ghost badge-xs">{{ __('System forecast') }}</span>
+                                            @if ($line['source'] === 'manual') {{ formatNumber($line['systemForecast']) }} @endif
+                                        </div>
                                     </td>
                                     <td class="text-end tabular-nums">
                                         @if (is_null($line['actual']))
@@ -204,11 +202,11 @@
                                         @endif
                                     </td>
                                     <td class="text-end">
-                                        @if (! is_null($line['variance']))
+                                        @if (is_null($line['variance']))
+                                            <span class="text-base-content/35">—</span>
+                                        @else
                                             <div class="font-semibold tabular-nums {{ $line['variance'] >= 0 ? 'text-success' : 'text-error' }}">{{ formatNumber($line['variance']) }}</div>
                                             <div class="text-[11px] text-base-content/45">{{ localizeNumber(number_format($line['variancePercent'], 1)) }}%</div>
-                                        @else
-                                            <span class="text-base-content/35">—</span>
                                         @endif
                                     </td>
                                     <td>
@@ -233,124 +231,18 @@
                         </tbody>
                     </table>
                 </div>
-            </article>
 
-            @if ($hasMoreBudgetLines)
-                <dialog id="all-monthly-forecasts-modal" class="modal">
-                    <div class="modal-box w-11/12 max-w-6xl p-0">
-                        <div class="flex items-center justify-between border-b border-base-300 px-5 py-4">
-                            <div>
-                                <h3 class="text-lg font-bold">{{ __('Forecasts') }}</h3> 
-                                <p class="mt-1 text-xs text-base-content/50">{{ $selectedMonthLabel }}
-                                    <span class="badge badge-neutral badge-sm">{{ localizeNumber($budgetLines->count()) }}</span>
-                                </p>
+                @if ($isModal)
+                            <div class="modal-action m-0 border-t border-base-300 px-5 py-3">
+                                <form method="dialog"><button class="btn btn-sm">{{ __('Close') }}</button></form>
                             </div>
-                            <form method="dialog">
-                                <button class="btn btn-circle btn-ghost btn-sm" aria-label="{{ __('Close') }}">✕</button>
-                            </form>
                         </div>
-
-                        <div class="max-h-[70vh] overflow-auto">
-                            <table class="table">
-                                <thead class="sticky top-0 z-10 bg-base-200 text-xs uppercase text-base-content/55">
-                                    <tr>
-                                        <th>{{ __('Subject') }}</th>
-                                        <th>{{ __('Type') }}</th>
-                                        <th class="text-end">{{ __('Applied Forecast') }}</th>
-                                        <th class="text-end">{{ __('Actual') }}</th>
-                                        <th class="text-end">{{ __('Variance') }}</th>
-                                        <th class="w-12"></th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-base-200">
-                                    @forelse ($allBudgetLinesByForecast as $line)
-                                        <tr class="group hover:bg-base-200/40">
-                                            <td>
-                                                <div @class(['min-w-56', 'ps-6' => $line['isChild']])>
-                                                    <div class="flex items-center gap-1.5 font-medium text-base-content">
-                                                        @if ($line['isChild'])
-                                                            <span class="text-base-content/35">↳</span>
-                                                        @endif
-                                                        <span>{{ $line['subject']->name }}</span>
-                                                        @if ($line['isRemainder'])
-                                                            <span class="badge badge-ghost badge-xs">{{ __('Remainder excluding child forecasts') }}</span>
-                                                        @elseif (! $line['includedInSummary'])
-                                                            <span class="badge badge-info badge-outline badge-xs">{{ __('Included in parent total') }}</span>
-                                                        @endif
-                                                    </div>
-                                                    <div class="mt-0.5 font-mono text-[11px] text-base-content/45">{{ formatCode($line['subject']->code) }}</div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <span class="badge {{ $line['type'] === 'income' ? 'badge-success' : 'badge-error' }} badge-outline badge-sm">
-                                                    {{ $line['type'] === 'income' ? __('Income') : __('Expense') }}
-                                                </span>
-                                            </td>
-                                            <td class="text-end tabular-nums">
-                                                @if ($line['source'] === 'manual')
-                                                    <div class="space-y-2">
-                                                        <div class="flex justify-end gap-4">
-                                                            <div class="font-semibold">{{ formatNumber($line['forecast']) }}</div>
-                                                        </div>
-                                                        <div>
-                                                            <div class="font-medium text-base-content/70">
-                                                                <span class="badge badge-ghost badge-xs">{{ __('System forecast') }}</span>
-                                                                {{ formatNumber($line['systemForecast']) }}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                @else
-                                                    <div class="font-semibold">{{ formatNumber($line['forecast']) }}</div>
-                                                    <div class="mt-1 text-[11px] text-base-content/50">
-                                                        <span class="badge badge-ghost badge-xs">{{ __('System forecast') }}</span>
-                                                    </div>
-                                                @endif
-                                            </td>
-                                            <td class="text-end tabular-nums">
-                                                @if (is_null($line['actual']))
-                                                    <span class="badge badge-error badge-outline badge-sm">{{ __('No document') }}</span>
-                                                @else
-                                                    {{ formatNumber($line['actual']) }}
-                                                @endif
-                                            </td>
-                                            <td class="text-end">
-                                                @if (! is_null($line['variance']))
-                                                    <div class="font-semibold tabular-nums {{ $line['variance'] >= 0 ? 'text-success' : 'text-error' }}">{{ formatNumber($line['variance']) }}</div>
-                                                    <div class="text-[11px] text-base-content/45">{{ localizeNumber(number_format($line['variancePercent'], 1)) }}%</div>
-                                                @else
-                                                    <span class="text-base-content/35">—</span>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                @if ($line['budget'])
-                                                    @can('budgets.destroy')
-                                                        <form method="POST" action="{{ route('budgets.destroy', $line['budget']) }}" onsubmit="return confirm('{{ __('Are you sure?') }}')">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button type="submit" class="btn btn-square btn-ghost btn-xs text-base-content/35 hover:text-error" title="{{ __('Delete') }}">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16m-10 4v6m4-6v6M9 7l1-3h4l1 3m-9 0 1 14h10l1-14" />
-                                                                </svg>
-                                                            </button>
-                                                        </form>
-                                                    @endcan
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr><td colspan="6" class="py-12 text-center text-base-content/50">{{ __('No temporary income or expense subjects are available.') }}</td></tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div class="modal-action m-0 border-t border-base-300 px-5 py-3">
-                            <form method="dialog"><button class="btn btn-sm">{{ __('Close') }}</button></form>
-                        </div>
-                    </div>
-                    <form method="dialog" class="modal-backdrop"><button aria-label="{{ __('Close') }}"></button></form>
-                </dialog>
-            @endif
+                        <form method="dialog" class="modal-backdrop"><button aria-label="{{ __('Close') }}"></button></form>
+                    </dialog>
+                @else
+                    </article>
+                @endif
+            @endforeach
         </section>
 
         <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">

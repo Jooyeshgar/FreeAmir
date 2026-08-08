@@ -24,16 +24,17 @@ class MonthlyBudgetController extends Controller
         $currentYear = (int) toEnglish(jdate('Y'));
         $selectedMonth = (int) ($validated['month'] ?? ($fiscalYear === $currentYear ? toEnglish(jdate('n')) : 1));
         $subjectRestrictions = $this->service->subjectSelectionRestrictions($selectedMonth);
-        $subjects = $this->service->selectableSubjectsForMonth($selectedMonth, $subjectRestrictions);
-        $subjectTree = $this->subjectService->buildSubjectTreeFromCollection($subjects);
+        $subjects = $this->subjectService->buildSubjectTreeFromCollection($this->service->selectableSubjects($subjectRestrictions));
         $oldSubjectId = (int) $request->old('subject_id');
         $selectedSubject = $oldSubjectId && ! in_array($oldSubjectId, $subjectRestrictions, true) ? Subject::query()->where('is_permanent', false)->find($oldSubjectId) : null;
         $analysis = $this->service->analysis($selectedMonth);
         $currency = config('amir.currency') ?? __('Rial');
-        $incomeLinesCount = $analysis['budgetLines']->where('type', 'income')->count();
-        $expenseLinesCount = $analysis['budgetLines']->where('type', 'expense')->count();
-        $allBudgetLinesByForecast = $analysis['budgetLines']->values();
+        $allBudgetLinesByForecast = $analysis['budgetLines'];
         $displayBudgetLines = $allBudgetLinesByForecast->take(5);
+        $incomeLines = $allBudgetLinesByForecast->where('type', 'income');
+        $expenseLines = $allBudgetLinesByForecast->where('type', 'expense');
+        $incomeLinesCount = $incomeLines->count();
+        $expenseLinesCount = $expenseLines->count();
         $incomeAchievement = $analysis['actualsCalculated'] && $analysis['forecastIncome'] > 0 ? max(0, ($analysis['actualIncome'] / $analysis['forecastIncome']) * 100) : 0;
         $expenseUtilization = $analysis['actualsCalculated'] && $analysis['forecastExpense'] > 0 ? max(0, ($analysis['actualExpense'] / $analysis['forecastExpense']) * 100) : 0;
         $comparisonDatasets = [[
@@ -51,13 +52,13 @@ class MonthlyBudgetController extends Controller
         }
 
         $incomeItemDatasets = $this->itemComparisonDatasets(
-            $analysis['budgetLines']->where('type', 'income')->where('includedInSummary', true),
+            $incomeLines->where('includedInSummary', true),
             $analysis['actualsCalculated'],
             '#2563eb',
             '#16a34a'
         );
         $expenseItemDatasets = $this->itemComparisonDatasets(
-            $analysis['budgetLines']->where('type', 'expense')->where('includedInSummary', true),
+            $expenseLines->where('includedInSummary', true),
             $analysis['actualsCalculated'],
             '#f59e0b',
             '#dc2626'
@@ -65,19 +66,16 @@ class MonthlyBudgetController extends Controller
 
         return view('monthly-budgets.index', array_merge(
             [
-                'fiscalYear' => $fiscalYear,
-                'subjects' => $subjectTree,
+                'subjects' => $subjects,
                 'selectedSubject' => $selectedSubject,
                 'currency' => $currency,
                 'incomeLinesCount' => $incomeLinesCount,
                 'expenseLinesCount' => $expenseLinesCount,
                 'allBudgetLinesByForecast' => $allBudgetLinesByForecast,
                 'displayBudgetLines' => $displayBudgetLines,
-                'hasMoreBudgetLines' => $analysis['budgetLines']->count() > $displayBudgetLines->count(),
+                'hasMoreBudgetLines' => $allBudgetLinesByForecast->count() > 5,
                 'incomeAchievement' => $incomeAchievement,
-                'incomeProgress' => min(100, $incomeAchievement),
                 'expenseUtilization' => $expenseUtilization,
-                'expenseProgress' => min(100, $expenseUtilization),
                 'comparisonDatasets' => $comparisonDatasets,
                 'incomeItemDatasets' => $incomeItemDatasets,
                 'expenseItemDatasets' => $expenseItemDatasets,
@@ -164,29 +162,17 @@ class MonthlyBudgetController extends Controller
     private function itemComparisonDatasets(Collection $lines, bool $includeActuals, string $forecastColor, string $actualColor): array
     {
         $topLines = $lines->sortByDesc(fn (array $line) => max((float) $line['forecast'], (float) ($line['actual'] ?? 0)))->take(5);
-        $forecast = $topLines->mapWithKeys(fn (array $line) => [
-            formatCode($line['subject']->code).' '.$line['subject']->name => $line['forecast'],
-        ])->all();
-        $datasets = [[
-            'label' => __('Forecast'),
-            'data' => $forecast,
-            'backgroundColor' => $forecastColor.'cc',
-            'borderColor' => $forecastColor,
+        $dataset = fn (string $label, string $key, string $color) => [
+            'label' => __($label),
+            'data' => $topLines->mapWithKeys(fn (array $line) => [formatCode($line['subject']->code).' '.$line['subject']->name => $line[$key]])->all(),
+            'backgroundColor' => $color.'cc',
+            'borderColor' => $color,
             'borderRadius' => 5,
-        ]];
+        ];
 
-        if ($includeActuals) {
-            $datasets[] = [
-                'label' => __('Actual'),
-                'data' => $topLines->mapWithKeys(fn (array $line) => [
-                    formatCode($line['subject']->code).' '.$line['subject']->name => $line['actual'],
-                ])->all(),
-                'backgroundColor' => $actualColor.'cc',
-                'borderColor' => $actualColor,
-                'borderRadius' => 5,
-            ];
-        }
-
-        return $datasets;
+        return array_values(array_filter([
+            $dataset('Forecast', 'forecast', $forecastColor),
+            $includeActuals ? $dataset('Actual', 'actual', $actualColor) : null,
+        ]));
     }
 }

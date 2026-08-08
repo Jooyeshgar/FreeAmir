@@ -10,23 +10,21 @@
         ->unique()
         ->values()
         ->all();
-    $lightBackgroundPalette = [
-        ['#2563eb', '#f59e0b'], // Forecast income, forecast expense
-        ['#059669', '#e11d48'], // Actual income, actual expense
+    $palettes = [
+        'background' => [
+            'light' => [['#2563eb', '#f59e0b'], ['#059669', '#e11d48']],
+            'dark' => [['#60a5fa', '#fbbf24'], ['#34d399', '#fb7185']],
+        ],
+        'border' => [
+            'light' => [['#1d4ed8', '#d97706'], ['#047857', '#be123c']],
+            'dark' => [['#93c5fd', '#fde68a'], ['#6ee7b7', '#fda4af']],
+        ],
     ];
-    $lightBorderPalette = [['#1d4ed8', '#d97706'], ['#047857', '#be123c']];
-    $darkBackgroundPalette = [
-        ['#60a5fa', '#fbbf24'], // Forecast income, forecast expense
-        ['#34d399', '#fb7185'], // Actual income, actual expense
-    ];
-    $darkBorderPalette = [['#93c5fd', '#fde68a'], ['#6ee7b7', '#fda4af']];
     $normalizedDatasets = collect($datasets)
-        ->map(function (array $dataset) use ($labels) {
-            $dataset['data'] = collect($labels)->map(fn(string $label) => $dataset['data'][$label] ?? 0)->all();
-            $dataset['borderWidth'] = 1;
-
-            return $dataset;
-        })
+        ->map(fn(array $dataset) => [...$dataset,
+            'data' => collect($labels)->map(fn(string $label) => $dataset['data'][$label] ?? 0)->all(),
+            'borderWidth' => 1,
+        ])
         ->values()
         ->all();
 @endphp
@@ -44,37 +42,24 @@
 
             const getTheme = () => window.getFreeAmirChartTheme ? window.getFreeAmirChartTheme() : {
                 isDark: false,
-                textColor: '#475569',
                 mutedTextColor: '#64748b',
                 gridColor: 'rgba(148, 163, 184, 0.24)',
                 tooltipBackgroundColor: '#111827',
                 tooltipTextColor: '#f8fafc',
             };
             const datasets = @json($normalizedDatasets);
-            const lightBackgroundPalette = @json($lightBackgroundPalette);
-            const lightBorderPalette = @json($lightBorderPalette);
-            const darkBackgroundPalette = @json($darkBackgroundPalette);
-            const darkBorderPalette = @json($darkBorderPalette);
-            const getDatasetColor = (lightPalette, darkPalette, datasetIndex, dataIndex) => {
-                const palette = getTheme().isDark ? darkPalette : lightPalette;
+            const palettes = @json($palettes);
+            const getDatasetColor = (type, datasetIndex, dataIndex) => {
+                const palette = palettes[type][getTheme().isDark ? 'dark' : 'light'];
                 const datasetColors = palette[datasetIndex] ?? palette[0];
 
                 return datasetColors[dataIndex] ?? datasetColors[0];
             };
 
             datasets.forEach((dataset, datasetIndex) => {
-                dataset.backgroundColor = (context) => getDatasetColor(
-                    lightBackgroundPalette,
-                    darkBackgroundPalette,
-                    datasetIndex,
-                    context.dataIndex,
-                );
-                dataset.borderColor = (context) => getDatasetColor(
-                    lightBorderPalette,
-                    darkBorderPalette,
-                    datasetIndex,
-                    context.dataIndex,
-                );
+                ['background', 'border'].forEach((type) => {
+                    dataset[`${type}Color`] = (context) => getDatasetColor(type, datasetIndex, context.dataIndex);
+                });
             });
 
             window.__chartInstances = window.__chartInstances || {};
@@ -129,12 +114,7 @@
                         datalabels: {
                             anchor: 'end',
                             align: 'top',
-                            color: (context) => getDatasetColor(
-                                lightBorderPalette,
-                                darkBorderPalette,
-                                context.datasetIndex,
-                                context.dataIndex,
-                            ),
+                            color: (context) => getDatasetColor('border', context.datasetIndex, context.dataIndex),
                             font: {
                                 weight: 'bold',
                                 size: 12,
@@ -145,9 +125,7 @@
                 },
             });
 
-            window.addEventListener('theme:changed', () => {
-                window.__chartInstances[chartId]?.update();
-            });
+            window.addEventListener('theme:changed', () => window.__chartInstances[chartId]?.update());
         });
     </script>
 @endpush

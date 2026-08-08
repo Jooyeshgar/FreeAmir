@@ -60,23 +60,15 @@ class CostIncomeDashboardTest extends TestCase
 
         $response = $this->actingAs($this->user)->get(route('reports.cost-income'));
 
-        $response->assertOk();
-        $response->assertViewIs('reports.cost-income.index');
-        $response->assertViewHas('totalIncome');
-        $response->assertViewHas('totalCost');
-        $response->assertViewHas('profit');
-        $response->assertViewHas('margin');
-        $response->assertViewHas('monthlyIncome');
-        $response->assertViewHas('monthlyCost');
-        $response->assertViewHas('forecastIncome');
-        $response->assertViewHas('forecastExpense');
-        $response->assertViewHas('monthlyBudgetLinks', fn (array $links) => count($links) === 12 && str_contains($links[0], 'month=1'));
-        $response->assertViewHas('monthsWithoutDocumentsLabel', fn (string $label) => str_contains($label, '، ') && str_contains($label, ' و '));
-        $response->assertViewHas('debtors');
-        $response->assertViewHas('creditors');
-        $response->assertSee('"type":"line"', false);
-        $response->assertSee("getElementsAtEventForMode(event, 'index', { intersect: true }", false);
-        $response->assertDontSee("getElementsAtEventForMode(event, 'index', { intersect: false }", false);
+        $response->assertOk()->assertViewIs('reports.cost-income.index');
+        foreach (['totalIncome', 'totalCost', 'profit', 'margin', 'monthlyIncome', 'monthlyCost', 'forecastIncome', 'forecastExpense', 'debtors', 'creditors'] as $key) {
+            $response->assertViewHas($key);
+        }
+        $response->assertViewHas('monthlyBudgetLinks', fn (array $links) => count($links) === 12 && str_contains($links[0], 'month=1'))
+            ->assertViewHas('monthsWithoutDocumentsLabel', fn (string $label) => str_contains($label, '، ') && str_contains($label, ' و '))
+            ->assertSee('"type":"line"', false)
+            ->assertSee("getElementsAtEventForMode(event, 'index', { intersect: true }", false)
+            ->assertDontSee("getElementsAtEventForMode(event, 'index', { intersect: false }", false);
     }
 
     public function test_budget_editor_sees_bulk_forecast_modal_with_current_and_future_months_selected(): void
@@ -127,9 +119,7 @@ class CostIncomeDashboardTest extends TestCase
 
     public function test_user_without_permission_is_forbidden(): void
     {
-        $response = $this->actingAs($this->user)->get(route('reports.cost-income'));
-
-        $response->assertForbidden();
+        $this->actingAs($this->user)->get(route('reports.cost-income'))->assertForbidden();
     }
 
     public function test_summary_classifies_balance_by_sign_and_computes_profit(): void
@@ -142,12 +132,14 @@ class CostIncomeDashboardTest extends TestCase
 
         $summary = $this->service()->summary();
 
-        $this->assertSame(1000, $summary['totalIncome']);
-        $this->assertSame(400, $summary['totalCost']);
-        $this->assertSame(600, $summary['profit']);
-        $this->assertSame(60, $summary['margin']); // 600 / 1000 * 100
-        $this->assertSame(['Sales revenue' => 1000], $summary['incomeBreakdown']);
-        $this->assertSame(['Wages' => 400], $summary['costBreakdown']);
+        $this->assertSame([
+            'totalIncome' => 1000,
+            'totalCost' => 400,
+            'profit' => 600,
+            'margin' => 60,
+            'incomeBreakdown' => ['Sales revenue' => 1000],
+            'costBreakdown' => ['Wages' => 400],
+        ], collect($summary)->only(['totalIncome', 'totalCost', 'profit', 'margin', 'incomeBreakdown', 'costBreakdown'])->all());
     }
 
     public function test_summary_excludes_permanent_subjects(): void
@@ -156,11 +148,7 @@ class CostIncomeDashboardTest extends TestCase
         $this->transaction($income->id, 1000);
 
         // A permanent subject (e.g. a balance-sheet account) must never affect P&L.
-        $permanent = Subject::factory()->create([
-            'company_id' => $this->companyId,
-            'name' => 'Bank',
-            'is_permanent' => true,
-        ]);
+        $permanent = $this->subject('Bank', permanent: true);
         $this->transaction($permanent->id, 9999);
 
         $summary = $this->service()->summary();
@@ -207,10 +195,12 @@ class CostIncomeDashboardTest extends TestCase
 
         $monthly = $this->service()->monthlyIncomeAndCost();
 
-        $this->assertSame(1000, $monthly['income']['مرداد']);
-        $this->assertSame(0, $monthly['income']['آبان']);
-        $this->assertSame(500, $monthly['cost']['آبان']);
-        $this->assertSame(0, $monthly['cost']['مرداد']);
+        $this->assertSame([1000, 0, 500, 0], [
+            $monthly['income']['مرداد'],
+            $monthly['income']['آبان'],
+            $monthly['cost']['آبان'],
+            $monthly['cost']['مرداد'],
+        ]);
     }
 
     public function test_monthly_totals_match_trial_balance_from_roots_to_deepest_descendants(): void
@@ -267,10 +257,12 @@ class CostIncomeDashboardTest extends TestCase
 
         $monthly = $this->service()->monthlyIncomeAndCost();
 
-        $this->assertSame(800, $monthly['income']['مهر']);
-        $this->assertSame(800, $monthly['cost']['مهر']);
-        $this->assertSame(0, $monthly['income']['آبان']);
-        $this->assertSame(0, $monthly['cost']['آبان']);
+        $this->assertSame([800, 800, 0, 0], [
+            $monthly['income']['مهر'],
+            $monthly['cost']['مهر'],
+            $monthly['income']['آبان'],
+            $monthly['cost']['آبان'],
+        ]);
     }
 
     public function test_monthly_totals_include_leap_esfand_day_thirty_and_exclude_next_fiscal_year(): void
@@ -291,10 +283,12 @@ class CostIncomeDashboardTest extends TestCase
 
         $monthly = $this->service()->monthlyIncomeAndCost();
 
-        $this->assertSame(700, $monthly['income']['اسفند']);
-        $this->assertSame(400, $monthly['cost']['اسفند']);
-        $this->assertSame(0, $monthly['income']['فروردین']);
-        $this->assertSame(0, $monthly['cost']['فروردین']);
+        $this->assertSame([700, 400, 0, 0], [
+            $monthly['income']['اسفند'],
+            $monthly['cost']['اسفند'],
+            $monthly['income']['فروردین'],
+            $monthly['cost']['فروردین'],
+        ]);
     }
 
     public function test_top_customers_splits_debtors_and_creditors_by_sign(): void
@@ -306,12 +300,10 @@ class CostIncomeDashboardTest extends TestCase
 
         $this->assertCount(1, $result['debtors']);
         $this->assertCount(1, $result['creditors']);
-
-        $this->assertSame($debtor->subject_id, $result['debtors'][0]['subject_id']);
-        $this->assertSame(700, $result['debtors'][0]['amount']);
-
-        $this->assertSame($creditor->subject_id, $result['creditors'][0]['subject_id']);
-        $this->assertSame(500, $result['creditors'][0]['amount']);
+        $this->assertSame([
+            ['subject_id' => $debtor->subject_id, 'amount' => 700],
+            ['subject_id' => $creditor->subject_id, 'amount' => 500],
+        ], collect(['debtors', 'creditors'])->map(fn (string $type) => collect($result[$type][0])->only(['subject_id', 'amount'])->all())->all());
     }
 
     private function service(): CostIncomeService
@@ -321,32 +313,27 @@ class CostIncomeDashboardTest extends TestCase
 
     private function nonPermanentSubject(string $name, SubjectType $type = SubjectType::BOTH): Subject
     {
-        return Subject::factory()->create([
-            'company_id' => $this->companyId,
-            'name' => $name,
-            'type' => $type,
-            'is_permanent' => false,
-        ]);
+        return $this->subject($name, $type);
     }
 
     private function childSubject(Subject $parent, string $name, SubjectType $type): Subject
     {
-        return Subject::factory()->withParent($parent)->create([
+        return $this->subject($name, $type, $parent);
+    }
+
+    private function subject(string $name, SubjectType $type = SubjectType::BOTH, ?Subject $parent = null, bool $permanent = false): Subject
+    {
+        return Subject::factory()->when($parent, fn ($factory) => $factory->withParent($parent))->create([
             'company_id' => $this->companyId,
             'name' => $name,
             'type' => $type,
-            'is_permanent' => false,
+            'is_permanent' => $permanent,
         ]);
     }
 
     private function permanentCounterSubject(): Subject
     {
-        return Subject::factory()->create([
-            'company_id' => $this->companyId,
-            'name' => 'Monthly totals counter account',
-            'type' => SubjectType::BOTH,
-            'is_permanent' => true,
-        ]);
+        return $this->subject('Monthly totals counter account', permanent: true);
     }
 
     /**
@@ -355,10 +342,10 @@ class CostIncomeDashboardTest extends TestCase
     private function balancedDocument(array $lines, string $date, Subject $counter): Document
     {
         $document = $this->makeDocument($date);
-        $total = 0.0;
+        $total = array_sum(array_column($lines, 1));
+        $lines[] = [$counter, -$total];
 
         foreach ($lines as [$subject, $value]) {
-            $total += $value;
             Transaction::create([
                 'value' => $value,
                 'subject_id' => $subject->id,
@@ -367,14 +354,6 @@ class CostIncomeDashboardTest extends TestCase
                 'desc' => 'monthly hierarchy test',
             ]);
         }
-
-        Transaction::create([
-            'value' => -$total,
-            'subject_id' => $counter->id,
-            'document_id' => $document->id,
-            'user_id' => $this->user->id,
-            'desc' => 'monthly hierarchy test counter',
-        ]);
 
         return $document;
     }
@@ -425,10 +404,6 @@ class CostIncomeDashboardTest extends TestCase
 
     private function grant(string ...$permissions): void
     {
-        $this->user->givePermissionTo(
-            collect($permissions)
-                ->map(fn (string $permission) => Permission::firstOrCreate(['name' => $permission]))
-                ->all()
-        );
+        $this->user->givePermissionTo(collect($permissions)->map(fn (string $permission) => Permission::firstOrCreate(['name' => $permission]))->all());
     }
 }
