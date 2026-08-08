@@ -10,6 +10,7 @@ use App\Notifications\UserVerificationNotification;
 use App\Services\GlobalConfigService;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
@@ -599,6 +600,129 @@ class AuthLifecycleTest extends TestCase
         $response->assertRedirect(route('registered-user.company.create'));
         $response->assertSessionHas('success');
         $this->assertTrue($user->fresh()->hasVerifiedEmail());
+    }
+
+    public function test_verification_email_contains_a_working_six_digit_otp(): void
+    {
+        $this->withoutMiddleware(ThrottleRequests::class);
+        Notification::fake();
+        $user = User::factory()->unverified()->create();
+        $otp = null;
+
+        $this->actingAs($user)->post(route('verification.send'))->assertSessionHas('success');
+
+        Notification::assertSentTo($user, UserVerificationNotification::class, function (UserVerificationNotification $notification) use ($user, &$otp): bool {
+            $otp = $notification->toMail($user)->viewData['otp'];
+
+            return preg_match('/^\d{6}$/', $otp) === 1;
+        });
+
+        $response = $this->actingAs($user)->post(route('verification.otp'), ['otp' => $otp]);
+
+        $response->assertRedirect(route('registered-user.company.create'));
+        $response->assertSessionHas('success');
+        $user->refresh();
+        $this->assertTrue($user->hasVerifiedEmail());
+        $this->assertNull($user->email_verification_otp);
+        $this->assertNull($user->email_verification_otp_expires_at);
+    }
+
+    public function test_verification_otp_uses_the_configured_expiration_time(): void
+    {
+        Notification::fake();
+        config(['auth.verification.expire' => 5]);
+        $this->freezeTime(function (): void {
+            $user = User::factory()->unverified()->create();
+
+            $user->sendEmailVerificationNotification();
+
+            $user->refresh();
+            $this->assertNotNull($user->email_verification_otp);
+            $this->assertSame(now()->addMinutes(5)->timestamp, $user->email_verification_otp_expires_at->timestamp);
+            Notification::assertSentTo($user, UserVerificationNotification::class);
+        });
+    }
+
+    public function test_incorrect_unexpired_verification_otp_is_rejected(): void
+    {
+        $this->withoutMiddleware(ThrottleRequests::class);
+        $user = User::factory()->unverified()->create([
+            'email_verification_otp' => Hash::make('123456'),
+            'email_verification_otp_expires_at' => now()->addDay(),
+        ]);
+
+        $response = $this->actingAs($user)->from(route('verification.notice'))->post(route('verification.otp'), ['otp' => '654321']);
+
+        $response->assertRedirect(route('verification.notice'));
+        $response->assertSessionHasErrors('otp');
+        $user->refresh();
+        $this->assertFalse($user->hasVerifiedEmail());
+        $this->assertNotNull($user->email_verification_otp);
+        $this->assertNotNull($user->email_verification_otp_expires_at);
+    }
+
+    public function test_verification_otp_accepts_persian_digits(): void
+    {
+        $this->withoutMiddleware(ThrottleRequests::class);
+        $user = User::factory()->unverified()->create([
+            'email_verification_otp' => Hash::make('123456'),
+            'email_verification_otp_expires_at' => now()->addDay(),
+        ]);
+
+        $this->assertSame('123456', toEnglish('۱۲۳۴۵۶'));
+        $this->assertTrue(Hash::check(toEnglish('۱۲۳۴۵۶'), $user->email_verification_otp));
+
+        $response = $this->actingAs($user)->post(route('verification.otp'), ['otp' => '۱۲۳۴۵۶']);
+
+        $response->assertRedirect(route('registered-user.company.create'));
+        $this->assertTrue($user->fresh()->hasVerifiedEmail());
+    }
+
+    public function test_verification_otp_must_contain_exactly_six_digits(): void
+    {
+        $this->withoutMiddleware(ThrottleRequests::class);
+        $user = User::factory()->unverified()->create([
+            'email_verification_otp' => Hash::make('123456'),
+            'email_verification_otp_expires_at' => now()->addDay(),
+        ]);
+
+        foreach (['', '12345', '1234567', 'abcdef'] as $otp) {
+            $response = $this->actingAs($user)->from(route('verification.notice'))->post(route('verification.otp'), ['otp' => $otp]);
+
+            $response->assertRedirect(route('verification.notice'));
+            $response->assertSessionHasErrors('otp');
+            $this->assertFalse($user->fresh()->hasVerifiedEmail());
+        }
+    }
+
+    public function test_verification_otp_is_rejected_when_no_code_has_been_issued(): void
+    {
+        $this->withoutMiddleware(ThrottleRequests::class);
+        $user = User::factory()->unverified()->create([
+            'email_verification_otp' => null,
+            'email_verification_otp_expires_at' => null,
+        ]);
+
+        $response = $this->actingAs($user)->from(route('verification.notice'))->post(route('verification.otp'), ['otp' => '123456']);
+
+        $response->assertRedirect(route('verification.notice'));
+        $response->assertSessionHasErrors('otp');
+        $this->assertFalse($user->fresh()->hasVerifiedEmail());
+    }
+
+    public function test_invalid_or_expired_verification_otp_is_rejected(): void
+    {
+        $this->withoutMiddleware(ThrottleRequests::class);
+        $user = User::factory()->unverified()->create([
+            'email_verification_otp' => Hash::make('123456'),
+            'email_verification_otp_expires_at' => now()->subMinute(),
+        ]);
+
+        $response = $this->actingAs($user)->from(route('verification.notice'))->post(route('verification.otp'), ['otp' => '123456']);
+
+        $response->assertRedirect(route('verification.notice'));
+        $response->assertSessionHasErrors('otp');
+        $this->assertFalse($user->fresh()->hasVerifiedEmail());
     }
 
     public function test_verification_rejects_a_validly_signed_link_with_the_wrong_hash(): void

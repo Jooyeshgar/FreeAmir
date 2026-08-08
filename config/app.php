@@ -1,5 +1,6 @@
 <?php
 
+use App\Providers\AppServiceProvider;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\ServiceProvider;
 
@@ -49,6 +50,8 @@ return [
     'registration' => (bool) env('APP_REGISTRATION', true),
 
     'email_verification' => (bool) env('APP_REGISTRATION', true) && (bool) env('APP_EMAIL_VERIFICATION', true),
+
+    'verification_expire' => (int) env('APP_VERIFICATION_EXPIRE', 1),
 
     /*
     |--------------------------------------------------------------------------
@@ -162,7 +165,7 @@ return [
     */
 
     'providers' => ServiceProvider::defaultProviders()->merge([
-        App\Providers\AppServiceProvider::class,
+        AppServiceProvider::class,
     ])->toArray(),
 
     /*

@@ -18,6 +18,7 @@ Route::middleware('ensure-feature-enabled:registration')->group(function () {
     Route::post('/register/email', [Controllers\Auth\RegisterController::class, 'registerWithEmail'])->name('register.email');
 });
 Route::get('/verify', [Controllers\Auth\RegisterController::class, 'showVerificationNotice'])->middleware('auth')->name('verification.notice');
+Route::post('/verify-otp', [Controllers\Auth\RegisterController::class, 'verifyOtp'])->middleware(['auth', 'throttle:6,1'])->name('verification.otp');
 Route::post('/verification-notification', [Controllers\Auth\RegisterController::class, 'resendVerificationNotification'])->middleware(['auth', 'throttle:6,1'])->name('verification.send');
 Route::get('/verify/{id}/{hash}', [Controllers\Auth\RegisterController::class, 'verify'])->middleware(['auth', 'signed', 'throttle:6,1'])->name('verification.verify');
 

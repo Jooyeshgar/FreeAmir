@@ -18,13 +18,17 @@
             <td style="padding: 16px;">
                 <p style="color: #111827;">{{ __('Greetings.') }}</p>
 
-                <p>{{ __('Please use the button below to verify your account.') }}</p>
+                <p>{{ __('Verify your account using either the magic link or the code below.') }}</p>
 
                 <p>
                     <center>
                         <a href="{!! $actionUrl !!}" style="padding: 8px; background-color: #2563eb; color: #ffffff;">{{ $actionText }}</a>
                     </center>
                 </p>
+
+                <p style="margin: 24px 0 8px; text-align: center; color: #6b7280; font-size: 13px;">{{ __('Your 6-digit verification code') }}</p>
+                <p style="margin: 0; text-align: center; font-family: monospace; font-size: 30px; font-weight: 700; letter-spacing: 8px; color: #111827;" dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}">{{ $otp }}</p>
+                <p style="text-align: center; color: #6b7280; font-size: 13px;">{{ __('This code expires in :minutes minutes.', ['minutes' => localizeNumber($expiresInMinutes)]) }}</p>
 
                 <p>{{ __('If you did not create an account, no further action is required.') }}</p>
 

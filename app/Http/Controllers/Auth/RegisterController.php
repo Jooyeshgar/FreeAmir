@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules\Password;
 
@@ -93,10 +94,44 @@ class RegisterController extends Controller
             403,
         );
 
-        $user->markEmailAsVerified();
+        $this->markVerified($user);
         event(new Verified($user));
 
         return $this->verifiedRedirect($user)->with('success', __('Your account has been verified successfully.'));
+    }
+
+    public function verifyOtp(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user->hasVerifiedEmail()) {
+            return $this->verifiedRedirect($user);
+        }
+
+        $user->refresh();
+        $otp = toEnglish((string) $request->input('otp'));
+
+        $request->merge(['otp' => $otp])->validate([
+            'otp' => ['required', 'digits:6'],
+        ]);
+
+        if (! $user->email_verification_otp || ! $user->email_verification_otp_expires_at || $user->email_verification_otp_expires_at->isPast() || ! Hash::check($otp, $user->email_verification_otp)) {
+            return back()->withErrors(['otp' => __('The verification code is invalid or has expired.')]);
+        }
+
+        $this->markVerified($user);
+        event(new Verified($user));
+
+        return $this->verifiedRedirect($user)->with('success', __('Your account has been verified successfully.'));
+    }
+
+    private function markVerified(User $user): void
+    {
+        $user->forceFill([
+            'email_verified_at' => $user->freshTimestamp(),
+            'email_verification_otp' => null,
+            'email_verification_otp_expires_at' => null,
+        ])->save();
     }
 
     private function verifiedRedirect(User $user): RedirectResponse

@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\URL;
 
 class UserVerificationNotification extends Notification
 {
+    public function __construct(private readonly string $otp) {}
+
     public function via(object $notifiable): array
     {
         return ['mail'];
@@ -21,6 +23,8 @@ class UserVerificationNotification extends Notification
             ->view('auth.verify-account', [
                 'appName' => __(config('app.name')),
                 'appUrl' => config('app.url'),
+                'otp' => $this->otp,
+                'expiresInMinutes' => config('app.verification_expire', 1),
             ]);
     }
 
@@ -28,7 +32,7 @@ class UserVerificationNotification extends Notification
     {
         return URL::temporarySignedRoute(
             'verification.verify',
-            now()->addMinutes(config('auth.verification.expire', 60)),
+            now()->addMinutes(config('app.verification_expire', 1)),
             [
                 'id' => $notifiable->getKey(),
                 'hash' => sha1($notifiable->getEmailForVerification()),
