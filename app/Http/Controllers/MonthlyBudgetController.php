@@ -17,91 +17,6 @@ class MonthlyBudgetController extends Controller
 
     public function index(Request $request)
     {
-        return $this->renderIndex($request);
-    }
-
-    public function searchSubjects(Request $request, string $month, ?string $scope = null)
-    {
-        $request->merge(['month' => $month, 'scope' => $scope]);
-        $validated = $request->validate([
-            'q' => ['required', 'string', 'max:100'],
-            'month' => ['required', 'integer', 'between:1,12'],
-            'scope' => ['nullable', Rule::in(['all'])],
-        ]);
-        $unavailableSubjectIds = ($validated['scope'] ?? null) === 'all' ? [] : $this->service->subjectSelectionRestrictions((int) $validated['month']);
-
-        $subjects = Subject::query()->whereIn('id', $this->service->forecastableSubjectIds())->whereNotIn('id', $unavailableSubjectIds)
-            ->where('name', 'like', '%'.$validated['q'].'%')->orderBy('code')->limit(25)->get(['id', 'name', 'code', 'parent_id']);
-
-        return response()->json($subjects->map(fn (Subject $subject) => [
-            'id' => $subject->id,
-            'name' => $subject->name,
-            'code' => $subject->code,
-            'parent_id' => $subject->parent_id,
-            'children' => [],
-        ])->values());
-    }
-
-    public function store(Request $request)
-    {
-        $isBulkForecast = $request->input('source') === 'cost-income';
-        $validated = $request->validate(array_merge([
-            'subject_id' => [
-                'required',
-                'integer',
-                Rule::exists('subjects', 'id')->where('company_id', getActiveCompany())->where('is_permanent', false),
-            ],
-            'forecast_amount' => ['required', 'numeric', 'regex:/^-?\d+(\.\d{1,2})?$/', 'not_in:0', 'between:-9999999999999999.99,9999999999999999.99'],
-            'source' => ['nullable', Rule::in(['cost-income'])],
-        ], $isBulkForecast ? [
-            'months' => ['required', 'array', 'min:1'],
-            'months.*' => ['required', 'integer', 'distinct', 'between:1,12'],
-        ] : [
-            'month' => ['required', 'integer', 'between:1,12'],
-        ]));
-        $subject = Subject::query()->findOrFail((int) $validated['subject_id']);
-        $normalizedForecast = $this->service->normalizeSignedForecast($subject, $validated['forecast_amount']);
-
-        if ($isBulkForecast) {
-            $this->service->saveForecastForMonths($validated['months'], array_merge($validated, $normalizedForecast));
-
-            return redirect()->route('reports.cost-income')->with('success', __('Forecast saved successfully for the selected months.'));
-        }
-
-        $month = (int) $validated['month'];
-
-        if (! $this->service->subjectIsAvailableForForecast($month, (int) $validated['subject_id'])) {
-            throw ValidationException::withMessages([
-                'subject_id' => __('The selected subject already has a forecast for this month.'),
-            ]);
-        }
-
-        $this->service->saveForecast($month, array_merge($validated, $normalizedForecast));
-
-        return redirect()->route('budgets.index', ['month' => $month])->with('success', __('Forecast saved successfully.'));
-    }
-
-    public function rollover(Request $request)
-    {
-        $validated = $request->validate([
-            'month' => ['required', 'integer', 'between:1,12'],
-        ]);
-        $month = (int) $validated['month'];
-        $this->service->rollover($month);
-
-        return redirect()->route('budgets.index', ['month' => $month])->with('success', __('Previous month forecast copied successfully.'));
-    }
-
-    public function destroy(MonthlyBudget $monthlyBudget)
-    {
-        $month = $monthlyBudget->month;
-        $monthlyBudget->delete();
-
-        return redirect()->route('budgets.index', ['month' => $month])->with('success', __('Forecast deleted successfully.'));
-    }
-
-    private function renderIndex(Request $request)
-    {
         $validated = $request->validate([
             'month' => ['nullable', 'integer', 'between:1,12'],
         ]);
@@ -169,6 +84,81 @@ class MonthlyBudgetController extends Controller
             ],
             $analysis
         ));
+    }
+
+    public function searchSubjects(Request $request, string $month, ?string $scope = null)
+    {
+        $request->merge(['month' => $month, 'scope' => $scope]);
+        $validated = $request->validate([
+            'q' => ['required', 'string', 'max:100'],
+            'month' => ['required', 'integer', 'between:1,12'],
+            'scope' => ['nullable', Rule::in(['all'])],
+        ]);
+        $unavailableSubjectIds = ($validated['scope'] ?? null) === 'all' ? [] : $this->service->subjectSelectionRestrictions((int) $validated['month']);
+
+        $subjects = Subject::query()->whereIn('id', $this->service->forecastableSubjectIds())->whereNotIn('id', $unavailableSubjectIds)
+            ->where('name', 'like', '%'.$validated['q'].'%')->orderBy('code')->limit(25)->get(['id', 'name', 'code', 'parent_id']);
+
+        return response()->json($subjects->map(fn (Subject $subject) => [
+            'id' => $subject->id,
+            'name' => $subject->name,
+            'code' => $subject->code,
+            'parent_id' => $subject->parent_id,
+            'children' => [],
+        ])->values());
+    }
+
+    public function store(Request $request)
+    {
+        $isBulkForecast = $request->input('source') === 'cost-income';
+        $validated = $request->validate(array_merge([
+            'subject_id' => [
+                'required',
+                'integer',
+                Rule::exists('subjects', 'id')->where('company_id', getActiveCompany())->where('is_permanent', false),
+            ],
+            'forecast_amount' => ['required', 'numeric', 'regex:/^-?\d+(\.\d{1,2})?$/', 'not_in:0', 'between:-9999999999999999.99,9999999999999999.99'],
+            'source' => ['nullable', Rule::in(['cost-income'])],
+        ], $isBulkForecast ? [
+            'months' => ['required', 'array', 'min:1'],
+            'months.*' => ['required', 'integer', 'distinct', 'between:1,12'],
+        ] : [
+            'month' => ['required', 'integer', 'between:1,12'],
+        ]));
+        $subject = Subject::query()->findOrFail((int) $validated['subject_id']);
+        $forecast = array_merge($validated, $this->service->normalizeSignedForecast($subject, $validated['forecast_amount']));
+
+        if ($isBulkForecast) {
+            $this->service->saveForecastForMonths($validated['months'], $forecast);
+
+            return redirect()->route('reports.cost-income')->with('success', __('Forecast saved successfully for the selected months.'));
+        }
+
+        $month = (int) $validated['month'];
+
+        if (! $this->service->subjectIsAvailableForForecast($month, (int) $validated['subject_id'])) {
+            throw ValidationException::withMessages(['subject_id' => __('The selected subject already has a forecast for this month.')]);
+        }
+
+        $this->service->saveForecast($month, $forecast);
+
+        return redirect()->route('budgets.index', ['month' => $month])->with('success', __('Forecast saved successfully.'));
+    }
+
+    public function rollover(Request $request)
+    {
+        $month = (int) $request->validate(['month' => ['required', 'integer', 'between:1,12']])['month'];
+        $this->service->rollover($month);
+
+        return redirect()->route('budgets.index', ['month' => $month])->with('success', __('Previous month forecast copied successfully.'));
+    }
+
+    public function destroy(MonthlyBudget $monthlyBudget)
+    {
+        $month = $monthlyBudget->month;
+        $monthlyBudget->delete();
+
+        return redirect()->route('budgets.index', ['month' => $month])->with('success', __('Forecast deleted successfully.'));
     }
 
     private function itemComparisonDatasets(Collection $lines, bool $includeActuals, string $forecastColor, string $actualColor): array

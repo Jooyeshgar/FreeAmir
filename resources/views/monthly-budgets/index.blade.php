@@ -361,53 +361,24 @@
         </section>
 
         <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <article class="card border border-base-300 bg-base-100 shadow-sm">
-                <div class="card-body p-5">
-                    <div>
-                        <h2 class="card-title text-base">{{ __('Forecast Income Breakdown') }}</h2>
-                        <p class="text-xs text-base-content/50">{{ __('Forecast values for the five largest items.') }}</p>
+            @foreach ([
+                [__('Forecast Income Breakdown'), __('Forecast values for the five largest items.'), 'monthlyIncomeForecastItemsChart', $incomeItemDatasets[0] ?? null],
+                [__('Actual Income Breakdown'), __('Actual values for the five largest items.'), 'monthlyIncomeActualItemsChart', $incomeItemDatasets[1] ?? null],
+                [__('Forecast Cost Breakdown'), __('Forecast values for the five largest items.'), 'monthlyExpenseForecastItemsChart', $expenseItemDatasets[0] ?? null],
+                [__('Actual Cost Breakdown'), __('Actual values for the five largest items.'), 'monthlyExpenseActualItemsChart', $expenseItemDatasets[1] ?? null],
+            ] as [$title, $description, $chartId, $dataset])
+                <article class="card border border-base-300 bg-base-100 shadow-sm">
+                    <div class="card-body p-5">
+                        <div>
+                            <h2 class="card-title text-base">{{ $title }}</h2>
+                            <p class="text-xs text-base-content/50">{{ $description }}</p>
+                        </div>
+                        <div class="mt-2">
+                            <x-charts.item-comparison-pie :chart-id="$chartId" height-class="h-64" :datasets="$dataset ? [$dataset] : []" />
+                        </div>
                     </div>
-                    <div class="mt-2">
-                        <x-charts.item-comparison-pie chart-id="monthlyIncomeForecastItemsChart" height-class="h-64" :datasets="isset($incomeItemDatasets[0]) ? [$incomeItemDatasets[0]] : []" />
-                    </div>
-                </div>
-            </article>
-
-            <article class="card border border-base-300 bg-base-100 shadow-sm">
-                <div class="card-body p-5">
-                    <div>
-                        <h2 class="card-title text-base">{{ __('Actual Income Breakdown') }}</h2>
-                        <p class="text-xs text-base-content/50">{{ __('Actual values for the five largest items.') }}</p>
-                    </div>
-                    <div class="mt-2">
-                        <x-charts.item-comparison-pie chart-id="monthlyIncomeActualItemsChart" height-class="h-64" :datasets="isset($incomeItemDatasets[1]) ? [$incomeItemDatasets[1]] : []" />
-                    </div>
-                </div>
-            </article>
-
-            <article class="card border border-base-300 bg-base-100 shadow-sm">
-                <div class="card-body p-5">
-                    <div>
-                        <h2 class="card-title text-base">{{ __('Forecast Cost Breakdown') }}</h2>
-                        <p class="text-xs text-base-content/50">{{ __('Forecast values for the five largest items.') }}</p>
-                    </div>
-                    <div class="mt-2">
-                        <x-charts.item-comparison-pie chart-id="monthlyExpenseForecastItemsChart" height-class="h-64" :datasets="isset($expenseItemDatasets[0]) ? [$expenseItemDatasets[0]] : []" />
-                    </div>
-                </div>
-            </article>
-
-            <article class="card border border-base-300 bg-base-100 shadow-sm">
-                <div class="card-body p-5">
-                    <div>
-                        <h2 class="card-title text-base">{{ __('Actual Cost Breakdown') }}</h2>
-                        <p class="text-xs text-base-content/50">{{ __('Actual values for the five largest items.') }}</p>
-                    </div>
-                    <div class="mt-2">
-                        <x-charts.item-comparison-pie chart-id="monthlyExpenseActualItemsChart" height-class="h-64" :datasets="isset($expenseItemDatasets[1]) ? [$expenseItemDatasets[1]] : []" />
-                    </div>
-                </div>
-            </article>
+                </article>
+            @endforeach
         </section>
 
         <article class="card border border-base-300 bg-base-100 shadow-sm">

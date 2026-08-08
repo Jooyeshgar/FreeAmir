@@ -87,9 +87,30 @@ class CostIncomeService
      */
     public function monthlyIncomeAndCost(): array
     {
-        $income = array_fill_keys(self::MONTHS, 0);
-        $cost = array_fill_keys(self::MONTHS, 0);
+        $monthly = $this->monthlyIncomeAndCostByMonth();
+        $income = [];
+        $cost = [];
 
+        foreach (self::MONTHS as $number => $name) {
+            $income[$name] = $monthly['income'][$number];
+            $cost[$name] = $monthly['cost'][$number];
+        }
+
+        return compact('income', 'cost');
+    }
+
+    /**
+     * Monthly income and cost keyed by Jalali month number.
+     *
+     * Like totalIncome and totalCost, each temporary root is netted with all
+     * descendants before its signed balance is classified.
+     *
+     * @return array{income: array<int, int>, cost: array<int, int>}
+     */
+    public function monthlyIncomeAndCostByMonth(): array
+    {
+        $income = array_fill(1, 12, 0);
+        $cost = array_fill(1, 12, 0);
         $nonPermanentSubjects = Subject::where('is_permanent', false)->whereIsRoot()->get();
 
         foreach ($nonPermanentSubjects as $subject) {
@@ -99,9 +120,9 @@ class CostIncomeService
                 $amount = (int) ($monthly[$number] ?? 0);
 
                 if ($amount > 0) {
-                    $income[$name] += $amount;
+                    $income[$number] += $amount;
                 } elseif ($amount < 0) {
-                    $cost[$name] += abs($amount);
+                    $cost[$number] += abs($amount);
                 }
             }
         }

@@ -16,7 +16,7 @@ use App\Services\SubjectService;
 use App\Services\TrialBalanceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Carbon;
 use Spatie\Permission\Models\Permission;
 use Tests\Helpers\SeederHelper;
 use Tests\TestCase;
@@ -35,9 +35,8 @@ class CostIncomeDashboardTest extends TestCase
     {
         parent::setUp();
 
-        config(['cache.default' => 'array', 'app.locale' => 'fa']);
+        config(['app.locale' => 'fa']);
         app()->setLocale('fa');
-        Cache::flush();
 
         $company = Company::factory()->create(['fiscal_year' => 1405]);
         $this->companyId = $company->id;
@@ -95,6 +94,22 @@ class CostIncomeDashboardTest extends TestCase
             ->assertSee('name="months[]"', false)
             ->assertSee('name="forecast_amount"', false)
             ->assertSee('name="subject_id"', false);
+    }
+
+    public function test_chart_uses_the_same_monthly_budget_totals_for_actual_and_historical_forecast_values(): void
+    {
+        $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 5, 15, '-').' 12:00:00'));
+        $income = $this->nonPermanentSubject('Chart income', SubjectType::DEBTOR);
+        $expense = $this->nonPermanentSubject('Chart expense', SubjectType::CREDITOR);
+        $this->transaction($income->id, 900, jalali_to_gregorian(1405, 4, 10, '-'));
+        $this->transaction($expense->id, -300, jalali_to_gregorian(1405, 4, 10, '-'));
+        $this->grant('reports.cost-income');
+
+        $this->actingAs($this->user)->get(route('reports.cost-income'))->assertOk()
+            ->assertViewHas('monthlyIncome', fn (array $values) => $values['تیر'] === 900)
+            ->assertViewHas('monthlyCost', fn (array $values) => $values['تیر'] === 300)
+            ->assertViewHas('forecastIncome', fn (array $values) => $values['تیر'] === 900.0)
+            ->assertViewHas('forecastExpense', fn (array $values) => $values['تیر'] === 300.0);
     }
 
     public function test_missing_document_months_use_the_configured_english_list_separators(): void

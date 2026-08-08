@@ -31,9 +31,13 @@ class MonthlyBudgetService
 
     private ?Collection $temporarySubjects = null;
 
+    private ?Collection $allSubjects = null;
+
     private array $monthlyBalances = [];
 
     private array $monthlyDocumentCounts = [];
+
+    private array $monthlyIncomeAndExpense = [];
 
     private ?int $activeFiscalYear = null;
 
@@ -62,28 +66,20 @@ class MonthlyBudgetService
         if ($unavailableMonths->isNotEmpty()) {
             $monthLabels = $unavailableMonths->map(fn (int $month) => __(self::MONTHS[$month]))->join(config('app.locale') === 'fa' ? '، ' : ', ');
 
-            throw ValidationException::withMessages([
-                'subject_id' => __('The selected subject overlaps an existing forecast in: :months.', ['months' => $monthLabels]),
-            ]);
+            throw ValidationException::withMessages(['subject_id' => __('The selected subject overlaps an existing forecast in: :months.', ['months' => $monthLabels])]);
         }
 
         return DB::transaction(fn () => $months->map(fn (int $month) => $this->saveForecast($month, $data)));
     }
 
-    /**
-     * Convert the signed amount entered by the user into the stored forecast
-     * direction and magnitude, while respecting the subject's normal balance.
-     */
+    /** Convert the signed amount entered by the user into the stored forecast direction and magnitude, while respecting the subject's normal balance. */
     public function normalizeSignedForecast(Subject $subject, int|float|string $signedAmount): array
     {
         $amount = trim((string) $signedAmount);
         $type = str_starts_with($amount, '-') ? 'expense' : 'income';
 
-        if (($subject->type === SubjectType::CREDITOR && $type !== 'income')
-            || ($subject->type === SubjectType::DEBTOR && $type !== 'expense')) {
-            throw ValidationException::withMessages([
-                'forecast_amount' => __('The forecast sign does not match the selected subject type.'),
-            ]);
+        if (($subject->type === SubjectType::CREDITOR && $type !== 'income') || ($subject->type === SubjectType::DEBTOR && $type !== 'expense')) {
+            throw ValidationException::withMessages(['forecast_amount' => __('The forecast sign does not match the selected subject type.')]);
         }
 
         return [
@@ -95,19 +91,12 @@ class MonthlyBudgetService
     /** The same subject cannot be selected twice; roots and their direct children may coexist. */
     public function subjectSelectionRestrictions(int $month, ?int $exceptSubjectId = null): array
     {
-        return $this->buildSubjectSelectionRestrictions($month, $exceptSubjectId);
-    }
-
-    private function buildSubjectSelectionRestrictions(int $month, ?int $exceptSubjectId = null): array
-    {
         return MonthlyBudget::query()->where('month', $month)
             ->when($exceptSubjectId, fn ($query) => $query->where('subject_id', '!=', $exceptSubjectId))
             ->pluck('subject_id')->map(fn ($id) => (int) $id)->all();
     }
 
-    /**
-     * Only roots and their direct children are exposed in the monthly selector.
-     */
+    /** Only roots and their direct children are exposed in the monthly selector. */
     public function selectableSubjectsForMonth(int $month, ?array $unavailableSubjectIds = null): Collection
     {
         return $this->selectableSubjects($unavailableSubjectIds ?? $this->subjectSelectionRestrictions($month));
@@ -146,24 +135,18 @@ class MonthlyBudgetService
             && ! in_array($subjectId, $this->subjectSelectionRestrictions($month, $allowExistingSubject ? $subjectId : null), true);
     }
 
-    /**
-     * Replace the current month's complete manual forecast set with the prior month's set.
-     */
+    /** Replace the current month's complete manual forecast set with the prior month's set. */
     public function rollover(int $month): Collection
     {
         if ($month === 1) {
-            throw ValidationException::withMessages([
-                'month' => __('The first month has no previous month in the active fiscal year.'),
-            ]);
+            throw ValidationException::withMessages(['month' => __('The first month has no previous month in the active fiscal year.')]);
         }
 
         return DB::transaction(function () use ($month) {
             $previousLines = MonthlyBudget::query()->where('month', $month - 1)->get();
 
             if ($previousLines->isEmpty()) {
-                throw ValidationException::withMessages([
-                    'month' => __('No forecast exists for the previous month.'),
-                ]);
+                throw ValidationException::withMessages(['month' => __('No forecast exists for the previous month.')]);
             }
 
             MonthlyBudget::query()->where('month', $month)->delete();
@@ -184,20 +167,13 @@ class MonthlyBudgetService
      */
     public function analysis(int $selectedMonth): array
     {
-        return $this->buildAnalysis($selectedMonth);
-    }
-
-    private function buildAnalysis(int $selectedMonth): array
-    {
-        $manualBudgets = MonthlyBudget::query()->with('subject:id,code,name,parent_id,type')->where('month', $selectedMonth)
-            ->orderBy('budget_type')->orderBy('subject_id')->get();
+        $manualBudgets = MonthlyBudget::query()->with('subject:id,code,name,parent_id,type')->where('month', $selectedMonth)->orderBy('budget_type')->orderBy('subject_id')->get();
         $subjects = $this->forecastableSubjects();
         $forecastableSubjectIds = $subjects->pluck('id')->map(fn ($id) => (int) $id);
         $manualBudgets = $manualBudgets->filter(fn (MonthlyBudget $budget) => $forecastableSubjectIds->contains((int) $budget->subject_id))->values();
         $manualBySubject = $manualBudgets->keyBy(fn (MonthlyBudget $budget) => (int) $budget->subject_id);
         $roots = $subjects->filter(fn (Subject $subject) => ! $subject->parent_id);
-        $childrenByParent = $subjects->filter(fn (Subject $subject) => (bool) $subject->parent_id)
-            ->groupBy(fn (Subject $subject) => (int) $subject->parent_id);
+        $childrenByParent = $subjects->filter(fn (Subject $subject) => (bool) $subject->parent_id)->groupBy(fn (Subject $subject) => (int) $subject->parent_id);
         $lineSubjects = collect();
         $manualChildIdsByRoot = [];
 
@@ -229,19 +205,30 @@ class MonthlyBudgetService
             $currentBalance = (float) collect($subjectIds)->sum(fn (int $subjectId) => (float) ($balances[$subjectId] ?? 0));
 
             if ($budget) {
-                $type = $this->manualForecastType($budget);
+                $type = match ($budget->subject->type) {
+                    SubjectType::CREDITOR => 'income',
+                    SubjectType::DEBTOR => 'expense',
+                    SubjectType::BOTH => $budget->budget_type,
+                };
                 $systemForecast = $this->systemForecastForType($subjectIds, $selectedMonth, $type);
+                $systemIncomeForecast = 0.0;
+                $systemExpenseForecast = 0.0;
                 $forecast = (float) $budget->forecast_amount;
                 $source = 'manual';
             } else {
-                $signedSystemForecast = $this->signedSystemForecast($subjectIds, $selectedMonth);
-                $type = $this->forecastTypeForSubject($subject, $signedSystemForecast);
-                $systemForecast = abs($signedSystemForecast);
+                $incomeForecast = $this->systemForecastForType($subjectIds, $selectedMonth, 'income');
+                $expenseForecast = $this->systemForecastForType($subjectIds, $selectedMonth, 'expense');
+                $type = $expenseForecast > $incomeForecast ? 'expense' : 'income';
+                $systemForecast = max($incomeForecast, $expenseForecast);
+                $systemIncomeForecast = $incomeForecast;
+                $systemExpenseForecast = $expenseForecast;
                 $forecast = $systemForecast;
                 $source = 'system';
             }
 
-            $actual = $hasDocuments ? $this->amountForType($currentBalance, $type) : null;
+            // Actuals are always bucketed by the transaction sign, independently of the subject's configured type or a forecast direction.
+            $actual = $hasDocuments ? abs($currentBalance) : null;
+            $actualType = $hasDocuments && $currentBalance < 0 ? 'expense' : 'income';
             $variance = is_null($actual) ? null : ($type === 'expense' ? $forecast - $actual : $actual - $forecast);
 
             return [
@@ -251,7 +238,10 @@ class MonthlyBudgetService
                 'source' => $source,
                 'forecast' => $forecast,
                 'systemForecast' => $systemForecast,
+                'systemIncomeForecast' => $systemIncomeForecast,
+                'systemExpenseForecast' => $systemExpenseForecast,
                 'actual' => $actual,
+                'actualType' => $actualType,
                 'variance' => $variance,
                 'variancePercent' => is_null($variance) ? null : ($forecast != 0 ? round($variance / $forecast * 100, 2) : 0),
                 'isChild' => $isChild,
@@ -260,12 +250,22 @@ class MonthlyBudgetService
             ];
         })->sortBy(fn (array $line) => $line['subject']->code)->values();
 
-        $incomeLines = $lines->where('type', 'income');
-        $expenseLines = $lines->where('type', 'expense');
-        $forecastIncome = (float) $incomeLines->where('includedInSummary', true)->sum('forecast');
-        $forecastExpense = (float) $expenseLines->where('includedInSummary', true)->sum('forecast');
-        $actualIncome = $hasDocuments ? (float) $incomeLines->where('includedInSummary', true)->sum('actual') : null;
-        $actualExpense = $hasDocuments ? (float) $expenseLines->where('includedInSummary', true)->sum('actual') : null;
+        $summaryLines = $lines->where('includedInSummary', true);
+        $forecastIncome = (float) $summaryLines->sum(fn (array $line) => $line['source'] === 'manual' ? ($line['type'] === 'income' ? $line['forecast'] : 0) : $line['systemIncomeForecast']);
+        $forecastExpense = (float) $summaryLines->sum(fn (array $line) => $line['source'] === 'manual' ? ($line['type'] === 'expense' ? $line['forecast'] : 0) : $line['systemExpenseForecast']);
+        $actualAmounts = $this->monthlyIncomeAndExpenseForMonth($selectedMonth);
+        $actualIncome = $hasDocuments ? $actualAmounts['income'] : null;
+        $actualExpense = $hasDocuments ? $actualAmounts['expense'] : null;
+
+        if ($this->monthIsCompleted($selectedMonth)) {
+            $forecastIncome = $actualAmounts['income'];
+            $forecastExpense = $actualAmounts['expense'];
+        } elseif ($manualBudgets->isEmpty()) {
+            $systemAmounts = $this->systemIncomeAndExpenseForecast($selectedMonth);
+            $forecastIncome = $systemAmounts['income'];
+            $forecastExpense = $systemAmounts['expense'];
+        }
+
         $hasOverlappingForecasts = $lines->contains(fn (array $line) => ! $line['includedInSummary']);
 
         return [
@@ -289,11 +289,6 @@ class MonthlyBudgetService
     }
 
     public function fullYearAnalysis(): array
-    {
-        return $this->buildFullYearAnalysis();
-    }
-
-    private function buildFullYearAnalysis(): array
     {
         $monthly = collect(array_keys(self::MONTHS))->mapWithKeys(fn (int $month) => [
             $month => $this->analysis($month),
@@ -336,42 +331,17 @@ class MonthlyBudgetService
         return $this->temporarySubjects ??= Subject::query()->where('is_permanent', false)->orderBy('code')->get(['id', 'code', 'name', 'parent_id', 'type']);
     }
 
-    private function forecastTypeForSubject(Subject $subject, float $signedAverage): string
+    /** Every subject of the active company, including permanent descendants of temporary roots. */
+    private function allSubjects(): Collection
     {
-        return match ($subject->type) {
-            SubjectType::CREDITOR => 'income',
-            SubjectType::DEBTOR => 'expense',
-            SubjectType::BOTH => $signedAverage < 0 ? 'expense' : 'income',
-        };
-    }
-
-    private function manualForecastType(MonthlyBudget $budget): string
-    {
-        return match ($budget->subject->type) {
-            SubjectType::CREDITOR => 'income',
-            SubjectType::DEBTOR => 'expense',
-            SubjectType::BOTH => $budget->budget_type,
-        };
+        return $this->allSubjects ??= Subject::query()->orderBy('code')->get(['id', 'code', 'name', 'parent_id', 'type', 'is_permanent']);
     }
 
     /**
-     * Completed months use their own actual balance. For an open/future month,
-     * prior completed actuals are averaged over the number of completed months.
+     * Completed months use their own actual signed transaction balance. For an
+     * open/future month, prior completed real balances are averaged; therefore
+     * in Mordad, Farvardin through Tir are the observations used for forecast.
      */
-    private function signedSystemForecast(array $subjectIds, int $selectedMonth): float
-    {
-        if ($this->monthIsCompleted($selectedMonth)) {
-            return $this->signedBalance($subjectIds, $selectedMonth);
-        }
-
-        $completedMonths = $this->completedMonthsBefore($selectedMonth);
-        if ($completedMonths->isEmpty()) {
-            return 0.0;
-        }
-
-        return (float) $completedMonths->avg(fn (int $month) => $this->signedBalance($subjectIds, $month));
-    }
-
     private function systemForecastForType(array $subjectIds, int $selectedMonth, string $type): float
     {
         if ($this->monthIsCompleted($selectedMonth)) {
@@ -400,7 +370,7 @@ class MonthlyBudgetService
     private function monthIsCompleted(int $month): bool
     {
         [$currentYear, $currentMonth] = $this->currentJalaliYearMonth();
-        $fiscalYear = $this->activeFiscalYear();
+        $fiscalYear = $this->activeFiscalYear ??= (int) Company::query()->findOrFail(getActiveCompany())->fiscal_year;
 
         return $fiscalYear < $currentYear || ($fiscalYear === $currentYear && $month < $currentMonth);
     }
@@ -419,11 +389,6 @@ class MonthlyBudgetService
         ];
     }
 
-    private function activeFiscalYear(): int
-    {
-        return $this->activeFiscalYear ??= (int) Company::query()->findOrFail(getActiveCompany())->fiscal_year;
-    }
-
     private function signedBalance(array $subjectIds, int $month): float
     {
         $balances = $this->subjectBalancesForMonth($month);
@@ -434,6 +399,57 @@ class MonthlyBudgetService
     private function amountForType(float $balance, string $type): float
     {
         return $type === 'expense' ? abs(min($balance, 0)) : max($balance, 0);
+    }
+
+    /**
+     * Calculate actual income and expense from each temporary root's complete transaction balance, including permanent descendants (for example customer or bank detail accounts).
+     * Positive balances are income; negative balances are expense.
+     * This matches the Home profit/loss calculation and avoids using SubjectType as a proxy for transaction direction.
+     */
+    private function monthlyIncomeAndExpenseForMonth(int $month): array
+    {
+        if (isset($this->monthlyIncomeAndExpense[$month])) {
+            return $this->monthlyIncomeAndExpense[$month];
+        }
+
+        $subjects = $this->allTemporarySubjects();
+        $roots = $subjects->filter(fn (Subject $subject) => ! $subject->parent_id);
+        $descendantIdsBySubject = $this->descendantIdsBySubject($roots->pluck('id')->all(), $this->allSubjects());
+        $allSubjectIds = collect($descendantIdsBySubject)->flatten()->map(fn ($id) => (int) $id)->unique()->values()->all();
+        $balances = $this->subjectBalancesForMonth($month, $allSubjectIds);
+        $income = 0.0;
+        $expense = 0.0;
+
+        foreach ($roots as $root) {
+            $balance = (float) collect($descendantIdsBySubject[(int) $root->id] ?? [(int) $root->id])
+                ->sum(fn (int $subjectId) => (float) ($balances[$subjectId] ?? 0));
+
+            if ($balance > 0) {
+                $income += $balance;
+            } elseif ($balance < 0) {
+                $expense += abs($balance);
+            }
+        }
+
+        return $this->monthlyIncomeAndExpense[$month] = compact('income', 'expense');
+    }
+
+    /** Past months return their real totals. Open/future months return the mean real income and expense of the completed months before them. */
+    private function systemIncomeAndExpenseForecast(int $selectedMonth): array
+    {
+        if ($this->monthIsCompleted($selectedMonth)) {
+            return $this->monthlyIncomeAndExpenseForMonth($selectedMonth);
+        }
+
+        $completedMonths = $this->completedMonthsBefore($selectedMonth);
+        if ($completedMonths->isEmpty()) {
+            return ['income' => 0.0, 'expense' => 0.0];
+        }
+
+        return [
+            'income' => (float) $completedMonths->avg(fn (int $month) => $this->monthlyIncomeAndExpenseForMonth($month)['income']),
+            'expense' => (float) $completedMonths->avg(fn (int $month) => $this->monthlyIncomeAndExpenseForMonth($month)['expense']),
+        ];
     }
 
     /** Resolve each forecast subject to itself and every descendant. */
@@ -464,20 +480,22 @@ class MonthlyBudgetService
         })->all();
     }
 
-    private function subjectBalancesForMonth(int $month): Collection
+    private function subjectBalancesForMonth(int $month, ?array $subjectIds = null): Collection
     {
-        if (isset($this->monthlyBalances[$month])) {
-            return $this->monthlyBalances[$month];
+        $subjectIds ??= $this->allTemporarySubjects()->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $cacheKey = $month.':'.implode(',', $subjectIds);
+
+        if (isset($this->monthlyBalances[$cacheKey])) {
+            return $this->monthlyBalances[$cacheKey];
         }
 
-        $subjectIds = $this->allTemporarySubjects()->pluck('id');
-        if ($subjectIds->isEmpty()) {
-            return $this->monthlyBalances[$month] = collect();
+        if (empty($subjectIds)) {
+            return $this->monthlyBalances[$cacheKey] = collect();
         }
 
         [$startDate, $endDate] = $this->monthDateRange($month);
 
-        return $this->monthlyBalances[$month] = Transaction::query()
+        return $this->monthlyBalances[$cacheKey] = Transaction::query()
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
             ->where('documents.company_id', getActiveCompany())
             ->whereNotNull('documents.approved_at')
@@ -501,7 +519,7 @@ class MonthlyBudgetService
 
     private function monthDateRange(int $month): array
     {
-        $fiscalYear = $this->activeFiscalYear();
+        $fiscalYear = $this->activeFiscalYear ??= (int) Company::query()->findOrFail(getActiveCompany())->fiscal_year;
         $lastDay = match (true) {
             $month <= 6 => 31,
             $month <= 11 => 30,

@@ -18,10 +18,12 @@ class CostIncomeController extends Controller
     public function index()
     {
         $summary = $this->service->summary();
-        $monthly = $this->service->monthlyIncomeAndCost();
         $topCustomers = $this->service->topCustomers();
         $invoices = $this->service->invoiceSummary();
         $forecastChart = $this->monthlyBudgetService->fullYearAnalysis()['chart'];
+        $monthly = $this->service->monthlyIncomeAndCostByMonth();
+        $monthlyIncome = array_combine($forecastChart['labels'], array_values($monthly['income']));
+        $monthlyCost = array_combine($forecastChart['labels'], array_values($monthly['cost']));
         $forecastIncome = array_combine($forecastChart['labels'], $forecastChart['forecastIncome']);
         $forecastExpense = array_combine($forecastChart['labels'], $forecastChart['forecastExpense']);
         $forecastMonths = $this->monthlyBudgetService->translatedMonths();
@@ -41,8 +43,8 @@ class CostIncomeController extends Controller
             'margin' => $summary['margin'],
             'incomeBreakdown' => $summary['incomeBreakdown'],
             'costBreakdown' => $summary['costBreakdown'],
-            'monthlyIncome' => $monthly['income'],
-            'monthlyCost' => $monthly['cost'],
+            'monthlyIncome' => $monthlyIncome,
+            'monthlyCost' => $monthlyCost,
             'forecastIncome' => $forecastIncome,
             'forecastExpense' => $forecastExpense,
             'forecastMonths' => $forecastMonths,
