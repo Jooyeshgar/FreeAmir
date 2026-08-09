@@ -69,6 +69,16 @@ class ReportEmailTest extends TestCase
         Notification::assertNothingSent();
     }
 
+    public function test_user_cannot_email_an_export_without_send_to_email_permission(): void
+    {
+        Notification::fake();
+        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'products.export']));
+
+        $this->actingAs($this->user)->post(route('send-to-email'), ['export' => 'products_csv', 'delivery' => 'email'])->assertForbidden();
+
+        Notification::assertNothingSent();
+    }
+
     public function test_download_uses_posted_filters_and_returns_an_attachment(): void
     {
         Notification::fake();

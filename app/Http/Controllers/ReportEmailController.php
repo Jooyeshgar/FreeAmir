@@ -11,11 +11,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ReportEmailController extends Controller
 {
-    public function store(
-        Request $request,
-        ReportExportService $reportExportService,
-        ReportEmailService $reportEmailService,
-    ): Response {
+    public function store(Request $request, ReportExportService $reportExportService, ReportEmailService $reportEmailService): Response
+    {
         $validated = $request->validate([
             'export' => ['required', 'string', Rule::in(array_keys(ReportExportService::EXPORTS))],
             'delivery' => ['nullable', Rule::in(['download', 'email'])],
