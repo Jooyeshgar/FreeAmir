@@ -37,6 +37,7 @@ class ProductImportExportTest extends TestCase
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'products.index']),
             Permission::firstOrCreate(['name' => 'products.export']),
+            Permission::firstOrCreate(['name' => 'products.report']),
             Permission::firstOrCreate(['name' => 'products.import']),
             Permission::firstOrCreate(['name' => 'products.import.store']),
         ]);
