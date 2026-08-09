@@ -1184,15 +1184,13 @@
                         @endif
                     @endcan
 
-                    <a href="{{ route('invoices.print', $invoice) }}" class="btn btn-outline gap-2" target="_blank"
-                        rel="noopener">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M7 8h10M7 12h10m-7 8h4m-7-4h10V8a2 2 0 00-2-2h-2V4a2 2 0 00-2-2h-2a2 2 0 00-2 2v2H9a2 2 0 00-2 2v8z" />
-                        </svg>
-                        {{ __('Print PDF') }}
-                    </a>
+                    @if ($invoice->status->isApproved())
+                        <x-export-delivery-choice :id="'invoice-pdf-delivery-'.$invoice->id" export="invoice_pdf" :filters="['invoice_id' => $invoice->id]" :label="__('Get PDF')" class="btn btn-outline gap-2" />
+                    @else
+                        <a href="{{ route('invoices.print', $invoice) }}" class="btn btn-outline gap-2" target="_blank" rel="noopener">
+                            {{ __('Print') }}
+                        </a>
+                    @endif
 
                     @can('invoices.approve')
                         @if ($isSellWorkflow && ($invoice->status->isPreInvoice() || $invoice->status->isRejected()))

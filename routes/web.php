@@ -81,6 +81,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::get('/', [Controllers\HomeController::class, 'index'])->name('home');
     Route::get('/home/cash-banks', [Controllers\HomeController::class, 'cashAndBanksBalances'])->name('home.cash-banks');
     Route::get('/home/bank-account', [Controllers\HomeController::class, 'bankAccount'])->name('home.bank-account');
+    Route::post('/send-to-email', [Controllers\ReportEmailController::class, 'store'])->name('send-to-email');
     Route::get('subjects/search', [Controllers\SubjectController::class, 'search'])->name('subjects.search');
     Route::get('subjects/search-code', [Controllers\SubjectController::class, 'searchCode'])->name('subjects.search-code');
     Route::post('subjects/transfer', [Controllers\SubjectController::class, 'transferSubject'])->name('subjects.transfer');

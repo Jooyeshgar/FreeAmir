@@ -26,7 +26,9 @@
         <div class="modal-box max-w-3xl">
             <h3 class="text-lg font-bold">{{ __('Export CSV') }}</h3>
 
-            <form action="{{ route('products.export') }}" method="GET">
+            <form id="product-csv-export-form" action="{{ route('products.export') }}" method="GET">
+                @csrf
+                <input type="hidden" name="export" value="products_csv">
                 <x-input name="cols_submitted" value="1" hidden />
 
                 <div class="mt-2 text-info">{{ __('The name column is always exported.') }}</div>
@@ -53,7 +55,7 @@
 
                 <div class="modal-action">
                     <button type="button" class="btn btn-ghost" onclick="document.getElementById('product-csv-modal').close()">{{ __('Cancel') }}</button>
-                    <button type="submit" class="btn btn-primary">{{ __('Export CSV') }}</button>
+                    <button type="button" class="btn btn-primary" onclick="document.getElementById('product-csv-delivery-modal').showModal()">{{ __('Get export') }}</button>
                 </div>
             </form>
         </div>
@@ -62,12 +64,27 @@
         </form>
     </dialog>
 
+    <dialog id="product-csv-delivery-modal" class="modal">
+        <div class="modal-box max-w-md">
+            <h3 class="text-lg font-bold">{{ __('How would you like to receive this file?') }}</h3>
+            <p class="mt-2 text-sm text-base-content/70">{{ __('Download it now or send it to :email.', ['email' => auth()->user()->email]) }}</p>
+            <div class="modal-action">
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('product-csv-delivery-modal').close()">{{ __('Cancel') }}</button>
+                <button type="submit" form="product-csv-export-form" name="delivery" value="download" formaction="{{ route('send-to-email') }}" formmethod="POST" formtarget="_self" class="btn btn-primary">{{ __('Download') }}</button>
+                <button type="submit" form="product-csv-export-form" name="delivery" value="email" formaction="{{ route('send-to-email') }}" formmethod="POST" formtarget="_self" class="btn btn-secondary">{{ __('Send to email') }}</button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button aria-label="{{ __('Close') }}"></button></form>
+    </dialog>
+
     @can('products.report')
         <dialog id="report-pdf-modal" class="modal">
             <div class="modal-box max-w-2xl">
                 <h3 class="text-lg font-bold">{{ __('Warehouse Report') }}</h3>
 
-                <form action="{{ route('products.report') }}" method="GET" target="_blank">
+                <form id="warehouse-pdf-export-form" action="{{ route('products.report') }}" method="GET" target="_blank">
+                    @csrf
+                    <input type="hidden" name="export" value="warehouse_pdf">
                     <x-input name="name" value="{{ request('name') }}" hidden />
                     <x-input name="group_name" value="{{ request('group_name') }}" hidden />
                     <x-input name="min_quantity" value="{{ request('min_quantity') }}" hidden />
@@ -98,13 +115,25 @@
 
                     <div class="modal-action">
                         <button type="button" class="btn btn-ghost" onclick="document.getElementById('report-pdf-modal').close()">{{ __('Cancel') }}</button>
-                        <button type="submit" class="btn btn-primary">{{ __('Print PDF') }}</button>
+                        <button type="button" class="btn btn-primary" onclick="document.getElementById('warehouse-pdf-delivery-modal').showModal()">{{ __('Get PDF') }}</button>
                     </div>
                 </form>
             </div>
             <form method="dialog" class="modal-backdrop">
                 <button aria-label="close"></button>
             </form>
+        </dialog>
+        <dialog id="warehouse-pdf-delivery-modal" class="modal">
+            <div class="modal-box max-w-md">
+                <h3 class="text-lg font-bold">{{ __('How would you like to receive this file?') }}</h3>
+                <p class="mt-2 text-sm text-base-content/70">{{ __('Download it now or send it to :email.', ['email' => auth()->user()->email]) }}</p>
+                <div class="modal-action">
+                    <button type="button" class="btn btn-ghost" onclick="document.getElementById('warehouse-pdf-delivery-modal').close()">{{ __('Cancel') }}</button>
+                    <button type="submit" form="warehouse-pdf-export-form" name="delivery" value="download" formaction="{{ route('send-to-email') }}" formmethod="POST" formtarget="_self" class="btn btn-primary">{{ __('Download') }}</button>
+                    <button type="submit" form="warehouse-pdf-export-form" name="delivery" value="email" formaction="{{ route('send-to-email') }}" formmethod="POST" formtarget="_self" class="btn btn-secondary">{{ __('Send to email') }}</button>
+                </div>
+            </div>
+            <form method="dialog" class="modal-backdrop"><button aria-label="{{ __('Close') }}"></button></form>
         </dialog>
     @endcan
 

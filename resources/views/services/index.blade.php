@@ -19,7 +19,9 @@
         <div class="modal-box max-w-2xl">
             <h3 class="text-lg font-bold">{{ __('Export CSV') }}</h3>
 
-            <form action="{{ route('services.export') }}" method="GET">
+            <form id="service-csv-export-form" action="{{ route('services.export') }}" method="GET">
+                @csrf
+                <input type="hidden" name="export" value="services_csv">
                 <x-input name="cols_submitted" value="1" hidden />
 
                 <div class="mt-2 text-info">{{ __('The name column is always exported.') }}</div>
@@ -46,13 +48,25 @@
 
                 <div class="modal-action">
                     <button type="button" class="btn btn-ghost" onclick="document.getElementById('service-csv-modal').close()">{{ __('Cancel') }}</button>
-                    <button type="submit" class="btn btn-primary">{{ __('Export CSV') }}</button>
+                    <button type="button" class="btn btn-primary" onclick="document.getElementById('service-csv-delivery-modal').showModal()">{{ __('Get export') }}</button>
                 </div>
             </form>
         </div>
         <form method="dialog" class="modal-backdrop">
             <button aria-label="close"></button>
         </form>
+    </dialog>
+    <dialog id="service-csv-delivery-modal" class="modal">
+        <div class="modal-box max-w-md">
+            <h3 class="text-lg font-bold">{{ __('How would you like to receive this file?') }}</h3>
+            <p class="mt-2 text-sm text-base-content/70">{{ __('Download it now or send it to :email.', ['email' => auth()->user()->email]) }}</p>
+            <div class="modal-action">
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('service-csv-delivery-modal').close()">{{ __('Cancel') }}</button>
+                <button type="submit" form="service-csv-export-form" name="delivery" value="download" formaction="{{ route('send-to-email') }}" formmethod="POST" class="btn btn-primary">{{ __('Download') }}</button>
+                <button type="submit" form="service-csv-export-form" name="delivery" value="email" formaction="{{ route('send-to-email') }}" formmethod="POST" class="btn btn-secondary">{{ __('Send to email') }}</button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button aria-label="{{ __('Close') }}"></button></form>
     </dialog>
 
     {{-- Service List --}}
