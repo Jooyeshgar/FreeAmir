@@ -90,6 +90,11 @@ class DocumentImportExportTest extends TestCase
         $this->resolver = new ImportSubjectResolver;
     }
 
+    public function test_document_export_preserves_document_filter_validation(): void
+    {
+        $this->actingAs($this->user)->post(route('documents.export.download'), ['start_document_number' => 'not-a-number'])->assertSessionHasErrors('start_document_number');
+    }
+
     public function test_export_form_renders(): void
     {
         $response = $this->get(route('documents.export'));
