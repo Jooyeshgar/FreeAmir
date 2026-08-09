@@ -234,7 +234,7 @@
                                     <th>{{ __('Code') }}</th>
                                     <th>{{ __('Product') }}</th>
                                     <th>{{ __('Category') }}</th>
-                                    <th class="text-right">{{ __('Quantity') }}</th>
+                                    <th class="text-right">{{ __('Stock') }}</th>
                                     <th class="text-right">{{ __('Reorder Point') }}</th>
                                 </tr>
                             </thead>
@@ -386,7 +386,7 @@
                                     <th>{{ __('Code') }}</th>
                                     <th>{{ __('Product') }}</th>
                                     <th>{{ __('Category') }}</th>
-                                    <th class="text-right">{{ __('Quantity') }}</th>
+                                    <th class="text-right">{{ __('Stock') }}</th>
                                     <th class="text-right">{{ __('Inventory Value') }}</th>
                                 </tr>
                             </thead>

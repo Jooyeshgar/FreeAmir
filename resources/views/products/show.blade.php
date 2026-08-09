@@ -55,7 +55,7 @@
 
         <div class="card-body">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
-                <x-stat-card :title="__('Quantity')" :value="formatNumber($product->quantity ?? 0)" :description="__('In Stock')" type="success" icon="quantity" />
+                <x-stat-card :title="__('Stock')" :value="formatNumber($product->quantity ?? 0)" :description="__('In Stock')" type="success" icon="quantity" />
                 <x-stat-card :title="__('Quantity warning')" :value="formatNumber($product->quantity_warning ?? 0)" :description="__('Alert Level')" type="warning" icon="warning" />
                 <x-stat-card :title="__('Oversell')" :value="formatNumber($product->oversell ?? 0)" :description="__('Allowed')" type="error" icon="oversell" />
                 <x-stat-card :title="__('VAT')" :value="formatNumber($product->vat ?? 0) . '%'" :description="__('Tax Rate')" type="info" icon="vat" />

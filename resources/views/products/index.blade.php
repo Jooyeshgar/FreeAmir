@@ -151,7 +151,7 @@
                         <tr>
                             <th class="px-4 py-2">{{ __('Product Code') }}</th>
                             <th class="px-4 py-2">{{ __('Name') }}</th>
-                            <th class="px-4 py-2">{{ __('Quantity') }}</th>
+                            <th class="px-4 py-2">{{ __('Stock') }}</th>
                             <th class="px-4 py-2">{{ __('Total Sell') }}</th>
                             <th class="px-4 py-2">{{ __('Average Cost') }}</th>
                             <th class="px-4 py-2">{{ __('Sell price') }}</th>
