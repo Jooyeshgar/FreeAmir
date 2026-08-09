@@ -2960,5 +2960,19 @@
     "— Select Format —": "— Select Format —",
     "— Select —": "— Select —",
     "… and :n more.": "… and :n more.",
-    "… and :remaining more records.": "… and :remaining more records."
+    "… and :remaining more records.": "… and :remaining more records.",
+    "Attached file": "Attached file",
+    "Download it now or send it to :email.": "Download it now or send it to :email.",
+    "Get export": "Get export",
+    "Get PDF": "Get PDF",
+    "Hello :name,": "Hello :name,",
+    "How would you like to receive this file?": "How would you like to receive this file?",
+    "Only approved invoices can be emailed as PDF.": "Only approved invoices can be emailed as PDF.",
+    "Send to email": "Send to email",
+    "The report was sent to :email.": "The report was sent to :email.",
+    "The report you requested is attached to this email.": "The report you requested is attached to this email.",
+    "The selected export is invalid.": "The selected export is invalid.",
+    "This report may contain confidential business information. Please store it securely.": "This report may contain confidential business information. Please store it securely.",
+    "Your report is ready": "Your report is ready",
+    "Your requested report": "Your requested report"
 }

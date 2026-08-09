@@ -2960,5 +2960,19 @@
     "— Select Format —": "- انتخاب فرمت -",
     "— Select —": "— انتخاب کنید —",
     "… and :n more.": "… و :n مورد دیگر.",
-    "… and :remaining more records.": "… و :remaining رکوردهای بیشتر."
+    "… and :remaining more records.": "… و :remaining رکوردهای بیشتر.",
+    "Attached file": "فایل پیوست‌شده",
+    "Download it now or send it to :email.": "فایل را اکنون دانلود کنید یا آن را به :email ارسال کنید.",
+    "Get export": "دریافت خروجی",
+    "Get PDF": "دریافت PDF",
+    "Hello :name,": "سلام :name،",
+    "How would you like to receive this file?": "مایل هستید این فایل را چگونه دریافت کنید؟",
+    "Only approved invoices can be emailed as PDF.": "فقط فاکتورهای تأییدشده را می‌توان به‌صورت PDF ایمیل کرد.",
+    "Send to email": "ارسال به ایمیل",
+    "The report was sent to :email.": "گزارش به :email ارسال شد.",
+    "The report you requested is attached to this email.": "گزارش درخواستی شما به این ایمیل پیوست شده است.",
+    "The selected export is invalid.": "خروجی انتخاب‌شده معتبر نیست.",
+    "This report may contain confidential business information. Please store it securely.": "این گزارش ممکن است شامل اطلاعات محرمانه کسب‌وکار باشد؛ لطفاً آن را به‌صورت امن نگهداری کنید.",
+    "Your report is ready": "گزارش شما آماده است",
+    "Your requested report": "گزارش درخواستی شما"
 }

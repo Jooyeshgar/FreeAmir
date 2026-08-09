@@ -1,7 +1,8 @@
 <x-app-layout :title="__('Export Documents')">
     <div class="card bg-base-100 shadow-xl max-w-2xl mx-auto">
-        <form action="{{ route('documents.export.download') }}" method="POST">
+        <form id="document-csv-export-form" action="{{ route('documents.export.download') }}" method="POST">
             @csrf
+            <input type="hidden" name="export" value="documents_csv">
             <div class="card-body">
                 <h2 class="card-title">{{ __('Export Documents') }}</h2>
                 <x-show-message-bags />
@@ -87,9 +88,21 @@
 
                 <div class="card-actions justify-end mt-4">
                     <a href="{{ route('documents.index') }}" class="btn btn-ghost">{{ __('Cancel') }}</a>
-                    <button type="submit" class="btn btn-primary">{{ __('Download CSV') }}</button>
+                    <button type="button" class="btn btn-primary" onclick="document.getElementById('document-csv-delivery-modal').showModal()">{{ __('Get export') }}</button>
                 </div>
             </div>
         </form>
+        <dialog id="document-csv-delivery-modal" class="modal">
+            <div class="modal-box max-w-md">
+                <h3 class="text-lg font-bold">{{ __('How would you like to receive this file?') }}</h3>
+                <p class="mt-2 text-sm text-base-content/70">{{ __('Download it now or send it to :email.', ['email' => auth()->user()->email]) }}</p>
+                <div class="modal-action">
+                    <button type="button" class="btn btn-ghost" onclick="document.getElementById('document-csv-delivery-modal').close()">{{ __('Cancel') }}</button>
+                    <button type="submit" form="document-csv-export-form" name="delivery" value="download" formaction="{{ route('send-to-email') }}" class="btn btn-primary">{{ __('Download') }}</button>
+                    <button type="submit" form="document-csv-export-form" name="delivery" value="email" formaction="{{ route('send-to-email') }}" class="btn btn-secondary">{{ __('Send to email') }}</button>
+                </div>
+            </div>
+            <form method="dialog" class="modal-backdrop"><button aria-label="{{ __('Close') }}"></button></form>
+        </dialog>
     </div>
 </x-app-layout>

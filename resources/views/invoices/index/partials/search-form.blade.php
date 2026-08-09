@@ -50,9 +50,7 @@
             <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
         </div>
         <div>
-            <a href="{{ route('invoices.export', request()->except('page')) }}" class="btn btn-sm btn-outline">
-                {{ __('Export CSV') }}
-            </a>
+            <x-export-delivery-choice id="invoices-export-delivery" export="invoices_csv" :filters="request()->except('page')" :label="__('Export CSV')" />
         </div>
     </div>
 </form>

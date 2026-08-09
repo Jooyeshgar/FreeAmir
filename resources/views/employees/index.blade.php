@@ -34,10 +34,7 @@
                 </select>
             </form>
             @can('hr.employees.export')
-                <a href="{{ route('hr.employees.export', request()->only(['search', 'is_active', 'work_site_id', 'contract_framework_id'])) }}"
-                    class="btn btn-sm btn-outline">
-                    {{ __('CSV Export') }}
-                </a>
+                <x-export-delivery-choice id="employees-export-delivery" export="employees_csv" :filters="request()->only(['search', 'is_active', 'work_site_id', 'contract_framework_id'])" :label="__('CSV Export')" />
             @endcan
             @can('hr.employees.create')
                 <a href="{{ route('hr.employees.create') }}" class="btn btn-primary btn-sm">{{ __('Add Employee') }}</a>
