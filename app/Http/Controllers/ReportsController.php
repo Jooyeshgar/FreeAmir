@@ -6,6 +6,7 @@ use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Services\DocumentImportExport\DocumentImportExportService;
+use App\Services\ReportExportService;
 use App\Services\SubjectService;
 use App\Services\TrialBalanceService;
 use Illuminate\Http\Request;
@@ -54,9 +55,9 @@ class ReportsController extends Controller
         return view('reports.trialBalance', $trialBalanceService->getTrialBalanceData($request));
     }
 
-    public function exportTrialBalanceCsv(Request $request, TrialBalanceService $trialBalanceService): StreamedResponse
+    public function exportTrialBalanceCsv(Request $request, ReportExportService $reportExportService): StreamedResponse
     {
-        return $trialBalanceService->exportCsv($request);
+        return $reportExportService->downloadResponse('trial_balance_csv', $request->all());
     }
 
     public function printTrialBalance(Request $request, TrialBalanceService $trialBalanceService)

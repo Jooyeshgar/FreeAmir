@@ -9,47 +9,21 @@ use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Services\ProductImportService;
 use App\Services\ProductService;
-use App\Services\WarehouseDashboardService;
+use App\Services\ReportExportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
-use PDF;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProductController extends Controller
 {
     public function __construct(
         private readonly ProductService $productService,
-        private readonly WarehouseDashboardService $warehouseDashboardService
     ) {}
 
-    public function report(Request $request)
+    public function report(Request $request, ReportExportService $reportExportService)
     {
-        $validated = $request->validate([
-            'name' => ['nullable', 'string'],
-            'group_name' => ['nullable', 'string'],
-            'min_quantity' => ['nullable', 'numeric'],
-            'need_order' => ['nullable', 'boolean'],
-            'cols_submitted' => ['nullable'],
-            'columns' => ['nullable', 'array'],
-            'columns.*' => ['string'],
-        ]);
-
-        $data = $this->warehouseDashboardService->report($validated);
-
-        $config = [
-            'format' => 'A4',
-            'orientation' => $data['portrait'] ? 'P' : 'L',
-            'directionality' => 'rtl',
-            'margin_top' => 28,
-            'margin_bottom' => 18,
-            'margin_header' => 6,
-            'margin_footer' => 6,
-            'defaultPageNumStyle' => 'persian',
-        ];
-
-        return PDF::loadView('warehouse.report-pdf', $data, [], $config)->stream('warehouse-report.pdf');
+        return $reportExportService->inlineResponse('warehouse_pdf', $request->all());
     }
 
     public function index()
@@ -164,65 +138,9 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with('success', __('Product deleted successfully.'));
     }
 
-    public function export(Request $request): StreamedResponse
+    public function export(Request $request, ReportExportService $reportExportService): StreamedResponse
     {
-        $columnMapping = $this->selectedExportColumns($request);
-
-        $selectedOptionalColumns = array_values(array_intersect(
-            array_keys($this->reportColumnMapping()),
-            array_keys($columnMapping),
-        ));
-
-        $reportRows = $this->warehouseDashboardService->report([
-            'cols_submitted' => true,
-            'columns' => $selectedOptionalColumns,
-        ])['rows']->keyBy(fn (array $row) => (string) $row['code']);
-
-        $filename = 'products_'.now()->format('YmdHis').'.csv';
-
-        return response()->streamDownload(function () use ($columnMapping, $reportRows) {
-            $file = fopen('php://output', 'w');
-
-            // UTF-8 BOM so Excel reads translated headers and Persian text correctly.
-            fwrite($file, "\xEF\xBB\xBF");
-            fputcsv($file, array_values($columnMapping));
-
-            Product::with('productGroup', 'incomeSubject', 'cogsSubject', 'inventorySubject', 'salesReturnsSubject')
-                ->orderBy('code')
-                ->chunk(200, function ($products) use ($file, $columnMapping, $reportRows) {
-                    foreach ($products as $product) {
-                        $reportRow = $reportRows->get((string) $product->code, []);
-                        $row = array_merge($reportRow, [
-                            'name' => $product->name,
-                            'category' => $product->productGroup?->name,
-                            'code' => $product->code,
-                            'stock' => $product->quantity,
-                            'selling_price' => $product->selling_price,
-                            'cost_of_goods' => $product->average_cost,
-                            'income_subject_code' => $product->incomeSubject?->code,
-                            'cogs_subject_code' => $product->cogsSubject?->code,
-                            'inventory_subject_code' => $product->inventorySubject?->code,
-                            'sales_returns_subject_code' => $product->salesReturnsSubject?->code,
-                            'sstid' => $product->sstid,
-                            'location' => $product->location,
-                            'quantity_warning' => $product->quantity_warning,
-                            'oversell' => $product->oversell,
-                            'discount_formula' => $product->discount_formula,
-                            'description' => $product->description,
-                            'vat' => $product->vat,
-                        ]);
-
-                        fputcsv($file, array_map(
-                            fn (string $column) => $row[$column] ?? null,
-                            array_keys($columnMapping),
-                        ));
-                    }
-                });
-
-            fclose($file);
-        }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        return $reportExportService->downloadResponse('products_csv', $request->all());
     }
 
     public function importForm(): View
@@ -314,23 +232,5 @@ class ProductController extends Controller
             'inventory_account' => __('Inventory account amount'),
             'sales_return_account' => __('Sales return account amount'),
         ];
-    }
-
-    private function selectedExportColumns(Request $request): array
-    {
-        $availableColumns = $this->exportColumnMapping();
-        $validated = $request->validate([
-            'cols_submitted' => ['nullable', 'boolean'],
-            'columns' => ['nullable', 'array'],
-            'columns.*' => ['string', Rule::in(array_keys($availableColumns))],
-        ]);
-
-        if (! $request->boolean('cols_submitted')) {
-            return $availableColumns;
-        }
-
-        $selectedColumns = array_unique(['name', ...(array) ($validated['columns'] ?? [])]);
-
-        return array_intersect_key($availableColumns, array_flip($selectedColumns));
     }
 }

@@ -11,6 +11,7 @@ use App\Models\Invoice;
 use App\Models\Transaction;
 use App\Services\CustomerImportService;
 use App\Services\CustomerService;
+use App\Services\ReportExportService;
 use App\Services\SubjectService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -167,54 +168,9 @@ class CustomerController extends Controller
         return view('customers.show', compact('customer', 'orders', 'cheques', 'subjectBalance'));
     }
 
-    public function export(): StreamedResponse
+    public function export(ReportExportService $reportExportService): StreamedResponse
     {
-        $filename = 'customers_'.now()->format('YmdHis').'.csv';
-
-        return response()->streamDownload(function () {
-            $file = fopen('php://output', 'w');
-
-            // UTF-8 BOM so Excel reads Persian text correctly.
-            fwrite($file, "\xEF\xBB\xBF");
-            fputcsv($file, CustomerImportService::COLUMNS);
-
-            Customer::with('group', 'subject')
-                ->orderBy('id')
-                ->chunk(200, function ($customers) use ($file) {
-                    foreach ($customers as $customer) {
-                        fputcsv($file, [
-                            $customer->name,
-                            $customer->group?->name,
-                            $customer->subject?->code,
-                            $customer->type?->valueName(),
-                            $customer->phone,
-                            $customer->mobile,
-                            $customer->fax,
-                            $customer->address,
-                            $customer->postal_code,
-                            $customer->email,
-                            $customer->ecnmcs_code,
-                            $customer->personal_code,
-                            $customer->web_page,
-                            $customer->responsible,
-                            $customer->connector,
-                            $customer->desc,
-                            $customer->credit,
-                            $customer->disc_rate,
-                            $customer->acc_name_1,
-                            $customer->acc_no_1,
-                            $customer->acc_bank_1,
-                            $customer->acc_name_2,
-                            $customer->acc_no_2,
-                            $customer->acc_bank_2,
-                        ]);
-                    }
-                });
-
-            fclose($file);
-        }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        return $reportExportService->downloadResponse('customers_csv', []);
     }
 
     public function importForm(): View
