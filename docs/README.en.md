@@ -25,6 +25,7 @@ This directory is the Markdown documentation hub for Amir. To keep languages ali
 | [Installation guide](INSTALLATION.en.md) | System admins and developers | Installation with Docker Compose, single-command Docker, or standard setup |
 | [Fiscal year](fiscal-year.en.md) | Everyone | What a fiscal year is and how to create one in Amir |
 | [Fiscal-year export/import](FiscalYearExportImport.en.md) | System admins and developers | The `fiscal-year:export` and `fiscal-year:import` commands |
+| [Monthly forecasting and variance reporting](user/monthly-income-expense-forecasting.en.md) | Users and accountants | Monthly forecasts, actuals, variances, and performance ratios |
 
 ## All Documentation Files
 
@@ -37,6 +38,7 @@ This directory is the Markdown documentation hub for Amir. To keep languages ali
 | [user/attendance/README.md](user/attendance/README.md) / [user/attendance/README.en.md](user/attendance/README.en.md) | Attendance | Work shifts, logs, imports, and monthly attendance |
 | [user/salary/README.md](user/salary/README.md) / [user/salary/README.en.md](user/salary/README.en.md) | Salary and payroll | Payroll elements, salary decrees, and payrolls |
 | [user/inventory-costing.md](user/inventory-costing.md) / [user/inventory-costing.en.md](user/inventory-costing.en.md) | Inventory accounting | COGS, costing methods, and Amir's selected method |
+| [user/monthly-income-expense-forecasting.md](user/monthly-income-expense-forecasting.md) / [user/monthly-income-expense-forecasting.en.md](user/monthly-income-expense-forecasting.en.md) | Budgeting | Monthly forecasting and actual-value of income and expense |
 | [fiscal-year.md](fiscal-year.md) / [fiscal-year.en.md](fiscal-year.en.md) | Fiscal year | Fiscal-year concept and creation guide |
 | [FiscalYearExportImport.en.md](FiscalYearExportImport.en.md) | Fiscal year | Exporting and importing fiscal-year data |
 | [accounting-basics.md](accounting-basics.md) | Accounting | Accounting basics, debit, credit, and documents |
