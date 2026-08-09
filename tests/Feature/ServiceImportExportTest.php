@@ -69,6 +69,14 @@ class ServiceImportExportTest extends TestCase
         return $rows;
     }
 
+    public function test_service_export_rejects_columns_outside_the_allowlist(): void
+    {
+        $this->actingAs($this->user)->get(route('services.export', [
+            'cols_submitted' => 1,
+            'columns' => ['not_an_export_column'],
+        ]))->assertSessionHasErrors('columns.0');
+    }
+
     public function test_export_returns_csv_with_services(): void
     {
         $service = Service::factory()->withGroup($this->serviceGroup)->withSubject()->create(['company_id' => $this->companyId, 'name' => 'Consulting', 'code' => 6001]);
