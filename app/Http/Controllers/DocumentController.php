@@ -12,6 +12,7 @@ use App\Services\DocumentImportExport\DocumentImportFormatRegistry;
 use App\Services\DocumentNumberService;
 use App\Services\DocumentService;
 use App\Services\FiscalYearTransferService;
+use App\Services\ReportExportService;
 use App\Services\SubjectService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -320,11 +321,9 @@ class DocumentController extends Controller
         return view('documents.export');
     }
 
-    public function export(Request $request): StreamedResponse
+    public function export(Request $request, ReportExportService $reportExportService): StreamedResponse
     {
-        $data = $this->documentImportExportService->validateExportRequest($request);
-
-        return $this->documentImportExportService->export($data);
+        return $reportExportService->downloadResponse('documents_csv', $request->all());
     }
 
     public function importForm()

@@ -17,6 +17,7 @@ use App\Models\OrgChart;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
 use App\Models\WorkSiteContract;
+use App\Services\ReportExportService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -67,55 +68,9 @@ class EmployeeController extends Controller
         ));
     }
 
-    public function export(Request $request): StreamedResponse
+    public function export(Request $request, ReportExportService $reportExportService): StreamedResponse
     {
-        $filename = 'employees_'.now()->format('YmdHis').'.csv';
-
-        return response()->streamDownload(function () use ($request) {
-            $file = fopen('php://output', 'w');
-
-            fwrite($file, "\xEF\xBB\xBF");
-            fputcsv($file, [
-                __('Code'),
-                __('First Name'),
-                __('Last Name'),
-                __('National Code'),
-                __('Phone'),
-                __('Work Site'),
-                __('Position'),
-                __('Contract'),
-                __('Employment Type'),
-                __('Status'),
-                __('Contract Start Date'),
-                __('Contract End Date'),
-                __('Salary Decree Count'),
-            ]);
-
-            $this->filteredEmployeeQuery($request)
-                ->chunk(200, function ($employees) use ($file) {
-                    foreach ($employees as $employee) {
-                        fputcsv($file, [
-                            $employee->code,
-                            $employee->first_name,
-                            $employee->last_name,
-                            $employee->national_code,
-                            $employee->phone,
-                            $employee->workSite?->name,
-                            $employee->orgChart?->title,
-                            $employee->workSiteContract?->name,
-                            $employee->employment_type?->label(),
-                            $employee->is_active ? __('Active') : __('Inactive'),
-                            $employee->contract_start_date?->toDateString(),
-                            $employee->contract_end_date?->toDateString(),
-                            $employee->salary_decrees_count,
-                        ]);
-                    }
-                });
-
-            fclose($file);
-        }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        return $reportExportService->downloadResponse('employees_csv', $request->all());
     }
 
     public function create(): View
