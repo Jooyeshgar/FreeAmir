@@ -22,8 +22,13 @@
             </div>
             <div class="flex flex-col gap-2">
                 <div>
-                    <span>{{ __('Phone') }}:</span>
-                    <span>{{ localizeNumber($invoice->customer->phone) }}</span>
+                    @if ($invoice->customer->mobile)
+                        <span>{{ __('Mobile') }}:</span>
+                        <span>{{ localizeNumber($invoice->customer->mobile) }}</span>
+                    @elseif ($invoice->customer->phone)
+                        <span>{{ __('Phone') }}:</span>
+                        <span>{{ localizeNumber($invoice->customer->postal_code) }}</span>
+                    @endif
                 </div>
                 <div>
                     <span>{{ __('Postal Code') }}:</span>

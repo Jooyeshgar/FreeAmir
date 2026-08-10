@@ -486,6 +486,7 @@
                             <table class="table w-full">
                                 <thead>
                                     <tr>
+                                        <th class="px-4 py-3">{{ __('Ancillary Cost Number') }}</th>
                                         <th class="px-4 py-3">{{ __('Doc Number') }}</th>
                                         <th class="px-4 py-3">{{ __('Cost Type') }}</th>
                                         <th class="px-4 py-3">{{ __('Status') }}</th>
@@ -499,10 +500,25 @@
                                     @foreach ($invoice->ancillaryCosts as $ancillaryCost)
                                         <tr class="hover:bg-base-300">
                                             <td class="px-4 py-3">
-                                                <a class="link"
-                                                    href="{{ route('invoices.ancillary-costs.show', [$invoice, $ancillaryCost]) }}">
-                                                    {{ formatDocumentNumber($ancillaryCost->document?->number ?? ($ancillaryCost->document_id ?? ($ancillaryCost->number ?? $ancillaryCost->id))) }}
+                                                <a class="link" href="{{ route('invoices.ancillary-costs.show', [$invoice, $ancillaryCost]) }}">
+                                                    {{ formatDocumentNumber($ancillaryCost->number) }}
                                                 </a>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                @can('documents.show')
+                                                    @if ($ancillaryCost->document_id)
+                                                        <a href="{{ route('documents.show', $ancillaryCost->document_id) }}">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                            </svg>
+                                                        </a>&nbsp;
+                                                        <a class="link" href="{{ route('documents.edit', $ancillaryCost->document_id) }}">
+                                                            {{ formatDocumentNumber($ancillaryCost->document->number) ?? '' }}</a>
+                                                    @endif
+                                                @else
+                                                    <span class="text-gray-500">{{ formatDocumentNumber($ancillaryCost->document->number) }}</span>
+                                                @endcan
                                             </td>
                                             <td class="px-4 py-3">{{ $ancillaryCost->type?->label() ?? '—' }}</td>
                                             <td class="px-4 py-3">{{ $ancillaryCost->status?->label() ?? '—' }}</td>

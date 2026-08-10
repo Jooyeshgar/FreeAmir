@@ -81,6 +81,7 @@ class WorkSiteController extends Controller
 
     public function destroy(WorkSite $workSite): RedirectResponse
     {
+        $workSite->employees()->delete();
         $workSite->delete();
 
         return redirect()->route('salary.work-sites.index')

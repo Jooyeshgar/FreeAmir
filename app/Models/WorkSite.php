@@ -33,4 +33,9 @@ class WorkSite extends Model
     {
         return $this->hasMany(WorkSiteContract::class, 'work_site_id');
     }
+
+    public function employees(): HasMany
+    {
+        return $this->hasMany(Employee::class, 'work_site_id');
+    }
 }

@@ -56,7 +56,7 @@
                                 @endcan
                                 @can('salary.work-sites.delete')
                                     <form action="{{ route('salary.work-sites.destroy', $workSite) }}" method="POST" class="inline-block"
-                                        onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                        onsubmit="return confirm('{{ __('All of the employees in this work site will be removed. Are you sure?') }}')">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-sm btn-error">

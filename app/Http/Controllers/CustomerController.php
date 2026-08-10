@@ -131,6 +131,9 @@ class CustomerController extends Controller
     public function destroy(Customer $customer)
     {
         try {
+            if ($customer->subject?->transactions()->exists()) {
+                throw new \Exception(__('Cannot delete customer with transaction.'));
+            }
             $this->service->delete($customer);
 
             return redirect()->route('customers.index')->with('success', __('Customer deleted successfully.'));

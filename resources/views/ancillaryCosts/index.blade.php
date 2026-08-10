@@ -29,7 +29,7 @@
             <table class="table w-full mt-4 overflow-auto">
                 <thead>
                     <tr>
-                        <th class="p-2">{{ __('Number') }}</th>
+                        <th class="p-2">{{ __('Ancillary Cost Number') }}</th>
                         <th class="p-2">{{ __('Doc Number') }}</th>
                         <th class="p-2">{{ __('Invoice Number') }}</th>
                         <th class="p-2">{{ __('Cost Type') }}</th>
@@ -43,7 +43,7 @@
 
                     @foreach ($ancillaryCosts as $ancillaryCost)
                         <tr>
-                            <td class="p-2">{{ $ancillaryCost->number }}</td>
+                            <td class="p-2">{{ formatDocumentNumber($ancillaryCost->number) }}</td>
                             <td class="p-2">
                                 @can('documents.show')
                                     @if ($ancillaryCost->document_id)
@@ -57,7 +57,7 @@
                                             {{ formatDocumentNumber($ancillaryCost->document->number) ?? '' }}</a>
                                     @endif
                                 @else
-                                    <span class="text-gray-500">{{ formatDocumentNumber($ancillaryCost->document->number) ?? '' }}</span>
+                                    <span class="text-gray-500">{{ formatDocumentNumber($ancillaryCost->document->number) }}</span>
                                 @endcan
                             </td>
                             <td class="p-2">
