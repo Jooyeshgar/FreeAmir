@@ -60,6 +60,7 @@ class WarehouseDashboardTest extends TestCase
         $response->assertViewHas('summary');
         $response->assertViewHas('categoryBreakdown');
         $response->assertViewHas('topSellers');
+        $response->assertViewHas('monthlyStock');
         $response->assertViewHas('belowReorderItems');
         $response->assertViewHas('stagnantItems');
     }
@@ -117,6 +118,7 @@ class WarehouseDashboardTest extends TestCase
         $this->assertCount(1, $data['topSellers']);
         $this->assertEquals('Best Seller', $data['topSellers']->first()['name']);
         $this->assertEquals(3.0, $data['topSellers']->first()['units']);
+        $this->assertEquals(8.0, $data['monthlyStock']['values'][(int) toEnglish(jdate('m', $sell->date->timestamp)) - 1]);
     }
 
     public function test_category_filter_restricts_dashboard_scope(): void

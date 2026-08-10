@@ -12,6 +12,7 @@ use App\Models\Transaction;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class WarehouseDashboardService
 {
@@ -108,6 +109,7 @@ class WarehouseDashboardService
             'categoryBreakdown' => $categoryBuckets->values(),
             'monthlyMovement' => $monthlyMovement,
             'monthlyMovementByCategory' => $monthlyMovementByCategory,
+            'monthlyStock' => $this->monthlyStock($filters['category_id']),
             'belowReorderItems' => $this->mapProductRows($belowReorder->sortBy(fn (Product $p) => (float) $p->quantity)->take(15)),
             'stagnantItems' => $this->mapStagnantRows($stagnantStandalone->take(15), $lastMovementByProduct),
             'topSellers' => $topSellers,
@@ -350,6 +352,57 @@ class WarehouseDashboardService
             'in' => array_map(fn ($b) => round($b['in'], 2), array_values($buckets)),
             'out' => array_map(fn ($b) => round($b['out'], 2), array_values($buckets)),
         ];
+    }
+
+    /**
+     * Month-end stock recorded by the last approved product movement in each Jalali month of the active fiscal year.
+     */
+    private function monthlyStock(?int $categoryId): array
+    {
+        $year = (int) (config('active-company-fiscal-year') ?? toEnglish(jdate('Y')));
+        $start = Carbon::parse(jalali_to_gregorian($year, 1, 1, '/'))->startOfDay();
+        $end = Carbon::parse(jalali_to_gregorian($year + 1, 1, 1, '/'))->subDay()->endOfDay();
+
+        $rows = DB::table('invoice_items')->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')->join('products', function ($join) {
+            $join->on('products.id', '=', 'invoice_items.itemable_id')
+                ->where('invoice_items.itemable_type', Product::class);
+        })
+            ->where('invoices.company_id', getActiveCompany())
+            ->whereIn('invoices.status', array_map(fn (InvoiceStatus $status) => $status->value, InvoiceStatus::approvedOrSettled()))
+            ->whereBetween('invoices.date', [$start->toDateString(), $end->toDateString()])
+            ->when($categoryId, fn ($query, int $id) => $query->where('products.group', $id))
+            ->orderBy('invoices.date')
+            ->orderBy('invoice_items.id')
+            ->get(['invoices.date', 'invoice_items.id', 'invoice_items.itemable_id', 'invoice_items.quantity_at']);
+
+        $latest = [];
+        foreach ($rows as $row) {
+            $month = (int) toEnglish(jdate('m', strtotime($row->date)));
+            $latest[$month.'-'.$row->itemable_id] = $row;
+        }
+
+        $values = array_fill(1, 12, 0.0);
+        foreach ($latest as $row) {
+            $month = (int) toEnglish(jdate('m', strtotime($row->date)));
+            $values[$month] += (float) $row->quantity_at;
+        }
+
+        return [
+            'labels' => array_map(fn (int $month) => $this->jalaliMonthName($month), range(1, 12)),
+            'values' => array_values($values),
+        ];
+    }
+
+    private function jalaliMonthName(int $month): string
+    {
+        $names = [
+            1 => __('Farvardin'), 2 => __('Ordibehesht'), 3 => __('Khordad'),
+            4 => __('Tir'), 5 => __('Mordad'), 6 => __('Shahrivar'),
+            7 => __('Mehr'), 8 => __('Aban'), 9 => __('Azar'),
+            10 => __('Dey'), 11 => __('Bahman'), 12 => __('Esfand'),
+        ];
+
+        return $names[$month] ?? (string) $month;
     }
 
     private function monthlyMovementByCategory(Collection $items, Carbon $from, Carbon $to, Collection $categoryBuckets): array

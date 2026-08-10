@@ -79,8 +79,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
         Route::post('/import', [Controllers\BackupController::class, 'import'])->name('import');
     });
     Route::get('/', [Controllers\HomeController::class, 'index'])->name('home');
-    Route::get('/home/cash-banks', [Controllers\HomeController::class, 'cashAndBanksBalances'])->name('home.cash-banks');
-    Route::get('/home/bank-account', [Controllers\HomeController::class, 'bankAccount'])->name('home.bank-account');
+    Route::get('/home/summary/{metric}', [Controllers\HomeController::class, 'summaryMetric'])->name('home.summary');
     Route::post('/send-to-email', [Controllers\ReportEmailController::class, 'store'])->name('send-to-email');
     Route::get('subjects/search', [Controllers\SubjectController::class, 'search'])->name('subjects.search');
     Route::get('subjects/search-code', [Controllers\SubjectController::class, 'searchCode'])->name('subjects.search-code');
@@ -242,6 +241,8 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
         Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
         Route::post('documents/export', [Controllers\DocumentController::class, 'export'])->name('documents.export');
         Route::get('cost-income', [Controllers\CostIncomeController::class, 'index'])->name('cost-income');
+        Route::get('cost-income/cash-banks', [Controllers\CostIncomeController::class, 'cashAndBanksBalances'])->name('cost-income.cash-banks');
+        Route::get('cost-income/bank-account', [Controllers\CostIncomeController::class, 'bankAccount'])->name('cost-income.bank-account');
     });
 
     Route::group(['prefix' => 'invoices', 'as' => 'invoices.index'], function () {

@@ -8,18 +8,18 @@ use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
+use App\Models\Employee;
 use App\Models\Invoice;
-use App\Models\InvoiceItem;
+use App\Models\Payroll;
 use App\Models\Product;
 use App\Models\ProductGroup;
-use App\Models\Service;
-use App\Models\ServiceGroup;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\HomeService;
 use App\Services\SubjectService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
 use Tests\Helpers\SeederHelper;
 use Tests\TestCase;
 
@@ -53,345 +53,86 @@ class HomeServiceChartTest extends TestCase
         $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['company_id' => $this->companyId]);
     }
 
-    public function test_warehouse_chart_excludes_invoice_items_from_next_fiscal_year(): void
+    public function test_total_sell_amount_includes_only_approved_or_settled_sales(): void
     {
-        $product = $this->makeProduct();
-        $invoice = $this->makeInvoice(jalali_to_gregorian(1406, 1, 1, '-'));
-        $this->makeInvoiceItem($invoice, $product, quantityAt: 99);
+        $this->makeInvoice(jalali_to_gregorian(1405, 2, 1, '-'), InvoiceType::SELL, InvoiceStatus::APPROVED, amount: 100);
+        $this->makeInvoice(jalali_to_gregorian(1405, 2, 2, '-'), InvoiceType::SELL, InvoiceStatus::PARTIALLY_PAID, amount: 200);
+        $this->makeInvoice(jalali_to_gregorian(1405, 2, 3, '-'), InvoiceType::SELL, InvoiceStatus::PAID, amount: 300);
+        $this->makeInvoice(jalali_to_gregorian(1405, 2, 4, '-'), InvoiceType::SELL, InvoiceStatus::UNAPPROVED, amount: 9000);
+        $this->makeInvoice(jalali_to_gregorian(1405, 2, 5, '-'), InvoiceType::BUY, InvoiceStatus::APPROVED, amount: 8000);
 
-        $result = $this->service()->getMonthlyWarehouse();
-
-        $this->assertSame(0, array_sum($result), 'An invoice from the next fiscal year must not appear in the current year warehouse chart');
+        $this->assertSame(600.0, $this->service()->totalSellAmount());
     }
 
-    public function test_warehouse_chart_includes_invoice_item_in_correct_month(): void
+    public function test_total_sell_amount_is_scoped_to_the_active_company(): void
     {
-        $product = $this->makeProduct();
-        $invoice = $this->makeInvoice(jalali_to_gregorian(1405, 6, 15, '-'));
-        $this->makeInvoiceItem($invoice, $product, quantityAt: 42);
+        $this->makeInvoice(jalali_to_gregorian(1405, 2, 1, '-'), InvoiceType::SELL, InvoiceStatus::APPROVED, amount: 400);
 
-        $result = $this->service()->getMonthlyWarehouse();
+        $otherCompany = Company::factory()->create(['fiscal_year' => 1405]);
+        config(['active-company-id' => $otherCompany->id]);
+        $this->makeInvoice(jalali_to_gregorian(1405, 2, 2, '-'), InvoiceType::SELL, InvoiceStatus::APPROVED, amount: 9000);
 
-        $this->assertSame(42, $result['شهریور']);
-        $this->assertSame(0, $result['مهر']);
+        config(['active-company-id' => $this->companyId]);
+
+        $this->assertSame(400.0, $this->service()->totalSellAmount());
     }
 
-    public function test_warehouse_chart_keeps_only_latest_invoice_per_product_per_month(): void
+    public function test_total_buy_amount_includes_only_approved_or_settled_purchases(): void
     {
-        $product = $this->makeProduct();
+        $this->makeInvoice(jalali_to_gregorian(1405, 2, 1, '-'), InvoiceType::BUY, InvoiceStatus::APPROVED, amount: 100);
+        $this->makeInvoice(jalali_to_gregorian(1405, 2, 2, '-'), InvoiceType::BUY, InvoiceStatus::PARTIALLY_PAID, amount: 200);
+        $this->makeInvoice(jalali_to_gregorian(1405, 2, 3, '-'), InvoiceType::BUY, InvoiceStatus::PAID, amount: 300);
+        $this->makeInvoice(jalali_to_gregorian(1405, 2, 4, '-'), InvoiceType::BUY, InvoiceStatus::UNAPPROVED, amount: 9000);
+        $this->makeInvoice(jalali_to_gregorian(1405, 2, 5, '-'), InvoiceType::SELL, InvoiceStatus::APPROVED, amount: 8000);
 
-        $earlier = $this->makeInvoice(jalali_to_gregorian(1405, 3, 1, '-'));
-        $this->makeInvoiceItem($earlier, $product, quantityAt: 100);
-
-        $later = $this->makeInvoice(jalali_to_gregorian(1405, 3, 20, '-'));
-        $this->makeInvoiceItem($later, $product, quantityAt: 55);
-
-        $result = $this->service()->getMonthlyWarehouse();
-
-        $this->assertSame(55, $result['خرداد'], 'Only the latest invoice_item snapshot per product per month is counted');
+        $this->assertSame(600.0, $this->service()->totalBuyAmount());
     }
 
-    public function test_warehouse_chart_sums_latest_quantity_at_across_products_in_same_month(): void
+    public function test_average_invoice_amounts_include_only_approved_or_settled_invoices(): void
+    {
+        $this->makeInvoice(jalali_to_gregorian(1405, 2, 1, '-'), InvoiceType::SELL, InvoiceStatus::APPROVED, amount: 100);
+        $this->makeInvoice(jalali_to_gregorian(1405, 2, 2, '-'), InvoiceType::SELL, InvoiceStatus::PAID, amount: 300);
+        $this->makeInvoice(jalali_to_gregorian(1405, 2, 3, '-'), InvoiceType::SELL, InvoiceStatus::UNAPPROVED, amount: 9000);
+        $this->makeInvoice(jalali_to_gregorian(1405, 2, 4, '-'), InvoiceType::BUY, InvoiceStatus::APPROVED, amount: 200);
+        $this->makeInvoice(jalali_to_gregorian(1405, 2, 5, '-'), InvoiceType::BUY, InvoiceStatus::PARTIALLY_PAID, amount: 400);
+
+        $this->assertSame(200.0, $this->service()->averageSellAmount());
+        $this->assertSame(300.0, $this->service()->averageBuyAmount());
+    }
+
+    public function test_warehouse_financial_values_use_current_product_costs_and_prices(): void
     {
         $productA = $this->makeProduct();
+        $productA->update(['quantity' => 2, 'average_cost' => 100, 'selling_price' => 160]);
         $productB = $this->makeProduct();
+        $productB->update(['quantity' => 3, 'average_cost' => 300, 'selling_price' => 440]);
 
-        $invoiceA = $this->makeInvoice(jalali_to_gregorian(1405, 2, 10, '-'));
-        $this->makeInvoiceItem($invoiceA, $productA, quantityAt: 30);
-
-        $invoiceB = $this->makeInvoice(jalali_to_gregorian(1405, 2, 20, '-'));
-        $this->makeInvoiceItem($invoiceB, $productB, quantityAt: 70);
-
-        $result = $this->service()->getMonthlyWarehouse();
-
-        $this->assertSame(100, $result['اردیبهشت']);
+        $this->assertSame(1640.0, $this->service()->totalWarehouseRetailValue());
+        $this->assertSame(200.0, $this->service()->averageWarehouseUnitCost());
+        $this->assertSame(300.0, $this->service()->averageWarehouseSellingPrice());
     }
 
-    public function test_warehouse_chart_excludes_service_invoice_items(): void
+    public function test_employee_payroll_summary_uses_the_latest_payroll(): void
     {
-        $serviceGroup = ServiceGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
-        $service = Service::factory()->withGroup($serviceGroup)->withSubject()->create(['company_id' => $this->companyId]);
-
-        $invoice = $this->makeInvoice(jalali_to_gregorian(1405, 5, 1, '-'));
-        InvoiceItem::create([
-            'invoice_id' => $invoice->id,
-            'itemable_type' => Service::class,
-            'itemable_id' => $service->id,
-            'quantity' => 1,
-            'unit_price' => 500,
-            'unit_discount' => 0,
-            'vat' => 0,
-            'amount' => 500,
-            'quantity_at' => 88,
-            'cog_after' => 0,
+        $employee = Employee::factory()->create(['company_id' => $this->companyId, 'user_id' => $this->user->id]);
+        Payroll::factory()->create(['company_id' => $this->companyId, 'employee_id' => $employee->id, 'year' => 1405, 'month' => 1]);
+        Payroll::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $employee->id,
+            'year' => 1405,
+            'month' => 2,
+            'net_payment' => 700,
+            'total_earnings' => 1000,
+            'total_deductions' => 300,
+            'income_tax_amount' => 100,
         ]);
 
-        $result = $this->service()->getMonthlyWarehouse();
-
-        $this->assertSame(0, array_sum($result), 'Service invoice items must not appear in the warehouse chart');
-    }
-
-    public function test_warehouse_chart_distributes_items_across_multiple_months(): void
-    {
-        $product = $this->makeProduct();
-
-        $this->makeInvoiceItem($this->makeInvoice(jalali_to_gregorian(1405, 1, 5, '-')), $product, quantityAt: 10);
-        $this->makeInvoiceItem($this->makeInvoice(jalali_to_gregorian(1405, 7, 5, '-')), $product, quantityAt: 20);
-        $this->makeInvoiceItem($this->makeInvoice(jalali_to_gregorian(1405, 12, 1, '-')), $product, quantityAt: 30);
-
-        $result = $this->service()->getMonthlyWarehouse();
-
-        $this->assertSame(10, $result['فروردین']);
-        $this->assertSame(0, $result['اردیبهشت']);
-        $this->assertSame(20, $result['مهر']);
-        $this->assertSame(30, $result['اسفند']);
-    }
-
-    public function test_sell_amount_per_products_filters_to_approved_sell_invoices_only(): void
-    {
-        $product = $this->makeProduct();
-
-        $sell = $this->makeInvoice(jalali_to_gregorian(1405, 4, 1, '-'), InvoiceType::SELL, InvoiceStatus::APPROVED, amount: 1000);
-        $this->makeInvoiceItem($sell, $product, amount: 1000);
-
-        $unapproved = $this->makeInvoice(jalali_to_gregorian(1405, 4, 2, '-'), InvoiceType::SELL, InvoiceStatus::UNAPPROVED, amount: 500);
-        $this->makeInvoiceItem($unapproved, $product, amount: 500);
-
-        $buy = $this->makeInvoice(jalali_to_gregorian(1405, 4, 3, '-'), InvoiceType::BUY, InvoiceStatus::APPROVED, amount: 300);
-        $this->makeInvoiceItem($buy, $product, amount: 300);
-
-        $result = $this->service()->getSellAmountPerProducts();
-        $productRow = $result->firstWhere('name', $product->name);
-
-        $this->assertNotNull($productRow);
-        $this->assertSame(1000, $productRow['amount']);
-    }
-
-    public function test_sell_amount_per_products_other_is_zero_when_five_or_fewer_products(): void
-    {
-        foreach (range(1, 3) as $i) {
-            $p = $this->makeProduct();
-            $inv = $this->makeInvoice(jalali_to_gregorian(1405, 3, $i, '-'), InvoiceType::SELL, InvoiceStatus::APPROVED, amount: $i * 100);
-            $this->makeInvoiceItem($inv, $p, amount: $i * 100);
-        }
-
-        $result = $this->service()->getSellAmountPerProducts();
-        $other = $result->firstWhere('name', __('Other'));
-
-        $this->assertNotNull($other);
-        $this->assertEquals(0, $other['amount']);
-    }
-
-    public function test_sell_amount_per_products_other_captures_remainder_beyond_top_five(): void
-    {
-        $amounts = [600, 500, 400, 300, 200, 100];
-        $total = array_sum($amounts);
-
-        foreach ($amounts as $idx => $amt) {
-            $p = $this->makeProduct();
-            $inv = $this->makeInvoice(jalali_to_gregorian(1405, 3, $idx + 1, '-'), InvoiceType::SELL, InvoiceStatus::APPROVED, amount: $amt);
-            $this->makeInvoiceItem($inv, $p, amount: $amt);
-        }
-
-        $result = $this->service()->getSellAmountPerProducts();
-        $other = $result->firstWhere('name', __('Other'));
-
-        $this->assertEquals(100, $other['amount']);
-        $this->assertEquals($total, $result->sum('amount'));
-    }
-
-    public function test_popular_products_ranks_by_quantity_on_approved_sell_invoices(): void
-    {
-        $low = $this->makeProduct();
-        $high = $this->makeProduct();
-
-        $invLow = $this->makeInvoice(jalali_to_gregorian(1405, 4, 1, '-'), InvoiceType::SELL, InvoiceStatus::APPROVED);
-        $this->makeInvoiceItem($invLow, $low, quantity: 2);
-
-        $invHigh = $this->makeInvoice(jalali_to_gregorian(1405, 4, 2, '-'), InvoiceType::SELL, InvoiceStatus::APPROVED);
-        $this->makeInvoiceItem($invHigh, $high, quantity: 10);
-
-        $result = $this->service()->popularProductsAndServices();
-
-        $this->assertEquals($high->id, $result->first()['id']);
-        $this->assertSame(10, $result->first()['quantity']);
-        $this->assertSame(2, $result->last()['quantity']);
-    }
-
-    public function test_popular_products_excludes_unapproved_invoices(): void
-    {
-        $product = $this->makeProduct();
-
-        $unapproved = $this->makeInvoice(jalali_to_gregorian(1405, 4, 1, '-'), InvoiceType::SELL, InvoiceStatus::UNAPPROVED);
-        $this->makeInvoiceItem($unapproved, $product, quantity: 50);
-
-        $result = $this->service()->popularProductsAndServices();
-
-        $this->assertCount(0, $result);
-    }
-
-    public function test_popular_products_excludes_buy_invoices(): void
-    {
-        $product = $this->makeProduct();
-
-        $buy = $this->makeInvoice(jalali_to_gregorian(1405, 4, 1, '-'), InvoiceType::BUY, InvoiceStatus::APPROVED);
-        $this->makeInvoiceItem($buy, $product, quantity: 50);
-
-        $result = $this->service()->popularProductsAndServices();
-
-        $this->assertCount(0, $result);
-    }
-
-    public function test_popular_products_accumulates_quantity_across_invoices(): void
-    {
-        $product = $this->makeProduct();
-
-        foreach ([5, 3, 7] as $idx => $qty) {
-            $inv = $this->makeInvoice(jalali_to_gregorian(1405, 4, $idx + 1, '-'), InvoiceType::SELL, InvoiceStatus::APPROVED);
-            $this->makeInvoiceItem($inv, $product, quantity: $qty);
-        }
-
-        $result = $this->service()->popularProductsAndServices();
-
-        $this->assertCount(1, $result);
-        $this->assertSame(15, $result->first()['quantity']);
-    }
-
-    public function test_total_buy_amount_sums_approved_buy_invoices(): void
-    {
-        $this->makeInvoice(jalali_to_gregorian(1405, 1, 1, '-'), InvoiceType::BUY, InvoiceStatus::APPROVED, amount: 400);
-        $this->makeInvoice(jalali_to_gregorian(1405, 6, 1, '-'), InvoiceType::BUY, InvoiceStatus::APPROVED, amount: 600);
-
-        $this->assertSame(1000.0, $this->service()->totalBuyAmount());
-    }
-
-    public function test_total_buy_amount_excludes_unapproved_buy_invoices(): void
-    {
-        $this->makeInvoice(jalali_to_gregorian(1405, 3, 1, '-'), InvoiceType::BUY, InvoiceStatus::APPROVED, amount: 300);
-        $this->makeInvoice(jalali_to_gregorian(1405, 3, 2, '-'), InvoiceType::BUY, InvoiceStatus::UNAPPROVED, amount: 9999);
-
-        $this->assertSame(300.0, $this->service()->totalBuyAmount());
-    }
-
-    public function test_total_buy_amount_excludes_sell_invoices(): void
-    {
-        $this->makeInvoice(jalali_to_gregorian(1405, 3, 1, '-'), InvoiceType::BUY, InvoiceStatus::APPROVED, amount: 200);
-        $this->makeInvoice(jalali_to_gregorian(1405, 3, 2, '-'), InvoiceType::SELL, InvoiceStatus::APPROVED, amount: 9999);
-
-        $this->assertSame(200.0, $this->service()->totalBuyAmount());
-    }
-
-    public function test_total_buy_amount_is_zero_with_no_approved_buy_invoices(): void
-    {
-        $this->assertSame(0.0, $this->service()->totalBuyAmount());
-    }
-
-    public function test_monthly_products_stat_places_transaction_in_correct_month(): void
-    {
-        $product = $this->makeProduct();
-        $inventorySubject = Subject::withoutGlobalScopes()->find($product->inventory_subject_id);
-
-        $doc = $this->makeDocument(jalali_to_gregorian(1405, 5, 10, '-'));
-        Transaction::create([
-            'value' => 800,
-            'subject_id' => $inventorySubject->id,
-            'document_id' => $doc->id,
-            'user_id' => $this->user->id,
-            'desc' => 'inventory in',
-        ]);
-
-        $result = $this->service()->getMonthlyProductsStat();
-
-        $this->assertSame(800, $result['مرداد']);
-        $this->assertSame(0, $result['تیر']);
-        $this->assertSame(0, $result['شهریور']);
-    }
-
-    public function test_monthly_products_stat_aggregates_across_multiple_products(): void
-    {
-        $productA = $this->makeProduct();
-        $productB = $this->makeProduct();
-
-        $subjectA = Subject::withoutGlobalScopes()->find($productA->inventory_subject_id);
-        $subjectB = Subject::withoutGlobalScopes()->find($productB->inventory_subject_id);
-
-        $doc = $this->makeDocument(jalali_to_gregorian(1405, 9, 5, '-'));
-
-        Transaction::create(['value' => 300, 'subject_id' => $subjectA->id, 'document_id' => $doc->id, 'user_id' => $this->user->id, 'desc' => 'a']);
-        Transaction::create(['value' => 700, 'subject_id' => $subjectB->id, 'document_id' => $doc->id, 'user_id' => $this->user->id, 'desc' => 'b']);
-
-        $result = $this->service()->getMonthlyProductsStat();
-
-        $this->assertSame(1000, $result['آذر']);
-    }
-
-    public function test_monthly_products_stat_excludes_transactions_outside_fiscal_year(): void
-    {
-        $product = $this->makeProduct();
-        $subject = Subject::withoutGlobalScopes()->find($product->inventory_subject_id);
-
-        $before = $this->makeDocument('2026-01-01');
-        Transaction::create(['value' => 500, 'subject_id' => $subject->id, 'document_id' => $before->id, 'user_id' => $this->user->id, 'desc' => 'before']);
-
-        $after = $this->makeDocument('2027-04-01');
-        Transaction::create(['value' => 500, 'subject_id' => $subject->id, 'document_id' => $after->id, 'user_id' => $this->user->id, 'desc' => 'after']);
-
-        $result = $this->service()->getMonthlyProductsStat();
-
-        $this->assertSame(0, array_sum($result));
-    }
-
-    public function test_monthly_products_stat_is_all_zeros_when_no_products_exist(): void
-    {
-        $result = $this->service()->getMonthlyProductsStat();
-
-        $this->assertCount(12, $result);
-        $this->assertSame(0, array_sum($result));
-    }
-
-    public function test_balance_for_subject_ids_returns_zero_sum_when_running_balance_is_zero(): void
-    {
-        $subjectId = 1;
-
-        $docBefore = $this->makeDocument('2025-12-01');
-        Transaction::create(['value' => 1000, 'subject_id' => $subjectId, 'document_id' => $docBefore->id, 'user_id' => $this->user->id, 'desc' => 'in']);
-
-        $docWithin = $this->makeDocument('2026-04-01');
-        Transaction::create(['value' => -1000, 'subject_id' => $subjectId, 'document_id' => $docWithin->id, 'user_id' => $this->user->id, 'desc' => 'out']);
-
-        $response = $this->service()->balanceForSubjectIds([$subjectId], 4, false);
-        $data = json_decode($response->getContent(), true);
-
-        $this->assertSame(0, $data['sum'], 'sum must be 0 when running balance is zero, not the non-zero initial balance');
-    }
-
-    public function test_balance_for_subject_ids_response_shape_is_correct(): void
-    {
-        $response = $this->service()->balanceForSubjectIds([1], 1, false);
-        $data = json_decode($response->getContent(), true);
-
-        $this->assertArrayHasKey('labels', $data);
-        $this->assertArrayHasKey('datas', $data);
-        $this->assertArrayHasKey('sum', $data);
-        $this->assertArrayHasKey('start_date', $data);
-        $this->assertArrayHasKey('end_date', $data);
-        $this->assertCount(count($data['labels']), $data['datas']);
-    }
-
-    public function test_balance_for_subject_ids_inverts_values_when_inverse_flag_is_set(): void
-    {
-        $subjectId = 1;
-
-        $doc = $this->makeDocument('2026-04-01');
-        Transaction::create(['value' => -500, 'subject_id' => $subjectId, 'document_id' => $doc->id, 'user_id' => $this->user->id, 'desc' => 'credit']);
-
-        $normal = json_decode($this->service()->balanceForSubjectIds([$subjectId], 4, false)->getContent(), true);
-        $inverted = json_decode($this->service()->balanceForSubjectIds([$subjectId], 4, true)->getContent(), true);
-
-        $this->assertNotEmpty($normal['datas']);
-        foreach ($normal['datas'] as $idx => $value) {
-            $this->assertSame($value * -1, $inverted['datas'][$idx]);
-        }
+        $this->assertSame([
+            'net_payment' => 700.0,
+            'total_earnings' => 1000.0,
+            'total_deductions' => 300.0,
+            'income_tax_amount' => 100.0,
+        ], $this->service()->employeePayrollSummary($this->user));
     }
 
     public function test_total_warehouse_value_sums_inventory_subject_balances(): void
@@ -439,6 +180,302 @@ class HomeServiceChartTest extends TestCase
         $this->assertSame(0.0, $this->service()->totalWarehouseValue());
     }
 
+    public function test_seller_sees_only_role_specific_quick_links(): void
+    {
+        $this->signInWith(['home.summary', 'invoices.index', 'invoices.create', 'customers.index', 'customers.create', 'customer-groups.index', 'crm.dashboard', 'ancillary-costs.index']);
+
+        $response = $this->get(route('home'));
+
+        $response->assertOk()
+            ->assertViewHas('canFinancial', false)
+            ->assertViewHas('canSales', true)
+            ->assertViewHas('canInventory', false)
+            ->assertViewHas('homeVariant', 'sales')
+            ->assertSee('data-home-variant="sales"', false)
+            ->assertSee('data-home-area="sell-invoices-link"', false)
+            ->assertSee('data-home-area="buy-invoices-link"', false)
+            ->assertSee('data-home-area="create-sell-invoice-link"', false)
+            ->assertSee('data-home-area="customers-link"', false)
+            ->assertSee('data-home-area="create-customer-link"', false)
+            ->assertSee('data-home-area="customer-groups-link"', false)
+            ->assertSee('data-home-area="crm-dashboard"', false)
+            ->assertSee('data-home-area="ancillary-costs"', false)
+            ->assertSee(route('invoices.index', ['invoice_type' => 'buy']), false)
+            ->assertSee('data-private-metric="sales"', false)
+            ->assertSee('data-private-metric="purchases"', false)
+            ->assertSee('data-private-metric="average_sales"', false)
+            ->assertSee('data-private-metric="average_purchases"', false)
+            ->assertDontSee('data-home-area="accounting"', false)
+            ->assertDontSee('data-home-area="sales"', false)
+            ->assertDontSee('data-home-area="inventory"', false)
+            ->assertDontSee('data-home-area="crm"', false)
+            ->assertDontSee('data-home-area="employee"', false);
+    }
+
+    public function test_warehousekeeper_does_not_receive_sales_content_from_product_access(): void
+    {
+        $this->signInWith(['home.summary', 'products.index', 'products.create', 'products.report', 'products.import', 'products.export', 'product-groups.index', 'product-groups.create', 'warehouse.dashboard']);
+
+        $response = $this->get(route('home'));
+
+        $response->assertOk()
+            ->assertViewHas('canSales', false)
+            ->assertViewHas('canInventory', true)
+            ->assertViewHas('homeVariant', 'inventory')
+            ->assertSee('data-home-variant="inventory"', false)
+            ->assertSee('data-home-area="products-link"', false)
+            ->assertSee('data-home-area="create-product-link"', false)
+            ->assertSee('data-home-area="warehouse-dashboard"', false)
+            ->assertSee('data-home-area="product-groups"', false)
+            ->assertSee('data-home-area="inventory-report"', false)
+            ->assertSee('data-home-area="create-product-group-link"', false)
+            ->assertSee('data-home-area="import-products-link"', false)
+            ->assertSee('data-home-area="export-products-link"', false)
+            ->assertSee('data-private-metric="inventory"', false)
+            ->assertSee('data-private-metric="inventory_retail"', false)
+            ->assertSee('data-private-metric="inventory_average_cost"', false)
+            ->assertSee('data-private-metric="inventory_average_price"', false)
+            ->assertDontSee('data-home-area="inventory"', false)
+            ->assertDontSee('data-home-area="sales"', false)
+            ->assertDontSee('data-private-metric="sales"', false);
+    }
+
+    public function test_accounting_user_sees_all_permitted_business_areas(): void
+    {
+        $this->signInWith(['home.summary', 'documents.show', 'documents.index', 'reports.ledger', 'bank-accounts.index', 'invoices.index', 'products.index', 'services.index', 'customers.index']);
+
+        $response = $this->get(route('home'));
+
+        $response->assertOk()
+            ->assertViewHas('homeVariant', 'accounting')
+            ->assertSee('data-home-variant="accounting"', false)
+            ->assertSee('data-home-area="accounting"', false)
+            ->assertSee('data-home-area="sales"', false)
+            ->assertSee('data-home-area="inventory"', false)
+            ->assertSee('data-home-area="services"', false)
+            ->assertSee('data-home-area="crm"', false)
+            ->assertSee('data-private-metric="profit"', false)
+            ->assertSee('data-private-metric="expenses"', false)
+            ->assertSee('data-private-metric="sales"', false)
+            ->assertSee('data-private-metric="purchases"', false)
+            ->assertSee('data-private-metric="inventory"', false);
+    }
+
+    public function test_mixed_business_permissions_are_combined_but_personal_portal_is_hidden(): void
+    {
+        $this->signInWith(['home.summary', 'invoices.index', 'products.index', 'employee-portal.dashboard']);
+
+        $response = $this->get(route('home'));
+
+        $response->assertOk()
+            ->assertViewHas('canSeePersonalPortal', false)
+            ->assertViewHas('homeVariant', 'operations')
+            ->assertSee('data-home-variant="operations"', false)
+            ->assertSee('data-home-area="sell-invoices-link"', false)
+            ->assertSee('data-home-area="buy-invoices-link"', false)
+            ->assertSee('data-home-area="products-link"', false)
+            ->assertSee('data-home-area="employee-overview"', false)
+            ->assertDontSee('data-home-area="create-sell-invoice-link"', false)
+            ->assertDontSee('data-home-area="create-product-link"', false)
+            ->assertDontSee('data-home-area="employee-attendance"', false)
+            ->assertDontSee('data-home-area="sales"', false)
+            ->assertDontSee('data-home-area="inventory"', false);
+    }
+
+    public function test_platform_administrator_can_return_to_management(): void
+    {
+        $this->signInWith(['access-super-admin-panel', 'customers.index']);
+
+        $this->get(route('home'))->assertOk()
+            ->assertViewHas('homeVariant', 'platform')
+            ->assertSee('data-home-variant="platform"', false)
+            ->assertSee(route('management.dashboard'), false);
+    }
+
+    public function test_company_administrator_gets_the_administration_variant(): void
+    {
+        $this->signInWith(['documents.show', 'configs.index']);
+
+        $this->get(route('home'))->assertOk()
+            ->assertViewHas('homeVariant', 'admin')
+            ->assertSee('data-home-variant="admin"', false)
+            ->assertSeeText(__('Administration workspace'));
+    }
+
+    public function test_employee_only_user_gets_the_employee_variant(): void
+    {
+        $user = $this->signInWith([
+            'home.summary',
+            'employee-portal.dashboard',
+            'employee-portal.attendance-logs',
+            'employee-portal.payrolls',
+            'employee-portal.personnel-requests.index',
+        ]);
+        Employee::factory()->create(['company_id' => $this->companyId, 'user_id' => $user->id]);
+
+        $this->get(route('home'))->assertOk()
+            ->assertViewHas('homeVariant', 'employee')
+            ->assertSee('data-home-variant="employee"', false)
+            ->assertSee('data-home-area="employee-overview"', false)
+            ->assertDontSee('data-home-area="employee-profile"', false)
+            ->assertSee('data-home-area="employee-attendance"', false)
+            ->assertSee('data-home-area="employee-payroll"', false)
+            ->assertSee('data-home-area="employee-requests"', false)
+            ->assertSee('data-private-metric="employee_net_payment"', false)
+            ->assertSee('data-private-metric="employee_earnings"', false)
+            ->assertSee('data-private-metric="employee_deductions"', false)
+            ->assertSee('data-private-metric="employee_tax"', false)
+            ->assertDontSee('data-home-area="employee"', false);
+    }
+
+    public function test_initial_home_request_does_not_calculate_private_metrics(): void
+    {
+        $this->signInWith(['home.summary', 'documents.show', 'invoices.index', 'products.index']);
+
+        $service = $this->mock(HomeService::class);
+        $service->shouldNotReceive('profitFromNonPermanentSubjects');
+        $service->shouldNotReceive('totalSellAmount');
+        $service->shouldNotReceive('totalBuyAmount');
+        $service->shouldNotReceive('totalWarehouseValue');
+
+        $this->get(route('home'))->assertOk()->assertSee('••••••', false);
+    }
+
+    public function test_each_private_summary_metric_is_fetched_independently(): void
+    {
+        $this->signInWith(['home.summary', 'documents.show', 'invoices.index', 'products.index']);
+
+        $service = $this->mock(HomeService::class);
+        $service->shouldReceive('profitFromNonPermanentSubjects')->twice()->andReturn([
+            'incomeData' => [],
+            'costData' => ['Operating expenses' => 450],
+            'profit' => 1250,
+        ]);
+        $service->shouldReceive('totalSellAmount')->once()->andReturn(2500.5);
+        $service->shouldReceive('totalBuyAmount')->once()->andReturn(1750);
+        $service->shouldReceive('averageSellAmount')->once()->andReturn(625.5);
+        $service->shouldReceive('averageBuyAmount')->once()->andReturn(875);
+        $service->shouldReceive('totalWarehouseValue')->once()->andReturn(3750);
+        $service->shouldReceive('totalWarehouseRetailValue')->once()->andReturn(5200);
+        $service->shouldReceive('averageWarehouseUnitCost')->once()->andReturn(240);
+        $service->shouldReceive('averageWarehouseSellingPrice')->once()->andReturn(360);
+
+        $this->getJson(route('home.summary', ['metric' => 'profit']))->assertOk()->assertExactJson([
+            'metric' => 'profit',
+            'formattedValue' => formatNumber(1250),
+            'unit' => __('Rial'),
+        ]);
+
+        $this->getJson(route('home.summary', ['metric' => 'sales']))->assertOk()->assertExactJson([
+            'metric' => 'sales',
+            'formattedValue' => formatNumber(2500.5),
+            'unit' => __('Rial'),
+        ]);
+
+        $this->getJson(route('home.summary', ['metric' => 'inventory']))->assertOk()->assertExactJson([
+            'metric' => 'inventory',
+            'formattedValue' => formatNumber(3750),
+            'unit' => __('Rial'),
+        ]);
+
+        $this->getJson(route('home.summary', ['metric' => 'expenses']))->assertOk()->assertExactJson([
+            'metric' => 'expenses',
+            'formattedValue' => formatNumber(450),
+            'unit' => __('Rial'),
+        ]);
+
+        $this->getJson(route('home.summary', ['metric' => 'purchases']))->assertOk()->assertExactJson([
+            'metric' => 'purchases',
+            'formattedValue' => formatNumber(1750),
+            'unit' => __('Rial'),
+        ]);
+
+        $this->getJson(route('home.summary', ['metric' => 'average_sales']))->assertOk()->assertExactJson([
+            'metric' => 'average_sales',
+            'formattedValue' => formatNumber(625.5),
+            'unit' => __('Rial'),
+        ]);
+
+        $this->getJson(route('home.summary', ['metric' => 'average_purchases']))->assertOk()->assertExactJson([
+            'metric' => 'average_purchases',
+            'formattedValue' => formatNumber(875),
+            'unit' => __('Rial'),
+        ]);
+
+        $this->getJson(route('home.summary', ['metric' => 'inventory_retail']))->assertOk()->assertExactJson([
+            'metric' => 'inventory_retail',
+            'formattedValue' => formatNumber(5200),
+            'unit' => __('Rial'),
+        ]);
+
+        $this->getJson(route('home.summary', ['metric' => 'inventory_average_cost']))->assertOk()->assertExactJson([
+            'metric' => 'inventory_average_cost',
+            'formattedValue' => formatNumber(240),
+            'unit' => __('Rial'),
+        ]);
+
+        $this->getJson(route('home.summary', ['metric' => 'inventory_average_price']))->assertOk()->assertExactJson([
+            'metric' => 'inventory_average_price',
+            'formattedValue' => formatNumber(360),
+            'unit' => __('Rial'),
+        ]);
+    }
+
+    public function test_employee_private_payroll_metrics_are_fetched_independently(): void
+    {
+        $user = $this->signInWith(['home.summary', 'employee-portal.dashboard']);
+        $service = $this->mock(HomeService::class);
+        $service->shouldReceive('employeePayrollSummary')->times(4)->with($user)->andReturn([
+            'net_payment' => 700,
+            'total_earnings' => 1000,
+            'total_deductions' => 300,
+            'income_tax_amount' => 100,
+        ]);
+
+        foreach ([
+            'employee_net_payment' => 700,
+            'employee_earnings' => 1000,
+            'employee_deductions' => 300,
+            'employee_tax' => 100,
+        ] as $metric => $value) {
+            $this->getJson(route('home.summary', ['metric' => $metric]))->assertOk()->assertExactJson([
+                'metric' => $metric,
+                'formattedValue' => formatNumber($value),
+                'unit' => __('Rial'),
+            ]);
+        }
+    }
+
+    public function test_metric_specific_permission_is_checked_before_calculation(): void
+    {
+        $this->signInWith(['home.summary', 'invoices.index']);
+
+        $service = $this->mock(HomeService::class);
+        $service->shouldNotReceive('profitFromNonPermanentSubjects');
+
+        $this->getJson(route('home.summary', ['metric' => 'profit']))->assertForbidden();
+    }
+
+    public function test_unknown_private_summary_metric_returns_not_found(): void
+    {
+        $this->signInWith(['home.summary', 'invoices.index']);
+
+        $this->getJson(route('home.summary', ['metric' => 'unknown']))->assertNotFound();
+    }
+
+    private function signInWith(array $permissions): User
+    {
+        $user = User::factory()->create();
+        Company::find($this->companyId)->users()->attach($user);
+
+        $permissionModels = collect(['home', ...$permissions])->unique()->map(fn (string $name) => Permission::firstOrCreate(['name' => $name]));
+
+        $user->givePermissionTo($permissionModels);
+        $this->actingAs($user);
+
+        return $user;
+    }
+
     private function service(): HomeService
     {
         return new HomeService(new SubjectService);
@@ -468,27 +505,6 @@ class HomeServiceChartTest extends TestCase
             'vat' => 0,
             'amount' => $amount,
             'title' => 'test',
-        ]);
-    }
-
-    private function makeInvoiceItem(
-        Invoice $invoice,
-        Product $product,
-        int $quantityAt = 0,
-        float $quantity = 1,
-        float $amount = 100,
-    ): InvoiceItem {
-        return InvoiceItem::create([
-            'invoice_id' => $invoice->id,
-            'itemable_type' => Product::class,
-            'itemable_id' => $product->id,
-            'quantity' => $quantity,
-            'unit_price' => $amount,
-            'unit_discount' => 0,
-            'vat' => 0,
-            'amount' => $amount,
-            'quantity_at' => $quantityAt,
-            'cog_after' => 0,
         ]);
     }
 

@@ -9,16 +9,11 @@ use App\Models\Activity;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Invoice;
-use App\Models\InvoiceItem;
-use App\Models\MonthlyAttendance;
 use App\Models\Payroll;
 use App\Models\Product;
-use App\Models\Service;
 use App\Models\Subject;
-use App\Models\Transaction;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Support\Collection;
 use Spatie\Permission\Models\Role;
 
 class HomeService
@@ -74,7 +69,7 @@ class HomeService
      *
      * Returns null when the user is not linked to an employee record.
      *
-     * @return array{employee: Employee, recentLogs: Collection, requestsCount: array<string,int>, lastMonthlyAttendance: ?MonthlyAttendance, lastPayroll: ?Payroll}|null
+     * @return array{employee: Employee, requestsCount: array<string,int>}|null
      */
     public function employeePersonalData(User $user): ?array
     {
@@ -84,99 +79,11 @@ class HomeService
             return null;
         }
 
-        $recentLogs = $employee->attendanceLogs()
-            ->orderByDesc('log_date')
-            ->limit(5)
-            ->get();
-
         $requestsCount = collect(PersonnelRequestStatus::cases())->mapWithKeys(fn (PersonnelRequestStatus $status) => [
             $status->valueName() => $employee->personnelRequests()->where('status', $status)->count(),
         ])->toArray();
 
-        $lastMonthlyAttendance = $employee->monthlyAttendances()
-            ->orderByDesc('year')
-            ->orderByDesc('month')
-            ->first();
-
-        $lastPayroll = $employee->payrolls()
-            ->orderByDesc('year')
-            ->orderByDesc('month')
-            ->first();
-
-        return compact('employee', 'recentLogs', 'requestsCount', 'lastMonthlyAttendance', 'lastPayroll');
-    }
-
-    public function getSellAmountPerProducts()
-    {
-        $baseQuery = InvoiceItem::query()
-            ->whereHas('invoice', fn ($q) => $q->where('invoice_type', InvoiceType::SELL)
-                ->whereIn('status', InvoiceStatus::approvedOrSettled())
-            )
-            ->with('itemable')
-            ->selectRaw('itemable_type, itemable_id, SUM(amount) as total_amount')
-            ->groupBy('itemable_type', 'itemable_id');
-
-        $totalAmount = (clone $baseQuery)->get()->sum('total_amount');
-
-        $topFiveInvoiceItemsSellAmount = (clone $baseQuery)
-            ->orderByDesc('total_amount')
-            ->limit(5)
-            ->get()
-            ->map(fn ($item) => [
-                'name' => $item->itemable->name ?? 'unknown',
-                'amount' => (int) $item->total_amount,
-                'type' => $item->itemable_type === Product::class ? __('Product') : __('Services'),
-            ]);
-
-        $sellInvoiceItemsTotalData = collect([[
-            'name' => __('Other'),
-            'amount' => $totalAmount - $topFiveInvoiceItemsSellAmount->sum('amount'),
-            'type' => __('None'),
-        ]]);
-
-        return $sellInvoiceItemsTotalData->concat($topFiveInvoiceItemsSellAmount);
-    }
-
-    public function incomeData()
-    {
-        $incomeSubjectIds = [
-            'service_revenue' => config('amir.service_revenue'),
-            'sales_revenue' => config('amir.sales_revenue'),
-        ];
-
-        $incomes = [];
-        foreach ($incomeSubjectIds as $index => $incomeSubjectId) {
-            $subject = Subject::find($incomeSubjectId);
-            $incomes[$index] = $subject ? $this->subjectService->sumSubject($subject) : 0;
-        }
-
-        return [$incomes['service_revenue'], $incomes['sales_revenue']];
-    }
-
-    public function costsData()
-    {
-        $wagesCostSubject = Subject::find(config('amir.wage'));
-        $wagesCost = 0;
-        if (! is_null($wagesCostSubject)) {
-            $wagesCost = $this->subjectService->sumSubject($wagesCostSubject);
-        }
-
-        $productCogSubjectIds = Product::pluck('cogs_subject_id')->all();
-        $productsCogCost = 0;
-        foreach ($productCogSubjectIds as $productCogSubjectId) {
-            $productSubject = Subject::find($productCogSubjectId);
-            if (! is_null($productSubject)) {
-                $productsCogCost += $this->subjectService->sumSubject($productSubject);
-            }
-        }
-        $serviceCogSubjectIds = Service::pluck('cogs_subject_id')->all();
-        $servicesCogCost = 0;
-        foreach ($serviceCogSubjectIds as $serviceCogSubjectId) {
-            $serviceSubject = Subject::find($serviceCogSubjectId);
-            $servicesCogCost += $this->subjectService->sumSubject($serviceSubject);
-        }
-
-        return [$wagesCost, $productsCogCost, $servicesCogCost];
+        return compact('employee', 'requestsCount');
     }
 
     /**
@@ -220,203 +127,6 @@ class HomeService
         return compact('incomeData', 'costData', 'profit');
     }
 
-    public function cashAndBanksBalances(string $type, int $duration)
-    {
-        if ($type === 'cash_book') {
-            $subjectIds = Subject::where('parent_id', config('amir.cash_book'))->pluck('id')->all();
-        } elseif ($type === 'bank') {
-            $subjectIds = Subject::where('parent_id', config('amir.bank'))->pluck('id')->all();
-        } elseif ($type === 'both') {
-            $bankAccountSubjectIds = Subject::where('parent_id', config('amir.bank'))->pluck('id')->all();
-            $cashBookSubjectIds = Subject::where('parent_id', config('amir.cash_book'))->pluck('id')->all();
-
-            $subjectIds = array_merge($bankAccountSubjectIds, $cashBookSubjectIds);
-        } else {
-            return response()->json([]);
-        }
-
-        return $this->balanceForSubjectIds($subjectIds, $duration, true);
-    }
-
-    public function getMonthlyCost()
-    {
-        $subject = Subject::find(config('amir.cost'));
-
-        return $this->mapMonths($this->subjectService->sumSubjectWithDateRange($subject));
-    }
-
-    public function getMonthlyIncome()
-    {
-        $incomeSubjectIds = [
-            'service_revenue' => config('amir.service_revenue'),
-            'sales_revenue' => config('amir.sales_revenue'),
-            'income' => config('amir.income'), // other_icnome = income - (service_revenue + sales_revenue)
-        ];
-
-        $monthlyIncomes = [];
-        foreach ($incomeSubjectIds as $index => $incomeSubjectId) {
-            $subject = Subject::find($incomeSubjectId);
-            $monthlyIncomes[$index] = $subject
-                ? $this->mapMonths($this->subjectService->sumSubjectWithDateRange($subject))
-                : $this->mapMonths([]);
-        }
-
-        $other_income = [];
-        foreach ($monthlyIncomes['income'] as $month => $total) {
-            $other_income[$month] = $total - ($monthlyIncomes['service_revenue'][$month] + $monthlyIncomes['sales_revenue'][$month]);
-        }
-
-        foreach ($monthlyIncomes['income'] as $month => $total) {
-            $monthlyIncomes['total'][$month] = $monthlyIncomes['service_revenue'][$month] + $monthlyIncomes['sales_revenue'][$month] + $other_income[$month];
-        }
-
-        return $monthlyIncomes['total'];
-    }
-
-    public function getMonthlyWarehouse()
-    {
-        $year = config('active-company-fiscal-year') ?? toEnglish(jdate('Y'));
-        $startDate = jalali_to_gregorian($year, 1, 1, '-');
-        // Esfand (month 12) has 30 days in a Jalali leap year, 29 in a common year.
-        // Formula matches jdf.php jcheckdate() to avoid overflowing into the next fiscal year.
-        $y = (int) $year;
-        $lastDayOfYear = ($y % 33 % 4 - 1) === (int) ($y % 33 * 0.05) ? 30 : 29;
-        $endDate = jalali_to_gregorian($year, 12, $lastDayOfYear, '-');
-
-        $invoiceItems = \DB::table('invoice_items')
-            ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
-            ->select('invoices.date', 'invoice_items.itemable_id', 'invoice_items.quantity_at')
-            ->where('invoice_items.itemable_type', Product::class)
-            ->whereBetween('invoices.date', [$startDate, $endDate])
-            ->get();
-
-        $latestMonthlyProductsInvoiceItems = [];
-        foreach ($invoiceItems as $invoiceItem) {
-            $month = (int) toEnglish(jdate('m', strtotime($invoiceItem->date)));
-            $key = $month.'-'.$invoiceItem->itemable_id;
-
-            if (! isset($latestMonthlyProductsInvoiceItems[$key]) || $invoiceItem->date > $latestMonthlyProductsInvoiceItems[$key]->date) {
-                $latestMonthlyProductsInvoiceItems[$key] = $invoiceItem;
-            }
-        }
-
-        $monthlyWarehouse = array_fill(1, 12, 0);
-        foreach ($latestMonthlyProductsInvoiceItems as $latestMonthlyProductInvoiceItem) {
-            $month = (int) toEnglish(jdate('m', strtotime($latestMonthlyProductInvoiceItem->date)));
-            $monthlyWarehouse[$month] += $latestMonthlyProductInvoiceItem->quantity_at;
-        }
-
-        return $this->mapMonths($monthlyWarehouse);
-    }
-
-    public function getMonthlyProductsStat()
-    {
-        $productInventorySubjectIds = Product::pluck('inventory_subject_id')->all();
-        $monthlyProductsStat = [];
-
-        foreach ($productInventorySubjectIds as $productInventorySubjectId) {
-            $productSubject = Subject::find($productInventorySubjectId);
-            if (! is_null($productSubject)) {
-                $monthlyProductsStat[] = $this->subjectService->sumSubjectWithDateRange($productSubject);
-            }
-        }
-
-        $productsStat = [];
-        foreach ($monthlyProductsStat as $monthlyProductStat) {
-            if (empty($monthlyProductStat)) {
-                continue;
-            }
-
-            foreach ($monthlyProductStat as $month => $stat) {
-                if (! isset($productsStat[$month])) {
-                    $productsStat[$month] = 0;
-                }
-
-                $productsStat[$month] += $stat;
-            }
-        }
-
-        return $this->mapMonths($productsStat);
-    }
-
-    public function balanceForSubjectIds(array $subjectIds, int $duration, bool $inverse = true)
-    {
-        $year = config('active-company-fiscal-year');
-
-        $endDate = now();
-        $lastDayOfFiscalYear = Carbon::parse(jalali_to_gregorian($year, 12, 29, '/'));
-        if ($endDate->isAfter($lastDayOfFiscalYear)) {
-            $endDate = $lastDayOfFiscalYear;
-        }
-
-        $transactionQuery = Transaction::query()->whereIn('subject_id', $subjectIds);
-
-        $startDate = (clone $endDate)->subMonths($duration * 3);
-
-        $firstDayOfFiscalYear = Carbon::parse(jalali_to_gregorian($year, 1, 1, '/'));
-
-        if ($startDate->isBefore($firstDayOfFiscalYear)) {
-            $startDate = $firstDayOfFiscalYear;
-        }
-
-        $initialBalance = (int) (clone $transactionQuery)
-            ->whereHas('document', fn ($q) => $q->where('date', '<', $startDate))
-            ->sum('value');
-
-        $dailyTransactions = (clone $transactionQuery)
-            ->join('documents', 'documents.id', '=', 'transactions.document_id')
-            ->whereBetween('documents.date', [$startDate, $endDate])
-            ->selectRaw('DATE(documents.date) as date, SUM(transactions.value) as total')
-            ->groupBy('date')
-            ->orderBy('date')
-            ->pluck('total', 'date')
-            ->map(fn ($v) => (int) $v);
-
-        $dailyBalances = [formatDate($startDate) => $initialBalance];
-        $runningBalance = $initialBalance;
-
-        foreach ($dailyTransactions as $date => $dailyChange) {
-            $runningBalance += $dailyChange;
-            $dailyBalances[formatDate($date)] = $runningBalance;
-        }
-
-        $dailyBalances[formatDate($endDate)] = $runningBalance;
-        $values = array_values($dailyBalances);
-
-        if ($inverse) {
-            $values = array_map(fn ($value) => $value * -1, $values);
-        }
-
-        return response()->json([
-            'labels' => array_keys($dailyBalances),
-            'datas' => $values,
-            'sum' => $runningBalance,
-            'start_date' => jdate('Y/m/d', $startDate->timestamp, tr_num: 'en'),
-            'end_date' => jdate('Y/m/d', $endDate->timestamp, tr_num: 'en'),
-        ]);
-    }
-
-    public function popularProductsAndServices()
-    {
-        return InvoiceItem::whereHas('invoice', fn ($q) => $q->where('invoice_type', InvoiceType::SELL)
-            ->whereIn('status', InvoiceStatus::approvedOrSettled())
-        )->with('itemable')
-            ->selectRaw('itemable_type, itemable_id, SUM(quantity) as total_quantity')
-            ->groupBy('itemable_type', 'itemable_id')
-            ->orderByDesc('total_quantity')
-            ->limit(10)
-            ->get()
-            ->map(fn ($item) => [
-                'id' => $item->itemable_id,
-                'name' => $item->itemable->name ?? 'unknown',
-                'code' => $item->itemable->code ?? '-',
-                'selling_price' => $item->itemable->selling_price ?? null,
-                'average_cost' => $item->itemable->average_cost ?? null,
-                'quantity' => (int) $item->total_quantity,
-                'type' => $item->itemable_type === Product::class ? 'products' : 'services',
-            ]);
-    }
-
     public function totalWarehouseValue(): float
     {
         $total = 0.0;
@@ -427,58 +137,78 @@ class HomeService
         return $total;
     }
 
+    /**
+     * Total approved or settled sales for the active company and fiscal year.
+     */
+    public function totalSellAmount(): float
+    {
+        return (float) Invoice::query()->where('invoice_type', InvoiceType::SELL)->whereIn('status', InvoiceStatus::approvedOrSettled())->sum('amount');
+    }
+
+    /**
+     * Total approved or settled purchases for the active company and fiscal year.
+     */
     public function totalBuyAmount(): float
     {
-        return (float) Invoice::query()
-            ->where('invoice_type', InvoiceType::BUY)
-            ->whereIn('status', InvoiceStatus::approvedOrSettled())
-            ->sum('amount');
+        return (float) Invoice::query()->where('invoice_type', InvoiceType::BUY)->whereIn('status', InvoiceStatus::approvedOrSettled())->sum('amount');
     }
 
-    public function topTenBanksAccountBalances()
+    public function averageSellAmount(): float
     {
-        $bankAccounts = Subject::where('parent_id', config('amir.bank'))->get();
-
-        $bankAccountBalances = Transaction::query()
-            ->whereIn('subject_id', $bankAccounts->pluck('id'))
-            ->selectRaw('subject_id, SUM(value) as balance')
-            ->groupBy('subject_id')
-            ->pluck('balance', 'subject_id')
-            ->map(fn ($v) => (int) $v)
-            ->toArray();
-
-        foreach ($bankAccounts as $bankAccount) {
-            $bankAccountBalances[$bankAccount->id] = $bankAccountBalances[$bankAccount->id] ?? 0;
-        }
-
-        asort($bankAccountBalances);
-
-        return [$bankAccounts, array_slice($bankAccountBalances, 0, 10, true)];
+        return (float) Invoice::query()->where('invoice_type', InvoiceType::SELL)->whereIn('status', InvoiceStatus::approvedOrSettled())->avg('amount');
     }
 
-    private function mapMonths(array $data): array
+    public function averageBuyAmount(): float
     {
-        $months = [
-            1 => 'فروردین',
-            2 => 'اردیبهشت',
-            3 => 'خرداد',
-            4 => 'تیر',
-            5 => 'مرداد',
-            6 => 'شهریور',
-            7 => 'مهر',
-            8 => 'آبان',
-            9 => 'آذر',
-            10 => 'دی',
-            11 => 'بهمن',
-            12 => 'اسفند',
+        return (float) Invoice::query()->where('invoice_type', InvoiceType::BUY)->whereIn('status', InvoiceStatus::approvedOrSettled())->avg('amount');
+    }
+
+    public function totalWarehouseRetailValue(): float
+    {
+        return (float) Product::query()->get(['quantity', 'selling_price'])->sum(
+            fn (Product $product) => (float) $product->quantity * (float) $product->selling_price
+        );
+    }
+
+    public function averageWarehouseUnitCost(): float
+    {
+        return (float) Product::query()->avg('average_cost');
+    }
+
+    public function averageWarehouseSellingPrice(): float
+    {
+        return (float) Product::query()->avg('selling_price');
+    }
+
+    /**
+     * Return private values from the employee's latest payroll.
+     *
+     * @return array{net_payment: float, total_earnings: float, total_deductions: float, income_tax_amount: float}
+     */
+    public function employeePayrollSummary(User $user): array
+    {
+        $emptySummary = [
+            'net_payment' => 0.0,
+            'total_earnings' => 0.0,
+            'total_deductions' => 0.0,
+            'income_tax_amount' => 0.0,
         ];
 
-        $result = [];
-
-        foreach ($months as $number => $name) {
-            $result[$name] = (int) abs($data[$number] ?? 0);
+        if (! $user->employee) {
+            return $emptySummary;
         }
 
-        return $result;
+        $payroll = Payroll::query()
+            ->where('employee_id', $user->employee->id)
+            ->orderByDesc('year')
+            ->orderByDesc('month')
+            ->first();
+
+        return $payroll ? [
+            'net_payment' => (float) ($payroll?->net_payment ?? 0),
+            'total_earnings' => (float) ($payroll?->total_earnings ?? 0),
+            'total_deductions' => (float) ($payroll?->total_deductions ?? 0),
+            'income_tax_amount' => (float) ($payroll?->income_tax_amount ?? 0),
+        ] : $emptySummary;
     }
 }

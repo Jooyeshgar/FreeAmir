@@ -62,6 +62,7 @@ class CostIncomeDashboardTest extends TestCase
         $response->assertViewHas('monthlyCost');
         $response->assertViewHas('debtors');
         $response->assertViewHas('creditors');
+        $response->assertViewHas('bankAccounts');
     }
 
     public function test_user_without_permission_is_forbidden(): void
@@ -152,6 +153,31 @@ class CostIncomeDashboardTest extends TestCase
 
         $this->assertSame($creditor->subject_id, $result['creditors'][0]['subject_id']);
         $this->assertSame(500, $result['creditors'][0]['amount']);
+    }
+
+    public function test_balance_history_returns_matching_labels_and_values(): void
+    {
+        $subject = Subject::factory()->create([
+            'company_id' => $this->companyId,
+            'name' => 'Cash account',
+            'is_permanent' => true,
+        ]);
+        $this->transaction($subject->id, -450, jalali_to_gregorian(1405, 2, 10, '-'));
+
+        $result = $this->service()->balanceForSubjectIds([$subject->id], 4);
+
+        $this->assertCount(count($result['labels']), $result['datas']);
+        $this->assertSame(450, $result['sum']);
+        $this->assertSame(450, $result['datas'][array_key_last($result['datas'])]);
+    }
+
+    public function test_liquidity_endpoint_requires_its_own_permission(): void
+    {
+        $this->grant('reports.cost-income');
+        $this->actingAs($this->user)->getJson(route('reports.cost-income.cash-banks', ['type' => 'both', 'duration' => 1]))->assertForbidden();
+
+        $this->grant('reports.cost-income.cash-banks');
+        $this->actingAs($this->user)->getJson(route('reports.cost-income.cash-banks', ['type' => 'both', 'duration' => 1]))->assertOk()->assertJsonStructure(['labels', 'datas', 'sum', 'start_date', 'end_date']);
     }
 
     private function service(): CostIncomeService

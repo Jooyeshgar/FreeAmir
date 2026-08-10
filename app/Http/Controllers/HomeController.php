@@ -7,8 +7,10 @@ use App\Models\Document;
 use App\Services\HomeService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Validator;
 
 class HomeController extends Controller
 {
@@ -98,59 +100,38 @@ class HomeController extends Controller
         $canSeePersonalPortal = $user->can('employee-portal.dashboard') && ! $hasBusinessPerms;
 
         $canFinancial = $user->can('documents.show');
-        $canSales = $user->can('invoices.index') || $user->can('products.index');
+        $canSales = $user->can('invoices.index');
         $canInventory = $user->can('products.index');
-        $canPopularItems = $user->can('products.index') || $user->can('services.index');
+        $canServices = $user->can('services.index');
+        $canCustomers = $user->can('customers.index');
+
+        $homeVariant = match (true) {
+            $user->can('access-super-admin-panel') => 'platform',
+            $canFinancial && $user->can('configs.index') => 'admin',
+            $canFinancial => 'accounting',
+            $canSales && $canInventory => 'operations',
+            $canSales => 'sales',
+            $canInventory => 'inventory',
+            $canServices => 'services',
+            $canCustomers => 'crm',
+            $canSeePersonalPortal => 'employee',
+            default => 'business',
+        };
 
         if (! $hasBusinessPerms && ! $canSeePersonalPortal) {
             abort(403);
         }
 
-        $cashTypes = ['both', 'bank', 'cash_book'];
-
         $data = [
-            'cashTypes' => $cashTypes,
             'hasBusinessPerms' => $hasBusinessPerms,
             'canSeePersonalPortal' => $canSeePersonalPortal,
             'canFinancial' => $canFinancial,
             'canSales' => $canSales,
             'canInventory' => $canInventory,
-            'canPopularItems' => $canPopularItems,
-            'hasDocument' => Document::exists(),
-            'isDebugMode' => config('app.debug') && config('app.env') !== 'production',
+            'canServices' => $canServices,
+            'canCustomers' => $canCustomers,
+            'homeVariant' => $homeVariant,
         ];
-
-        if ($canFinancial) {
-            [$bankAccounts, $topTenBankAccountBalances] = $this->service->topTenBanksAccountBalances();
-
-            ['incomeData' => $totalIncomesData, 'costData' => $totalCostsData, 'profit' => $profit] =
-                $this->service->profitFromNonPermanentSubjects();
-
-            $data += [
-                'bankAccounts' => $bankAccounts,
-                'topTenBankAccountBalances' => $topTenBankAccountBalances,
-                'monthlyIncome' => $this->service->getMonthlyIncome(),
-                'monthlyCost' => $this->service->getMonthlyCost(),
-                'totalIncomesData' => $totalIncomesData,
-                'totalCostsData' => $totalCostsData,
-                'profit' => $profit,
-            ];
-        }
-
-        if ($canSales) {
-            $data['monthlySellAmount'] = $this->service->getMonthlyProductsStat();
-            $data['sellAmountPerProducts'] = $this->service->getSellAmountPerProducts();
-            $data['totalBuyAmount'] = $this->service->totalBuyAmount();
-        }
-
-        if ($canInventory) {
-            $data['monthlyWarehouse'] = $this->service->getMonthlyWarehouse();
-            $data['totalWarehouseValue'] = $this->service->totalWarehouseValue();
-        }
-
-        if ($canPopularItems) {
-            $data['popularProductsAndServices'] = $this->service->popularProductsAndServices();
-        }
 
         if ($canSeePersonalPortal) {
             $personal = $this->service->employeePersonalData($user);
@@ -166,27 +147,48 @@ class HomeController extends Controller
         return view('home', $data);
     }
 
-    public function cashAndBanksBalances(Request $request)
+    /**
+     * Return one explicitly requested private dashboard metric.
+     */
+    public function summaryMetric(string $metric): JsonResponse
     {
-        $data = $request->validate(
-            [
-                'duration' => 'required|integer|in:1,2,3,4',
-                'type' => 'required|in:cash_book,bank,both',
-            ]
-        );
+        Validator::make(['metric' => $metric], ['metric' => ['in:profit,sales,inventory,expenses,purchases,average_sales,average_purchases,inventory_retail,inventory_average_cost,inventory_average_price,employee_net_payment,employee_earnings,employee_deductions,employee_tax']])->validate();
+        $user = auth()->user();
 
-        return $this->service->cashAndBanksBalances($data['type'], intval($data['duration']));
-    }
+        $permission = match ($metric) {
+            'profit' => 'documents.show',
+            'sales' => 'invoices.index',
+            'inventory' => 'products.index',
+            'expenses' => 'documents.show',
+            'purchases' => 'invoices.index',
+            'average_sales', 'average_purchases' => 'invoices.index',
+            'inventory_retail', 'inventory_average_cost', 'inventory_average_price' => 'products.index',
+            'employee_net_payment', 'employee_earnings', 'employee_deductions', 'employee_tax' => 'employee-portal.dashboard',
+        };
 
-    public function bankAccount(Request $request)
-    {
-        $data = $request->validate(
-            [
-                'subject_id' => 'required|integer|exists:subjects,id',
-                'duration' => 'required|integer|in:1,2,3,4',
-            ]
-        );
+        abort_unless($user->can($permission), 403);
 
-        return $this->service->balanceForSubjectIds([$data['subject_id']], intval($data['duration']));
+        $value = match ($metric) {
+            'profit' => $this->service->profitFromNonPermanentSubjects()['profit'],
+            'sales' => $this->service->totalSellAmount(),
+            'inventory' => $this->service->totalWarehouseValue(),
+            'expenses' => array_sum($this->service->profitFromNonPermanentSubjects()['costData']),
+            'purchases' => $this->service->totalBuyAmount(),
+            'average_sales' => $this->service->averageSellAmount(),
+            'average_purchases' => $this->service->averageBuyAmount(),
+            'inventory_retail' => $this->service->totalWarehouseRetailValue(),
+            'inventory_average_cost' => $this->service->averageWarehouseUnitCost(),
+            'inventory_average_price' => $this->service->averageWarehouseSellingPrice(),
+            'employee_net_payment' => $this->service->employeePayrollSummary($user)['net_payment'],
+            'employee_earnings' => $this->service->employeePayrollSummary($user)['total_earnings'],
+            'employee_deductions' => $this->service->employeePayrollSummary($user)['total_deductions'],
+            'employee_tax' => $this->service->employeePayrollSummary($user)['income_tax_amount'],
+        };
+
+        return response()->json([
+            'metric' => $metric,
+            'formattedValue' => formatNumber($value),
+            'unit' => __('Rial'),
+        ]);
     }
 }

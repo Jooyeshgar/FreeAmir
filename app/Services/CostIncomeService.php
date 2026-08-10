@@ -7,6 +7,8 @@ use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Subject;
 use App\Models\Transaction;
+use Carbon\Carbon;
+use Illuminate\Support\Collection;
 
 class CostIncomeService
 {
@@ -177,6 +179,72 @@ class CostIncomeService
         return [
             'debtors' => array_slice($debtors, 0, $limit),
             'creditors' => array_slice($creditors, 0, $limit),
+        ];
+    }
+
+    public function bankAccounts(): Collection
+    {
+        return Subject::query()->where('parent_id', config('amir.bank'))->orderBy('name')->get(['id', 'name']);
+    }
+
+    /**
+     * Cash and bank balance history for the requested rolling quarter range.
+     */
+    public function cashAndBanksBalances(string $type, int $duration): array
+    {
+        $subjectIds = match ($type) {
+            'cash_book' => Subject::where('parent_id', config('amir.cash_book'))->pluck('id')->all(),
+            'bank' => Subject::where('parent_id', config('amir.bank'))->pluck('id')->all(),
+            'both' => Subject::whereIn('parent_id', [config('amir.bank'), config('amir.cash_book')])->pluck('id')->all(),
+        };
+
+        return $this->balanceForSubjectIds($subjectIds, $duration);
+    }
+
+    /**
+     * Running balance for the selected subjects, constrained to the active fiscal year. Asset balances are inverted for display.
+     */
+    public function balanceForSubjectIds(array $subjectIds, int $duration, bool $inverse = true): array
+    {
+        $year = (int) (config('active-company-fiscal-year') ?? toEnglish(jdate('Y')));
+        $fiscalStart = Carbon::parse(jalali_to_gregorian($year, 1, 1, '/'))->startOfDay();
+        $fiscalEnd = Carbon::parse(jalali_to_gregorian($year + 1, 1, 1, '/'))->subDay()->endOfDay();
+        $endDate = Carbon::now()->min($fiscalEnd)->max($fiscalStart);
+        $startDate = $endDate->copy()->subMonths($duration * 3)->max($fiscalStart);
+
+        $transactionQuery = Transaction::query()->whereIn('subject_id', $subjectIds);
+        $initialBalance = (int) (clone $transactionQuery)->whereHas('document', fn ($query) => $query->where('date', '<', $startDate))->sum('value');
+
+        $dailyTransactions = (clone $transactionQuery)
+            ->join('documents', 'documents.id', '=', 'transactions.document_id')
+            ->whereBetween('documents.date', [$startDate, $endDate])
+            ->selectRaw('DATE(documents.date) as date, SUM(transactions.value) as total')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->pluck('total', 'date')
+            ->map(fn ($value) => (int) $value);
+
+        $dailyBalances = [formatDate($startDate) => $initialBalance];
+        $runningBalance = $initialBalance;
+
+        foreach ($dailyTransactions as $date => $dailyChange) {
+            $runningBalance += $dailyChange;
+            $dailyBalances[formatDate($date)] = $runningBalance;
+        }
+
+        $dailyBalances[formatDate($endDate)] = $runningBalance;
+        $values = array_values($dailyBalances);
+
+        if ($inverse) {
+            $values = array_map(fn (int $value) => -$value, $values);
+        }
+
+        return [
+            'labels' => array_keys($dailyBalances),
+            'datas' => $values,
+            'sum' => $inverse ? -$runningBalance : $runningBalance,
+            'start_date' => jdate('Y/m/d', $startDate->timestamp, tr_num: 'en'),
+            'end_date' => jdate('Y/m/d', $endDate->timestamp, tr_num: 'en'),
         ];
     }
 }
