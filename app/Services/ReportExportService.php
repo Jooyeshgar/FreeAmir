@@ -5,14 +5,17 @@ namespace App\Services;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\Customer;
+use App\Models\Document;
 use App\Models\Employee;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Service;
+use App\Models\Subject;
 use App\Models\Transaction;
 use App\Services\DocumentImportExport\DocumentImportExportService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -32,6 +35,7 @@ class ReportExportService
         'employees_csv' => ['permission' => 'hr.employees.export'],
         'documents_csv' => ['permission' => 'documents.export'],
         'trial_balance_csv' => ['permission' => 'reports.trial-balance.export-csv'],
+        'accounting_report_csv' => ['permission' => 'reports.result'],
         'invoice_pdf' => ['permission' => 'invoices.print'],
     ];
 
@@ -56,6 +60,7 @@ class ReportExportService
             'employees_csv' => $this->employeesCsv($filters),
             'documents_csv' => $this->captureResponse($this->documentExportService->export($this->validateDocumentFilters($filters))),
             'trial_balance_csv' => $this->captureResponse($this->trialBalanceService->exportCsv($this->filterRequest($filters))),
+            'accounting_report_csv' => $this->accountingReportCsv($filters),
             'invoice_pdf' => $this->invoicePdf($filters),
         };
     }
@@ -206,6 +211,100 @@ class ReportExportService
                     }
                 });
             });
+    }
+
+    private function accountingReportCsv(array $filters): array
+    {
+        $validated = Validator::make($filters, [
+            'report_for' => ['required', Rule::in(['Journal', 'Ledger', 'subLedger', 'Document'])],
+            'subject_id' => ['nullable', 'integer', 'exists:subjects,id'],
+            'start_document_number' => ['nullable', 'numeric'],
+            'end_document_number' => ['nullable', 'numeric'],
+            'start_date' => ['nullable', 'string'],
+            'end_date' => ['nullable', 'string'],
+            'search' => ['nullable', 'string', 'max:255'],
+            'columns_selected' => ['nullable', 'boolean'],
+            'columns' => ['nullable', 'array'],
+            'columns.*' => ['string', Rule::in(DocumentImportExportService::ALL_COLUMNS)],
+        ])->after(function ($validator) use ($filters): void {
+            if (in_array($filters['report_for'] ?? null, ['Ledger', 'subLedger'], true) && empty($filters['subject_id'])) {
+                $validator->errors()->add('subject_id', __('The subject field is required.'));
+            }
+
+            if (isset($filters['start_document_number'], $filters['end_document_number'])
+                && (float) $filters['start_document_number'] > (float) $filters['end_document_number']) {
+                $validator->errors()->add('start_document_number', __('Start document number cannot be greater than end document number.'));
+            }
+        })->validate();
+
+        $startDate = $this->reportDate($validated['start_date'] ?? null, 'start_date');
+        $endDate = $this->reportDate($validated['end_date'] ?? null, 'end_date');
+        if ($startDate && $endDate && Carbon::parse($startDate)->isAfter(Carbon::parse($endDate))) {
+            throw ValidationException::withMessages(['start_date' => __('Start date cannot be greater than end date.')]);
+        }
+
+        if (in_array($validated['report_for'], ['Journal', 'Document'], true)) {
+            $documentFilters = [
+                'start_document_number' => $validated['start_document_number'] ?? null,
+                'end_document_number' => $validated['end_document_number'] ?? null,
+                'start_date' => $validated['start_date'] ?? null,
+                'end_date' => $validated['end_date'] ?? null,
+                'text' => $validated['search'] ?? null,
+                'columns_selected' => $validated['columns_selected'] ?? null,
+                'columns' => $validated['columns'] ?? [],
+            ];
+
+            return $this->captureResponse($this->documentExportService->export($documentFilters));
+        }
+
+        $subject = Subject::findOrFail($validated['subject_id']);
+        $subjectIds = $subject->getAllDescendantIds();
+        $query = Transaction::with(['document', 'subject'])->whereIn('subject_id', $subjectIds);
+
+        $query->when($validated['search'] ?? null, fn (Builder $query, string $search) => $query->whereHas(
+            'document', fn (Builder $document) => $document->where('title', 'like', '%'.$search.'%')
+        ));
+        $query->when($validated['start_document_number'] ?? null, fn (Builder $query, $number) => $query->whereHas(
+            'document', fn (Builder $document) => $document->where('number', '>=', $number)
+        ));
+        $query->when($validated['end_document_number'] ?? null, fn (Builder $query, $number) => $query->whereHas(
+            'document', fn (Builder $document) => $document->where('number', '<=', $number)
+        ));
+        $query->when($startDate, fn (Builder $query, string $date) => $query->whereHas(
+            'document', fn (Builder $document) => $document->where('date', '>=', $date)
+        ));
+        $query->when($endDate, fn (Builder $query, string $date) => $query->whereHas(
+            'document', fn (Builder $document) => $document->where('date', '<=', $date)
+        ));
+        $query->orderBy(Document::whereColumn('id', 'transactions.document_id')->select('date'))
+            ->orderBy(Document::whereColumn('id', 'transactions.document_id')->select('number'));
+
+        $headers = [__('Date'), __('Document #'), __('Subject Code'), __('Subject Name'), __('Description'), __('Debit'), __('Credit')];
+
+        return $this->csv(strtolower($validated['report_for']).'_report_'.now()->format('YmdHis').'.csv', $headers, function ($file) use ($query): void {
+            $query->chunk(200, function ($transactions) use ($file): void {
+                foreach ($transactions as $transaction) {
+                    fputcsv($file, [
+                        formatDate($transaction->document->date),
+                        formatDocumentNumber($transaction->document->number),
+                        formatCode($transaction->subject->code),
+                        $transaction->subject->name,
+                        $transaction->desc ?? '',
+                        $transaction->debit ?? 0,
+                        $transaction->credit ?? 0,
+                    ]);
+                }
+            });
+        });
+    }
+
+    private function reportDate(?string $date, string $attribute): ?string
+    {
+        if ($date === null || trim($date) === '') {
+            return null;
+        }
+
+        return jalaliInputToGregorian(toEnglish(str_replace('-', '/', trim($date))), $attribute);
     }
 
     private function invoicePdf(array $filters): array

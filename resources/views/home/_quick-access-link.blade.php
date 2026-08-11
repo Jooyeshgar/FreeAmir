@@ -1,11 +1,18 @@
-<a href="{{ $link['href'] }}" data-home-area="{{ $link['area'] }}"
-    class="group flex min-h-20 items-center gap-2 rounded-2xl border p-2 text-sm font-semibold shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md {{ $link['style'] }}">
-    <span class="inline-flex items-center gap-2">
-        <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-base-100/70">
-            <svg xmlns="http://www.w3.org/2000/svg" class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 12h14m-5-5 5 5-5 5" />
-            </svg>
+@php
+    $classes = 'group flex min-h-20 items-center gap-2 rounded-2xl border p-2 text-sm font-semibold shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md '.$link['style'];
+@endphp
+
+@if($link['area'] === 'export-products-link' && (auth()->user()->can('send-to-email') || auth()->user()->can('send-to-email.*')))
+    <x-export-delivery-choice id="home-products-export-delivery" export="products_csv" :label="$link['label']" :class="$classes" data-home-area="{{ $link['area'] }}" />
+@else
+    <a href="{{ $link['href'] }}" data-home-area="{{ $link['area'] }}" class="{{ $classes }}">
+        <span class="inline-flex items-center gap-2">
+            <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-base-100/70">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 12h14m-5-5 5 5-5 5" />
+                </svg>
+            </span>
+            {{ $link['label'] }}
         </span>
-        {{ $link['label'] }}
-    </span>
-</a>
+    </a>
+@endif
