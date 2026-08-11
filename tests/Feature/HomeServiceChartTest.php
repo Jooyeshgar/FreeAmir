@@ -11,11 +11,9 @@ use App\Models\CustomerGroup;
 use App\Models\Document;
 use App\Models\Employee;
 use App\Models\Invoice;
-use App\Models\InvoiceItem;
 use App\Models\Payroll;
 use App\Models\Product;
 use App\Models\ProductGroup;
-use App\Models\Service;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
@@ -183,66 +181,31 @@ class HomeServiceChartTest extends TestCase
         $this->assertSame(0.0, $this->service()->totalWarehouseValue());
     }
 
-    public function test_latest_quick_access_data_returns_five_rows_for_each_area(): void
+    public function test_latest_quick_access_data_returns_ten_rows_for_accounting_and_sales(): void
     {
-        $latestProduct = null;
-        $latestService = null;
-        $latestCustomer = null;
-
-        foreach (range(1, 6) as $day) {
+        foreach (range(1, 12) as $day) {
             $date = jalali_to_gregorian(1405, 2, $day, '-');
-            $latestProduct = $this->makeProduct();
-            $latestService = Service::factory()->withGroup()->create(['company_id' => $this->companyId]);
-            $latestCustomer = Customer::factory()->withGroup($this->customer->group)->create([
-                'company_id' => $this->companyId,
-                'name' => 'Customer '.$day,
-            ]);
             $invoice = $this->makeInvoice($date, $day % 2 === 0 ? InvoiceType::SELL : InvoiceType::BUY);
-            $invoice->update(['customer_id' => $latestCustomer->id]);
-
-            InvoiceItem::create([
-                'invoice_id' => $invoice->id,
-                'itemable_id' => $latestProduct->id,
-                'itemable_type' => Product::class,
-                'quantity' => 1,
-                'unit_price' => 100,
-                'unit_discount' => 0,
-                'vat' => 0,
-                'amount' => 100,
-            ]);
-            InvoiceItem::create([
-                'invoice_id' => $invoice->id,
-                'itemable_id' => $latestService->id,
-                'itemable_type' => Service::class,
-                'quantity' => 1,
-                'unit_price' => 100,
-                'unit_discount' => 0,
-                'vat' => 0,
-                'amount' => 100,
-            ]);
 
             $document = $this->makeDocument($date);
             $document->update([
                 'approved_at' => $date,
-                'documentable_id' => $day === 6 ? $invoice->id : null,
-                'documentable_type' => $day === 6 ? Invoice::class : null,
+                'documentable_id' => $day === 12 ? $invoice->id : null,
+                'documentable_type' => $day === 12 ? Invoice::class : null,
             ]);
         }
 
         $unapprovedInvoice = $this->makeInvoice(
-            jalali_to_gregorian(1405, 2, 7, '-'),
+            jalali_to_gregorian(1405, 2, 13, '-'),
             InvoiceType::SELL,
             InvoiceStatus::UNAPPROVED,
         );
-        $unapprovedDocument = $this->makeDocument(jalali_to_gregorian(1405, 2, 7, '-'));
+        $unapprovedDocument = $this->makeDocument(jalali_to_gregorian(1405, 2, 13, '-'));
 
-        $data = $this->service()->latestQuickAccessData(['accounting', 'sales', 'inventory', 'services', 'customers']);
+        $data = $this->service()->latestQuickAccessData(['accounting', 'sales']);
 
-        $this->assertSame(5, $data['accounting']->count());
-        $this->assertSame(5, $data['sales']->count());
-        $this->assertSame(5, $data['inventory']->count());
-        $this->assertSame(5, $data['services']->count());
-        $this->assertSame(5, $data['customers']->count());
+        $this->assertSame(10, $data['accounting']->count());
+        $this->assertSame(10, $data['sales']->count());
         $this->assertFalse($data['accounting']->contains('href', route('documents.show', $unapprovedDocument)));
         $this->assertFalse($data['sales']->contains('label', __('Invoice').' #'.$unapprovedInvoice->number));
         $this->assertSame('documentable', $data['accounting']->first()['typeKey']);
@@ -251,21 +214,11 @@ class HomeServiceChartTest extends TestCase
         $this->assertTrue($data['accounting']->contains('typeKey', 'manual_document'));
         $this->assertSame('sell', $data['sales']->first()['typeKey']);
         $this->assertSame(route('invoices.show', $invoice), $data['sales']->first()['href']);
-        $this->assertSame($latestProduct->name, $data['inventory']->first()['label']);
-        $this->assertSame($latestService->name, $data['services']->first()['label']);
-        $this->assertSame($latestCustomer->name, $data['customers']->first()['label']);
-        $this->assertSame(route('products.show', $latestProduct), $data['inventory']->first()['href']);
-        $this->assertSame(route('services.show', $latestService), $data['services']->first()['href']);
-        $this->assertSame(route('customers.show', $latestCustomer), $data['customers']->first()['href']);
-        $this->assertSame(__('Sell'), $data['inventory']->first()['type']);
-        $this->assertSame('sell', $data['inventory']->first()['typeKey']);
-        $this->assertSame('sell', $data['services']->first()['typeKey']);
-        $this->assertSame('sell', $data['customers']->first()['typeKey']);
     }
 
     public function test_seller_sees_only_role_specific_quick_links(): void
     {
-        $this->signInWith(['home.summary', 'invoices.index', 'invoices.create', 'customers.index', 'customers.create', 'customer-groups.index', 'crm.dashboard', 'ancillary-costs.index']);
+        $this->signInWith(['home.summary', 'invoices.index', 'invoices.create', 'customers.create', 'crm.dashboard', 'ancillary-costs.index']);
 
         $response = $this->get(route('home'));
 
@@ -278,9 +231,7 @@ class HomeServiceChartTest extends TestCase
             ->assertSee('data-home-area="sell-invoices-link"', false)
             ->assertSee('data-home-area="buy-invoices-link"', false)
             ->assertSee('data-home-area="create-sell-invoice-link"', false)
-            ->assertSee('data-home-area="customers-link"', false)
             ->assertSee('data-home-area="create-customer-link"', false)
-            ->assertSee('data-home-area="customer-groups-link"', false)
             ->assertSee('data-home-area="crm-dashboard"', false)
             ->assertSee('data-home-area="ancillary-costs"', false)
             ->assertSee(route('invoices.index', ['invoice_type' => 'buy']), false)
@@ -297,7 +248,7 @@ class HomeServiceChartTest extends TestCase
 
     public function test_warehousekeeper_does_not_receive_sales_content_from_product_access(): void
     {
-        $this->signInWith(['home.summary', 'products.index', 'products.create', 'products.report', 'products.import', 'products.export', 'product-groups.index', 'product-groups.create', 'warehouse.dashboard']);
+        $this->signInWith(['home.summary', 'products.index', 'products.create', 'products.report', 'products.import', 'products.export', 'warehouse.dashboard']);
 
         $response = $this->get(route('home'));
 
@@ -306,12 +257,9 @@ class HomeServiceChartTest extends TestCase
             ->assertViewHas('canInventory', true)
             ->assertViewHas('homeVariant', 'inventory')
             ->assertSee('data-home-variant="inventory"', false)
-            ->assertSee('data-home-area="products-link"', false)
             ->assertSee('data-home-area="create-product-link"', false)
             ->assertSee('data-home-area="warehouse-dashboard"', false)
-            ->assertSee('data-home-area="product-groups"', false)
             ->assertSee('data-home-area="inventory-report"', false)
-            ->assertSee('data-home-area="create-product-group-link"', false)
             ->assertSee('data-home-area="import-products-link"', false)
             ->assertSee('data-home-area="export-products-link"', false)
             ->assertSee('data-private-metric="inventory"', false)
@@ -325,13 +273,11 @@ class HomeServiceChartTest extends TestCase
 
     public function test_services_only_user_receives_service_quick_links(): void
     {
-        $this->signInWith(['services.index', 'services.create', 'service-groups.index']);
+        $this->signInWith(['services.index', 'services.create']);
 
         $this->get(route('home'))->assertOk()
             ->assertViewHas('homeVariant', 'services')
-            ->assertSee('data-home-area="services-link"', false)
             ->assertSee('data-home-area="create-service-link"', false)
-            ->assertSee('data-home-area="service-groups-link"', false)
             ->assertDontSee('data-home-area="services"', false);
     }
 
@@ -356,9 +302,9 @@ class HomeServiceChartTest extends TestCase
         $this->get(route('reports.company-overview'))->assertOk()->assertSee(route('reports.company-overview.seed-demo-data'), false);
     }
 
-    public function test_accounting_user_sees_all_permitted_business_areas(): void
+    public function test_accounting_user_does_not_see_removed_catalog_cards(): void
     {
-        $this->signInWith(['home.summary', 'documents.show', 'documents.index', 'reports.ledger', 'bank-accounts.index', 'invoices.index', 'products.index', 'services.index', 'customers.index']);
+        $this->signInWith(['home.summary', 'documents.show', 'documents.index', 'reports.ledger', 'bank-accounts.index', 'invoices.index', 'products.index']);
 
         $response = $this->get(route('home'));
 
@@ -367,9 +313,9 @@ class HomeServiceChartTest extends TestCase
             ->assertSee('data-home-variant="accounting"', false)
             ->assertSee('data-home-area="accounting"', false)
             ->assertSee('data-home-area="sales"', false)
-            ->assertSee('data-home-area="inventory"', false)
-            ->assertSee('data-home-area="services"', false)
-            ->assertSee('data-home-area="crm"', false)
+            ->assertDontSee('data-home-area="inventory"', false)
+            ->assertDontSee('data-home-area="services"', false)
+            ->assertDontSee('data-home-area="crm"', false)
             ->assertSee('data-private-metric="profit"', false)
             ->assertSee('data-private-metric="expenses"', false)
             ->assertSee('data-private-metric="sales"', false)
@@ -389,7 +335,6 @@ class HomeServiceChartTest extends TestCase
             ->assertSee('data-home-variant="operations"', false)
             ->assertSee('data-home-area="sell-invoices-link"', false)
             ->assertSee('data-home-area="buy-invoices-link"', false)
-            ->assertSee('data-home-area="products-link"', false)
             ->assertSee('data-home-area="employee-overview"', false)
             ->assertDontSee('data-home-area="create-sell-invoice-link"', false)
             ->assertDontSee('data-home-area="create-product-link"', false)
@@ -422,7 +367,9 @@ class HomeServiceChartTest extends TestCase
         $user = $this->signInWith([
             'home.summary',
             'employee-portal.dashboard',
+            'employee-portal.employee.show',
             'employee-portal.attendance-logs',
+            'employee-portal.monthly-attendances',
             'employee-portal.payrolls',
             'employee-portal.personnel-requests.index',
         ]);
@@ -432,8 +379,9 @@ class HomeServiceChartTest extends TestCase
             ->assertViewHas('homeVariant', 'employee')
             ->assertSee('data-home-variant="employee"', false)
             ->assertSee('data-home-area="employee-overview"', false)
-            ->assertDontSee('data-home-area="employee-profile"', false)
+            ->assertSee('data-home-area="employee-profile"', false)
             ->assertSee('data-home-area="employee-attendance"', false)
+            ->assertSee('data-home-area="employee-monthly-attendance"', false)
             ->assertSee('data-home-area="employee-payroll"', false)
             ->assertSee('data-home-area="employee-requests"', false)
             ->assertSee('data-private-metric="employee_net_payment"', false)

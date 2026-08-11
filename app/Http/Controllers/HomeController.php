@@ -82,8 +82,6 @@ class HomeController extends Controller
             'canFinancial' => $canFinancial,
             'canSales' => $canSales,
             'canInventory' => $canInventory,
-            'canServices' => $canServices,
-            'canCustomers' => $canCustomers,
             'homeVariant' => $homeVariant,
         ];
 
@@ -91,9 +89,6 @@ class HomeController extends Controller
             $quickAccessAreas = collect([
                 'accounting' => $canFinancial,
                 'sales' => $canSales,
-                'inventory' => $canInventory,
-                'services' => $canServices,
-                'customers' => $canCustomers,
             ])->filter()->keys()->all();
 
             $data['quickAccessRecentData'] = $this->service->latestQuickAccessData($quickAccessAreas);
