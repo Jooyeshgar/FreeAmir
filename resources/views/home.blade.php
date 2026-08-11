@@ -1,58 +1,85 @@
-<x-app-layout :title="__('Dashboard')">
+<x-app-layout :title="__('Home')">
     <x-show-message-bags />
 
-    <main class="mt-6 space-y-4">
+    <main class="home-dashboard pb-6">
+        @include('home._header', compact('homeVariant'))
 
-        @include('home.database-actions')
+        @include('home._financial-values')
 
-        @include('home.header')
-        @include('home.quick-access')
-
-        @if ($hasBusinessPerms)
-
-            @if ($canFinancial)
-                @include('home.financial-metrics')
-            @endif
-
-            @if ($canSales || $canInventory)
-                @include('home.sales-metrics')
-            @endif
-
-            @if ($canFinancial)
-                <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
-                    @include('home.cash-and-banks')
-                    @include('home.income')
-                    @include('home.profit')
-                </section>
-
-                <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                    @include('home.bank-account-list')
-                    @include('home.bank-account-chart')
-                </section>
-            @endif
-
-            @if ($canPopularItems || $canInventory)
-                <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                    @if ($canInventory)
-                        @include('home.warehouse')
-                    @endif
-
-                    @if ($canPopularItems)
-                        @include('home.popular-products')
-                    @endif
-                </section>
-            @endif
-
-            @if ($canSales)
-                <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                    @include('home.sell')
-                    @include('home.sold-amount')
-                </section>
-            @endif
-        @endif
-
-        @if ($canSeePersonalPortal)
-            @include('home.personal-portal')
-        @endif
+        @include('home._access-sections')
     </main>
+
+    @push('scripts')
+        <script>
+            window.privateHomeMetric = function (url) {
+                return {
+                    revealed: false,
+                    loaded: false,
+                    loading: false,
+                    error: false,
+                    formattedValue: '',
+                    unit: '',
+
+                    async toggle() {
+                        if (this.revealed) {
+                            this.revealed = false;
+                            return;
+                        }
+
+                        this.revealed = true;
+                        if (!this.loaded && !this.loading) {
+                            await this.load();
+                        }
+                    },
+
+                    async load() {
+                        this.loading = true;
+                        this.error = false;
+
+                        try {
+                            const response = await fetch(url, {
+                                cache: 'no-store',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                },
+                            });
+
+                            if (!response.ok) {
+                                throw new Error(`Metric request failed with status ${response.status}`);
+                            }
+
+                            const data = await response.json();
+                            this.formattedValue = data.formattedValue;
+                            this.unit = data.unit;
+                            this.loaded = true;
+                        } catch (error) {
+                            this.error = true;
+                        } finally {
+                            this.loading = false;
+                        }
+                    },
+
+                    async retry() {
+                        await this.load();
+                    },
+
+                    reset() {
+                        this.revealed = false;
+                        this.loaded = false;
+                        this.loading = false;
+                        this.error = false;
+                        this.formattedValue = '';
+                        this.unit = '';
+                    },
+                };
+            };
+
+            window.addEventListener('pageshow', (event) => {
+                if (event.persisted) {
+                    window.dispatchEvent(new CustomEvent('home-private-reset'));
+                }
+            });
+        </script>
+    @endpush
 </x-app-layout>

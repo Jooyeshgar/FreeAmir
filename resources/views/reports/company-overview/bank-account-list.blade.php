@@ -14,7 +14,8 @@
         </div>
 
         <div class="mt-3 space-y-2 text-sm">
-            <div class="flex items-center justify-between border-b border-base-300 pb-2 text-xs font-semibold text-base-content/55">
+            <div
+                class="flex items-center justify-between border-b border-base-300 pb-2 text-xs font-semibold text-base-content/55">
                 <span>{{ __('Bank Name') }}</span>
                 <span>{{ __('Balance') }}</span>
             </div>
@@ -30,7 +31,8 @@
                     </span>
                 </div>
             @empty
-                <div class="rounded-lg border border-dashed border-base-300 bg-base-200/50 p-5 text-center text-sm text-base-content/60">
+                <div
+                    class="rounded-lg border border-dashed border-base-300 bg-base-200/50 p-5 text-center text-sm text-base-content/60">
                     {{ __('No bank accounts found.') }}
                 </div>
             @endforelse

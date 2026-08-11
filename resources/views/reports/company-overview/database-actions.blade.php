@@ -1,8 +1,8 @@
-@can(['home.seed-demo-data', 'home.refresh-database'])
+@can(['reports.company-overview.seed-demo-data', 'reports.company-overview.refresh-database'])
     @if ($isDebugMode && !$hasDocument)
         <div class="alert alert-warning">
             <p>{{ __('Your database tables are empty. Do you want to load demo data into your database?') }}</p>
-            <form method="POST" action="{{ route('home.seed-demo-data') }}" class="inline-block">
+            <form method="POST" action="{{ route('reports.company-overview.seed-demo-data') }}" class="inline-block">
                 @csrf
                 <button type="submit" class="btn btn-info">{{ __('Seed Demo Data') }}</button>
             </form>
@@ -13,7 +13,7 @@
         <div role="alert" class="alert alert-warning flex flex-col mt-4 mb-4">
             <div class="w-full flex items-center gap-2">
                 <p>{{ __('Do you want to refresh your database?') }}</p>
-                <form method="POST" action="{{ route('home.refresh-database') }}" class="inline-block"
+                <form method="POST" action="{{ route('reports.company-overview.refresh-database') }}" class="inline-block"
                     onsubmit="return confirm('{{ __('Are you sure you want to refresh the database? This will delete all current tables and data and rebuild the database with demo data.') }}')">
                     @csrf
                     <button type="submit" class="btn btn-error btn-sm">{{ __('Refresh Database') }}</button>
@@ -23,7 +23,7 @@
                 <p class="text-sm opacity-80 w-full">
                     {!! __('To disable database refresh, disable :debug on the :settings page.', [
                         'debug' => __('about.debug_mode'),
-                        'settings' => '<a href="'.route('management.settings').'" class="link">'.__('Settings').'</a>',
+                        'settings' => '<a href="' . route('management.settings') . '" class="link">' . __('Settings') . '</a>',
                     ]) !!}
                 </p>
             @endcan

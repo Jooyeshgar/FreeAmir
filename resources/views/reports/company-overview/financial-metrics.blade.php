@@ -8,7 +8,7 @@
     $incomeSeries = array_values($monthlyIncome ?? []);
     $costSeries = array_values($monthlyCost ?? []);
     $profitSeries = collect($incomeSeries)
-        ->map(fn ($value, $index) => (float) $value - (float) ($costSeries[$index] ?? 0))
+        ->map(fn($value, $index) => (float) $value - (float) ($costSeries[$index] ?? 0))
         ->all();
 
     $financialCards = [

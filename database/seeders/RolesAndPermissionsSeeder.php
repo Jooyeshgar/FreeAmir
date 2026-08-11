@@ -154,13 +154,13 @@ class RolesAndPermissionsSeeder extends Seeder
             'comments' => self::CRUD_NO_SHOW,
 
             // Reports
-            'reports' => ['ledger', 'journal', 'sub-ledger', 'trial-balance', 'trial-balance.print', 'trial-balance.export-csv', 'documents', 'result', 'cost-income'],
+            'reports' => ['ledger', 'journal', 'sub-ledger', 'trial-balance', 'trial-balance.print', 'trial-balance.export-csv', 'documents', 'result', 'cost-income', 'company-overview', 'company-overview.cash-banks', 'company-overview.bank-account', 'company-overview.seed-demo-data', 'company-overview.refresh-database'],
 
             // API
             'api-tokens' => ['index', 'create', 'store', 'destroy'],
 
             // Home
-            'home' => ['cash-banks', 'bank-account', 'seed-demo-data', 'refresh-database'],
+            'home' => ['summary'],
 
             // Employee portal
             'employee-portal' => [
@@ -250,7 +250,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     ->orWhere('name', 'LIKE', 'customers.%')
                     ->orWhere('name', 'LIKE', 'customer-groups.%')
                     ->orWhere('name', 'LIKE', 'crm.%')
-                    ->orWhere('name', '=', 'home'))
+                    ->orWhereIn('name', ['home', 'home.summary']))
                 ->whereNotIn('name', [
                     'invoices.approve',
                     'invoices.change-status',
@@ -277,7 +277,7 @@ class RolesAndPermissionsSeeder extends Seeder
             Permission::query()
                 ->where('name', 'LIKE', 'employee-portal.%')
                 ->orWhere('name', '=', 'change-company')
-                ->orWhere('name', '=', 'home')
+                ->orWhereIn('name', ['home', 'home.summary'])
                 ->orWhere('name', '=', 'attendance.attendance-logs.show')
                 ->pluck('name')
                 ->toArray()
