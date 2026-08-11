@@ -37,6 +37,7 @@ class ProductImportExportTest extends TestCase
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'products.index']),
             Permission::firstOrCreate(['name' => 'products.export']),
+            Permission::firstOrCreate(['name' => 'products.report']),
             Permission::firstOrCreate(['name' => 'products.import']),
             Permission::firstOrCreate(['name' => 'products.import.store']),
         ]);
@@ -66,6 +67,19 @@ class ProductImportExportTest extends TestCase
         fclose($handle);
 
         return $rows;
+    }
+
+    public function test_product_export_rejects_columns_outside_the_allowlist(): void
+    {
+        $this->actingAs($this->user)->get(route('products.export', [
+            'cols_submitted' => 1,
+            'columns' => ['not_an_export_column'],
+        ]))->assertSessionHasErrors('columns.0');
+    }
+
+    public function test_warehouse_pdf_report_preserves_numeric_filter_validation(): void
+    {
+        $this->actingAs($this->user)->get(route('products.report', ['min_quantity' => 'not-a-number']))->assertSessionHasErrors('min_quantity');
     }
 
     public function test_export_returns_csv_with_products(): void

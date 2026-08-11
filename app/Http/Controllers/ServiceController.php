@@ -6,13 +6,11 @@ use App\Http\Requests\StoreServiceRequest;
 use App\Http\Requests\UpdateServiceRequest;
 use App\Models\Service;
 use App\Models\ServiceGroup;
-use App\Models\Transaction;
+use App\Services\ReportExportService;
 use App\Services\ServiceImportService;
 use App\Services\ServiceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -93,53 +91,9 @@ class ServiceController extends Controller
         return redirect()->route('services.index')->with('success', __('Service deleted successfully.'));
     }
 
-    public function export(Request $request): StreamedResponse
+    public function export(Request $request, ReportExportService $reportExportService): StreamedResponse
     {
-        $columnMapping = $this->selectedExportColumns($request);
-        $amountColumns = ['revenue_account', 'cogs_account', 'sales_return_account'];
-        $includeSubjectAmounts = array_intersect($amountColumns, array_keys($columnMapping)) !== [];
-        $filename = 'services_'.now()->format('YmdHis').'.csv';
-
-        return response()->streamDownload(function () use ($columnMapping, $includeSubjectAmounts) {
-            $file = fopen('php://output', 'w');
-
-            // UTF-8 BOM so Excel reads translated headers and Persian text correctly.
-            fwrite($file, "\xEF\xBB\xBF");
-            fputcsv($file, array_values($columnMapping));
-
-            Service::with('serviceGroup', 'subject', 'cogsSubject', 'salesReturnsSubject')
-                ->orderBy('code')
-                ->chunk(200, function ($services) use ($file, $columnMapping, $includeSubjectAmounts) {
-                    $subjectTotals = $includeSubjectAmounts ? $this->serviceSubjectTotals($services) : [];
-
-                    foreach ($services as $service) {
-                        $row = [
-                            'code' => $service->code,
-                            'name' => $service->name,
-                            'selling_price' => $service->selling_price,
-                            'vat' => $service->vat,
-                            'group_name' => $service->serviceGroup?->name,
-                            'revenue_account' => abs($subjectTotals[$service->subject_id] ?? 0),
-                            'cogs_account' => abs($subjectTotals[$service->cogs_subject_id] ?? 0),
-                            'sales_return_account' => abs($subjectTotals[$service->sales_returns_subject_id] ?? 0),
-                            'income_subject_code' => $service->subject?->code,
-                            'cogs_subject_code' => $service->cogsSubject?->code,
-                            'sales_returns_subject_code' => $service->salesReturnsSubject?->code,
-                            'sstid' => $service->sstid,
-                            'description' => $service->description,
-                        ];
-
-                        fputcsv($file, array_map(
-                            fn (string $column) => $row[$column] ?? null,
-                            array_keys($columnMapping),
-                        ));
-                    }
-                });
-
-            fclose($file);
-        }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        return $reportExportService->downloadResponse('services_csv', $request->all());
     }
 
     public function importForm(): View
@@ -212,39 +166,5 @@ class ServiceController extends Controller
             'sstid' => __('Service SSTID'),
             'description' => __('Description'),
         ];
-    }
-
-    private function selectedExportColumns(Request $request): array
-    {
-        $availableColumns = $this->exportColumnMapping();
-        $validated = $request->validate([
-            'cols_submitted' => ['nullable', 'boolean'],
-            'columns' => ['nullable', 'array'],
-            'columns.*' => ['string', Rule::in(array_keys($availableColumns))],
-        ]);
-
-        if (! $request->boolean('cols_submitted')) {
-            return $availableColumns;
-        }
-
-        $selectedColumns = array_unique(['name', ...(array) ($validated['columns'] ?? [])]);
-
-        return array_intersect_key($availableColumns, array_flip($selectedColumns));
-    }
-
-    private function serviceSubjectTotals(Collection $services): array
-    {
-        $subjectIds = $services->flatMap(fn (Service $service) => [
-            $service->subject_id,
-            $service->cogs_subject_id,
-            $service->sales_returns_subject_id,
-        ])->filter()->unique()->values();
-
-        if ($subjectIds->isEmpty()) {
-            return [];
-        }
-
-        return Transaction::query()->whereIn('subject_id', $subjectIds)->selectRaw('subject_id, SUM(value) as total')
-            ->groupBy('subject_id')->pluck('total', 'subject_id')->map(fn ($value) => (float) $value)->all();
     }
 }

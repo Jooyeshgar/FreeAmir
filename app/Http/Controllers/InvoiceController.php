@@ -25,6 +25,7 @@ use App\Services\GroupActionService;
 use App\Services\InvoiceService;
 use App\Services\MoadianService;
 use App\Services\PaymentService;
+use App\Services\ReportExportService;
 use DB;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
@@ -32,7 +33,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use PDF;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class InvoiceController extends Controller
@@ -90,62 +90,9 @@ class InvoiceController extends Controller
         return view('invoices.index', ['invoices' => $invoices, 'statusCounts' => $statusCounts, 'service_buy' => $isServiceBuy]);
     }
 
-    public function export(Request $request): StreamedResponse
+    public function export(Request $request, ReportExportService $reportExportService): StreamedResponse
     {
-        $invoiceType = InvoiceType::tryFromName($request->invoice_type);
-        $status = InvoiceStatus::tryFromName($request->status);
-
-        $builder = Invoice::with(['customer', 'document', 'items'])->orderByDesc('date')->orderByDesc('number');
-
-        $isServiceBuy = $this->isServiceBuyFilterActive($request, $invoiceType);
-        $this->applyInvoiceFilters($builder, $request, $invoiceType, $isServiceBuy);
-
-        $builder->when($status !== null, fn ($invoice) => $invoice->where('status', $status));
-
-        $headers = [
-            __('Invoice Number'),
-            __('Customer Name'),
-            __('Date'),
-            __('Document Number'),
-            __('Before discounts and tax'),
-            __('Discounts'),
-            __('Tax'),
-            __('Amount'),
-            __('Amount - Discounts'),
-        ];
-
-        $filename = 'invoices_'.now()->format('YmdHis').'.csv';
-
-        return response()->streamDownload(function () use ($builder, $headers) {
-            $file = fopen('php://output', 'w');
-
-            // UTF-8 BOM so Excel reads translated headers and Persian text correctly.
-            fwrite($file, "\xEF\xBB\xBF");
-            fputcsv($file, $headers);
-
-            $builder->chunk(200, function ($invoices) use ($file) {
-                foreach ($invoices as $invoice) {
-                    $subtotal = $invoice->items->sum(fn ($item) => (float) $item->quantity * (float) $item->unit_price);
-                    $discounts = (float) $invoice->items->sum('unit_discount');
-
-                    fputcsv($file, [
-                        $invoice->number,
-                        $invoice->customer?->name,
-                        formatDate($invoice->date),
-                        $invoice->document?->number,
-                        $subtotal,
-                        $discounts,
-                        (float) $invoice->items->sum('vat'),
-                        (float) $invoice->amount - (float) $invoice->subtraction,
-                        $subtotal - $discounts,
-                    ]);
-                }
-            });
-
-            fclose($file);
-        }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        return $reportExportService->downloadResponse('invoices_csv', $request->all());
     }
 
     private function isServiceBuyFilterActive(Request $request, ?InvoiceType $invoiceType): bool
@@ -383,7 +330,7 @@ class InvoiceController extends Controller
         return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'paidAmount', 'remainingAmount', 'chequeDirection', 'chequeBanks', 'chequeBankAccounts', 'chequebooks', 'fiscalYears', 'canCreateAncillaryCost'));
     }
 
-    public function print(Invoice $invoice)
+    public function print(Invoice $invoice, ReportExportService $reportExportService)
     {
         $invoice->load('customer', 'items');
 
@@ -391,9 +338,7 @@ class InvoiceController extends Controller
             return view('invoices.draft', compact('invoice'));
         }
 
-        $pdf = PDF::loadView('invoices.print', compact('invoice'));
-
-        return $pdf->stream('invoice-'.(formatDocumentNumber($invoice->number ?? $invoice->id)).'.pdf');
+        return $reportExportService->inlineResponse('invoice_pdf', ['invoice_id' => $invoice->id]);
     }
 
     /**
