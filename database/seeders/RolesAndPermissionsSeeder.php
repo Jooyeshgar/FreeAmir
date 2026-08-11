@@ -160,7 +160,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'api-tokens' => ['index', 'create', 'store', 'destroy'],
 
             // Home
-            'home' => ['summary', 'seed-demo-data', 'refresh-database'],
+            'home' => ['summary'],
 
             // Employee portal
             'employee-portal' => [

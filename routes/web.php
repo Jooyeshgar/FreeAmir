@@ -239,8 +239,8 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
         Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
         Route::post('documents/export', [Controllers\DocumentController::class, 'export'])->name('documents.export');
         Route::get('cost-income', [Controllers\CostIncomeController::class, 'index'])->name('cost-income');
-        Route::get('company-overview/cash-banks', [Controllers\CostIncomeController::class, 'cashAndBanksBalances'])->name('company-overview.cash-banks');
-        Route::get('company-overview/bank-account', [Controllers\CostIncomeController::class, 'bankAccount'])->name('company-overview.bank-account');
+        Route::get('company-overview/cash-banks', [Controllers\ReportsController::class, 'cashAndBanksBalances'])->name('company-overview.cash-banks');
+        Route::get('company-overview/bank-account', [Controllers\ReportsController::class, 'bankAccount'])->name('company-overview.bank-account');
         Route::get('company-overview', [Controllers\ReportsController::class, 'companyOverview'])->name('company-overview');
     });
 
