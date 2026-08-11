@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
 use Lab404\Impersonate\Models\Impersonate;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
@@ -36,6 +37,7 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $hidden = [
         'password',
         'remember_token',
+        'email_verification_otp',
     ];
 
     /**
@@ -46,6 +48,7 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'email_verification_otp_expires_at' => 'datetime',
     ];
 
     /**
@@ -61,7 +64,14 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function sendEmailVerificationNotification(): void
     {
-        $this->notify(new UserVerificationNotification);
+        $otp = (string) random_int(100000, 999999);
+
+        $this->forceFill([
+            'email_verification_otp' => Hash::make($otp),
+            'email_verification_otp_expires_at' => now()->addMinutes(config('app.verification_expire', 1)),
+        ])->save();
+
+        $this->notify(new UserVerificationNotification($otp));
     }
 
     public function companies()
