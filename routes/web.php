@@ -67,8 +67,6 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::delete('api-tokens/{tokenId}', [Controllers\ApiTokenController::class, 'destroy'])->name('api-tokens.destroy');
 
     Route::get('change-company/{company}', [Controllers\CompanyController::class, 'setActiveCompany'])->name('change-company');
-    Route::post('/seed-demo-data', [Controllers\HomeController::class, 'seedDemoData'])->name('home.seed-demo-data');
-    Route::post('/refresh-database', [Controllers\HomeController::class, 'refreshDatabase'])->name('home.refresh-database');
 
     Route::group(['prefix' => 'backups', 'as' => 'backups.'], function () {
         Route::get('/create', [Controllers\BackupController::class, 'create'])->name('create');
@@ -239,9 +237,13 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
         Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
         Route::post('documents/export', [Controllers\DocumentController::class, 'export'])->name('documents.export');
         Route::get('cost-income', [Controllers\CostIncomeController::class, 'index'])->name('cost-income');
-        Route::get('company-overview/cash-banks', [Controllers\ReportsController::class, 'cashAndBanksBalances'])->name('company-overview.cash-banks');
-        Route::get('company-overview/bank-account', [Controllers\ReportsController::class, 'bankAccount'])->name('company-overview.bank-account');
-        Route::get('company-overview', [Controllers\ReportsController::class, 'companyOverview'])->name('company-overview');
+        Route::get('/company-overview', [Controllers\ReportsController::class, 'companyOverview'])->name('company-overview');
+        Route::group(['prefix' => 'company-overview', 'as' => 'company-overview.'], function () {
+            Route::get('/cash-banks', [Controllers\ReportsController::class, 'cashAndBanksBalances'])->name('cash-banks');
+            Route::get('/bank-account', [Controllers\ReportsController::class, 'bankAccount'])->name('bank-account');
+            Route::post('/seed-demo-data', [Controllers\ReportsController::class, 'seedDemoData'])->name('seed-demo-data');
+            Route::post('/refresh-database', [Controllers\ReportsController::class, 'refreshDatabase'])->name('refresh-database');
+        });
     });
 
     Route::group(['prefix' => 'invoices', 'as' => 'invoices.index'], function () {

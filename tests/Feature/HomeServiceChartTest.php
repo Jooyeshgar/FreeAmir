@@ -10,9 +10,11 @@ use App\Models\CustomerGroup;
 use App\Models\Document;
 use App\Models\Employee;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\Payroll;
 use App\Models\Product;
 use App\Models\ProductGroup;
+use App\Models\Service;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
@@ -180,6 +182,86 @@ class HomeServiceChartTest extends TestCase
         $this->assertSame(0.0, $this->service()->totalWarehouseValue());
     }
 
+    public function test_latest_quick_access_data_returns_five_rows_for_each_area(): void
+    {
+        $latestProduct = null;
+        $latestService = null;
+        $latestCustomer = null;
+
+        foreach (range(1, 6) as $day) {
+            $date = jalali_to_gregorian(1405, 2, $day, '-');
+            $latestProduct = $this->makeProduct();
+            $latestService = Service::factory()->withGroup()->create(['company_id' => $this->companyId]);
+            $latestCustomer = Customer::factory()->withGroup($this->customer->group)->create([
+                'company_id' => $this->companyId,
+                'name' => 'Customer '.$day,
+            ]);
+            $invoice = $this->makeInvoice($date, $day % 2 === 0 ? InvoiceType::SELL : InvoiceType::BUY);
+            $invoice->update(['customer_id' => $latestCustomer->id]);
+
+            InvoiceItem::create([
+                'invoice_id' => $invoice->id,
+                'itemable_id' => $latestProduct->id,
+                'itemable_type' => Product::class,
+                'quantity' => 1,
+                'unit_price' => 100,
+                'unit_discount' => 0,
+                'vat' => 0,
+                'amount' => 100,
+            ]);
+            InvoiceItem::create([
+                'invoice_id' => $invoice->id,
+                'itemable_id' => $latestService->id,
+                'itemable_type' => Service::class,
+                'quantity' => 1,
+                'unit_price' => 100,
+                'unit_discount' => 0,
+                'vat' => 0,
+                'amount' => 100,
+            ]);
+
+            $document = $this->makeDocument($date);
+            $document->update([
+                'approved_at' => $date,
+                'documentable_id' => $day === 6 ? $invoice->id : null,
+                'documentable_type' => $day === 6 ? Invoice::class : null,
+            ]);
+        }
+
+        $unapprovedInvoice = $this->makeInvoice(
+            jalali_to_gregorian(1405, 2, 7, '-'),
+            InvoiceType::SELL,
+            InvoiceStatus::UNAPPROVED,
+        );
+        $unapprovedDocument = $this->makeDocument(jalali_to_gregorian(1405, 2, 7, '-'));
+
+        $data = $this->service()->latestQuickAccessData(['accounting', 'sales', 'inventory', 'services', 'customers']);
+
+        $this->assertSame(5, $data['accounting']->count());
+        $this->assertSame(5, $data['sales']->count());
+        $this->assertSame(5, $data['inventory']->count());
+        $this->assertSame(5, $data['services']->count());
+        $this->assertSame(5, $data['customers']->count());
+        $this->assertFalse($data['accounting']->contains('href', route('documents.show', $unapprovedDocument)));
+        $this->assertFalse($data['sales']->contains('label', __('Invoice').' #'.$unapprovedInvoice->number));
+        $this->assertSame('documentable', $data['accounting']->first()['typeKey']);
+        $this->assertSame(__('Automatic document'), $data['accounting']->first()['type']);
+        $this->assertSame(route('invoices.show', $invoice), $data['accounting']->first()['typeHref']);
+        $this->assertTrue($data['accounting']->contains('typeKey', 'manual_document'));
+        $this->assertSame('sell', $data['sales']->first()['typeKey']);
+        $this->assertSame(route('invoices.show', $invoice), $data['sales']->first()['href']);
+        $this->assertSame($latestProduct->name, $data['inventory']->first()['label']);
+        $this->assertSame($latestService->name, $data['services']->first()['label']);
+        $this->assertSame($latestCustomer->name, $data['customers']->first()['label']);
+        $this->assertSame(route('products.show', $latestProduct), $data['inventory']->first()['href']);
+        $this->assertSame(route('services.show', $latestService), $data['services']->first()['href']);
+        $this->assertSame(route('customers.show', $latestCustomer), $data['customers']->first()['href']);
+        $this->assertSame(__('Sell'), $data['inventory']->first()['type']);
+        $this->assertSame('sell', $data['inventory']->first()['typeKey']);
+        $this->assertSame('sell', $data['services']->first()['typeKey']);
+        $this->assertSame('sell', $data['customers']->first()['typeKey']);
+    }
+
     public function test_seller_sees_only_role_specific_quick_links(): void
     {
         $this->signInWith(['home.summary', 'invoices.index', 'invoices.create', 'customers.index', 'customers.create', 'customer-groups.index', 'crm.dashboard', 'ancillary-costs.index']);
@@ -336,6 +418,11 @@ class HomeServiceChartTest extends TestCase
         $service->shouldNotReceive('totalSellAmount');
         $service->shouldNotReceive('totalBuyAmount');
         $service->shouldNotReceive('totalWarehouseValue');
+        $service->shouldReceive('latestQuickAccessData')->once()->andReturn([
+            'accounting' => collect(),
+            'sales' => collect(),
+            'inventory' => collect(),
+        ]);
 
         $this->get(route('home'))->assertOk()->assertSee('••••••', false);
     }

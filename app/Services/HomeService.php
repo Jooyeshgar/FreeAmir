@@ -6,14 +6,21 @@ use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Enums\PersonnelRequestStatus;
 use App\Models\Activity;
+use App\Models\AncillaryCost;
+use App\Models\Cheque;
 use App\Models\Company;
+use App\Models\Customer;
+use App\Models\Document;
 use App\Models\Employee;
 use App\Models\Invoice;
+use App\Models\Payment;
 use App\Models\Payroll;
 use App\Models\Product;
+use App\Models\Service;
 use App\Models\Subject;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Spatie\Permission\Models\Role;
 
 class HomeService
@@ -65,11 +72,7 @@ class HomeService
     }
 
     /**
-     * Build the personal portal payload for an employee user.
-     *
-     * Returns null when the user is not linked to an employee record.
-     *
-     * @return array{employee: Employee, requestsCount: array<string,int>}|null
+     * Build the personal portal payload for an employee user. Returns null when the user is not linked to an employee record.
      */
     public function employeePersonalData(User $user): ?array
     {
@@ -87,12 +90,148 @@ class HomeService
     }
 
     /**
+     * Return the five most recent records shown in each visible quick-access area.
+     */
+    public function latestQuickAccessData(array $areas): array
+    {
+        $data = [];
+
+        if (in_array('accounting', $areas, true)) {
+            $data['accounting'] = Document::query()
+                ->with('documentable')
+                ->whereNotNull('approved_at')
+                ->latest('date')
+                ->orderByDesc('id')
+                ->limit(5)
+                ->get(['id', 'number', 'title', 'date', 'documentable_id', 'documentable_type'])
+                ->map(fn (Document $document) => [
+                    'label' => $document->title ?: __('Document').' #'.$document->number,
+                    'date' => $document->date,
+                    'type' => $document->documentable_type ? __('Automatic document') : __('Manual document'),
+                    'typeKey' => $document->documentable_type ? 'documentable' : 'manual_document',
+                    'typeHref' => $this->documentableHref($document),
+                    'href' => route('documents.show', $document),
+                ]);
+        }
+
+        if (in_array('sales', $areas, true)) {
+            $data['sales'] = Invoice::query()
+                ->whereIn('status', InvoiceStatus::approvedOrSettled())
+                ->orderByDesc('date')
+                ->orderByDesc('number')
+                ->limit(5)
+                ->get(['id', 'number', 'date', 'invoice_type'])
+                ->map(fn (Invoice $invoice) => [
+                    'label' => __('Invoice').' #'.$invoice->number,
+                    'date' => $invoice->date,
+                    'type' => $invoice->invoice_type->label(),
+                    'typeKey' => $invoice->invoice_type->valueName(),
+                    'href' => route('invoices.show', $invoice),
+                ]);
+        }
+
+        if (in_array('inventory', $areas, true)) {
+            $data['inventory'] = $this->latestInvoicedModels(Product::class, 'products.show');
+        }
+
+        if (in_array('services', $areas, true)) {
+            $data['services'] = $this->latestInvoicedModels(Service::class, 'services.show');
+        }
+
+        if (in_array('customers', $areas, true)) {
+            $latestInvoice = Invoice::query()
+                ->whereColumn('invoices.customer_id', 'customers.id')
+                ->whereIn('status', InvoiceStatus::approvedOrSettled())
+                ->orderByDesc('date')
+                ->orderByDesc('id')
+                ->limit(1);
+
+            $data['customers'] = Customer::query()
+                ->select('customers.*')
+                ->selectSub((clone $latestInvoice)->select('date'), 'latest_invoice_date')
+                ->selectSub((clone $latestInvoice)->select('invoice_type'), 'latest_invoice_type')
+                ->whereHas('invoices', fn ($query) => $query->whereIn('status', InvoiceStatus::approvedOrSettled()))
+                ->orderByDesc('latest_invoice_date')
+                ->orderByDesc('customers.id')
+                ->limit(5)
+                ->get()
+                ->map(function (Customer $customer) {
+                    $invoiceType = InvoiceType::from((int) $customer->latest_invoice_type);
+
+                    return [
+                        'label' => $customer->name,
+                        'date' => Carbon::parse($customer->latest_invoice_date),
+                        'type' => $invoiceType->label(),
+                        'typeKey' => $invoiceType->valueName(),
+                        'href' => route('customers.show', $customer),
+                    ];
+                });
+        }
+
+        return $data;
+    }
+
+    /**
+     * Resolve the most useful show page for an automatic document's source.
+     */
+    private function documentableHref(Document $document): ?string
+    {
+        return match (true) {
+            $document->documentable instanceof Invoice => route('invoices.show', $document->documentable),
+            $document->documentable instanceof AncillaryCost => route('invoices.ancillary-costs.show', [$document->documentable->invoice_id, $document->documentable]),
+            $document->documentable instanceof Cheque => route('cheques.show', $document->documentable),
+            $document->documentable instanceof Payment && $document->documentable->invoice_id => route('invoices.show', $document->documentable->invoice_id),
+            $document->documentable instanceof Payment && $document->documentable->cheque_id => route('cheques.show', $document->documentable->cheque_id),
+            default => null,
+        };
+    }
+
+    /**
+     * Return unique catalog records ordered by their latest invoice usage.
+     */
+    private function latestInvoicedModels(string $itemableType, string $routeName): Collection
+    {
+        $model = new $itemableType;
+        $table = $model->getTable();
+        $latestInvoice = Invoice::withoutGlobalScopes()
+            ->join('invoice_items', 'invoices.id', '=', 'invoice_items.invoice_id')
+            ->whereColumn('invoice_items.itemable_id', $table.'.id')
+            ->where('invoice_items.itemable_type', $itemableType)
+            ->where('invoices.company_id', getActiveCompany())
+            ->whereIn('invoices.status', array_map(fn (InvoiceStatus $status) => $status->value, InvoiceStatus::approvedOrSettled()))
+            ->orderByDesc('invoices.date')
+            ->orderByDesc('invoices.id')
+            ->limit(1);
+
+        return $itemableType::query()
+            ->select($table.'.*')
+            ->selectSub((clone $latestInvoice)->select('invoices.date'), 'latest_invoice_date')
+            ->selectSub((clone $latestInvoice)->select('invoices.invoice_type'), 'latest_invoice_type')
+            ->whereHas('invoiceItems', fn ($query) => $query->whereHas(
+                'invoice',
+                fn ($invoiceQuery) => $invoiceQuery->whereIn('status', InvoiceStatus::approvedOrSettled())
+            ))
+            ->orderByDesc('latest_invoice_date')
+            ->orderByDesc($table.'.id')
+            ->limit(5)
+            ->get()
+            ->map(function (Product|Service $item) use ($routeName) {
+                $invoiceType = InvoiceType::from((int) $item->latest_invoice_type);
+
+                return [
+                    'label' => $item->name,
+                    'date' => Carbon::parse($item->latest_invoice_date),
+                    'type' => $invoiceType->label(),
+                    'typeKey' => $invoiceType->valueName(),
+                    'href' => route($routeName, $item),
+                ];
+            });
+    }
+
+    /**
      * Build income and cost chart data from non-permanent (temporary) subjects.
-     *
      * Fetches all leaf non-permanent subjects that have a non-zero balance.
      * Subjects with a positive balance are treated as income; negative as cost.
-     *
-     * @return array{incomeData: array<string, int>, costData: array<string, int>, profit: int}
      */
     public function profitFromNonPermanentSubjects(): array
     {
