@@ -92,46 +92,19 @@
             </article>
         </section>
 
-        {{-- Sales composition + Top buyers (year) --}}
-        <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        {{-- Sales by category + Top buyers (year) --}}
+        <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
             <article class="card border border-base-300 bg-base-100/90 shadow-sm">
-                <div class="card-body p-4">
-                    <div class="">
-                        <h2 class="card-title text-base">{{ __('Sales by customer category') }}</h2>
-                        <p class="text-xs text-base-content/55">{{ __('Distribution of sales by customer category') }}</p>
-                    </div>
-
+                <div class="card-body">
+                    <h2 class="card-title text-base">{{ __('Sales by customer category') }}</h2>
                     @if (count($salesByCategory))
-                        <div class="flex justify-center">
-                            <x-charts.pie-chart
-                                :datas="$salesByCategory"
-                                metric="amount"
-                                :label="__('Sales')"
-                                heightClass="h-72" />
-                        </div>
+                        <x-charts.pie-chart
+                            :datas="$salesByCategory"
+                            metric="amount"
+                            :label="__('Sales')"
+                            heightClass="h-72" />
                     @else
-                        <div class="rounded-lg border border-dashed border-base-300 p-4 text-center text-sm text-base-content/60">
-                            {{ __('No sales recorded') }}
-                        </div>
-                    @endif
-                </div>
-            </article>
-
-            <article class="card border border-base-300 bg-base-100/90 shadow-sm">
-                <div class="card-body p-4">
-                    <div class="flex items-start justify-between gap-2">
-                        <div>
-                            <h2 class="card-title text-base">{{ __('Total amount of sold product and service') }}</h2>
-                            <p class="text-xs text-base-content/55">{{ __('Distribution of sales by item') }}</p>
-                        </div>
-                    </div>
-                    @if (count($salesByItem))
-                        <div class="flex justify-center">
-                            <x-charts.pie-chart :datas="$salesByItem" position="bottom" metric="amount"
-                                label="{{ __('Total Sold') }}" />
-                        </div>
-                    @else
-                        <div class="rounded-lg border border-dashed border-base-300 p-4 text-center text-sm text-base-content/60">
+                        <div class="mt-3 rounded-lg border border-dashed border-base-300 p-4 text-center text-sm text-base-content/60">
                             {{ __('No sales recorded') }}
                         </div>
                     @endif

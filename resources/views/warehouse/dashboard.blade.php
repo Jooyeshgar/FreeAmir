@@ -215,18 +215,6 @@
             </div>
         </section>
 
-        <section class="card border border-base-300 bg-base-100/90 shadow-sm">
-            <div class="card-body">
-                <div>
-                    <h2 class="card-title text-base">{{ __('Month-end Warehouse Stock') }}</h2>
-                    <p class="text-xs text-base-content/55">{{ __('Last recorded approved product stock in each fiscal month') }}</p>
-                </div>
-                <div class="mt-3 h-72">
-                    <canvas id="monthlyStockChart" class="h-full w-full"></canvas>
-                </div>
-            </div>
-        </section>
-
         <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
             <article class="card border border-base-300 bg-base-100/90 shadow-sm">
                 <div class="card-body p-0">
@@ -436,7 +424,6 @@
                 const breakdown = @json($categoryBreakdown);
                 const movement = @json($monthlyMovement);
                 const categoryMovement = @json($monthlyMovementByCategory);
-                const monthlyStock = @json($monthlyStock);
                 const palette = ['#38bdf8', '#34d399', '#fbbf24', '#fb7185', '#a78bfa', '#22d3ee', '#f97316', '#10b981'];
                 const numberFormatter = (value) => {
                     const locale = document.documentElement.lang === 'fa' ? 'fa-IR' : 'en-US';
@@ -604,33 +591,6 @@
                                 responsive: true,
                                 maintainAspectRatio: false,
                                 plugins: { legend: { position: 'bottom', labels: { color: theme.textColor, boxWidth: 10 } } },
-                                scales: {
-                                    x: { ticks: { color: theme.mutedTextColor }, grid: { display: false } },
-                                    y: { beginAtZero: true, ticks: { color: theme.mutedTextColor }, grid: { color: theme.gridColor } },
-                                },
-                            },
-                        });
-                    }
-
-                    const monthlyStockCanvas = document.getElementById('monthlyStockChart');
-                    if (monthlyStockCanvas && (monthlyStock.labels || []).length > 0) {
-                        charts.monthlyStock = new Chart(monthlyStockCanvas, {
-                            type: 'bar',
-                            data: {
-                                labels: monthlyStock.labels,
-                                datasets: [{
-                                    label: @json(__('Stock')),
-                                    data: monthlyStock.values,
-                                    backgroundColor: '#38bdf8cc',
-                                    borderColor: '#0284c7',
-                                    borderWidth: 1,
-                                    borderRadius: 6,
-                                }],
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: { legend: { display: false }, datalabels: { display: false } },
                                 scales: {
                                     x: { ticks: { color: theme.mutedTextColor }, grid: { display: false } },
                                     y: { beginAtZero: true, ticks: { color: theme.mutedTextColor }, grid: { color: theme.gridColor } },

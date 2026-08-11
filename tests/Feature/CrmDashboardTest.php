@@ -9,9 +9,6 @@ use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
 use App\Models\Invoice;
-use App\Models\InvoiceItem;
-use App\Models\Product;
-use App\Models\ProductGroup;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\CrmDashboardService;
@@ -71,7 +68,6 @@ class CrmDashboardTest extends TestCase
 
         $response->assertOk();
         $response->assertViewIs('crm.dashboard');
-        $response->assertViewHas('salesByItem');
         $response->assertViewHas('metrics');
         $response->assertViewHas('aging');
         $response->assertViewHas('salesByCategory');
@@ -142,37 +138,6 @@ class CrmDashboardTest extends TestCase
         $this->assertSame('Acme Co', $data['topBuyersYear'][0]['name']);
         $this->assertEqualsWithDelta(1000, $data['topBuyersYear'][0]['amount'], 0.001);
         $this->assertEqualsWithDelta(1000, $data['salesTrend']['values'][11], 0.001);
-    }
-
-    public function test_sales_by_item_contains_only_approved_sales_in_the_fiscal_year(): void
-    {
-        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId]);
-        $product = Product::factory()->withGroup($group)->withSubjects()->create([
-            'company_id' => $this->companyId,
-            'name' => 'Chart Product',
-        ]);
-
-        $approved = $this->makeSellInvoice(jalali_to_gregorian($this->fiscalYear, 2, 1, '-'), 700);
-        InvoiceItem::factory()->create([
-            'invoice_id' => $approved->id,
-            'itemable_type' => Product::class,
-            'itemable_id' => $product->id,
-            'amount' => 700,
-        ]);
-
-        $unapproved = $this->makeSellInvoice(jalali_to_gregorian($this->fiscalYear, 2, 2, '-'), 900);
-        $unapproved->update(['status' => InvoiceStatus::UNAPPROVED]);
-        InvoiceItem::factory()->create([
-            'invoice_id' => $unapproved->id,
-            'itemable_type' => Product::class,
-            'itemable_id' => $product->id,
-            'amount' => 900,
-        ]);
-
-        $data = app(CrmDashboardService::class)->dashboard();
-
-        $this->assertSame('Chart Product', $data['salesByItem'][0]['name']);
-        $this->assertEqualsWithDelta(700, $data['salesByItem'][0]['amount'], 0.001);
     }
 
     private function makeSellInvoice(string $date, float $amount, InvoiceType $type = InvoiceType::SELL): Invoice

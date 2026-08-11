@@ -2,15 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Company;
 use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
+use App\Services\CompanyOverviewService;
 use App\Services\DocumentImportExport\DocumentImportExportService;
 use App\Services\SubjectService;
 use App\Services\TrialBalanceService;
+use Database\Seeders\DemoSeeder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -19,8 +23,174 @@ class ReportsController extends Controller
 {
     public function __construct(
         private readonly SubjectService $subjectService,
-        private readonly DocumentImportExportService $documentImportExportService
+        private readonly DocumentImportExportService $documentImportExportService,
+        private readonly CompanyOverviewService $companyOverviewService
     ) {}
+
+    public function companyOverview(Request $request)
+    {
+        $user = auth()->user();
+
+        if ($user->can('access-super-admin-panel')) {
+            $hasCurrentWorkspace = $user->companies()->whereKey(getActiveCompany())->where('fiscal_year', toEnglish(jdate('Y')))->exists();
+
+            if (! $hasCurrentWorkspace) {
+                return redirect()->route('management.dashboard');
+            }
+        }
+
+        $request->session()->put('interface_mode', 'workspace');
+
+        // Use can() (not Spatie's hasAnyPermission) so AppServiceProvider's
+        // platform-access capability hook is honored.
+
+        $BUSINESS_PERMISSIONS = [
+            'documents.show',
+            'products.index',
+            'services.index',
+            'invoices.index',
+            'customers.index',
+            'bank-accounts.index',
+            'reports.ledger',
+        ];
+
+        $hasBusinessPerms = collect($BUSINESS_PERMISSIONS)->contains(fn ($perm) => $user->can($perm));
+        $canSeePersonalPortal = $user->can('employee-portal.dashboard') && ! $hasBusinessPerms;
+
+        $canFinancial = $user->can('documents.show');
+        $canSales = $user->can('invoices.index') || $user->can('products.index');
+        $canInventory = $user->can('products.index');
+        $canPopularItems = $user->can('products.index') || $user->can('services.index');
+
+        if (! $hasBusinessPerms && ! $canSeePersonalPortal) {
+            abort(403);
+        }
+
+        $cashTypes = ['both', 'bank', 'cash_book'];
+
+        $data = [
+            'cashTypes' => $cashTypes,
+            'hasBusinessPerms' => $hasBusinessPerms,
+            'canSeePersonalPortal' => $canSeePersonalPortal,
+            'canFinancial' => $canFinancial,
+            'canSales' => $canSales,
+            'canInventory' => $canInventory,
+            'canPopularItems' => $canPopularItems,
+            'hasDocument' => Document::exists(),
+            'isDebugMode' => config('app.debug') && config('app.env') !== 'production',
+        ];
+
+        if ($canFinancial) {
+            [$bankAccounts, $topTenBankAccountBalances] = $this->companyOverviewService->topTenBanksAccountBalances();
+
+            ['incomeData' => $totalIncomesData, 'costData' => $totalCostsData, 'profit' => $profit] =
+                $this->companyOverviewService->profitFromNonPermanentSubjects();
+
+            $data += [
+                'bankAccounts' => $bankAccounts,
+                'topTenBankAccountBalances' => $topTenBankAccountBalances,
+                'monthlyIncome' => $this->companyOverviewService->getMonthlyIncome(),
+                'monthlyCost' => $this->companyOverviewService->getMonthlyCost(),
+                'totalIncomesData' => $totalIncomesData,
+                'totalCostsData' => $totalCostsData,
+                'profit' => $profit,
+            ];
+        }
+
+        if ($canSales) {
+            $data['monthlySellAmount'] = $this->companyOverviewService->getMonthlyProductsStat();
+            $data['sellAmountPerProducts'] = $this->companyOverviewService->getSellAmountPerProducts();
+            $data['totalBuyAmount'] = $this->companyOverviewService->totalBuyAmount();
+        }
+
+        if ($canInventory) {
+            $data['monthlyWarehouse'] = $this->companyOverviewService->getMonthlyWarehouse();
+            $data['totalWarehouseValue'] = $this->companyOverviewService->totalWarehouseValue();
+        }
+
+        if ($canPopularItems) {
+            $data['popularProductsAndServices'] = $this->companyOverviewService->popularProductsAndServices();
+        }
+
+        if ($canSeePersonalPortal) {
+            $personal = $this->companyOverviewService->employeePersonalData($user);
+
+            if ($personal) {
+                $data += $personal;
+                $data['hasPersonalData'] = true;
+            } else {
+                $data['hasPersonalData'] = false;
+            }
+        }
+
+        return view('reports.company-overview', $data);
+    }
+
+    public function seedDemoData()
+    {
+        abort_if(! config('app.debug') || config('app.env') === 'production', 404);
+
+        $companyId = (int) getActiveCompany();
+        $user = auth()->user();
+
+        abort_unless($user->can('access-super-admin-panel') || $user->companies()->whereKey($companyId)->exists(), 403);
+
+        if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
+            return redirect()->route('home')->with('error', __('Please select a valid company first.'));
+        }
+
+        // Seeders use this value when no HTTP cookie is available (for example when they are invoked through Artisan from this request).
+        config(['active-company-id' => $companyId]);
+
+        if (Document::withoutGlobalScopes()->where('company_id', $companyId)->exists()) {
+            return redirect()->route('home')->with('error', __('Cannot add demo data to a non-empty database.'));
+        }
+
+        try {
+            app(DemoSeeder::class)->run($companyId);
+        } catch (\Exception $e) {
+            return redirect()->route('home')->with('error', __('An error occurred while seeding demo data.'));
+        }
+
+        return redirect()->route('home')->with('success', __('Demo data has been added to the database.'));
+    }
+
+    public function refreshDatabase()
+    {
+        abort_if(! config('app.debug') || config('app.env') === 'production', 404);
+
+        try {
+            Artisan::call('migrate:fresh', ['--seed' => true]);
+        } catch (\Exception $e) {
+            return redirect()->route('home')->with('error', __('An error occurred while refreshing the database.'));
+        }
+
+        return redirect()->route('home')->with('success', __('Refresh database completed successfully.'));
+    }
+
+    public function cashAndBanksBalances(Request $request)
+    {
+        $data = $request->validate(
+            [
+                'duration' => 'required|integer|in:1,2,3,4',
+                'type' => 'required|in:cash_book,bank,both',
+            ]
+        );
+
+        return $this->companyOverviewService->cashAndBanksBalances($data['type'], intval($data['duration']));
+    }
+
+    public function bankAccount(Request $request)
+    {
+        $data = $request->validate(
+            [
+                'subject_id' => 'required|integer|exists:subjects,id',
+                'duration' => 'required|integer|in:1,2,3,4',
+            ]
+        );
+
+        return $this->companyOverviewService->balanceForSubjectIds([$data['subject_id']], intval($data['duration']));
+    }
 
     public function ledger()
     {

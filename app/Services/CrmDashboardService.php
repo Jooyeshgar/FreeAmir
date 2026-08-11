@@ -6,8 +6,6 @@ use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\Customer;
 use App\Models\Invoice;
-use App\Models\InvoiceItem;
-use App\Models\Product;
 use App\Models\Transaction;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -49,7 +47,6 @@ class CrmDashboardService
             'topBuyersMonth' => $this->topBuyers($monthSellByCustomer, $customers, 5),
             'topBuyersYear' => $this->topBuyers($yearSellByCustomer, $customers, 5),
             'salesByCategory' => $this->salesByCategory($yearSellByCustomer, $customers),
-            'salesByItem' => $this->salesByItem($yearStart, $yearEnd),
             'salesTrend' => $this->salesTrend($yearStart, $yearEnd),
             'recentInvoices' => $this->recentInvoices(),
         ];
@@ -269,40 +266,6 @@ class CrmDashboardService
             ])
             ->values()
             ->all();
-    }
-
-    /**
-     * Approved sales grouped by product or service for the fiscal year.
-     * The five largest items remain visible and the rest are combined so the chart stays readable.
-     */
-    private function salesByItem(Carbon $yearStart, Carbon $yearEnd): array
-    {
-        $items = InvoiceItem::query()
-            ->whereHas('invoice', fn ($query) => $query
-                ->where('invoice_type', InvoiceType::SELL)
-                ->whereIn('status', InvoiceStatus::approvedOrSettled())->whereBetween('date', [$yearStart, $yearEnd]))
-            ->with('itemable')
-            ->selectRaw('itemable_type, itemable_id, SUM(amount) as total_amount')
-            ->groupBy('itemable_type', 'itemable_id')
-            ->orderByDesc('total_amount')
-            ->get();
-
-        $topItems = $items->take(5)->map(fn (InvoiceItem $item) => [
-            'name' => $item->itemable?->name ?? __('Unknown'),
-            'amount' => (float) $item->total_amount,
-            'type' => $item->itemable_type === Product::class ? __('Product') : __('Services'),
-        ]);
-
-        $otherAmount = (float) $items->skip(5)->sum('total_amount');
-        if ($otherAmount > 0) {
-            $topItems->push([
-                'name' => __('Other'),
-                'amount' => $otherAmount,
-                'type' => __('Mixed items'),
-            ]);
-        }
-
-        return $topItems->values()->all();
     }
 
     /**
