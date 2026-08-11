@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Enums\SubjectType;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
@@ -322,6 +323,39 @@ class HomeServiceChartTest extends TestCase
             ->assertDontSee('data-private-metric="sales"', false);
     }
 
+    public function test_services_only_user_receives_service_quick_links(): void
+    {
+        $this->signInWith(['services.index', 'services.create', 'service-groups.index']);
+
+        $this->get(route('home'))->assertOk()
+            ->assertViewHas('homeVariant', 'services')
+            ->assertSee('data-home-area="services-link"', false)
+            ->assertSee('data-home-area="create-service-link"', false)
+            ->assertSee('data-home-area="service-groups-link"', false)
+            ->assertDontSee('data-home-area="services"', false);
+    }
+
+    public function test_company_overview_does_not_expose_sales_from_product_access(): void
+    {
+        $this->signInWith(['reports.company-overview', 'products.index']);
+
+        $this->get(route('reports.company-overview'))->assertOk()
+            ->assertViewHas('canSales', false)
+            ->assertViewHas('canInventory', true)
+            ->assertViewMissing('monthlySellAmount')
+            ->assertViewMissing('sellAmountPerProducts')
+            ->assertViewMissing('totalBuyAmount')
+            ->assertSee(route('reports.company-overview'), false);
+    }
+
+    public function test_company_overview_demo_action_uses_registered_route(): void
+    {
+        config(['app.debug' => true, 'app.env' => 'testing']);
+        $this->signInWith(['reports.company-overview', 'reports.company-overview.seed-demo-data', 'reports.company-overview.refresh-database', 'products.index']);
+
+        $this->get(route('reports.company-overview'))->assertOk()->assertSee(route('reports.company-overview.seed-demo-data'), false);
+    }
+
     public function test_accounting_user_sees_all_permitted_business_areas(): void
     {
         $this->signInWith(['home.summary', 'documents.show', 'documents.index', 'reports.ledger', 'bank-accounts.index', 'invoices.index', 'products.index', 'services.index', 'customers.index']);
@@ -409,42 +443,67 @@ class HomeServiceChartTest extends TestCase
             ->assertDontSee('data-home-area="employee"', false);
     }
 
-    public function test_initial_home_request_does_not_calculate_private_metrics(): void
+    public function test_initial_home_request_does_not_expose_private_metric_values(): void
     {
         $this->signInWith(['home.summary', 'documents.show', 'invoices.index', 'products.index']);
+        $privateAmount = 987654321;
+        $this->makeInvoice(jalali_to_gregorian(1405, 2, 1, '-'), InvoiceType::SELL, amount: $privateAmount);
 
-        $service = $this->mock(HomeService::class);
-        $service->shouldNotReceive('profitFromNonPermanentSubjects');
-        $service->shouldNotReceive('totalSellAmount');
-        $service->shouldNotReceive('totalBuyAmount');
-        $service->shouldNotReceive('totalWarehouseValue');
-        $service->shouldReceive('latestQuickAccessData')->once()->andReturn([
-            'accounting' => collect(),
-            'sales' => collect(),
-            'inventory' => collect(),
-        ]);
-
-        $this->get(route('home'))->assertOk()->assertSee('••••••', false);
+        $this->get(route('home'))->assertOk()->assertSee('••••••', false)->assertDontSee(formatNumber($privateAmount), false);
     }
 
     public function test_each_private_summary_metric_is_fetched_independently(): void
     {
         $this->signInWith(['home.summary', 'documents.show', 'invoices.index', 'products.index']);
 
-        $service = $this->mock(HomeService::class);
-        $service->shouldReceive('profitFromNonPermanentSubjects')->twice()->andReturn([
-            'incomeData' => [],
-            'costData' => ['Operating expenses' => 450],
-            'profit' => 1250,
+        $incomeSubject = Subject::create([
+            'code' => '900',
+            'name' => 'Dashboard income',
+            'parent_id' => null,
+            'company_id' => $this->companyId,
+            'type' => SubjectType::CREDITOR,
+            'is_permanent' => false,
         ]);
-        $service->shouldReceive('totalSellAmount')->once()->andReturn(2500.5);
-        $service->shouldReceive('totalBuyAmount')->once()->andReturn(1750);
-        $service->shouldReceive('averageSellAmount')->once()->andReturn(625.5);
-        $service->shouldReceive('averageBuyAmount')->once()->andReturn(875);
-        $service->shouldReceive('totalWarehouseValue')->once()->andReturn(3750);
-        $service->shouldReceive('totalWarehouseRetailValue')->once()->andReturn(5200);
-        $service->shouldReceive('averageWarehouseUnitCost')->once()->andReturn(240);
-        $service->shouldReceive('averageWarehouseSellingPrice')->once()->andReturn(360);
+        $costSubject = Subject::create([
+            'code' => '901',
+            'name' => 'Dashboard cost',
+            'parent_id' => null,
+            'company_id' => $this->companyId,
+            'type' => SubjectType::DEBTOR,
+            'is_permanent' => false,
+        ]);
+        $profitDocument = $this->makeDocument(jalali_to_gregorian(1405, 2, 1, '-'));
+        Transaction::create([
+            'value' => 1700,
+            'subject_id' => $incomeSubject->id,
+            'document_id' => $profitDocument->id,
+            'user_id' => $this->user->id,
+            'desc' => 'dashboard income',
+        ]);
+        Transaction::create([
+            'value' => -450,
+            'subject_id' => $costSubject->id,
+            'document_id' => $profitDocument->id,
+            'user_id' => $this->user->id,
+            'desc' => 'dashboard cost',
+        ]);
+
+        $this->makeInvoice(jalali_to_gregorian(1405, 2, 2, '-'), InvoiceType::SELL, amount: 2500.5);
+        $this->makeInvoice(jalali_to_gregorian(1405, 2, 3, '-'), InvoiceType::BUY, amount: 1750);
+
+        $productA = $this->makeProduct();
+        $productA->update(['quantity' => 2, 'average_cost' => 100, 'selling_price' => 160]);
+        $productB = $this->makeProduct();
+        $productB->update(['quantity' => 3, 'average_cost' => 300, 'selling_price' => 440]);
+
+        $inventoryDocument = $this->makeDocument(jalali_to_gregorian(1405, 2, 4, '-'));
+        Transaction::create([
+            'value' => 3750,
+            'subject_id' => $productA->inventory_subject_id,
+            'document_id' => $inventoryDocument->id,
+            'user_id' => $this->user->id,
+            'desc' => 'dashboard inventory value',
+        ]);
 
         $this->getJson(route('home.summary', ['metric' => 'profit']))->assertOk()->assertExactJson([
             'metric' => 'profit',
@@ -478,31 +537,31 @@ class HomeServiceChartTest extends TestCase
 
         $this->getJson(route('home.summary', ['metric' => 'average_sales']))->assertOk()->assertExactJson([
             'metric' => 'average_sales',
-            'formattedValue' => formatNumber(625.5),
+            'formattedValue' => formatNumber(2500.5),
             'unit' => __('Rial'),
         ]);
 
         $this->getJson(route('home.summary', ['metric' => 'average_purchases']))->assertOk()->assertExactJson([
             'metric' => 'average_purchases',
-            'formattedValue' => formatNumber(875),
+            'formattedValue' => formatNumber(1750),
             'unit' => __('Rial'),
         ]);
 
         $this->getJson(route('home.summary', ['metric' => 'inventory_retail']))->assertOk()->assertExactJson([
             'metric' => 'inventory_retail',
-            'formattedValue' => formatNumber(5200),
+            'formattedValue' => formatNumber(1640),
             'unit' => __('Rial'),
         ]);
 
         $this->getJson(route('home.summary', ['metric' => 'inventory_average_cost']))->assertOk()->assertExactJson([
             'metric' => 'inventory_average_cost',
-            'formattedValue' => formatNumber(240),
+            'formattedValue' => formatNumber(200),
             'unit' => __('Rial'),
         ]);
 
         $this->getJson(route('home.summary', ['metric' => 'inventory_average_price']))->assertOk()->assertExactJson([
             'metric' => 'inventory_average_price',
-            'formattedValue' => formatNumber(360),
+            'formattedValue' => formatNumber(300),
             'unit' => __('Rial'),
         ]);
     }
@@ -510,8 +569,12 @@ class HomeServiceChartTest extends TestCase
     public function test_employee_private_payroll_metrics_are_fetched_independently(): void
     {
         $user = $this->signInWith(['home.summary', 'employee-portal.dashboard']);
-        $service = $this->mock(HomeService::class);
-        $service->shouldReceive('employeePayrollSummary')->times(4)->with($user)->andReturn([
+        $employee = Employee::factory()->create(['company_id' => $this->companyId, 'user_id' => $user->id]);
+        Payroll::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $employee->id,
+            'year' => 1405,
+            'month' => 2,
             'net_payment' => 700,
             'total_earnings' => 1000,
             'total_deductions' => 300,
@@ -532,12 +595,9 @@ class HomeServiceChartTest extends TestCase
         }
     }
 
-    public function test_metric_specific_permission_is_checked_before_calculation(): void
+    public function test_metric_specific_permission_is_enforced(): void
     {
         $this->signInWith(['home.summary', 'invoices.index']);
-
-        $service = $this->mock(HomeService::class);
-        $service->shouldNotReceive('profitFromNonPermanentSubjects');
 
         $this->getJson(route('home.summary', ['metric' => 'profit']))->assertForbidden();
     }

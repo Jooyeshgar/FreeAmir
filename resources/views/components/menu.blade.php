@@ -105,7 +105,7 @@
     </li>
 @endcanany
 @canany(['reports.documents', 'reports.journal', 'reports.ledger', 'reports.sub-ledger', 'reports.trial-balance',
-    'reports.cost-income'])
+    'reports.cost-income', 'reports.company-overview'])
     <li>
         <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('Reports') }}</summary>

@@ -2,7 +2,7 @@
     @if ($isDebugMode && !$hasDocument)
         <div class="alert alert-warning">
             <p>{{ __('Your database tables are empty. Do you want to load demo data into your database?') }}</p>
-            <form method="POST" action="{{ route('company-overview.seed-demo-data') }}" class="inline-block">
+            <form method="POST" action="{{ route('reports.company-overview.seed-demo-data') }}" class="inline-block">
                 @csrf
                 <button type="submit" class="btn btn-info">{{ __('Seed Demo Data') }}</button>
             </form>

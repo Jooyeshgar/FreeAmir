@@ -59,7 +59,7 @@ class ReportsController extends Controller
         $canSeePersonalPortal = $user->can('employee-portal.dashboard') && ! $hasBusinessPerms;
 
         $canFinancial = $user->can('documents.show');
-        $canSales = $user->can('invoices.index') || $user->can('products.index');
+        $canSales = $user->can('products.index') && $user->can('invoices.index');
         $canInventory = $user->can('products.index');
         $canPopularItems = $user->can('products.index') || $user->can('services.index');
 
