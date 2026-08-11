@@ -189,10 +189,43 @@ use Illuminate\Support\Facades\Route;
 Route::get('/login', [Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [Controllers\Auth\LoginController::class, 'login']);
 Route::get('/logout', [Controllers\Auth\LoginController::class, 'logout'])->name('logout');
+Route::post('/locale', [Controllers\Auth\LoginController::class, 'locale'])->name('locale');
+Route::post('/impersonation/leave', [Controllers\Management\UserController::class, 'leaveImpersonation'])->middleware('auth')->name('impersonation.leave');
 
-Route::get('/about', [Controllers\AboutController::class, 'index'])->name('about')->middleware('auth');
+Route::get('/forgot-password', [Controllers\Auth\PasswordResetController::class, 'showForgotPasswordForm'])->name('password.request');
+Route::post('/forgot-password', [Controllers\Auth\PasswordResetController::class, 'sendResetLink'])->middleware('throttle:6,1')->name('password.email');
+Route::get('/reset-password/{token}', [Controllers\Auth\PasswordResetController::class, 'showResetPasswordForm'])->name('password.reset');
+Route::post('/reset-password', [Controllers\Auth\PasswordResetController::class, 'resetPassword'])->name('password.update');
 
-Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee-portal', 'as' => 'employee-portal.'], function () {
+Route::middleware('ensure-feature-enabled:registration')->group(function () {
+    Route::get('/register', [Controllers\Auth\RegisterController::class, 'showRegisterForm'])->name('register');
+    Route::post('/register/email', [Controllers\Auth\RegisterController::class, 'registerWithEmail'])->name('register.email');
+});
+Route::get('/verify', [Controllers\Auth\RegisterController::class, 'showVerificationNotice'])->middleware('auth')->name('verification.notice');
+Route::post('/verification-notification', [Controllers\Auth\RegisterController::class, 'resendVerificationNotification'])->middleware(['auth', 'throttle:6,1'])->name('verification.send');
+Route::get('/verify/{id}/{hash}', [Controllers\Auth\RegisterController::class, 'verify'])->middleware(['auth', 'signed', 'throttle:6,1'])->name('verification.verify');
+
+Route::middleware(['auth', 'ensure-feature-enabled:email_verification'])->group(function () {
+    Route::get('/about', [Controllers\AboutController::class, 'index'])->name('about');
+    Route::get('/registered-user/company', [Controllers\CompanyController::class, 'createCompanyForRegisteredUser'])->name('registered-user.company.create');
+    Route::post('/registered-user/company', [Controllers\CompanyController::class, 'storeCompanyForRegisteredUser'])->name('registered-user.company.store');
+});
+
+Route::middleware(['auth', 'permission:access-super-admin-panel', 'ensure-feature-enabled:email_verification'])->prefix('management')->group(function () {
+    Route::get('/', [Controllers\HomeController::class, 'managementDashboard'])->name('management.dashboard');
+    Route::get('/activity-logs', [Controllers\Management\ActivityLogController::class, 'index'])->name('management.activity-logs.index');
+    Route::get('/settings', [Controllers\AboutController::class, 'index'])->name('management.settings');
+    Route::get('/users/{user}', [Controllers\Management\UserController::class, 'show'])->whereNumber('user')->name('users.show');
+    Route::post('/users/{user}/verify', [Controllers\Management\UserController::class, 'verify'])->name('users.verify');
+
+    Route::middleware('check-permission')->group(function () {
+        Route::put('/settings', [Controllers\AboutController::class, 'updateGlobalConfigs'])->name('update-global-configs');
+        Route::resource('permissions', Controllers\Management\PermissionController::class)->except(['show']);
+        Route::resource('roles', Controllers\Management\RoleController::class)->except(['show']);
+    });
+});
+
+Route::group(['middleware' => ['auth', 'ensure-employee', 'ensure-feature-enabled:email_verification'], 'prefix' => 'employee-portal', 'as' => 'employee-portal.'], function () {
     Route::get('/employee', [Controllers\EmployeePortalController::class, 'employeeShow'])->name('employee.show');
     Route::get('/change-employee-information', [Controllers\EmployeePortalController::class, 'changeEmployeeInformation'])->name('change-employee-information');
     Route::put('/change-employee-information', [Controllers\EmployeePortalController::class, 'updateEmployeeInformation'])->name('update-employee-information');
@@ -210,16 +243,13 @@ Route::group(['middleware' => ['auth', 'ensure-employee'], 'prefix' => 'employee
     Route::delete('/personnel-requests/{personnel_request}', [Controllers\EmployeePortalController::class, 'destroyPersonnelRequest'])->name('personnel-requests.destroy');
 });
 
-Route::group(['middleware' => ['auth', 'check-permission']], function () {
-    Route::put('/about/change-global-configs', [Controllers\AboutController::class, 'updateGlobalConfigs'])->name('update-global-configs');
+Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabled:email_verification']], function () {
     Route::get('api-tokens', [Controllers\ApiTokenController::class, 'index'])->name('api-tokens.index');
     Route::get('api-tokens/create', [Controllers\ApiTokenController::class, 'create'])->name('api-tokens.create');
     Route::post('api-tokens', [Controllers\ApiTokenController::class, 'store'])->name('api-tokens.store');
     Route::delete('api-tokens/{tokenId}', [Controllers\ApiTokenController::class, 'destroy'])->name('api-tokens.destroy');
 
     Route::get('change-company/{company}', [Controllers\CompanyController::class, 'setActiveCompany'])->name('change-company');
-    Route::post('/seed-demo-data', [Controllers\HomeController::class, 'seedDemoData'])->name('home.seed-demo-data');
-    Route::post('/refresh-database', [Controllers\HomeController::class, 'refreshDatabase'])->name('home.refresh-database');
 
     Route::group(['prefix' => 'backups', 'as' => 'backups.'], function () {
         Route::get('/create', [Controllers\BackupController::class, 'create'])->name('create');
@@ -229,10 +259,10 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::post('/import', [Controllers\BackupController::class, 'import'])->name('import');
     });
     Route::get('/', [Controllers\HomeController::class, 'index'])->name('home');
-    Route::get('/home/cash-banks', [Controllers\HomeController::class, 'cashAndBanksBalances'])->name('home.cash-banks');
-    Route::get('/home/bank-account', [Controllers\HomeController::class, 'bankAccount'])->name('home.bank-account');
+    Route::get('/home/summary/{metric}', [Controllers\HomeController::class, 'summaryMetric'])->name('home.summary');
     Route::get('subjects/search', [Controllers\SubjectController::class, 'search'])->name('subjects.search');
     Route::get('subjects/search-code', [Controllers\SubjectController::class, 'searchCode'])->name('subjects.search-code');
+    Route::post('subjects/transfer', [Controllers\SubjectController::class, 'transferSubject'])->name('subjects.transfer');
     Route::resource('subjects', Controllers\SubjectController::class);
     Route::post('documents/{document}/change-status', [Controllers\DocumentController::class, 'changeStatus'])->name('documents.change-status');
     Route::post('documents/approve-all', [Controllers\DocumentController::class, 'approveAll'])->name('documents.approve-all');
@@ -269,14 +299,14 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::post('customers/import', [Controllers\CustomerController::class, 'import'])->name('customers.import.store');
     Route::resource('customers', Controllers\CustomerController::class);
     Route::resource('customer-groups', Controllers\CustomerGroupController::class);
-    Route::resource('companies', Controllers\CompanyController::class);
-    Route::post('companies/close-fiscal-year/{company}', [Controllers\CompanyController::class, 'closeFiscalYear'])->name('companies.close-fiscal-year');
-    Route::get('companies/{company}/closing-wizard', [Controllers\CompanyController::class, 'closingWizard'])->name('companies.closing-wizard');
-    Route::post('companies/{company}/closing-wizard/step1', [Controllers\CompanyController::class, 'closingWizardStep1'])->name('companies.closing-wizard.step1');
-    Route::post('companies/{company}/closing-wizard/step3', [Controllers\CompanyController::class, 'closingWizardStep3'])->name('companies.closing-wizard.step3');
     Route::get('bank-accounts/search-bank', [Controllers\BankAccountController::class, 'searchBank'])->name('bank-accounts.search-bank');
     Route::resource('bank-accounts', Controllers\BankAccountController::class);
     Route::resource('banks', Controllers\BankController::class);
+
+    Route::resource('chequebooks', Controllers\ChequebookController::class)->names('chequebooks');
+    Route::get('cheques/report', [Controllers\ChequeController::class, 'report'])->name('cheques.report');
+    Route::post('cheques/{cheque}/transition/{action}', [Controllers\ChequeController::class, 'transition'])->name('cheques.transition');
+    Route::resource('cheques', Controllers\ChequeController::class);
 
     Route::get('invoices/search/{invoice_type}', [Controllers\InvoiceController::class, 'search'])->name('invoices.search');
     Route::get('invoices/get-items/{invoice}', [Controllers\InvoiceController::class, 'getItems'])->name('invoices.get-items');
@@ -285,6 +315,7 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
 
     Route::get('invoices/inactive', [Controllers\InvoiceController::class, 'inactiveInvoices'])->name('invoices.inactive');
     Route::get('invoices/inactive/approve', [Controllers\InvoiceController::class, 'approveInactiveInvoices'])->name('invoices.inactive.approve');
+    Route::get('invoices/export', [Controllers\InvoiceController::class, 'export'])->name('invoices.export');
     Route::prefix('invoices')->group(function () {
         Route::get('ancillary-costs/search-customer', [Controllers\AncillaryCostController::class, 'searchCustomer'])->name('ancillary-costs.search-customer');
         Route::get('ancillary-costs/search-invoice', [Controllers\AncillaryCostController::class, 'searchInvoice'])->name('ancillary-costs.search-invoice');
@@ -311,16 +342,22 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
     Route::post('invoices/{invoice}/void', [Controllers\InvoiceController::class, 'voidInvoice'])->name('invoices.void');
     Route::post('invoices/{invoice}/change-status/{status}', [Controllers\InvoiceController::class, 'changeStatus'])->name('invoices.change-status');
     Route::post('invoices/{invoice}/payments', [Controllers\PaymentController::class, 'store'])->name('invoices.payments.store');
+    Route::post('invoices/{invoice}/payments/cheque', [Controllers\PaymentController::class, 'storeCheque'])->name('invoices.payments.store-cheque');
     Route::delete('invoices/{invoice}/payments/{payment}', [Controllers\PaymentController::class, 'destroy'])->name('invoices.payments.destroy');
     Route::post('invoices/{invoice}/payments/{payment}/document', [Controllers\PaymentController::class, 'createDocument'])->name('invoices.payments.create-document');
     Route::delete('invoices/{invoice}/payments/{payment}/document', [Controllers\PaymentController::class, 'destroyDocument'])->name('invoices.payments.destroy-document');
     Route::post('invoices/{invoice}/transfer', [Controllers\InvoiceController::class, 'transfer'])->name('invoices.transfer');
     Route::group(['prefix' => 'management'], function () {
+        Route::resource('companies', Controllers\CompanyController::class);
+        Route::post('companies/close-fiscal-year/{company}', [Controllers\CompanyController::class, 'closeFiscalYear'])->name('companies.close-fiscal-year');
+        Route::get('companies/{company}/closing-wizard', [Controllers\CompanyController::class, 'closingWizard'])->name('companies.closing-wizard');
+        Route::post('companies/{company}/closing-wizard/step1', [Controllers\CompanyController::class, 'closingWizardStep1'])->name('companies.closing-wizard.step1');
+        Route::post('companies/{company}/closing-wizard/step3', [Controllers\CompanyController::class, 'closingWizardStep3'])->name('companies.closing-wizard.step3');
         Route::post('users/{user}/create-employee', [Controllers\Management\UserController::class, 'createEmployee'])
             ->name('users.create-employee');
-        Route::resource('users', Controllers\Management\UserController::class);
-        Route::resource('permissions', Controllers\Management\PermissionController::class)->except(['show']);
-        Route::resource('roles', Controllers\Management\RoleController::class)->except(['show']);
+        Route::post('users/{user}/impersonate', [Controllers\Management\UserController::class, 'impersonate'])
+            ->name('users.impersonate');
+        Route::resource('users', Controllers\Management\UserController::class)->except(['show']);
         Route::resource('configs', Controllers\ConfigController::class);
     });
 
@@ -383,6 +420,13 @@ Route::group(['middleware' => ['auth', 'check-permission']], function () {
         Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
         Route::post('documents/export', [Controllers\DocumentController::class, 'export'])->name('documents.export');
         Route::get('cost-income', [Controllers\CostIncomeController::class, 'index'])->name('cost-income');
+        Route::get('/company-overview', [Controllers\ReportsController::class, 'companyOverview'])->name('company-overview');
+        Route::group(['prefix' => 'company-overview', 'as' => 'company-overview.'], function () {
+            Route::get('/cash-banks', [Controllers\ReportsController::class, 'cashAndBanksBalances'])->name('cash-banks');
+            Route::get('/bank-account', [Controllers\ReportsController::class, 'bankAccount'])->name('bank-account');
+            Route::post('/seed-demo-data', [Controllers\ReportsController::class, 'seedDemoData'])->name('seed-demo-data');
+            Route::post('/refresh-database', [Controllers\ReportsController::class, 'refreshDatabase'])->name('refresh-database');
+        });
     });
 
     Route::group(['prefix' => 'invoices', 'as' => 'invoices.index'], function () {

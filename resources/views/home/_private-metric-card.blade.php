@@ -1,4 +1,46 @@
-@php($metricTheme = $privateMetricThemes[$metric['theme']])
+                
+@php
+    $privateMetricThemes = [
+        'primary' => [
+            'card' => 'border-primary/20 bg-gradient-to-br from-primary/10 to-base-100 hover:border-primary/35',
+            'icon' => 'bg-primary/10 text-primary',
+            'loading' => 'text-primary',
+            'button' => 'border-primary/25 text-primary hover:border-primary hover:bg-primary hover:text-primary-content',
+        ],
+        'secondary' => [
+            'card' => 'border-secondary/20 bg-gradient-to-br from-secondary/10 to-base-100 hover:border-secondary/35',
+            'icon' => 'bg-secondary/10 text-secondary',
+            'loading' => 'text-secondary',
+            'button' => 'border-secondary/25 text-secondary hover:border-secondary hover:bg-secondary hover:text-secondary-content',
+        ],
+        'accent' => [
+            'card' => 'border-accent/20 bg-gradient-to-br from-accent/10 to-base-100 hover:border-accent/35',
+            'icon' => 'bg-accent/10 text-accent',
+            'loading' => 'text-accent',
+            'button' => 'border-accent/25 text-accent hover:border-accent hover:bg-accent hover:text-accent-content',
+        ],
+        'info' => [
+            'card' => 'border-info/20 bg-gradient-to-br from-info/10 to-base-100 hover:border-info/35',
+            'icon' => 'bg-info/10 text-info',
+            'loading' => 'text-info',
+            'button' => 'border-info/25 text-info hover:border-info hover:bg-info hover:text-info-content',
+        ],
+        'success' => [
+            'card' => 'border-success/20 bg-gradient-to-br from-success/10 to-base-100 hover:border-success/35',
+            'icon' => 'bg-success/10 text-success',
+            'loading' => 'text-success',
+            'button' => 'border-success/25 text-success hover:border-success hover:bg-success hover:text-success-content',
+        ],
+        'warning' => [
+            'card' => 'border-warning/20 bg-gradient-to-br from-warning/10 to-base-100 hover:border-warning/35',
+            'icon' => 'bg-warning/10 text-warning',
+            'loading' => 'text-warning',
+            'button' => 'border-warning/25 text-warning hover:border-warning hover:bg-warning hover:text-warning-content',
+        ],
+    ];
+    
+    $metricTheme = $privateMetricThemes[$metric['theme']];
+@endphp
 
 <article
     data-private-metric="{{ $metric['metric'] }}"

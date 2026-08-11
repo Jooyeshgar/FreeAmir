@@ -2,14 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Company;
-use App\Models\Document;
 use App\Services\HomeService;
-use Database\Seeders\DemoSeeder;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Validator;
 
 class HomeController extends Controller
@@ -36,48 +32,6 @@ class HomeController extends Controller
         $request->session()->put('interface_mode', 'management');
 
         return view('super-admin.dashboard', $this->service->superAdminOverview());
-    }
-
-    public function seedDemoData()
-    {
-        abort_if(! config('app.debug') || config('app.env') === 'production', 404);
-
-        $companyId = (int) getActiveCompany();
-        $user = auth()->user();
-
-        abort_unless($user->can('access-super-admin-panel') || $user->companies()->whereKey($companyId)->exists(), 403);
-
-        if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
-            return redirect()->route('home')->with('error', __('Please select a valid company first.'));
-        }
-
-        // Seeders use this value when no HTTP cookie is available (for example when they are invoked through Artisan from this request).
-        config(['active-company-id' => $companyId]);
-
-        if (Document::withoutGlobalScopes()->where('company_id', $companyId)->exists()) {
-            return redirect()->route('home')->with('error', __('Cannot add demo data to a non-empty database.'));
-        }
-
-        try {
-            app(DemoSeeder::class)->run($companyId);
-        } catch (\Exception $e) {
-            return redirect()->route('home')->with('error', __('An error occurred while seeding demo data.'));
-        }
-
-        return redirect()->route('home')->with('success', __('Demo data has been added to the database.'));
-    }
-
-    public function refreshDatabase()
-    {
-        abort_if(! config('app.debug') || config('app.env') === 'production', 404);
-
-        try {
-            Artisan::call('migrate:fresh', ['--seed' => true]);
-        } catch (\Exception $e) {
-            return redirect()->route('home')->with('error', __('An error occurred while refreshing the database.'));
-        }
-
-        return redirect()->route('home')->with('success', __('Refresh database completed successfully.'));
     }
 
     public function index(Request $request)
@@ -132,6 +86,18 @@ class HomeController extends Controller
             'canCustomers' => $canCustomers,
             'homeVariant' => $homeVariant,
         ];
+
+        if ($canFinancial) {
+            $quickAccessAreas = collect([
+                'accounting' => $canFinancial,
+                'sales' => $canSales,
+                'inventory' => $canInventory,
+                'services' => $canServices,
+                'customers' => $canCustomers,
+            ])->filter()->keys()->all();
+
+            $data['quickAccessRecentData'] = $this->service->latestQuickAccessData($quickAccessAreas);
+        }
 
         if ($canSeePersonalPortal) {
             $personal = $this->service->employeePersonalData($user);
@@ -188,7 +154,7 @@ class HomeController extends Controller
         return response()->json([
             'metric' => $metric,
             'formattedValue' => formatNumber($value),
-            'unit' => __('Rial'),
+            'unit' => config('amir.currency') ?? __('Rial'),
         ]);
     }
 }
