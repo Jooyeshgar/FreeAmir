@@ -6,7 +6,7 @@
     </div>
     <x-show-message-bags />
 
-    <form action="{{ route('reports.result') }}" method="get" x-data="{ subjectCode: '' }">
+    <form id="sub-ledger-report-form" action="{{ route('reports.result') }}" method="get" x-data="{ subjectCode: '' }">
         <x-card>
             <div class="flex gap-4" x-data="{
                 selectedName: '',
@@ -131,11 +131,9 @@
             @include('reports.form', ['type' => 'subLedger'])
         </x-card>
         <div class="mt-2 flex gap-2 justify-end">
-            <button type="submit" name="action" value="export_csv" class="btn btn-default rounded-md">
-                {{ __('Convert to CSV') }}
-            </button>
-            <button type="submit" name="action" value="print" class="btn btn-default rounded-md"> {{ __('Print') }}</button>
-            <button type="submit" name="action" value="preview" class="btn text-white btn-primary rounded-md"> {{ __('Preview') }}</button>
+            <x-form-export-delivery-choice id="sub-ledger-report-delivery" form="sub-ledger-report-form" export="accounting_report_csv" class="btn btn-default rounded-md" />
+            <button type="submit" name="action" value="print" formnovalidate class="btn btn-default rounded-md"> {{ __('Print') }}</button>
+            <button type="submit" name="action" value="preview" formnovalidate class="btn text-white btn-primary rounded-md"> {{ __('Preview') }}</button>
         </div>
     </form>
 </x-app-layout>

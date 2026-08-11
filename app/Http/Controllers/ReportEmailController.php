@@ -17,6 +17,7 @@ class ReportEmailController extends Controller
             'export' => ['required', 'string', Rule::in(array_keys(ReportExportService::EXPORTS))],
             'delivery' => ['nullable', Rule::in(['download', 'email'])],
             'filters' => ['nullable', 'array'],
+            'email' => [Rule::excludeIf($request->input('delivery') === 'download'), 'required', 'email:rfc', 'max:255'],
         ]);
 
         $definition = ReportExportService::EXPORTS[$validated['export']];
@@ -28,13 +29,14 @@ class ReportEmailController extends Controller
             throw UnauthorizedException::forPermissions([$permission]);
         }
 
-        $filters = $validated['filters'] ?? $request->except(['_token', 'export', 'delivery']);
+        $filters = $validated['filters'] ?? $request->except(['_token', 'export', 'delivery', 'email']);
         if (($validated['delivery'] ?? 'email') === 'download') {
             return $reportExportService->downloadResponse($validated['export'], $filters);
         }
 
-        $reportEmailService->send($user, $validated['export'], $filters);
+        $recipientEmail = $validated['email'];
+        $reportEmailService->send($user, $recipientEmail, $validated['export'], $filters);
 
-        return back()->with('success', __('The report was sent to :email.', ['email' => $user->email]));
+        return back()->with('success', __('The report was sent to :email.', ['email' => $recipientEmail]));
     }
 }
