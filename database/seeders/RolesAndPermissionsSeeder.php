@@ -154,7 +154,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'comments' => self::CRUD_NO_SHOW,
 
             // Reports
-            'reports' => ['ledger', 'journal', 'sub-ledger', 'trial-balance', 'trial-balance.print', 'trial-balance.export-csv', 'documents', 'result', 'cost-income', 'cost-income.cash-banks', 'cost-income.bank-account'],
+            'reports' => ['ledger', 'journal', 'sub-ledger', 'trial-balance', 'trial-balance.print', 'trial-balance.export-csv', 'documents', 'result', 'cost-income', 'company-overview', 'company-overview.cash-banks', 'company-overview.bank-account'],
 
             // API
             'api-tokens' => ['index', 'create', 'store', 'destroy'],

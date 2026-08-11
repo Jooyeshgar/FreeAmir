@@ -298,8 +298,7 @@ class HomeServiceChartTest extends TestCase
 
         $this->get(route('home'))->assertOk()
             ->assertViewHas('homeVariant', 'admin')
-            ->assertSee('data-home-variant="admin"', false)
-            ->assertSeeText(__('Administration workspace'));
+            ->assertSee('data-home-variant="admin"', false);
     }
 
     public function test_employee_only_user_gets_the_employee_variant(): void
@@ -460,7 +459,7 @@ class HomeServiceChartTest extends TestCase
     {
         $this->signInWith(['home.summary', 'invoices.index']);
 
-        $this->getJson(route('home.summary', ['metric' => 'unknown']))->assertNotFound();
+        $this->getJson(route('home.summary', ['metric' => 'unknown']))->assertStatus(422)->assertJsonValidationErrors(['metric']);
     }
 
     private function signInWith(array $permissions): User

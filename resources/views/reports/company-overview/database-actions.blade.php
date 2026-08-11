@@ -23,7 +23,7 @@
                 <p class="text-sm opacity-80 w-full">
                     {!! __('To disable database refresh, disable :debug on the :settings page.', [
                         'debug' => __('about.debug_mode'),
-                        'settings' => '<a href="'.route('management.settings').'" class="link">'.__('Settings').'</a>',
+                        'settings' => '<a href="' . route('management.settings') . '" class="link">' . __('Settings') . '</a>',
                     ]) !!}
                 </p>
             @endcan

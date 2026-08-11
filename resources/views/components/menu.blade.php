@@ -110,6 +110,9 @@
         <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('Reports') }}</summary>
             <ul class="{{ $topDropdownContentClass }}">
+                @can('reports.company-overview')
+                    <li><a href="{{ route('reports.company-overview') }}">{{ __('Company overview') }}</a></li>
+                @endcan
                 @can('reports.cost-income')
                     <li><a href="{{ route('reports.cost-income') }}">{{ __('Cost and Income Dashboard') }}</a></li>
                 @endcan
