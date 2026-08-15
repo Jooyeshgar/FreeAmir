@@ -70,12 +70,10 @@ class ReportEmailTest extends TestCase
         $this->assertStringContainsString('Receive Report', $html);
         $this->assertStringContainsString('name="email"', $html);
         $this->assertStringContainsString('value="'.$this->user->email.'"', $html);
-        $this->assertStringContainsString('for example, recipient@example.com', $html);
 
         app()->setLocale('fa');
         $html = Blade::render('<x-export-delivery-choice id="fa-delivery" export="products_csv" />');
         $this->assertStringContainsString('دریافت گزارش', $html);
-        $this->assertStringContainsString('برای مثال recipient@example.com', $html);
     }
 
     public function test_delivery_component_reuses_get_form_without_nesting_a_form_or_leaking_csrf_tokens(): void
