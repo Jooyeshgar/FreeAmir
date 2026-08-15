@@ -27,9 +27,19 @@ class SubjectFactory extends Factory
 
     public function withParent(?Subject $parent = null): static
     {
-        return $this->state([
+        $state = [
             'parent_id' => $parent?->id,
-        ]);
+        ];
+
+        if ($parent) {
+            $state['is_permanent'] = $parent->is_permanent;
+
+            if (! $parent->type->isBoth()) {
+                $state['type'] = $parent->type;
+            }
+        }
+
+        return $this->state($state);
     }
 
     public function configure(): static

@@ -42,12 +42,12 @@ class SubjectSeeder extends Seeder
             ['id' => 5, 'code' => '067', 'name' => 'تراز افتتاحیه', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 6, 'code' => '013', 'name' => 'اسناد دریافتنی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 8, 'code' => '068', 'name' => 'جاری شرکا', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
-            ['id' => 9, 'code' => '019', 'name' => 'موجودی کالا', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
+            ['id' => 9, 'code' => '019', 'name' => 'موجودی کالا', 'parent_id' => null, 'type' => 'debtor', 'company_id' => 1],
             ['id' => 17, 'code' => '062', 'name' => 'خرید', 'parent_id' => null, 'type' => 'debtor', 'company_id' => 1],
             ['id' => 18, 'code' => '060', 'name' => 'فروش', 'parent_id' => null, 'type' => 'creditor', 'company_id' => 1],
             ['id' => 22, 'code' => '020', 'name' => 'اسناد پرداختنی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 23, 'code' => '050', 'name' => 'درآمدها', 'parent_id' => null, 'type' => 'creditor', 'company_id' => 1],
-            ['id' => 25, 'code' => '061', 'name' => 'برگشت از فروش و تخفیفات', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
+            ['id' => 25, 'code' => '061', 'name' => 'برگشت از فروش و تخفیفات', 'parent_id' => null, 'type' => 'debtor', 'company_id' => 1],
             ['id' => 38, 'code' => '018', 'name' => 'سایر حسابهای دریافتنی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 39, 'code' => '023', 'name' => 'سایر حسابهای پرداختنی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 67, 'code' => '014', 'name' => 'اسناد در جریان وصول', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
@@ -56,14 +56,14 @@ class SubjectSeeder extends Seeder
             ['id' => 75, 'code' => '017', 'name' => 'دارایی های غیر جاری', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 81, 'code' => '022', 'name' => 'پیش دریافت ها', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 84, 'code' => '030', 'name' => 'حقوق صاحبان سهام', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
-            ['id' => 88, 'code' => '041', 'name' => 'قیمت تمام شده کالای فروش رفته', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
+            ['id' => 88, 'code' => '041', 'name' => 'قیمت تمام شده کالای فروش رفته', 'parent_id' => null, 'type' => 'debtor', 'company_id' => 1],
             ['id' => 90, 'code' => '064', 'name' => 'حسابهای انتظامی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 93, 'code' => '065', 'name' => 'طرف حسابهای انتظامی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
             ['id' => 97, 'code' => '066', 'name' => 'تخفیفات نقدی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
 
-            ['id' => 102, 'code' => '070', 'name' => 'بهای تمام شده', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
-            ['id' => 105, 'code' => '070001', 'name' => 'بهای تمام شده کالا فروش رفته', 'parent_id' => 102, 'type' => 'both', 'company_id' => 1],
-            ['id' => 106, 'code' => '070002', 'name' => 'بهای تمام شده خدمات', 'parent_id' => 102, 'type' => 'both', 'company_id' => 1],
+            ['id' => 102, 'code' => '070', 'name' => 'بهای تمام شده', 'parent_id' => null, 'type' => 'debtor', 'company_id' => 1],
+            ['id' => 105, 'code' => '070001', 'name' => 'بهای تمام شده کالا فروش رفته', 'parent_id' => 102, 'type' => 'debtor', 'company_id' => 1],
+            ['id' => 106, 'code' => '070002', 'name' => 'بهای تمام شده خدمات', 'parent_id' => 102, 'type' => 'debtor', 'company_id' => 1],
 
             ['id' => 10, 'code' => '040001', 'name' => 'حقوق پرسنل', 'parent_id' => 2, 'type' => 'debtor', 'company_id' => 1],
             ['id' => 11, 'code' => '040002', 'name' => 'آب', 'parent_id' => 2, 'type' => 'debtor', 'company_id' => 1],
@@ -122,24 +122,24 @@ class SubjectSeeder extends Seeder
             ['id' => 96, 'code' => '030004', 'name' => 'سود (زیان) جاری', 'parent_id' => 84, 'type' => 'both', 'company_id' => 1],
             ['id' => 87, 'code' => '030005', 'name' => 'تقسیم سود', 'parent_id' => 84, 'type' => 'both', 'company_id' => 1],
 
-            ['id' => 89, 'code' => '041001', 'name' => 'قیمت تمام شده کالای فروش رفته', 'parent_id' => 88, 'type' => 'both', 'company_id' => 1],
+            ['id' => 89, 'code' => '041001', 'name' => 'قیمت تمام شده کالای فروش رفته', 'parent_id' => 88, 'type' => 'debtor', 'company_id' => 1],
 
             ['id' => 36, 'code' => '050001', 'name' => 'درآمد متفرقه', 'parent_id' => 23, 'type' => 'creditor', 'company_id' => 1],
             ['id' => 103, 'code' => '050002', 'name' => 'درآمد خدمات', 'parent_id' => 23, 'type' => 'creditor', 'company_id' => 1],
-            ['id' => 104, 'code' => '050003', 'name' => 'درآمد فروش', 'parent_id' => 23, 'type' => 'both', 'company_id' => 1],
+            ['id' => 104, 'code' => '050003', 'name' => 'درآمد فروش', 'parent_id' => 23, 'type' => 'creditor', 'company_id' => 1],
 
             ['id' => 20, 'code' => '060001', 'name' => 'فروش', 'parent_id' => 18, 'type' => 'creditor', 'company_id' => 1],
 
-            ['id' => 55, 'code' => '061001', 'name' => 'تخفیفات فروش', 'parent_id' => 25, 'type' => 'both', 'company_id' => 1],
-            ['id' => 43, 'code' => '061002', 'name' => 'برگشت از فروش', 'parent_id' => 25, 'type' => 'both', 'company_id' => 1],
+            ['id' => 55, 'code' => '061001', 'name' => 'تخفیفات فروش', 'parent_id' => 25, 'type' => 'debtor', 'company_id' => 1],
+            ['id' => 43, 'code' => '061002', 'name' => 'برگشت از فروش', 'parent_id' => 25, 'type' => 'debtor', 'company_id' => 1],
 
             ['id' => 92, 'code' => '064002', 'name' => 'حسابهای انتظامی به عهده شرکت', 'parent_id' => 90, 'type' => 'both', 'company_id' => 1],
 
             ['id' => 94, 'code' => '065001', 'name' => 'طرف حساب انتظامی به نفع شرکت', 'parent_id' => 93, 'type' => 'both', 'company_id' => 1],
             ['id' => 95, 'code' => '065002', 'name' => 'طرف حساب انتظامی به عهده شرکت', 'parent_id' => 93, 'type' => 'both', 'company_id' => 1],
 
-            ['id' => 98, 'code' => '066001', 'name' => 'تخفیفات خرید', 'parent_id' => 97, 'type' => 'both', 'company_id' => 1],
-            ['id' => 99, 'code' => '066002', 'name' => 'تخفیفات فروش', 'parent_id' => 97, 'type' => 'both', 'company_id' => 1],
+            ['id' => 98, 'code' => '066001', 'name' => 'تخفیفات خرید', 'parent_id' => 97, 'type' => 'creditor', 'company_id' => 1],
+            ['id' => 99, 'code' => '066002', 'name' => 'تخفیفات فروش', 'parent_id' => 97, 'type' => 'debtor', 'company_id' => 1],
 
             ['id' => 15, 'code' => '067001', 'name' => 'تراز افتتاحیه', 'parent_id' => 5, 'type' => 'both', 'company_id' => 1],
 
