@@ -46,7 +46,7 @@ class CostIncomeService
             if ($rootBalance > 0) {
                 $totalIncome += $rootBalance;
             } elseif ($rootBalance < 0) {
-                $totalCost += abs($rootBalance);
+                $totalCost += -1 * $rootBalance;
             }
 
             $children = $root->children;
@@ -78,7 +78,7 @@ class CostIncomeService
         if ($balance > 0) {
             $income[$name] = ($income[$name] ?? 0) + $balance;
         } elseif ($balance < 0) {
-            $cost[$name] = ($cost[$name] ?? 0) + abs($balance);
+            $cost[$name] = ($cost[$name] ?? 0) + (-1 * $balance);
         }
     }
 
@@ -93,7 +93,7 @@ class CostIncomeService
 
         foreach (self::MONTHS as $number => $name) {
             $income[$name] = $monthly['income'][$number];
-            $cost[$name] = $monthly['cost'][$number];
+            $cost[$name] = -1 * $monthly['cost'][$number];
         }
 
         return compact('income', 'cost');
@@ -102,8 +102,11 @@ class CostIncomeService
     /**
      * Monthly income and cost keyed by Jalali month number.
      *
-     * Like totalIncome and totalCost, each temporary root is netted with all
-     * descendants before its signed balance is classified.
+     * Like totalIncome and totalCost, each temporary root is netted with all descendants across approved transactions to determine its direction.
+     * Every monthly movement is assigned to that resolved bucket while retaining its accounting sign.
+     *
+     * Expense totals retain their negative accounting sign.
+     * Presentation boundaries convert them to positive chart values with -1 * value.
      *
      * @return array{income: array<int, int>, cost: array<int, int>}
      */
@@ -115,14 +118,16 @@ class CostIncomeService
 
         foreach ($nonPermanentSubjects as $subject) {
             $monthly = $this->subjectService->sumSubjectWithDateRange($subject, true);
+            $classificationBalance = (float) $this->subjectService->sumSubject($subject, true, false, true);
 
             foreach (self::MONTHS as $number => $name) {
                 $amount = (int) ($monthly[$number] ?? 0);
+                $type = $classificationBalance != 0 ? ($classificationBalance < 0 ? 'expense' : 'income') : ($amount < 0 ? 'expense' : 'income');
 
-                if ($amount > 0) {
+                if ($type === 'expense') {
+                    $cost[$number] += $amount;
+                } else {
                     $income[$number] += $amount;
-                } elseif ($amount < 0) {
-                    $cost[$number] += abs($amount);
                 }
             }
         }

@@ -15,7 +15,9 @@ use App\Services\MonthlyBudgetService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -128,6 +130,8 @@ class MonthlyBudgetTest extends TestCase
         $response->assertViewHas('selectedMonth', 5);
         $response->assertViewHas('subjects', fn ($subjects) => ! collect($subjects)->contains('id', $subject->id));
         $response->assertViewHas('budgetLines', fn ($lines) => $lines->count() === 1);
+        $response->assertViewHas('comparisonDatasets', fn (array $datasets) => $datasets[0]['data'][__('Expense')] === 0.0
+            && ! str_contains(json_encode($datasets, JSON_THROW_ON_ERROR), '-0'));
         $response->assertSee($subject->name);
         $response->assertSee(__('Monthly Income and Expense Workbench'));
         $response->assertDontSee(__('Forecast Type'));
@@ -146,7 +150,28 @@ class MonthlyBudgetTest extends TestCase
         $this->actingAs($this->user)->get(route('budgets.index', ['month' => 5]))->assertOk()
             ->assertViewHas('displayBudgetLines', fn ($lines) => $lines->count() === 5)
             ->assertViewHas('allBudgetLinesByForecast', fn ($lines) => $lines->count() === 6)->assertViewHas('hasMoreBudgetLines', true)
-            ->assertSee(__('View all'))->assertSee('all-monthly-forecasts-modal', false);
+            ->assertSee(__('Show all'))->assertSee('all-monthly-forecasts-modal', false);
+    }
+
+    public function test_manual_forecast_groups_come_first_while_parent_and_child_stay_together(): void
+    {
+        $root = $this->temporarySubject('System parent', SubjectType::DEBTOR);
+        $child = $this->childSubject($root, 'Manual child', SubjectType::DEBTOR);
+        $otherRoot = $this->temporarySubject('Other manual root', SubjectType::CREDITOR);
+        $pureSystemRoot = $this->temporarySubject('Pure system root', SubjectType::CREDITOR);
+        $root->update(['code' => '100']);
+        $child->update(['code' => '100001']);
+        $otherRoot->update(['code' => '200']);
+        $pureSystemRoot->update(['code' => '050']);
+        $this->budget($child, 'expense', 800, 5);
+        $this->budget($otherRoot, 'income', 1000, 5);
+
+        $lines = $this->service->analysis(5)['budgetLines'];
+
+        $this->assertSame([$root->id, $child->id, $otherRoot->id, $pureSystemRoot->id], $lines->pluck('subject.id')->all());
+        $this->assertSame(['system', 'manual', 'manual', 'system'], $lines->pluck('source')->all());
+        $this->assertFalse($lines[0]['isChild']);
+        $this->assertTrue($lines[1]['isChild']);
     }
 
     public function test_income_and_expense_items_compare_forecast_with_actual_values(): void
@@ -169,9 +194,17 @@ class MonthlyBudgetTest extends TestCase
             return count($datasets) === 2
                 && array_values($datasets[0]['data']) === [800.0]
                 && array_values($datasets[1]['data']) === [700.0];
+        })->assertViewHas('comparisonDatasets', function (array $datasets) {
+            return $datasets[0]['data'][__('Expense')] === 800.0
+                && $datasets[1]['data'][__('Expense')] === 700.0;
         })->assertSee('monthlyIncomeForecastItemsChart', false)->assertSee('monthlyIncomeActualItemsChart', false)
             ->assertSee('monthlyExpenseForecastItemsChart', false)->assertSee('monthlyExpenseActualItemsChart', false)
-            ->assertSee('emptySelectionBorderPlugin', false)->assertSee("type: 'pie'", false);
+            ->assertSee('emptySelectionBorderPlugin', false)->assertSee("type: 'pie'", false)
+            ->assertSee(__('Manual Forecast'))->assertSee(__('Entered by the user.'))
+            ->assertSee(__("Calculated automatically from the actual value or the previous month's applied forecast."))
+            ->assertDontSee('data-tip="'.e(__('Entered by the user.')).'"', false)
+            ->assertSee('(۸۰۰)', false)->assertSee('(۷۰۰)', false)
+            ->assertDontSee('-۸۰۰', false)->assertDontSee('-۷۰۰', false);
 
         $this->assertSame(4, substr_count($response->getContent(), "type: 'pie'"));
     }
@@ -200,6 +233,15 @@ class MonthlyBudgetTest extends TestCase
     public function test_user_without_budget_permission_is_forbidden(): void
     {
         $this->actingAs($this->user)->get(route('budgets.index'))->assertForbidden();
+    }
+
+    public function test_budget_editor_is_hidden_when_subject_search_permission_is_missing(): void
+    {
+        $this->grant('budgets.index', 'budgets.store');
+
+        $this->actingAs($this->user)->get(route('budgets.index', ['month' => 5]))
+            ->assertOk()
+            ->assertDontSee('forecast_amount_display', false);
     }
 
     public function test_budget_subject_search_only_returns_temporary_subjects_from_active_company(): void
@@ -412,10 +454,10 @@ class MonthlyBudgetTest extends TestCase
         ]);
     }
 
-    public function test_manual_forecast_wins_and_completed_month_average_is_available_for_comparison(): void
+    public function test_manual_forecast_wins_and_is_inherited_by_the_next_open_month(): void
     {
         $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 3, 15, '-').' 12:00:00'));
-        $expense = $this->temporarySubject('Average expense', SubjectType::DEBTOR);
+        $expense = $this->temporarySubject('Recurring expense', SubjectType::DEBTOR);
         $this->transaction($expense, -100, 1);
         $this->transaction($expense, -300, 2);
         $this->budget($expense, 'expense', 500, 3);
@@ -423,14 +465,91 @@ class MonthlyBudgetTest extends TestCase
         $line = $this->service->analysis(3)['budgetLines']->first(fn (array $item) => $item['subject']->id === $expense->id);
 
         $this->assertSame('manual', $line['source']);
-        $this->assertSame(500.0, $line['forecast']);
-        $this->assertSame(200.0, $line['systemForecast']);
+        $this->assertSame(-500.0, $line['forecast']);
+        $this->assertSame(-300.0, $line['systemForecast']);
 
-        $this->budget($expense, 'expense', 1, 4)->delete();
         $systemLine = $this->service->analysis(4)['budgetLines']->first(fn (array $item) => $item['subject']->id === $expense->id);
 
         $this->assertSame('system', $systemLine['source']);
-        $this->assertSame(200.0, $systemLine['forecast']);
+        $this->assertSame(-500.0, $systemLine['forecast']);
+    }
+
+    public function test_manual_forecast_overrides_current_actual_while_unforecasted_subject_inherits_previous_applied_forecast(): void
+    {
+        $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 5, 15, '-').' 12:00:00'));
+        $manualIncome = $this->temporarySubject('Manual current income', SubjectType::CREDITOR);
+        $actualExpense = $this->temporarySubject('Actual current expense', SubjectType::DEBTOR);
+        $this->budget($manualIncome, 'income', 1000, 5);
+        $this->transaction($actualExpense, -250, 4);
+        $this->transaction($manualIncome, 1200, 5);
+        $this->transaction($actualExpense, -300, 5);
+
+        $analysis = $this->service->analysis(5);
+        $manualLine = $analysis['budgetLines']->first(fn (array $line) => $line['subject']->id === $manualIncome->id);
+        $systemLine = $analysis['budgetLines']->first(fn (array $line) => $line['subject']->id === $actualExpense->id);
+
+        $this->assertSame('manual', $manualLine['source']);
+        $this->assertSame(1000.0, $manualLine['forecast']);
+        $this->assertSame('system', $systemLine['source']);
+        $this->assertSame(-250.0, $systemLine['forecast']);
+        $this->assertSame(1000.0, $analysis['forecastIncome']);
+        $this->assertSame(-250.0, $analysis['forecastExpense']);
+        $this->assertSame(1200.0, $analysis['actualIncome']);
+        $this->assertSame(-300.0, $analysis['actualExpense']);
+    }
+
+    public function test_first_month_uses_its_actual_value_when_documents_exist_and_zero_otherwise(): void
+    {
+        $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 1, 15, '-').' 12:00:00'));
+        $incomeWithActual = $this->temporarySubject('First month income', SubjectType::CREDITOR);
+        $incomeWithoutActual = $this->temporarySubject('First month empty income', SubjectType::CREDITOR);
+        $this->transaction($incomeWithActual, 400, 1);
+
+        $lines = $this->service->analysis(1)['budgetLines']->keyBy('subject.id');
+
+        $this->assertSame(400.0, $lines[$incomeWithActual->id]['forecast']);
+        $this->assertSame(0.0, $lines[$incomeWithoutActual->id]['forecast']);
+    }
+
+    public function test_subject_direction_uses_the_approved_balance_of_itself_and_every_descendant(): void
+    {
+        $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 3, 15, '-').' 12:00:00'));
+        $root = $this->temporarySubject('Direction from complete hierarchy', SubjectType::BOTH);
+        $child = $this->childSubject($root, 'Direction child', SubjectType::BOTH);
+        $this->transaction($root, 100, 1);
+        $this->transaction($child, -300, 2);
+
+        $analysis = $this->service->analysis(1);
+        $line = $analysis['budgetLines']->first(fn (array $item) => $item['subject']->id === $root->id);
+
+        $this->assertSame('expense', $line['type']);
+        $this->assertSame(100.0, $line['actual']);
+        $this->assertSame(100.0, $line['forecast']);
+        $this->assertSame(0.0, $analysis['actualIncome']);
+        $this->assertSame(100.0, $analysis['actualExpense']);
+        $this->assertSame(0.0, $analysis['forecastIncome']);
+        $this->assertSame(100.0, $analysis['forecastExpense']);
+
+        $this->grant('budgets.index');
+        $this->actingAs($this->user)->get(route('budgets.index', ['month' => 1]))->assertOk()
+            ->assertViewHas('comparisonDatasets', fn (array $datasets) => $datasets[0]['data'][__('Expense')] === 100.0
+                && $datasets[1]['data'][__('Expense')] === 100.0);
+    }
+
+    public function test_manual_forecast_direction_overrides_history_for_a_both_type_subject(): void
+    {
+        $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 5, 15, '-').' 12:00:00'));
+        $subject = $this->temporarySubject('Either direction', SubjectType::BOTH);
+        $this->transaction($subject, 1000, 1);
+        $this->budget($subject, 'expense', 400, 5);
+
+        $analysis = $this->service->analysis(5);
+        $line = $analysis['budgetLines']->sole();
+
+        $this->assertSame('expense', $line['type']);
+        $this->assertSame(-400.0, $line['forecast']);
+        $this->assertSame(0.0, $analysis['forecastIncome']);
+        $this->assertSame(-400.0, $analysis['forecastExpense']);
     }
 
     public function test_system_forecast_rolls_leaf_invoice_and_payroll_postings_up_to_their_roots(): void
@@ -466,12 +585,12 @@ class MonthlyBudgetTest extends TestCase
             $currentMonth['budgetLines']->pluck('subject.id')->all()
         );
         $this->assertSame(300.0, $firstMonth['forecastIncome']);
-        $this->assertSame(150.0, $firstMonth['forecastExpense']);
-        $this->assertSame(450.0, $currentMonth['forecastIncome']);
-        $this->assertSame(225.0, $currentMonth['forecastExpense']);
+        $this->assertSame(-150.0, $firstMonth['forecastExpense']);
+        $this->assertSame(600.0, $currentMonth['forecastIncome']);
+        $this->assertSame(-300.0, $currentMonth['forecastExpense']);
     }
 
-    public function test_past_months_use_real_totals_and_mordad_forecast_averages_farvardin_through_tir(): void
+    public function test_past_months_use_real_totals_and_mordad_inherits_tirs_applied_forecast(): void
     {
         $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 5, 15, '-').' 12:00:00'));
 
@@ -490,13 +609,17 @@ class MonthlyBudgetTest extends TestCase
 
         $tir = $this->service->analysis(4);
         $mordad = $this->service->analysis(5);
+        $tirIncomeLine = $tir['budgetLines']->first(fn (array $line) => $line['subject']->id === $income->id);
+        $tirExpenseLine = $tir['budgetLines']->first(fn (array $line) => $line['subject']->id === $expense->id);
 
+        $this->assertSame('income', $tirIncomeLine['type']);
+        $this->assertSame('expense', $tirExpenseLine['type']);
         $this->assertSame(300.0, $tir['actualIncome']);
-        $this->assertSame(80.0, $tir['actualExpense']);
+        $this->assertSame(-80.0, $tir['actualExpense']);
         $this->assertSame(300.0, $tir['forecastIncome']);
-        $this->assertSame(80.0, $tir['forecastExpense']);
-        $this->assertSame(150.0, $mordad['forecastIncome']); // (100 + 200 + 0 + 300) / 4
-        $this->assertSame(50.0, $mordad['forecastExpense']); // (20 + 40 + 60 + 80) / 4
+        $this->assertSame(-80.0, $tir['forecastExpense']);
+        $this->assertSame(300.0, $mordad['forecastIncome']);
+        $this->assertSame(-80.0, $mordad['forecastExpense']);
         $this->assertNull($mordad['actualIncome']);
         $this->assertNull($mordad['actualExpense']);
     }
@@ -595,7 +718,7 @@ class MonthlyBudgetTest extends TestCase
         $this->actingAs($this->user)->put(route('budgets.store'), [
             'month' => 5,
             'subject_id' => $root->id,
-            'forecast_amount' => -200,
+            'forecast_amount' => -900,
         ])->assertSessionHasNoErrors();
 
         $this->actingAs($this->user)->put(route('budgets.store'), [
@@ -652,14 +775,16 @@ class MonthlyBudgetTest extends TestCase
 
         $this->assertTrue($analysis['actualsCalculated']);
         $this->assertSame(1200.0, $analysis['actualIncome']);
-        $this->assertSame(1500.0, $analysis['actualExpense']);
-        $this->assertSame(0.0, $analysis['incomeVariance']);
-        $this->assertSame(0.0, $analysis['expenseVariance']);
-        $this->assertSame(600.0, $expenseLine['actual']);
+        $this->assertSame(-1500.0, $analysis['actualExpense']);
+        $this->assertSame(1000.0, $analysis['forecastIncome']);
+        $this->assertSame(-1700.0, $analysis['forecastExpense']);
+        $this->assertSame(200.0, $analysis['incomeVariance']);
+        $this->assertSame(200.0, $analysis['expenseVariance']);
+        $this->assertSame(-600.0, $expenseLine['actual']);
         $this->assertSame(25.0, $expenseLine['variancePercent']);
         $this->assertSame('system', $unbudgetedLine['source']);
-        $this->assertSame(900.0, $unbudgetedLine['forecast']);
-        $this->assertSame(900.0, $unbudgetedLine['actual']);
+        $this->assertSame(-900.0, $unbudgetedLine['forecast']);
+        $this->assertSame(-900.0, $unbudgetedLine['actual']);
     }
 
     public function test_actuals_include_every_descendant_level_for_income_and_expense_forecasts(): void
@@ -667,10 +792,22 @@ class MonthlyBudgetTest extends TestCase
         $this->setFiscalYear((int) toEnglish(jdate('Y')) - 1);
         $incomeRoot = $this->temporarySubject('Income root', SubjectType::CREDITOR);
         $incomeChild = $this->childSubject($incomeRoot, 'Income child', SubjectType::CREDITOR);
-        $incomeGrandchild = $this->childSubject($incomeChild, 'Income grandchild', SubjectType::CREDITOR);
+        $incomeGrandchild = Subject::factory()->create([
+            'company_id' => $this->company->id,
+            'name' => 'Income permanent grandchild',
+            'type' => SubjectType::CREDITOR,
+            'is_permanent' => true,
+            'parent_id' => $incomeChild->id,
+        ]);
         $expenseRoot = $this->temporarySubject('Expense root', SubjectType::DEBTOR);
         $expenseChild = $this->childSubject($expenseRoot, 'Expense child', SubjectType::DEBTOR);
-        $expenseGrandchild = $this->childSubject($expenseChild, 'Expense grandchild', SubjectType::DEBTOR);
+        $expenseGrandchild = Subject::factory()->create([
+            'company_id' => $this->company->id,
+            'name' => 'Expense permanent grandchild',
+            'type' => SubjectType::DEBTOR,
+            'is_permanent' => true,
+            'parent_id' => $expenseChild->id,
+        ]);
 
         $this->budget($incomeRoot, 'income', 1000, 5);
         $this->budget($expenseChild, 'expense', 800, 5);
@@ -687,9 +824,9 @@ class MonthlyBudgetTest extends TestCase
         $expenseLine = $analysis['budgetLines']->first(fn (array $line) => $line['subject']->id === $expenseChild->id);
 
         $this->assertSame(600.0, $incomeLine['actual']);
-        $this->assertSame(500.0, $expenseLine['actual']);
+        $this->assertSame(-500.0, $expenseLine['actual']);
         $this->assertSame(600.0, $analysis['actualIncome']);
-        $this->assertSame(600.0, $analysis['actualExpense']);
+        $this->assertSame(-600.0, $analysis['actualExpense']);
         $this->assertFalse($analysis['hasOverlappingForecasts']);
     }
 
@@ -707,21 +844,46 @@ class MonthlyBudgetTest extends TestCase
         $chart = $fullYearAnalysis['chart'];
 
         $this->assertCount(12, $chart['labels']);
-        $this->assertSame(1250.0, $chart['forecastIncome'][1]);
+        $this->assertSame(1000.0, $chart['forecastIncome'][1]);
         $this->assertSame(1250.0, $chart['actualIncome'][1]);
         $this->assertSame(0.0, $chart['forecastIncome'][2]);
-        $this->assertSame(650.0, $chart['forecastExpense'][10]);
-        $this->assertSame(650.0, $chart['actualExpense'][10]);
+        $this->assertSame(-800.0, $chart['forecastExpense'][10]);
+        $this->assertSame(-650.0, $chart['actualExpense'][10]);
         $this->assertSame(0.0, $chart['forecastIncome'][11]);
         $this->assertSame(0.0, $chart['forecastExpense'][11]);
         $this->assertNull($chart['actualIncome'][0]);
         $this->assertSame(1, $chart['documentCounts'][1]);
         $this->assertSame([
-            'forecastIncome' => 1250.0,
-            'forecastExpense' => 650.0,
+            'forecastIncome' => 1000.0,
+            'forecastExpense' => -800.0,
             'actualIncome' => 1250.0,
-            'actualExpense' => 650.0,
+            'actualExpense' => -650.0,
         ], $fullYearAnalysis['totals']);
+    }
+
+    public function test_full_year_analysis_queries_monthly_balances_once_per_month(): void
+    {
+        $this->setFiscalYear((int) toEnglish(jdate('Y')) - 1);
+
+        foreach (range(1, 5) as $index) {
+            $subject = $this->temporarySubject('Query count '.$index, SubjectType::CREDITOR);
+            $this->transaction($subject, $index * 100, 1);
+        }
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        $this->service->fullYearAnalysis();
+
+        $balanceQueries = collect(DB::getQueryLog())->filter(function (array $query) {
+            $sql = strtolower($query['query']);
+
+            return str_contains($sql, 'transactions') && str_contains($sql, 'group by');
+        });
+
+        DB::disableQueryLog();
+
+        $this->assertCount(13, $balanceQueries);
     }
 
     public function test_system_forecasts_show_roots_only_and_split_out_manually_forecast_direct_children(): void
@@ -741,7 +903,7 @@ class MonthlyBudgetTest extends TestCase
 
         $this->assertCount(1, $rootOnly['budgetLines']);
         $this->assertSame($root->id, $rootOnly['budgetLines']->sole()['subject']->id);
-        $this->assertSame(1000.0, $rootOnly['forecastExpense']);
+        $this->assertSame(-1000.0, $rootOnly['forecastExpense']);
 
         $this->budget($manualChild, 'expense', 800, 5);
         $split = $this->service->analysis(5);
@@ -751,12 +913,12 @@ class MonthlyBudgetTest extends TestCase
         $this->assertCount(2, $split['budgetLines']);
         $this->assertTrue($rootLine['isRemainder']);
         $this->assertTrue($rootLine['includedInSummary']);
-        $this->assertSame(500.0, $rootLine['forecast']);
+        $this->assertSame(-500.0, $rootLine['forecast']);
         $this->assertTrue($childLine['isChild']);
         $this->assertTrue($childLine['includedInSummary']);
-        $this->assertSame(800.0, $childLine['forecast']);
-        $this->assertSame(1000.0, $split['forecastExpense']);
-        $this->assertSame(1000.0, $split['actualExpense']);
+        $this->assertSame(-800.0, $childLine['forecast']);
+        $this->assertSame(-1300.0, $split['forecastExpense']);
+        $this->assertSame(-1000.0, $split['actualExpense']);
     }
 
     public function test_manual_root_total_controls_summary_while_manual_child_is_shown_as_detail(): void
@@ -777,19 +939,83 @@ class MonthlyBudgetTest extends TestCase
         $rootLine = $analysis['budgetLines']->first(fn (array $line) => $line['budget']->subject_id === $root->id);
         $childLine = $analysis['budgetLines']->first(fn (array $line) => $line['budget']->subject_id === $child->id);
 
-        $this->assertSame(600.0, $rootLine['actual']);
-        $this->assertSame(500.0, $childLine['actual']);
+        $this->assertSame(-600.0, $rootLine['actual']);
+        $this->assertSame(-500.0, $childLine['actual']);
         $this->assertTrue($rootLine['includedInSummary']);
         $this->assertFalse($childLine['includedInSummary']);
-        $this->assertSame(600.0, $analysis['forecastExpense']);
-        $this->assertSame(600.0, $analysis['actualExpense']);
+        $this->assertSame(-1000.0, $analysis['forecastExpense']);
+        $this->assertSame(-600.0, $analysis['actualExpense']);
         $this->assertTrue($analysis['hasOverlappingForecasts']);
         $this->assertSame([$root->id, $child->id], $analysis['budgetLines']->pluck('subject.id')->all());
 
         $this->grant('budgets.index');
         $this->actingAs($this->user)->get(route('budgets.index', ['month' => 5]))->assertOk()->assertViewHas('actualsCalculated', true)
-            ->assertSee(__('Child forecasts shown below a manually forecast root are details only and are already included in the root total.'))
+            ->assertSee(__('Forecasts for lower-level subjects shown below a manually forecast root are details only and are already included in the root total.'))
             ->assertSee(__('Included in parent total'));
+    }
+
+    public function test_parent_and_child_manual_forecasts_must_form_a_valid_breakdown(): void
+    {
+        $root = $this->temporarySubject('Validated expense root', SubjectType::DEBTOR);
+        $firstChild = $this->childSubject($root, 'First expense detail', SubjectType::DEBTOR);
+        $secondChild = $this->childSubject($root, 'Second expense detail', SubjectType::BOTH);
+        $this->budget($root, 'expense', 1000, 5);
+        $this->budget($firstChild, 'expense', 600, 5);
+
+        try {
+            $this->service->saveForecast(5, [
+                'subject_id' => $secondChild->id,
+                'budget_type' => 'expense',
+                'forecast_amount' => 500,
+            ]);
+            $this->fail('A child total greater than its parent forecast must be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('forecast_amount', $exception->errors());
+        }
+
+        try {
+            $this->service->saveForecast(5, [
+                'subject_id' => $secondChild->id,
+                'budget_type' => 'income',
+                'forecast_amount' => 100,
+            ]);
+            $this->fail('A child direction different from its parent forecast must be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('forecast_amount', $exception->errors());
+        }
+
+        $this->service->saveForecast(5, [
+            'subject_id' => $secondChild->id,
+            'budget_type' => 'expense',
+            'forecast_amount' => 400,
+        ]);
+
+        $analysis = $this->service->analysis(5);
+
+        $this->assertSame(-1000.0, $analysis['forecastExpense']);
+        $this->assertCount(3, $analysis['budgetLines']);
+        $this->assertSame(2, $analysis['budgetLines']->where('includedInSummary', false)->count());
+    }
+
+    public function test_parent_and_child_manual_forecasts_carry_forward_without_counting_the_child_twice(): void
+    {
+        $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 5, 15, '-').' 12:00:00'));
+        $root = $this->temporarySubject('Carried expense root', SubjectType::DEBTOR);
+        $child = $this->childSubject($root, 'Carried expense child', SubjectType::DEBTOR);
+
+        $this->budget($root, 'expense', 1000, 5);
+        $this->budget($child, 'expense', 300, 5);
+        $this->budget($child, 'expense', 400, 6);
+
+        $monthFive = $this->service->analysis(5);
+        $monthSix = $this->service->analysis(6);
+        $rootRemainder = $monthSix['budgetLines']->first(fn (array $line) => $line['subject']->is($root));
+        $childLine = $monthSix['budgetLines']->first(fn (array $line) => $line['subject']->is($child));
+
+        $this->assertSame(-1000.0, $monthFive['forecastExpense']);
+        $this->assertSame(-700.0, $rootRemainder['forecast']);
+        $this->assertSame(-400.0, $childLine['forecast']);
+        $this->assertSame(-1100.0, $monthSix['forecastExpense']);
     }
 
     public function test_actuals_are_calculated_when_the_month_has_documents_and_missing_documents_are_flagged(): void
@@ -809,12 +1035,13 @@ class MonthlyBudgetTest extends TestCase
         $this->assertTrue($analysis['actualsCalculated']);
         $this->assertTrue($analysis['hasDocuments']);
         $this->assertSame(1200.0, $analysis['actualIncome']);
-        $this->assertSame(700.0, $analysis['actualExpense']);
+        $this->assertSame(-700.0, $analysis['actualExpense']);
+        $this->assertSame(100.0, $analysis['expenseVariance']);
 
         $currentYearChart = $this->service->fullYearAnalysis()['chart'];
 
         $this->assertSame(1200.0, $currentYearChart['actualIncome'][$currentMonth - 1]);
-        $this->assertSame(700.0, $currentYearChart['actualExpense'][$currentMonth - 1]);
+        $this->assertSame(-700.0, $currentYearChart['actualExpense'][$currentMonth - 1]);
 
         $this->grant('budgets.index');
         $this->actingAs($this->user)->get(route('budgets.index', ['month' => $currentMonth]))

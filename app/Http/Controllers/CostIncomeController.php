@@ -21,11 +21,10 @@ class CostIncomeController extends Controller
         $topCustomers = $this->service->topCustomers();
         $invoices = $this->service->invoiceSummary();
         $forecastChart = $this->monthlyBudgetService->fullYearAnalysis()['chart'];
-        $monthly = $this->service->monthlyIncomeAndCostByMonth();
-        $monthlyIncome = array_combine($forecastChart['labels'], array_values($monthly['income']));
-        $monthlyCost = array_combine($forecastChart['labels'], array_values($monthly['cost']));
-        $forecastIncome = array_combine($forecastChart['labels'], $forecastChart['forecastIncome']);
-        $forecastExpense = array_combine($forecastChart['labels'], $forecastChart['forecastExpense']);
+        $monthlyIncome = array_combine($forecastChart['labels'], array_map(fn (int|float|null $value) => abs((float) ($value ?? 0)), $forecastChart['actualIncome']));
+        $monthlyCost = array_combine($forecastChart['labels'], array_map(fn (int|float|null $value) => abs((float) ($value ?? 0)), $forecastChart['actualExpense']));
+        $forecastIncome = array_combine($forecastChart['labels'], array_map(fn (int|float $value) => abs((float) $value), $forecastChart['forecastIncome']));
+        $forecastExpense = array_combine($forecastChart['labels'], array_map(fn (int|float $value) => abs((float) $value), $forecastChart['forecastExpense']));
         $forecastMonths = $this->monthlyBudgetService->translatedMonths();
         $fiscalYear = (int) (config('active-company-fiscal-year') ?? toEnglish(jdate('Y')));
         $currentYear = (int) toEnglish(jdate('Y'));

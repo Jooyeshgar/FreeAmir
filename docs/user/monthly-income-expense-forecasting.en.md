@@ -29,44 +29,44 @@ A transaction contributes to actual values only when its accounting document:
 
 Draft and unapproved documents are excluded. The selected Jalali month is converted to a Gregorian date range before documents are queried.
 
-For actual totals, Amir combines each temporary root with all of its descendants.
-
-> **Note:** If a root subject is temporary, every descendant beneath it must also be temporary. A permanent subject cannot belong to that subtree.
+For actual totals, Amir combines each temporary root with all of its descendants, at every depth. Transactions posted to permanent detail subjects beneath a temporary root are included as well.
 
 ```text
 Root balance = root transactions + all descendant transactions
 ```
 
-It then classifies each net root balance by sign:
+The root's direction is determined once from the signed sum of all approved transactions on the root and every descendant in the active fiscal company:
 
 ```text
-If root balance > 0:
-    Income contribution = root balance
+If complete hierarchy balance > 0:
+    Subject direction = income
 
-If root balance < 0:
-    Expense contribution = ABS(root balance)
+If complete hierarchy balance < 0:
+    Subject direction = expense
 ```
+
+The selected month's balance is assigned to that direction while retaining its accounting sign. An opposite-signed movement is a reversal: it reduces that category instead of being converted into a positive amount. This makes the sum of the monthly values reconcile with the complete approved hierarchy balance.
 
 Therefore:
 
 ```text
-Actual Income  = SUM(positive temporary-root balances)
-Actual Expense = SUM(ABS(negative temporary-root balances))
+Actual Income  = SUM(signed monthly balances of income roots)
+Actual Expense = SUM(signed monthly balances of expense roots)
 ```
 
-The transaction balance sign determines the classification, not merely the configured subject type.
+The complete approved hierarchy balance determines the actual-income or actual-expense classification, not merely the configured subject type or only the selected month's movement. For a manual forecast row on a subject configured as **Both**, the entered sign determines that forecast row's direction; it does not reclassify the actual totals.
 
 ### Example
 
 | Temporary root | Net balance | Income | Expense |
 |---|---:|---:|---:|
 | Sales revenue | +1,200 | 1,200 | 0 |
-| Operating expenses | -700 | 0 | 700 |
+| Operating expenses | -700 | 0 | -700 |
 | Other revenue | +300 | 300 | 0 |
 
 ```text
 Actual Income  = 1,200 + 300 = 1,500
-Actual Expense = 700
+Actual Expense = -700
 ```
 
 Each root is netted before classification. Transactions of `+1,000` and `-200` under the same root produce `800` of income, not separate income of `1,000` and expense of `200`.
@@ -94,7 +94,7 @@ Stored budget_type: expense
 Stored forecast_amount: 800
 ```
 
-Only one forecast can exist for a company, month, and subject. For an open or future month, a manual forecast takes priority over the system forecast.
+Only one forecast can exist for a company, month, and subject. A manual forecast always takes priority over the system forecast for that subject, including completed, current, and future months.
 
 The **Copy Previous Month** action replaces the selected month's complete manual forecast set with a copy of the preceding month's set.
 
@@ -119,29 +119,24 @@ Completed months act as historical reporting points rather than predictions.
 
 ### Current or future month
 
-For an open or future month, the system uses the arithmetic mean of actual values from all preceding completed months:
+For a current or future month, an unforecasted subject inherits the preceding month's **applied forecast**. Documents entered in the open month affect its actual value and variance, but do not replace this inherited system forecast:
 
 ```text
-System Income Forecast =
-    SUM(actual income in preceding completed months)
-    / number of preceding completed months
-
-System Expense Forecast =
-    SUM(actual expense in preceding completed months)
-    / number of preceding completed months
+System Forecast(month N) = Applied Forecast(month N - 1)
 ```
 
-If income actuals from Farvardin through Tir are `1,000`, `1,400`, `800`, and `1,600`, the Mordad forecast is:
+The first fiscal month has no preceding month. When it has an approved document, its system forecast starts from its actual signed value; otherwise it starts from zero:
 
 ```text
-(1,000 + 1,400 + 800 + 1,600) / 4 = 1,200
+System Forecast(Farvardin) = Actual(Farvardin), if a document exists
+System Forecast(Farvardin) = 0, otherwise
 ```
 
-If there is no preceding completed month, the system forecast is zero.
+This calculation is sequential and cached during analysis. The system does not search from the beginning of the year every time: each month needs only the already resolved applied forecast of the preceding month. If a preceding forecast is changed, the sequence is resolved again from the updated value.
 
 ## Applied Forecast
 
-For an open or future month:
+The applied forecast is selected separately for every subject and every month:
 
 ```text
 If a manual forecast exists:
@@ -150,23 +145,44 @@ Otherwise:
     Applied Forecast = System Forecast
 ```
 
-For a completed month, forecast totals are replaced by actual totals:
+This priority also applies to completed months. A completed month's total is therefore a combination of manual values for forecasted subjects and actual values for subjects without manual forecasts. Manual values are not replaced by the total actual result.
+
+For example:
 
 ```text
-Forecast Income  = Actual Income
-Forecast Expense = Actual Expense
+Subject A manual forecast = 1,000
+Subject A actual value    = 1,200
+Subject B has no manual forecast
+Subject B actual value    = 300
+
+Applied total forecast = 1,000 + 300 = 1,300
 ```
 
-A stored manual amount can still appear in a completed month's line table for comparison, while its forecast indicators use historical actual totals.
+For current and future months, the priority creates a carry-forward chain. For example, if Tir has a manual forecast of `1,800`, Mordad has no manual value, Shahrivar has a manual forecast of `2,200`, and Mehr has no manual value:
 
-## Parent and Child Forecasts
+```text
+Tir applied forecast       = 1,800 (manual)
+Mordad applied forecast    = 1,800 (inherited from Tir)
+Shahrivar applied forecast = 2,200 (manual)
+Mehr applied forecast      = 2,200 (inherited from Shahrivar)
+```
 
-Forecast selectors expose temporary roots and their direct children, while calculations can include deeper descendants. Amir prevents double-counting:
+## Root and Child Forecasts
 
-1. If a root has no manual forecast but a direct child does, the child's subtree is separated from the root. The root becomes the **remainder excluding child forecasts**.
-2. If both a root and child have manual forecasts, the root controls the forecast total. The child is displayed as detail and marked **included in parent total**.
+Forecast selectors expose temporary roots and their immediate lower-level subjects, while calculations can include deeper levels. Amir prevents double-counting:
 
-Thus, a root forecast of `10,000` and child forecast of `3,000` produce a total forecast of `10,000`, not `13,000`.
+1. If a root has no manual forecast but an immediate lower-level subject does, that lower subtree is separated from the root. The root becomes the **remainder excluding lower-level forecasts**.
+2. If both a root and a child subject have manual forecasts, the root controls the forecast total. The child row is shown for reference and marked **Detail only — included in root total**.
+
+The warning above **New Forecast** instructs users to enter the combined forecast amount for the root itself and all its child subjects—not only the root's own amount. Thus, a root forecast of `10,000` and child forecast of `3,000` produce a total forecast of `10,000`, not `13,000`.
+
+Because the child rows are a breakdown of the root total, they must use the same income or expense direction and their combined amount cannot exceed the root forecast. Amir rejects a save that would violate either condition.
+
+If the following month keeps only the lower-level manual forecast, the inherited root value is first reduced by that lower-level subject's preceding applied forecast. Only the root remainder and the new lower-level value are then added, so carry-forward does not count the lower-level forecast twice.
+
+Forecast groups containing a manual value are listed first. Root and lower-level rows remain together: the root appears first and is immediately followed by its manually forecasted immediate lower levels. Groups containing only system-calculated values appear below the manual groups. Consequently, a system-calculated root may appear in the manual section when one of its lower levels has a manual forecast.
+
+Each applied value displays its source badge next to the number. The explanation for **Manual Forecast** and **System forecast** appears once above the table instead of being repeated as a tooltip on every row. A manual row also displays the system value for comparison.
 
 ## Variance Calculations
 
@@ -185,28 +201,29 @@ Income Variance = Actual Income - Forecast Income
 
 ### Expense variance
 
-Because spending less than forecast is favorable, the direction is reversed:
+Expense values retain their negative accounting sign. The same signed subtraction is therefore used, and spending less than forecast produces a positive result:
 
 ```text
-Expense Variance = Forecast Expense - Actual Expense
+Expense Variance = Actual Expense - Forecast Expense
 ```
 
 | Forecast | Actual | Variance | Meaning |
 |---:|---:|---:|---|
-| 1,000 | 800 | +200 | Favorable; spending was under budget |
-| 1,000 | 1,200 | -200 | Unfavorable; spending exceeded budget |
+| -1,000 | -800 | +200 | Favorable; spending was under budget |
+| -1,000 | -1,200 | -200 | Unfavorable; spending exceeded budget |
 
 ### Variance percentage
 
 ```text
-Variance % = (Variance / Forecast) * 100
+Income Variance %  = (Variance / Forecast Income) * 100
+Expense Variance % = (Variance / (-1 * Forecast Expense)) * 100
 ```
 
-For an expense forecast of `800` and actual expense of `600`:
+For an expense forecast of `-800` and actual expense of `-600`:
 
 ```text
-Variance   = 800 - 600 = 200
-Variance % = (200 / 800) * 100 = 25%
+Variance   = -600 - (-800) = 200
+Variance % = (200 / (-1 * -800)) * 100 = 25%
 ```
 
 When the forecast is zero, Amir reports `0%` to avoid division by zero.
@@ -227,6 +244,27 @@ Expense Utilization % = (Actual Expense / Forecast Expense) * 100
 
 When a forecast denominator is zero, the corresponding ratio defaults to zero.
 
+## Number Display and Charts
+
+The workbench keeps expense forecasts and actuals negative during calculations. In tables and metric cards, `formatNumber()` displays a negative value using accounting parentheses:
+
+```text
+-800 is displayed as (800)
+```
+
+Charts display magnitudes as positive numbers. Only at the chart presentation boundary, Amir applies `ABS` to income and expense values:
+
+```text
+Signed income reversal used in calculations = -200
+Income value sent to chart                  = ABS(-200) = 200
+Signed expense used in calculations         = -800
+Expense value sent to chart                 = ABS(-800) = 800
+```
+
+The monthly workbench charts and the **Monthly Income vs Cost** chart in `reports.cost-income` therefore display positive bars, lines, and slices without changing the signed accounting calculations.
+
+Charts show magnitude only. To determine whether a value was originally positive or negative, use the signed values in the table or metric cards.
+
 ## Months Without Accounting Documents
 
 Actual values are available only if at least one approved document exists in the selected month. If none exists:
@@ -245,13 +283,13 @@ Annual analysis applies the same calculation to all 12 Jalali months:
 
 ```text
 Annual Forecast Income  = SUM(monthly forecast income)
-Annual Forecast Expense = SUM(monthly forecast expense)
+Annual Forecast Expense = SUM(signed monthly forecast expense)
 
 Annual Actual Income =
     SUM(actual income for months containing approved documents)
 
 Annual Actual Expense =
-    SUM(actual expense for months containing approved documents)
+    SUM(signed actual expense for months containing approved documents)
 ```
 
-Annual charts use these same monthly results, keeping the workbench and cost-income report consistent.
+Annual calculations retain signed income and expense totals. Charts display their absolute magnitudes, keeping presentation positive while the workbench and cost-income report calculations remain consistent.

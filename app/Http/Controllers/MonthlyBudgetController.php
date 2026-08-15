@@ -36,17 +36,17 @@ class MonthlyBudgetController extends Controller
         $incomeLinesCount = $incomeLines->count();
         $expenseLinesCount = $expenseLines->count();
         $incomeAchievement = $analysis['actualsCalculated'] && $analysis['forecastIncome'] > 0 ? max(0, ($analysis['actualIncome'] / $analysis['forecastIncome']) * 100) : 0;
-        $expenseUtilization = $analysis['actualsCalculated'] && $analysis['forecastExpense'] > 0 ? max(0, ($analysis['actualExpense'] / $analysis['forecastExpense']) * 100) : 0;
+        $expenseUtilization = $analysis['actualsCalculated'] && $analysis['forecastExpense'] < 0 ? max(0, ($analysis['actualExpense'] / $analysis['forecastExpense']) * 100) : 0;
         $comparisonDatasets = [[
             'label' => __('Forecast'),
-            'data' => [__('Income') => $analysis['forecastIncome'], __('Expense') => $analysis['forecastExpense']],
+            'data' => [__('Income') => abs($analysis['forecastIncome']), __('Expense') => abs($analysis['forecastExpense'])],
             'borderRadius' => 6,
         ]];
 
         if ($analysis['actualsCalculated']) {
             $comparisonDatasets[] = [
                 'label' => __('Actual'),
-                'data' => [__('Income') => $analysis['actualIncome'], __('Expense') => $analysis['actualExpense']],
+                'data' => [__('Income') => abs($analysis['actualIncome']), __('Expense') => abs($analysis['actualExpense'])],
                 'borderRadius' => 6,
             ];
         }
@@ -161,10 +161,19 @@ class MonthlyBudgetController extends Controller
 
     private function itemComparisonDatasets(Collection $lines, bool $includeActuals, string $forecastColor, string $actualColor): array
     {
-        $topLines = $lines->sortByDesc(fn (array $line) => max((float) $line['forecast'], (float) ($line['actual'] ?? 0)))->take(5);
+        $topLines = $lines->sortByDesc(function (array $line) {
+            $forecast = (float) $line['forecast'];
+            $actual = (float) ($line['actual'] ?? 0);
+
+            return max($forecast < 0 ? -1 * $forecast : $forecast, $actual < 0 ? -1 * $actual : $actual);
+        })->take(5);
         $dataset = fn (string $label, string $key, string $color) => [
             'label' => __($label),
-            'data' => $topLines->mapWithKeys(fn (array $line) => [formatCode($line['subject']->code).' '.$line['subject']->name => $line[$key]])->all(),
+            'data' => $topLines->mapWithKeys(function (array $line) use ($key) {
+                $value = (float) $line[$key];
+
+                return [formatCode($line['subject']->code).' '.$line['subject']->name => abs($value)];
+            })->all(),
             'backgroundColor' => $color.'cc',
             'borderColor' => $color,
             'borderRadius' => 5,

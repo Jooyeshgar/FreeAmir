@@ -65,6 +65,8 @@ class CostIncomeDashboardTest extends TestCase
             $response->assertViewHas($key);
         }
         $response->assertViewHas('monthlyBudgetLinks', fn (array $links) => count($links) === 12 && str_contains($links[0], 'month=1'))
+            ->assertViewHas('forecastExpense', fn (array $values) => ! str_contains(json_encode(array_values($values), JSON_THROW_ON_ERROR), '-0'))
+            ->assertViewHas('monthlyCost', fn (array $values) => ! str_contains(json_encode(array_values($values), JSON_THROW_ON_ERROR), '-0'))
             ->assertViewHas('monthsWithoutDocumentsLabel', fn (string $label) => str_contains($label, '، ') && str_contains($label, ' و '))
             ->assertSee('"type":"line"', false)
             ->assertSee("getElementsAtEventForMode(event, 'index', { intersect: true }", false)
@@ -88,20 +90,29 @@ class CostIncomeDashboardTest extends TestCase
             ->assertSee('name="subject_id"', false);
     }
 
+    public function test_bulk_forecast_editor_is_hidden_when_subject_search_permission_is_missing(): void
+    {
+        $this->grant('reports.cost-income', 'budgets.store');
+
+        $this->actingAs($this->user)->get(route('reports.cost-income'))
+            ->assertOk()
+            ->assertDontSee('cost-income-forecast-modal', false);
+    }
+
     public function test_chart_uses_the_same_monthly_budget_totals_for_actual_and_historical_forecast_values(): void
     {
         $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 5, 15, '-').' 12:00:00'));
         $income = $this->nonPermanentSubject('Chart income', SubjectType::DEBTOR);
         $expense = $this->nonPermanentSubject('Chart expense', SubjectType::CREDITOR);
-        $this->transaction($income->id, 900, jalali_to_gregorian(1405, 4, 10, '-'));
-        $this->transaction($expense->id, -300, jalali_to_gregorian(1405, 4, 10, '-'));
+        $this->transaction($income->id, 900.25, jalali_to_gregorian(1405, 4, 10, '-'));
+        $this->transaction($expense->id, -300.75, jalali_to_gregorian(1405, 4, 10, '-'));
         $this->grant('reports.cost-income');
 
         $this->actingAs($this->user)->get(route('reports.cost-income'))->assertOk()
-            ->assertViewHas('monthlyIncome', fn (array $values) => $values['تیر'] === 900)
-            ->assertViewHas('monthlyCost', fn (array $values) => $values['تیر'] === 300)
-            ->assertViewHas('forecastIncome', fn (array $values) => $values['تیر'] === 900.0)
-            ->assertViewHas('forecastExpense', fn (array $values) => $values['تیر'] === 300.0);
+            ->assertViewHas('monthlyIncome', fn (array $values) => $values['تیر'] === 900.25)
+            ->assertViewHas('monthlyCost', fn (array $values) => $values['تیر'] === 300.75)
+            ->assertViewHas('forecastIncome', fn (array $values) => $values['تیر'] === 900.25)
+            ->assertViewHas('forecastExpense', fn (array $values) => $values['تیر'] === 300.75);
     }
 
     public function test_missing_document_months_use_the_configured_english_list_separators(): void
@@ -190,17 +201,26 @@ class CostIncomeDashboardTest extends TestCase
         $cost = $this->nonPermanentSubject('Cost');
 
         $this->transaction($income->id, 1000, jalali_to_gregorian(1405, 5, 10, '-')); // مرداد
-        $this->transaction($income->id, -200, jalali_to_gregorian(1405, 8, 11, '-'));  // آبان؛ جهت ماهانه باید مستقل باشد
+        $this->transaction($income->id, -200, jalali_to_gregorian(1405, 8, 11, '-'));  // آبان؛ برگشت درآمد باید جمع سالانه را کاهش دهد
         $this->transaction($cost->id, -300, jalali_to_gregorian(1405, 8, 12, '-'));   // آبان
 
         $monthly = $this->service()->monthlyIncomeAndCost();
+        $signedMonthly = $this->service()->monthlyIncomeAndCostByMonth();
 
-        $this->assertSame([1000, 0, 500, 0], [
+        $this->assertSame([1000, -200, 300, 0], [
             $monthly['income']['مرداد'],
             $monthly['income']['آبان'],
             $monthly['cost']['آبان'],
             $monthly['cost']['مرداد'],
         ]);
+        $this->assertSame(-200, $signedMonthly['income'][8]);
+        $this->assertSame(-300, $signedMonthly['cost'][8]);
+        $this->assertSame($this->service()->summary()['totalIncome'], array_sum($signedMonthly['income']));
+
+        $this->grant('reports.cost-income');
+        $this->actingAs($this->user)->get(route('reports.cost-income'))->assertOk()
+            ->assertViewHas('monthlyIncome', fn (array $values) => $values['آبان'] === 200.0)
+            ->assertViewHas('monthlyCost', fn (array $values) => $values['آبان'] === 300.0);
     }
 
     public function test_monthly_totals_match_trial_balance_from_roots_to_deepest_descendants(): void

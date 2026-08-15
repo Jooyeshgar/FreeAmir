@@ -15,13 +15,13 @@
                             <h1 class="text-xl font-bold text-base-content sm:text-2xl">{{ __('Monthly Income and Expense Workbench') }}</h1>
                             <span class="badge badge-primary badge-outline">{{ $selectedMonthLabel }}</span>
                             @if (! $hasDocuments)
-                                <span class="badge badge-error gap-1 text-error-content">
+                                <span class="badge badge-warning badge-outline gap-1">
                                     {{ __('No accounting document exists for calculating actual income and expense.') }}
                                 </span>
                             @endif
                         </div>
                         <p class="mt-1.5 max-w-2xl text-sm leading-6 text-base-content/60">
-                            {{ __('Manual forecasts take priority. Completed months use actual amounts; other system forecasts average the actual amounts of prior completed months.') }}
+                            {{ __("Manual forecasts take priority. Completed months otherwise use actual values; current and future months inherit the previous month's applied forecast.") }}
                         </p>
                     </div>
                 </div>
@@ -48,7 +48,8 @@
                 </div>
 
                 @can('budgets.rollover')
-                    <form method="POST" action="{{ route('budgets.rollover') }}">
+                    <form method="POST" action="{{ route('budgets.rollover') }}"
+                        onsubmit="return confirm('{{ __('Copy the previous month forecast into :month. Existing values for this month will be replaced.', ['month' => $selectedMonthLabel]) }}')">
                         @csrf
                         <x-input name="month" value="{{ $selectedMonth }}" hidden />
                         <button type="submit" class="btn btn-ghost btn-sm" @disabled(! $hasPreviousForecast)
@@ -61,7 +62,16 @@
         </section>
 
         <section class="space-y-4">
-            @can('budgets.store')
+            @if ((auth()->user()->can('budgets.store') && auth()->user()->can('budgets.search-subjects')) || $hasOverlappingForecasts)
+                <div role="alert" class="alert alert-warning border border-warning/30 bg-warning/10 text-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.6 2.7 17.2A2 2 0 0 0 4.4 20h15.2a2 2 0 0 0 1.7-2.8L13.7 3.6a2 2 0 0 0-3.4 0Z" />
+                    </svg>
+                    <span>{{ __('Forecasts for lower-level subjects shown below a manually forecast root are details only and are already included in the root total.') }}</span>
+                </div>
+            @endif
+
+            @if (auth()->user()->can('budgets.store') && auth()->user()->can('budgets.search-subjects'))
                 <article class="card overflow-visible border border-base-300 bg-base-100 shadow-sm">
                     <div class="flex items-center gap-3 border-b border-base-300 px-5 py-4">
                         <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -71,7 +81,7 @@
                         </span>
                         <div>
                             <h2 class="font-bold text-base-content">{{ __('New Forecast') }}</h2>
-                            <p class="text-xs text-base-content/50">{{ __('Only root subjects and their direct children can be selected.') }}</p>
+                            <p class="text-xs text-base-content/50">{{ __('Only root subjects and their immediate lower-level subjects can be selected.') }}</p>
                         </div>
                     </div>
 
@@ -80,8 +90,8 @@
                         @method('PUT')
                         <x-input name="month" value="{{ $selectedMonth }}" hidden />
 
-                        <div class="grid grid-cols-1 items-end gap-4 lg:grid-cols-12">
-                            <fieldset class="form-control lg:col-span-6" x-data="{
+                        <div class="grid grid-cols-1 items-end gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(16rem,2fr)_auto]">
+                            <fieldset class="form-control min-w-0" x-data="{
                                 selectedName: @js($selectedSubject?->name ?? ''),
                                 selectedCode: @js($selectedSubject?->code ?? ''),
                                 selectedId: @js($selectedSubject?->id),
@@ -92,7 +102,7 @@
                                 <x-input name="subject_id" x-bind:value="selectedId" hidden />
                             </fieldset>
 
-                            <fieldset class="form-control lg:col-span-5">
+                            <fieldset class="form-control min-w-0">
                                 <label for="forecast_amount_display" class="label block py-1 text-xs font-medium">
                                     <span>{{ __('Forecast Amount') }} ({{ $currency }})</span>
                                     <span class="mt-0.5 block font-normal text-base-content/50">{{ __('Enter income as a positive amount and expense as a negative amount; the sign must match the subject type.') }}</span>
@@ -106,17 +116,18 @@
                                 </div>
                             </fieldset>
 
-                            <div class="lg:col-span-1">
-                                <button type="submit" class="btn btn-primary h-10 w-full px-3" title="{{ __('Save Forecast Line') }}">
+                            <div class="justify-self-start">
+                                <button type="submit" class="btn btn-primary btn-sm h-10 gap-1.5 whitespace-nowrap px-3" title="{{ __('Save Forecast Line') }}">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14" />
                                     </svg>
+                                    <span>{{ __('Save Forecast') }}</span>
                                 </button>
                             </div>
                         </div>
                     </form>
                 </article>
-            @endcan
+            @endif
 
             @foreach ([[$displayBudgetLines, false], ...($hasMoreBudgetLines ? [[$allBudgetLinesByForecast, true]] : [])] as [$tableLines, $isModal])
                 @if ($isModal)
@@ -133,24 +144,38 @@
                             </div>
                 @else
                     <article class="card overflow-hidden border border-base-300 bg-base-100 shadow-sm">
-                        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-base-300 px-5 py-4">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <h2 class="font-bold text-base-content">{{ __('Forecasts') }}</h2>
-                                    <span class="badge badge-neutral badge-sm">{{ localizeNumber($budgetLines->count()) }}</span>
-                                    <span class="badge badge-primary badge-outline badge-sm">{{ trans_choice(':count manual forecasts', $manualForecastsCount, ['count' => localizeNumber($manualForecastsCount)]) }}</span>
+                        <div class="flex flex-wrap items-center gap-3 border-b border-base-300 px-5 py-4">
+                            <div class="w-full">
+                                <div class="flex flex-wrap items-center justify-between gap-4">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <h2 class="font-bold text-base-content">{{ __('Forecasts') }}</h2>
+                                        <span class="badge badge-neutral badge-sm">{{ localizeNumber($budgetLines->count()) }}</span>
+                                        <span class="badge badge-primary badge-outline badge-sm">{{ trans_choice(':count manual forecasts', $manualForecastsCount, ['count' => localizeNumber($manualForecastsCount)]) }}</span>
+                                    </div>
+                                    @if ($hasMoreBudgetLines)
+                                        <button type="button" class="btn btn-outline btn-primary btn-sm" onclick="document.getElementById('all-monthly-forecasts-modal').showModal()">{{ __('Show all') }}</button>
+                                    @endif
                                 </div>
-                                <p class="mt-1 text-xs text-base-content/50">{{ __('Completed months use actual amounts as system forecasts; other months average the actual amounts of prior completed months.') }}</p>
+                                <div class="mt-3 grid w-full grid-cols-1 gap-x-4 gap-y-2 text-[11px] text-base-content/55 sm:grid-cols-2 xl:grid-cols-4">
+                                    <span class="flex items-start gap-1.5">
+                                        <span class="shrink-0 font-semibold text-primary">{{ __('Manual Forecast') }}:</span>
+                                        <span>{{ __('Entered by the user.') }}</span>
+                                    </span>
+                                    <span class="flex items-start gap-1.5">
+                                        <span class="shrink-0 font-semibold text-base-content/70">{{ __('System forecast') }}:</span>
+                                        <span>{{ __("Calculated automatically from the actual value or the previous month's applied forecast.") }}</span>
+                                    </span>
+                                    <span class="flex items-start gap-1.5">
+                                        <span class="shrink-0 font-semibold text-success">{{ __('Actual') }}:</span>
+                                        <span>{{ __('Actual values include transactions on the selected subject and all its descendants in documents dated within this month.') }}</span>
+                                    </span>
+                                    <span class="flex items-start gap-1.5">
+                                        <span class="shrink-0 font-semibold text-warning">{{ __('Variance') }}:</span>
+                                        <span>{{ __('Positive variance is favorable; negative variance is unfavorable.') }}</span>
+                                    </span>
+                                </div>
                             </div>
-                            @if ($hasMoreBudgetLines)
-                                <button type="button" class="btn btn-outline btn-primary btn-sm" onclick="document.getElementById('all-monthly-forecasts-modal').showModal()">{{ __('View all') }}</button>
-                            @endif
                         </div>
-                        @if ($hasOverlappingForecasts)
-                            <div role="alert" class="alert alert-info mx-5 mt-4 text-sm">
-                                {{ __('Child forecasts shown below a manually forecast root are details only and are already included in the root total.') }}
-                            </div>
-                        @endif
                 @endif
 
                 <div @class(['max-h-[70vh] overflow-auto' => $isModal, 'overflow-x-auto' => ! $isModal])>
@@ -174,7 +199,7 @@
                                                 @if ($line['isChild'])<span class="text-base-content/35">↳</span>@endif
                                                 <span>{{ $line['subject']->name }}</span>
                                                 @if ($line['isRemainder'])
-                                                    <span class="badge badge-ghost badge-xs">{{ __('Remainder excluding child forecasts') }}</span>
+                                                    <span class="badge badge-ghost badge-xs">{{ __('Remainder excluding lower-level forecasts') }}</span>
                                                 @elseif (! $line['includedInSummary'])
                                                     <span class="badge badge-info badge-outline badge-xs">{{ __('Included in parent total') }}</span>
                                                 @endif
@@ -188,15 +213,19 @@
                                         </span>
                                     </td>
                                     <td class="text-end tabular-nums">
-                                        <div class="font-semibold">{{ formatNumber($line['forecast']) }}</div>
-                                        <div class="mt-1 text-[11px] text-base-content/50">
-                                            <span class="badge badge-ghost badge-xs">{{ __('System forecast') }}</span>
-                                            @if ($line['source'] === 'manual') {{ formatNumber($line['systemForecast']) }} @endif
+                                        <div class="flex flex-wrap items-center justify-end gap-1.5 font-semibold">
+                                            <span>{{ formatNumber($line['forecast']) }}</span>
+                                            <span @class(['badge badge-xs', 'badge-primary' => $line['source'] === 'manual', 'badge-ghost' => $line['source'] === 'system'])>
+                                                {{ $line['source'] === 'manual' ? __('Manual Forecast') : __('System forecast') }}
+                                            </span>
                                         </div>
+                                        @if ($line['source'] === 'manual')
+                                            <div class="mt-1 text-[11px] text-base-content/50">{{ __('System forecast') }}: {{ formatNumber($line['systemForecast']) }}</div>
+                                        @endif
                                     </td>
                                     <td class="text-end tabular-nums">
                                         @if (is_null($line['actual']))
-                                            <span class="badge badge-error badge-outline badge-sm">{{ __('No document') }}</span>
+                                            <span class="badge badge-warning badge-outline badge-sm">{{ __('No document') }}</span>
                                         @else
                                             {{ formatNumber($line['actual']) }}
                                         @endif

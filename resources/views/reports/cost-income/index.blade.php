@@ -19,14 +19,14 @@
                         <p class="text-xs text-base-content/55">{{ __('Select a month on the chart to open its monthly income and expense workbench.') }}</p>
                     </div>
 
-                    @can('budgets.store')
+                    @if (auth()->user()->can('budgets.store') && auth()->user()->can('budgets.search-subjects'))
                         <button type="button" class="btn btn-primary btn-sm gap-1.5" onclick="document.getElementById('cost-income-forecast-modal').showModal()">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14" />
                             </svg>
                             {{ __('New Forecast') }}
                         </button>
-                    @endcan
+                    @endif
                 </div>
 
                 <div class="mt-3">
@@ -48,7 +48,7 @@
             </div>
         </article>
 
-        @can('budgets.store')
+        @if (auth()->user()->can('budgets.store') && auth()->user()->can('budgets.search-subjects'))
             <dialog id="cost-income-forecast-modal" class="modal">
                 <div class="modal-box relative w-11/12 max-w-3xl overflow-visible p-0">
                     <div class="flex items-center justify-between border-b border-base-300 px-5 py-4">
@@ -118,7 +118,7 @@
                 </div>
                 <form method="dialog" class="modal-backdrop"><button>{{ __('Close') }}</button></form>
             </dialog>
-        @endcan
+        @endif
 
         <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
             @include('reports.cost-income._breakdown')
