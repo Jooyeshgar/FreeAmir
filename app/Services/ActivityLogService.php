@@ -5,10 +5,15 @@ namespace App\Services;
 use App\Models\Activity;
 use App\Models\Company;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Lab404\Impersonate\Services\ImpersonateManager;
 
@@ -112,7 +117,7 @@ class ActivityLogService
      */
     public function index(array $filters): array
     {
-        $query = Activity::query()->with('user:id,name,email')->latest('id');
+        $query = Activity::query();
 
         $query->when($filters['search'] ?? null, function ($query, string $search) {
             $query->where(function ($query) use ($search) {
@@ -139,7 +144,7 @@ class ActivityLogService
             ->when($filters['date_from'] ?? null, fn ($query, string $date) => $query->whereDate('created_at', '>=', $date))
             ->when($filters['date_to'] ?? null, fn ($query, string $date) => $query->whereDate('created_at', '<=', $date));
 
-        $activities = $query->paginate(25)->withQueryString();
+        $activities = $this->paginateGroupedActivities($query);
         $impersonatedUserIds = $activities->getCollection()
             ->map(fn (Activity $activity) => $activity->details?->get('impersonated_user_id'))->filter()->unique();
 
@@ -152,6 +157,93 @@ class ActivityLogService
             'modelTypes' => Activity::query()->whereNotNull('model_type')->distinct()->orderBy('model_type')->pluck('model_type'),
             'filters' => $filters,
         ];
+    }
+
+    private function paginateGroupedActivities(Builder $query): LengthAwarePaginator
+    {
+        $perPage = 25;
+        $page = Paginator::resolveCurrentPage();
+        $firstItem = ($page - 1) * $perPage;
+        $lastItem = $firstItem + $perPage;
+        $selectedActivities = new EloquentCollection;
+        $groupCount = 0;
+        $pendingRequest = null;
+        $pendingModels = collect();
+
+        $addGroup = function (Collection $group) use (&$groupCount, $firstItem, $lastItem, $selectedActivities): void {
+            if ($groupCount >= $firstItem && $groupCount < $lastItem) {
+                $group->each(fn (Activity $activity) => $selectedActivities->push($activity));
+            }
+
+            $groupCount++;
+        };
+
+        $flushRequest = function () use (&$pendingRequest, &$pendingModels, $addGroup): void {
+            if (! $pendingRequest) {
+                return;
+            }
+
+            $relatedIndexes = $pendingModels->keys()
+                ->filter(fn (int $index): bool => $this->belongsToRequest($pendingRequest, $pendingModels[$index]));
+
+            if ($relatedIndexes->isEmpty()) {
+                $addGroup(collect([$pendingRequest]));
+                $pendingModels->each(fn (Activity $activity) => $addGroup(collect([$activity])));
+            } else {
+                $firstRelatedIndex = $relatedIndexes->first();
+                $relatedActivities = $relatedIndexes->map(fn (int $index): Activity => $pendingModels[$index]);
+                $requestActivity = $pendingRequest;
+
+                $pendingModels->each(function (Activity $activity, int $index) use ($addGroup, $firstRelatedIndex, $relatedIndexes, $relatedActivities, $requestActivity): void {
+                    if ($index === $firstRelatedIndex) {
+                        $addGroup(collect([$requestActivity])->concat($relatedActivities));
+                    }
+
+                    if (! $relatedIndexes->contains($index)) {
+                        $addGroup(collect([$activity]));
+                    }
+                });
+            }
+
+            $pendingRequest = null;
+            $pendingModels = collect();
+        };
+
+        foreach ((clone $query)->lazyByIdDesc(500) as $activity) {
+            if ($activity->source === 'request') {
+                $flushRequest();
+                $pendingRequest = $activity;
+
+                continue;
+            }
+
+            if ($pendingRequest) {
+                $pendingModels->push($activity);
+            } else {
+                $addGroup(collect([$activity]));
+            }
+        }
+
+        $flushRequest();
+        $selectedActivities->load('user:id,name,email');
+
+        return (new LengthAwarePaginator(
+            $selectedActivities,
+            $groupCount,
+            $perPage,
+            $page,
+            ['path' => Paginator::resolveCurrentPath(), 'pageName' => 'page'],
+        ))->withQueryString();
+    }
+
+    private function belongsToRequest(Activity $requestActivity, Activity $modelActivity): bool
+    {
+        $requestRoute = $requestActivity->details?->get('route');
+
+        return filled($requestRoute)
+            && $modelActivity->user_id === $requestActivity->user_id
+            && $modelActivity->details?->get('route') === $requestRoute
+            && abs(($modelActivity->created_at?->getTimestamp() ?? 0) - ($requestActivity->created_at?->getTimestamp() ?? 0)) <= 10;
     }
 
     /**

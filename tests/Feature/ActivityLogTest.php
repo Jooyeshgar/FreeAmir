@@ -259,6 +259,144 @@ class ActivityLogTest extends TestCase
             ->assertDontSee('fiscal_year');
     }
 
+    public function test_request_and_all_of_its_model_events_are_shown_as_one_activity(): void
+    {
+        $superAdmin = User::factory()->create();
+        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $firstCompany = Company::factory()->create(['name' => 'First related model']);
+        $secondCompany = Company::factory()->create(['name' => 'Second related model']);
+
+        foreach ([$firstCompany, $secondCompany] as $company) {
+            activity('model')
+                ->causedBy($superAdmin)
+                ->performedOn($company)
+                ->event('created')
+                ->withProperties([
+                    'route' => 'companies.store',
+                    'model_label' => $company->name,
+                    'attributes' => ['name' => $company->name],
+                ])
+                ->log('created');
+        }
+
+        activity('request')
+            ->causedBy($superAdmin)
+            ->event('post')
+            ->withProperties([
+                'route' => 'companies.store',
+                'method' => 'POST',
+                'path' => '/companies',
+                'request_input' => ['name' => 'Parent request'],
+            ])
+            ->log('POST companies.store');
+
+        $this->actingAs($superAdmin)
+            ->get(route('management.activity-logs.index'))
+            ->assertOk()
+            ->assertViewHas('activities', function ($activities) use ($firstCompany, $secondCompany): bool {
+                $row = $activities->getCollection()->first();
+
+                return $activities->count() === 1
+                    && $row['requestMethod'] === 'POST'
+                    && $row['modelContextLabels']->contains(__('Company').' #'.$firstCompany->id)
+                    && $row['modelContextLabels']->contains(__('Company').' #'.$secondCompany->id)
+                    && $row['hasDetails'];
+            })
+            ->assertSee(__('Company').' #'.$firstCompany->id)
+            ->assertSee(__('Company').' #'.$secondCompany->id)
+            ->assertSee('Parent request');
+    }
+
+    public function test_merged_changes_identify_their_affected_model(): void
+    {
+        $superAdmin = User::factory()->create();
+        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $firstCompany = Company::factory()->create();
+        $secondCompany = Company::factory()->create();
+
+        foreach ([$firstCompany, $secondCompany] as $company) {
+            activity('model')
+                ->causedBy($superAdmin)
+                ->performedOn($company)
+                ->event('updated')
+                ->withProperties([
+                    'route' => 'companies.update',
+                    'attributes' => ['name' => "After {$company->id}"],
+                    'old' => ['name' => "Before {$company->id}"],
+                ])
+                ->log('updated');
+        }
+
+        activity('request')
+            ->causedBy($superAdmin)
+            ->event('put')
+            ->withProperties(['route' => 'companies.update', 'method' => 'PUT'])
+            ->log('PUT companies.update');
+
+        $response = $this->actingAs($superAdmin)
+            ->get(route('management.activity-logs.index'));
+
+        $response
+            ->assertOk()
+            ->assertViewHas('activities', function ($activities) use ($firstCompany, $secondCompany): bool {
+                $changes = $activities->getCollection()->first()['changes'];
+
+                return $activities->count() === 1
+                    && $changes->count() === 2
+                    && $changes->pluck('model')->contains(__('Company').' #'.$firstCompany->id)
+                    && $changes->pluck('model')->contains(__('Company').' #'.$secondCompany->id);
+            })
+            ->assertSee(__('Affected model'));
+
+        $this->assertSame(1, substr_count($response->getContent(), 'data-affected-model="'.e(__('Company').' #'.$firstCompany->id).'"'));
+        $this->assertSame(1, substr_count($response->getContent(), 'data-affected-model="'.e(__('Company').' #'.$secondCompany->id).'"'));
+    }
+
+    public function test_request_and_model_events_are_merged_before_pagination(): void
+    {
+        $superAdmin = User::factory()->create();
+        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $firstCompany = Company::factory()->create();
+        $secondCompany = Company::factory()->create();
+
+        foreach ([$firstCompany, $secondCompany] as $company) {
+            activity('model')
+                ->causedBy($superAdmin)
+                ->performedOn($company)
+                ->event('created')
+                ->withProperties(['route' => 'companies.store'])
+                ->log('created');
+        }
+
+        activity('request')
+            ->causedBy($superAdmin)
+            ->event('post')
+            ->withProperties(['route' => 'companies.store', 'method' => 'POST'])
+            ->log('POST companies.store');
+
+        foreach (range(1, 24) as $index) {
+            activity('request')
+                ->causedBy($superAdmin)
+                ->event('post')
+                ->withProperties(['route' => "audit.page.{$index}", 'method' => 'POST'])
+                ->log("POST audit.page.{$index}");
+        }
+
+        $this->actingAs($superAdmin)
+            ->get(route('management.activity-logs.index'))
+            ->assertOk()
+            ->assertViewHas('activities', function ($activities) use ($firstCompany, $secondCompany): bool {
+                $row = $activities->getCollection()->last();
+
+                return $activities->count() === 25
+                    && $activities->total() === 25
+                    && $activities->lastPage() === 1
+                    && $row['route'] === 'companies.store'
+                    && $row['modelContextLabels']->contains(__('Company').' #'.$firstCompany->id)
+                    && $row['modelContextLabels']->contains(__('Company').' #'.$secondCompany->id);
+            });
+    }
+
     public function test_unrelated_request_and_model_rows_are_not_merged(): void
     {
         $superAdmin = User::factory()->create();

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Management;
 use App\Http\Controllers\Controller;
 use App\Models\Activity;
 use App\Models\Company;
-use App\Models\User;
 use App\Services\ActivityLogService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -96,9 +95,6 @@ class ActivityLogController extends Controller
         ];
     }
 
-    /**
-     * @return array<string, array{label: string, style: string}>
-     */
     private function actionOptions(): array
     {
         return [
@@ -117,10 +113,6 @@ class ActivityLogController extends Controller
         ];
     }
 
-    /**
-     * @param  array{total: int, today: int, model: int, request: int}  $metrics
-     * @return array<int, array{label: string, value: string, accent: string, icon: string}>
-     */
     private function metricCards(array $metrics): array
     {
         return [
@@ -151,11 +143,6 @@ class ActivityLogController extends Controller
         ];
     }
 
-    /**
-     * @param  Collection<int, Company>  $companyLookup
-     * @param  Collection<int, User>  $impersonatedUsers
-     * @return array<string, mixed>
-     */
     private function activityRow(Activity $activity, Collection $companyLookup, Collection $impersonatedUsers): array
     {
         $details = $activity->details ?? collect();
@@ -179,6 +166,7 @@ class ActivityLogController extends Controller
             'style' => 'bg-slate-100 text-slate-700 ring-slate-600/20 dark:bg-slate-800 dark:text-slate-300',
         ];
         $modelTitle = __(class_basename($activity->model_type ?? 'Activity'));
+        $modelContextLabel = $modelTitle.' #'.$activity->model_id;
         $route = $details->get('route');
 
         return [
@@ -197,8 +185,9 @@ class ActivityLogController extends Controller
                 ? strtoupper((string) ($details->get('method') ?: $activity->action))
                 : null,
             'route' => $route,
-            'contextLabel' => $route ?: ($isRequest ? $activity->description : $modelTitle.' #'.$activity->model_id),
-            'modelContextLabel' => $isRequest ? null : $modelTitle.' #'.$activity->model_id,
+            'contextLabel' => $route ?: ($isRequest ? $activity->description : $modelContextLabel),
+            'modelContextLabel' => $isRequest ? null : $modelContextLabel,
+            'modelContextLabels' => $isRequest ? collect() : collect([$modelContextLabel]),
             'modelId' => $isRequest ? null : $activity->model_id,
             'ipAddress' => $details->get('ip_address'),
             'impersonatedUserName' => $impersonatedUser?->name,
@@ -217,6 +206,7 @@ class ActivityLogController extends Controller
                 ? (json_encode($details->get('request_input'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) ?: '—')
                 : null,
             'changes' => $changeKeys->map(fn (string $key): array => [
+                'model' => $modelContextLabel,
                 'field' => $key,
                 'old' => $this->formatValue($old->get($key)),
                 'new' => $this->formatValue($attributes->get($key)),
@@ -224,13 +214,6 @@ class ActivityLogController extends Controller
         ];
     }
 
-    /**
-     * Merge a write request with the model event it caused when both audit rows
-     * belong to the same actor, named route, and moment.
-     *
-     * @param  Collection<int, array<string, mixed>>  $rows
-     * @return Collection<int, array<string, mixed>>
-     */
     private function mergeRequestRows(Collection $rows): Collection
     {
         $rows = $rows->values();
@@ -241,29 +224,60 @@ class ActivityLogController extends Controller
                 continue;
             }
 
-            $modelIndex = $rows->search(function (array $modelRow, int $index) use ($requestIndex, $requestRow, $mergedIndexes): bool {
-                return $index > $requestIndex
-                    && ! isset($mergedIndexes[$index])
-                    && ! $modelRow['isRequest']
-                    && $modelRow['userId'] === $requestRow['userId']
-                    && $modelRow['route'] === $requestRow['route']
-                    && abs(($modelRow['createdAtTimestamp'] ?? 0) - ($requestRow['createdAtTimestamp'] ?? 0)) <= 10;
-            });
+            $modelIndexes = $this->relatedModelIndexes($rows, $requestIndex, $requestRow, $mergedIndexes);
 
-            if ($modelIndex === false) {
+            if ($modelIndexes->isEmpty()) {
                 continue;
             }
 
+            $modelIndex = $modelIndexes->first();
+            $modelRows = $modelIndexes->map(fn (int $index): array => $rows[$index]);
             $modelRow = $rows[$modelIndex];
             $modelRow['requestMethod'] = $requestRow['requestMethod'];
             $modelRow['requestContext'] = $requestRow['requestContext'];
             $modelRow['requestInput'] = $requestRow['requestInput'];
+            $modelRow['modelContextLabels'] = $modelRows->flatMap(fn (array $row): Collection => $row['modelContextLabels'])->unique()->values();
+            $modelRow['changes'] = $modelRows->flatMap(fn (array $row): Collection => $row['changes'])->values();
+            $modelRow['companyLabel'] ??= $requestRow['companyLabel'];
+            $modelRow['impersonatedUserName'] ??= $requestRow['impersonatedUserName'];
             $modelRow['hasDetails'] = true;
             $rows[$modelIndex] = $modelRow;
             $mergedIndexes[$requestIndex] = true;
+
+            $modelIndexes->skip(1)->each(function (int $index) use (&$mergedIndexes): void {
+                $mergedIndexes[$index] = true;
+            });
         }
 
         return $rows->reject(fn (array $row, int $index): bool => isset($mergedIndexes[$index]))->values();
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $rows
+     * @param  array<string, mixed>  $requestRow
+     * @param  array<int, bool>  $mergedIndexes
+     * @return Collection<int, int>
+     */
+    private function relatedModelIndexes(Collection $rows, int $requestIndex, array $requestRow, array $mergedIndexes): Collection
+    {
+        $indexes = collect();
+
+        for ($index = $requestIndex + 1; $index < $rows->count(); $index++) {
+            $row = $rows[$index];
+
+            if ($row['isRequest']) {
+                break;
+            }
+
+            if (! isset($mergedIndexes[$index])
+                && $row['userId'] === $requestRow['userId']
+                && $row['route'] === $requestRow['route']
+                && abs(($row['createdAtTimestamp'] ?? 0) - ($requestRow['createdAtTimestamp'] ?? 0)) <= 10) {
+                $indexes->push($index);
+            }
+        }
+
+        return $indexes;
     }
 
     private function formatValue(mixed $value): string
