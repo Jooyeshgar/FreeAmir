@@ -132,7 +132,7 @@
             @include('reports.form', ['type' => 'Ledger'])
         </x-card>
         <div class="mt-2 flex gap-2 justify-end">
-            <x-form-export-delivery-choice id="ledger-report-delivery" form="ledger-report-form" export="accounting_report_csv" class="btn btn-default rounded-md" />
+            <x-export-delivery-choice id="ledger-report-delivery" form="ledger-report-form" export="accounting_report_csv" class="btn btn-default rounded-md" />
             <button type="submit" name="action" value="print" formnovalidate class="btn btn-default rounded-md"> {{ __('Print') }}</button>
             <button type="submit" name="action" value="preview" formnovalidate class="btn text-white btn-primary rounded-md"> {{ __('Preview') }}</button>
         </div>

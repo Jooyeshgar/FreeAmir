@@ -70,17 +70,21 @@ class ReportEmailTest extends TestCase
         $this->assertStringContainsString('Receive Report', $html);
         $this->assertStringContainsString('name="email"', $html);
         $this->assertStringContainsString('value="'.$this->user->email.'"', $html);
+        $this->assertStringContainsString('for example, recipient@example.com', $html);
 
         app()->setLocale('fa');
-        $this->assertStringContainsString('دریافت گزارش', Blade::render('<x-export-delivery-choice id="fa-delivery" export="products_csv" />'));
+        $html = Blade::render('<x-export-delivery-choice id="fa-delivery" export="products_csv" />');
+        $this->assertStringContainsString('دریافت گزارش', $html);
+        $this->assertStringContainsString('برای مثال recipient@example.com', $html);
     }
 
-    public function test_form_delivery_component_keeps_csrf_tokens_out_of_regular_get_submissions(): void
+    public function test_delivery_component_reuses_get_form_without_nesting_a_form_or_leaking_csrf_tokens(): void
     {
         $this->actingAs($this->user);
 
-        $html = Blade::render('<form id="report-form" method="GET"><x-form-export-delivery-choice id="report-delivery" form="report-form" export="accounting_report_csv" /></form>');
+        $html = Blade::render('<form id="report-form" method="GET"><x-export-delivery-choice id="report-delivery" form="report-form" export="accounting_report_csv" /></form>');
 
+        $this->assertSame(1, substr_count($html, '<form'));
         $this->assertStringNotContainsString('<input type="hidden" name="_token"', $html);
         $this->assertSame(2, substr_count($html, 'name="_token"'));
         $this->assertStringContainsString('delivery=download', $html);

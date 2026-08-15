@@ -16,7 +16,7 @@
             @endforeach
         </x-card>
         <div class="mt-2 flex gap-2 justify-end">
-            <x-form-export-delivery-choice id="journal-report-delivery" form="journal-report-form" export="accounting_report_csv" class="btn" />
+            <x-export-delivery-choice id="journal-report-delivery" form="journal-report-form" export="accounting_report_csv" class="btn" />
             <button type="submit" name="action" value="print" formnovalidate class="btn"> {{ __('Print') }}</button>
             <button type="submit" name="action" value="preview" formnovalidate class="btn text-white btn-primary rounded-md"> {{ __('Preview') }}</button>
         </div>
